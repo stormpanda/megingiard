@@ -36,7 +36,10 @@ import java.util.Locale
 private const val TAG = "QuickMenuComponents"
 
 @Composable
-internal fun SectionLabel(text: String, colors: AppColors) {
+internal fun SectionLabel(
+    text: String,
+    colors: AppColors,
+) {
     Text(
         text = text.uppercase(Locale.ROOT),
         color = colors.sectionHeaderColor,
@@ -95,33 +98,34 @@ internal fun LayoutRow(
 
 @Composable
 internal fun QuickMenuActionChip(
-    label:    String,
-    icon:     ImageVector,
-    colors:   AppColors,
-    onClick:  () -> Unit,
+    label: String,
+    icon: ImageVector,
+    colors: AppColors,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val accent = colors.accent
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-            .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-            .clickable(onClick = onClick)
-            .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
-        verticalAlignment    = Alignment.CenterVertically,
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clickable(onClick = onClick)
+                .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector        = icon,
+            imageVector = icon,
             contentDescription = null,
-            tint               = accent,
-            modifier           = Modifier.size(PM_NAV_ICON_SIZE),
+            tint = accent,
+            modifier = Modifier.size(PM_NAV_ICON_SIZE),
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            text     = label,
-            color    = accent,
-            style    = MaterialTheme.typography.bodyMedium,
+            text = label,
+            color = accent,
+            style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -136,9 +140,9 @@ private fun SelectableChip(
     onClick: () -> Unit,
 ) {
     AppSelectableChip(
-        text               = text,
-        selected           = isSelected,
-        onClick            = onClick,
+        text = text,
+        selected = isSelected,
+        onClick = onClick,
         contentDescription = contentDescription,
     )
 }

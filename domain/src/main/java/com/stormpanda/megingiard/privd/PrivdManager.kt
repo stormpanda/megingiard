@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.privd
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
-import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -11,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Features that become available when Privileged Mode is connected.
@@ -30,6 +30,7 @@ enum class PrivdFeature {
      * to the virtual uinput gamepad.
      */
     GAMEPAD_MERGE,
+
     /**
      * Physical gamepad input is recorded directly from the evdev node during
      * macro recording sessions, capturing analog stick paths with full fidelity.
@@ -37,6 +38,7 @@ enum class PrivdFeature {
      * path is used instead.
      */
     GAMEPAD_RECORDING,
+
     /**
      * Primary-display mirror is captured via the on-device privileged daemon
      * spawning an `app_process` server child (no MediaProjection consent
@@ -122,7 +124,6 @@ enum class PrivdError {
  * read-only [state] / [lastError] surfaces escape this object.
  */
 object PrivdManager {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var clientObserverJob: Job? = null
 
@@ -185,8 +186,7 @@ object PrivdManager {
      * stored in user settings.
      */
     @Suppress("UNUSED_PARAMETER")
-    fun isAvailable(feature: PrivdFeature): Boolean =
-        _state.value == PrivdState.RUNNING && PrivdClient.isConnected
+    fun isAvailable(feature: PrivdFeature): Boolean = _state.value == PrivdState.RUNNING && PrivdClient.isConnected
 
     /**
      * Used during the VERIFYING phase of bootstrap. Attempts a raw socket
@@ -228,16 +228,17 @@ object PrivdManager {
      */
     private fun startClientObserver() {
         clientObserverJob?.cancel()
-        clientObserverJob = scope.launch {
-            PrivdClient.state.collect { clientState ->
-                if (clientState == PrivdConnectionState.DISCONNECTED &&
-                    _state.value == PrivdState.RUNNING
-                ) {
-                    AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting state to FAILED")
-                    _state.value = PrivdState.FAILED
-                    _lastError.value = PrivdError.DAEMON_UNREACHABLE
+        clientObserverJob =
+            scope.launch {
+                PrivdClient.state.collect { clientState ->
+                    if (clientState == PrivdConnectionState.DISCONNECTED &&
+                        _state.value == PrivdState.RUNNING
+                    ) {
+                        AppLog.w(TAG, "PrivdClient dropped unexpectedly — setting state to FAILED")
+                        _state.value = PrivdState.FAILED
+                        _lastError.value = PrivdError.DAEMON_UNREACHABLE
+                    }
                 }
             }
-        }
     }
 }

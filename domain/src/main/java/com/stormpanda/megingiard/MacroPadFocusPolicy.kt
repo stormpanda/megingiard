@@ -17,10 +17,11 @@ data class MacroPadFocusPolicyState(
  * still receives touch input.
  */
 fun shouldKeepPrimaryGameFocus(state: MacroPadFocusPolicyState): Boolean {
-    val hasInteractiveOverlay = state.isQuickMenuOpen ||
-        state.isFilePickerOpen ||
-        state.isEditorActive ||
-        state.isBackgroundSettingsActive
+    val hasInteractiveOverlay =
+        state.isQuickMenuOpen ||
+            state.isFilePickerOpen ||
+            state.isEditorActive ||
+            state.isBackgroundSettingsActive
     return state.isFullscreenKeyboardActive ||
         (state.isMacroPadSurfaceActive && !hasInteractiveOverlay)
 }

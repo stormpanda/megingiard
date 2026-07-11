@@ -56,6 +56,7 @@ class MacroPadHitTestEngine(
     private val onHapticFeedback: ((String, HapticStrength, Int, Int, Float) -> Unit)? = null,
 ) {
     private val _pressedIds = MutableStateFlow(emptySet<String>())
+
     /** Set of currently pressed button IDs (for visual highlighting). */
     val pressedIds: StateFlow<Set<String>> = _pressedIds.asStateFlow()
 
@@ -93,29 +94,33 @@ class MacroPadHitTestEngine(
         profile: PadProfile,
         isPeekActive: Boolean,
     ): PadButton? {
-        val hitList = if (isPeekActive) {
-            buttons.filter { it.action is PadAction.BackgroundPeek }
-        } else {
-            buttons
-        }
+        val hitList =
+            if (isPeekActive) {
+                buttons.filter { it.action is PadAction.BackgroundPeek }
+            } else {
+                buttons
+            }
 
-        val hitButton = hitList.firstOrNull { btn ->
-            val isTrackpoint = btn.action is PadAction.TrackpointMove
-            val chipWidthPx = if (isTrackpoint) {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
-            } else {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.cols)
-            }
-            val chipHeightPx = if (isTrackpoint) {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
-            } else {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.rows)
-            }
-            val bx = btn.posX * canvasW
-            val by = btn.posY * canvasH
-            px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
-            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
-        } ?: return null
+        val hitButton =
+            hitList.firstOrNull { btn ->
+                val isTrackpoint = btn.action is PadAction.TrackpointMove
+                val chipWidthPx =
+                    if (isTrackpoint) {
+                        buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+                    } else {
+                        buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.cols)
+                    }
+                val chipHeightPx =
+                    if (isTrackpoint) {
+                        buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+                    } else {
+                        buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.rows)
+                    }
+                val bx = btn.posX * canvasW
+                val by = btn.posY * canvasH
+                px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
+                    py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
+            } ?: return null
 
         // Check if the required device is disabled
         if (isDeviceDisabled(hitButton.action, profile)) return hitButton
@@ -125,6 +130,7 @@ class MacroPadHitTestEngine(
             hitButton.action is PadAction.ScrollWheel -> {
                 scrollStartY[pointerId] = py
             }
+
             hitButton.action is PadAction.TrackpointMove -> {
                 lastTpPos = Pair(px, py)
                 val tpAction = hitButton.action as PadAction.TrackpointMove
@@ -136,6 +142,7 @@ class MacroPadHitTestEngine(
                     TouchInjector.injectTouch(TouchAction.DOWN, unclampedCursorX, unclampedCursorY)
                 }
             }
+
             else -> {
                 _pressedIds.value = _pressedIds.value + hitButton.id
                 injectActionDown(hitButton.action)
@@ -165,36 +172,37 @@ class MacroPadHitTestEngine(
         buttons: List<PadButton>,
         isPeekActive: Boolean,
     ): Boolean {
-        val hitList = if (isPeekActive) {
-            buttons.filter { it.action is PadAction.BackgroundPeek }
-        } else {
-            buttons
-        }
+        val hitList =
+            if (isPeekActive) {
+                buttons.filter { it.action is PadAction.BackgroundPeek }
+            } else {
+                buttons
+            }
         return hitList.any { btn ->
             val isTrackpoint = btn.action is PadAction.TrackpointMove
-            val chipWidthPx = if (isTrackpoint) {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
-            } else {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.cols)
-            }
-            val chipHeightPx = if (isTrackpoint) {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
-            } else {
-                buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.rows)
-            }
+            val chipWidthPx =
+                if (isTrackpoint) {
+                    buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+                } else {
+                    buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.cols)
+                }
+            val chipHeightPx =
+                if (isTrackpoint) {
+                    buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * (btn.action as PadAction.TrackpointMove).size.multiplier)
+                } else {
+                    buttonUnitDpToPx(MP_BUTTON_UNIT_DP_VALUE * btn.buttonSize.rows)
+                }
             val bx = btn.posX * canvasW
             val by = btn.posY * canvasH
             px >= bx - chipWidthPx / 2f && px <= bx + chipWidthPx / 2f &&
-            py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
+                py >= by - chipHeightPx / 2f && py <= by + chipHeightPx / 2f
         }
     }
 
     /**
      * Check whether a pointer is currently tracked (i.e. currently pressing a button).
      */
-    fun isPointerTracked(pointerId: Long): Boolean {
-        return pointerMap.containsKey(pointerId)
-    }
+    fun isPointerTracked(pointerId: Long): Boolean = pointerMap.containsKey(pointerId)
 
     /**
      * Handle a Move event.
@@ -227,7 +235,14 @@ class MacroPadHitTestEngine(
                         val dxNormalized = (deltaX * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_WIDTH
                         val dyNormalized = (deltaY * MP_TRACKPOINT_SENSITIVITY) / LOGICAL_SCREEN_HEIGHT
 
-                        val currentDxSign = if (dxNormalized > 0f) 1f else if (dxNormalized < 0f) -1f else 0f
+                        val currentDxSign =
+                            if (dxNormalized > 0f) {
+                                1f
+                            } else if (dxNormalized < 0f) {
+                                -1f
+                            } else {
+                                0f
+                            }
                         if (currentDxSign != 0f && lastDxSign != 0f && currentDxSign != lastDxSign) {
                             unclampedCursorX = virtualCursorX
                         }
@@ -235,7 +250,14 @@ class MacroPadHitTestEngine(
                             lastDxSign = currentDxSign
                         }
 
-                        val currentDySign = if (dyNormalized > 0f) 1f else if (dyNormalized < 0f) -1f else 0f
+                        val currentDySign =
+                            if (dyNormalized > 0f) {
+                                1f
+                            } else if (dyNormalized < 0f) {
+                                -1f
+                            } else {
+                                0f
+                            }
                         if (currentDySign != 0f && lastDySign != 0f && currentDySign != lastDySign) {
                             unclampedCursorY = virtualCursorY
                         }
@@ -284,6 +306,7 @@ class MacroPadHitTestEngine(
                 }
                 lastTpPos = Pair(px, py)
             }
+
             mappedBtn.action is PadAction.ScrollWheel -> {
                 val startY = scrollStartY[pointerId] ?: return
                 val totalDeltaY = startY - py
@@ -328,9 +351,11 @@ class MacroPadHitTestEngine(
                     TouchInjector.injectTouch(TouchAction.UP, unclampedCursorX, unclampedCursorY)
                 }
             }
+
             btn.action is PadAction.ScrollWheel -> {
                 scrollStartY.remove(pointerId)
             }
+
             else -> {
                 _pressedIds.value = _pressedIds.value - mapped
                 injectActionUp(btn.action)
@@ -384,9 +409,11 @@ class MacroPadHitTestEngine(
                             TouchInjector.injectTouch(TouchAction.UP, upX, upY)
                         }
                     }
+
                     btn.action is PadAction.ScrollWheel -> {
                         // no-op
                     }
+
                     else -> {
                         injectActionUp(btn.action)
                     }
@@ -400,54 +427,114 @@ class MacroPadHitTestEngine(
         const val MP_BUTTON_UNIT_DP_VALUE = 60f
 
         /** Check whether the device needed for a given action is disabled. */
-        fun isDeviceDisabled(action: PadAction, profile: PadProfile): Boolean = when (action) {
-            is PadAction.KeyboardKey -> !profile.enableKeyboard
-            is PadAction.GamepadButton -> !profile.enableGamepad
-            is PadAction.MouseButton,
-            is PadAction.ScrollWheel -> !profile.enableMouse
-            is PadAction.TrackpointMove -> {
-                if (action.mode == TrackpointMode.VIRTUAL_TOUCH) !profile.enableTouch else !profile.enableMouse
+        fun isDeviceDisabled(
+            action: PadAction,
+            profile: PadProfile,
+        ): Boolean =
+            when (action) {
+                is PadAction.KeyboardKey -> {
+                    !profile.enableKeyboard
+                }
+
+                is PadAction.GamepadButton -> {
+                    !profile.enableGamepad
+                }
+
+                is PadAction.MouseButton,
+                is PadAction.ScrollWheel,
+                -> {
+                    !profile.enableMouse
+                }
+
+                is PadAction.TrackpointMove -> {
+                    if (action.mode == TrackpointMode.VIRTUAL_TOUCH) !profile.enableTouch else !profile.enableMouse
+                }
+
+                is PadAction.Macro -> {
+                    false
+                }
+
+                is PadAction.BackgroundPeek -> {
+                    false
+                }
+
+                is PadAction.LayoutNext,
+                is PadAction.LayoutPrevious,
+                is PadAction.ProfileSwitcher,
+                is PadAction.MirrorPlayStop,
+                is PadAction.MirrorFreeze,
+                is PadAction.MirrorViewportEdit,
+                is PadAction.MirrorTouchProjection,
+                -> {
+                    false
+                }
+
+                is PadAction.FullScreenMouse -> {
+                    !profile.enableMouse
+                }
+
+                is PadAction.FullScreenKeyboard -> {
+                    !profile.enableKeyboard
+                }
             }
-            is PadAction.Macro -> false
-            is PadAction.BackgroundPeek -> false
-            is PadAction.LayoutNext,
-            is PadAction.LayoutPrevious,
-            is PadAction.ProfileSwitcher,
-            is PadAction.MirrorPlayStop,
-            is PadAction.MirrorFreeze,
-            is PadAction.MirrorViewportEdit,
-            is PadAction.MirrorTouchProjection -> false
-            is PadAction.FullScreenMouse -> !profile.enableMouse
-            is PadAction.FullScreenKeyboard -> !profile.enableKeyboard
-        }
 
         /**
          * Returns the [DisabledReason] for a blocked button tap, or null if the device is enabled.
          * The caller is responsible for mapping the reason to a localised message.
          */
-        fun deviceDisabledReason(action: PadAction, profile: PadProfile): DisabledReason? = when (action) {
-            is PadAction.KeyboardKey -> if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
-            is PadAction.GamepadButton -> if (!profile.enableGamepad) DisabledReason.GAMEPAD else null
-            is PadAction.MouseButton,
-            is PadAction.ScrollWheel -> if (!profile.enableMouse) DisabledReason.MOUSE else null
-            is PadAction.TrackpointMove -> {
-                if (action.mode == TrackpointMode.VIRTUAL_TOUCH) {
-                    if (!profile.enableTouch) DisabledReason.TOUCH else null
-                } else {
+        fun deviceDisabledReason(
+            action: PadAction,
+            profile: PadProfile,
+        ): DisabledReason? =
+            when (action) {
+                is PadAction.KeyboardKey -> {
+                    if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
+                }
+
+                is PadAction.GamepadButton -> {
+                    if (!profile.enableGamepad) DisabledReason.GAMEPAD else null
+                }
+
+                is PadAction.MouseButton,
+                is PadAction.ScrollWheel,
+                -> {
                     if (!profile.enableMouse) DisabledReason.MOUSE else null
                 }
+
+                is PadAction.TrackpointMove -> {
+                    if (action.mode == TrackpointMode.VIRTUAL_TOUCH) {
+                        if (!profile.enableTouch) DisabledReason.TOUCH else null
+                    } else {
+                        if (!profile.enableMouse) DisabledReason.MOUSE else null
+                    }
+                }
+
+                is PadAction.Macro -> {
+                    null
+                }
+
+                is PadAction.BackgroundPeek -> {
+                    null
+                }
+
+                is PadAction.LayoutNext,
+                is PadAction.LayoutPrevious,
+                is PadAction.ProfileSwitcher,
+                is PadAction.MirrorPlayStop,
+                is PadAction.MirrorFreeze,
+                is PadAction.MirrorViewportEdit,
+                is PadAction.MirrorTouchProjection,
+                -> {
+                    null
+                }
+
+                is PadAction.FullScreenMouse -> {
+                    if (!profile.enableMouse) DisabledReason.MOUSE else null
+                }
+
+                is PadAction.FullScreenKeyboard -> {
+                    if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
+                }
             }
-            is PadAction.Macro -> null
-            is PadAction.BackgroundPeek -> null
-            is PadAction.LayoutNext,
-            is PadAction.LayoutPrevious,
-            is PadAction.ProfileSwitcher,
-            is PadAction.MirrorPlayStop,
-            is PadAction.MirrorFreeze,
-            is PadAction.MirrorViewportEdit,
-            is PadAction.MirrorTouchProjection -> null
-            is PadAction.FullScreenMouse -> if (!profile.enableMouse) DisabledReason.MOUSE else null
-            is PadAction.FullScreenKeyboard -> if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
-        }
     }
 }

@@ -3,6 +3,9 @@ package com.stormpanda.megingiard
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,9 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
@@ -37,9 +37,6 @@ object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
-
-
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -104,14 +101,17 @@ object AppStateManager {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed
     }
+
     fun setUserLeaving(leaving: Boolean) {
         AppLog.d(TAG, "setUserLeaving($leaving)")
         _isUserLeaving.value = leaving
     }
+
     fun setOnValidScreen(valid: Boolean) {
         AppLog.i(TAG, "setOnValidScreen($valid)")
         _isOnValidScreen.value = valid
     }
+
     fun setPromptInFlight(inFlight: Boolean) {
         AppLog.d(TAG, "setPromptInFlight($inFlight)")
         _promptInFlight.value = inFlight
@@ -135,7 +135,9 @@ object AppStateManager {
     private val _isTouching = MutableStateFlow(false)
     val isTouching: StateFlow<Boolean> = _isTouching.asStateFlow()
 
-    fun setTouching(touching: Boolean) { _isTouching.value = touching }
+    fun setTouching(touching: Boolean) {
+        _isTouching.value = touching
+    }
 
     // ── SAF file picker ───────────────────────────────────────────────────────
 
@@ -223,7 +225,6 @@ object AppStateManager {
         _isGlobalSettingsOpen.value = open
     }
 
-
     private var wasViewportEditActiveBeforeSettings = false
 
     /**
@@ -261,17 +262,21 @@ object AppStateManager {
      * True whenever any fullscreen modal overlay is showing.
      * Used by [handleEdgeSwipe] to determine if an edge swipe should close the active modal.
      */
-    val isAnyModalActive: StateFlow<Boolean> = combine(
-        _isFullscreenKeyboardActive,
-        _isFullscreenMouseActive,
-        _isViewportEditActive,
-        _isBackgroundSettingsActive,
-        MacroPadState.isPeekActive,
-        _isGlobalSettingsOpen,
-    ) { array: Array<Boolean> -> array.any { it } }
-        .stateIn(scope, SharingStarted.Eagerly, false)
+    val isAnyModalActive: StateFlow<Boolean> =
+        combine(
+            _isFullscreenKeyboardActive,
+            _isFullscreenMouseActive,
+            _isViewportEditActive,
+            _isBackgroundSettingsActive,
+            MacroPadState.isPeekActive,
+            _isGlobalSettingsOpen,
+        ) { array: Array<Boolean> -> array.any { it } }
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
-    fun setFullscreenKeyboardActive(active: Boolean, layout: KbLayout = KbLayout.QWERTZ) {
+    fun setFullscreenKeyboardActive(
+        active: Boolean,
+        layout: KbLayout = KbLayout.QWERTZ,
+    ) {
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
             _fullscreenKeyboardLayout.value = layout
@@ -282,7 +287,10 @@ object AppStateManager {
         _isFullscreenKeyboardActive.value = active
     }
 
-    fun setFullscreenMouseActive(active: Boolean, sensitivity: Float = 1.0f) {
+    fun setFullscreenMouseActive(
+        active: Boolean,
+        sensitivity: Float = 1.0f,
+    ) {
         AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
         if (active) {
             _fullscreenMouseSensitivity.value = sensitivity
@@ -325,7 +333,10 @@ object AppStateManager {
 
     /** Closes whichever fullscreen modal overlay is currently active. */
     fun closeActiveModal() {
-        AppLog.i(TAG, "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isBackgroundSettingsActive.value} peek=${MacroPadState.isPeekActive.value}")
+        AppLog.i(
+            TAG,
+            "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isBackgroundSettingsActive.value} peek=${MacroPadState.isPeekActive.value}",
+        )
         _isFullscreenKeyboardActive.value = false
         _isFullscreenMouseActive.value = false
         _isViewportEditActive.value = false
@@ -346,9 +357,9 @@ object AppStateManager {
     fun handleEdgeSwipe() {
         AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${_isQuickMenuOpen.value}")
         when {
-            isAnyModalActive.value  -> closeActiveModal()
-            _isQuickMenuOpen.value   -> closeQuickMenu()
-            else                    -> openQuickMenu()
+            isAnyModalActive.value -> closeActiveModal()
+            _isQuickMenuOpen.value -> closeQuickMenu()
+            else -> openQuickMenu()
         }
     }
 
@@ -370,7 +381,7 @@ object AppStateManager {
                 MacroPadSettings.privdShowAdbPrompt,
                 _hasAdbCredentials,
                 _isPrivdPromptDismissed,
-                _isBackgroundSettingsActive
+                _isBackgroundSettingsActive,
             ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
                 if (state == PrivdState.RUNNING) {
                     _isPrivdPromptDismissed.value = false

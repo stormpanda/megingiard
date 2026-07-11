@@ -2,10 +2,10 @@ package com.stormpanda.megingiard.settings
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +36,7 @@ internal fun RememberSettingRow(
     label: String,
     description: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     AppSettingsRow {
         SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
@@ -59,12 +59,12 @@ internal fun LayoutDropdownRow(
             modifier = Modifier.weight(1f),
         )
         AppDropdown(
-            selected          = currentLayout,
-            options           = KbLayout.entries,
-            optionText        = { layout -> stringResource(layout.labelResId()) },
-            onSelected        = onLayoutSelected,
+            selected = currentLayout,
+            options = KbLayout.entries,
+            optionText = { layout -> stringResource(layout.labelResId()) },
+            onSelected = onLayoutSelected,
             horizontalPadding = TS_DROPDOWN_H_PADDING,
-            verticalPadding   = TS_DROPDOWN_V_PADDING,
+            verticalPadding = TS_DROPDOWN_V_PADDING,
         )
     }
 }
@@ -81,12 +81,12 @@ internal fun MouseBtnPosDropdownRow(
             modifier = Modifier.weight(1f),
         )
         AppDropdown(
-            selected          = currentPos,
-            options           = KbMouseBtnPos.entries,
-            optionText        = { pos -> stringResource(pos.labelResId()) },
-            onSelected        = onPosSelected,
+            selected = currentPos,
+            options = KbMouseBtnPos.entries,
+            optionText = { pos -> stringResource(pos.labelResId()) },
+            onSelected = onPosSelected,
             horizontalPadding = TS_DROPDOWN_H_PADDING,
-            verticalPadding   = TS_DROPDOWN_V_PADDING,
+            verticalPadding = TS_DROPDOWN_V_PADDING,
         )
     }
 }
@@ -136,14 +136,16 @@ internal fun SliderSettingRow(
 // Enum label helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal fun KbLayout.labelResId(): Int = when (this) {
-    KbLayout.QWERTZ -> R.string.settings_kb_layout_qwertz
-    KbLayout.QWERTY -> R.string.settings_kb_layout_qwerty
-    KbLayout.AZERTY -> R.string.settings_kb_layout_azerty
-}
+internal fun KbLayout.labelResId(): Int =
+    when (this) {
+        KbLayout.QWERTZ -> R.string.settings_kb_layout_qwertz
+        KbLayout.QWERTY -> R.string.settings_kb_layout_qwerty
+        KbLayout.AZERTY -> R.string.settings_kb_layout_azerty
+    }
 
-internal fun KbMouseBtnPos.labelResId(): Int = when (this) {
-    KbMouseBtnPos.LEFT  -> R.string.kb_mouse_btn_pos_left
-    KbMouseBtnPos.RIGHT -> R.string.kb_mouse_btn_pos_right
-    KbMouseBtnPos.BOTH  -> R.string.kb_mouse_btn_pos_both
-}
+internal fun KbMouseBtnPos.labelResId(): Int =
+    when (this) {
+        KbMouseBtnPos.LEFT -> R.string.kb_mouse_btn_pos_left
+        KbMouseBtnPos.RIGHT -> R.string.kb_mouse_btn_pos_right
+        KbMouseBtnPos.BOTH -> R.string.kb_mouse_btn_pos_both
+    }

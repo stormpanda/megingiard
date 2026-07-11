@@ -33,12 +33,13 @@ import androidx.compose.ui.input.pointer.pointerInput
  * ) { … }
  * ```
  */
-fun Modifier.blockPointerEvents(): Modifier = this.pointerInput(Unit) {
-    awaitPointerEventScope {
-        while (true) {
-            awaitPointerEvent()
-            // Intentionally not consuming — hit-test opacity alone is sufficient
-            // to prevent events from reaching z-order siblings below.
+fun Modifier.blockPointerEvents(): Modifier =
+    this.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                awaitPointerEvent()
+                // Intentionally not consuming — hit-test opacity alone is sufficient
+                // to prevent events from reaching z-order siblings below.
+            }
         }
     }
-}

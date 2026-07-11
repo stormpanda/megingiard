@@ -31,15 +31,22 @@ data class MacroEvent(
  * state rather than a stale latch.
  */
 val MacroEvent.isReset: Boolean
-    get() = when (type) {
-        MacroEventType.BUTTON_UP             -> true
-        MacroEventType.TOUCH_UP              -> true
-        MacroEventType.BUTTON_DOWN           -> false
-        MacroEventType.TOUCH_MOVE            -> false
-        MacroEventType.TOUCH_DOWN            -> false
-        MacroEventType.JOYSTICK_SET,
-        MacroEventType.HAT                   -> value == 0
-    }
+    get() =
+        when (type) {
+            MacroEventType.BUTTON_UP -> true
+
+            MacroEventType.TOUCH_UP -> true
+
+            MacroEventType.BUTTON_DOWN -> false
+
+            MacroEventType.TOUCH_MOVE -> false
+
+            MacroEventType.TOUCH_DOWN -> false
+
+            MacroEventType.JOYSTICK_SET,
+            MacroEventType.HAT,
+            -> value == 0
+        }
 
 /**
  * Compiles the overlapping [MacroStep] list of [macro] into a flat, time-sorted list of
@@ -56,6 +63,7 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
                 events += MacroEvent(step.startTimeMs, MacroEventType.BUTTON_DOWN, step.btnCode, 0)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.BUTTON_UP, step.btnCode, 0)
             }
+
             is MacroStep.JoystickMove -> {
                 val rawX = (step.x.coerceIn(-1f, 1f) * ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
                 val rawY = (step.y.coerceIn(-1f, 1f) * ABS_FULL_DEFLECTION).toInt().coerceIn(-32768, 32767)
@@ -66,16 +74,19 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisX, 0)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisY, 0)
             }
+
             is MacroStep.DPadTap -> {
                 events += MacroEvent(step.startTimeMs, MacroEventType.HAT, 0, step.dirX)
                 events += MacroEvent(step.startTimeMs, MacroEventType.HAT, 1, step.dirY)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.HAT, 0, 0)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.HAT, 1, 0)
             }
+
             is MacroStep.TouchTap -> {
                 events += MacroEvent(step.startTimeMs, MacroEventType.TOUCH_DOWN, 0, 0, step.normX, step.normY)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.TOUCH_UP, 0, 0, step.normX, step.normY)
             }
+
             is MacroStep.JoystickPath -> {
                 val axisX = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
                 val axisY = if (step.stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
@@ -94,29 +105,33 @@ fun buildMacroEventList(macro: Macro): List<MacroEvent> {
                     events += MacroEvent(t, MacroEventType.JOYSTICK_SET, axisX, rawX)
                     events += MacroEvent(t, MacroEventType.JOYSTICK_SET, axisY, rawY)
                 }
-                /* Return axes to neutral at step end. */
+                // Return axes to neutral at step end.
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisX, 0)
                 events += MacroEvent(step.startTimeMs + step.durationMs, MacroEventType.JOYSTICK_SET, axisY, 0)
             }
+
             is MacroStep.TouchPath -> {
                 val activePointers = mutableMapOf<Int, Pair<Float, Float>>()
                 for (sample in step.samples) {
                     if (sample.offsetMs > step.durationMs) continue
                     val t = step.startTimeMs + sample.offsetMs
-                    val eventType = when (sample.action) {
-                        TouchAction.DOWN -> {
-                            activePointers[sample.pointerId] = Pair(sample.normX, sample.normY)
-                            MacroEventType.TOUCH_DOWN
+                    val eventType =
+                        when (sample.action) {
+                            TouchAction.DOWN -> {
+                                activePointers[sample.pointerId] = Pair(sample.normX, sample.normY)
+                                MacroEventType.TOUCH_DOWN
+                            }
+
+                            TouchAction.MOVE -> {
+                                activePointers[sample.pointerId] = Pair(sample.normX, sample.normY)
+                                MacroEventType.TOUCH_MOVE
+                            }
+
+                            TouchAction.UP -> {
+                                activePointers -= sample.pointerId
+                                MacroEventType.TOUCH_UP
+                            }
                         }
-                        TouchAction.MOVE -> {
-                            activePointers[sample.pointerId] = Pair(sample.normX, sample.normY)
-                            MacroEventType.TOUCH_MOVE
-                        }
-                        TouchAction.UP -> {
-                            activePointers -= sample.pointerId
-                            MacroEventType.TOUCH_UP
-                        }
-                    }
                     events += MacroEvent(t, eventType, sample.pointerId, 0, sample.normX, sample.normY)
                 }
                 /* Emit synthetic TOUCH_UP for any pointer still active at step end

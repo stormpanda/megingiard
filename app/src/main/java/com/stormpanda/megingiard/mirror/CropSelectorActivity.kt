@@ -6,9 +6,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -17,6 +14,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 private const val TAG = "CropSelectorActivity"
 
 class CropSelectorActivity : ComponentActivity() {
-
     private var wasFrozenInitially = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,15 +69,15 @@ class CropSelectorActivity : ComponentActivity() {
 
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),
-                typography = megingiardTypography
+                typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
-                    LocalAppDimens provides AppDimens()
+                    LocalAppDimens provides AppDimens(),
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = Color.Transparent
+                        color = Color.Transparent,
                     ) {
                         activeCropCutoutId?.let { cutoutId ->
                             CropSelectorOverlay(
@@ -86,7 +85,7 @@ class CropSelectorActivity : ComponentActivity() {
                                 onDismiss = {
                                     AppLog.d(TAG, "Dismissing crop selector")
                                     AppStateManager.setActiveCropCutoutId(null)
-                                }
+                                },
                             )
                         }
                     }

@@ -38,17 +38,17 @@ import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.blockPointerEvents
-import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.QuickMenuBar
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
-import kotlin.math.sqrt
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -60,7 +60,6 @@ private val AM_SWIPE_EDGE_ZONE = 40.dp
 private val AM_SWIPE_THRESHOLD = 25.dp
 private val AM_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val AM_PERCENT_DIVISOR = 100f
-
 
 /** Mirrors MacroPadViewModel.INJECTOR_RESTART_DEBOUNCE_MS — absorbs rapid modal transitions. */
 private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
@@ -92,9 +91,10 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
     val quickMenuBarZoneWidthPx = with(density) { AM_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
-    val swipeProcessor = remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx) {
-        SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
-    }
+    val swipeProcessor =
+        remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx) {
+            SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
+        }
 
     // Effective dim: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
@@ -124,32 +124,37 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 stopMouseAndGamepad = stopAll || quickMenu,
             )
         }.distinctUntilChanged()
-        .collectLatest { gate ->
-            when {
-                gate.stopKeyboard -> {
-                    AppLog.d(TAG, "blocking modal open → stopping keyboard/gamepad/mouse injectors")
-                    KeyInjector.stop()
-                    GamepadInjector.stop()
-                    MouseInjector.stop()
-                }
-                gate.stopMouseAndGamepad -> {
-                    AppLog.d(TAG, "quick menu open → stopping gamepad/mouse injectors")
-                    GamepadInjector.stop()
-                    MouseInjector.stop()
-                }
-                else -> {
-                    delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
-                    withContext(Dispatchers.IO) {
-                        val ap = MacroPadState.activeProfile.value
-                        AppLog.i(TAG, "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})")
-                        if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                        if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                        if (ap?.enableMouse == true) MouseInjector.start(context)
-                        if (ap?.enableTouch == true) TouchInjector.start(context, "BackgroundMacroPadOverlay")
+            .collectLatest { gate ->
+                when {
+                    gate.stopKeyboard -> {
+                        AppLog.d(TAG, "blocking modal open → stopping keyboard/gamepad/mouse injectors")
+                        KeyInjector.stop()
+                        GamepadInjector.stop()
+                        MouseInjector.stop()
+                    }
+
+                    gate.stopMouseAndGamepad -> {
+                        AppLog.d(TAG, "quick menu open → stopping gamepad/mouse injectors")
+                        GamepadInjector.stop()
+                        MouseInjector.stop()
+                    }
+
+                    else -> {
+                        delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
+                        withContext(Dispatchers.IO) {
+                            val ap = MacroPadState.activeProfile.value
+                            AppLog.i(
+                                TAG,
+                                "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})",
+                            )
+                            if (ap?.enableKeyboard == true) KeyInjector.start(context)
+                            if (ap?.enableGamepad == true) GamepadInjector.start(context)
+                            if (ap?.enableMouse == true) MouseInjector.start(context)
+                            if (ap?.enableTouch == true) TouchInjector.start(context, "BackgroundMacroPadOverlay")
+                        }
                     }
                 }
             }
-        }
     }
 
     // Stop all injectors and reset peek state when leaving
@@ -165,66 +170,70 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx, previewConfig == null) {
-                if (previewConfig != null) return@pointerInput
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val primaryChange = event.changes.firstOrNull()
-                        val x = primaryChange?.position?.x ?: 0f
-                        val y = primaryChange?.position?.y ?: 0f
-                        when (event.type) {
-                            PointerEventType.Press -> {
-                                swipeProcessor.onPress(
-                                    pointerY = y,
-                                    containerHeight = size.height.toFloat(),
-                                    pointerX = x,
-                                    containerWidth = size.width.toFloat(),
-                                )
-                                if (swipeProcessor.isNearEdge) {
-                                    event.changes.forEach { it.consume() }
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx, previewConfig == null) {
+                    if (previewConfig != null) return@pointerInput
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val primaryChange = event.changes.firstOrNull()
+                            val x = primaryChange?.position?.x ?: 0f
+                            val y = primaryChange?.position?.y ?: 0f
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    swipeProcessor.onPress(
+                                        pointerY = y,
+                                        containerHeight = size.height.toFloat(),
+                                        pointerX = x,
+                                        containerWidth = size.width.toFloat(),
+                                    )
+                                    if (swipeProcessor.isNearEdge) {
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
-                            }
-                            PointerEventType.Move -> {
-                                swipeProcessor.onMove(y)
-                                if (swipeProcessor.isNearEdge) {
-                                    event.changes.forEach { it.consume() }
+
+                                PointerEventType.Move -> {
+                                    swipeProcessor.onMove(y)
+                                    if (swipeProcessor.isNearEdge) {
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
-                            }
-                            PointerEventType.Release -> {
-                                val allPointersLifted = !event.changes.any { it.pressed }
-                                swipeProcessor.onRelease(allPointersLifted)
-                                if (swipeProcessor.isNearEdge) {
-                                    event.changes.forEach { it.consume() }
+
+                                PointerEventType.Release -> {
+                                    val allPointersLifted = !event.changes.any { it.pressed }
+                                    swipeProcessor.onRelease(allPointersLifted)
+                                    if (swipeProcessor.isNearEdge) {
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
+
+                                else -> {}
                             }
-                            else -> {}
                         }
                     }
-                }
-            }
+                },
     ) {
         // Layer 1: Dim overlay
         if (effectiveDim > 0f) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = effectiveDim))
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = effectiveDim)),
             )
         }
-
-
 
         // Layer 4: MacroPad buttons
         // During viewport edit: rendered at 50% alpha so the user can see button
         //   positions while adjusting the mirror crop.
         // Normal: fully opaque (or peek-adjusted via isPeekActive).
-        val buttonAlpha = when {
-            isViewportEditActive || previewConfig != null -> 0.5f
-            else                                          -> 1f
-        }
+        val buttonAlpha =
+            when {
+                isViewportEditActive || previewConfig != null -> 0.5f
+                else -> 1f
+            }
         if (buttonAlpha > 0f) {
             val p = profile
             val l = layout
@@ -243,10 +252,11 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 }
             } else {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(AM_SCREEN_PADDING)
-                        .graphicsLayer { alpha = buttonAlpha },
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(AM_SCREEN_PADDING)
+                            .graphicsLayer { alpha = buttonAlpha },
                 ) {
                     PadSurface(
                         profile = p,
@@ -255,7 +265,6 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                         isPeekActive = isPeekActive,
                         transparentBackground = true,
                     )
-
                 }
             }
         }
@@ -266,10 +275,11 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
         val pc = previewConfig
         val pl = layout
         if (pc != null && pl != null) {
-            val previewValue = when (pc.type) {
-                AmbientPreviewType.DIM -> pl.ambientDim
-                AmbientPreviewType.EDGE_BLENDING -> pl.mirrorEdgeBlendWidth
-            }
+            val previewValue =
+                when (pc.type) {
+                    AmbientPreviewType.DIM -> pl.ambientDim
+                    AmbientPreviewType.EDGE_BLENDING -> pl.mirrorEdgeBlendWidth
+                }
             val formatPreviewLabel: (Float) -> String = { v ->
                 if (pc.type == AmbientPreviewType.DIM) {
                     "${(v * AM_PERCENT_DIVISOR).toInt()}%"
@@ -284,10 +294,11 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 }
             }
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blockPointerEvents(),
-                contentAlignment = Alignment.BottomCenter
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .blockPointerEvents(),
+                contentAlignment = Alignment.BottomCenter,
             ) {
                 AsoPreviewBar(
                     label = pc.label,
@@ -296,18 +307,20 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                     formatLabel = formatPreviewLabel,
                     accentColor = colors.accent,
                     onValueChange = { v ->
-                        val updated = when (pc.type) {
-                            AmbientPreviewType.DIM -> pl.copy(ambientDim = v)
-                            AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = v)
-                        }
+                        val updated =
+                            when (pc.type) {
+                                AmbientPreviewType.DIM -> pl.copy(ambientDim = v)
+                                AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = v)
+                            }
                         MacroPadState.updateLayout(updated)
                     },
                     onCancel = {
                         AppLog.d(TAG, "ambient preview ${pc.type} cancelled")
-                        val restored = when (pc.type) {
-                            AmbientPreviewType.DIM -> pl.copy(ambientDim = pc.originalValue)
-                            AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = pc.originalValue)
-                        }
+                        val restored =
+                            when (pc.type) {
+                                AmbientPreviewType.DIM -> pl.copy(ambientDim = pc.originalValue)
+                                AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = pc.originalValue)
+                            }
                         MacroPadState.updateLayout(restored)
                         AppStateManager.setAmbientPreviewConfig(null)
                     },
@@ -322,5 +335,3 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
         if (showQuickMenuBar) QuickMenuBar()
     }
 }
-
-

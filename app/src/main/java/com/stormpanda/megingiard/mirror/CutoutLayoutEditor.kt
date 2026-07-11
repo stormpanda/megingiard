@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.mirror
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Circle
@@ -40,10 +40,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,24 +53,24 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
@@ -79,7 +79,6 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.UUID
 import kotlin.math.min
 import kotlin.math.roundToInt
-
 
 private const val TAG = "CutoutLayoutEditor"
 private val HANDLE_SIZE = 20.dp
@@ -100,9 +99,7 @@ private val CLE_HELP_BTN_CORNER = 4.dp
 private val CLE_SPACER_WIDTH = 32.dp
 
 @Composable
-fun CutoutLayoutEditor(
-    overlayAtBottom: Boolean
-) {
+fun CutoutLayoutEditor(overlayAtBottom: Boolean) {
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
@@ -122,9 +119,10 @@ fun CutoutLayoutEditor(
     val srcHeight = if (captureSourceHeight > 0) captureSourceHeight.toFloat() else 1080f
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Transparent)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Transparent),
     ) {
         val containerW = constraints.maxWidth.toFloat()
         val containerH = constraints.maxHeight.toFloat()
@@ -134,14 +132,14 @@ fun CutoutLayoutEditor(
         val screenH = if (surfaceHeight > 0f) surfaceHeight else containerH
 
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(
-                    width = with(density) { screenW.toDp() },
-                    height = with(density) { screenH.toDp() }
-                )
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .size(
+                        width = with(density) { screenW.toDp() },
+                        height = with(density) { screenH.toDp() },
+                    ),
         ) {
-
             // ── Multi-Cutout Arrangement Mode ──────────────────────────────────────
             // Draw all active cutout destinations
             val handleSizePx = with(density) { HANDLE_SIZE.toPx() }
@@ -157,101 +155,106 @@ fun CutoutLayoutEditor(
                 // Render destination bounding box
                 val isCircle = cutout.shape == CutoutShape.CIRCLE
                 Box(
-                    modifier = Modifier
-                        .offset { IntOffset(destLeft.roundToInt(), destTop.roundToInt()) }
-                        .size(
-                            width = with(density) { destW.toDp() },
-                            height = with(density) { destH.toDp() }
-                        )
-                        .clickable {
-                            AppStateManager.setSelectedCutoutId(cutout.id)
-                        }
-                        .pointerInput(cutout.id) {
-                            var dragStartX = 0f
-                            var dragStartY = 0f
-                            var accumulatedX = 0f
-                            var accumulatedY = 0f
-                            detectDragGestures(
-                                onDragStart = {
-                                    val curCutout = currentCutoutState.value
-                                    dragStartX = curCutout.destX
-                                    dragStartY = curCutout.destY
-                                    accumulatedX = 0f
-                                    accumulatedY = 0f
-                                    AppLog.d(TAG, "Drag start cutout '${curCutout.name}' at (${curCutout.destX}, ${curCutout.destY})")
-                                    AppStateManager.setSelectedCutoutId(curCutout.id)
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val curLayout = currentLayoutState.value
-                                    val curCutout = currentCutoutState.value
-                                    accumulatedX += dragAmount.x
-                                    accumulatedY += dragAmount.y
-                                    val targetX = dragStartX + accumulatedX / screenW
-                                    val targetY = dragStartY + accumulatedY / screenH
+                    modifier =
+                        Modifier
+                            .offset { IntOffset(destLeft.roundToInt(), destTop.roundToInt()) }
+                            .size(
+                                width = with(density) { destW.toDp() },
+                                height = with(density) { destH.toDp() },
+                            ).clickable {
+                                AppStateManager.setSelectedCutoutId(cutout.id)
+                            }.pointerInput(cutout.id) {
+                                var dragStartX = 0f
+                                var dragStartY = 0f
+                                var accumulatedX = 0f
+                                var accumulatedY = 0f
+                                detectDragGestures(
+                                    onDragStart = {
+                                        val curCutout = currentCutoutState.value
+                                        dragStartX = curCutout.destX
+                                        dragStartY = curCutout.destY
+                                        accumulatedX = 0f
+                                        accumulatedY = 0f
+                                        AppLog.d(TAG, "Drag start cutout '${curCutout.name}' at (${curCutout.destX}, ${curCutout.destY})")
+                                        AppStateManager.setSelectedCutoutId(curCutout.id)
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        val curLayout = currentLayoutState.value
+                                        val curCutout = currentCutoutState.value
+                                        accumulatedX += dragAmount.x
+                                        accumulatedY += dragAmount.y
+                                        val targetX = dragStartX + accumulatedX / screenW
+                                        val targetY = dragStartY + accumulatedY / screenH
 
-                                    val (clampedX, clampedY) = clampCutoutDrag(
-                                        cutoutId = curCutout.id,
-                                        originalX = curCutout.destX,
-                                        originalY = curCutout.destY,
-                                        targetX = targetX,
-                                        targetY = targetY,
-                                        width = curCutout.destWidth,
-                                        height = curCutout.destHeight,
-                                        allCutouts = curLayout.mirrorCutouts
-                                    )
+                                        val (clampedX, clampedY) =
+                                            clampCutoutDrag(
+                                                cutoutId = curCutout.id,
+                                                originalX = curCutout.destX,
+                                                originalY = curCutout.destY,
+                                                targetX = targetX,
+                                                targetY = targetY,
+                                                width = curCutout.destWidth,
+                                                height = curCutout.destHeight,
+                                                allCutouts = curLayout.mirrorCutouts,
+                                            )
 
-                                    if (clampedX != targetX || clampedY != targetY) {
-                                        AppLog.d(TAG, "Drag clamped '${curCutout.name}': target=($targetX, $targetY) -> clamped=($clampedX, $clampedY)")
-                                    }
+                                        if (clampedX != targetX || clampedY != targetY) {
+                                            AppLog.d(
+                                                TAG,
+                                                "Drag clamped '${curCutout.name}': target=($targetX, $targetY) -> clamped=($clampedX, $clampedY)",
+                                            )
+                                        }
 
-                                    val updated = curLayout.mirrorCutouts.map {
-                                        if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
-                                    }
-                                    MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                                }
-                            )
-                        }
+                                        val updated =
+                                            curLayout.mirrorCutouts.map {
+                                                if (it.id == curCutout.id) it.copy(destX = clampedX, destY = clampedY) else it
+                                            }
+                                        MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
+                                    },
+                                )
+                            },
                 ) {
                     if (isCircle) {
                         val diameterDp = with(density) { min(destW, destH).toDp() }
                         Box(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .size(diameterDp)
-                                .background(
-                                    color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
-                                    shape = CircleShape
-                                )
-                                .border(
-                                    width = BORDER_WIDTH,
-                                    color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
-                                    shape = CircleShape
-                                )
+                            modifier =
+                                Modifier
+                                    .align(Alignment.Center)
+                                    .size(diameterDp)
+                                    .background(
+                                        color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+                                        shape = CircleShape,
+                                    ).border(
+                                        width = BORDER_WIDTH,
+                                        color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                        shape = CircleShape,
+                                    ),
                         )
                     } else {
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
-                                    shape = RoundedCornerShape(4.dp)
-                                )
-                                .border(
-                                    width = BORDER_WIDTH,
-                                    color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(4.dp)
-                                )
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        color = if (isSelected) colors.accent.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.05f),
+                                        shape = RoundedCornerShape(4.dp),
+                                    ).border(
+                                        width = BORDER_WIDTH,
+                                        color = if (isSelected) colors.accent.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(4.dp),
+                                    ),
                         )
                     }
                     Text(
                         text = cutout.name.ifBlank { "Cutout" },
                         color = if (isSelected) colors.accent else Color.White,
                         style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier =
+                            Modifier
+                                .align(Alignment.Center)
+                                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
 
@@ -292,7 +295,10 @@ fun CutoutLayoutEditor(
                             dragStartSrcY = curCutout.srcY
                             dragStartSrcW = curCutout.srcWidth
                             dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(TAG, "Resize start TOP_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
+                            AppLog.d(
+                                TAG,
+                                "Resize start TOP_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
+                            )
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
@@ -302,48 +308,55 @@ fun CutoutLayoutEditor(
                             val targetWidth = dragStartW - totalDx / screenW
                             val targetHeight = dragStartH - totalDy / screenH
                             val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom = clampCutoutResize(
-                                cutoutId = curCutout.id,
-                                handle = ResizeHandle.TOP_LEFT,
-                                originalX = dragStartX,
-                                originalY = dragStartY,
-                                originalWidth = dragStartW,
-                                originalHeight = dragStartH,
-                                targetX = targetX,
-                                targetY = targetY,
-                                targetWidth = targetWidth,
-                                targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                cropRatio = cropRatio,
-                                screenW = screenW,
-                                screenH = screenH
-                            )
+                            val geom =
+                                clampCutoutResize(
+                                    cutoutId = curCutout.id,
+                                    handle = ResizeHandle.TOP_LEFT,
+                                    originalX = dragStartX,
+                                    originalY = dragStartY,
+                                    originalWidth = dragStartW,
+                                    originalHeight = dragStartH,
+                                    targetX = targetX,
+                                    targetY = targetY,
+                                    targetWidth = targetWidth,
+                                    targetHeight = targetHeight,
+                                    allCutouts = curLayout.mirrorCutouts,
+                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
+                                    cropRatio = cropRatio,
+                                    screenW = screenW,
+                                    screenH = screenH,
+                                )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(TAG, "Resize TOP_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                                AppLog.d(
+                                    TAG,
+                                    "Resize TOP_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
+                                )
                             }
-                            val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) {
-                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(
-                                            next,
-                                            screenW = screenW,
-                                            screenH = screenH,
-                                            srcW = srcWidth,
-                                            srcH = srcHeight,
-                                            baseSrcX = dragStartSrcX,
-                                            baseSrcY = dragStartSrcY,
-                                            baseSrcW = dragStartSrcW,
-                                            baseSrcH = dragStartSrcH
-                                        )
+                            val updated =
+                                curLayout.mirrorCutouts.map {
+                                    if (it.id == curCutout.id) {
+                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                            adjustSourceCropToAspectRatio(
+                                                next,
+                                                screenW = screenW,
+                                                screenH = screenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                                baseSrcX = dragStartSrcX,
+                                                baseSrcY = dragStartSrcY,
+                                                baseSrcW = dragStartSrcW,
+                                                baseSrcH = dragStartSrcH,
+                                            )
+                                        } else {
+                                            next
+                                        }
                                     } else {
-                                        next
+                                        it
                                     }
-                                } else it
-                            }
+                                }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        }
+                        },
                     )
 
                     // Top-Right handle
@@ -366,7 +379,10 @@ fun CutoutLayoutEditor(
                             dragStartSrcY = curCutout.srcY
                             dragStartSrcW = curCutout.srcWidth
                             dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(TAG, "Resize start TOP_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
+                            AppLog.d(
+                                TAG,
+                                "Resize start TOP_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
+                            )
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
@@ -376,48 +392,55 @@ fun CutoutLayoutEditor(
                             val targetWidth = dragStartW + totalDx / screenW
                             val targetHeight = dragStartH - totalDy / screenH
                             val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom = clampCutoutResize(
-                                cutoutId = curCutout.id,
-                                handle = ResizeHandle.TOP_RIGHT,
-                                originalX = dragStartX,
-                                originalY = dragStartY,
-                                originalWidth = dragStartW,
-                                originalHeight = dragStartH,
-                                targetX = targetX,
-                                targetY = targetY,
-                                targetWidth = targetWidth,
-                                targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                cropRatio = cropRatio,
-                                screenW = screenW,
-                                screenH = screenH
-                            )
+                            val geom =
+                                clampCutoutResize(
+                                    cutoutId = curCutout.id,
+                                    handle = ResizeHandle.TOP_RIGHT,
+                                    originalX = dragStartX,
+                                    originalY = dragStartY,
+                                    originalWidth = dragStartW,
+                                    originalHeight = dragStartH,
+                                    targetX = targetX,
+                                    targetY = targetY,
+                                    targetWidth = targetWidth,
+                                    targetHeight = targetHeight,
+                                    allCutouts = curLayout.mirrorCutouts,
+                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
+                                    cropRatio = cropRatio,
+                                    screenW = screenW,
+                                    screenH = screenH,
+                                )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(TAG, "Resize TOP_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                                AppLog.d(
+                                    TAG,
+                                    "Resize TOP_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
+                                )
                             }
-                            val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) {
-                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(
-                                            next,
-                                            screenW = screenW,
-                                            screenH = screenH,
-                                            srcW = srcWidth,
-                                            srcH = srcHeight,
-                                            baseSrcX = dragStartSrcX,
-                                            baseSrcY = dragStartSrcY,
-                                            baseSrcW = dragStartSrcW,
-                                            baseSrcH = dragStartSrcH
-                                        )
+                            val updated =
+                                curLayout.mirrorCutouts.map {
+                                    if (it.id == curCutout.id) {
+                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                            adjustSourceCropToAspectRatio(
+                                                next,
+                                                screenW = screenW,
+                                                screenH = screenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                                baseSrcX = dragStartSrcX,
+                                                baseSrcY = dragStartSrcY,
+                                                baseSrcW = dragStartSrcW,
+                                                baseSrcH = dragStartSrcH,
+                                            )
+                                        } else {
+                                            next
+                                        }
                                     } else {
-                                        next
+                                        it
                                     }
-                                } else it
-                            }
+                                }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        }
+                        },
                     )
 
                     // Bottom-Left handle
@@ -440,7 +463,10 @@ fun CutoutLayoutEditor(
                             dragStartSrcY = curCutout.srcY
                             dragStartSrcW = curCutout.srcWidth
                             dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(TAG, "Resize start BOTTOM_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
+                            AppLog.d(
+                                TAG,
+                                "Resize start BOTTOM_LEFT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
+                            )
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
@@ -450,48 +476,55 @@ fun CutoutLayoutEditor(
                             val targetWidth = dragStartW - totalDx / screenW
                             val targetHeight = dragStartH + totalDy / screenH
                             val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom = clampCutoutResize(
-                                cutoutId = curCutout.id,
-                                handle = ResizeHandle.BOTTOM_LEFT,
-                                originalX = dragStartX,
-                                originalY = dragStartY,
-                                originalWidth = dragStartW,
-                                originalHeight = dragStartH,
-                                targetX = targetX,
-                                targetY = targetY,
-                                targetWidth = targetWidth,
-                                targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                cropRatio = cropRatio,
-                                screenW = screenW,
-                                screenH = screenH
-                            )
+                            val geom =
+                                clampCutoutResize(
+                                    cutoutId = curCutout.id,
+                                    handle = ResizeHandle.BOTTOM_LEFT,
+                                    originalX = dragStartX,
+                                    originalY = dragStartY,
+                                    originalWidth = dragStartW,
+                                    originalHeight = dragStartH,
+                                    targetX = targetX,
+                                    targetY = targetY,
+                                    targetWidth = targetWidth,
+                                    targetHeight = targetHeight,
+                                    allCutouts = curLayout.mirrorCutouts,
+                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
+                                    cropRatio = cropRatio,
+                                    screenW = screenW,
+                                    screenH = screenH,
+                                )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(TAG, "Resize BOTTOM_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                                AppLog.d(
+                                    TAG,
+                                    "Resize BOTTOM_LEFT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
+                                )
                             }
-                            val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) {
-                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(
-                                            next,
-                                            screenW = screenW,
-                                            screenH = screenH,
-                                            srcW = srcWidth,
-                                            srcH = srcHeight,
-                                            baseSrcX = dragStartSrcX,
-                                            baseSrcY = dragStartSrcY,
-                                            baseSrcW = dragStartSrcW,
-                                            baseSrcH = dragStartSrcH
-                                        )
+                            val updated =
+                                curLayout.mirrorCutouts.map {
+                                    if (it.id == curCutout.id) {
+                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                            adjustSourceCropToAspectRatio(
+                                                next,
+                                                screenW = screenW,
+                                                screenH = screenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                                baseSrcX = dragStartSrcX,
+                                                baseSrcY = dragStartSrcY,
+                                                baseSrcW = dragStartSrcW,
+                                                baseSrcH = dragStartSrcH,
+                                            )
+                                        } else {
+                                            next
+                                        }
                                     } else {
-                                        next
+                                        it
                                     }
-                                } else it
-                            }
+                                }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        }
+                        },
                     )
 
                     // Bottom-Right handle
@@ -514,7 +547,10 @@ fun CutoutLayoutEditor(
                             dragStartSrcY = curCutout.srcY
                             dragStartSrcW = curCutout.srcWidth
                             dragStartSrcH = curCutout.srcHeight
-                            AppLog.d(TAG, "Resize start BOTTOM_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})")
+                            AppLog.d(
+                                TAG,
+                                "Resize start BOTTOM_RIGHT cutout '${curCutout.name}' bounds=(${curCutout.destX}, ${curCutout.destY}, ${curCutout.destWidth}, ${curCutout.destHeight})",
+                            )
                         },
                         onDrag = { totalDx, totalDy ->
                             val curLayout = currentLayoutState.value
@@ -524,91 +560,101 @@ fun CutoutLayoutEditor(
                             val targetWidth = dragStartW + totalDx / screenW
                             val targetHeight = dragStartH + totalDy / screenH
                             val cropRatio = (curCutout.srcWidth * srcWidth) / (curCutout.srcHeight * srcHeight)
-                            val geom = clampCutoutResize(
-                                cutoutId = curCutout.id,
-                                handle = ResizeHandle.BOTTOM_RIGHT,
-                                originalX = dragStartX,
-                                originalY = dragStartY,
-                                originalWidth = dragStartW,
-                                originalHeight = dragStartH,
-                                targetX = targetX,
-                                targetY = targetY,
-                                targetWidth = targetWidth,
-                                targetHeight = targetHeight,
-                                allCutouts = curLayout.mirrorCutouts,
-                                keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
-                                cropRatio = cropRatio,
-                                screenW = screenW,
-                                screenH = screenH
-                            )
+                            val geom =
+                                clampCutoutResize(
+                                    cutoutId = curCutout.id,
+                                    handle = ResizeHandle.BOTTOM_RIGHT,
+                                    originalX = dragStartX,
+                                    originalY = dragStartY,
+                                    originalWidth = dragStartW,
+                                    originalHeight = dragStartH,
+                                    targetX = targetX,
+                                    targetY = targetY,
+                                    targetWidth = targetWidth,
+                                    targetHeight = targetHeight,
+                                    allCutouts = curLayout.mirrorCutouts,
+                                    keepAspectRatio = (curCutout.aspectRatioMode == AspectRatioMode.TOP),
+                                    cropRatio = cropRatio,
+                                    screenW = screenW,
+                                    screenH = screenH,
+                                )
                             if (geom.x != targetX || geom.y != targetY || geom.w != targetWidth || geom.h != targetHeight) {
-                                AppLog.d(TAG, "Resize BOTTOM_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})")
+                                AppLog.d(
+                                    TAG,
+                                    "Resize BOTTOM_RIGHT clamped '${curCutout.name}': target=($targetX, $targetY, $targetWidth, $targetHeight) -> clamped=(${geom.x}, ${geom.y}, ${geom.w}, ${geom.h})",
+                                )
                             }
-                            val updated = curLayout.mirrorCutouts.map {
-                                if (it.id == curCutout.id) {
-                                    val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
-                                    if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
-                                        adjustSourceCropToAspectRatio(
-                                            next,
-                                            screenW = screenW,
-                                            screenH = screenH,
-                                            srcW = srcWidth,
-                                            srcH = srcHeight,
-                                            baseSrcX = dragStartSrcX,
-                                            baseSrcY = dragStartSrcY,
-                                            baseSrcW = dragStartSrcW,
-                                            baseSrcH = dragStartSrcH
-                                        )
+                            val updated =
+                                curLayout.mirrorCutouts.map {
+                                    if (it.id == curCutout.id) {
+                                        val next = it.copy(destX = geom.x, destY = geom.y, destWidth = geom.w, destHeight = geom.h)
+                                        if (next.aspectRatioMode == AspectRatioMode.BOTTOM) {
+                                            adjustSourceCropToAspectRatio(
+                                                next,
+                                                screenW = screenW,
+                                                screenH = screenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                                baseSrcX = dragStartSrcX,
+                                                baseSrcY = dragStartSrcY,
+                                                baseSrcW = dragStartSrcW,
+                                                baseSrcH = dragStartSrcH,
+                                            )
+                                        } else {
+                                            next
+                                        }
                                     } else {
-                                        next
+                                        it
                                     }
-                                } else it
-                            }
+                                }
                             MacroPadState.updateLayout(curLayout.copy(mirrorCutouts = updated))
-                        }
+                        },
                     )
                 }
             }
-    }
+        }
 
         val marginPx = with(density) { TOOLBAR_SAFE_MARGIN.toPx() }
 
         if (toolbarOffset == null && toolbarSize != IntSize.Zero) {
-            val initialY = if (overlayAtBottom) {
-                marginPx
-            } else {
-                containerH - toolbarSize.height.toFloat() - marginPx
-            }
+            val initialY =
+                if (overlayAtBottom) {
+                    marginPx
+                } else {
+                    containerH - toolbarSize.height.toFloat() - marginPx
+                }
             toolbarOffset = IntOffset(0, initialY.roundToInt())
         }
 
         val currentOffset = toolbarOffset ?: IntOffset.Zero
-        val clampedOffset = if (toolbarSize != IntSize.Zero) {
-            val maxStartX = ((containerW - toolbarSize.width) / 2f - marginPx).coerceAtLeast(0f)
-            val clampedX = currentOffset.x.toFloat().coerceIn(-maxStartX, maxStartX)
+        val clampedOffset =
+            if (toolbarSize != IntSize.Zero) {
+                val maxStartX = ((containerW - toolbarSize.width) / 2f - marginPx).coerceAtLeast(0f)
+                val clampedX = currentOffset.x.toFloat().coerceIn(-maxStartX, maxStartX)
 
-            val minY = marginPx
-            val maxY = containerH - toolbarSize.height.toFloat() - marginPx
-            val clampedY = currentOffset.y.toFloat().coerceIn(minY, maxY.coerceAtLeast(minY))
+                val minY = marginPx
+                val maxY = containerH - toolbarSize.height.toFloat() - marginPx
+                val clampedY = currentOffset.y.toFloat().coerceIn(minY, maxY.coerceAtLeast(minY))
 
-            IntOffset(clampedX.roundToInt(), clampedY.roundToInt())
-        } else {
-            currentOffset
-        }
+                IntOffset(clampedX.roundToInt(), clampedY.roundToInt())
+            } else {
+                currentOffset
+            }
 
         val currentClampedOffset by rememberUpdatedState(clampedOffset)
 
         var showEditorHelp by remember { mutableStateOf(false) }
 
         Surface(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .onGloballyPositioned { coords -> toolbarSize = coords.size }
-                .offset { clampedOffset }
-                .shadow(TOOLBAR_SHADOW, RoundedCornerShape(TOOLBAR_CORNER)),
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .onGloballyPositioned { coords -> toolbarSize = coords.size }
+                    .offset { clampedOffset }
+                    .shadow(TOOLBAR_SHADOW, RoundedCornerShape(TOOLBAR_CORNER)),
             color = colors.surface.copy(alpha = 0.9f),
             shape = RoundedCornerShape(TOOLBAR_CORNER),
-            border = borderStrokeFor(colors.controlOverlayBorder)
+            border = borderStrokeFor(colors.controlOverlayBorder),
         ) {
             Row(
                 modifier = Modifier.padding(top = 4.dp, bottom = 4.dp, start = 8.dp, end = 4.dp),
@@ -616,14 +662,16 @@ fun CutoutLayoutEditor(
             ) {
                 // Button grid (left side)
                 Column(
-                    modifier = Modifier
-                        .width(IntrinsicSize.Max),
+                    modifier =
+                        Modifier
+                            .width(IntrinsicSize.Max),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.Start
+                    horizontalAlignment = Alignment.Start,
                 ) {
-                    val selectedCutout = selectedCutoutId?.let { cutoutId ->
-                        layout.mirrorCutouts.find { it.id == cutoutId }
-                    }
+                    val selectedCutout =
+                        selectedCutoutId?.let { cutoutId ->
+                            layout.mirrorCutouts.find { it.id == cutoutId }
+                        }
                     val currentMode = selectedCutout?.aspectRatioMode ?: AspectRatioMode.FREE
                     val isCircle = selectedCutout?.shape == CutoutShape.CIRCLE
 
@@ -631,7 +679,7 @@ fun CutoutLayoutEditor(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.Add,
@@ -641,7 +689,12 @@ fun CutoutLayoutEditor(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 if (layout.mirrorCutouts.size >= 10) {
-                                    Toast.makeText(context, context.getString(R.string.mirror_editor_max_cutouts), Toast.LENGTH_SHORT).show()
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            context.getString(R.string.mirror_editor_max_cutouts),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                 } else {
                                     val newId = UUID.randomUUID().toString()
                                     var foundX = 0f
@@ -649,10 +702,11 @@ fun CutoutLayoutEditor(
                                     var collides = true
                                     for (y in listOf(0f, 0.35f, 0.7f)) {
                                         for (x in listOf(0f, 0.35f, 0.7f)) {
-                                            collides = layout.mirrorCutouts.any { other ->
-                                                x < other.destX + other.destWidth && x + 0.3f > other.destX &&
-                                                y < other.destY + other.destHeight && y + 0.3f > other.destY
-                                            }
+                                            collides =
+                                                layout.mirrorCutouts.any { other ->
+                                                    x < other.destX + other.destWidth && x + 0.3f > other.destX &&
+                                                        y < other.destY + other.destHeight && y + 0.3f > other.destY
+                                                }
                                             if (!collides) {
                                                 foundX = x
                                                 foundY = y
@@ -662,27 +716,40 @@ fun CutoutLayoutEditor(
                                         if (!collides) break
                                     }
                                     if (collides) {
-                                        Toast.makeText(context, context.getString(R.string.mirror_editor_no_space), Toast.LENGTH_SHORT).show()
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                context.getString(R.string.mirror_editor_no_space),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
                                     } else {
-                                        val initialCutout = ScreenCutout(
-                                            id = newId,
-                                            name = "Cutout ${layout.mirrorCutouts.size + 1}",
-                                            srcX = 0.25f, srcY = 0.25f, srcWidth = 0.5f, srcHeight = 0.5f,
-                                            destX = foundX, destY = foundY, destWidth = 0.3f, destHeight = 0.3f,
-                                            aspectRatioMode = AspectRatioMode.BOTTOM
-                                        )
-                                        val newCutout = adjustSourceCropToAspectRatio(
-                                            cutout = initialCutout,
-                                            screenW = screenW,
-                                            screenH = screenH,
-                                            srcW = srcWidth,
-                                            srcH = srcHeight
-                                        )
+                                        val initialCutout =
+                                            ScreenCutout(
+                                                id = newId,
+                                                name = "Cutout ${layout.mirrorCutouts.size + 1}",
+                                                srcX = 0.25f,
+                                                srcY = 0.25f,
+                                                srcWidth = 0.5f,
+                                                srcHeight = 0.5f,
+                                                destX = foundX,
+                                                destY = foundY,
+                                                destWidth = 0.3f,
+                                                destHeight = 0.3f,
+                                                aspectRatioMode = AspectRatioMode.BOTTOM,
+                                            )
+                                        val newCutout =
+                                            adjustSourceCropToAspectRatio(
+                                                cutout = initialCutout,
+                                                screenW = screenW,
+                                                screenH = screenH,
+                                                srcW = srcWidth,
+                                                srcH = srcHeight,
+                                            )
                                         MacroPadState.updateLayout(layout.copy(mirrorCutouts = layout.mirrorCutouts + newCutout))
                                         AppStateManager.setSelectedCutoutId(newId)
                                     }
                                 }
-                            }
+                            },
                         )
 
                         ToolbarIconButton(
@@ -693,21 +760,22 @@ fun CutoutLayoutEditor(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setBackgroundSettingsActive(true)
-                            }
+                            },
                         )
 
                         Box(
-                            modifier = Modifier
-                                .size(CLE_HELP_BTN_SIZE)
-                                .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
-                                .clickable { showEditorHelp = true },
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(CLE_HELP_BTN_SIZE)
+                                    .clip(RoundedCornerShape(CLE_HELP_BTN_CORNER))
+                                    .clickable { showEditorHelp = true },
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
                                 contentDescription = stringResource(R.string.help_open_cd),
                                 tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(CLE_HELP_ICON_SIZE)
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE),
                             )
                         }
                     }
@@ -716,89 +784,103 @@ fun CutoutLayoutEditor(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.AspectRatio,
                             contentDescription = stringResource(R.string.mirror_editor_aspect_ratio_mode),
                             color = colors.accent,
-                            label = when (currentMode) {
-                                AspectRatioMode.FREE -> stringResource(R.string.mirror_editor_aspect_ratio_free)
-                                AspectRatioMode.TOP -> stringResource(R.string.mirror_editor_aspect_ratio_top)
-                                AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
-                            },
+                            label =
+                                when (currentMode) {
+                                    AspectRatioMode.FREE -> stringResource(R.string.mirror_editor_aspect_ratio_free)
+                                    AspectRatioMode.TOP -> stringResource(R.string.mirror_editor_aspect_ratio_top)
+                                    AspectRatioMode.BOTTOM -> stringResource(R.string.mirror_editor_aspect_ratio_bottom)
+                                },
                             enabled = selectedCutout != null,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
-                                val updated = layout.mirrorCutouts.map {
-                                    if (it.id == cutoutId) {
-                                        val nextMode = when (it.aspectRatioMode) {
-                                            AspectRatioMode.FREE -> AspectRatioMode.TOP
-                                            AspectRatioMode.TOP -> AspectRatioMode.BOTTOM
-                                            AspectRatioMode.BOTTOM -> AspectRatioMode.FREE
+                                val updated =
+                                    layout.mirrorCutouts.map {
+                                        if (it.id == cutoutId) {
+                                            val nextMode =
+                                                when (it.aspectRatioMode) {
+                                                    AspectRatioMode.FREE -> AspectRatioMode.TOP
+                                                    AspectRatioMode.TOP -> AspectRatioMode.BOTTOM
+                                                    AspectRatioMode.BOTTOM -> AspectRatioMode.FREE
+                                                }
+                                            var updatedCutout =
+                                                it.copy(
+                                                    aspectRatioMode = nextMode,
+                                                    keepAspectRatio = (nextMode == AspectRatioMode.TOP),
+                                                )
+                                            if (nextMode == AspectRatioMode.TOP) {
+                                                val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
+                                                val (newDestW, newDestH) =
+                                                    adjustDestSizeToAspectRatio(
+                                                        destX = updatedCutout.destX,
+                                                        destY = updatedCutout.destY,
+                                                        destWidth = updatedCutout.destWidth,
+                                                        destHeight = updatedCutout.destHeight,
+                                                        cropRatio = cropRatio,
+                                                        screenW = screenW,
+                                                        screenH = screenH,
+                                                    )
+                                                updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
+                                            } else if (nextMode == AspectRatioMode.BOTTOM) {
+                                                updatedCutout =
+                                                    adjustSourceCropToAspectRatio(
+                                                        updatedCutout,
+                                                        screenW = screenW,
+                                                        screenH = screenH,
+                                                        srcW = srcWidth,
+                                                        srcH = srcHeight,
+                                                    )
+                                            }
+                                            updatedCutout
+                                        } else {
+                                            it
                                         }
-                                        var updatedCutout = it.copy(
-                                            aspectRatioMode = nextMode,
-                                            keepAspectRatio = (nextMode == AspectRatioMode.TOP)
-                                        )
-                                        if (nextMode == AspectRatioMode.TOP) {
-                                            val cropRatio = (updatedCutout.srcWidth * srcWidth) / (updatedCutout.srcHeight * srcHeight)
-                                            val (newDestW, newDestH) = adjustDestSizeToAspectRatio(
-                                                destX = updatedCutout.destX,
-                                                destY = updatedCutout.destY,
-                                                destWidth = updatedCutout.destWidth,
-                                                destHeight = updatedCutout.destHeight,
-                                                cropRatio = cropRatio,
-                                                screenW = screenW,
-                                                screenH = screenH
-                                            )
-                                            updatedCutout = updatedCutout.copy(destWidth = newDestW, destHeight = newDestH)
-                                        } else if (nextMode == AspectRatioMode.BOTTOM) {
-                                            updatedCutout = adjustSourceCropToAspectRatio(
-                                                updatedCutout,
-                                                screenW = screenW,
-                                                screenH = screenH,
-                                                srcW = srcWidth,
-                                                srcH = srcHeight
-                                            )
-                                        }
-                                        updatedCutout
-                                    } else it
-                                }
+                                    }
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                            }
+                            },
                         )
 
                         ToolbarIconButton(
                             icon = if (isCircle) Icons.Rounded.Circle else Icons.Rounded.CropSquare,
-                            contentDescription = if (isCircle) {
-                                stringResource(R.string.mirror_editor_shape_circle)
-                            } else {
-                                stringResource(R.string.mirror_editor_shape_rectangle)
-                            },
+                            contentDescription =
+                                if (isCircle) {
+                                    stringResource(R.string.mirror_editor_shape_circle)
+                                } else {
+                                    stringResource(R.string.mirror_editor_shape_rectangle)
+                                },
                             color = colors.accent,
-                            label = if (isCircle) {
-                                stringResource(R.string.mirror_editor_toolbar_shape_circle)
-                            } else {
-                                stringResource(R.string.mirror_editor_toolbar_shape_rect)
-                            },
+                            label =
+                                if (isCircle) {
+                                    stringResource(R.string.mirror_editor_toolbar_shape_circle)
+                                } else {
+                                    stringResource(R.string.mirror_editor_toolbar_shape_rect)
+                                },
                             enabled = selectedCutout != null,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 val cutoutId = selectedCutoutId ?: return@ToolbarIconButton
-                                val updated = layout.mirrorCutouts.map {
-                                    if (it.id == cutoutId) {
-                                        val nextShape = if (it.shape == CutoutShape.CIRCLE) {
-                                            CutoutShape.RECTANGLE
+                                val updated =
+                                    layout.mirrorCutouts.map {
+                                        if (it.id == cutoutId) {
+                                            val nextShape =
+                                                if (it.shape == CutoutShape.CIRCLE) {
+                                                    CutoutShape.RECTANGLE
+                                                } else {
+                                                    CutoutShape.CIRCLE
+                                                }
+                                            it.copy(shape = nextShape)
                                         } else {
-                                            CutoutShape.CIRCLE
+                                            it
                                         }
-                                        it.copy(shape = nextShape)
-                                    } else it
-                                }
+                                    }
                                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
-                            }
+                            },
                         )
 
                         Spacer(Modifier.width(CLE_SPACER_WIDTH))
@@ -808,7 +890,7 @@ fun CutoutLayoutEditor(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.Crop,
@@ -819,7 +901,7 @@ fun CutoutLayoutEditor(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setActiveCropCutoutId(selectedCutoutId)
-                            }
+                            },
                         )
 
                         ToolbarIconButton(
@@ -834,15 +916,17 @@ fun CutoutLayoutEditor(
                                 val remaining = layout.mirrorCutouts.filter { it.id != targetId }
                                 val wasFollowing = layout.mirrorCutouts.find { it.id == targetId }?.followTouch == true
                                 val newFollowActive = if (wasFollowing) false else layout.mirrorFollowActive
-                                MacroPadState.updateLayout(layout.copy(
-                                    mirrorCutouts = remaining,
-                                    mirrorFollowActive = newFollowActive
-                                ))
+                                MacroPadState.updateLayout(
+                                    layout.copy(
+                                        mirrorCutouts = remaining,
+                                        mirrorFollowActive = newFollowActive,
+                                    ),
+                                )
                                 if (wasFollowing) {
                                     ScreenCaptureManager.setFollowActive(false, persist = false)
                                 }
                                 AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
-                            }
+                            },
                         )
 
                         Spacer(Modifier.width(CLE_SPACER_WIDTH))
@@ -852,7 +936,7 @@ fun CutoutLayoutEditor(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ToolbarIconButton(
                             icon = Icons.Rounded.Check,
@@ -862,7 +946,7 @@ fun CutoutLayoutEditor(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 AppStateManager.setViewportEditActive(false)
-                            }
+                            },
                         )
 
                         ToolbarIconButton(
@@ -872,34 +956,37 @@ fun CutoutLayoutEditor(
                             label = stringResource(R.string.mirror_editor_toolbar_cancel),
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                val updatedLayout = layout.copy(
-                                    mirrorCutouts = initialCutouts
-                                )
+                                val updatedLayout =
+                                    layout.copy(
+                                        mirrorCutouts = initialCutouts,
+                                    )
                                 MacroPadState.updateLayout(updatedLayout)
                                 AppStateManager.setViewportEditActive(false)
-                            }
+                            },
                         )
 
                         Box(
-                            modifier = Modifier
-                                .size(CLE_HELP_BTN_SIZE)
-                                .pointerInput(Unit) {
-                                    detectDragGestures { change, dragAmount ->
-                                        change.consume()
-                                        val cur = currentClampedOffset
-                                        toolbarOffset = IntOffset(
-                                            x = cur.x + dragAmount.x.roundToInt(),
-                                            y = cur.y + dragAmount.y.roundToInt()
-                                        )
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(CLE_HELP_BTN_SIZE)
+                                    .pointerInput(Unit) {
+                                        detectDragGestures { change, dragAmount ->
+                                            change.consume()
+                                            val cur = currentClampedOffset
+                                            toolbarOffset =
+                                                IntOffset(
+                                                    x = cur.x + dragAmount.x.roundToInt(),
+                                                    y = cur.y + dragAmount.y.roundToInt(),
+                                                )
+                                        }
+                                    },
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.DragIndicator,
                                 contentDescription = stringResource(R.string.cd_drag_toolbar),
                                 tint = colors.onSurfaceSecondary,
-                                modifier = Modifier.size(CLE_HELP_ICON_SIZE)
+                                modifier = Modifier.size(CLE_HELP_ICON_SIZE),
                             )
                         }
                     }
@@ -915,7 +1002,10 @@ fun CutoutLayoutEditor(
 }
 
 @Composable
-private fun CutoutLayoutEditorHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun CutoutLayoutEditorHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_mirror_editor_title),
@@ -978,37 +1068,39 @@ private fun ResizeHandleView(
     touchHeight: Dp,
     color: Color,
     onDragStart: () -> Unit,
-    onDrag: (Float, Float) -> Unit
+    onDrag: (Float, Float) -> Unit,
 ) {
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDrag by rememberUpdatedState(onDrag)
     Box(
-        modifier = Modifier
-            .offset { offset }
-            .size(width = touchWidth, height = touchHeight)
-            .pointerInput(Unit) {
-                var accumulatedX = 0f
-                var accumulatedY = 0f
-                detectDragGestures(
-                    onDragStart = {
-                        accumulatedX = 0f
-                        accumulatedY = 0f
-                        currentOnDragStart()
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        accumulatedX += dragAmount.x
-                        accumulatedY += dragAmount.y
-                        currentOnDrag(accumulatedX, accumulatedY)
-                    }
-                )
-            },
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .offset { offset }
+                .size(width = touchWidth, height = touchHeight)
+                .pointerInput(Unit) {
+                    var accumulatedX = 0f
+                    var accumulatedY = 0f
+                    detectDragGestures(
+                        onDragStart = {
+                            accumulatedX = 0f
+                            accumulatedY = 0f
+                            currentOnDragStart()
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            accumulatedX += dragAmount.x
+                            accumulatedY += dragAmount.y
+                            currentOnDrag(accumulatedX, accumulatedY)
+                        },
+                    )
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(HANDLE_SIZE)
-                .background(color.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+            modifier =
+                Modifier
+                    .size(HANDLE_SIZE)
+                    .background(color.copy(alpha = 0.5f), RoundedCornerShape(4.dp)),
         )
     }
 }
@@ -1018,24 +1110,25 @@ private fun ToolbarButton(
     text: String,
     color: Color,
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = color,
-            disabledContainerColor = colors.onSurfaceSecondary.copy(alpha = 0.1f)
-        ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = color,
+                disabledContainerColor = colors.onSurfaceSecondary.copy(alpha = 0.1f),
+            ),
         shape = RoundedCornerShape(4.dp),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-        modifier = Modifier.height(32.dp)
+        modifier = Modifier.height(32.dp),
     ) {
         Text(
             text = text,
             color = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall,
         )
     }
 }
@@ -1048,35 +1141,36 @@ private fun ToolbarIconButton(
     enabled: Boolean = true,
     label: String? = null,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     Button(
         onClick = onClick,
         enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = color,
-            disabledContainerColor = colors.onSurfaceSecondary.copy(alpha = 0.1f)
-        ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = color,
+                disabledContainerColor = colors.onSurfaceSecondary.copy(alpha = 0.1f),
+            ),
         shape = RoundedCornerShape(4.dp),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-        modifier = modifier.height(32.dp)
+        modifier = modifier.height(32.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
             )
             if (label != null) {
                 Text(
                     text = label,
                     color = if (enabled) colors.onAccent else colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall,
                 )
             }
         }
@@ -1096,7 +1190,7 @@ private fun adjustSourceCropToAspectRatio(
     baseSrcX: Float = cutout.srcX,
     baseSrcY: Float = cutout.srcY,
     baseSrcW: Float = cutout.srcWidth,
-    baseSrcH: Float = cutout.srcHeight
+    baseSrcH: Float = cutout.srcHeight,
 ): ScreenCutout {
     val targetRatio = (cutout.destWidth * screenW) / (cutout.destHeight * screenH)
     val factor = targetRatio * (srcH / srcW)
@@ -1122,6 +1216,6 @@ private fun adjustSourceCropToAspectRatio(
         srcX = newX,
         srcY = newY,
         srcWidth = newW,
-        srcHeight = newH
+        srcHeight = newH,
     )
 }

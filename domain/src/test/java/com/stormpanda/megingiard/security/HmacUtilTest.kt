@@ -20,7 +20,6 @@ import org.junit.Test
  *    any divergence causes the Privd socket handshake to fail at boot.
  */
 class HmacUtilTest {
-
     // -------------------------------------------------------------------------
     // hexToBytes — decoding
     // -------------------------------------------------------------------------
@@ -109,8 +108,8 @@ class HmacUtilTest {
      */
     @Test
     fun computeHmacHex_rfc4231TestCase1() {
-        val key   = ByteArray(20) { 0x0b.toByte() }
-        val data  = "Hi There".toByteArray(Charsets.US_ASCII)
+        val key = ByteArray(20) { 0x0b.toByte() }
+        val data = "Hi There".toByteArray(Charsets.US_ASCII)
         val result = HmacUtil.computeHmacHex(key, data)
         assertEquals(
             "B0344C61D8DB38535CA8AFCEAF0BF12B881DC200C9833DA726E9376C2E32CFF7",
@@ -126,8 +125,8 @@ class HmacUtilTest {
      */
     @Test
     fun computeHmacHex_rfc4231TestCase2() {
-        val key   = "Jefe".toByteArray(Charsets.US_ASCII)
-        val data  = "what do ya want for nothing?".toByteArray(Charsets.US_ASCII)
+        val key = "Jefe".toByteArray(Charsets.US_ASCII)
+        val data = "what do ya want for nothing?".toByteArray(Charsets.US_ASCII)
         val result = HmacUtil.computeHmacHex(key, data)
         assertEquals(
             "5BDCC146BF60754E6A042426089575C75A003F089D2739839DEC58B964EC3843",
@@ -143,8 +142,8 @@ class HmacUtilTest {
      */
     @Test
     fun computeHmacHex_rfc4231TestCase3() {
-        val key   = ByteArray(20) { 0xAA.toByte() }
-        val data  = ByteArray(50) { 0xDD.toByte() }
+        val key = ByteArray(20) { 0xAA.toByte() }
+        val data = ByteArray(50) { 0xDD.toByte() }
         val result = HmacUtil.computeHmacHex(key, data)
         assertEquals(
             "773EA91E36800E46854DB8EBD09181A72959098B3EF8C122D9635514CED565FE",
@@ -159,8 +158,8 @@ class HmacUtilTest {
     /** HMAC-SHA256 is always 32 bytes → 64 uppercase hex chars. */
     @Test
     fun computeHmacHex_outputIs64UppercaseHexChars() {
-        val key   = ByteArray(32)  // all zeros (32-byte production key size)
-        val nonce = ByteArray(16)  // all zeros (16-byte production nonce size)
+        val key = ByteArray(32) // all zeros (32-byte production key size)
+        val nonce = ByteArray(16) // all zeros (16-byte production nonce size)
         val result = HmacUtil.computeHmacHex(key, nonce)
         assertEquals(64, result.length)
         assertTrue(
@@ -175,7 +174,7 @@ class HmacUtilTest {
      */
     @Test
     fun computeHmacHex_differentNonces_produceDifferentOutputs() {
-        val key    = ByteArray(32) { (it + 1).toByte() }
+        val key = ByteArray(32) { (it + 1).toByte() }
         val nonce1 = ByteArray(16) { it.toByte() }
         val nonce2 = ByteArray(16) { (it + 1).toByte() }
         assertTrue(
@@ -191,8 +190,8 @@ class HmacUtilTest {
     @Test
     fun computeHmacHex_differentKeys_produceDifferentOutputs() {
         val nonce = ByteArray(16) { 0x42.toByte() }
-        val key1  = ByteArray(32) { 0x00.toByte() }
-        val key2  = ByteArray(32) { 0x01.toByte() }
+        val key1 = ByteArray(32) { 0x00.toByte() }
+        val key2 = ByteArray(32) { 0x01.toByte() }
         assertTrue(
             "Different keys must produce different HMACs",
             HmacUtil.computeHmacHex(key1, nonce) != HmacUtil.computeHmacHex(key2, nonce),
@@ -202,7 +201,7 @@ class HmacUtilTest {
     /** HMAC must be deterministic for the same key+nonce pair. */
     @Test
     fun computeHmacHex_sameInputs_alwaysSameOutput() {
-        val key   = ByteArray(32) { (it * 3).toByte() }
+        val key = ByteArray(32) { (it * 3).toByte() }
         val nonce = ByteArray(16) { (it + 5).toByte() }
         assertEquals(
             HmacUtil.computeHmacHex(key, nonce),

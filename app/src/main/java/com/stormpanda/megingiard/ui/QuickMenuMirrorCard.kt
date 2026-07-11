@@ -53,50 +53,51 @@ internal fun MirrorControlCard(
     onTakeScreenshot: () -> Unit,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
-            .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
-            .clip(RoundedCornerShape(PM_PANEL_CORNER))
-            .background(colors.controlOverlay)
-            .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_PANEL_CORNER))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { } // absorb clicks — prevent scrim dismiss
-            .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
+                .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
+                .clip(RoundedCornerShape(PM_PANEL_CORNER))
+                .background(colors.controlOverlay)
+                .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_PANEL_CORNER))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { } // absorb clicks — prevent scrim dismiss
+                .padding(horizontal = PM_CONTENT_PADDING, vertical = PM_MIRROR_CARD_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Screen Mirroring button (left)
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .background(if (isViewportEditActive) colors.accent.copy(alpha = 0.15f) else Color.Transparent)
-                .border(
-                    width = PM_BORDER_WIDTH,
-                    color = if (isViewportEditActive) {
-                        colors.accent
-                    } else {
-                        if (isCapturing) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
-                    },
-                    shape = RoundedCornerShape(PM_ACTION_BUTTON_CORNER)
-                )
-                .clickable(
-                    enabled = isCapturing,
-                    onClick = onToggleViewportEdit
-                )
-                .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                    .background(if (isViewportEditActive) colors.accent.copy(alpha = 0.15f) else Color.Transparent)
+                    .border(
+                        width = PM_BORDER_WIDTH,
+                        color =
+                            if (isViewportEditActive) {
+                                colors.accent
+                            } else {
+                                if (isCapturing) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
+                            },
+                        shape = RoundedCornerShape(PM_ACTION_BUTTON_CORNER),
+                    ).clickable(
+                        enabled = isCapturing,
+                        onClick = onToggleViewportEdit,
+                    ).padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 imageVector = Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.cd_viewport_edit),
                 tint = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
-                modifier = Modifier.size(PM_SCREEN_MIRRORING_ICON_SIZE)
+                modifier = Modifier.size(PM_SCREEN_MIRRORING_ICON_SIZE),
             )
             Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
             Text(
-                text  = stringResource(R.string.quick_menu_screen_mirroring),
+                text = stringResource(R.string.quick_menu_screen_mirroring),
                 color = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -128,12 +129,14 @@ internal fun MirrorControlCard(
         }
         MirrorControlIconButton(
             icon = if (isFrozen) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
-            contentDescription = stringResource(
-                if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze,
-            ),
-            label = stringResource(
-                if (isFrozen) R.string.mirror_control_label_unfreeze else R.string.mirror_control_label_freeze,
-            ),
+            contentDescription =
+                stringResource(
+                    if (isFrozen) R.string.cd_unfreeze else R.string.cd_freeze,
+                ),
+            label =
+                stringResource(
+                    if (isFrozen) R.string.mirror_control_label_unfreeze else R.string.mirror_control_label_freeze,
+                ),
             tint = if (isFrozen) colors.accent else colors.onControlOverlay,
             enabled = isCapturing,
             colors = colors,

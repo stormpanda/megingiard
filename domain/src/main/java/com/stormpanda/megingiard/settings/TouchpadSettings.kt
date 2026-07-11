@@ -36,7 +36,10 @@ object TouchpadSettings {
     private val _touchpadTwoFingerTap = MutableStateFlow(true)
     val touchpadTwoFingerTap: StateFlow<Boolean> = _touchpadTwoFingerTap.asStateFlow()
 
-    internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
+    internal fun init(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope,
+    ) {
         this.dataStore = dataStore
         this.scope = scope
     }

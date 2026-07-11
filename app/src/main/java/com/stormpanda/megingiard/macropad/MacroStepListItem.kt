@@ -36,48 +36,76 @@ import kotlin.math.sqrt
 private const val TAG = "MacroStepListItem"
 private const val MTE_PADDING = 16
 
-private fun dirArrow(dirX: Int, dirY: Int): String = when {
-    dirX > 0 && dirY < 0 -> "↗"
-    dirX > 0 && dirY == 0 -> "→"
-    dirX > 0 && dirY > 0 -> "↘"
-    dirX == 0 && dirY < 0 -> "↑"
-    dirX == 0 && dirY > 0 -> "↓"
-    dirX < 0 && dirY < 0 -> "↖"
-    dirX < 0 && dirY == 0 -> "←"
-    dirX < 0 && dirY > 0 -> "↙"
-    else -> "·"
-}
+private fun dirArrow(
+    dirX: Int,
+    dirY: Int,
+): String =
+    when {
+        dirX > 0 && dirY < 0 -> "↗"
+        dirX > 0 && dirY == 0 -> "→"
+        dirX > 0 && dirY > 0 -> "↘"
+        dirX == 0 && dirY < 0 -> "↑"
+        dirX == 0 && dirY > 0 -> "↓"
+        dirX < 0 && dirY < 0 -> "↖"
+        dirX < 0 && dirY == 0 -> "←"
+        dirX < 0 && dirY > 0 -> "↙"
+        else -> "·"
+    }
 
-private fun joyDirArrow(x: Float, y: Float): String {
+private fun joyDirArrow(
+    x: Float,
+    y: Float,
+): String {
     val mag = sqrt(x * x + y * y)
     if (mag < 0.1f) return "·"
-    val nx = when {
-        x / mag > 0.5f -> 1
-        x / mag < -0.5f -> -1
-        else -> 0
-    }
-    val ny = when {
-        y / mag > 0.5f -> 1
-        y / mag < -0.5f -> -1
-        else -> 0
-    }
+    val nx =
+        when {
+            x / mag > 0.5f -> 1
+            x / mag < -0.5f -> -1
+            else -> 0
+        }
+    val ny =
+        when {
+            y / mag > 0.5f -> 1
+            y / mag < -0.5f -> -1
+            else -> 0
+        }
     return dirArrow(nx, ny)
 }
 
-internal fun shortStepLabel(step: MacroStep, swapFaceButtons: Boolean, tapLabel: String, gestureLabel: String): String = when (step) {
-    is MacroStep.GamepadButtonTap -> gamepadCodeDisplayShortLabel(step.btnCode, swapFaceButtons)
-    is MacroStep.JoystickMove -> {
-        val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
-        "$stick${joyDirArrow(step.x, step.y)}"
+internal fun shortStepLabel(
+    step: MacroStep,
+    swapFaceButtons: Boolean,
+    tapLabel: String,
+    gestureLabel: String,
+): String =
+    when (step) {
+        is MacroStep.GamepadButtonTap -> {
+            gamepadCodeDisplayShortLabel(step.btnCode, swapFaceButtons)
+        }
+
+        is MacroStep.JoystickMove -> {
+            val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
+            "$stick${joyDirArrow(step.x, step.y)}"
+        }
+
+        is MacroStep.DPadTap -> {
+            dirArrow(step.dirX, step.dirY)
+        }
+
+        is MacroStep.TouchTap -> {
+            tapLabel
+        }
+
+        is MacroStep.JoystickPath -> {
+            val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
+            "$stick↻"
+        }
+
+        is MacroStep.TouchPath -> {
+            gestureLabel
+        }
     }
-    is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
-    is MacroStep.TouchTap -> tapLabel
-    is MacroStep.JoystickPath -> {
-        val stick = if (step.stick == JoystickStick.LEFT) "L" else "R"
-        "$stick↻"
-    }
-    is MacroStep.TouchPath -> gestureLabel
-}
 
 internal fun stepColor(
     step: MacroStep,
@@ -85,14 +113,15 @@ internal fun stepColor(
     joystickColor: Color,
     dpadColor: Color,
     touchColor: Color,
-): Color = when (step) {
-    is MacroStep.GamepadButtonTap -> accentColor
-    is MacroStep.JoystickMove -> joystickColor
-    is MacroStep.DPadTap -> dpadColor
-    is MacroStep.TouchTap -> touchColor
-    is MacroStep.JoystickPath -> joystickColor
-    is MacroStep.TouchPath -> touchColor
-}
+): Color =
+    when (step) {
+        is MacroStep.GamepadButtonTap -> accentColor
+        is MacroStep.JoystickMove -> joystickColor
+        is MacroStep.DPadTap -> dpadColor
+        is MacroStep.TouchTap -> touchColor
+        is MacroStep.JoystickPath -> joystickColor
+        is MacroStep.TouchPath -> touchColor
+    }
 
 @Composable
 internal fun StepListItem(
@@ -107,44 +136,61 @@ internal fun StepListItem(
     val joystickColor = colors.actionColorGamepad
     val dpadColor = colors.actionColorSystem
     val touchColor = MaterialTheme.colorScheme.tertiary
-    val typeLabel = stringResource(
+    val typeLabel =
+        stringResource(
+            when (step) {
+                is MacroStep.GamepadButtonTap -> R.string.macropad_macro_step_type_gamepad
+                is MacroStep.JoystickMove -> R.string.macropad_macro_step_type_joystick
+                is MacroStep.DPadTap -> R.string.macropad_macro_step_type_dpad
+                is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
+                is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
+                is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
+            },
+        )
+    val description =
         when (step) {
-            is MacroStep.GamepadButtonTap -> R.string.macropad_macro_step_type_gamepad
-            is MacroStep.JoystickMove -> R.string.macropad_macro_step_type_joystick
-            is MacroStep.DPadTap -> R.string.macropad_macro_step_type_dpad
-            is MacroStep.TouchTap -> R.string.macropad_macro_step_type_touch
-            is MacroStep.JoystickPath -> R.string.macropad_macro_step_type_joystick_path
-            is MacroStep.TouchPath -> R.string.macropad_macro_step_type_touch_path
-        },
-    )
-    val description = when (step) {
-        is MacroStep.GamepadButtonTap -> gamepadCodeDisplayLabel(step.btnCode, swapFaceButtons)
-        is MacroStep.JoystickMove -> {
-            val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
-            "$stickLabel ${joyDirArrow(step.x, step.y)}"
+            is MacroStep.GamepadButtonTap -> {
+                gamepadCodeDisplayLabel(step.btnCode, swapFaceButtons)
+            }
+
+            is MacroStep.JoystickMove -> {
+                val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
+                "$stickLabel ${joyDirArrow(step.x, step.y)}"
+            }
+
+            is MacroStep.DPadTap -> {
+                dirArrow(step.dirX, step.dirY)
+            }
+
+            is MacroStep.TouchTap -> {
+                "${"%.2f".format(step.normX)}, ${"%.2f".format(step.normY)}"
+            }
+
+            is MacroStep.JoystickPath -> {
+                val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
+                stringResource(R.string.macropad_macro_step_joystick_path_short, stickLabel, step.samples.size)
+            }
+
+            is MacroStep.TouchPath -> {
+                stringResource(R.string.macropad_macro_step_short_samples_count, step.samples.size)
+            }
         }
-        is MacroStep.DPadTap -> dirArrow(step.dirX, step.dirY)
-        is MacroStep.TouchTap -> "${"%.2f".format(step.normX)}, ${"%.2f".format(step.normY)}"
-        is MacroStep.JoystickPath -> {
-            val stickLabel = if (step.stick == JoystickStick.LEFT) "L" else "R"
-            stringResource(R.string.macropad_macro_step_joystick_path_short, stickLabel, step.samples.size)
-        }
-        is MacroStep.TouchPath -> stringResource(R.string.macropad_macro_step_short_samples_count, step.samples.size)
-    }
     val indicatorColor = stepColor(step, accentColor, joystickColor, dpadColor, touchColor)
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onEdit)
-            .padding(start = MTE_PADDING.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onEdit)
+                .padding(start = MTE_PADDING.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(12.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(indicatorColor),
+            modifier =
+                Modifier
+                    .size(12.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(indicatorColor),
         )
         Spacer(Modifier.width(12.dp))
 

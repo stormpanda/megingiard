@@ -12,7 +12,7 @@ fun isPrivdMirrorConnecting(
     hasCreds: Boolean,
     showPromptPref: Boolean,
     dismissed: Boolean,
-    isManuallyDisconnected: Boolean
+    isManuallyDisconnected: Boolean,
 ): Boolean {
     val autoConnectPending = hasCreds && !isManuallyDisconnected
     val promptShouldShow = privdState == PrivdState.FAILED && showPromptPref && hasCreds && !dismissed
@@ -69,6 +69,7 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
             !state.promptInFlight &&
             !state.privdMirrorConnecting &&
             !state.tutorialsActive -> MirrorRuntimeAction.START
+
         else -> MirrorRuntimeAction.NONE
     }
 }

@@ -19,7 +19,6 @@ import org.junit.Test
  * is the only non-trivial part and is fully covered below.
  */
 class BinaryIntegrityTest {
-
     // -------------------------------------------------------------------------
     // sha256Hex — NIST FIPS 180-4 known-answer test vectors
     // -------------------------------------------------------------------------
@@ -75,7 +74,7 @@ class BinaryIntegrityTest {
     @Test
     fun sha256Hex_singleBitFlip_producesDistinctHash() {
         val original = ByteArray(64) { it.toByte() }
-        val flipped  = original.copyOf().also { it[0] = (it[0].toInt() xor 0x01).toByte() }
+        val flipped = original.copyOf().also { it[0] = (it[0].toInt() xor 0x01).toByte() }
         assertFalse(
             "Single-bit flip must change the SHA-256 digest",
             BinaryIntegrity.sha256Hex(original) == BinaryIntegrity.sha256Hex(flipped),

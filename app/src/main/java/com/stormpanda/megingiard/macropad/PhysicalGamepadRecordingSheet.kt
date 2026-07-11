@@ -17,7 +17,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import com.stormpanda.megingiard.ui.AppDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -26,11 +25,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 
@@ -67,26 +67,29 @@ internal fun PhysicalGamepadRecordingSheet(
     val recording = state as? GamepadRecordingState.Recording
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground.copy(alpha = 0.96f))
-            .blockPointerEvents(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground.copy(alpha = 0.96f))
+                .blockPointerEvents(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(PR_SHEET_PADDING.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(PR_SHEET_PADDING.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(PR_SECTION_SPACING.dp),
         ) {
-            /* ── Recording indicator ─────────────────────────────────────── */
+            // ── Recording indicator ───────────────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    modifier = Modifier
-                        .size(PR_DOT_SIZE.dp)
-                        .clip(CircleShape)
-                        .background(colors.error),
+                    modifier =
+                        Modifier
+                            .size(PR_DOT_SIZE.dp)
+                            .clip(CircleShape)
+                            .background(colors.error),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -105,7 +108,7 @@ internal fun PhysicalGamepadRecordingSheet(
 
             AppDivider()
 
-            /* ── Live controller state ───────────────────────────────────── */
+            // ── Live controller state ─────────────────────────────────────
             if (recording != null) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -113,47 +116,51 @@ internal fun PhysicalGamepadRecordingSheet(
                 ) {
                     if (recording.pressedButtons.isNotEmpty()) {
                         Text(
-                            text = stringResource(
-                                R.string.privd_recording_physical_pressed,
-                                recording.pressedButtons
-                                    .mapNotNull { code ->
-                                        gamepadCodeDisplayLabel(code, swapFaceButtons, context)
-                                            .takeIf { it.isNotBlank() }
-                                    }
-                                    .joinToString(" + "),
-                            ),
+                            text =
+                                stringResource(
+                                    R.string.privd_recording_physical_pressed,
+                                    recording.pressedButtons
+                                        .mapNotNull { code ->
+                                            gamepadCodeDisplayLabel(code, swapFaceButtons, context)
+                                                .takeIf { it.isNotBlank() }
+                                        }.joinToString(" + "),
+                                ),
                             color = colors.onSurface,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
 
-                    val leftMag = kotlin.math.sqrt(
-                        recording.leftStickX * recording.leftStickX +
-                            recording.leftStickY * recording.leftStickY,
-                    )
-                    val rightMag = kotlin.math.sqrt(
-                        recording.rightStickX * recording.rightStickX +
-                            recording.rightStickY * recording.rightStickY,
-                    )
+                    val leftMag =
+                        kotlin.math.sqrt(
+                            recording.leftStickX * recording.leftStickX +
+                                recording.leftStickY * recording.leftStickY,
+                        )
+                    val rightMag =
+                        kotlin.math.sqrt(
+                            recording.rightStickX * recording.rightStickX +
+                                recording.rightStickY * recording.rightStickY,
+                        )
 
                     if (leftMag > 0.05f) {
                         Text(
-                            text = stringResource(
-                                R.string.privd_recording_physical_stick_left,
-                                "%.2f".format(recording.leftStickX),
-                                "%.2f".format(recording.leftStickY),
-                            ),
+                            text =
+                                stringResource(
+                                    R.string.privd_recording_physical_stick_left,
+                                    "%.2f".format(recording.leftStickX),
+                                    "%.2f".format(recording.leftStickY),
+                                ),
                             color = colors.actionColorGamepad,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     if (rightMag > 0.05f) {
                         Text(
-                            text = stringResource(
-                                R.string.privd_recording_physical_stick_right,
-                                "%.2f".format(recording.rightStickX),
-                                "%.2f".format(recording.rightStickY),
-                            ),
+                            text =
+                                stringResource(
+                                    R.string.privd_recording_physical_stick_right,
+                                    "%.2f".format(recording.rightStickX),
+                                    "%.2f".format(recording.rightStickY),
+                                ),
                             color = colors.actionColorGamepad,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -163,7 +170,7 @@ internal fun PhysicalGamepadRecordingSheet(
                 AppDivider()
             }
 
-            /* ── Actions ─────────────────────────────────────────────────── */
+            // ── Actions ───────────────────────────────────────────────────
             Row(horizontalArrangement = Arrangement.spacedBy(PR_BTN_SPACING.dp)) {
                 OutlinedButton(onClick = onCancel) {
                     Text(

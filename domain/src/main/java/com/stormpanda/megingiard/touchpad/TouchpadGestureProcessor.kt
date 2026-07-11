@@ -42,10 +42,16 @@ class TouchpadGestureProcessor(
     sensitivity: Float = 1.0f,
 ) {
     // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
-    private val sensitivity: Float = if (sensitivity.isFinite() && sensitivity > 0f)
-        sensitivity.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX) else 1.0f
+    private val sensitivity: Float =
+        if (sensitivity.isFinite() && sensitivity > 0f) {
+            sensitivity.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
+        } else {
+            1.0f
+        }
+
     // ── Touch mode state ────────────────────────────────────────────────────
     private val _touchPos = MutableStateFlow<Pair<Float, Float>?>(null)
+
     /** Current finger position (touch mode only), null when not touching. */
     val touchPos: StateFlow<Pair<Float, Float>?> = _touchPos.asStateFlow()
 
@@ -165,7 +171,8 @@ class TouchpadGestureProcessor(
             val pressTime = pressTimes.remove(pointerId)
             downPositions.remove(pointerId)
             val disqualified = movedTooFar.remove(pointerId)
-            val isTap = pressTime != null &&
+            val isTap =
+                pressTime != null &&
                     !disqualified &&
                     (System.currentTimeMillis() - pressTime) < TP_TAP_TIMEOUT_MS
             if (pointerId == primaryPointer) {
@@ -182,15 +189,20 @@ class TouchpadGestureProcessor(
                 movedTooFar.clear()
                 primaryPointer = null
                 when {
-                    tapCount == 1 && tapToClick -> scope.launch {
-                        MouseInjector.leftDown()
-                        delay(TP_CLICK_DURATION_MS)
-                        MouseInjector.leftUp()
+                    tapCount == 1 && tapToClick -> {
+                        scope.launch {
+                            MouseInjector.leftDown()
+                            delay(TP_CLICK_DURATION_MS)
+                            MouseInjector.leftUp()
+                        }
                     }
-                    tapCount >= 2 && twoFingerTap -> scope.launch {
-                        MouseInjector.rightDown()
-                        delay(TP_CLICK_DURATION_MS)
-                        MouseInjector.rightUp()
+
+                    tapCount >= 2 && twoFingerTap -> {
+                        scope.launch {
+                            MouseInjector.rightDown()
+                            delay(TP_CLICK_DURATION_MS)
+                            MouseInjector.rightUp()
+                        }
                     }
                 }
             }

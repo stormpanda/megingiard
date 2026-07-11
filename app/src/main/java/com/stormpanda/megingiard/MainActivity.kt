@@ -6,24 +6,20 @@ import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.os.Bundle
+import android.graphics.BitmapFactory
+import android.media.MediaScannerConnection
 import android.os.Build
+import android.os.Bundle
+import android.os.Environment
 import android.os.LocaleList
 import android.os.Process
 import android.view.Display
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import android.graphics.BitmapFactory
-import android.media.MediaScannerConnection
-import android.os.Environment
-import android.widget.Toast
-import java.io.File
-import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -36,27 +32,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -66,17 +64,15 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.CropSelectorActivity
 import com.stormpanda.megingiard.mirror.DisplayDetector
-import com.stormpanda.megingiard.mirror.MirrorStrategy
 import com.stormpanda.megingiard.mirror.MirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.MirrorRuntimePolicyState
+import com.stormpanda.megingiard.mirror.MirrorStrategy
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
@@ -92,24 +88,27 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
-
     // ── File picker launchers ─────────────────────────────────────────────────
     // Registered here because ActivityResultLaunchers require an Activity context.
     // GlobalSettingsScreen (which may be inside MirrorPresentation) posts requests
@@ -118,75 +117,78 @@ class MainActivity : ComponentActivity() {
     private var pendingExportKind: ConfigManager.ExportKind? = null
     private var pendingInAppImportMode = ConfigManager.ImportMode.BACKUP_RESTORE
 
-    private val createDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE)
-    ) { uri ->
-        AppStateManager.setFilePickerOpen(false)
-        val kind = pendingExportKind ?: return@registerForActivityResult
-        pendingExportKind = null
-        if (uri == null) return@registerForActivityResult
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
-                val export = when (kind) {
-                    is ConfigManager.ExportKind.Backup -> ConfigManager.buildExport(kind.metadata)
-                    is ConfigManager.ExportKind.ProfileShare -> ConfigManager.buildProfileExport(kind.metadata, kind.profile)
-                }
-                ConfigManager.writeToUri(this@MainActivity, uri, export)
-            }
-                .onSuccess {
+    private val createDocumentLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE),
+        ) { uri ->
+            AppStateManager.setFilePickerOpen(false)
+            val kind = pendingExportKind ?: return@registerForActivityResult
+            pendingExportKind = null
+            if (uri == null) return@registerForActivityResult
+            lifecycleScope.launch(Dispatchers.IO) {
+                runCatching {
+                    val export =
+                        when (kind) {
+                            is ConfigManager.ExportKind.Backup -> ConfigManager.buildExport(kind.metadata)
+                            is ConfigManager.ExportKind.ProfileShare -> ConfigManager.buildProfileExport(kind.metadata, kind.profile)
+                        }
+                    ConfigManager.writeToUri(this@MainActivity, uri, export)
+                }.onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
                     ConfigManager.setExportResult(ConfigManager.ExportResult.Success)
-                }
-                .onFailure { e ->
+                }.onFailure { e ->
                     AppLog.e(TAG, "Export failed", e)
                     ConfigManager.setExportResult(ConfigManager.ExportResult.Failure(e.message))
                 }
-        }
-    }
-
-    private val openDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        AppStateManager.setFilePickerOpen(false)
-        if (uri == null) {
-            return@registerForActivityResult
-        }
-        ConfigManager.setPendingInAppUri(uri, pendingInAppImportMode)
-    }
-
-    private val createLogDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("text/plain")
-    ) { uri ->
-        AppStateManager.setFilePickerOpen(false)
-        if (uri == null) return@registerForActivityResult
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
-                val pid = Process.myPid()
-                val header = LogReportManager.buildReportHeader(
-                    appVersion = BuildConfig.VERSION_NAME,
-                    deviceModel = Build.MODEL,
-                    androidVersion = Build.VERSION.RELEASE,
-                    timestamp = LocalDateTime.now()
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                )
-                val body = LogReportManager.readLogcatLines(pid)
-                contentResolver.openOutputStream(uri)?.use { stream ->
-                    stream.bufferedWriter().use { writer ->
-                        writer.write(header)
-                        writer.write(body)
-                    }
-                } ?: error("Could not open output stream for $uri")
             }
-                .onSuccess {
+        }
+
+    private val openDocumentLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            AppStateManager.setFilePickerOpen(false)
+            if (uri == null) {
+                return@registerForActivityResult
+            }
+            ConfigManager.setPendingInAppUri(uri, pendingInAppImportMode)
+        }
+
+    private val createLogDocumentLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument("text/plain"),
+        ) { uri ->
+            AppStateManager.setFilePickerOpen(false)
+            if (uri == null) return@registerForActivityResult
+            lifecycleScope.launch(Dispatchers.IO) {
+                runCatching {
+                    val pid = Process.myPid()
+                    val header =
+                        LogReportManager.buildReportHeader(
+                            appVersion = BuildConfig.VERSION_NAME,
+                            deviceModel = Build.MODEL,
+                            androidVersion = Build.VERSION.RELEASE,
+                            timestamp =
+                                LocalDateTime
+                                    .now()
+                                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                        )
+                    val body = LogReportManager.readLogcatLines(pid)
+                    contentResolver.openOutputStream(uri)?.use { stream ->
+                        stream.bufferedWriter().use { writer ->
+                            writer.write(header)
+                            writer.write(body)
+                        }
+                    } ?: error("Could not open output stream for $uri")
+                }.onSuccess {
                     AppLog.i(TAG, "Log report written to $uri")
                     LogReportManager.setSaveResult(LogReportManager.SaveResult.Success)
-                }
-                .onFailure { e ->
+                }.onFailure { e ->
                     AppLog.e(TAG, "Log report save failed", e)
                     LogReportManager.setSaveResult(LogReportManager.SaveResult.Failure(e.message))
                 }
+            }
         }
-    }
 
     // The manifest declares configChanges that prevent activity recreation when the app
     // is moved between displays. Without this override, Compose never recomposes and
@@ -241,6 +243,7 @@ class MainActivity : ComponentActivity() {
                     AppLog.w(TAG, "Debug build: signature mismatch ignored ($res)")
                 }
             }
+
             is SignatureGuard.Result.Error -> {
                 if (!BuildConfig.DEBUG) {
                     AppLog.e(TAG, "Aborting: signature verification failed (${res.message})")
@@ -249,6 +252,7 @@ class MainActivity : ComponentActivity() {
                     return
                 }
             }
+
             SignatureGuard.Result.Skipped -> {
                 if (!BuildConfig.DEBUG) {
                     AppLog.e(TAG, "Aborting: release build ships without a pinned signing hash")
@@ -257,15 +261,19 @@ class MainActivity : ComponentActivity() {
                     return
                 }
             }
-            SignatureGuard.Result.Ok -> Unit
+
+            SignatureGuard.Result.Ok -> {
+                Unit
+            }
         }
 
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
 
-        val hasCreds = File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
-            File(noBackupFilesDir, "privd_adb_cert.bin").exists()
+        val hasCreds =
+            File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
+                File(noBackupFilesDir, "privd_adb_cert.bin").exists()
         AppStateManager.setHasAdbCredentials(hasCreds)
 
         // Handle .mgrd config files opened from a file manager or share sheet.
@@ -298,8 +306,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 LogReportManager.saveRequest.collect {
-                    val timestamp = LocalDateTime.now()
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+                    val timestamp =
+                        LocalDateTime
+                            .now()
+                            .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
                     val filename = LogReportManager.buildReportFilename(timestamp)
                     AppStateManager.setFilePickerOpen(true)
                     createLogDocumentLauncher.launch(filename)
@@ -315,9 +325,10 @@ class MainActivity : ComponentActivity() {
                         AppLog.i(TAG, "activeCropCutoutId=$id -> launching CropSelectorActivity on primary display")
                         val options = ActivityOptions.makeBasic()
                         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        val intent = Intent(this@MainActivity, CropSelectorActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-                        }
+                        val intent =
+                            Intent(this@MainActivity, CropSelectorActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            }
                         startActivity(intent, options.toBundle())
                     } else if (id == null) {
                         lastLaunchedId = null
@@ -351,10 +362,9 @@ class MainActivity : ComponentActivity() {
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
-                    )
+                    ),
                 )
-            }
-                .distinctUntilChanged()
+            }.distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
         // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
@@ -365,7 +375,10 @@ class MainActivity : ComponentActivity() {
             var triggered = false
             PrivdManager.state.collect { state ->
                 when {
-                    state == PrivdState.RUNNING -> triggered = false
+                    state == PrivdState.RUNNING -> {
+                        triggered = false
+                    }
+
                     (state == PrivdState.OFF || state == PrivdState.FAILED) && !triggered && !PrivdManager.isManuallyDisconnected -> {
                         triggered = true
                         AppLog.i(TAG, "Auto-connecting Privileged Mode")
@@ -377,11 +390,12 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             SettingsManager.appLanguage.drop(1).collect { lang ->
                 AppLog.d(TAG, "appLanguage changed to $lang → applying locales")
-                val desired = when (lang) {
-                    AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
-                    AppLanguage.EN     -> LocaleList(Locale.ENGLISH)
-                    AppLanguage.DE     -> LocaleList(Locale.GERMAN)
-                }
+                val desired =
+                    when (lang) {
+                        AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
+                        AppLanguage.EN -> LocaleList(Locale.ENGLISH)
+                        AppLanguage.DE -> LocaleList(Locale.GERMAN)
+                    }
                 val localeManager = getSystemService(LocaleManager::class.java)
                 if (localeManager.applicationLocales != desired) {
                     localeManager.applicationLocales = desired
@@ -401,21 +415,24 @@ class MainActivity : ComponentActivity() {
 
             val lifecycleOwner = LocalLifecycleOwner.current
             LaunchedEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    when (event) {
-                        Lifecycle.Event.ON_RESUME -> {
-                            AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
-                            AppStateManager.setActivityResumed(true)
-                            // Clear the user-leaving flag: the user has returned to the app.
-                            AppStateManager.setUserLeaving(false)
+                val observer =
+                    LifecycleEventObserver { _, event ->
+                        when (event) {
+                            Lifecycle.Event.ON_RESUME -> {
+                                AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
+                                AppStateManager.setActivityResumed(true)
+                                // Clear the user-leaving flag: the user has returned to the app.
+                                AppStateManager.setUserLeaving(false)
+                            }
+
+                            Lifecycle.Event.ON_STOP -> {
+                                AppLog.i(TAG, "ON_STOP")
+                                AppStateManager.setActivityResumed(false)
+                            }
+
+                            else -> {}
                         }
-                        Lifecycle.Event.ON_STOP -> {
-                            AppLog.i(TAG, "ON_STOP")
-                            AppStateManager.setActivityResumed(false)
-                        }
-                        else -> {}
                     }
-                }
                 lifecycleOwner.lifecycle.addObserver(observer)
             }
 
@@ -442,22 +459,23 @@ class MainActivity : ComponentActivity() {
                 // True while privd mirror daemon is still connecting
                 // (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending). Blocks
                 // auto-start so the strategy decision waits for the daemon to settle.
-                val privdMirrorConnectingFlow = combine(
-                    PrivdManager.state,
-                    AppStateManager.isPrivdPromptActive,
-                    AppStateManager.hasAdbCredentials,
-                    MacroPadSettings.privdShowAdbPrompt,
-                    AppStateManager.isPrivdPromptDismissed,
-                ) { privdState, promptActive, hasCreds, showPromptPref, dismissed ->
-                    isPrivdMirrorConnecting(
-                        privdState = privdState,
-                        promptActive = promptActive,
-                        hasCreds = hasCreds,
-                        showPromptPref = showPromptPref,
-                        dismissed = dismissed,
-                        isManuallyDisconnected = PrivdManager.isManuallyDisconnected
-                    )
-                }
+                val privdMirrorConnectingFlow =
+                    combine(
+                        PrivdManager.state,
+                        AppStateManager.isPrivdPromptActive,
+                        AppStateManager.hasAdbCredentials,
+                        MacroPadSettings.privdShowAdbPrompt,
+                        AppStateManager.isPrivdPromptDismissed,
+                    ) { privdState, promptActive, hasCreds, showPromptPref, dismissed ->
+                        isPrivdMirrorConnecting(
+                            privdState = privdState,
+                            promptActive = promptActive,
+                            hasCreds = hasCreds,
+                            showPromptPref = showPromptPref,
+                            dismissed = dismissed,
+                            isManuallyDisconnected = PrivdManager.isManuallyDisconnected,
+                        )
+                    }
                 combine(
                     AppStateManager.promptInFlight,
                     AppStateManager.mirrorAutoStartSuppressedLayoutId,
@@ -484,11 +502,9 @@ class MainActivity : ComponentActivity() {
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
                         tutorialsActive = showWelcome || showQuickMenu,
                     )
-                }
-                    .combine(privdMirrorConnectingFlow) { policy, connecting ->
-                        policy.copy(privdMirrorConnecting = connecting)
-                    }
-                    .distinctUntilChanged()
+                }.combine(privdMirrorConnectingFlow) { policy, connecting ->
+                    policy.copy(privdMirrorConnecting = connecting)
+                }.distinctUntilChanged()
                     .collect { policy ->
                         if (policy.layoutId != lastPolicyLayoutId) {
                             AppLog.i(
@@ -504,17 +520,24 @@ class MainActivity : ComponentActivity() {
                                 // promptInFlight=false if the manual-start handler set it to
                                 // true in the same scheduler turn — causing a double launch.
                                 if (AppStateManager.promptInFlight.value) {
-                                    AppLog.d(TAG, "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping")
+                                    AppLog.d(
+                                        TAG,
+                                        "mirror policy: layout=${policy.layoutId} wants ON but prompt already in flight — skipping",
+                                    )
                                 } else {
                                     AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants ON → start")
                                     startMirrorByPolicy()
                                 }
                             }
+
                             MirrorRuntimeAction.STOP -> {
                                 AppLog.i(TAG, "mirror policy: layout=${policy.layoutId} wants OFF → stop")
                                 stopMirrorService()
                             }
-                            MirrorRuntimeAction.NONE -> Unit
+
+                            MirrorRuntimeAction.NONE -> {
+                                Unit
+                            }
                         }
                     }
             }
@@ -574,7 +597,8 @@ class MainActivity : ComponentActivity() {
                             launch(Dispatchers.IO) {
                                 try {
                                     val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
-                                    val picturesDir = File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
+                                    val picturesDir =
+                                        File(Environment.getExternalStorageDirectory(), ScreenCaptureManager.SCREENSHOT_SUBDIR)
                                     if (!picturesDir.exists()) {
                                         picturesDir.mkdirs()
                                     }
@@ -623,15 +647,15 @@ class MainActivity : ComponentActivity() {
 
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),
-                typography = megingiardTypography
+                typography = megingiardTypography,
             ) {
                 CompositionLocalProvider(
                     LocalAppColors provides appColors,
-                    LocalAppDimens provides AppDimens()
+                    LocalAppDimens provides AppDimens(),
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        color = appColors.appBackground
+                        color = appColors.appBackground,
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             MainAppScreen()
@@ -656,9 +680,9 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Decides whether to start the privileged mirror path (no consent dialog,
-        * direct SurfaceControl output) or the standard MediaProjection path. The
-        * privileged path requires the per-feature flag to be enabled and a RUNNING
-        * privd connection.
+     * direct SurfaceControl output) or the standard MediaProjection path. The
+     * privileged path requires the per-feature flag to be enabled and a RUNNING
+     * privd connection.
      */
     private fun startMirrorByPolicy() {
         val privdRunning = PrivdManager.state.value == PrivdState.RUNNING
@@ -667,11 +691,13 @@ class MainActivity : ComponentActivity() {
             MirrorStrategy.PRIVILEGED -> {
                 AppLog.i(TAG, "startMirrorByPolicy: privd path")
                 AppStateManager.setPromptInFlight(true)
-                val intent = Intent(this, ScreenCaptureService::class.java).apply {
-                    action = ACTION_START_PRIVD
-                }
+                val intent =
+                    Intent(this, ScreenCaptureService::class.java).apply {
+                        action = ACTION_START_PRIVD
+                    }
                 startForegroundService(intent)
             }
+
             MirrorStrategy.MEDIA_PROJECTION -> {
                 AppLog.i(TAG, "startMirrorByPolicy: MediaProjection path")
                 launchCaptureRequest()
@@ -689,16 +715,18 @@ class MainActivity : ComponentActivity() {
         AppStateManager.setPromptInFlight(true)
         val options = ActivityOptions.makeBasic()
         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-        val intent = Intent(this, CaptureRequestActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-        }
+        val intent =
+            Intent(this, CaptureRequestActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            }
         startActivity(intent, options.toBundle())
     }
 
     private fun stopMirrorService() {
-        val stopIntent = Intent(this, ScreenCaptureService::class.java).apply {
-            action = ACTION_STOP
-        }
+        val stopIntent =
+            Intent(this, ScreenCaptureService::class.java).apply {
+                action = ACTION_STOP
+            }
         startService(stopIntent)
     }
 

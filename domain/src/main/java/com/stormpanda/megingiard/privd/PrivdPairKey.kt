@@ -44,7 +44,6 @@ private const val KEY_LEN_BYTES = 32
  * [PrivdBootstrapper.bootstrapAndConnect] instead.
  */
 internal object PrivdPairKey {
-
     /**
      * Generates a fresh 32-byte random key, encrypts it under the Keystore AES key,
      * stores the ciphertext in [noBackupFilesDir][android.content.Context.getNoBackupFilesDir],
@@ -129,7 +128,10 @@ internal object PrivdPairKey {
     // Internal helpers
     // -------------------------------------------------------------------------
 
-    private fun store(context: Context, rawKey: ByteArray) {
+    private fun store(
+        context: Context,
+        rawKey: ByteArray,
+    ) {
         val cipher = Cipher.getInstance(AES_TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKeystoreKey())
         val iv = cipher.iv // Keystore-generated random IV; unique for every encrypt call
@@ -139,8 +141,7 @@ internal object PrivdPairKey {
         AppLog.d(TAG, "store: encrypted key blob written (${(iv + ciphertext).size} bytes)")
     }
 
-    private fun encryptedKeyFile(context: Context): File =
-        File(context.noBackupFilesDir, ENCRYPTED_KEY_FILE)
+    private fun encryptedKeyFile(context: Context): File = File(context.noBackupFilesDir, ENCRYPTED_KEY_FILE)
 
     private fun getOrCreateKeystoreKey(): SecretKey {
         val ks = KeyStore.getInstance(KEYSTORE_PROVIDER).also { it.load(null) }
@@ -148,11 +149,11 @@ internal object PrivdPairKey {
 
         val keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER)
         keyGen.init(
-            KeyGenParameterSpec.Builder(
-                KEYSTORE_ALIAS,
-                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-            )
-                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            KeyGenParameterSpec
+                .Builder(
+                    KEYSTORE_ALIAS,
+                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+                ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(256)
                 // No user auth required — the daemon performs auto-connect in the background.

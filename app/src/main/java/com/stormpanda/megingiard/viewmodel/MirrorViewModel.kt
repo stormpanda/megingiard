@@ -31,8 +31,9 @@ private const val MIRROR_CONTROLS_AUTO_HIDE_MS = 5000L
  * - Creates per-scope [TouchProjectionController] instances
  * - Starts persistence coroutines in [viewModelScope]
  */
-class MirrorViewModel(application: Application) : AndroidViewModel(application) {
-
+class MirrorViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     // ── Capture state ───────────────────────────────────────────────────────
     val isCapturing: StateFlow<Boolean> = ScreenCaptureManager.isCapturing
     val surfaceWidth: StateFlow<Float> = ScreenCaptureManager.surfaceWidth
@@ -63,23 +64,37 @@ class MirrorViewModel(application: Application) : AndroidViewModel(application) 
     fun setTouching(touching: Boolean) = AppStateManager.setTouching(touching)
 
     // ── Viewport operations ─────────────────────────────────────────────────
-    fun applyZoomPan(zoom: Float, panX: Float, panY: Float) {
+    fun applyZoomPan(
+        zoom: Float,
+        panX: Float,
+        panY: Float,
+    ) {
         MirrorViewportController.applyZoomPan(
-            zoom, panX, panY,
+            zoom,
+            panX,
+            panY,
             ScreenCaptureManager.surfaceWidth.value,
-            ScreenCaptureManager.surfaceHeight.value
+            ScreenCaptureManager.surfaceHeight.value,
         )
     }
 
     fun resetViewport() = MirrorViewportController.resetViewport()
+
     fun shouldSnapBack() = MirrorViewportController.shouldSnapBack()
+
     fun restoreFromManager() = MirrorViewportController.restoreFromManager()
-    fun setViewportValues(scale: Float, offsetX: Float, offsetY: Float) =
-        MirrorViewportController.setValues(scale, offsetX, offsetY)
+
+    fun setViewportValues(
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float,
+    ) = MirrorViewportController.setValues(scale, offsetX, offsetY)
 
     // ── Touch projection ────────────────────────────────────────────────────
-    fun createTouchProjectionController(edgeZonePx: Float, overlayAtBottom: Boolean) =
-        TouchProjectionController(edgeZonePx, overlayAtBottom)
+    fun createTouchProjectionController(
+        edgeZonePx: Float,
+        overlayAtBottom: Boolean,
+    ) = TouchProjectionController(edgeZonePx, overlayAtBottom)
 
     fun startTouchInjector(context: Context) {
         AppLog.i(TAG, "TouchInjector starting")

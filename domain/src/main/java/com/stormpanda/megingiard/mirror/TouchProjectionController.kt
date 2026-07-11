@@ -35,6 +35,7 @@ class TouchProjectionController(
     private var lastInjectedNy = 0f
 
     private val _indicatorPos = MutableStateFlow<Pair<Float, Float>?>(null)
+
     /** Screen-space position of the touch indicator dot, or null when hidden. */
     val indicatorPos: StateFlow<Pair<Float, Float>?> = _indicatorPos.asStateFlow()
 
@@ -62,11 +63,12 @@ class TouchProjectionController(
         }
 
         gestureStarted = false
-        val nearEdge = if (overlayAtBottom) {
-            y >= boxH - edgeZonePx
-        } else {
-            y <= edgeZonePx
-        }
+        val nearEdge =
+            if (overlayAtBottom) {
+                y >= boxH - edgeZonePx
+            } else {
+                y <= edgeZonePx
+            }
         gestureInEdgeZone = nearEdge
         if (nearEdge) return false
         if (isConsumed) return false
@@ -82,19 +84,20 @@ class TouchProjectionController(
             val destWidth = cutout.destWidth * boxW
             val destHeight = cutout.destHeight * boxH
 
-            val projected = projectCutoutCoordinates(
-                touchX = x,
-                touchY = y,
-                destLeft = destLeft,
-                destTop = destTop,
-                destWidth = destWidth,
-                destHeight = destHeight,
-                srcX = cutout.srcX,
-                srcY = cutout.srcY,
-                srcWidth = cutout.srcWidth,
-                srcHeight = cutout.srcHeight,
-                clampToEdge = false
-            )
+            val projected =
+                projectCutoutCoordinates(
+                    touchX = x,
+                    touchY = y,
+                    destLeft = destLeft,
+                    destTop = destTop,
+                    destWidth = destWidth,
+                    destHeight = destHeight,
+                    srcX = cutout.srcX,
+                    srcY = cutout.srcY,
+                    srcWidth = cutout.srcWidth,
+                    srcHeight = cutout.srcHeight,
+                    clampToEdge = false,
+                )
             if (projected != null) {
                 matchedProjected = projected
                 matchedCutoutId = cutout.id
@@ -138,9 +141,12 @@ class TouchProjectionController(
         }
 
         val cutoutId = activeCutoutId
-        val cutout = if (cutoutId != null) {
-            ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
-        } else null
+        val cutout =
+            if (cutoutId != null) {
+                ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
+            } else {
+                null
+            }
 
         if (cutoutId == null || cutout == null) {
             _indicatorPos.value = null
@@ -156,24 +162,8 @@ class TouchProjectionController(
         val destWidth = cutout.destWidth * boxW
         val destHeight = cutout.destHeight * boxH
 
-        val coords = projectCutoutCoordinates(
-            touchX = x,
-            touchY = y,
-            destLeft = destLeft,
-            destTop = destTop,
-            destWidth = destWidth,
-            destHeight = destHeight,
-            srcX = cutout.srcX,
-            srcY = cutout.srcY,
-            srcWidth = cutout.srcWidth,
-            srcHeight = cutout.srcHeight,
-            clampToEdge = false
-        )
-
-        if (coords == null) {
-            // Finger panned outside destination bounds — send clamped UP
-            _indicatorPos.value = null
-            val clampedCoords = projectCutoutCoordinates(
+        val coords =
+            projectCutoutCoordinates(
                 touchX = x,
                 touchY = y,
                 destLeft = destLeft,
@@ -184,8 +174,26 @@ class TouchProjectionController(
                 srcY = cutout.srcY,
                 srcWidth = cutout.srcWidth,
                 srcHeight = cutout.srcHeight,
-                clampToEdge = true
-            ) ?: Pair(lastInjectedNx, lastInjectedNy)
+                clampToEdge = false,
+            )
+
+        if (coords == null) {
+            // Finger panned outside destination bounds — send clamped UP
+            _indicatorPos.value = null
+            val clampedCoords =
+                projectCutoutCoordinates(
+                    touchX = x,
+                    touchY = y,
+                    destLeft = destLeft,
+                    destTop = destTop,
+                    destWidth = destWidth,
+                    destHeight = destHeight,
+                    srcX = cutout.srcX,
+                    srcY = cutout.srcY,
+                    srcWidth = cutout.srcWidth,
+                    srcHeight = cutout.srcHeight,
+                    clampToEdge = true,
+                ) ?: Pair(lastInjectedNx, lastInjectedNy)
 
             TouchInjector.injectTouch(TouchAction.UP, clampedCoords.first, clampedCoords.second)
             gestureStarted = false
@@ -214,9 +222,12 @@ class TouchProjectionController(
         _indicatorPos.value = null
         if (!gestureInEdgeZone && gestureStarted) {
             val cutoutId = activeCutoutId
-            val cutout = if (cutoutId != null) {
-                ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
-            } else null
+            val cutout =
+                if (cutoutId != null) {
+                    ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
+                } else {
+                    null
+                }
 
             if (cutout != null && x != null && y != null) {
                 val destLeft = cutout.destX * boxW
@@ -224,19 +235,20 @@ class TouchProjectionController(
                 val destWidth = cutout.destWidth * boxW
                 val destHeight = cutout.destHeight * boxH
 
-                val coords = projectCutoutCoordinates(
-                    touchX = x,
-                    touchY = y,
-                    destLeft = destLeft,
-                    destTop = destTop,
-                    destWidth = destWidth,
-                    destHeight = destHeight,
-                    srcX = cutout.srcX,
-                    srcY = cutout.srcY,
-                    srcWidth = cutout.srcWidth,
-                    srcHeight = cutout.srcHeight,
-                    clampToEdge = true
-                )
+                val coords =
+                    projectCutoutCoordinates(
+                        touchX = x,
+                        touchY = y,
+                        destLeft = destLeft,
+                        destTop = destTop,
+                        destWidth = destWidth,
+                        destHeight = destHeight,
+                        srcX = cutout.srcX,
+                        srcY = cutout.srcY,
+                        srcWidth = cutout.srcWidth,
+                        srcHeight = cutout.srcHeight,
+                        clampToEdge = true,
+                    )
                 val nx = coords?.first ?: lastInjectedNx
                 val ny = coords?.second ?: lastInjectedNy
                 TouchInjector.injectTouch(TouchAction.UP, nx, ny)

@@ -12,7 +12,6 @@ private const val TAG = "KeyInjector"
  * (see [LinuxKeycodes] for named constants).
  */
 object KeyInjector {
-
     fun start(context: Context) {
         AppLog.i(TAG, "start()")
         ShellKeyInjector.start(context)
@@ -26,7 +25,8 @@ object KeyInjector {
     val isRunning: Boolean get() = ShellKeyInjector.isRunning
 
     fun keyDown(linuxKeycode: Int) = ShellKeyInjector.injectKey(KeyAction.DOWN, linuxKeycode)
-    fun keyUp(linuxKeycode: Int)   = ShellKeyInjector.injectKey(KeyAction.UP, linuxKeycode)
+
+    fun keyUp(linuxKeycode: Int) = ShellKeyInjector.injectKey(KeyAction.UP, linuxKeycode)
 
     /** Convenience: sends key down immediately followed by key up. */
     fun keyTap(linuxKeycode: Int) {

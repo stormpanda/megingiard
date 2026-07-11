@@ -4,8 +4,6 @@ import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.coroutineContext
 
 // Wait after starting GamepadInjector before the first event dispatch, in milliseconds.
 // start() blocks until the native binary signals "R\n", meaning the uinput fd is opened,
@@ -35,7 +35,6 @@ private const val TAG = "MacroExecutor"
  * The internal [scope] is app-lifetime (process-scoped singleton) and is never cancelled.
  */
 object MacroExecutor {
-
     // App-lifetime scope: intentionally never cancelled — lives for the duration of the process.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -67,7 +66,10 @@ object MacroExecutor {
      * Starts executing [macro]. If the same macro is already running, the previous execution
      * is cancelled before starting a new one (use [stop] directly for toggle-off semantics).
      */
-    fun execute(macro: Macro, context: Context? = null) {
+    fun execute(
+        macro: Macro,
+        context: Context? = null,
+    ) {
         if (macro.steps.isEmpty()) return
         val ctx = context ?: appContext
         synchronized(runningJobs) {
@@ -97,7 +99,10 @@ object MacroExecutor {
     // Internal execution logic
     // -------------------------------------------------------------------------
 
-    private suspend fun executeSuspend(macro: Macro, context: Context?) {
+    private suspend fun executeSuspend(
+        macro: Macro,
+        context: Context?,
+    ) {
         // Capture this coroutine's Job for race-safe map cleanup in finally.
         val thisJob = coroutineContext[Job]!!
 
@@ -105,7 +110,7 @@ object MacroExecutor {
         // is stopped or cancelled mid-sequence. Covers all virtual devices that MacroExecutor
         // can drive: gamepad (buttons, axes, hat) and touch.
         val pressedButtons = mutableSetOf<Int>()
-        val activeAxes = mutableMapOf<Int, Int>()    // axis code → last non-zero value
+        val activeAxes = mutableMapOf<Int, Int>() // axis code → last non-zero value
         var liveHatX = 0
         var liveHatY = 0
         var liveTouchPos: Pair<Float, Float>? = null
@@ -140,7 +145,10 @@ object MacroExecutor {
             do {
                 val randomizedMacro = macro.randomized()
                 if (macro.randomizeTimingEnabled) {
-                    AppLog.d(TAG, "executeSuspend: applied timing and duration randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms")
+                    AppLog.d(
+                        TAG,
+                        "executeSuspend: applied timing and duration randomization to ${macro.steps.size} steps with max offset ${macro.randomizeTimingRangeMs}ms",
+                    )
                 }
                 val events = buildMacroEventList(randomizedMacro)
                 var currentTimeMs = 0L
@@ -154,27 +162,36 @@ object MacroExecutor {
                             pressedButtons += event.code
                             GamepadInjector.buttonDown(event.code)
                         }
+
                         MacroEventType.BUTTON_UP -> {
                             pressedButtons -= event.code
                             GamepadInjector.buttonUp(event.code)
                         }
+
                         MacroEventType.JOYSTICK_SET -> {
-                            if (event.value != 0) activeAxes[event.code] = event.value
-                            else activeAxes -= event.code
+                            if (event.value != 0) {
+                                activeAxes[event.code] = event.value
+                            } else {
+                                activeAxes -= event.code
+                            }
                             GamepadInjector.joystick(event.code, event.value)
                         }
+
                         MacroEventType.HAT -> {
                             if (event.code == 0) liveHatX = event.value else liveHatY = event.value
                             GamepadInjector.hat(axis = event.code, value = event.value)
                         }
+
                         MacroEventType.TOUCH_DOWN -> {
                             liveTouchPos = Pair(event.normX, event.normY)
                             TouchInjector.injectTouch(event.code, TouchAction.DOWN, event.normX, event.normY)
                         }
+
                         MacroEventType.TOUCH_MOVE -> {
                             liveTouchPos = Pair(event.normX, event.normY)
                             TouchInjector.injectTouch(event.code, TouchAction.MOVE, event.normX, event.normY)
                         }
+
                         MacroEventType.TOUCH_UP -> {
                             liveTouchPos = null
                             TouchInjector.injectTouch(event.code, TouchAction.UP, event.normX, event.normY)
@@ -187,7 +204,10 @@ object MacroExecutor {
                 }
             } while (macro.loopEnabled)
         } finally {
-            AppLog.d(TAG, "macro '${macro.name}' done (buttons=${pressedButtons.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${liveTouchPos != null})")
+            AppLog.d(
+                TAG,
+                "macro '${macro.name}' done (buttons=${pressedButtons.size} axes=${activeAxes.size} hat=$liveHatX,$liveHatY touch=${liveTouchPos != null})",
+            )
             // Release all inputs that are still active. This handles early cancellation
             // (user taps stop mid-sequence) in addition to the normal end-of-sequence reset.
             pressedButtons.forEach { GamepadInjector.buttonUp(it) }

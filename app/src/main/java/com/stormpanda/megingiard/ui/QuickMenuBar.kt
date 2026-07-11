@@ -85,11 +85,11 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         QuickMenuBarTab(
             overlayAtBottom = overlayAtBottom,
             colors = colors,
-            modifier = Modifier
-                .align(
-                    if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
-                )
-                .graphicsLayer(alpha = alpha.value)
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
+                    ).graphicsLayer(alpha = alpha.value),
         )
 
         // Quick Menu overlay — rendered as a sibling so it covers MacroPadScreen
@@ -101,19 +101,25 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun QuickMenuBarTab(overlayAtBottom: Boolean, colors: AppColors, modifier: Modifier = Modifier) {
+private fun QuickMenuBarTab(
+    overlayAtBottom: Boolean,
+    colors: AppColors,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = modifier
-            .then(
-                if (overlayAtBottom) Modifier.padding(bottom = QM_BAR_TOP_PADDING)
-                else Modifier.padding(top = QM_BAR_TOP_PADDING)
-            )
-            .shadow(
-                elevation = QM_BAR_SHADOW_ELEVATION,
-                shape = RoundedCornerShape(50),
-                clip = false,
-            )
-            .size(width = QM_BAR_IDLE_WIDTH, height = QM_BAR_IDLE_HEIGHT)
-            .background(colors.quickMenuBarIdleColor, RoundedCornerShape(50)),
+        modifier =
+            modifier
+                .then(
+                    if (overlayAtBottom) {
+                        Modifier.padding(bottom = QM_BAR_TOP_PADDING)
+                    } else {
+                        Modifier.padding(top = QM_BAR_TOP_PADDING)
+                    },
+                ).shadow(
+                    elevation = QM_BAR_SHADOW_ELEVATION,
+                    shape = RoundedCornerShape(50),
+                    clip = false,
+                ).size(width = QM_BAR_IDLE_WIDTH, height = QM_BAR_IDLE_HEIGHT)
+                .background(colors.quickMenuBarIdleColor, RoundedCornerShape(50)),
     )
 }

@@ -19,7 +19,6 @@ private const val TAG = "MegingiardAccessService"
  * Registered in AndroidManifest.xml and configured by accessibility_service_config.xml.
  */
 class MegingiardAccessibilityService : AccessibilityService() {
-
     override fun onServiceConnected() {
         super.onServiceConnected()
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
@@ -49,14 +48,16 @@ class MegingiardAccessibilityService : AccessibilityService() {
          * Checks if the Megingiard Accessibility Service is currently enabled in Android system settings.
          */
         fun isEnabled(context: Context): Boolean {
-            val expectedComponentName = ComponentName(
-                context.applicationContext,
-                MegingiardAccessibilityService::class.java
-            )
-            val enabledServices = Settings.Secure.getString(
-                context.contentResolver,
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ) ?: return false
+            val expectedComponentName =
+                ComponentName(
+                    context.applicationContext,
+                    MegingiardAccessibilityService::class.java,
+                )
+            val enabledServices =
+                Settings.Secure.getString(
+                    context.contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                ) ?: return false
             val splitter = TextUtils.SimpleStringSplitter(':')
             splitter.setString(enabledServices)
             while (splitter.hasNext()) {

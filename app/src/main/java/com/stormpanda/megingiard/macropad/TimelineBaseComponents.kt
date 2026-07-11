@@ -40,13 +40,14 @@ private val MTE_SECTION_HEADER_V_PADDING = 10.dp
 internal fun MtSectionHeader(textRes: Int) {
     val colors = LocalAppColors.current
     Text(
-        text     = stringResource(textRes).uppercase(Locale.ROOT),
-        color    = colors.sectionHeaderColor,
-        style    = MaterialTheme.typography.labelSmall,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surfaceVariant)
-            .padding(horizontal = MTE_PADDING.dp, vertical = MTE_SECTION_HEADER_V_PADDING),
+        text = stringResource(textRes).uppercase(Locale.ROOT),
+        color = colors.sectionHeaderColor,
+        style = MaterialTheme.typography.labelSmall,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant)
+                .padding(horizontal = MTE_PADDING.dp, vertical = MTE_SECTION_HEADER_V_PADDING),
     )
 }
 
@@ -61,18 +62,20 @@ internal fun StepActionRow(
 ) {
     val btnShape = RoundedCornerShape(8.dp)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = MTE_PADDING.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MTE_PADDING.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
-            modifier = Modifier
-                .weight(1f)
-                .height(MTE_ACTION_BTN_HEIGHT)
-                .clip(btnShape)
-                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
-                .clickable { onAdd() },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(MTE_ACTION_BTN_HEIGHT)
+                    .clip(btnShape)
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                    .clickable { onAdd() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -82,12 +85,13 @@ internal fun StepActionRow(
         }
 
         Row(
-            modifier = Modifier
-                .weight(1f)
-                .height(MTE_ACTION_BTN_HEIGHT)
-                .clip(btnShape)
-                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
-                .clickable { onRecordGamepad() },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(MTE_ACTION_BTN_HEIGHT)
+                    .clip(btnShape)
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                    .clickable { onRecordGamepad() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -97,32 +101,44 @@ internal fun StepActionRow(
         }
 
         Row(
-            modifier = Modifier
-                .weight(1f)
-                .height(MTE_ACTION_BTN_HEIGHT)
-                .clip(btnShape)
-                .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
-                .clickable { onRecordTouch() },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(MTE_ACTION_BTN_HEIGHT)
+                    .clip(btnShape)
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                    .clickable { onRecordTouch() },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Rounded.TouchApp, contentDescription = stringResource(R.string.cd_record_touch), tint = accentColor, modifier = Modifier.size(18.dp))
+            Icon(
+                Icons.Rounded.TouchApp,
+                contentDescription = stringResource(R.string.cd_record_touch),
+                tint = accentColor,
+                modifier = Modifier.size(18.dp),
+            )
             Spacer(Modifier.width(4.dp))
             Text(stringResource(R.string.macropad_macro_record_touch), color = accentColor, style = MaterialTheme.typography.bodyMedium)
         }
 
         if (steps.isNotEmpty()) {
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(MTE_ACTION_BTN_HEIGHT)
-                    .clip(btnShape)
-                    .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
-                    .clickable { onTest() },
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(MTE_ACTION_BTN_HEIGHT)
+                        .clip(btnShape)
+                        .border(1.dp, accentColor.copy(alpha = 0.5f), btnShape)
+                        .clickable { onTest() },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.cd_test_macro), tint = accentColor, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(R.string.cd_test_macro),
+                    tint = accentColor,
+                    modifier = Modifier.size(18.dp),
+                )
                 Spacer(Modifier.width(4.dp))
                 Text(stringResource(R.string.macropad_macro_test_run), color = accentColor, style = MaterialTheme.typography.bodyMedium)
             }

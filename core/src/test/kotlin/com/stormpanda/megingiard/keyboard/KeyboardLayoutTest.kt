@@ -20,12 +20,12 @@ import org.junit.Test
  * - All non-trackpoint keys have linuxKeycode in 1..255.
  */
 class KeyboardLayoutTest {
-
-    private val layouts = mapOf(
-        "QWERTZ" to qwertzLayout(),
-        "QWERTY" to qwertyLayout(),
-        "AZERTY" to azertyLayout(),
-    )
+    private val layouts =
+        mapOf(
+            "QWERTZ" to qwertzLayout(),
+            "QWERTY" to qwertyLayout(),
+            "AZERTY" to azertyLayout(),
+        )
 
     @Test
     fun `every layout has six rows`() {
@@ -38,7 +38,12 @@ class KeyboardLayoutTest {
     fun `key ids are unique within each layout`() {
         for ((name, layout) in layouts) {
             val allIds = layout.flatten().map { it.id }
-            val duplicates = allIds.groupingBy { it }.eachCount().filter { it.value > 1 }.keys
+            val duplicates =
+                allIds
+                    .groupingBy { it }
+                    .eachCount()
+                    .filter { it.value > 1 }
+                    .keys
             assertTrue("$name has duplicate ids: $duplicates", duplicates.isEmpty())
         }
     }

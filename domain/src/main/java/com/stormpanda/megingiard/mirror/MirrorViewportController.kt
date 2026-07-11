@@ -44,7 +44,6 @@ private data class ViewportSnapshot(
  * for smooth animations. All mutation goes through the controller methods.
  */
 object MirrorViewportController {
-
     private val _scale = MutableStateFlow(1f)
     val scale: StateFlow<Float> = _scale.asStateFlow()
 
@@ -63,7 +62,13 @@ object MirrorViewportController {
      * @param surfaceW  width of the mirrored surface in pixels
      * @param surfaceH  height of the mirrored surface in pixels
      */
-    fun applyZoomPan(zoom: Float, panX: Float, panY: Float, surfaceW: Float, surfaceH: Float) {
+    fun applyZoomPan(
+        zoom: Float,
+        panX: Float,
+        panY: Float,
+        surfaceW: Float,
+        surfaceH: Float,
+    ) {
         val newScale = (_scale.value * zoom).coerceIn(VIEWPORT_ZOOM_MIN, VIEWPORT_ZOOM_MAX)
         _scale.value = newScale
         val maxX = (surfaceW * (newScale - 1f)) / 2f
@@ -109,27 +114,35 @@ object MirrorViewportController {
         val sh = ScreenCaptureManager.surfaceHeight.value
 
         if (layout.mirrorCutouts.isEmpty()) {
-            val sourceW = ScreenCaptureManager.captureSourceWidth.value.toFloat().let { if (it > 0f) it else 1920f }
-            val sourceH = ScreenCaptureManager.captureSourceHeight.value.toFloat().let { if (it > 0f) it else 1080f }
-            val defaultCutout = if (sw > 0f && sh > 0f) {
-                ScreenCutout.createDefault(sourceW, sourceH, sw, sh)
-            } else {
-                ScreenCutout.createDefault(sourceW, sourceH)
-            }
-            AppLog.i(TAG, "restoreFromLayout: cutout list is empty, creating default cutout source=${sourceW}x${sourceH} surface=${sw}x${sh}")
+            val sourceW =
+                ScreenCaptureManager.captureSourceWidth.value
+                    .toFloat()
+                    .let { if (it > 0f) it else 1920f }
+            val sourceH =
+                ScreenCaptureManager.captureSourceHeight.value
+                    .toFloat()
+                    .let { if (it > 0f) it else 1080f }
+            val defaultCutout =
+                if (sw > 0f && sh > 0f) {
+                    ScreenCutout.createDefault(sourceW, sourceH, sw, sh)
+                } else {
+                    ScreenCutout.createDefault(sourceW, sourceH)
+                }
+            AppLog.i(TAG, "restoreFromLayout: cutout list is empty, creating default cutout source=${sourceW}x$sourceH surface=${sw}x$sh")
             MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
             return
         }
 
         val firstCutout = layout.mirrorCutouts.firstOrNull()
-        val (s, ox, oy) = if (firstCutout != null && sw > 0f && sh > 0f) {
-            val scale = 1.0f / firstCutout.srcWidth
-            val offsetX = -(firstCutout.srcX - 0.5f + firstCutout.srcWidth / 2f) * (sw * scale)
-            val offsetY = -(firstCutout.srcY - 0.5f + firstCutout.srcHeight / 2f) * (sh * scale)
-            Triple(scale, offsetX, offsetY)
-        } else {
-            Triple(layout.mirrorSavedScale, layout.mirrorSavedOffsetX, layout.mirrorSavedOffsetY)
-        }
+        val (s, ox, oy) =
+            if (firstCutout != null && sw > 0f && sh > 0f) {
+                val scale = 1.0f / firstCutout.srcWidth
+                val offsetX = -(firstCutout.srcX - 0.5f + firstCutout.srcWidth / 2f) * (sw * scale)
+                val offsetY = -(firstCutout.srcY - 0.5f + firstCutout.srcHeight / 2f) * (sh * scale)
+                Triple(scale, offsetX, offsetY)
+            } else {
+                Triple(layout.mirrorSavedScale, layout.mirrorSavedOffsetX, layout.mirrorSavedOffsetY)
+            }
 
         val follow = layout.mirrorFollowActive
         AppLog.d(TAG, "restoreFromLayout layoutId=${layout.id} scale=$s offset=($ox,$oy) follow=$follow")
@@ -141,7 +154,11 @@ object MirrorViewportController {
     }
 
     /** Directly set scale/offset (used when syncing from Animatable). */
-    fun setValues(scale: Float, offsetX: Float, offsetY: Float) {
+    fun setValues(
+        scale: Float,
+        offsetX: Float,
+        offsetY: Float,
+    ) {
         _scale.value = scale
         _offsetX.value = offsetX
         _offsetY.value = offsetY
@@ -165,13 +182,11 @@ object MirrorViewportController {
                 MacroPadState.activeLayout,
             ) { s, ox, oy, layout ->
                 ViewportSnapshot(s, ox, oy, layout?.id)
-            }
-                .onEach { snapshot ->
-                    ScreenCaptureManager.setScale(snapshot.scale)
-                    ScreenCaptureManager.setOffsetX(snapshot.offsetX)
-                    ScreenCaptureManager.setOffsetY(snapshot.offsetY)
-                }
-                .debounce(VIEWPORT_SAVE_DEBOUNCE_MS)
+            }.onEach { snapshot ->
+                ScreenCaptureManager.setScale(snapshot.scale)
+                ScreenCaptureManager.setOffsetX(snapshot.offsetX)
+                ScreenCaptureManager.setOffsetY(snapshot.offsetY)
+            }.debounce(VIEWPORT_SAVE_DEBOUNCE_MS)
                 .collectLatest { snapshot ->
                     if (ScreenCaptureManager.isCapturing.value &&
                         MirrorSettings.rememberViewport.value

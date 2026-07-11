@@ -16,7 +16,10 @@ import com.stormpanda.megingiard.input.NativeBinaryInjector
  * The binary registers KEY bits 1–255 only; codes ≥ 256 (BTN_* device buttons)
  * are rejected so Android classifies the virtual device as KEYBOARD.
  */
-internal data class KeyCommand(val action: KeyAction, val linuxKeycode: Int)
+internal data class KeyCommand(
+    val action: KeyAction,
+    val linuxKeycode: Int,
+)
 
 internal object ShellKeyInjector : NativeBinaryInjector<KeyCommand>(
     workerThreadName = "KeyInjectorWriter",
@@ -25,14 +28,18 @@ internal object ShellKeyInjector : NativeBinaryInjector<KeyCommand>(
     override val assetName = "keyinjector_arm64"
 
     override fun formatCommand(cmd: KeyCommand): String {
-        val prefix = when (cmd.action) {
-            KeyAction.DOWN -> "KD"
-            KeyAction.UP   -> "KU"
-        }
+        val prefix =
+            when (cmd.action) {
+                KeyAction.DOWN -> "KD"
+                KeyAction.UP -> "KU"
+            }
         return "$prefix ${cmd.linuxKeycode}\n"
     }
 
-    fun injectKey(action: KeyAction, linuxKeycode: Int) {
+    fun injectKey(
+        action: KeyAction,
+        linuxKeycode: Int,
+    ) {
         // The native binary only registers KEY bits 1–255. Codes 256+ are BTN_*
         // (mouse/gamepad/stylus buttons) and are intentionally excluded so that
         // the virtual device is classified as KEYBOARD (not EXTERNAL_STYLUS) by Android.

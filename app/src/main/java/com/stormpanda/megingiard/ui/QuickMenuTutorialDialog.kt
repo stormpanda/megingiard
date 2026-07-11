@@ -33,9 +33,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,42 +80,45 @@ fun QuickMenuTutorialDialog(
     val bounceOffset by bounceTransition.animateFloat(
         initialValue = QM_BOUNCE_MIN_PX,
         targetValue = QM_BOUNCE_MAX_PX,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = QM_BOUNCE_DURATION_MS, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "quick-menu-arrow-y"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = QM_BOUNCE_DURATION_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "quick-menu-arrow-y",
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {
-                    AppLog.d(TAG, "Quick Menu tutorial dialog dismissed via background click")
-                    onDismiss()
-                }
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        // Centered dialog card
-        Column(
-            modifier = Modifier
-                .widthIn(max = QM_DIALOG_MAX_WIDTH)
-                .padding(QM_DIALOG_PADDING)
-                .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                .background(colors.surface)
-                .border(QM_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                .padding(QM_DIALOG_PADDING)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = {} // absorb clicks so dialog itself doesn't dismiss
-                )
+                    onClick = {
+                        AppLog.d(TAG, "Quick Menu tutorial dialog dismissed via background click")
+                        onDismiss()
+                    },
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Centered dialog card
+        Column(
+            modifier =
+                Modifier
+                    .widthIn(max = QM_DIALOG_MAX_WIDTH)
+                    .padding(QM_DIALOG_PADDING)
+                    .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                    .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                    .background(colors.surface)
+                    .border(QM_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                    .padding(QM_DIALOG_PADDING)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // absorb clicks so dialog itself doesn't dismiss
+                    ),
         ) {
             Text(
                 text = stringResource(R.string.quick_menu_tutorial_title),
@@ -124,9 +127,10 @@ fun QuickMenuTutorialDialog(
             )
             Spacer(modifier = Modifier.height(QM_TITLE_BODY_SPACING))
             Column(
-                modifier = Modifier
-                    .weight(weight = 1f, fill = false)
-                    .verticalScroll(rememberScrollState())
+                modifier =
+                    Modifier
+                        .weight(weight = 1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
             ) {
                 Text(
                     text = stringResource(R.string.quick_menu_tutorial_body),
@@ -137,13 +141,13 @@ fun QuickMenuTutorialDialog(
             Spacer(modifier = Modifier.height(QM_BODY_BUTTON_SPACING))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(
                     onClick = {
                         AppLog.d(TAG, "Quick Menu tutorial dialog confirmed")
                         onDismiss()
-                    }
+                    },
                 ) {
                     Text(
                         text = stringResource(R.string.welcome_btn_got_it),
@@ -159,20 +163,20 @@ fun QuickMenuTutorialDialog(
         val arrowIcon = if (overlayAtBottom) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward
 
         Box(
-            modifier = Modifier
-                .align(arrowAlign)
-                .padding(
-                    top = if (overlayAtBottom) 0.dp else QM_ARROW_EDGE_PADDING,
-                    bottom = if (overlayAtBottom) QM_ARROW_EDGE_PADDING else 0.dp
-                )
-                .offset(y = bounceOffset.dp),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .align(arrowAlign)
+                    .padding(
+                        top = if (overlayAtBottom) 0.dp else QM_ARROW_EDGE_PADDING,
+                        bottom = if (overlayAtBottom) QM_ARROW_EDGE_PADDING else 0.dp,
+                    ).offset(y = bounceOffset.dp),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = arrowIcon,
                 contentDescription = null,
                 tint = colors.accent,
-                modifier = Modifier.size(QM_ARROW_SIZE)
+                modifier = Modifier.size(QM_ARROW_SIZE),
             )
         }
     }

@@ -5,11 +5,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,10 +26,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,14 +66,8 @@ import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "EditorInlineOverlays"
@@ -86,39 +86,41 @@ internal fun InlineDialogOverlay(
         TextButton(onClick = onDismiss) {
             Text(
                 text = stringResource(R.string.macropad_editor_cancel),
-                color = LocalAppColors.current.onSurfaceSecondary
+                color = LocalAppColors.current.onSurfaceSecondary,
             )
         }
     },
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onDismiss)
-            .blockPointerEvents()
-            .then(modifier),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(onClick = onDismiss)
+                .blockPointerEvents()
+                .then(modifier),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(widthFraction)
-                .background(colors.surface, RoundedCornerShape(12.dp))
-                .clickable(enabled = true, onClick = {})
-                .padding(MPE_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(widthFraction)
+                    .background(colors.surface, RoundedCornerShape(12.dp))
+                    .clickable(enabled = true, onClick = {})
+                    .padding(MPE_PADDING),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = title,
                     color = colors.onSurface,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 if (titleAccessory != null) {
                     titleAccessory()
@@ -131,7 +133,7 @@ internal fun InlineDialogOverlay(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = buttonsArrangement,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     buttonsRow()
                 }
@@ -142,8 +144,8 @@ internal fun InlineDialogOverlay(
 
 @Composable
 internal fun InlineConfirmDeleteOverlay(
-    title:    String,
-    body:     String,
+    title: String,
+    body: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -159,7 +161,7 @@ internal fun InlineConfirmDeleteOverlay(
             TextButton(onClick = onConfirm) {
                 Text(stringResource(R.string.macropad_editor_confirm), color = colors.error)
             }
-        }
+        },
     ) {
         Text(body, color = colors.onSurfaceSecondary)
     }
@@ -167,12 +169,12 @@ internal fun InlineConfirmDeleteOverlay(
 
 @Composable
 internal fun InlineNameInputOverlay(
-    title:        String,
+    title: String,
     initialValue: String,
-    accentColor:  Color,
+    accentColor: Color,
     existingNames: List<String>,
-    onConfirm:    (String) -> Unit,
-    onDismiss:    () -> Unit,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf(initialValue) }
     val normalizedName = text.trim()
@@ -197,15 +199,15 @@ internal fun InlineNameInputOverlay(
                     color = if (!hasError) accentColor else colors.onSurfaceSecondary,
                 )
             }
-        }
+        },
     ) {
         AppTextField(
-            value         = text,
+            value = text,
             onValueChange = { text = it },
-            label         = { Text(title, color = colors.onSurfaceSecondary) },
-            singleLine    = true,
-            modifier      = Modifier.fillMaxWidth(),
-            isError       = hasError,
+            label = { Text(title, color = colors.onSurfaceSecondary) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            isError = hasError,
             supportingText = {
                 when {
                     normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
@@ -233,13 +235,14 @@ internal fun InlineProfileSettingsOverlay(
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
 
     val profiles by MacroPadState.profiles.collectAsState()
-    val assignedPackages = remember(profiles) {
-        profiles
-            .filter { it.associatedPackage != null && it.associatedPackage != initialPackage }
-            .mapNotNull { it.associatedPackage?.trim()?.lowercase() }
-            .toSet()
-    }
-    
+    val assignedPackages =
+        remember(profiles) {
+            profiles
+                .filter { it.associatedPackage != null && it.associatedPackage != initialPackage }
+                .mapNotNull { it.associatedPackage?.trim()?.lowercase() }
+                .toSet()
+        }
+
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
@@ -253,17 +256,22 @@ internal fun InlineProfileSettingsOverlay(
     LaunchedEffect(showAppList) {
         if (showAppList) {
             isLoadingApps = true
-            appsList = withContext(Dispatchers.IO) {
-                val pm = context.packageManager
-                val intent = Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_LAUNCHER)
+            appsList =
+                withContext(Dispatchers.IO) {
+                    val pm = context.packageManager
+                    val intent =
+                        Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_LAUNCHER)
+                        }
+                    pm
+                        .queryIntentActivities(intent, 0)
+                        .map { info ->
+                            val label = info.loadLabel(pm).toString()
+                            val pkg = info.activityInfo.packageName
+                            label to pkg
+                        }.distinctBy { it.second }
+                        .sortedBy { it.first }
                 }
-                pm.queryIntentActivities(intent, 0).map { info ->
-                    val label = info.loadLabel(pm).toString()
-                    val pkg = info.activityInfo.packageName
-                    label to pkg
-                }.distinctBy { it.second }.sortedBy { it.first }
-            }
             isLoadingApps = false
         }
     }
@@ -271,15 +279,16 @@ internal fun InlineProfileSettingsOverlay(
     LaunchedEffect(selectedPackage) {
         val pkg = selectedPackage
         if (pkg != null) {
-            selectedAppName = withContext(Dispatchers.IO) {
-                try {
-                    val pm = context.packageManager
-                    val info = pm.getApplicationInfo(pkg, 0)
-                    pm.getApplicationLabel(info).toString()
-                } catch (e: Exception) {
-                    pkg
+            selectedAppName =
+                withContext(Dispatchers.IO) {
+                    try {
+                        val pm = context.packageManager
+                        val info = pm.getApplicationInfo(pkg, 0)
+                        pm.getApplicationLabel(info).toString()
+                    } catch (e: Exception) {
+                        pkg
+                    }
                 }
-            }
         }
     }
 
@@ -306,7 +315,7 @@ internal fun InlineProfileSettingsOverlay(
                     )
                 }
             }
-        }
+        },
     ) {
         if (!showAppList) {
             AppTextField(
@@ -328,7 +337,7 @@ internal fun InlineProfileSettingsOverlay(
             Text(
                 text = stringResource(R.string.profile_settings_app_mapping),
                 color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
             )
             Spacer(Modifier.height(4.dp))
 
@@ -337,36 +346,37 @@ internal fun InlineProfileSettingsOverlay(
                     text = stringResource(R.string.profile_settings_accessibility_required),
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 8.dp),
                 )
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (selectedPackage != null) {
                         Row(
                             modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             AppIcon(
                                 packageName = selectedPackage!!,
-                                modifier = Modifier
-                                    .padding(end = 8.dp)
-                                    .size(36.dp)
+                                modifier =
+                                    Modifier
+                                        .padding(end = 8.dp)
+                                        .size(36.dp),
                             )
                             Text(
                                 text = selectedAppName,
                                 color = accentColor,
                                 style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                         TextButton(onClick = { selectedPackage = null }) {
                             Text(
                                 text = stringResource(R.string.profile_settings_clear_app),
-                                color = colors.error
+                                color = colors.error,
                             )
                         }
                     } else {
@@ -374,12 +384,12 @@ internal fun InlineProfileSettingsOverlay(
                             text = stringResource(R.string.macropad_modifier_none),
                             color = colors.onSurfaceSecondary,
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         TextButton(onClick = { showAppList = true }) {
                             Text(
                                 text = stringResource(R.string.profile_settings_select_app),
-                                color = accentColor
+                                color = accentColor,
                             )
                         }
                     }
@@ -392,7 +402,7 @@ internal fun InlineProfileSettingsOverlay(
                 label = {
                     Text(
                         text = stringResource(R.string.profile_settings_search_apps),
-                        color = colors.onSurfaceSecondary
+                        color = colors.onSurfaceSecondary,
                     )
                 },
                 singleLine = true,
@@ -404,67 +414,77 @@ internal fun InlineProfileSettingsOverlay(
                 Text(
                     text = stringResource(R.string.profile_settings_loading_apps),
                     color = colors.onSurfaceSecondary,
-                    modifier = Modifier.padding(vertical = 16.dp)
+                    modifier = Modifier.padding(vertical = 16.dp),
                 )
             } else {
-                val filtered = appsList.filter {
-                    it.first.contains(searchQuery, ignoreCase = true) ||
-                    it.second.contains(searchQuery, ignoreCase = true)
-                }
+                val filtered =
+                    appsList.filter {
+                        it.first.contains(searchQuery, ignoreCase = true) ||
+                            it.second.contains(searchQuery, ignoreCase = true)
+                    }
                 if (filtered.isEmpty()) {
                     Text(
                         text = stringResource(R.string.profile_settings_no_apps),
                         color = colors.onSurfaceSecondary,
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.padding(vertical = 16.dp),
                     )
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
                     ) {
                         items(filtered) { (label, pkg) ->
                             val isAssigned = assignedPackages.contains(pkg.trim().lowercase())
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(enabled = !isAssigned) {
-                                        selectedPackage = pkg
-                                        showAppList = false
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = !isAssigned) {
+                                            selectedPackage = pkg
+                                            showAppList = false
+                                        }.padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 AppIcon(
                                     packageName = pkg,
-                                    modifier = Modifier
-                                        .padding(end = 12.dp)
-                                        .size(36.dp)
-                                        .alpha(if (isAssigned) 0.38f else 1f)
+                                    modifier =
+                                        Modifier
+                                            .padding(end = 12.dp)
+                                            .size(36.dp)
+                                            .alpha(if (isAssigned) 0.38f else 1f),
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
                                             text = label,
                                             color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.5f) else colors.onSurface,
                                             style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
+                                            fontWeight = FontWeight.Medium,
                                         )
                                         if (isAssigned) {
                                             Spacer(Modifier.width(6.dp))
                                             Text(
                                                 text = stringResource(R.string.profile_settings_app_assigned),
                                                 color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                                                style = MaterialTheme.typography.bodySmall
+                                                style = MaterialTheme.typography.bodySmall,
                                             )
                                         }
                                     }
                                     Text(
                                         text = pkg,
-                                        color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.38f) else colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodySmall
+                                        color =
+                                            if (isAssigned) {
+                                                colors.onSurfaceSecondary.copy(
+                                                    alpha = 0.38f,
+                                                )
+                                            } else {
+                                                colors.onSurfaceSecondary
+                                            },
+                                        style = MaterialTheme.typography.bodySmall,
                                     )
                                 }
                             }
@@ -476,11 +496,10 @@ internal fun InlineProfileSettingsOverlay(
     }
 }
 
-
 @Composable
 internal fun AppIcon(
     packageName: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var imageBitmap by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
@@ -502,14 +521,15 @@ internal fun AppIcon(
         Image(
             bitmap = imageBitmap!!,
             contentDescription = null,
-            modifier = modifier
+            modifier = modifier,
         )
     } else {
         Box(
-            modifier = modifier.background(
-                LocalAppColors.current.surfaceVariant,
-                CircleShape
-            )
+            modifier =
+                modifier.background(
+                    LocalAppColors.current.surfaceVariant,
+                    CircleShape,
+                ),
         )
     }
 }
@@ -520,16 +540,14 @@ private fun getDrawableBitmap(drawable: Drawable): Bitmap {
             return drawable.bitmap
         }
     }
-    val bitmap = if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
-        Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-    } else {
-        Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
-    }
+    val bitmap =
+        if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        } else {
+            Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        }
     val canvas = Canvas(bitmap)
     drawable.setBounds(0, 0, canvas.width, canvas.height)
     drawable.draw(canvas)
     return bitmap
 }
-
-
-

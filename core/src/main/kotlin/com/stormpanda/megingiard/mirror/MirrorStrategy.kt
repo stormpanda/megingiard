@@ -25,8 +25,9 @@ enum class MirrorStrategy {
  *
  * @param privdRunning `true` iff `PrivdManager.state == PrivdState.RUNNING`.
  */
-fun selectMirrorStrategy(
-    privdRunning: Boolean,
-): MirrorStrategy =
-    if (privdRunning) MirrorStrategy.PRIVILEGED
-    else MirrorStrategy.MEDIA_PROJECTION
+fun selectMirrorStrategy(privdRunning: Boolean): MirrorStrategy =
+    if (privdRunning) {
+        MirrorStrategy.PRIVILEGED
+    } else {
+        MirrorStrategy.MEDIA_PROJECTION
+    }

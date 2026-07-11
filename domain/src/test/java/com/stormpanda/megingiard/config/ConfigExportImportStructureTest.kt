@@ -15,17 +15,18 @@ import org.junit.Test
  * or coroutines are involved.
  */
 class ConfigExportImportStructureTest {
+    private val testMetadata =
+        com.stormpanda.megingiard.config.ExportMetadata(
+            exportedAt = "2025-01-01T00:00:00Z",
+            appVersionName = "1.0.0",
+            appVersionCode = 1,
+        )
 
-    private val testMetadata = com.stormpanda.megingiard.config.ExportMetadata(
-        exportedAt = "2025-01-01T00:00:00Z",
-        appVersionName = "1.0.0",
-        appVersionCode = 1,
-    )
-
-    private val testProfile = PadProfile(
-        id = "profile-uuid-test",
-        name = "SharedProfile",
-    )
+    private val testProfile =
+        PadProfile(
+            id = "profile-uuid-test",
+            name = "SharedProfile",
+        )
 
     // ── ImportMode enum ───────────────────────────────────────────────────────
 

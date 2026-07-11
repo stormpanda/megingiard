@@ -38,7 +38,10 @@ object BackgroundSettings {
     private val _macropadBackgroundApplyTheme = MutableStateFlow(false)
     val macropadBackgroundApplyTheme: StateFlow<Boolean> = _macropadBackgroundApplyTheme.asStateFlow()
 
-    internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
+    internal fun init(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope,
+    ) {
         this.dataStore = dataStore
         this.scope = scope
     }
@@ -48,8 +51,6 @@ object BackgroundSettings {
         _macropadBackgroundPreview.value = prefs[KEY_MACROPAD_AMBIENT_PREVIEW] ?: false
         _macropadBackgroundApplyTheme.value = prefs[KEY_MACROPAD_AMBIENT_APPLY_THEME] ?: false
     }
-
-
 
     fun setMacropadBackgroundDim(value: Float) {
         AppLog.d(TAG, "setMacropadBackgroundDim($value)")
@@ -61,8 +62,6 @@ object BackgroundSettings {
     fun updateMacropadBackgroundDimLive(value: Float) {
         _macropadBackgroundDim.value = value
     }
-
-
 
     fun setMacropadBackgroundPreview(value: Boolean) {
         AppLog.d(TAG, "setMacropadBackgroundPreview($value)")

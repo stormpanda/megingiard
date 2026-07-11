@@ -61,7 +61,6 @@ import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDivider
-import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -69,6 +68,7 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -114,7 +114,9 @@ internal fun MacroTimelineEditor(
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var loopEnabled by remember { mutableStateOf(macro.loopEnabled) }
     var loopPauseMs by remember { mutableIntStateOf(macro.loopPauseMs) }
-    var loopPauseMaxMs by remember { mutableIntStateOf(mtExpandLoopScale(MTE_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MTE_LOOP_PAUSE_INIT_MAX_MS)) }
+    var loopPauseMaxMs by remember {
+        mutableIntStateOf(mtExpandLoopScale(MTE_LOOP_PAUSE_INIT_MAX_MS, macro.loopPauseMs).coerceAtLeast(MTE_LOOP_PAUSE_INIT_MAX_MS))
+    }
     var randomizeTimingEnabled by remember { mutableStateOf(macro.randomizeTimingEnabled) }
     var randomizeTimingRangeMs by remember { mutableIntStateOf(macro.randomizeTimingRangeMs.coerceIn(10, 100)) }
     // Tracks whether the recording session started GamepadInjector; guards the matching stop() call.
@@ -187,12 +189,13 @@ internal fun MacroTimelineEditor(
         val tap = recordedTap ?: return@LaunchedEffect
         val nextStart = steps.totalDurationMs()
         pushUndo(steps)
-        steps = steps + MacroStep.TouchTap(
-            startTimeMs = nextStart,
-            durationMs = MTE_DEFAULT_TOUCH_DURATION_MS,
-            normX = tap.first,
-            normY = tap.second,
-        )
+        steps = steps +
+            MacroStep.TouchTap(
+                startTimeMs = nextStart,
+                durationMs = MTE_DEFAULT_TOUCH_DURATION_MS,
+                normX = tap.first,
+                normY = tap.second,
+            )
         AppLog.d(TAG, "recordedTouchAdded startMs=$nextStart")
         TouchRecordingManager.consumeRecordedTap()
     }
@@ -264,37 +267,42 @@ internal fun MacroTimelineEditor(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .blockPointerEvents(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .blockPointerEvents(),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(colors.appBackground),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(MTE_TOP_BAR_HEIGHT.dp)
-                    .background(colors.surface)
-                    .padding(horizontal = MTE_PADDING.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(MTE_TOP_BAR_HEIGHT.dp)
+                        .background(colors.surface)
+                        .padding(horizontal = MTE_PADDING.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
                     value = localName,
                     onValueChange = { localName = it },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = accentColor,
-                        unfocusedBorderColor = colors.accentBorder,
-                        focusedTextColor = colors.onSurface,
-                        unfocusedTextColor = colors.onSurface,
-                        cursorColor = accentColor,
-                    ),
-                    modifier = Modifier
-                        .weight(MTE_NAME_FIELD_WEIGHT)
-                        .padding(vertical = 6.dp),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = accentColor,
+                            unfocusedBorderColor = colors.accentBorder,
+                            focusedTextColor = colors.onSurface,
+                            unfocusedTextColor = colors.onSurface,
+                            cursorColor = accentColor,
+                        ),
+                    modifier =
+                        Modifier
+                            .weight(MTE_NAME_FIELD_WEIGHT)
+                            .padding(vertical = 6.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = onBack) {
@@ -310,7 +318,7 @@ internal fun MacroTimelineEditor(
                                 loopPauseMs = loopPauseMs,
                                 randomizeTimingEnabled = randomizeTimingEnabled,
                                 randomizeTimingRangeMs = randomizeTimingRangeMs,
-                            )
+                            ),
                         )
                     },
                     enabled = localName.isNotBlank(),
@@ -327,10 +335,11 @@ internal fun MacroTimelineEditor(
             AppDivider()
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface)
-                    .padding(horizontal = MTE_PADDING.dp, vertical = 4.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.surface)
+                        .padding(horizontal = MTE_PADDING.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -370,10 +379,11 @@ internal fun MacroTimelineEditor(
 
             if (viewMode == MacroEditorViewMode.LIST) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.surface)
-                        .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = 4.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.surface)
+                            .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(
@@ -424,15 +434,16 @@ internal fun MacroTimelineEditor(
                     Row(horizontalArrangement = Arrangement.spacedBy(MTE_VIEW_CHIP_SPACING.dp)) {
                         ShiftMode.entries.forEach { mode ->
                             AppSelectableChip(
-                                text = stringResource(
-                                    when (mode) {
-                                        ShiftMode.NONE        -> R.string.macropad_macro_editor_shift_none
-                                        ShiftMode.START_DELTA -> R.string.macropad_macro_editor_shift_start_delta
-                                        ShiftMode.END_DELTA   -> R.string.macropad_macro_editor_shift_end_delta
-                                    }
-                                ),
+                                text =
+                                    stringResource(
+                                        when (mode) {
+                                            ShiftMode.NONE -> R.string.macropad_macro_editor_shift_none
+                                            ShiftMode.START_DELTA -> R.string.macropad_macro_editor_shift_start_delta
+                                            ShiftMode.END_DELTA -> R.string.macropad_macro_editor_shift_end_delta
+                                        },
+                                    ),
                                 selected = shiftModeDefault == mode,
-                                onClick  = { shiftModeDefault = mode },
+                                onClick = { shiftModeDefault = mode },
                             )
                         }
                     }
@@ -445,16 +456,18 @@ internal fun MacroTimelineEditor(
 
             if (viewMode == MacroEditorViewMode.LIST) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(colors.surface)
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(colors.surface)
+                            .verticalScroll(rememberScrollState()),
                 ) {
                     if (steps.isEmpty()) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(MTE_PADDING.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(MTE_PADDING.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -521,10 +534,11 @@ internal fun MacroTimelineEditor(
                 Column(modifier = Modifier.fillMaxSize().background(colors.surface)) {
                     if (steps.isEmpty()) {
                         Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(MTE_PADDING.dp),
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(MTE_PADDING.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -535,10 +549,11 @@ internal fun MacroTimelineEditor(
                         }
                     } else {
                         MacroVerticalTimeline(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(horizontal = MTE_TIMELINE_SIDE_PADDING.dp),
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = MTE_TIMELINE_SIDE_PADDING.dp),
                             steps = steps,
                             accentColor = accentColor,
                             onEditStep = { editingStepIndex = it },
@@ -624,39 +639,45 @@ internal fun MacroTimelineEditor(
                 if (editingStepIndex != null) {
                     val idx = editingStepIndex!!
                     val oldStep = steps[idx]
-                    val updated = applyShiftSubsequent(
-                        steps       = steps,
-                        editedIndex = idx,
-                        oldStep     = oldStep,
-                        newStep     = newStep,
-                        mode        = shiftMode,
-                        maxTimeMs   = MTE_TIMING_MAX_MS,
-                    )
+                    val updated =
+                        applyShiftSubsequent(
+                            steps = steps,
+                            editedIndex = idx,
+                            oldStep = oldStep,
+                            newStep = newStep,
+                            mode = shiftMode,
+                            maxTimeMs = MTE_TIMING_MAX_MS,
+                        )
                     pushUndo(steps)
                     steps = updated
                     editingStepIndex = null
                 } else {
-                    val updated = if (shiftMode == ShiftMode.NONE) {
-                        steps + newStep
-                    } else {
-                        val shifted = steps.map { existing ->
-                            if (existing.startTimeMs >= newStep.startTimeMs) {
-                                existing.withStartTime(
-                                    (existing.startTimeMs + newStep.durationMs)
-                                        .coerceIn(0L, MTE_TIMING_MAX_MS),
-                                )
-                            } else {
-                                existing
-                            }
+                    val updated =
+                        if (shiftMode == ShiftMode.NONE) {
+                            steps + newStep
+                        } else {
+                            val shifted =
+                                steps.map { existing ->
+                                    if (existing.startTimeMs >= newStep.startTimeMs) {
+                                        existing.withStartTime(
+                                            (existing.startTimeMs + newStep.durationMs)
+                                                .coerceIn(0L, MTE_TIMING_MAX_MS),
+                                        )
+                                    } else {
+                                        existing
+                                    }
+                                }
+                            shifted + newStep
                         }
-                        shifted + newStep
-                    }
                     pushUndo(steps)
                     steps = updated
                     showAddStep = false
                 }
             },
-            onDismiss = { showAddStep = false; editingStepIndex = null },
+            onDismiss = {
+                showAddStep = false
+                editingStepIndex = null
+            },
         )
     }
 
@@ -723,13 +744,16 @@ internal fun MacroTimelineEditor(
             onDismissForever = {
                 showMacroEditorTutorialLocal = false
                 SettingsManager.setShowMacroEditorTutorial(false)
-            }
+            },
         )
     }
 }
 
 @Composable
-private fun MacroTimelineHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun MacroTimelineHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     val colors = LocalAppColors.current
     HelpModal(
         visible = visible,

@@ -142,49 +142,53 @@ internal fun SteamGridDbScrapeDialog(
         selectedImage = null
         imagesList = emptyList()
         errorMessage = null
-        activeFetchJob = scope.launch {
-            SteamGridDbClient.searchGames(searchQuery, apiKey)
-                .onSuccess { games ->
-                    AppLog.d(TAG, "searchGames success: found ${games.size} games")
-                    gamesList = games
-                    isSearchingGames = false
-                    if (games.isNotEmpty()) {
-                        // Automatically select the first match and fetch its images
-                        val firstGame = games.first()
-                        selectedGame = firstGame
-                        val cacheKey = firstGame.id to selectedType
-                        val cached = imagesCache[cacheKey]
-                        if (cached != null) {
-                            AppLog.d(TAG, "searchGames auto-fetch: cache hit for gameId=${firstGame.id} type=$selectedType")
-                            imagesList = cached
-                        } else {
-                            isLoadingImages = true
-                            AppLog.i(TAG, "searchGames auto-fetch: loading images for gameId=${firstGame.id} type=$selectedType")
-                            SteamGridDbClient.fetchImages(firstGame.id, selectedType, apiKey)
-                                .onSuccess { images ->
-                                    imagesCache[cacheKey] = images
-                                    imagesList = images
-                                    isLoadingImages = false
-                                }
-                                .onFailure { err ->
-                                    AppLog.w(TAG, "searchGames auto-fetch failure: ${err.message}")
-                                    errorMessage = err.message
-                                    isLoadingImages = false
-                                    pendingErrorDialog = err
-                                }
+        activeFetchJob =
+            scope.launch {
+                SteamGridDbClient
+                    .searchGames(searchQuery, apiKey)
+                    .onSuccess { games ->
+                        AppLog.d(TAG, "searchGames success: found ${games.size} games")
+                        gamesList = games
+                        isSearchingGames = false
+                        if (games.isNotEmpty()) {
+                            // Automatically select the first match and fetch its images
+                            val firstGame = games.first()
+                            selectedGame = firstGame
+                            val cacheKey = firstGame.id to selectedType
+                            val cached = imagesCache[cacheKey]
+                            if (cached != null) {
+                                AppLog.d(TAG, "searchGames auto-fetch: cache hit for gameId=${firstGame.id} type=$selectedType")
+                                imagesList = cached
+                            } else {
+                                isLoadingImages = true
+                                AppLog.i(TAG, "searchGames auto-fetch: loading images for gameId=${firstGame.id} type=$selectedType")
+                                SteamGridDbClient
+                                    .fetchImages(firstGame.id, selectedType, apiKey)
+                                    .onSuccess { images ->
+                                        imagesCache[cacheKey] = images
+                                        imagesList = images
+                                        isLoadingImages = false
+                                    }.onFailure { err ->
+                                        AppLog.w(TAG, "searchGames auto-fetch failure: ${err.message}")
+                                        errorMessage = err.message
+                                        isLoadingImages = false
+                                        pendingErrorDialog = err
+                                    }
+                            }
                         }
+                    }.onFailure { err ->
+                        AppLog.w(TAG, "searchGames failure: ${err.message}")
+                        errorMessage = err.message
+                        isSearchingGames = false
+                        pendingErrorDialog = err
                     }
-                }
-                .onFailure { err ->
-                    AppLog.w(TAG, "searchGames failure: ${err.message}")
-                    errorMessage = err.message
-                    isSearchingGames = false
-                    pendingErrorDialog = err
-                }
-        }
+            }
     }
 
-    fun loadImagesForGame(gameId: Int, type: String) {
+    fun loadImagesForGame(
+        gameId: Int,
+        type: String,
+    ) {
         selectedImage = null
         errorMessage = null
         val cacheKey = gameId to type
@@ -197,21 +201,22 @@ internal fun SteamGridDbScrapeDialog(
         activeFetchJob?.cancel()
         isLoadingImages = true
         AppLog.i(TAG, "loadImagesForGame: fetching images for gameId=$gameId type=$type")
-        activeFetchJob = scope.launch {
-            SteamGridDbClient.fetchImages(gameId, type, apiKey)
-                .onSuccess { images ->
-                    AppLog.d(TAG, "loadImagesForGame success: loaded ${images.size} images")
-                    imagesCache[cacheKey] = images
-                    imagesList = images
-                    isLoadingImages = false
-                }
-                .onFailure { err ->
-                    AppLog.w(TAG, "loadImagesForGame failure: ${err.message}")
-                    errorMessage = err.message
-                    isLoadingImages = false
-                    pendingErrorDialog = err
-                }
-        }
+        activeFetchJob =
+            scope.launch {
+                SteamGridDbClient
+                    .fetchImages(gameId, type, apiKey)
+                    .onSuccess { images ->
+                        AppLog.d(TAG, "loadImagesForGame success: loaded ${images.size} images")
+                        imagesCache[cacheKey] = images
+                        imagesList = images
+                        isLoadingImages = false
+                    }.onFailure { err ->
+                        AppLog.w(TAG, "loadImagesForGame failure: ${err.message}")
+                        errorMessage = err.message
+                        isLoadingImages = false
+                        pendingErrorDialog = err
+                    }
+            }
     }
 
     // Trigger initial search if layout name is prefilled
@@ -227,9 +232,10 @@ internal fun SteamGridDbScrapeDialog(
     })
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.appBackground),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(colors.appBackground),
     ) {
         FullScreenTopBar(
             title = stringResource(R.string.steamgriddb_scrape_dialog_title),
@@ -246,14 +252,14 @@ internal fun SteamGridDbScrapeDialog(
                         AppLog.i(TAG, "Starting download for image URL: ${currentSelectedImage.url}")
                         scope.launch {
                             val cacheDir = context.cacheDir
-                            SteamGridDbClient.downloadImageToTempFile(currentSelectedImage.url, cacheDir)
+                            SteamGridDbClient
+                                .downloadImageToTempFile(currentSelectedImage.url, cacheDir)
                                 .onSuccess { tempFile ->
                                     AppLog.i(TAG, "Download successful, file saved to: ${tempFile.absolutePath}")
                                     onImageSelected(Uri.fromFile(tempFile))
                                     isDownloading = false
                                     onDismiss()
-                                }
-                                .onFailure { err ->
+                                }.onFailure { err ->
                                     AppLog.e(TAG, "Failed to download image: ${err.message}", err)
                                     errorMessage = err.message
                                     isDownloading = false
@@ -262,12 +268,19 @@ internal fun SteamGridDbScrapeDialog(
                         }
                     }
                 },
-                enabled = selectedImage != null && !isDownloading
+                enabled = selectedImage != null && !isDownloading,
             ) {
                 Text(
                     text = stringResource(R.string.macropad_macro_editor_save),
-                    color = if (selectedImage != null && !isDownloading) colors.accent else colors.onSurfaceSecondary.copy(alpha = DISABLE_ALPHA),
-                    fontWeight = FontWeight.Bold
+                    color =
+                        if (selectedImage != null &&
+                            !isDownloading
+                        ) {
+                            colors.accent
+                        } else {
+                            colors.onSurfaceSecondary.copy(alpha = DISABLE_ALPHA)
+                        },
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -279,13 +292,13 @@ internal fun SteamGridDbScrapeDialog(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // ── Search row ──────────────────────────────────────────────────────────
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         AppTextField(
                             value = searchQuery,
@@ -294,23 +307,23 @@ internal fun SteamGridDbScrapeDialog(
                             placeholder = {
                                 Text(
                                     text = stringResource(R.string.steamgriddb_scrape_search_placeholder),
-                                    color = colors.onSurfaceSecondary
+                                    color = colors.onSurfaceSecondary,
                                 )
                             },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Rounded.Search,
                                     contentDescription = null,
-                                    tint = colors.onSurfaceSecondary
+                                    tint = colors.onSurfaceSecondary,
                                 )
                             },
-                            singleLine = true
+                            singleLine = true,
                         )
                         Spacer(Modifier.width(12.dp))
                         Button(
                             onClick = { searchGames() },
                             colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                            enabled = searchQuery.isNotBlank() && !isSearchingGames
+                            enabled = searchQuery.isNotBlank() && !isSearchingGames,
                         ) {
                             Text(text = stringResource(R.string.steamgriddb_scrape_search_btn), color = colors.onAccent)
                         }
@@ -321,36 +334,37 @@ internal fun SteamGridDbScrapeDialog(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         listOf(TYPE_GRIDS, TYPE_HEROES, TYPE_LOGOS, TYPE_ICONS).forEach { type ->
                             val isSelected = selectedType == type
-                            val label = when (type) {
-                                TYPE_GRIDS -> stringResource(R.string.steamgriddb_scrape_type_grid)
-                                TYPE_HEROES -> stringResource(R.string.steamgriddb_scrape_type_hero)
-                                TYPE_LOGOS -> stringResource(R.string.steamgriddb_scrape_type_logo)
-                                else -> stringResource(R.string.steamgriddb_scrape_type_icon)
-                            }
+                            val label =
+                                when (type) {
+                                    TYPE_GRIDS -> stringResource(R.string.steamgriddb_scrape_type_grid)
+                                    TYPE_HEROES -> stringResource(R.string.steamgriddb_scrape_type_hero)
+                                    TYPE_LOGOS -> stringResource(R.string.steamgriddb_scrape_type_logo)
+                                    else -> stringResource(R.string.steamgriddb_scrape_type_icon)
+                                }
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) accentColor else colors.surface)
-                                    .border(1.dp, if (isSelected) accentColor else colors.accentBorder, RoundedCornerShape(8.dp))
-                                    .clickable {
-                                        selectedType = type
-                                        if (selectedGame != null) {
-                                            loadImagesForGame(selectedGame!!.id, type)
-                                        }
-                                    }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSelected) accentColor else colors.surface)
+                                        .border(1.dp, if (isSelected) accentColor else colors.accentBorder, RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            selectedType = type
+                                            if (selectedGame != null) {
+                                                loadImagesForGame(selectedGame!!.id, type)
+                                            }
+                                        }.padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     text = label,
                                     color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 )
                             }
                         }
@@ -365,20 +379,21 @@ internal fun SteamGridDbScrapeDialog(
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 8.dp),
                                 ) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(16.dp),
                                         color = accentColor,
-                                        strokeWidth = 2.dp
+                                        strokeWidth = 2.dp,
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(R.string.steamgriddb_scrape_searching_games),
                                         color = colors.onSurfaceSecondary,
-                                        style = MaterialTheme.typography.bodyMedium
+                                        style = MaterialTheme.typography.bodyMedium,
                                     )
                                 }
                             } else {
@@ -386,38 +401,39 @@ internal fun SteamGridDbScrapeDialog(
                                     text = stringResource(R.string.steamgriddb_scrape_select_game),
                                     color = colors.onSurface,
                                     style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    contentPadding = PaddingValues(bottom = 8.dp)
+                                    contentPadding = PaddingValues(bottom = 8.dp),
                                 ) {
                                     items(gamesList) { game ->
                                         val isSelectedGame = selectedGame?.id == game.id
                                         Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(
-                                                    if (isSelectedGame) accentColor.copy(alpha = SELECTION_ALPHA)
-                                                    else colors.surface
-                                                )
-                                                .border(
-                                                    1.dp,
-                                                    if (isSelectedGame) accentColor else colors.accentBorder,
-                                                    RoundedCornerShape(8.dp)
-                                                )
-                                                .clickable {
-                                                    selectedGame = game
-                                                    loadImagesForGame(game.id, selectedType)
-                                                }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                            modifier =
+                                                Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(
+                                                        if (isSelectedGame) {
+                                                            accentColor.copy(alpha = SELECTION_ALPHA)
+                                                        } else {
+                                                            colors.surface
+                                                        },
+                                                    ).border(
+                                                        1.dp,
+                                                        if (isSelectedGame) accentColor else colors.accentBorder,
+                                                        RoundedCornerShape(8.dp),
+                                                    ).clickable {
+                                                        selectedGame = game
+                                                        loadImagesForGame(game.id, selectedType)
+                                                    }.padding(horizontal = 14.dp, vertical = 8.dp),
                                         ) {
                                             Text(
                                                 text = game.name,
                                                 color = if (isSelectedGame) colors.onSurface else colors.onSurfaceSecondary,
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (isSelectedGame) FontWeight.SemiBold else FontWeight.Normal
+                                                fontWeight = if (isSelectedGame) FontWeight.SemiBold else FontWeight.Normal,
                                             )
                                         }
                                     }
@@ -440,10 +456,11 @@ internal fun SteamGridDbScrapeDialog(
                 if (isDownloading) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(STATUS_BOX_HEIGHT),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator(color = accentColor)
@@ -451,7 +468,7 @@ internal fun SteamGridDbScrapeDialog(
                                 Text(
                                     text = stringResource(R.string.steamgriddb_scrape_downloading),
                                     color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                         }
@@ -459,10 +476,11 @@ internal fun SteamGridDbScrapeDialog(
                 } else if (isLoadingImages) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(STATUS_BOX_HEIGHT),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 CircularProgressIndicator(color = accentColor)
@@ -470,7 +488,7 @@ internal fun SteamGridDbScrapeDialog(
                                 Text(
                                     text = stringResource(R.string.steamgriddb_scrape_loading_images),
                                     color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                         }
@@ -478,23 +496,24 @@ internal fun SteamGridDbScrapeDialog(
                 } else if (errorMessage != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(STATUS_BOX_HEIGHT),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
                                     imageVector = Icons.Rounded.Warning,
                                     contentDescription = null,
                                     tint = colors.error,
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size(48.dp),
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
                                     text = stringResource(R.string.steamgriddb_scrape_error, errorMessage ?: ""),
                                     color = colors.error,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                         }
@@ -502,30 +521,32 @@ internal fun SteamGridDbScrapeDialog(
                 } else if (gamesList.isEmpty() && searchQuery.isNotBlank() && !isSearchingGames) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(STATUS_BOX_HEIGHT),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = stringResource(R.string.steamgriddb_scrape_no_games_found),
                                 color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         }
                     }
                 } else if (imagesList.isEmpty() && selectedGame != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(STATUS_BOX_HEIGHT),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = stringResource(R.string.steamgriddb_scrape_no_images_found),
                                 color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                         }
                     }
@@ -535,30 +556,29 @@ internal fun SteamGridDbScrapeDialog(
                     items(imagesList) { image ->
                         val isSelected = selectedImage?.id == image.id
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(
-                                    when (selectedType) {
-                                        TYPE_GRIDS -> GRID_ASPECT_RATIO_GRID
-                                        TYPE_HEROES -> GRID_ASPECT_RATIO_HERO
-                                        else -> GRID_ASPECT_RATIO_DEFAULT
-                                    }
-                                )
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(colors.surface)
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) accentColor else colors.accentBorder,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .clickable {
-                                    selectedImage = if (isSelected) null else image
-                                }
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(
+                                        when (selectedType) {
+                                            TYPE_GRIDS -> GRID_ASPECT_RATIO_GRID
+                                            TYPE_HEROES -> GRID_ASPECT_RATIO_HERO
+                                            else -> GRID_ASPECT_RATIO_DEFAULT
+                                        },
+                                    ).clip(RoundedCornerShape(8.dp))
+                                    .background(colors.surface)
+                                    .border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = if (isSelected) accentColor else colors.accentBorder,
+                                        shape = RoundedCornerShape(8.dp),
+                                    ).clickable {
+                                        selectedImage = if (isSelected) null else image
+                                    },
                         ) {
                             SteamGridDbImageThumbnail(
                                 url = image.thumb.ifBlank { image.url },
                                 contentDescription = null, // decorative image, screen readers can ignore
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
                             )
                         }
                     }
@@ -573,9 +593,10 @@ internal fun SteamGridDbScrapeDialog(
             val showBackToTop by remember { derivedStateOf { gridState.firstVisibleItemIndex > BACK_TO_TOP_THRESHOLD } }
             if (showBackToTop) {
                 Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(24.dp)
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(24.dp),
                 ) {
                     FloatingActionButton(
                         onClick = {
@@ -586,11 +607,11 @@ internal fun SteamGridDbScrapeDialog(
                         containerColor = accentColor,
                         contentColor = colors.onAccent,
                         shape = CircleShape,
-                        modifier = Modifier.size(56.dp)
+                        modifier = Modifier.size(56.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.ArrowUpward,
-                            contentDescription = "Back to Top"
+                            contentDescription = "Back to Top",
                         )
                     }
                 }
@@ -598,20 +619,24 @@ internal fun SteamGridDbScrapeDialog(
 
             val currentError = pendingErrorDialog
             if (currentError != null) {
-                val (titleRes, messageRes) = when (currentError) {
-                    is SteamGridDbException.Offline -> {
-                        R.string.steamgriddb_error_offline_title to R.string.steamgriddb_error_offline_message
+                val (titleRes, messageRes) =
+                    when (currentError) {
+                        is SteamGridDbException.Offline -> {
+                            R.string.steamgriddb_error_offline_title to R.string.steamgriddb_error_offline_message
+                        }
+
+                        is SteamGridDbException.RateLimited -> {
+                            R.string.steamgriddb_error_rate_limited_title to R.string.steamgriddb_error_rate_limited_message
+                        }
+
+                        is SteamGridDbException.ServiceUnavailable -> {
+                            R.string.steamgriddb_error_unreachable_title to R.string.steamgriddb_error_unreachable_message
+                        }
+
+                        else -> {
+                            R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
+                        }
                     }
-                    is SteamGridDbException.RateLimited -> {
-                        R.string.steamgriddb_error_rate_limited_title to R.string.steamgriddb_error_rate_limited_message
-                    }
-                    is SteamGridDbException.ServiceUnavailable -> {
-                        R.string.steamgriddb_error_unreachable_title to R.string.steamgriddb_error_unreachable_message
-                    }
-                    else -> {
-                        R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
-                    }
-                }
                 AlertDialog(
                     containerColor = colors.surface,
                     onDismissRequest = {
@@ -623,14 +648,14 @@ internal fun SteamGridDbScrapeDialog(
                         Text(
                             text = stringResource(titleRes),
                             color = colors.onSurface,
-                            style = MaterialTheme.typography.titleLarge
+                            style = MaterialTheme.typography.titleLarge,
                         )
                     },
                     text = {
                         Text(
                             text = stringResource(messageRes),
                             color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     },
                     confirmButton = {
@@ -642,10 +667,10 @@ internal fun SteamGridDbScrapeDialog(
                             Text(
                                 text = stringResource(R.string.steamgriddb_error_dismiss),
                                 color = colors.accent,
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.labelLarge,
                             )
                         }
-                    }
+                    },
                 )
             }
         }
@@ -656,7 +681,7 @@ internal fun SteamGridDbScrapeDialog(
 private fun SteamGridDbImageThumbnail(
     url: String,
     contentDescription: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     var bitmap by remember(url) { mutableStateOf<ImageBitmap?>(null) }
@@ -666,24 +691,25 @@ private fun SteamGridDbImageThumbnail(
     LaunchedEffect(url) {
         isLoading = true
         isError = false
-        val decoded = withContext(Dispatchers.IO) {
-            try {
-                val connection = URL(url).openConnection() as HttpURLConnection
-                connection.connectTimeout = THUMB_CONNECT_TIMEOUT_MS
-                connection.readTimeout = THUMB_READ_TIMEOUT_MS
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    connection.inputStream.use { input ->
-                        BitmapFactory.decodeStream(input)
+        val decoded =
+            withContext(Dispatchers.IO) {
+                try {
+                    val connection = URL(url).openConnection() as HttpURLConnection
+                    connection.connectTimeout = THUMB_CONNECT_TIMEOUT_MS
+                    connection.readTimeout = THUMB_READ_TIMEOUT_MS
+                    val responseCode = connection.responseCode
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        connection.inputStream.use { input ->
+                            BitmapFactory.decodeStream(input)
+                        }
+                    } else {
+                        null
                     }
-                } else {
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to load thumb $url", e)
                     null
                 }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to load thumb $url", e)
-                null
             }
-        }
         if (decoded != null) {
             bitmap = decoded.asImageBitmap()
         } else {
@@ -694,26 +720,26 @@ private fun SteamGridDbImageThumbnail(
 
     Box(
         modifier = modifier.background(colors.surfaceVariant),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
                 color = colors.accent,
-                strokeWidth = 2.dp
+                strokeWidth = 2.dp,
             )
         } else if (isError || bitmap == null) {
             Icon(
                 imageVector = Icons.Rounded.Warning,
                 contentDescription = "Error loading thumbnail",
-                tint = colors.error
+                tint = colors.error,
             )
         } else {
             Image(
                 bitmap = bitmap!!,
                 contentDescription = contentDescription,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
             )
         }
     }

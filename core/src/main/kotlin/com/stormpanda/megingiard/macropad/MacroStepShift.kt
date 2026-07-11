@@ -59,11 +59,12 @@ fun applyShiftSubsequent(
         return steps.toMutableList().also { it[editedIndex] = newStep }
     }
 
-    val delta = when (mode) {
-        ShiftMode.START_DELTA -> newStep.startTimeMs - oldStep.startTimeMs
-        ShiftMode.END_DELTA   -> newStep.endTimeMs() - oldStep.endTimeMs()
-        ShiftMode.NONE        -> 0L // unreachable — handled above
-    }
+    val delta =
+        when (mode) {
+            ShiftMode.START_DELTA -> newStep.startTimeMs - oldStep.startTimeMs
+            ShiftMode.END_DELTA -> newStep.endTimeMs() - oldStep.endTimeMs()
+            ShiftMode.NONE -> 0L // unreachable — handled above
+        }
     val oldEnd = oldStep.endTimeMs()
 
     return steps.mapIndexed { i, step ->

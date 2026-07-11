@@ -29,8 +29,9 @@ private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
-private const val NONCE_HEX_LEN = 32   // 16 nonce bytes → 32 hex chars
-private const val HMAC_HEX_LEN = 64    // SHA-256 digest → 64 hex chars
+private const val NONCE_HEX_LEN = 32 // 16 nonce bytes → 32 hex chars
+private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
+
 // UID of the Android shell user (ADB / adb shell). The daemon runs as this UID.
 private const val SHELL_UID = 2000
 
@@ -55,7 +56,6 @@ private const val SHELL_UID = 2000
  * surface only exposes the read-only [state].
  */
 object PrivdClient {
-
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
 
@@ -66,10 +66,11 @@ object PrivdClient {
      * Buffer: 64 events (DROP_OLDEST on overflow — the recording manager processes events
      * fast enough that this should never be reached under normal conditions).
      */
-    private val _evdevEvents = MutableSharedFlow<EvdevEvent>(
-        extraBufferCapacity = 64,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    private val _evdevEvents =
+        MutableSharedFlow<EvdevEvent>(
+            extraBufferCapacity = 64,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
     val evdevEvents: SharedFlow<EvdevEvent> = _evdevEvents.asSharedFlow()
 
     // Per-install HMAC key loaded from Android Keystore-encrypted storage at startup.
@@ -110,16 +111,25 @@ object PrivdClient {
     }
 
     @Volatile private var socket: LocalSocket? = null
+
     @Volatile private var writer: BufferedWriter? = null
+
     @Volatile private var reader: BufferedReader? = null
+
     @Volatile private var writerThread: Thread? = null
+
     @Volatile private var readerThread: Thread? = null
+
     @Volatile private var running = false
 
     private val queue = LinkedBlockingQueue<String>()
+
     @Volatile private var pingDeferred: CompletableDeferred<Boolean>? = null
+
     @Volatile private var mirrorDirectStartDeferred: CompletableDeferred<Boolean>? = null
+
     @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
+
     @Volatile private var screenshotDeferred: CompletableDeferred<Boolean>? = null
 
     val isConnected: Boolean
@@ -149,7 +159,10 @@ object PrivdClient {
             val peerUid = s.peerCredentials.uid
             if (peerUid != SHELL_UID) {
                 AppLog.w(TAG, "connect(): peer UID $peerUid is not shell ($SHELL_UID) — rejecting rogue socket server")
-                try { s.close() } catch (_: Exception) {}
+                try {
+                    s.close()
+                } catch (_: Exception) {
+                }
                 _state.value = PrivdConnectionState.DISCONNECTED
                 return false
             }
@@ -161,7 +174,10 @@ object PrivdClient {
             // during Privileged Mode bootstrap. The key is never embedded in the APK.
             if (!performHmacHandshake(s, r, w, key)) {
                 AppLog.w(TAG, "connect() rejected: HMAC handshake failed")
-                try { s.close() } catch (_: Exception) {}
+                try {
+                    s.close()
+                } catch (_: Exception) {
+                }
                 _state.value = PrivdConnectionState.DISCONNECTED
                 return false
             }
@@ -170,14 +186,16 @@ object PrivdClient {
             reader = r
             queue.clear()
             running = true
-            writerThread = Thread(::writerLoop, WRITER_THREAD_NAME).apply {
-                isDaemon = true
-                start()
-            }
-            readerThread = Thread(::readerLoop, READER_THREAD_NAME).apply {
-                isDaemon = true
-                start()
-            }
+            writerThread =
+                Thread(::writerLoop, WRITER_THREAD_NAME).apply {
+                    isDaemon = true
+                    start()
+                }
+            readerThread =
+                Thread(::readerLoop, READER_THREAD_NAME).apply {
+                    isDaemon = true
+                    start()
+                }
             _state.value = PrivdConnectionState.CONNECTED
             AppLog.i(TAG, "connect() succeeded")
             true
@@ -276,7 +294,12 @@ object PrivdClient {
 
     private fun writerLoop() {
         while (running) {
-            val line = try { queue.take() } catch (_: InterruptedException) { break }
+            val line =
+                try {
+                    queue.take()
+                } catch (_: InterruptedException) {
+                    break
+                }
             val w = writer ?: break
             try {
                 w.write(line)
@@ -292,14 +315,15 @@ object PrivdClient {
     private fun readerLoop() {
         val r = reader ?: return
         while (running) {
-            val line = try {
-                r.readLine() ?: break
-            } catch (_: InterruptedException) {
-                break
-            } catch (e: Exception) {
-                AppLog.w(TAG, "readerLoop failed: $e")
-                break
-            }
+            val line =
+                try {
+                    r.readLine() ?: break
+                } catch (_: InterruptedException) {
+                    break
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "readerLoop failed: $e")
+                    break
+                }
             if (line == "PONG") {
                 pingDeferred?.complete(true)
                 continue
@@ -374,8 +398,14 @@ object PrivdClient {
         // causing the main thread to block for several seconds (ANR). Since
         // socket.close() frees the underlying fd, the stream wrappers have no
         // independent resources to clean up.
-        try { socket?.shutdownInput() } catch (_: Exception) {}
-        try { socket?.close() } catch (_: Exception) {}
+        try {
+            socket?.shutdownInput()
+        } catch (_: Exception) {
+        }
+        try {
+            socket?.close()
+        } catch (_: Exception) {
+        }
         writer = null
         reader = null
         socket = null
@@ -442,10 +472,11 @@ object PrivdClient {
             writer.write("VERIFY $verifyHex\n")
             writer.flush()
 
-            val proofLine = reader.readLine() ?: run {
-                AppLog.w(TAG, "handshake: no PROOF received")
-                return false
-            }
+            val proofLine =
+                reader.readLine() ?: run {
+                    AppLog.w(TAG, "handshake: no PROOF received")
+                    return false
+                }
             if (!proofLine.startsWith("PROOF ")) {
                 AppLog.w(TAG, "handshake: expected PROOF, got: $proofLine")
                 return false
@@ -469,5 +500,4 @@ object PrivdClient {
             false
         }
     }
-
 }

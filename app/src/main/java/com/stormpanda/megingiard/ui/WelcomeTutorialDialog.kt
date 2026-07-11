@@ -23,9 +23,7 @@ private val WT_CONTENT_SPACING = 16.dp
 private val WT_INTRO_SPACING = 6.dp
 
 @Composable
-fun WelcomeTutorialDialog(
-    onDismiss: () -> Unit,
-) {
+fun WelcomeTutorialDialog(onDismiss: () -> Unit) {
     val colors = LocalAppColors.current
 
     LaunchedEffect(Unit) {
@@ -47,7 +45,7 @@ fun WelcomeTutorialDialog(
         },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState())
+                modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 Text(
                     text = stringResource(R.string.welcome_desc),
@@ -74,7 +72,7 @@ fun WelcomeTutorialDialog(
                 onClick = {
                     AppLog.d(TAG, "Welcome tutorial dialog confirmed")
                     onDismiss()
-                }
+                },
             ) {
                 Text(
                     text = stringResource(R.string.welcome_btn_got_it),
@@ -82,6 +80,6 @@ fun WelcomeTutorialDialog(
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
-        }
+        },
     )
 }

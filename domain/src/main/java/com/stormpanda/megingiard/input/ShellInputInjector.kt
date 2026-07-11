@@ -17,7 +17,12 @@ package com.stormpanda.megingiard.input
  * Consecutive MOVE commands are coalesced (keep-latest) to prevent backlog.
  * DOWN and UP are never dropped.
  */
-internal data class TouchCommand(val slot: Int, val action: TouchAction, val x: Int, val y: Int)
+internal data class TouchCommand(
+    val slot: Int,
+    val action: TouchAction,
+    val x: Int,
+    val y: Int,
+)
 
 internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
     workerThreadName = "TouchInjectorWriter",
@@ -27,19 +32,22 @@ internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
 
     private const val EVENT_NODE = "/dev/input/event6"
 
-    override fun buildProcessArgs(binaryPath: String): List<String> =
-        listOf(binaryPath, EVENT_NODE)
+    override fun buildProcessArgs(binaryPath: String): List<String> = listOf(binaryPath, EVENT_NODE)
 
     override fun isCoalescible(cmd: TouchCommand): Boolean = cmd.action == TouchAction.MOVE
 
-    override fun canCoalesce(cmd1: TouchCommand, cmd2: TouchCommand): Boolean = cmd1.slot == cmd2.slot
+    override fun canCoalesce(
+        cmd1: TouchCommand,
+        cmd2: TouchCommand,
+    ): Boolean = cmd1.slot == cmd2.slot
 
     override fun formatCommand(cmd: TouchCommand): String {
-        val char = when (cmd.action) {
-            TouchAction.DOWN -> "D"
-            TouchAction.MOVE -> "M"
-            TouchAction.UP   -> "U"
-        }
+        val char =
+            when (cmd.action) {
+                TouchAction.DOWN -> "D"
+                TouchAction.MOVE -> "M"
+                TouchAction.UP -> "U"
+            }
         return if (cmd.action == TouchAction.UP) {
             "U ${cmd.slot}\n"
         } else {
@@ -50,14 +58,23 @@ internal object ShellInputInjector : NativeBinaryInjector<TouchCommand>(
     /**
      * Enqueues a touch event for legacy single-touch.
      */
-    fun injectTouch(action: TouchAction, px: Int, py: Int) {
+    fun injectTouch(
+        action: TouchAction,
+        px: Int,
+        py: Int,
+    ) {
         enqueue(TouchCommand(0, action, px, py))
     }
 
     /**
      * Enqueues a touch event for slot-aware multi-touch.
      */
-    fun injectTouch(slot: Int, action: TouchAction, px: Int, py: Int) {
+    fun injectTouch(
+        slot: Int,
+        action: TouchAction,
+        px: Int,
+        py: Int,
+    ) {
         enqueue(TouchCommand(slot, action, px, py))
     }
 

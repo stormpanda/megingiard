@@ -20,12 +20,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -106,22 +106,22 @@ fun QuickMenu(
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
 
-
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(),
-        exit  = fadeOut(),
+        exit = fadeOut(),
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = PM_SCRIM_ALPHA))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss,
-                ),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = PM_SCRIM_ALPHA))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss,
+                    ),
         ) {
             // ── Top card — Mirror controls (always visible) ───────────────
             MirrorControlCard(
@@ -130,12 +130,13 @@ fun QuickMenu(
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
                 isScreenshotEnabled = isCapturing || isPrivdConnected,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .animateEnterExit(
-                        enter = slideInVertically { -it },
-                        exit  = slideOutVertically { -it },
-                    ),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .animateEnterExit(
+                            enter = slideInVertically { -it },
+                            exit = slideOutVertically { -it },
+                        ),
                 onStart = {
                     AppStateManager.requestMirrorStart()
                 },
@@ -153,23 +154,23 @@ fun QuickMenu(
 
             // ── Bottom card — Profiles / Layouts / Actions ─────────────────
             Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .animateEnterExit(
-                        enter = slideInVertically { it },
-                        exit  = slideOutVertically { it },
-                    )
-                    .fillMaxWidth()
-                    .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
-                    .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
-                    .clip(RoundedCornerShape(PM_PANEL_CORNER))
-                    .background(colors.controlOverlay)
-                    .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_PANEL_CORNER))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) { } // absorb clicks — prevent scrim dismiss
-                    .padding(PM_CONTENT_PADDING),
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .animateEnterExit(
+                            enter = slideInVertically { it },
+                            exit = slideOutVertically { it },
+                        ).fillMaxWidth()
+                        .padding(horizontal = PM_PANEL_H_PADDING, vertical = PM_PANEL_V_PADDING)
+                        .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
+                        .clip(RoundedCornerShape(PM_PANEL_CORNER))
+                        .background(colors.controlOverlay)
+                        .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_PANEL_CORNER))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { } // absorb clicks — prevent scrim dismiss
+                        .padding(PM_CONTENT_PADDING),
             ) {
                 // ── Profile section ────────────────────────────────────────
                 SectionLabel(text = stringResource(R.string.quick_menu_profile_label), colors = colors)
@@ -205,22 +206,25 @@ fun QuickMenu(
 
                 // ── Action buttons ─────────────────────────────────────────
                 Row(
-                    modifier              = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment     = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     QuickMenuActionChip(
-                        label    = stringResource(R.string.quick_menu_edit_layout),
-                        icon     = Icons.Rounded.Edit,
-                        colors   = colors,
-                        onClick  = { AppStateManager.setEditorActive(true); onDismiss() },
+                        label = stringResource(R.string.quick_menu_edit_layout),
+                        icon = Icons.Rounded.Edit,
+                        colors = colors,
+                        onClick = {
+                            AppStateManager.setEditorActive(true)
+                            onDismiss()
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     QuickMenuActionChip(
-                        label    = stringResource(R.string.quick_menu_global_settings),
-                        icon     = Icons.Rounded.Settings,
-                        colors   = colors,
-                        onClick  = { AppStateManager.setGlobalSettingsOpen(true) },
+                        label = stringResource(R.string.quick_menu_global_settings),
+                        icon = Icons.Rounded.Settings,
+                        colors = colors,
+                        onClick = { AppStateManager.setGlobalSettingsOpen(true) },
                         modifier = Modifier.weight(1f),
                     )
                     HelpIconButton(onClick = { showQuickMenuHelp = true })
@@ -236,7 +240,10 @@ fun QuickMenu(
 }
 
 @Composable
-private fun QuickMenuHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun QuickMenuHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_quickmenu_title),

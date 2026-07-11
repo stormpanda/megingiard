@@ -57,7 +57,8 @@ class SteamGridDbClientTest {
 
     @Test
     fun testDeserializeGameAutocompleteResponse() {
-        val jsonResponse = """
+        val jsonResponse =
+            """
             {
               "success": true,
               "data": [
@@ -75,7 +76,7 @@ class SteamGridDbClientTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonResponse)
         assertTrue(parsed.success)
@@ -94,7 +95,8 @@ class SteamGridDbClientTest {
 
     @Test
     fun testDeserializeGridsResponse() {
-        val jsonResponse = """
+        val jsonResponse =
+            """
             {
               "success": true,
               "data": [
@@ -110,7 +112,7 @@ class SteamGridDbClientTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbImage>>>(jsonResponse)
         assertTrue(parsed.success)

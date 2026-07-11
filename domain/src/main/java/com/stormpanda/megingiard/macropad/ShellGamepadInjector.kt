@@ -15,9 +15,20 @@ import com.stormpanda.megingiard.input.NativeBinaryInjector
  * Every event is delivered in order — no coalescing applied.
  */
 internal sealed class GamepadCommand {
-    data class Button(val down: Boolean, val btnCode: Int) : GamepadCommand()
-    data class Hat(val axis: Int, val value: Int) : GamepadCommand()
-    data class Joystick(val axisCode: Int, val value: Int) : GamepadCommand()
+    data class Button(
+        val down: Boolean,
+        val btnCode: Int,
+    ) : GamepadCommand()
+
+    data class Hat(
+        val axis: Int,
+        val value: Int,
+    ) : GamepadCommand()
+
+    data class Joystick(
+        val axisCode: Int,
+        val value: Int,
+    ) : GamepadCommand()
 }
 
 internal object ShellGamepadInjector : NativeBinaryInjector<GamepadCommand>(
@@ -26,17 +37,22 @@ internal object ShellGamepadInjector : NativeBinaryInjector<GamepadCommand>(
     override val tag = "ShellGamepadInjector"
     override val assetName = "gamepadinjector_arm64"
 
-    override fun formatCommand(cmd: GamepadCommand): String = when (cmd) {
-        is GamepadCommand.Button   -> "${if (cmd.down) "GD" else "GU"} ${cmd.btnCode}\n"
-        is GamepadCommand.Hat      -> "HD ${cmd.axis} ${cmd.value}\n"
-        is GamepadCommand.Joystick -> "JS ${cmd.axisCode} ${cmd.value}\n"
-    }
+    override fun formatCommand(cmd: GamepadCommand): String =
+        when (cmd) {
+            is GamepadCommand.Button -> "${if (cmd.down) "GD" else "GU"} ${cmd.btnCode}\n"
+            is GamepadCommand.Hat -> "HD ${cmd.axis} ${cmd.value}\n"
+            is GamepadCommand.Joystick -> "JS ${cmd.axisCode} ${cmd.value}\n"
+        }
 
     fun buttonDown(btnCode: Int) = enqueue(GamepadCommand.Button(down = true, btnCode = btnCode))
-    fun buttonUp(btnCode: Int)   = enqueue(GamepadCommand.Button(down = false, btnCode = btnCode))
+
+    fun buttonUp(btnCode: Int) = enqueue(GamepadCommand.Button(down = false, btnCode = btnCode))
 
     /** Sends a D-Pad hat event. axis: 0 = X, 1 = Y; value: −1 / 0 / +1 */
-    fun hat(axis: Int, value: Int) {
+    fun hat(
+        axis: Int,
+        value: Int,
+    ) {
         require(axis in 0..1) { "axis must be 0 (X) or 1 (Y)" }
         require(value in -1..1) { "value must be -1, 0, or +1" }
         enqueue(GamepadCommand.Hat(axis = axis, value = value))
@@ -48,7 +64,10 @@ internal object ShellGamepadInjector : NativeBinaryInjector<GamepadCommand>(
      *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5.
      * [value]: raw int16 range −32768…+32767.
      */
-    fun joystick(axisCode: Int, value: Int) {
+    fun joystick(
+        axisCode: Int,
+        value: Int,
+    ) {
         require(axisCode in setOf(GamepadKeycodes.ABS_X, GamepadKeycodes.ABS_Y, GamepadKeycodes.ABS_Z, GamepadKeycodes.ABS_RZ)) {
             "axisCode must be one of ABS_X(0), ABS_Y(1), ABS_Z(2), or ABS_RZ(5)"
         }

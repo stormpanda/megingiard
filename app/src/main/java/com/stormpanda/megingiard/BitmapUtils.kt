@@ -4,9 +4,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import com.stormpanda.megingiard.AppLog
 import java.io.File
 import kotlin.math.max
-import com.stormpanda.megingiard.AppLog
 
 object BitmapUtils {
     private const val TAG = "BitmapUtils"
@@ -18,21 +18,27 @@ object BitmapUtils {
         return Pair(maxDim, maxDim)
     }
 
-    fun decodeScaledBitmap(file: File, targetW: Int, targetH: Int): Bitmap? {
+    fun decodeScaledBitmap(
+        file: File,
+        targetW: Int,
+        targetH: Int,
+    ): Bitmap? {
         if (!file.exists()) return null
         return try {
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
+            val options =
+                BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
             BitmapFactory.decodeFile(file.absolutePath, options)
             val srcW = options.outWidth
             val srcH = options.outHeight
             if (srcW <= 0 || srcH <= 0) return null
 
             val sampleSize = calculateInSampleSize(srcW, srcH, targetW, targetH)
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
             BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to decode scaled bitmap from file: ${file.absolutePath}", e)
@@ -40,11 +46,17 @@ object BitmapUtils {
         }
     }
 
-    fun decodeScaledBitmapFromUri(context: Context, uri: Uri, targetW: Int, targetH: Int): Bitmap? {
+    fun decodeScaledBitmapFromUri(
+        context: Context,
+        uri: Uri,
+        targetW: Int,
+        targetH: Int,
+    ): Bitmap? {
         return try {
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
+            val options =
+                BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
             context.contentResolver.openInputStream(uri).use { input ->
                 BitmapFactory.decodeStream(input, null, options)
             }
@@ -53,9 +65,10 @@ object BitmapUtils {
             if (srcW <= 0 || srcH <= 0) return null
 
             val sampleSize = calculateInSampleSize(srcW, srcH, targetW, targetH)
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }
+            val decodeOptions =
+                BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
             context.contentResolver.openInputStream(uri).use { input ->
                 BitmapFactory.decodeStream(input, null, decodeOptions)
             }
@@ -71,14 +84,15 @@ object BitmapUtils {
         srcFile: File?,
         destFile: File,
         targetW: Int,
-        targetH: Int
+        targetH: Int,
     ): Boolean {
         return try {
-            val bitmap = when {
-                srcUri != null -> decodeScaledBitmapFromUri(context, srcUri, targetW, targetH)
-                srcFile != null && srcFile.exists() -> decodeScaledBitmap(srcFile, targetW, targetH)
-                else -> null
-            }
+            val bitmap =
+                when {
+                    srcUri != null -> decodeScaledBitmapFromUri(context, srcUri, targetW, targetH)
+                    srcFile != null && srcFile.exists() -> decodeScaledBitmap(srcFile, targetW, targetH)
+                    else -> null
+                }
             if (bitmap == null) return false
 
             destFile.outputStream().use { output ->
@@ -92,7 +106,12 @@ object BitmapUtils {
         }
     }
 
-    private fun calculateInSampleSize(srcW: Int, srcH: Int, targetW: Int, targetH: Int): Int {
+    private fun calculateInSampleSize(
+        srcW: Int,
+        srcH: Int,
+        targetW: Int,
+        targetH: Int,
+    ): Int {
         var inSampleSize = 1
         if (srcW > targetW || srcH > targetH) {
             val halfHeight = srcH / 2

@@ -5,28 +5,28 @@ import android.app.Presentation
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
-import android.os.Bundle
-import androidx.compose.ui.graphics.Color as ComposeColor
-import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.BitmapUtils
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
+import android.graphics.PorterDuffXfermode
+import android.graphics.RadialGradient
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.SurfaceTexture
 import android.graphics.drawable.BitmapDrawable
-import android.graphics.BitmapFactory
-import java.io.File
-import com.stormpanda.megingiard.macropad.MacroPadState
-import kotlinx.coroutines.withContext
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.Gravity
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.Rect
-import android.graphics.RectF
-import android.graphics.SurfaceTexture
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -38,52 +38,76 @@ import android.window.OnBackInvokedDispatcher
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
-import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
-import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
-import com.stormpanda.megingiard.ui.QuickMenuBar
-import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
-import com.stormpanda.megingiard.settings.GlobalSettingsScreen
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import com.stormpanda.megingiard.settings.AppLanguage
+import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
-import android.graphics.LinearGradient
-import android.graphics.RadialGradient
-import android.graphics.Shader
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
-import android.graphics.PorterDuffXfermode
-import kotlin.math.min
-import kotlin.math.roundToInt
-import java.util.Locale
+import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
+import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.QuickMenuBar
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
@@ -95,39 +119,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.ui.draw.shadow
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.gestures.detectTransformGestures
-import com.stormpanda.megingiard.input.TouchInjector
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.Locale
+import kotlin.math.min
+import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 private val MP_EDGE_ZONE = 40.dp
 private val MP_SWIPE_THRESHOLD = 25.dp
@@ -137,14 +134,14 @@ private const val TOUCH_TOLERANCE = 0.005f
 private const val UNCROPPED_THRESHOLD = 0.999f
 
 class MirrorPresentation(
-    context: Context, 
-    private val display: Display, 
-    private val srcWidth: Int, 
-    private val srcHeight: Int
+    context: Context,
+    private val display: Display,
+    private val srcWidth: Int,
+    private val srcHeight: Int,
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
     var onSurfaceReady: ((Surface) -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
-    
+
     private var masterTextureView: TextureView? = null
     private var masterSurface: Surface? = null
     private var multiCutoutContainer: MultiCutoutContainer? = null
@@ -158,14 +155,15 @@ class MirrorPresentation(
     // We forward them to backDispatcher first so that BackHandlers registered by
     // Compose (Dialog dismiss, etc.) fire correctly. Only if no
     // Compose callback is enabled do we fall back to switching mode.
-    private val onBackCallback = OnBackInvokedCallback {
-        if (backDispatcher.hasEnabledCallbacks()) {
-            AppLog.d(TAG, "back pressed: delegating to Compose")
-            backDispatcher.onBackPressed()
-        } else {
-            AppLog.d(TAG, "back pressed: no Compose handler → ignoring")
+    private val onBackCallback =
+        OnBackInvokedCallback {
+            if (backDispatcher.hasEnabledCallbacks()) {
+                AppLog.d(TAG, "back pressed: delegating to Compose")
+                backDispatcher.onBackPressed()
+            } else {
+                AppLog.d(TAG, "back pressed: no Compose handler → ignoring")
+            }
         }
-    }
 
     override fun cancel() {
         AppLog.d(TAG, "cancel → ignoring")
@@ -173,15 +171,16 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x${srcHeight}")
+        AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x$srcHeight")
         setPresentationFocusMode(
-            keepPrimaryFocus = shouldKeepPrimaryGameFocus(
-                MacroPadFocusPolicyState(isMacroPadSurfaceActive = true)
-            )
+            keepPrimaryFocus =
+                shouldKeepPrimaryGameFocus(
+                    MacroPadFocusPolicyState(isMacroPadSurfaceActive = true),
+                ),
         )
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-            onBackCallback
+            onBackCallback,
         )
         val lifecycleOwner = MirrorPresentationLifecycleOwner(context.applicationContext as Application)
         window?.decorView?.apply {
@@ -204,20 +203,24 @@ class MirrorPresentation(
 
         ScreenCaptureManager.setSurfaceSize(targetWidth.toFloat(), targetHeight.toFloat())
 
-        val container = FrameLayout(context).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            setBackgroundColor(Color.BLACK)
-        }
+        val container =
+            FrameLayout(context).apply {
+                layoutParams =
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+                setBackgroundColor(Color.BLACK)
+            }
 
-        val mcc = MultiCutoutContainer(context, srcWidth, srcHeight).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
+        val mcc =
+            MultiCutoutContainer(context, srcWidth, srcHeight).apply {
+                layoutParams =
+                    FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                    )
+            }
         multiCutoutContainer = mcc
         container.addView(mcc)
 
@@ -225,41 +228,53 @@ class MirrorPresentation(
         masterTextureView = tv
         mcc.addView(tv)
 
-        tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            private var lastUpdateTime = 0L
+        tv.surfaceTextureListener =
+            object : TextureView.SurfaceTextureListener {
+                private var lastUpdateTime = 0L
 
-            override fun onSurfaceTextureAvailable(st: SurfaceTexture, width: Int, height: Int) {
-                st.setDefaultBufferSize(srcWidth, srcHeight)
-                val surface = Surface(st)
-                masterSurface = surface
-                try {
-                    val fps = ScreenCaptureManager.maxFps.value
-                    AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
-                    surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Error setting initial surface frame rate", e)
+                override fun onSurfaceTextureAvailable(
+                    st: SurfaceTexture,
+                    width: Int,
+                    height: Int,
+                ) {
+                    st.setDefaultBufferSize(srcWidth, srcHeight)
+                    val surface = Surface(st)
+                    masterSurface = surface
+                    try {
+                        val fps = ScreenCaptureManager.maxFps.value
+                        AppLog.i(TAG, "Setting initial surface frame rate to $fps FPS")
+                        surface.setFrameRate(fps.toFloat(), Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Error setting initial surface frame rate", e)
+                    }
+                    AppLog.d(TAG, "master TextureView surface available")
+                    onSurfaceReady?.invoke(surface)
                 }
-                AppLog.d(TAG, "master TextureView surface available")
-                onSurfaceReady?.invoke(surface)
-            }
-            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {}
-            override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                AppLog.d(TAG, "master TextureView surface destroyed")
-                onSurfaceDestroyed?.invoke()
-                masterSurface?.release()
-                masterSurface = null
-                return true
-            }
-            override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                val now = System.currentTimeMillis()
-                val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
-                val interval = 1000L / fps
-                if (now - lastUpdateTime >= interval) {
-                    mcc.updateAccumulator(tv)
-                    lastUpdateTime = now
+
+                override fun onSurfaceTextureSizeChanged(
+                    st: SurfaceTexture,
+                    width: Int,
+                    height: Int,
+                ) {}
+
+                override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                    AppLog.d(TAG, "master TextureView surface destroyed")
+                    onSurfaceDestroyed?.invoke()
+                    masterSurface?.release()
+                    masterSurface = null
+                    return true
+                }
+
+                override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
+                    val now = System.currentTimeMillis()
+                    val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
+                    val interval = 1000L / fps
+                    if (now - lastUpdateTime >= interval) {
+                        mcc.updateAccumulator(tv)
+                        lastUpdateTime = now
+                    }
                 }
             }
-        }
 
         scope.launch {
             ScreenCaptureManager.cutouts.collect { cutouts ->
@@ -295,11 +310,11 @@ class MirrorPresentation(
                 ScreenCaptureManager.offsetX,
                 ScreenCaptureManager.offsetY,
             ) { s, ox, oy -> Triple(s, ox, oy) }
-            .collect { triple ->
-                mcc.viewportScale = triple.first
-                mcc.viewportOffsetX = triple.second
-                mcc.viewportOffsetY = triple.third
-            }
+                .collect { triple ->
+                    mcc.viewportScale = triple.first
+                    mcc.viewportOffsetX = triple.second
+                    mcc.viewportOffsetY = triple.third
+                }
         }
 
         // BackHandler (used in Compose Dialog) requires
@@ -307,10 +322,11 @@ class MirrorPresentation(
         // onBackCallback (the system back receiver) can delegate into it, making all
         // BackHandlers inside this ComposeView fire correctly before falling back to
         // the Presentation-level mode switch.
-        val backDispatcherOwner = object : OnBackPressedDispatcherOwner {
-            override val lifecycle: Lifecycle get() = lifecycleOwner.lifecycle
-            override val onBackPressedDispatcher: OnBackPressedDispatcher get() = backDispatcher
-        }
+        val backDispatcherOwner =
+            object : OnBackPressedDispatcherOwner {
+                override val lifecycle: Lifecycle get() = lifecycleOwner.lifecycle
+                override val onBackPressedDispatcher: OnBackPressedDispatcher get() = backDispatcher
+            }
 
         // Compose's Dialog() composable creates android.app.Dialog using
         // LocalView.current.context — i.e. the ComposeView's own context.
@@ -321,280 +337,310 @@ class MirrorPresentation(
         // This context is used for the ComposeView so that LocalView.current.context
         // (which Compose Dialog reads) carries no window-type restriction, and Dialog
         // sub-windows appear on the correct secondary display.
-        val composeViewContext = context.createWindowContext(
-            display,
-            WindowManager.LayoutParams.TYPE_APPLICATION,
-            null
-        )
-        val composeView = ComposeView(composeViewContext).apply {
-            setContent {
-                val themeMode by SettingsManager.themeMode.collectAsState()
-                val userAccentArgb by SettingsManager.accentColor.collectAsState()
-                val appColors = paletteFor(themeMode, ComposeColor(userAccentArgb))
+        val composeViewContext =
+            context.createWindowContext(
+                display,
+                WindowManager.LayoutParams.TYPE_APPLICATION,
+                null,
+            )
+        val composeView =
+            ComposeView(composeViewContext).apply {
+                setContent {
+                    val themeMode by SettingsManager.themeMode.collectAsState()
+                    val userAccentArgb by SettingsManager.accentColor.collectAsState()
+                    val appColors = paletteFor(themeMode, ComposeColor(userAccentArgb))
 
-                // The Presentation window has its own Context that is never updated when
-                // LocaleManager.applicationLocales changes (only the Activity recreates).
-                // We derive a locale-aware context here so all stringResource() calls inside
-                // this Compose tree use the correct locale after a language switch.
-                val appLanguage by SettingsManager.appLanguage.collectAsState()
-                val localeContext = remember(appLanguage) {
-                    val locale: Locale = when (appLanguage) {
-                        AppLanguage.SYSTEM -> Locale.getDefault()
-                        AppLanguage.EN     -> Locale.ENGLISH
-                        AppLanguage.DE     -> Locale.GERMAN
-                    }
-                    val config = Configuration(context.resources.configuration)
-                    config.setLocale(locale)
-                    composeViewContext.createConfigurationContext(config)
-                }
+                    // The Presentation window has its own Context that is never updated when
+                    // LocaleManager.applicationLocales changes (only the Activity recreates).
+                    // We derive a locale-aware context here so all stringResource() calls inside
+                    // this Compose tree use the correct locale after a language switch.
+                    val appLanguage by SettingsManager.appLanguage.collectAsState()
+                    val localeContext =
+                        remember(appLanguage) {
+                            val locale: Locale =
+                                when (appLanguage) {
+                                    AppLanguage.SYSTEM -> Locale.getDefault()
+                                    AppLanguage.EN -> Locale.ENGLISH
+                                    AppLanguage.DE -> Locale.GERMAN
+                                }
+                            val config = Configuration(context.resources.configuration)
+                            config.setLocale(locale)
+                            composeViewContext.createConfigurationContext(config)
+                        }
 
-                CompositionLocalProvider(
-                    LocalContext provides localeContext,
-                    LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
-                    LocalAppColors provides appColors,
-                    LocalAppDimens provides AppDimens()
-                ) {
-                    MaterialTheme(
-                        colorScheme = colorSchemeFor(appColors, themeMode),
-                        typography = megingiardTypography
+                    CompositionLocalProvider(
+                        LocalContext provides localeContext,
+                        LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
+                        LocalAppColors provides appColors,
+                        LocalAppDimens provides AppDimens(),
                     ) {
-                        val capturing by ScreenCaptureManager.isCapturing.collectAsState()
-                        val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
-                        val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
-                        val scale by ScreenCaptureManager.scale.collectAsState()
-                        val offsetX by ScreenCaptureManager.offsetX.collectAsState()
-                        val offsetY by ScreenCaptureManager.offsetY.collectAsState()
-                        val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
-                        val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsState()
-                        val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-                        val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
-                        val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
-                        val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
-                        val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-                        val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
-                        val density = LocalDensity.current
-                        val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
-                        val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
-                        val quickMenuBarZoneWidthPx = with(density) { MP_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
-                        val projectionController = remember(edgeZonePx, overlayAtBottom) {
-                            TouchProjectionController(edgeZonePx, overlayAtBottom)
-                        }
-
-                        LaunchedEffect(isTouchProjectionActive) {
-                            if (isTouchProjectionActive) {
-                                TouchInjector.start(localeContext, "MirrorPresentation")
-                            } else {
-                                TouchInjector.stop("MirrorPresentation")
-                            }
-                        }
-                        LaunchedEffect(isFollowActive, capturing) {
-                            if (isFollowActive && capturing) {
-                                TouchScreenObserver.onTouchNormalized = { nx, ny ->
-                                    ScreenCaptureManager.onTouchReceived(nx, ny)
-                                }
-                                TouchScreenObserver.start()
-                            } else {
-                                TouchScreenObserver.stop()
-                                TouchScreenObserver.onTouchNormalized = null
-                            }
-                        }
-                        DisposableEffect(Unit) {
-                            onDispose {
-                                TouchInjector.stop("MirrorPresentation")
-                                TouchScreenObserver.stop()
-                            }
-                        }
-
-                        var gestureBoxSize by remember { mutableStateOf(IntSize.Zero) }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .onGloballyPositioned { coords -> gestureBoxSize = coords.size }
-                                // Parent-level swipe handler (PointerEventPass.Initial).
-                                // Fires BEFORE any child regardless of z-order, so the
-                                // dismiss-swipe works even when FullscreenMouseOverlay or
-                                // KeyboardScreen is the hit-test target.
-                                // Only active while a fullscreen overlay is shown.
-                                .pointerInput(isFullscreenMouseActive, isFullscreenKeyboardActive, overlayAtBottom, quickMenuBarZoneWidthPx) {
-                                    if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                                            val firstChange = event.changes.firstOrNull()
-                                            val x = firstChange?.position?.x ?: 0f
-                                            val y = firstChange?.position?.y ?: 0f
-                                            when (event.type) {
-                                                PointerEventType.Press -> {
-                                                    swipe.onPress(
-                                                        pointerY = y,
-                                                        containerHeight = size.height.toFloat(),
-                                                        pointerX = x,
-                                                        containerWidth = size.width.toFloat(),
-                                                    )
-                                                    if (swipe.isNearEdge) {
-                                                        event.changes.forEach { it.consume() }
-                                                    }
-                                                }
-                                                PointerEventType.Move  -> {
-                                                    swipe.onMove(y)
-                                                    if (swipe.isNearEdge) {
-                                                        event.changes.forEach { it.consume() }
-                                                    }
-                                                }
-                                                PointerEventType.Release -> {
-                                                    swipe.onRelease(!event.changes.any { it.pressed })
-                                                    if (swipe.isNearEdge) {
-                                                        event.changes.forEach { it.consume() }
-                                                    }
-                                                }
-                                                else -> Unit
-                                            }
-                                        }
-                                    }
-                                }
-                                .pointerInput(isTouchProjectionActive, overlayAtBottom) {
-                                    if (!isTouchProjectionActive) return@pointerInput
-                                    projectionController.reset()
-                                    var swipeStartY = Float.NaN
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val event = awaitPointerEvent(PointerEventPass.Main)
-                                            if (gestureBoxSize == IntSize.Zero) continue
-                                            val scW = gestureBoxSize.width.toFloat()
-                                            val scH = gestureBoxSize.height.toFloat()
-                                            when (event.type) {
-                                                PointerEventType.Press -> {
-                                                    val change = event.changes.firstOrNull() ?: continue
-                                                    val y = change.position.y
-                                                    val nearEdge = if (overlayAtBottom) {
-                                                        y >= scH - edgeZonePx
-                                                    } else {
-                                                        y <= edgeZonePx
-                                                    }
-                                                    swipeStartY = if (nearEdge) y else Float.NaN
-                                                    if (!nearEdge) {
-                                                        projectionController.onPress(
-                                                            pointerId = change.id.value,
-                                                            x = change.position.x,
-                                                            y = y,
-                                                            boxW = scW,
-                                                            boxH = scH,
-                                                            isConsumed = change.isConsumed,
-                                                            pointerCount = event.changes.size,
-                                                        )
-                                                    }
-                                                }
-                                                PointerEventType.Move -> {
-                                                    val change = event.changes.firstOrNull() ?: continue
-                                                    val y = change.position.y
-                                                    if (!swipeStartY.isNaN()) {
-                                                        val delta = if (overlayAtBottom) {
-                                                            swipeStartY - y
-                                                        } else {
-                                                            y - swipeStartY
-                                                        }
-                                                        if (delta >= swipeThresholdPx) {
-                                                            swipeStartY = Float.NaN
-                                                        }
-                                                    } else {
-                                                        projectionController.onMove(
-                                                            pointerId = change.id.value,
-                                                            x = change.position.x,
-                                                            y = y,
-                                                            boxW = scW,
-                                                            boxH = scH,
-                                                            isConsumed = change.isConsumed,
-                                                        )
-                                                    }
-                                                }
-                                                PointerEventType.Release -> {
-                                                    val change = event.changes.firstOrNull()
-                                                    swipeStartY = Float.NaN
-                                                    projectionController.onRelease(
-                                                        pointerId = change?.id?.value ?: -1L,
-                                                        x = change?.position?.x,
-                                                        y = change?.position?.y,
-                                                        boxW = scW,
-                                                        boxH = scH,
-                                                    )
-                                                }
-                                                else -> Unit
-                                            }
-                                        }
-                                    }
-                                },
+                        MaterialTheme(
+                            colorScheme = colorSchemeFor(appColors, themeMode),
+                            typography = megingiardTypography,
                         ) {
+                            val capturing by ScreenCaptureManager.isCapturing.collectAsState()
+                            val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
+                            val frozenBitmap by ScreenCaptureManager.frozenBitmap.collectAsState()
+                            val scale by ScreenCaptureManager.scale.collectAsState()
+                            val offsetX by ScreenCaptureManager.offsetX.collectAsState()
+                            val offsetY by ScreenCaptureManager.offsetY.collectAsState()
+                            val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+                            val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsState()
+                            val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+                            val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+                            val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+                            val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
+                            val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+                            val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
+                            val density = LocalDensity.current
+                            val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
+                            val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
+                            val quickMenuBarZoneWidthPx = with(density) { MP_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+                            val projectionController =
+                                remember(edgeZonePx, overlayAtBottom) {
+                                    TouchProjectionController(edgeZonePx, overlayAtBottom)
+                                }
 
-
-                            // Layer 2: BackgroundMacroPadOverlay — always rendered when active
-                             // so QuickMenuBar remains visible in all modes. Internally dims
-                            // buttons during viewport edit.
-                            if (capturing) {
-                                BackgroundMacroPadOverlay(showQuickMenuBar = false)
+                            LaunchedEffect(isTouchProjectionActive) {
+                                if (isTouchProjectionActive) {
+                                    TouchInjector.start(localeContext, "MirrorPresentation")
+                                } else {
+                                    TouchInjector.stop("MirrorPresentation")
+                                }
                             }
-
-                            // Layer 3: Viewport edit gesture overlay — transparent fullscreen
-                            // pinch/pan surface for adjusting the mirror viewport.
-                            // Exit via edge-swipe (isViewportEditActive is part of
-                            // isAnyModalActive → closeActiveModal() in SwipeGestureProcessor).
-                            if (isViewportEditActive) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                ) {
-                                    CutoutLayoutEditor(overlayAtBottom = overlayAtBottom)
+                            LaunchedEffect(isFollowActive, capturing) {
+                                if (isFollowActive && capturing) {
+                                    TouchScreenObserver.onTouchNormalized = { nx, ny ->
+                                        ScreenCaptureManager.onTouchReceived(nx, ny)
+                                    }
+                                    TouchScreenObserver.start()
+                                } else {
+                                    TouchScreenObserver.stop()
+                                    TouchScreenObserver.onTouchNormalized = null
+                                }
+                            }
+                            DisposableEffect(Unit) {
+                                onDispose {
+                                    TouchInjector.stop("MirrorPresentation")
+                                    TouchScreenObserver.stop()
                                 }
                             }
 
-                            // Layer 4: Fullscreen Mouse Overlay — rendered above background
-                            // content when triggered from BackgroundMacroPadOverlay buttons.
-                            // Dismissed via edge-swipe → BackgroundMacroPadOverlay's
-                            // SwipeGestureProcessor → AppStateManager.closeActiveModal().
-                            if (capturing && isFullscreenMouseActive) {
-                                FullscreenMouseOverlay()
-                            }
+                            var gestureBoxSize by remember { mutableStateOf(IntSize.Zero) }
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .onGloballyPositioned { coords -> gestureBoxSize = coords.size }
+                                        // Parent-level swipe handler (PointerEventPass.Initial).
+                                        // Fires BEFORE any child regardless of z-order, so the
+                                        // dismiss-swipe works even when FullscreenMouseOverlay or
+                                        // KeyboardScreen is the hit-test target.
+                                        // Only active while a fullscreen overlay is shown.
+                                        .pointerInput(
+                                            isFullscreenMouseActive,
+                                            isFullscreenKeyboardActive,
+                                            overlayAtBottom,
+                                            quickMenuBarZoneWidthPx,
+                                        ) {
+                                            if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
+                                            val swipe =
+                                                SwipeGestureProcessor(
+                                                    edgeZonePx,
+                                                    swipeThresholdPx,
+                                                    overlayAtBottom,
+                                                    quickMenuBarZoneWidthPx,
+                                                )
+                                            awaitPointerEventScope {
+                                                while (true) {
+                                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                                    val firstChange = event.changes.firstOrNull()
+                                                    val x = firstChange?.position?.x ?: 0f
+                                                    val y = firstChange?.position?.y ?: 0f
+                                                    when (event.type) {
+                                                        PointerEventType.Press -> {
+                                                            swipe.onPress(
+                                                                pointerY = y,
+                                                                containerHeight = size.height.toFloat(),
+                                                                pointerX = x,
+                                                                containerWidth = size.width.toFloat(),
+                                                            )
+                                                            if (swipe.isNearEdge) {
+                                                                event.changes.forEach { it.consume() }
+                                                            }
+                                                        }
 
-                            // Layer 5: Fullscreen Keyboard Overlay — rendered above background
-                            // content when triggered from BackgroundMacroPadOverlay buttons.
-                            // Dismissed via edge-swipe → AppStateManager.closeActiveModal().
-                            if (capturing && isFullscreenKeyboardActive) {
-                                KeyboardScreen(
-                                    modifier = Modifier.fillMaxSize(),
-                                    forcedLayout = fullscreenKeyboardLayout,
-                                )
-                            }
+                                                        PointerEventType.Move -> {
+                                                            swipe.onMove(y)
+                                                            if (swipe.isNearEdge) {
+                                                                event.changes.forEach { it.consume() }
+                                                            }
+                                                        }
 
-                            // Layer 6: QuickMenuBar — always the topmost layer so the swipe
-                            // affordance and QuickMenu are never covered by fullscreen
-                            // overlays (keyboard / mouse). Suppressed inside
-                            // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
-                            // only one QuickMenuBar instance exists at a time.
-                            if (capturing) {
-                                QuickMenuBar()
-                            }
+                                                        PointerEventType.Release -> {
+                                                            swipe.onRelease(!event.changes.any { it.pressed })
+                                                            if (swipe.isNearEdge) {
+                                                                event.changes.forEach { it.consume() }
+                                                            }
+                                                        }
 
-                            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
+                                                        else -> {
+                                                            Unit
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }.pointerInput(isTouchProjectionActive, overlayAtBottom) {
+                                            if (!isTouchProjectionActive) return@pointerInput
+                                            projectionController.reset()
+                                            var swipeStartY = Float.NaN
+                                            awaitPointerEventScope {
+                                                while (true) {
+                                                    val event = awaitPointerEvent(PointerEventPass.Main)
+                                                    if (gestureBoxSize == IntSize.Zero) continue
+                                                    val scW = gestureBoxSize.width.toFloat()
+                                                    val scH = gestureBoxSize.height.toFloat()
+                                                    when (event.type) {
+                                                        PointerEventType.Press -> {
+                                                            val change = event.changes.firstOrNull() ?: continue
+                                                            val y = change.position.y
+                                                            val nearEdge =
+                                                                if (overlayAtBottom) {
+                                                                    y >= scH - edgeZonePx
+                                                                } else {
+                                                                    y <= edgeZonePx
+                                                                }
+                                                            swipeStartY = if (nearEdge) y else Float.NaN
+                                                            if (!nearEdge) {
+                                                                projectionController.onPress(
+                                                                    pointerId = change.id.value,
+                                                                    x = change.position.x,
+                                                                    y = y,
+                                                                    boxW = scW,
+                                                                    boxH = scH,
+                                                                    isConsumed = change.isConsumed,
+                                                                    pointerCount = event.changes.size,
+                                                                )
+                                                            }
+                                                        }
 
-                            AnimatedVisibility(
-                                visible  = isGlobalSettingsOpen,
-                                enter    = slideInVertically { it } + fadeIn(),
-                                exit     = slideOutVertically { it } + fadeOut(),
-                                modifier = Modifier.fillMaxSize(),
+                                                        PointerEventType.Move -> {
+                                                            val change = event.changes.firstOrNull() ?: continue
+                                                            val y = change.position.y
+                                                            if (!swipeStartY.isNaN()) {
+                                                                val delta =
+                                                                    if (overlayAtBottom) {
+                                                                        swipeStartY - y
+                                                                    } else {
+                                                                        y - swipeStartY
+                                                                    }
+                                                                if (delta >= swipeThresholdPx) {
+                                                                    swipeStartY = Float.NaN
+                                                                }
+                                                            } else {
+                                                                projectionController.onMove(
+                                                                    pointerId = change.id.value,
+                                                                    x = change.position.x,
+                                                                    y = y,
+                                                                    boxW = scW,
+                                                                    boxH = scH,
+                                                                    isConsumed = change.isConsumed,
+                                                                )
+                                                            }
+                                                        }
+
+                                                        PointerEventType.Release -> {
+                                                            val change = event.changes.firstOrNull()
+                                                            swipeStartY = Float.NaN
+                                                            projectionController.onRelease(
+                                                                pointerId = change?.id?.value ?: -1L,
+                                                                x = change?.position?.x,
+                                                                y = change?.position?.y,
+                                                                boxW = scW,
+                                                                boxH = scH,
+                                                            )
+                                                        }
+
+                                                        else -> {
+                                                            Unit
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
                             ) {
-                                GlobalSettingsScreen(
-                                    onBack = { AppStateManager.setGlobalSettingsOpen(false) }
-                                )
+                                // Layer 2: BackgroundMacroPadOverlay — always rendered when active
+                                // so QuickMenuBar remains visible in all modes. Internally dims
+                                // buttons during viewport edit.
+                                if (capturing) {
+                                    BackgroundMacroPadOverlay(showQuickMenuBar = false)
+                                }
+
+                                // Layer 3: Viewport edit gesture overlay — transparent fullscreen
+                                // pinch/pan surface for adjusting the mirror viewport.
+                                // Exit via edge-swipe (isViewportEditActive is part of
+                                // isAnyModalActive → closeActiveModal() in SwipeGestureProcessor).
+                                if (isViewportEditActive) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize(),
+                                    ) {
+                                        CutoutLayoutEditor(overlayAtBottom = overlayAtBottom)
+                                    }
+                                }
+
+                                // Layer 4: Fullscreen Mouse Overlay — rendered above background
+                                // content when triggered from BackgroundMacroPadOverlay buttons.
+                                // Dismissed via edge-swipe → BackgroundMacroPadOverlay's
+                                // SwipeGestureProcessor → AppStateManager.closeActiveModal().
+                                if (capturing && isFullscreenMouseActive) {
+                                    FullscreenMouseOverlay()
+                                }
+
+                                // Layer 5: Fullscreen Keyboard Overlay — rendered above background
+                                // content when triggered from BackgroundMacroPadOverlay buttons.
+                                // Dismissed via edge-swipe → AppStateManager.closeActiveModal().
+                                if (capturing && isFullscreenKeyboardActive) {
+                                    KeyboardScreen(
+                                        modifier = Modifier.fillMaxSize(),
+                                        forcedLayout = fullscreenKeyboardLayout,
+                                    )
+                                }
+
+                                // Layer 6: QuickMenuBar — always the topmost layer so the swipe
+                                // affordance and QuickMenu are never covered by fullscreen
+                                // overlays (keyboard / mouse). Suppressed inside
+                                // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
+                                // only one QuickMenuBar instance exists at a time.
+                                if (capturing) {
+                                    QuickMenuBar()
+                                }
+
+                                ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
+
+                                AnimatedVisibility(
+                                    visible = isGlobalSettingsOpen,
+                                    enter = slideInVertically { it } + fadeIn(),
+                                    exit = slideOutVertically { it } + fadeOut(),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    GlobalSettingsScreen(
+                                        onBack = { AppStateManager.setGlobalSettingsOpen(false) },
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-        container.addView(composeView, FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 
-            ViewGroup.LayoutParams.MATCH_PARENT
-        ))
+        container.addView(
+            composeView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ),
+        )
 
         setContentView(container)
 
@@ -618,10 +664,9 @@ class MirrorPresentation(
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
-                    )
+                    ),
                 )
-            }
-                .distinctUntilChanged()
+            }.distinctUntilChanged()
                 .collect { keepPrimaryFocus -> setPresentationFocusMode(keepPrimaryFocus) }
         }
         scope.launch {
@@ -818,7 +863,7 @@ class MirrorPresentation(
 class MultiCutoutContainer(
     context: Context,
     private val srcWidth: Int,
-    private val srcHeight: Int
+    private val srcHeight: Int,
 ) : FrameLayout(context) {
     private val bgDimPaint = Paint()
     private val bgSrcRect = Rect()
@@ -882,14 +927,16 @@ class MultiCutoutContainer(
         val dim = bgImageDim
         if (dim > 0f) {
             val scale = 1f - dim
-            val matrix = ColorMatrix().apply {
-                setScale(scale, scale, scale, 1f)
-            }
+            val matrix =
+                ColorMatrix().apply {
+                    setScale(scale, scale, scale, 1f)
+                }
             bgDimPaint.colorFilter = ColorMatrixColorFilter(matrix)
         } else {
             bgDimPaint.colorFilter = null
         }
     }
+
     var viewportScale: Float = 1f
         set(value) {
             field = value
@@ -907,26 +954,33 @@ class MultiCutoutContainer(
         }
 
     private val cutoutPaint = Paint()
-    private val blendPaint = Paint().apply {
-        isAntiAlias = true
-        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-    }
+    private val blendPaint =
+        Paint().apply {
+            isAntiAlias = true
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        }
     private val circlePath = Path()
-    private val maskPaint = Paint().apply {
-        color = Color.BLACK
-    }
+    private val maskPaint =
+        Paint().apply {
+            color = Color.BLACK
+        }
 
     private var scratchBitmap: Bitmap? = null
 
-    private class Accumulator(val strength: Int, width: Int, height: Int) {
+    private class Accumulator(
+        val strength: Int,
+        width: Int,
+        height: Int,
+    ) {
         var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         var initialized: Boolean = false
 
-        val blendPaint = Paint().apply {
-            val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
-            alpha = (alphaPercent * 255f).roundToInt()
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-        }
+        val blendPaint =
+            Paint().apply {
+                val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
+                alpha = (alphaPercent * 255f).roundToInt()
+                xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
+            }
 
         fun recycle() {
             accumulated?.recycle()
@@ -982,12 +1036,13 @@ class MultiCutoutContainer(
 
             // 3. Ensure a valid single scratch bitmap exists
             val currentScratch = scratchBitmap
-            val scratch = if (currentScratch == null || currentScratch.width != srcWidth || currentScratch.height != srcHeight) {
-                currentScratch?.recycle()
-                Bitmap.createBitmap(srcWidth, srcHeight, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
-            } else {
-                currentScratch
-            }
+            val scratch =
+                if (currentScratch == null || currentScratch.width != srcWidth || currentScratch.height != srcHeight) {
+                    currentScratch?.recycle()
+                    Bitmap.createBitmap(srcWidth, srcHeight, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
+                } else {
+                    currentScratch
+                }
 
             // 4. Capture TextureView frame once
             try {
@@ -1021,23 +1076,32 @@ class MultiCutoutContainer(
         }
     }
 
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+    override fun onLayout(
+        changed: Boolean,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+    ) {
         if (childCount > 0) {
             val child = getChildAt(0)
             child.layout(0, 0, srcWidth, srcHeight)
         }
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int,
+    ) {
         setMeasuredDimension(
             resolveSize(suggestedMinimumWidth, widthMeasureSpec),
-            resolveSize(suggestedMinimumHeight, heightMeasureSpec)
+            resolveSize(suggestedMinimumHeight, heightMeasureSpec),
         )
         if (childCount > 0) {
             val child = getChildAt(0)
             child.measure(
                 MeasureSpec.makeMeasureSpec(srcWidth, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(srcHeight, MeasureSpec.EXACTLY)
+                MeasureSpec.makeMeasureSpec(srcHeight, MeasureSpec.EXACTLY),
             )
         }
     }
@@ -1073,10 +1137,10 @@ class MultiCutoutContainer(
                 val scaleBase = maxOf(cw / iw, ch / ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
-                
+
                 canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
                 canvas.scale(scale, scale)
-                
+
                 bgSrcRect.set(0, 0, bg.width, bg.height)
                 bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
                 val paint = if (bgImageDim > 0f) bgDimPaint else null
@@ -1089,18 +1153,19 @@ class MultiCutoutContainer(
             // within this layer. When the layer is restored to the parent canvas it
             // uses the default SRC_OVER composite so cutouts alpha-blend correctly
             // on top of the background image instead of being added to it.
-            val cutoutsLayerSaveCount = if (edgeBlending) {
-                canvas.saveLayer(0f, 0f, parentW, parentH, null)
-            } else {
-                canvas.save()
-            }
+            val cutoutsLayerSaveCount =
+                if (edgeBlending) {
+                    canvas.saveLayer(0f, 0f, parentW, parentH, null)
+                } else {
+                    canvas.save()
+                }
 
             for (cutout in cutouts) {
                 val dw = (cutout.destWidth * parentW).roundToInt().toFloat()
                 val dh = (cutout.destHeight * parentH).roundToInt().toFloat()
                 val dx = (cutout.destX * parentW).roundToInt().toFloat()
                 val dy = (cutout.destY * parentH).roundToInt().toFloat()
-                
+
                 val sw = cutout.srcWidth * srcWidth
                 val sh = cutout.srcHeight * srcHeight
                 val sx = cutout.srcX * srcWidth
@@ -1119,23 +1184,24 @@ class MultiCutoutContainer(
                 val bottomExt = if (touchesBottom) (blendW / 2f).roundToInt().toFloat() else 0f
                 val hasTouching = leftExt > 0f || rightExt > 0f || topExt > 0f || bottomExt > 0f
 
-                val saveCount = if (cutout.opacity < 1f || hasTouching) {
-                    cutoutPaint.alpha = (cutout.opacity * 255).toInt()
-                    if (hasTouching) {
-                        cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+                val saveCount =
+                    if (cutout.opacity < 1f || hasTouching) {
+                        cutoutPaint.alpha = (cutout.opacity * 255).toInt()
+                        if (hasTouching) {
+                            cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+                        } else {
+                            cutoutPaint.xfermode = null
+                        }
+                        val clipLeft = dx - leftExt
+                        val clipTop = dy - topExt
+                        val clipRight = dx + dw + rightExt
+                        val clipBottom = dy + dh + bottomExt
+                        canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
                     } else {
-                        cutoutPaint.xfermode = null
+                        canvas.save()
+                        canvas.clipRect(dx, dy, dx + dw, dy + dh)
+                        0
                     }
-                    val clipLeft = dx - leftExt
-                    val clipTop = dy - topExt
-                    val clipRight = dx + dw + rightExt
-                    val clipBottom = dy + dh + bottomExt
-                    canvas.saveLayer(clipLeft, clipTop, clipRight, clipBottom, cutoutPaint)
-                } else {
-                    canvas.save()
-                    canvas.clipRect(dx, dy, dx + dw, dy + dh)
-                    0
-                }
 
                 try {
                     canvas.translate(dx, dy)
@@ -1146,7 +1212,7 @@ class MultiCutoutContainer(
                         canvas.clipPath(circlePath)
                     }
                     val innerSaveCount = canvas.save()
-                    
+
                     val isFollowActive = ScreenCaptureManager.isFollowActive.value
                     val isUncropped = cutout.srcWidth >= UNCROPPED_THRESHOLD && cutout.srcHeight >= UNCROPPED_THRESHOLD
                     if (cutouts.size == 1 && isFollowActive && isUncropped) {
@@ -1156,7 +1222,7 @@ class MultiCutoutContainer(
                         // Fit srcWidth x srcHeight into dw x dh preserving aspect ratio
                         val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
                         val destRatio = dw / dh
-                        
+
                         var fitW = dw
                         var fitH = dh
                         if (srcRatio > destRatio) {
@@ -1164,7 +1230,7 @@ class MultiCutoutContainer(
                         } else {
                             fitW = dh * srcRatio
                         }
-                        
+
                         // Center the fitted rectangle within dw x dh
                         val fitX = (dw - fitW) / 2f
                         val fitY = (dh - fitH) / 2f
@@ -1263,10 +1329,10 @@ class MultiCutoutContainer(
                 val scaleBase = maxOf(cw / iw, ch / ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
-                
+
                 canvas.translate(cw / 2f + offsetX, ch / 2f + offsetY)
                 canvas.scale(scale, scale)
-                
+
                 bgSrcRect.set(0, 0, mask.width, mask.height)
                 bgDestRect.set(-ws / 2f, -hs / 2f, ws / 2f, hs / 2f)
                 val paint = if (bgImageDim > 0f) bgDimPaint else null
@@ -1279,7 +1345,9 @@ class MultiCutoutContainer(
     }
 }
 
-private class ThrottledTextureView(context: Context) : TextureView(context) {
+private class ThrottledTextureView(
+    context: Context,
+) : TextureView(context) {
     var maxFps: Int = 60
         set(value) {
             if (field != value) {
@@ -1293,10 +1361,11 @@ private class ThrottledTextureView(context: Context) : TextureView(context) {
         }
     private var lastInvalidateTime: Long = 0L
     private var isScheduled = false
-    private val invalidateRunnable = Runnable {
-        isScheduled = false
-        invalidate()
-    }
+    private val invalidateRunnable =
+        Runnable {
+            isScheduled = false
+            invalidate()
+        }
 
     override fun invalidate() {
         val now = System.currentTimeMillis()
@@ -1324,12 +1393,12 @@ private class ThrottledTextureView(context: Context) : TextureView(context) {
     }
 
     @Deprecated("Deprecated in parent class")
-    override fun invalidate(l: Int, t: Int, r: Int, b: Int) {
+    override fun invalidate(
+        l: Int,
+        t: Int,
+        r: Int,
+        b: Int,
+    ) {
         invalidate()
     }
 }
-
-
-
-
-

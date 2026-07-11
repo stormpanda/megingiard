@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class MirrorStrategyTest {
-
     @Test
     fun `returns PRIVILEGED when daemon running`() {
         assertEquals(

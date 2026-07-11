@@ -10,7 +10,6 @@ import kotlin.random.Random
  * and step timing shift behavior for the timing randomization feature.
  */
 class MacroTimingRandomizationTest {
-
     @Test
     fun `default values are correct`() {
         val macro = Macro(id = "test", name = "test")
@@ -21,12 +20,13 @@ class MacroTimingRandomizationTest {
     @Test
     fun `serialization preserves timing randomization fields`() {
         val json = kotlinx.serialization.json.Json { encodeDefaults = true }
-        val macro = Macro(
-            id = "test",
-            name = "test",
-            randomizeTimingEnabled = true,
-            randomizeTimingRangeMs = 45
-        )
+        val macro =
+            Macro(
+                id = "test",
+                name = "test",
+                randomizeTimingEnabled = true,
+                randomizeTimingRangeMs = 45,
+            )
         val encoded = json.encodeToString(Macro.serializer(), macro)
         val decoded = json.decodeFromString(Macro.serializer(), encoded)
         assertEquals(true, decoded.randomizeTimingEnabled)
@@ -36,7 +36,8 @@ class MacroTimingRandomizationTest {
     @Test
     fun `deserializing older JSON configuration maps fields to defaults`() {
         // Mock JSON representing older config format (V3/V4) without randomization fields
-        val olderJson = """
+        val olderJson =
+            """
             {
                 "id": "older-id",
                 "name": "Older Macro",
@@ -44,8 +45,12 @@ class MacroTimingRandomizationTest {
                 "loopEnabled": false,
                 "loopPauseMs": 0
             }
-        """.trimIndent()
-        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; encodeDefaults = true }
+            """.trimIndent()
+        val json =
+            kotlinx.serialization.json.Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+            }
         val decoded = json.decodeFromString(Macro.serializer(), olderJson)
         assertEquals(false, decoded.randomizeTimingEnabled)
         assertEquals(20, decoded.randomizeTimingRangeMs)
@@ -53,17 +58,19 @@ class MacroTimingRandomizationTest {
 
     @Test
     fun `timing randomization shifts step start times and durations within bounds`() {
-        val steps = listOf(
-            MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 50L, btnCode = 1, label = "A"),
-            MacroStep.GamepadButtonTap(startTimeMs = 200L, durationMs = 50L, btnCode = 2, label = "B")
-        )
-        val macro = Macro(
-            id = "test",
-            name = "test",
-            steps = steps,
-            randomizeTimingEnabled = true,
-            randomizeTimingRangeMs = 50
-        )
+        val steps =
+            listOf(
+                MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 50L, btnCode = 1, label = "A"),
+                MacroStep.GamepadButtonTap(startTimeMs = 200L, durationMs = 50L, btnCode = 2, label = "B"),
+            )
+        val macro =
+            Macro(
+                id = "test",
+                name = "test",
+                steps = steps,
+                randomizeTimingEnabled = true,
+                randomizeTimingRangeMs = 50,
+            )
 
         val randomizedSteps = macro.randomized(Random(seed = 42)).steps
 
@@ -93,26 +100,32 @@ class MacroTimingRandomizationTest {
 
     @Test
     fun `user sequential randomization example is exactly matched`() {
-        val steps = listOf(
-            MacroStep.GamepadButtonTap(startTimeMs = 0L, durationMs = 100L, btnCode = 1, label = "A"),
-            MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 100L, btnCode = 2, label = "B"),
-            MacroStep.GamepadButtonTap(startTimeMs = 200L, durationMs = 100L, btnCode = 3, label = "X")
-        )
-        val macro = Macro(
-            id = "test",
-            name = "test",
-            steps = steps,
-            randomizeTimingEnabled = true,
-            randomizeTimingRangeMs = 20
-        )
+        val steps =
+            listOf(
+                MacroStep.GamepadButtonTap(startTimeMs = 0L, durationMs = 100L, btnCode = 1, label = "A"),
+                MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 100L, btnCode = 2, label = "B"),
+                MacroStep.GamepadButtonTap(startTimeMs = 200L, durationMs = 100L, btnCode = 3, label = "X"),
+            )
+        val macro =
+            Macro(
+                id = "test",
+                name = "test",
+                steps = steps,
+                randomizeTimingEnabled = true,
+                randomizeTimingRangeMs = 20,
+            )
 
-        val mockRandom = object : Random() {
-            private val values = mutableListOf(5L, 10L, 7L)
-            override fun nextBits(bitCount: Int): Int = 0
-            override fun nextLong(from: Long, until: Long): Long {
-                return if (values.isNotEmpty()) values.removeAt(0) else 0L
+        val mockRandom =
+            object : Random() {
+                private val values = mutableListOf(5L, 10L, 7L)
+
+                override fun nextBits(bitCount: Int): Int = 0
+
+                override fun nextLong(
+                    from: Long,
+                    until: Long,
+                ): Long = if (values.isNotEmpty()) values.removeAt(0) else 0L
             }
-        }
 
         val randomizedSteps = macro.randomized(mockRandom).steps
 
@@ -131,19 +144,21 @@ class MacroTimingRandomizationTest {
 
     @Test
     fun `stick inputs and touch paths are excluded from duration randomization but delayed in start time`() {
-        val steps = listOf(
-            MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 50L, btnCode = 1, label = "A"),
-            MacroStep.JoystickMove(startTimeMs = 200L, durationMs = 80L, stick = JoystickStick.LEFT, x = 1.0f, y = 0.0f),
-            MacroStep.JoystickPath(startTimeMs = 300L, durationMs = 120L, stick = JoystickStick.RIGHT, samples = emptyList()),
-            MacroStep.TouchPath(startTimeMs = 500L, durationMs = 150L, samples = emptyList())
-        )
-        val macro = Macro(
-            id = "test",
-            name = "test",
-            steps = steps,
-            randomizeTimingEnabled = true,
-            randomizeTimingRangeMs = 50
-        )
+        val steps =
+            listOf(
+                MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 50L, btnCode = 1, label = "A"),
+                MacroStep.JoystickMove(startTimeMs = 200L, durationMs = 80L, stick = JoystickStick.LEFT, x = 1.0f, y = 0.0f),
+                MacroStep.JoystickPath(startTimeMs = 300L, durationMs = 120L, stick = JoystickStick.RIGHT, samples = emptyList()),
+                MacroStep.TouchPath(startTimeMs = 500L, durationMs = 150L, samples = emptyList()),
+            )
+        val macro =
+            Macro(
+                id = "test",
+                name = "test",
+                steps = steps,
+                randomizeTimingEnabled = true,
+                randomizeTimingRangeMs = 50,
+            )
 
         val randomizedSteps = macro.randomized(Random(seed = 42)).steps
 

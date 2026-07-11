@@ -2,8 +2,6 @@ package com.stormpanda.megingiard.privd
 
 import android.content.Context
 import android.os.Build
-import com.stormpanda.megingiard.AppLog
-import io.github.muntashirakon.adb.AbsAdbConnectionManager
 import android.sun.security.x509.AlgorithmId
 import android.sun.security.x509.CertificateAlgorithmId
 import android.sun.security.x509.CertificateExtensions
@@ -19,6 +17,8 @@ import android.sun.security.x509.SubjectKeyIdentifierExtension
 import android.sun.security.x509.X500Name
 import android.sun.security.x509.X509CertImpl
 import android.sun.security.x509.X509CertInfo
+import com.stormpanda.megingiard.AppLog
+import io.github.muntashirakon.adb.AbsAdbConnectionManager
 import java.io.File
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
@@ -52,13 +52,14 @@ internal class PrivdAdbConnectionManager private constructor(
     private val privateKey: PrivateKey,
     private val certificate: Certificate,
 ) : AbsAdbConnectionManager() {
-
     init {
         api = Build.VERSION.SDK_INT
     }
 
     override fun getPrivateKey(): PrivateKey = privateKey
+
     override fun getCertificate(): Certificate = certificate
+
     override fun getDeviceName(): String = DEVICE_NAME
 
     companion object {
@@ -77,11 +78,14 @@ internal class PrivdAdbConnectionManager private constructor(
             if (keyFile.exists() && certFile.exists()) {
                 runCatching {
                     val keyBytes = keyFile.readBytes()
-                    val key = KeyFactory.getInstance("RSA")
-                        .generatePrivate(PKCS8EncodedKeySpec(keyBytes))
-                    val cert = certFile.inputStream().use { ins ->
-                        CertificateFactory.getInstance("X.509").generateCertificate(ins)
-                    }
+                    val key =
+                        KeyFactory
+                            .getInstance("RSA")
+                            .generatePrivate(PKCS8EncodedKeySpec(keyBytes))
+                    val cert =
+                        certFile.inputStream().use { ins ->
+                            CertificateFactory.getInstance("X.509").generateCertificate(ins)
+                        }
                     AppLog.d(TAG, "Loaded existing ADB credentials")
                     return key to cert
                 }.onFailure { e ->
@@ -91,7 +95,10 @@ internal class PrivdAdbConnectionManager private constructor(
             return generateAndStore(keyFile, certFile)
         }
 
-        private fun generateAndStore(keyFile: File, certFile: File): Pair<PrivateKey, Certificate> {
+        private fun generateAndStore(
+            keyFile: File,
+            certFile: File,
+        ): Pair<PrivateKey, Certificate> {
             AppLog.i(TAG, "Generating new ADB key pair + certificate")
             val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
             keyPairGenerator.initialize(RSA_KEY_SIZE, SecureRandom())

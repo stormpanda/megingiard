@@ -15,6 +15,7 @@ import java.util.concurrent.Executors
 private const val TAG = "TouchScreenObserver"
 private const val EVENT_NODE = "/dev/input/event6"
 private const val INPUT_EVENT_SIZE = 24
+
 // Physical sensor dimensions of the AYN Thor primary touchscreen (fts_ts, event6).
 // Canonical source: TouchInjector.PHYS_W / PHYS_H (domain/input/TouchInjector.kt).
 // Duplicated here because those constants are private; extract to a shared geometry
@@ -24,8 +25,10 @@ private const val SENSOR_H = 1920f
 
 object TouchScreenObserver {
     private var job: Job? = null
+
     // Created per start(), closed per stop() so the backing thread does not outlive the session.
     private var dispatcher: ExecutorCoroutineDispatcher? = null
+
     // Retained so stop() can close the stream and unblock the in-progress blocking read() immediately.
     @Volatile private var activeStream: FileInputStream? = null
 
@@ -38,71 +41,72 @@ object TouchScreenObserver {
         AppLog.i(TAG, "start()")
         val exec = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
         dispatcher = exec
-        job = CoroutineScope(exec).launch {
-            val file = File(EVENT_NODE)
-            if (!file.exists()) {
-                AppLog.e(TAG, "Touch event node $EVENT_NODE does not exist")
-                return@launch
-            }
-            try {
-                val fis = FileInputStream(file)
-                activeStream = fis
-                fis.use {
-                    val buffer = ByteArray(INPUT_EVENT_SIZE)
-                    val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.nativeOrder())
+        job =
+            CoroutineScope(exec).launch {
+                val file = File(EVENT_NODE)
+                if (!file.exists()) {
+                    AppLog.e(TAG, "Touch event node $EVENT_NODE does not exist")
+                    return@launch
+                }
+                try {
+                    val fis = FileInputStream(file)
+                    activeStream = fis
+                    fis.use {
+                        val buffer = ByteArray(INPUT_EVENT_SIZE)
+                        val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.nativeOrder())
 
-                    var currentX: Int? = null
-                    var currentY: Int? = null
+                        var currentX: Int? = null
+                        var currentY: Int? = null
 
-                    while (coroutineContext[Job]?.isActive == true) {
-                        var bytesRead = 0
-                        while (bytesRead < INPUT_EVENT_SIZE) {
-                            val r = fis.read(buffer, bytesRead, INPUT_EVENT_SIZE - bytesRead)
-                            if (r < 0) break
-                            bytesRead += r
-                        }
-                        if (bytesRead < INPUT_EVENT_SIZE) {
-                            AppLog.w(TAG, "Read fewer bytes than expected input event size, stopping")
-                            break
-                        }
-
-                        byteBuffer.rewind()
-                        // Skip timeval (16 bytes on 64-bit systems)
-                        byteBuffer.position(16)
-                        val type = byteBuffer.short.toInt() and 0xFFFF
-                        val code = byteBuffer.short.toInt() and 0xFFFF
-                        val value = byteBuffer.int
-
-                        // EV_ABS = 3
-                        if (type == 3) {
-                            if (code == 53) { // ABS_MT_POSITION_X
-                                currentX = value
-                            } else if (code == 54) { // ABS_MT_POSITION_Y
-                                currentY = value
+                        while (coroutineContext[Job]?.isActive == true) {
+                            var bytesRead = 0
+                            while (bytesRead < INPUT_EVENT_SIZE) {
+                                val r = fis.read(buffer, bytesRead, INPUT_EVENT_SIZE - bytesRead)
+                                if (r < 0) break
+                                bytesRead += r
                             }
-                        } else if (type == 0 && code == 0) { // EV_SYN / SYN_REPORT
-                            val x = currentX
-                            val y = currentY
-                            if (x != null && y != null) {
-                                // Map to normalized landscape coordinates:
-                                // normalizedX = sensor_y / SENSOR_H
-                                // normalizedY = 1.0f - (sensor_x / SENSOR_W)
-                                val nx = y.toFloat() / SENSOR_H
-                                val ny = 1.0f - (x.toFloat() / SENSOR_W)
-                                // Coerce to [0, 1]
-                                val coercedNx = nx.coerceIn(0f, 1f)
-                                val coercedNy = ny.coerceIn(0f, 1f)
-                                onTouchNormalized?.invoke(coercedNx, coercedNy)
+                            if (bytesRead < INPUT_EVENT_SIZE) {
+                                AppLog.w(TAG, "Read fewer bytes than expected input event size, stopping")
+                                break
+                            }
+
+                            byteBuffer.rewind()
+                            // Skip timeval (16 bytes on 64-bit systems)
+                            byteBuffer.position(16)
+                            val type = byteBuffer.short.toInt() and 0xFFFF
+                            val code = byteBuffer.short.toInt() and 0xFFFF
+                            val value = byteBuffer.int
+
+                            // EV_ABS = 3
+                            if (type == 3) {
+                                if (code == 53) { // ABS_MT_POSITION_X
+                                    currentX = value
+                                } else if (code == 54) { // ABS_MT_POSITION_Y
+                                    currentY = value
+                                }
+                            } else if (type == 0 && code == 0) { // EV_SYN / SYN_REPORT
+                                val x = currentX
+                                val y = currentY
+                                if (x != null && y != null) {
+                                    // Map to normalized landscape coordinates:
+                                    // normalizedX = sensor_y / SENSOR_H
+                                    // normalizedY = 1.0f - (sensor_x / SENSOR_W)
+                                    val nx = y.toFloat() / SENSOR_H
+                                    val ny = 1.0f - (x.toFloat() / SENSOR_W)
+                                    // Coerce to [0, 1]
+                                    val coercedNx = nx.coerceIn(0f, 1f)
+                                    val coercedNy = ny.coerceIn(0f, 1f)
+                                    onTouchNormalized?.invoke(coercedNx, coercedNy)
+                                }
                             }
                         }
                     }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Exception in touch screen reading loop: $e")
+                } finally {
+                    activeStream = null
                 }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Exception in touch screen reading loop: $e")
-            } finally {
-                activeStream = null
             }
-        }
     }
 
     fun stop() {
@@ -111,7 +115,7 @@ object TouchScreenObserver {
         activeStream = null
         job?.cancel()
         job = null
-        dispatcher?.close()  // shuts down the backing executor thread
+        dispatcher?.close() // shuts down the backing executor thread
         dispatcher = null
     }
 }

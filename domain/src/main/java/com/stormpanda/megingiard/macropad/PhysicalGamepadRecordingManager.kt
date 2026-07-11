@@ -3,9 +3,9 @@ package com.stormpanda.megingiard.macropad
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.EvdevEvent
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdGamepadInjector
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -56,16 +56,16 @@ private const val JOYSTICK_DEAD_ZONE_DEFAULT = 0.15f
  * @see GamepadRecordingState — same sealed interface as [GamepadRecordingManager]
  */
 object PhysicalGamepadRecordingManager {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _state = MutableStateFlow<GamepadRecordingState>(GamepadRecordingState.Idle)
     val state: StateFlow<GamepadRecordingState> = _state.asStateFlow()
 
     @Volatile private var recordingStartEpochMs: Long = 0L
+
     @Volatile private var collectorJob: Job? = null
 
-    /* Per-stick gesture tracking */
+    // Per-stick gesture tracking
     private val leftSamples = mutableListOf<PathSample>()
     private val rightSamples = mutableListOf<PathSample>()
     private var leftInGesture = false
@@ -73,16 +73,16 @@ object PhysicalGamepadRecordingManager {
     private var leftGestureStartMs = 0L
     private var rightGestureStartMs = 0L
 
-    /* Latest raw axis values — held so we can close open gestures at stop time */
+    // Latest raw axis values — held so we can close open gestures at stop time
     private var leftX = 0f
     private var leftY = 0f
     private var rightX = 0f
     private var rightY = 0f
 
-    /* Steps collected from closed gestures during the session */
+    // Steps collected from closed gestures during the session
     private val recordedSteps = mutableListOf<MacroStep>()
 
-    /* Latest recording state snapshot — mutated as events arrive and emitted */
+    // Latest recording state snapshot — mutated as events arrive and emitted
     private val pendingButtonDowns = mutableMapOf<Int, Long>()
     private var pressedButtons: MutableSet<Int> = mutableSetOf()
     private var hatStartMs: Long? = null
@@ -105,11 +105,12 @@ object PhysicalGamepadRecordingManager {
         PrivdClient.send("SUB GAMEPAD\n")
         beginRecordingSession(startElapsedMs = SystemClock.elapsedRealtime())
 
-        collectorJob = scope.launch {
-            PrivdClient.evdevEvents.collect { event ->
-                recordEvdevEvent(event = event, nowElapsedMs = SystemClock.elapsedRealtime())
+        collectorJob =
+            scope.launch {
+                PrivdClient.evdevEvents.collect { event ->
+                    recordEvdevEvent(event = event, nowElapsedMs = SystemClock.elapsedRealtime())
+                }
             }
-        }
     }
 
     /**
@@ -168,36 +169,41 @@ object PhysicalGamepadRecordingManager {
         return steps
     }
 
-    internal fun recordEvdevEvent(event: EvdevEvent, nowElapsedMs: Long) {
+    internal fun recordEvdevEvent(
+        event: EvdevEvent,
+        nowElapsedMs: Long,
+    ) {
         if (_state.value !is GamepadRecordingState.Recording) return
         when (event.type) {
             EV_KEY -> handleKeyEvent(code = event.code, value = event.value, nowMs = relativeElapsedMs(nowElapsedMs))
             EV_ABS -> handleAbsEvent(code = event.code, rawValue = event.value, nowMs = nowElapsedMs)
         }
-        /* Update Recording state snapshot after each event for UI reactivity. */
+        // Update Recording state snapshot after each event for UI reactivity.
         val current = _state.value as? GamepadRecordingState.Recording ?: return
-        _state.value = current.copy(
-            pressedButtons = pressedButtons.toSet(),
-            dpadDirectionX = dpadX,
-            dpadDirectionY = dpadY,
-            leftStickX = leftX,
-            leftStickY = leftY,
-            rightStickX = rightX,
-            rightStickY = rightY,
-        )
+        _state.value =
+            current.copy(
+                pressedButtons = pressedButtons.toSet(),
+                dpadDirectionX = dpadX,
+                dpadDirectionY = dpadY,
+                leftStickX = leftX,
+                leftStickY = leftY,
+                rightStickX = rightX,
+                rightStickY = rightY,
+            )
     }
 
     private fun beginRecordingSession(startElapsedMs: Long) {
         recordingStartEpochMs = startElapsedMs
-        _state.value = GamepadRecordingState.Recording(
-            pressedButtons = emptySet(),
-            dpadDirectionX = 0,
-            dpadDirectionY = 0,
-            leftStickX = 0f,
-            leftStickY = 0f,
-            rightStickX = 0f,
-            rightStickY = 0f,
-        )
+        _state.value =
+            GamepadRecordingState.Recording(
+                pressedButtons = emptySet(),
+                dpadDirectionX = 0,
+                dpadDirectionY = 0,
+                leftStickX = 0f,
+                leftStickY = 0f,
+                rightStickX = 0f,
+                rightStickY = 0f,
+            )
     }
 
     private fun completeRecordingAt(stopElapsedMs: Long): List<MacroStep> {
@@ -207,7 +213,11 @@ object PhysicalGamepadRecordingManager {
         return trimLeadingIdle(recordedSteps.sortedBy { it.startTimeMs })
     }
 
-    private fun handleKeyEvent(code: Int, value: Int, nowMs: Long) {
+    private fun handleKeyEvent(
+        code: Int,
+        value: Int,
+        nowMs: Long,
+    ) {
         when (value) {
             1 -> {
                 if (pendingButtonDowns.containsKey(code)) return
@@ -215,6 +225,7 @@ object PhysicalGamepadRecordingManager {
                 pressedButtons.add(code)
                 AppLog.d(TAG, "button down code=$code at=$nowMs")
             }
+
             0 -> {
                 val startMs = pendingButtonDowns.remove(code) ?: return
                 pressedButtons.remove(code)
@@ -223,22 +234,35 @@ object PhysicalGamepadRecordingManager {
         }
     }
 
-    private fun handleAbsEvent(code: Int, rawValue: Int, nowMs: Long) {
+    private fun handleAbsEvent(
+        code: Int,
+        rawValue: Int,
+        nowMs: Long,
+    ) {
         when (code) {
-            ABS_HAT0X -> updateHat(nowMs = relativeElapsedMs(nowMs), nextX = rawValue, nextY = dpadY)
-            ABS_HAT0Y -> updateHat(nowMs = relativeElapsedMs(nowMs), nextX = dpadX, nextY = rawValue)
+            ABS_HAT0X -> {
+                updateHat(nowMs = relativeElapsedMs(nowMs), nextX = rawValue, nextY = dpadY)
+            }
+
+            ABS_HAT0Y -> {
+                updateHat(nowMs = relativeElapsedMs(nowMs), nextX = dpadX, nextY = rawValue)
+            }
+
             GamepadKeycodes.ABS_X -> {
                 leftX = (rawValue / 32767f).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.LEFT, x = leftX, y = leftY, nowMs = nowMs)
             }
+
             GamepadKeycodes.ABS_Y -> {
                 leftY = (rawValue / 32767f).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.LEFT, x = leftX, y = leftY, nowMs = nowMs)
             }
+
             GamepadKeycodes.ABS_Z -> {
                 rightX = (rawValue / 32767f).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.RIGHT, x = rightX, y = rightY, nowMs = nowMs)
             }
+
             GamepadKeycodes.ABS_RZ -> {
                 rightY = (rawValue / 32767f).coerceIn(-1f, 1f)
                 updateStick(stick = JoystickStick.RIGHT, x = rightX, y = rightY, nowMs = nowMs)
@@ -246,7 +270,11 @@ object PhysicalGamepadRecordingManager {
         }
     }
 
-    private fun emitButtonStep(code: Int, startMs: Long, endMs: Long) {
+    private fun emitButtonStep(
+        code: Int,
+        startMs: Long,
+        endMs: Long,
+    ) {
         val durationMs = (endMs - startMs).coerceAtLeast(1L)
         val label = GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: "BTN $code"
         recordedSteps.add(
@@ -260,7 +288,11 @@ object PhysicalGamepadRecordingManager {
         AppLog.d(TAG, "button tap code=$code start=$startMs duration=$durationMs")
     }
 
-    private fun updateHat(nowMs: Long, nextX: Int, nextY: Int) {
+    private fun updateHat(
+        nowMs: Long,
+        nextX: Int,
+        nextY: Int,
+    ) {
         val normalizedX = nextX.coerceIn(-1, 1)
         val normalizedY = nextY.coerceIn(-1, 1)
         val previousX = dpadX
@@ -280,7 +312,12 @@ object PhysicalGamepadRecordingManager {
         hatStartMs = if (isNeutral) null else nowMs
     }
 
-    private fun emitHatStep(startMs: Long, endMs: Long, dirX: Int, dirY: Int) {
+    private fun emitHatStep(
+        startMs: Long,
+        endMs: Long,
+        dirX: Int,
+        dirY: Int,
+    ) {
         val durationMs = (endMs - startMs).coerceAtLeast(1L)
         recordedSteps.add(
             MacroStep.DPadTap(
@@ -293,19 +330,26 @@ object PhysicalGamepadRecordingManager {
         AppLog.d(TAG, "dpad step dirX=$dirX dirY=$dirY start=$startMs duration=$durationMs")
     }
 
-    private fun updateStick(stick: JoystickStick, x: Float, y: Float, nowMs: Long) {
+    private fun updateStick(
+        stick: JoystickStick,
+        x: Float,
+        y: Float,
+        nowMs: Long,
+    ) {
         val mag = kotlin.math.sqrt(x * x + y * y)
-        val deadZone = if (stick == JoystickStick.LEFT)
-            MacroPadSettings.deadzoneLeft.value
-        else
-            MacroPadSettings.deadzoneRight.value
+        val deadZone =
+            if (stick == JoystickStick.LEFT) {
+                MacroPadSettings.deadzoneLeft.value
+            } else {
+                MacroPadSettings.deadzoneRight.value
+            }
         val samples = if (stick == JoystickStick.LEFT) leftSamples else rightSamples
         val inGesture = if (stick == JoystickStick.LEFT) leftInGesture else rightInGesture
         val gestureStartMs = if (stick == JoystickStick.LEFT) leftGestureStartMs else rightGestureStartMs
 
         if (!inGesture) {
             if (mag > deadZone) {
-                /* Stick left dead zone — begin new gesture. */
+                // Stick left dead zone — begin new gesture.
                 val start = nowMs
                 samples.clear()
                 samples.add(PathSample(offsetMs = 0L, x = x, y = y))
@@ -319,7 +363,7 @@ object PhysicalGamepadRecordingManager {
                 AppLog.d(TAG, "gesture start stick=$stick at ${nowMs - recordingStartEpochMs} ms")
             }
         } else {
-            /* Gesture in progress — accumulate sample. */
+            // Gesture in progress — accumulate sample.
             val offsetMs = nowMs - gestureStartMs
             samples.add(PathSample(offsetMs = offsetMs, x = x, y = y))
 
@@ -329,12 +373,13 @@ object PhysicalGamepadRecordingManager {
                    end-of-step neutral reset event sorts strictly after the last sample
                    at the same global timestamp. */
                 val durationMs = (offsetMs + 1L).coerceAtLeast(1L)
-                val step = MacroStep.JoystickPath(
-                    startTimeMs = gestureStartMs - recordingStartEpochMs,
-                    durationMs = durationMs,
-                    stick = stick,
-                    samples = samples.toList(),
-                )
+                val step =
+                    MacroStep.JoystickPath(
+                        startTimeMs = gestureStartMs - recordingStartEpochMs,
+                        durationMs = durationMs,
+                        stick = stick,
+                        samples = samples.toList(),
+                    )
                 recordedSteps.add(step)
                 samples.clear()
                 if (stick == JoystickStick.LEFT) {

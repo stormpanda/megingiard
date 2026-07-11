@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
@@ -37,6 +36,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -58,26 +58,28 @@ internal fun EditorSectionHeader(
 ) {
     val colors = LocalAppColors.current
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surfaceVariant)
-            .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING - 2.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant)
+                .padding(horizontal = MPE_PADDING, vertical = MPE_SECTION_HEADER_V_PADDING - 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text     = stringResource(textRes).uppercase(Locale.ROOT),
-            color    = colors.sectionHeaderColor,
-            style    = MaterialTheme.typography.labelSmall,
+            text = stringResource(textRes).uppercase(Locale.ROOT),
+            color = colors.sectionHeaderColor,
+            style = MaterialTheme.typography.labelSmall,
         )
         if (actionIcon != null && onActionClick != null) {
             Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable(onClick = onActionClick)
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .clickable(onClick = onActionClick)
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Icon(
                     imageVector = actionIcon,
@@ -89,7 +91,7 @@ internal fun EditorSectionHeader(
                     text = stringResource(R.string.macropad_editor_add),
                     color = colors.accent,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
@@ -98,21 +100,22 @@ internal fun EditorSectionHeader(
 
 @Composable
 internal fun EditorActionChip(
-    label:       String,
-    icon:        ImageVector,
+    label: String,
+    icon: ImageVector,
     accentColor: Color,
-    onClick:     () -> Unit,
-    modifier:    Modifier = Modifier,
-    enabled:     Boolean = true,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val effectiveColor = if (enabled) accentColor else accentColor.copy(alpha = 0.38f)
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, effectiveColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment    = Alignment.CenterVertically,
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, effectiveColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         Icon(icon, contentDescription = null, tint = effectiveColor, modifier = Modifier.size(18.dp))
@@ -123,21 +126,22 @@ internal fun EditorActionChip(
 
 @Composable
 internal fun EditorToolbar(
-    profile:          PadProfile,
-    accentColor:      Color,
-    gridMode:         GridMode,
-    isCanvasLocked:   Boolean,
+    profile: PadProfile,
+    accentColor: Color,
+    gridMode: GridMode,
+    isCanvasLocked: Boolean,
     onToggleCanvasLock: () -> Unit,
-    onAddButton:      () -> Unit,
+    onAddButton: () -> Unit,
     onGridModeChange: () -> Unit,
     onManageBackground: () -> Unit,
-    modifier:         Modifier = Modifier,
+    modifier: Modifier = Modifier,
 ) {
-    val gridIcon = when (gridMode) {
-        GridMode.OFF         -> Icons.Rounded.GridOff
-        GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
-        GridMode.RADIAL      -> Icons.Rounded.TripOrigin
-    }
+    val gridIcon =
+        when (gridMode) {
+            GridMode.OFF -> Icons.Rounded.GridOff
+            GridMode.RECTANGULAR -> Icons.Rounded.Grid4x4
+            GridMode.RADIAL -> Icons.Rounded.TripOrigin
+        }
     val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
     val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
     val bgLabel = stringResource(R.string.layout_settings_bg_section_title)
@@ -146,41 +150,41 @@ internal fun EditorToolbar(
     val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
 
     Row(
-        modifier              = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-        verticalAlignment     = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Add Button ("Button")
         EditorActionChip(
-            label       = buttonLabel,
-            icon        = Icons.Rounded.Add,
+            label = buttonLabel,
+            icon = Icons.Rounded.Add,
             accentColor = accentColor,
-            onClick     = onAddButton,
-            modifier    = Modifier.weight(1f),
+            onClick = onAddButton,
+            modifier = Modifier.weight(1f),
         )
         // Grid toggle ("Grid", accent color all the time)
         EditorActionChip(
-            label       = gridLabel,
-            icon        = gridIcon,
+            label = gridLabel,
+            icon = gridIcon,
             accentColor = accentColor,
-            onClick     = onGridModeChange,
-            modifier    = Modifier.weight(1f),
+            onClick = onGridModeChange,
+            modifier = Modifier.weight(1f),
         )
         // Unlock / Lock button
         EditorActionChip(
-            label       = lockLabel,
-            icon        = lockIcon,
+            label = lockLabel,
+            icon = lockIcon,
             accentColor = accentColor,
-            onClick     = onToggleCanvasLock,
-            modifier    = Modifier.weight(1f),
+            onClick = onToggleCanvasLock,
+            modifier = Modifier.weight(1f),
         )
         // Background Button ("Background")
         EditorActionChip(
-            label       = bgLabel,
-            icon        = Icons.Rounded.Wallpaper,
+            label = bgLabel,
+            icon = Icons.Rounded.Wallpaper,
             accentColor = accentColor,
-            onClick     = onManageBackground,
-            modifier    = Modifier.weight(1f),
+            onClick = onManageBackground,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -203,14 +207,13 @@ internal fun SwordsButtonPreview(
         bgColor = bgColor,
         bgAlpha = EBC_PREVIEW_BG_ALPHA,
         gradientScale = EBC_PREVIEW_GRADIENT_SCALE,
-        modifier = modifier
+        modifier = modifier,
     ) {
         MaterialSymbol(
             name = "swords",
             size = EBC_PREVIEW_ICON_SIZE,
             tint = textColor,
-            filled = true
+            filled = true,
         )
     }
 }
-

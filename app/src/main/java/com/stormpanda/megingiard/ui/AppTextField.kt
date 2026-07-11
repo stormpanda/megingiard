@@ -35,14 +35,15 @@ internal fun AppTextField(
         isError = isError,
         singleLine = singleLine,
         enabled = enabled,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = accentColor,
-            unfocusedBorderColor = colors.accentBorder,
-            focusedTextColor = colors.onSurface,
-            unfocusedTextColor = colors.onSurface,
-            cursorColor = accentColor,
-            errorBorderColor = colors.error,
-            errorCursorColor = colors.error,
-        ),
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = accentColor,
+                unfocusedBorderColor = colors.accentBorder,
+                focusedTextColor = colors.onSurface,
+                unfocusedTextColor = colors.onSurface,
+                cursorColor = accentColor,
+                errorBorderColor = colors.error,
+                errorCursorColor = colors.error,
+            ),
     )
 }

@@ -12,7 +12,6 @@ import org.junit.Test
 import java.util.concurrent.LinkedBlockingQueue
 
 class MacroPadHitTestEngineTest {
-
     private val dummyDpToPx: (Float) -> Float = { it }
     private val canvasW = 1000f
     private val canvasH = 1000f
@@ -45,25 +44,27 @@ class MacroPadHitTestEngineTest {
         queue.clear()
     }
 
-    private fun centeredButton(action: PadAction) = PadButton(
-        id = "btn-test",
-        label = "T",
-        posX = 0.5f,
-        posY = 0.5f,
-        action = action,
-        hapticStrength = HapticStrength.OFF,
-        hapticCustomDurationMs = 0,
-        hapticCustomAmplitude = 0,
-    )
+    private fun centeredButton(action: PadAction) =
+        PadButton(
+            id = "btn-test",
+            label = "T",
+            posX = 0.5f,
+            posY = 0.5f,
+            action = action,
+            hapticStrength = HapticStrength.OFF,
+            hapticCustomDurationMs = 0,
+            hapticCustomAmplitude = 0,
+        )
 
-    private val enabledProfile = PadProfile(
-        id = "p",
-        name = "Test Profile",
-        enableKeyboard = true,
-        enableGamepad = true,
-        enableMouse = true,
-        enableTouch = true,
-    )
+    private val enabledProfile =
+        PadProfile(
+            id = "p",
+            name = "Test Profile",
+            enableKeyboard = true,
+            enableGamepad = true,
+            enableMouse = true,
+            enableTouch = true,
+        )
 
     private val disabledTouchProfile = enabledProfile.copy(enableTouch = false)
 

@@ -1,11 +1,10 @@
 package com.stormpanda.megingiard.config
 
-import org.junit.Assert.assertEquals
-
-import org.junit.Test
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 /**
  * Unit tests verifying [InternalBackup] data class serialization/deserialization
@@ -13,31 +12,34 @@ import kotlinx.serialization.json.Json
  * configuration backups in the DataStore.
  */
 class InternalBackupTest {
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val testMetadata =
+        ExportMetadata(
+            exportedAt = "2026-05-24T12:00:00Z",
+            appVersionName = "2.0.0",
+            appVersionCode = 20,
+        )
 
-    private val testMetadata = ExportMetadata(
-        exportedAt = "2026-05-24T12:00:00Z",
-        appVersionName = "2.0.0",
-        appVersionCode = 20,
-    )
-
-    private val testExport = MegingiardExport(
-        schemaVersion = SCHEMA_VERSION,
-        metadata = testMetadata,
-        checksum = "sha256:dummy",
-    )
+    private val testExport =
+        MegingiardExport(
+            schemaVersion = SCHEMA_VERSION,
+            metadata = testMetadata,
+            checksum = "sha256:dummy",
+        )
 
     @Test
     fun `InternalBackup model supports serialization and deserialization`() {
-        val backup = InternalBackup(
-            dateString = "2026-05-24",
-            timestampMs = 1716584400000L,
-            export = testExport
-        )
+        val backup =
+            InternalBackup(
+                dateString = "2026-05-24",
+                timestampMs = 1716584400000L,
+                export = testExport,
+            )
 
         val encoded = json.encodeToString(backup)
         val decoded = json.decodeFromString<InternalBackup>(encoded)
@@ -50,23 +52,26 @@ class InternalBackupTest {
 
     @Test
     fun `Backups list keeps last 5 days of usage and is sorted descending`() {
-        val newBackup = InternalBackup(
-            dateString = "2026-05-24",
-            timestampMs = 105L,
-            export = testExport
-        )
+        val newBackup =
+            InternalBackup(
+                dateString = "2026-05-24",
+                timestampMs = 105L,
+                export = testExport,
+            )
 
-        val existingList = listOf(
-            InternalBackup("2026-05-23", 104L, testExport),
-            InternalBackup("2026-05-22", 103L, testExport),
-            InternalBackup("2026-05-21", 102L, testExport),
-            InternalBackup("2026-05-20", 101L, testExport),
-            InternalBackup("2026-05-19", 100L, testExport)
-        )
+        val existingList =
+            listOf(
+                InternalBackup("2026-05-23", 104L, testExport),
+                InternalBackup("2026-05-22", 103L, testExport),
+                InternalBackup("2026-05-21", 102L, testExport),
+                InternalBackup("2026-05-20", 101L, testExport),
+                InternalBackup("2026-05-19", 100L, testExport),
+            )
 
-        val result = (existingList.filter { it.dateString != newBackup.dateString } + newBackup)
-            .sortedByDescending { it.timestampMs }
-            .take(5)
+        val result =
+            (existingList.filter { it.dateString != newBackup.dateString } + newBackup)
+                .sortedByDescending { it.timestampMs }
+                .take(5)
 
         assertEquals(5, result.size)
         // 2026-05-24 should be the first (most recent)
@@ -79,20 +84,23 @@ class InternalBackupTest {
 
     @Test
     fun `Backups list overwrites backup for the same day`() {
-        val duplicateBackup = InternalBackup(
-            dateString = "2026-05-23",
-            timestampMs = 110L, // Newer timestamp for the same day
-            export = testExport
-        )
+        val duplicateBackup =
+            InternalBackup(
+                dateString = "2026-05-23",
+                timestampMs = 110L, // Newer timestamp for the same day
+                export = testExport,
+            )
 
-        val existingList = listOf(
-            InternalBackup("2026-05-23", 104L, testExport),
-            InternalBackup("2026-05-22", 103L, testExport)
-        )
+        val existingList =
+            listOf(
+                InternalBackup("2026-05-23", 104L, testExport),
+                InternalBackup("2026-05-22", 103L, testExport),
+            )
 
-        val result = (existingList.filter { it.dateString != duplicateBackup.dateString } + duplicateBackup)
-            .sortedByDescending { it.timestampMs }
-            .take(5)
+        val result =
+            (existingList.filter { it.dateString != duplicateBackup.dateString } + duplicateBackup)
+                .sortedByDescending { it.timestampMs }
+                .take(5)
 
         assertEquals(2, result.size)
         assertEquals("2026-05-23", result[0].dateString)

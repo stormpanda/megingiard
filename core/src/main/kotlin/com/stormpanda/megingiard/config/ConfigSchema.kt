@@ -54,19 +54,14 @@ data class MegingiardExport(
 data class ExportMetadata(
     /** Free-text author name or handle. Optional. */
     val author: String? = null,
-
     /** Short human description of what this config is for. Optional. */
     val description: String? = null,
-
     /** Free-form tag list for community discovery (e.g. `[\"elden-ring\", \"souls\"]`). */
     val tags: List<String> = emptyList(),
-
     /** ISO-8601 timestamp at UTC, e.g. `\"2026-04-12T14:30:00Z\"`. */
     val exportedAt: String,
-
     val appVersionName: String,
     val appVersionCode: Int,
-
     /** `\"\${Build.MANUFACTURER} \${Build.MODEL}\"`, or null if unavailable. */
     val deviceModel: String? = null,
 )
@@ -81,7 +76,7 @@ data class ExportMetadata(
  */
 @Serializable
 data class InternalBackup(
-    val dateString: String,   // Local date formatted as "yyyy-MM-dd"
-    val timestampMs: Long,    // Milliseconds since epoch
+    val dateString: String, // Local date formatted as "yyyy-MM-dd"
+    val timestampMs: Long, // Milliseconds since epoch
     val export: MegingiardExport,
 )

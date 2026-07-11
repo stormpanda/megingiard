@@ -76,14 +76,14 @@ fun <T> AppDropdown(
 
     Box(modifier = modifier) {
         Row(
-            modifier = (if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
-                .clip(RoundedCornerShape(DROPDOWN_CORNER))
-                .clickable(enabled = isEnabled) { expanded = true }
-                .background(
-                    colors.onSurface.copy(alpha = DROPDOWN_BG_ALPHA),
-                    RoundedCornerShape(DROPDOWN_CORNER),
-                )
-                .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+            modifier =
+                (if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
+                    .clip(RoundedCornerShape(DROPDOWN_CORNER))
+                    .clickable(enabled = isEnabled) { expanded = true }
+                    .background(
+                        colors.onSurface.copy(alpha = DROPDOWN_BG_ALPHA),
+                        RoundedCornerShape(DROPDOWN_CORNER),
+                    ).padding(horizontal = horizontalPadding, vertical = verticalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(

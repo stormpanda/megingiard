@@ -7,7 +7,6 @@ import org.junit.Before
 import org.junit.Test
 
 class TouchRecordingManagerTest {
-
     @Before
     fun resetManager() {
         TouchRecordingManager.cancelRecording()
@@ -31,17 +30,19 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
         TouchRecordingManager.recordGestureCompleted(
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-            ),
+            samples =
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                    TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+                ),
             startOffsetMs = 0L,
         )
         TouchRecordingManager.recordGestureCompleted(
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
-                TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.MOVE, normX = 0.7f, normY = 0.8f),
-            ),
+            samples =
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                    TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.MOVE, normX = 0.7f, normY = 0.8f),
+                ),
             startOffsetMs = 100L,
         )
 
@@ -64,9 +65,10 @@ class TouchRecordingManagerTest {
     fun `cancel recording discards accumulated gestures`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
         TouchRecordingManager.recordGestureCompleted(
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-            ),
+            samples =
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                ),
             startOffsetMs = 0L,
         )
 
@@ -82,17 +84,19 @@ class TouchRecordingManagerTest {
 
         // First gesture starts 500 ms into the session (user waited before touching)
         TouchRecordingManager.recordGestureCompleted(
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-            ),
+            samples =
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                    TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+                ),
             startOffsetMs = 500L,
         )
         TouchRecordingManager.recordGestureCompleted(
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
-                TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
-            ),
+            samples =
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                    TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
+                ),
             startOffsetMs = 800L,
         )
 
@@ -122,10 +126,11 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
 
         TouchRecordingManager.recordGestureCompleted(
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-            ),
+            samples =
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                    TouchSample(offsetMs = 10L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+                ),
             startOffsetMs = 0L,
         )
 

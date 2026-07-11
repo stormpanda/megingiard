@@ -98,15 +98,16 @@ internal fun PrivdSetupWizardDialog(
     var pairBusy by remember { mutableStateOf(false) }
     var bootstrapBusy by remember { mutableStateOf(false) }
 
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
-        unfocusedBorderColor = colors.divider,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
-        unfocusedLabelColor = colors.onSurfaceSecondary,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = colors.onSurface,
-        unfocusedTextColor = colors.onSurface,
-    )
+    val fieldColors =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = colors.divider,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = colors.onSurfaceSecondary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = colors.onSurface,
+            unfocusedTextColor = colors.onSurface,
+        )
     val focusManager = LocalFocusManager.current
 
     BackHandler(onBack = {
@@ -115,19 +116,21 @@ internal fun PrivdSetupWizardDialog(
     })
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = SW_SCRIM_ALPHA))
-            .clickable(enabled = false, onClick = {}),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = SW_SCRIM_ALPHA))
+                .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(SW_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(SW_DIALOG_CORNER))
-                .verticalScroll(rememberScrollState())
-                .clickable(enabled = true, onClick = {})
-                .padding(SW_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(SW_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(SW_DIALOG_CORNER))
+                    .verticalScroll(rememberScrollState())
+                    .clickable(enabled = true, onClick = {})
+                    .padding(SW_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(SW_GAP),
         ) {
             Row(
@@ -153,94 +156,106 @@ internal fun PrivdSetupWizardDialog(
             }
 
             when (step) {
-                0 -> StepEnableWireless(
-                    onOpenSettings = {
-                        val devOptionsEnabled = Settings.Global.getInt(
-                            context.contentResolver,
-                            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-                            0
-                        ) != 0
+                0 -> {
+                    StepEnableWireless(
+                        onOpenSettings = {
+                            val devOptionsEnabled =
+                                Settings.Global.getInt(
+                                    context.contentResolver,
+                                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+                                    0,
+                                ) != 0
 
-                        val intentsToTry = if (devOptionsEnabled) {
-                            listOf(
-                                // 1. Try to open Wireless Debugging directly
-                                Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
-                                    component = ComponentName(
-                                        "com.android.settings",
-                                        "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging"
+                            val intentsToTry =
+                                if (devOptionsEnabled) {
+                                    listOf(
+                                        // 1. Try to open Wireless Debugging directly
+                                        Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                                            component =
+                                                ComponentName(
+                                                    "com.android.settings",
+                                                    "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
+                                                )
+                                        },
+                                        // 2. Try to open Developer Options directly
+                                        Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+                                        // 3. Fallback to general settings
+                                        Intent(Settings.ACTION_SETTINGS),
                                     )
-                                },
-                                // 2. Try to open Developer Options directly
-                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-                                // 3. Fallback to general settings
-                                Intent(Settings.ACTION_SETTINGS)
-                            )
-                        } else {
-                            listOf(
-                                // If disabled, go straight to general settings
-                                Intent(Settings.ACTION_SETTINGS)
-                            )
-                        }
+                                } else {
+                                    listOf(
+                                        // If disabled, go straight to general settings
+                                        Intent(Settings.ACTION_SETTINGS),
+                                    )
+                                }
 
-                        val options = ActivityOptions.makeBasic().apply {
-                            setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                        }
+                            val options =
+                                ActivityOptions.makeBasic().apply {
+                                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                }
 
-                        for (intent in intentsToTry) {
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            try {
-                                context.startActivity(intent, options.toBundle())
-                                break
-                            } catch (e: Exception) {
-                                // Fallback to next intent in the list
+                            for (intent in intentsToTry) {
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                try {
+                                    context.startActivity(intent, options.toBundle())
+                                    break
+                                } catch (e: Exception) {
+                                    // Fallback to next intent in the list
+                                }
                             }
-                        }
-                    },
-                    onNext = { step = 1 },
-                )
+                        },
+                        onNext = { step = 1 },
+                    )
+                }
 
-                1 -> StepPair(
-                    pairPort = pairPort,
-                    code = pairCode,
-                    busy = pairBusy,
-                    error = pairError,
-                    fieldColors = fieldColors,
-                    focusManager = focusManager,
-                    onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
-                    onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
-                    onSubmit = {
-                        val portInt = pairPort.toIntOrNull() ?: return@StepPair
-                        pairBusy = true
-                        pairError = false
-                        viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
-                            pairBusy = false
-                            if (ok) {
-                                step = 2
-                            } else {
-                                pairError = true
+                1 -> {
+                    StepPair(
+                        pairPort = pairPort,
+                        code = pairCode,
+                        busy = pairBusy,
+                        error = pairError,
+                        fieldColors = fieldColors,
+                        focusManager = focusManager,
+                        onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
+                        onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
+                        onSubmit = {
+                            val portInt = pairPort.toIntOrNull() ?: return@StepPair
+                            pairBusy = true
+                            pairError = false
+                            viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
+                                pairBusy = false
+                                if (ok) {
+                                    step = 2
+                                } else {
+                                    pairError = true
+                                }
                             }
-                        }
-                    },
-                    onBack = { step = 0 },
-                )
+                        },
+                        onBack = { step = 0 },
+                    )
+                }
 
-                2 -> StepBootstrap(
-                    stage = stage,
-                    busy = bootstrapBusy,
-                    onStart = {
-                        bootstrapBusy = true
-                        viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
-                            bootstrapBusy = false
-                            if (ok) step = 3
-                        }
-                    },
-                    onBack = { step = 1 },
-                )
+                2 -> {
+                    StepBootstrap(
+                        stage = stage,
+                        busy = bootstrapBusy,
+                        onStart = {
+                            bootstrapBusy = true
+                            viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
+                                bootstrapBusy = false
+                                if (ok) step = 3
+                            }
+                        },
+                        onBack = { step = 1 },
+                    )
+                }
 
-                3 -> StepDone(onClose = {
-                    viewModel.privdResetBootstrapStage()
-                    onDismiss()
-                })
+                3 -> {
+                    StepDone(onClose = {
+                        viewModel.privdResetBootstrapStage()
+                        onDismiss()
+                    })
+                }
             }
 
             // Error footer (shows for any failed bootstrap stage)
@@ -333,9 +348,10 @@ private fun StepPair(
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
         colors = fieldColors,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Next,
-        ),
+        keyboardOptions =
+            KeyboardOptions(
+                imeAction = ImeAction.Next,
+            ),
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
     OutlinedTextField(
@@ -346,9 +362,10 @@ private fun StepPair(
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
         colors = fieldColors,
-        keyboardOptions = KeyboardOptions(
-            imeAction = ImeAction.Done,
-        ),
+        keyboardOptions =
+            KeyboardOptions(
+                imeAction = ImeAction.Done,
+            ),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
     )
     if (error) {
@@ -364,13 +381,17 @@ private fun StepPair(
         }
         Button(
             onClick = onSubmit,
-            enabled = !busy &&
-                pairPort.toIntOrNull()?.let { it in 1..65535 } == true &&
-                code.length == 6,
+            enabled =
+                !busy &&
+                    pairPort.toIntOrNull()?.let { it in 1..65535 } == true &&
+                    code.length == 6,
         ) {
             Text(
-                if (busy) stringResource(R.string.privd_wizard_pairing)
-                else stringResource(R.string.privd_wizard_step2_pair)
+                if (busy) {
+                    stringResource(R.string.privd_wizard_pairing)
+                } else {
+                    stringResource(R.string.privd_wizard_step2_pair)
+                },
             )
         }
     }
@@ -380,48 +401,64 @@ private fun StepPair(
 private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
 
 @Composable
-private fun ChecklistRow(label: String, status: ChecklistStatus) {
+private fun ChecklistRow(
+    label: String,
+    status: ChecklistStatus,
+) {
     val colors = LocalAppColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP),
     ) {
         when (status) {
-            ChecklistStatus.PENDING -> Icon(
-                imageVector = Icons.Rounded.RadioButtonUnchecked,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-            )
-            ChecklistStatus.ACTIVE -> CircularProgressIndicator(
-                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            ChecklistStatus.DONE -> Icon(
-                imageVector = Icons.Rounded.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
-            )
+            ChecklistStatus.PENDING -> {
+                Icon(
+                    imageVector = Icons.Rounded.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary,
+                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                )
+            }
+
+            ChecklistStatus.ACTIVE -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            ChecklistStatus.DONE -> {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(SW_CHECKLIST_ICON_SIZE),
+                )
+            }
         }
         Text(
             text = label,
-            color = when (status) {
-                ChecklistStatus.DONE    -> colors.onSurface
-                ChecklistStatus.ACTIVE  -> colors.onSurface
-                ChecklistStatus.PENDING -> colors.onSurfaceSecondary
-            },
+            color =
+                when (status) {
+                    ChecklistStatus.DONE -> colors.onSurface
+                    ChecklistStatus.ACTIVE -> colors.onSurface
+                    ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+                },
             style = MaterialTheme.typography.bodySmall,
         )
     }
 }
 
-private fun checklistStatus(stageOrdinal: Int, rowOrdinal: Int): ChecklistStatus = when {
-    stageOrdinal < rowOrdinal  -> ChecklistStatus.PENDING
-    stageOrdinal == rowOrdinal -> ChecklistStatus.ACTIVE
-    else                       -> ChecklistStatus.DONE
-}
+private fun checklistStatus(
+    stageOrdinal: Int,
+    rowOrdinal: Int,
+): ChecklistStatus =
+    when {
+        stageOrdinal < rowOrdinal -> ChecklistStatus.PENDING
+        stageOrdinal == rowOrdinal -> ChecklistStatus.ACTIVE
+        else -> ChecklistStatus.DONE
+    }
 
 @Composable
 private fun StepBootstrap(
@@ -466,8 +503,11 @@ private fun StepBootstrap(
         }
         Button(onClick = onStart, enabled = !busy) {
             Text(
-                if (busy) stringResource(R.string.privd_wizard_bootstrapping)
-                else stringResource(R.string.privd_wizard_step3_start)
+                if (busy) {
+                    stringResource(R.string.privd_wizard_bootstrapping)
+                } else {
+                    stringResource(R.string.privd_wizard_step3_start)
+                },
             )
         }
     }
@@ -486,13 +526,14 @@ private fun StepDone(onClose: () -> Unit) {
     }
 }
 
-private fun errorStringResource(error: PrivdError?): Int? = when (error) {
-    PrivdError.DAEMON_UNREACHABLE     -> R.string.privd_error_daemon_unreachable
-    PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
-    PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
-    PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
-    PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
-    PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
-    PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
-    null                                   -> null
-}
+private fun errorStringResource(error: PrivdError?): Int? =
+    when (error) {
+        PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
+        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
+        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
+        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
+        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
+        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
+        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
+        null -> null
+    }

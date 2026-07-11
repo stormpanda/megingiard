@@ -20,8 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import com.stormpanda.megingiard.ui.AppDivider
-import com.stormpanda.megingiard.settings.RememberSettingRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.RememberSettingRow
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.Dispatchers
@@ -109,20 +109,22 @@ internal fun PrivdSettingsCard(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .padding(PR_CARD_PADDING),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .padding(PR_CARD_PADDING),
     ) {
         // ── Status row ──────────────────────────────────────────────────────
         Column {
-            val (dotColor, label) = when (state) {
-                PrivdState.OFF           -> colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
-                PrivdState.BOOTSTRAPPING -> colors.accent             to stringResource(R.string.privd_status_bootstrapping)
-                PrivdState.CONNECTING    -> colors.accent             to stringResource(R.string.privd_status_connecting)
-                PrivdState.RUNNING       -> colors.actionColorSystem  to stringResource(R.string.privd_status_running)
-                PrivdState.FAILED        -> colors.error              to stringResource(R.string.privd_status_failed)
-            }
+            val (dotColor, label) =
+                when (state) {
+                    PrivdState.OFF -> colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
+                    PrivdState.BOOTSTRAPPING -> colors.accent to stringResource(R.string.privd_status_bootstrapping)
+                    PrivdState.CONNECTING -> colors.accent to stringResource(R.string.privd_status_connecting)
+                    PrivdState.RUNNING -> colors.actionColorSystem to stringResource(R.string.privd_status_running)
+                    PrivdState.FAILED -> colors.error to stringResource(R.string.privd_status_failed)
+                }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.privd_title),
@@ -131,9 +133,10 @@ internal fun PrivdSettingsCard(
                 )
                 Spacer(Modifier.width(PR_STATUS_DOT_GAP))
                 Box(
-                    modifier = Modifier
-                        .size(PR_STATUS_DOT_SIZE)
-                        .background(dotColor, CircleShape),
+                    modifier =
+                        Modifier
+                            .size(PR_STATUS_DOT_SIZE)
+                            .background(dotColor, CircleShape),
                 )
             }
             Text(
@@ -194,44 +197,48 @@ internal fun PrivdSettingsCard(
             val ok = pingResult!!
             Spacer(Modifier.height(PR_BUTTON_GAP))
             Text(
-                text = stringResource(
-                    if (ok) R.string.privd_ping_ok else R.string.privd_ping_fail
-                ),
+                text =
+                    stringResource(
+                        if (ok) R.string.privd_ping_ok else R.string.privd_ping_fail,
+                    ),
                 color = if (ok) colors.actionColorSystem else colors.error,
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {
-            val specificErrorRes = if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
-                when (lastError) {
-                    PrivdError.PAIRING_FAILED         -> R.string.privd_error_pairing_failed
-                    PrivdError.ADB_DISCOVERY_FAILED   -> R.string.privd_error_adb_discovery_failed
-                    PrivdError.ADB_CONNECT_FAILED     -> R.string.privd_error_adb_connect_failed
-                    PrivdError.BOOTSTRAP_PUSH_FAILED       -> R.string.privd_error_bootstrap_push_failed
-                    PrivdError.BOOTSTRAP_SPAWN_FAILED      -> R.string.privd_error_bootstrap_spawn_failed
-                    PrivdError.BOOTSTRAP_PROVISION_FAILED  -> R.string.privd_error_bootstrap_provision_failed
-                    else                                   -> null
+            val specificErrorRes =
+                if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
+                    when (lastError) {
+                        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
+                        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
+                        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
+                        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
+                        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
+                        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
+                        else -> null
+                    }
+                } else {
+                    null
                 }
-            } else {
-                null
-            }
 
-            val infoStringRes = when {
-                state == PrivdState.RUNNING -> R.string.privd_info_running
-                state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
-                hasCredentials == false -> R.string.privd_info_no_credentials
-                wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
-                specificErrorRes != null -> specificErrorRes
-                wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
-                else -> null
-            }
-            infoStringRes?.let { resId ->
-                val textColor = when {
-                    state == PrivdState.RUNNING -> colors.actionColorSystem
-                    hasCredentials == false -> colors.onSurfaceSecondary
-                    wirelessDebuggingActive == false -> colors.error
-                    specificErrorRes != null -> colors.error
-                    else -> colors.actionColorSystem
+            val infoStringRes =
+                when {
+                    state == PrivdState.RUNNING -> R.string.privd_info_running
+                    state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
+                    hasCredentials == false -> R.string.privd_info_no_credentials
+                    wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
+                    specificErrorRes != null -> specificErrorRes
+                    wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
+                    else -> null
                 }
+            infoStringRes?.let { resId ->
+                val textColor =
+                    when {
+                        state == PrivdState.RUNNING -> colors.actionColorSystem
+                        hasCredentials == false -> colors.onSurfaceSecondary
+                        wirelessDebuggingActive == false -> colors.error
+                        specificErrorRes != null -> colors.error
+                        else -> colors.actionColorSystem
+                    }
                 Spacer(Modifier.height(PR_BUTTON_GAP))
                 Text(
                     text = stringResource(resId),
@@ -240,9 +247,6 @@ internal fun PrivdSettingsCard(
                 )
             }
         }
-
-
-
 
         AppDivider()
         RememberSettingRow(
@@ -255,10 +259,11 @@ internal fun PrivdSettingsCard(
         // ── Dead-zone configuration row ──────────────────────────────────────
         AppDivider()
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onShowDeadzoneDialog() }
-                .padding(vertical = PR_ROW_V_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onShowDeadzoneDialog() }
+                    .padding(vertical = PR_ROW_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -268,11 +273,12 @@ internal fun PrivdSettingsCard(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.privd_deadzone_desc,
-                        (deadzoneLeft * 100).toInt(),
-                        (deadzoneRight * 100).toInt(),
-                    ),
+                    text =
+                        stringResource(
+                            R.string.privd_deadzone_desc,
+                            (deadzoneLeft * 100).toInt(),
+                            (deadzoneRight * 100).toInt(),
+                        ),
                     color = colors.accent,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -304,30 +310,32 @@ internal fun DeadzoneDialog(
     onConfirm: (left: Float, right: Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var leftPct  by rememberSaveable { mutableIntStateOf((initialDeadzoneLeft  * 100).roundToInt()) }
+    var leftPct by rememberSaveable { mutableIntStateOf((initialDeadzoneLeft * 100).roundToInt()) }
     var rightPct by rememberSaveable { mutableIntStateOf((initialDeadzoneRight * 100).roundToInt()) }
     val colors = LocalAppColors.current
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = PR_DIALOG_SCRIM_ALPHA))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { onDismiss() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(PR_DIALOG_WIDTH_FRACTION)
-                .clip(RoundedCornerShape(PR_DIALOG_CORNER))
-                .background(colors.surface)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = PR_DIALOG_SCRIM_ALPHA))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                ) {}
-                .padding(PR_DIALOG_PADDING),
+                ) { onDismiss() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth(PR_DIALOG_WIDTH_FRACTION)
+                    .clip(RoundedCornerShape(PR_DIALOG_CORNER))
+                    .background(colors.surface)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {}
+                    .padding(PR_DIALOG_PADDING),
         ) {
             Text(
                 text = stringResource(R.string.privd_deadzone_dialog_title),
@@ -359,9 +367,10 @@ internal fun DeadzoneDialog(
                     text = "$leftPct %",
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .width(PR_DIALOG_PCT_WIDTH)
-                        .padding(start = PR_DIALOG_SLIDER_GAP),
+                    modifier =
+                        Modifier
+                            .width(PR_DIALOG_PCT_WIDTH)
+                            .padding(start = PR_DIALOG_SLIDER_GAP),
                 )
             }
             Spacer(Modifier.height(PR_DIALOG_SLIDER_GAP))
@@ -383,9 +392,10 @@ internal fun DeadzoneDialog(
                     text = "$rightPct %",
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .width(PR_DIALOG_PCT_WIDTH)
-                        .padding(start = PR_DIALOG_SLIDER_GAP),
+                    modifier =
+                        Modifier
+                            .width(PR_DIALOG_PCT_WIDTH)
+                            .padding(start = PR_DIALOG_SLIDER_GAP),
                 )
             }
             Spacer(Modifier.height(PR_DIALOG_PADDING))

@@ -64,9 +64,7 @@ private const val SS_PREVIEW_STAY_DURATION_MS = 1800L
 private const val SS_FADE_OUT_DURATION_MS = 400
 
 @Composable
-fun ScreenshotPreviewOverlay(
-    modifier: Modifier = Modifier
-) {
+fun ScreenshotPreviewOverlay(modifier: Modifier = Modifier) {
     val previewBitmap by ScreenCaptureManager.screenshotPreview.collectAsState()
     var isPreviewVisible by remember { mutableStateOf(false) }
     val sweepOffset = remember { Animatable(SS_GLARE_START_OFFSET) }
@@ -80,10 +78,11 @@ fun ScreenshotPreviewOverlay(
             launch {
                 sweepOffset.animateTo(
                     targetValue = SS_GLARE_END_OFFSET,
-                    animationSpec = tween(
-                        durationMillis = SS_GLARE_ANIM_DURATION_MS,
-                        easing = LinearEasing
-                    )
+                    animationSpec =
+                        tween(
+                            durationMillis = SS_GLARE_ANIM_DURATION_MS,
+                            easing = LinearEasing,
+                        ),
                 )
             }
             delay(SS_PREVIEW_STAY_DURATION_MS)
@@ -100,54 +99,61 @@ fun ScreenshotPreviewOverlay(
         AnimatedVisibility(
             visible = isPreviewVisible,
             enter = fadeIn(animationSpec = tween(durationMillis = SS_FADE_OUT_DURATION_MS)),
-            exit = fadeOut(animationSpec = tween(durationMillis = SS_FADE_OUT_DURATION_MS)) + slideOutHorizontally(
-                targetOffsetX = { fullWidth -> fullWidth },
-                animationSpec = tween(durationMillis = SS_FADE_OUT_DURATION_MS)
-            ),
-            modifier = modifier
+            exit =
+                fadeOut(animationSpec = tween(durationMillis = SS_FADE_OUT_DURATION_MS)) +
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> fullWidth },
+                        animationSpec = tween(durationMillis = SS_FADE_OUT_DURATION_MS),
+                    ),
+            modifier = modifier,
         ) {
-            val aspectRatio = remember(currentBitmap) {
-                currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
-            }
+            val aspectRatio =
+                remember(currentBitmap) {
+                    currentBitmap.width.toFloat() / currentBitmap.height.toFloat()
+                }
             Box(
-                modifier = Modifier
-                    .fillMaxWidth(SS_PREVIEW_WIDTH_FRACTION)
-                    .shadow(elevation = SS_SHADOW_ELEVATION, shape = RoundedCornerShape(SS_CORNER_RADIUS))
-                    .background(SS_BG_COLOR)
-                    .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = RoundedCornerShape(SS_CORNER_RADIUS))
-                    .padding(SS_FRAME_PADDING)
-                    .drawWithContent {
-                        drawContent()
-                        val progress = sweepOffset.value
-                        if (progress in SS_GLARE_START_OFFSET..SS_GLARE_END_OFFSET) {
-                            val width = size.width
-                            val height = size.height
-                            val startX = width * progress
-                            val startY = 0f
-                            val endX = startX + width * SS_GLARE_SWEEP_WIDTH_RATIO
-                            val endY = height
-                            val glossBrush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.White.copy(alpha = SS_GLARE_ALPHA_EDGE),
-                                    Color.White.copy(alpha = SS_GLARE_ALPHA_CENTER),
-                                    Color.White.copy(alpha = SS_GLARE_ALPHA_EDGE),
-                                    Color.Transparent
-                                ),
-                                start = Offset(startX, startY),
-                                end = Offset(endX, endY)
-                            )
-                            drawRect(brush = glossBrush)
-                        }
-                    }
+                modifier =
+                    Modifier
+                        .fillMaxWidth(SS_PREVIEW_WIDTH_FRACTION)
+                        .shadow(elevation = SS_SHADOW_ELEVATION, shape = RoundedCornerShape(SS_CORNER_RADIUS))
+                        .background(SS_BG_COLOR)
+                        .border(width = SS_BORDER_WIDTH, color = SS_BORDER_COLOR, shape = RoundedCornerShape(SS_CORNER_RADIUS))
+                        .padding(SS_FRAME_PADDING)
+                        .drawWithContent {
+                            drawContent()
+                            val progress = sweepOffset.value
+                            if (progress in SS_GLARE_START_OFFSET..SS_GLARE_END_OFFSET) {
+                                val width = size.width
+                                val height = size.height
+                                val startX = width * progress
+                                val startY = 0f
+                                val endX = startX + width * SS_GLARE_SWEEP_WIDTH_RATIO
+                                val endY = height
+                                val glossBrush =
+                                    Brush.linearGradient(
+                                        colors =
+                                            listOf(
+                                                Color.Transparent,
+                                                Color.White.copy(alpha = SS_GLARE_ALPHA_EDGE),
+                                                Color.White.copy(alpha = SS_GLARE_ALPHA_CENTER),
+                                                Color.White.copy(alpha = SS_GLARE_ALPHA_EDGE),
+                                                Color.Transparent,
+                                            ),
+                                        start = Offset(startX, startY),
+                                        end = Offset(endX, endY),
+                                    )
+                                drawRect(brush = glossBrush)
+                            }
+                        },
             ) {
                 Image(
                     bitmap = currentBitmap.asImageBitmap(),
                     contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(aspectRatio)
-                        .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(aspectRatio)
+                            .border(width = SS_IMAGE_BORDER_WIDTH, color = SS_IMAGE_BORDER_COLOR),
                 )
             }
         }

@@ -7,14 +7,14 @@ import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.KeyRepeatController
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
-import com.stormpanda.megingiard.keyboard.KbLayout
-import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -26,8 +26,9 @@ private const val TAG = "KeyboardViewModel"
  * ViewModel for [KeyboardScreen] — manages injector lifecycle, key repeat,
  * and keyboard state.
  */
-class KeyboardViewModel(application: Application) : AndroidViewModel(application) {
-
+class KeyboardViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     val kbLayout: StateFlow<KbLayout> = KeyboardSettings.kbLayout
     val kbRepeatEnabled: StateFlow<Boolean> = KeyboardSettings.kbRepeatEnabled
     val kbTrackpointEnabled: StateFlow<Boolean> = KeyboardSettings.kbTrackpointEnabled

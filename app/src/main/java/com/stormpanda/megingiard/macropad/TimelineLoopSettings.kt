@@ -34,7 +34,10 @@ private const val MTE_LOOP_PAUSE_SLIDER_STEP_MS = 100
  * Extends the loop-pause slider scale in [MTE_LOOP_PAUSE_SCALE_STEP_MS] increments until
  * [requiredValueMs] fits, mirroring the scale-extension pattern in MacroStepEditDialog.
  */
-internal fun mtExpandLoopScale(currentMaxMs: Int, requiredValueMs: Int): Int {
+internal fun mtExpandLoopScale(
+    currentMaxMs: Int,
+    requiredValueMs: Int,
+): Int {
     var maxMs = currentMaxMs.coerceAtLeast(MTE_LOOP_PAUSE_SCALE_STEP_MS)
     while (requiredValueMs > maxMs) maxMs += MTE_LOOP_PAUSE_SCALE_STEP_MS
     return maxMs
@@ -79,9 +82,10 @@ internal fun MtLoopSection(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = MTE_PADDING.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = MTE_PADDING.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
@@ -119,22 +123,23 @@ internal fun MtLoopSection(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -100) { applyPauseDelta(-100) }
-                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -10)  { applyPauseDelta(-10) }
-                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -1)   { applyPauseDelta(-1) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -10) { applyPauseDelta(-10) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = -1) { applyPauseDelta(-1) }
                 Slider(
                     value = loopPauseMs.toFloat(),
                     onValueChange = { onLoopPauseMsChange(it.roundToInt().coerceIn(0, loopPauseMaxMs)) },
                     valueRange = 0f..loopPauseMaxMs.toFloat(),
                     steps = ((loopPauseMaxMs / MTE_LOOP_PAUSE_SLIDER_STEP_MS) - 1).coerceAtLeast(0),
-                    colors = SliderDefaults.colors(
-                        thumbColor = accentColor,
-                        activeTrackColor = accentColor,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = accentColor,
+                            activeTrackColor = accentColor,
+                        ),
                     modifier = Modifier.weight(1f),
                 )
-                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1)    { applyPauseDelta(1) }
-                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 10)   { applyPauseDelta(10) }
-                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 100)  { applyPauseDelta(100) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1) { applyPauseDelta(1) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 10) { applyPauseDelta(10) }
+                MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 100) { applyPauseDelta(100) }
                 MtLoopPauseDeltaButton(accentColor = accentColor, deltaMs = 1_000) { applyPauseDelta(1_000) }
             }
         }
@@ -176,9 +181,10 @@ internal fun MtRandomizationSection(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = MTE_PADDING.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = MTE_PADDING.dp, end = MTE_PADDING.dp, bottom = MTE_PADDING.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(
@@ -202,7 +208,7 @@ internal fun MtRandomizationSection(
                 text = stringResource(R.string.macropad_macro_randomize_desc),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             Row(
@@ -222,22 +228,22 @@ internal fun MtRandomizationSection(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -10)  { applyRangeDelta(-10) }
-                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -1)   { applyRangeDelta(-1) }
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -10) { applyRangeDelta(-10) }
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = -1) { applyRangeDelta(-1) }
                 Slider(
                     value = randomizeRangeMs.coerceIn(10, 100).toFloat(),
                     onValueChange = { onRandomizeRangeMsChange(it.roundToInt().coerceIn(10, 100)) },
                     valueRange = 10f..100f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = accentColor,
-                        activeTrackColor = accentColor,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = accentColor,
+                            activeTrackColor = accentColor,
+                        ),
                     modifier = Modifier.weight(1f),
                 )
-                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = 1)    { applyRangeDelta(1) }
-                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = 10)   { applyRangeDelta(10) }
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = 1) { applyRangeDelta(1) }
+                MtRandomizeRangeDeltaButton(accentColor = accentColor, deltaMs = 10) { applyRangeDelta(10) }
             }
         }
     }
 }
-

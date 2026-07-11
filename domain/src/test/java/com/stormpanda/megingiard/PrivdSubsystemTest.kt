@@ -31,7 +31,6 @@ private const val ABS_HAT0X = 16
  * verification through the in-app setup wizard.
  */
 class PrivdSubsystemTest {
-
     @Test
     fun `PrivdConnectionState enum has stable shape`() {
         assertEquals(3, PrivdConnectionState.entries.size)

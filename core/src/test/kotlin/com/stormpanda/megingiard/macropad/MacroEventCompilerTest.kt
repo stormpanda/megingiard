@@ -10,12 +10,12 @@ import org.junit.Test
  * [MacroStep]s into a flat, time-sorted [MacroEvent] list.
  */
 class MacroEventCompilerTest {
-
-    private fun macro(vararg steps: MacroStep) = Macro(
-        id = "test",
-        name = "test",
-        steps = steps.toList(),
-    )
+    private fun macro(vararg steps: MacroStep) =
+        Macro(
+            id = "test",
+            name = "test",
+            steps = steps.toList(),
+        )
 
     // ── empty input ───────────────────────────────────────────────────────────
 
@@ -28,9 +28,12 @@ class MacroEventCompilerTest {
 
     @Test
     fun `button tap produces DOWN at start and UP at end`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 250L, btnCode = 0x130, label = "A"),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.GamepadButtonTap(startTimeMs = 100L, durationMs = 250L, btnCode = 0x130, label = "A"),
+                ),
+            )
         assertEquals(2, events.size)
         assertEquals(MacroEventType.BUTTON_DOWN, events[0].type)
         assertEquals(100L, events[0].timeMs)
@@ -45,12 +48,15 @@ class MacroEventCompilerTest {
 
     @Test
     fun `left stick move produces four JOYSTICK_SET events on ABS_X and ABS_Y`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.JoystickMove(0L, 200L, JoystickStick.LEFT, x = 1.0f, y = -1.0f),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.JoystickMove(0L, 200L, JoystickStick.LEFT, x = 1.0f, y = -1.0f),
+                ),
+            )
         assertEquals(4, events.size)
         val startEvents = events.filter { it.timeMs == 0L }
-        val endEvents   = events.filter { it.timeMs == 200L }
+        val endEvents = events.filter { it.timeMs == 200L }
         assertEquals(2, startEvents.size)
         assertEquals(2, endEvents.size)
         assertTrue(startEvents.any { it.code == GamepadKeycodes.ABS_X && it.value > 0 })
@@ -60,9 +66,12 @@ class MacroEventCompilerTest {
 
     @Test
     fun `right stick move uses ABS_Z and ABS_RZ axis codes`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.JoystickMove(0L, 100L, JoystickStick.RIGHT, x = 0.5f, y = 0.5f),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.JoystickMove(0L, 100L, JoystickStick.RIGHT, x = 0.5f, y = 0.5f),
+                ),
+            )
         val axisCodes = events.map { it.code }.toSet()
         assertTrue(axisCodes.contains(GamepadKeycodes.ABS_Z))
         assertTrue(axisCodes.contains(GamepadKeycodes.ABS_RZ))
@@ -70,21 +79,27 @@ class MacroEventCompilerTest {
 
     @Test
     fun `joystick full deflection maps to int16 range`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, x = 1.0f, y = -1.0f),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, x = 1.0f, y = -1.0f),
+                ),
+            )
         val xEvent = events.first { it.timeMs == 0L && it.code == GamepadKeycodes.ABS_X }
         val yEvent = events.first { it.timeMs == 0L && it.code == GamepadKeycodes.ABS_Y }
-        assertEquals(32767, xEvent.value)   // 1.0f * 32768 clamped to 32767
-        assertEquals(-32768, yEvent.value)  // -1.0f * 32768 = -32768 exactly
+        assertEquals(32767, xEvent.value) // 1.0f * 32768 clamped to 32767
+        assertEquals(-32768, yEvent.value) // -1.0f * 32768 = -32768 exactly
     }
 
     @Test
     fun `joystick over-range input is clamped to int16`() {
         // coerceIn(-1f, 1f) runs first, so 2.0f → 1.0f → 32767
-        val events = buildMacroEventList(macro(
-            MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, x = 2.0f, y = -2.0f),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, x = 2.0f, y = -2.0f),
+                ),
+            )
         val xEvent = events.first { it.timeMs == 0L && it.code == GamepadKeycodes.ABS_X }
         assertEquals(32767, xEvent.value)
     }
@@ -93,13 +108,16 @@ class MacroEventCompilerTest {
 
     @Test
     fun `dpad tap produces four HAT events`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.DPadTap(0L, 100L, dirX = -1, dirY = 1),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.DPadTap(0L, 100L, dirX = -1, dirY = 1),
+                ),
+            )
         assertEquals(4, events.size)
         assertTrue(events.all { it.type == MacroEventType.HAT })
         val start = events.filter { it.timeMs == 0L }
-        val end   = events.filter { it.timeMs == 100L }
+        val end = events.filter { it.timeMs == 100L }
         assertTrue(start.any { it.code == 0 && it.value == -1 })
         assertTrue(start.any { it.code == 1 && it.value == 1 })
         assertTrue(end.all { it.value == 0 })
@@ -109,9 +127,12 @@ class MacroEventCompilerTest {
 
     @Test
     fun `touch tap produces TOUCH_DOWN then TOUCH_UP with coordinates`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.TouchTap(50L, 33L, 0.25f, 0.75f),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.TouchTap(50L, 33L, 0.25f, 0.75f),
+                ),
+            )
         assertEquals(2, events.size)
         assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
         assertEquals(50L, events[0].timeMs)
@@ -126,10 +147,13 @@ class MacroEventCompilerTest {
 
     @Test
     fun `events are sorted by timestamp ascending`() {
-        val events = buildMacroEventList(macro(
-            MacroStep.GamepadButtonTap(200L, 50L, 0x130, "A"),
-            MacroStep.GamepadButtonTap(0L,   50L, 0x131, "B"),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.GamepadButtonTap(200L, 50L, 0x130, "A"),
+                    MacroStep.GamepadButtonTap(0L, 50L, 0x131, "B"),
+                ),
+            )
         val times = events.map { it.timeMs }
         assertEquals(times.sorted(), times)
     }
@@ -137,13 +161,16 @@ class MacroEventCompilerTest {
     @Test
     fun `reset events sort before set events at the same timestamp`() {
         // step1 ends at 100ms; step2 also starts at 100ms — UP must precede DOWN
-        val events = buildMacroEventList(macro(
-            MacroStep.GamepadButtonTap(0L,   100L, 0x130, "A"),  // UP at 100
-            MacroStep.GamepadButtonTap(100L, 100L, 0x131, "B"),  // DOWN at 100
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.GamepadButtonTap(0L, 100L, 0x130, "A"), // UP at 100
+                    MacroStep.GamepadButtonTap(100L, 100L, 0x131, "B"), // DOWN at 100
+                ),
+            )
         val at100 = events.filter { it.timeMs == 100L }
         assertEquals(2, at100.size)
-        assertEquals(MacroEventType.BUTTON_UP,   at100[0].type)
+        assertEquals(MacroEventType.BUTTON_UP, at100[0].type)
         assertEquals(MacroEventType.BUTTON_DOWN, at100[1].type)
     }
 
@@ -151,15 +178,17 @@ class MacroEventCompilerTest {
 
     @Test
     fun `joystick path emits JOYSTICK_SET for each sample then reset at end`() {
-        val step = MacroStep.JoystickPath(
-            startTimeMs = 100L,
-            durationMs  = 200L,
-            stick       = JoystickStick.LEFT,
-            samples     = listOf(
-                PathSample(offsetMs = 0L,   x = 0.5f,  y = 0f),
-                PathSample(offsetMs = 100L, x = 1.0f,  y = 0.5f),
-            ),
-        )
+        val step =
+            MacroStep.JoystickPath(
+                startTimeMs = 100L,
+                durationMs = 200L,
+                stick = JoystickStick.LEFT,
+                samples =
+                    listOf(
+                        PathSample(offsetMs = 0L, x = 0.5f, y = 0f),
+                        PathSample(offsetMs = 100L, x = 1.0f, y = 0.5f),
+                    ),
+            )
         val events = buildMacroEventList(macro(step))
         // Each sample emits 2 JOYSTICK_SET events (X + Y axis), plus 2 reset events at end.
         assertEquals(6, events.size)
@@ -179,12 +208,13 @@ class MacroEventCompilerTest {
 
     @Test
     fun `joystick path right stick uses ABS_Z and ABS_RZ`() {
-        val step = MacroStep.JoystickPath(
-            startTimeMs = 0L,
-            durationMs  = 100L,
-            stick       = JoystickStick.RIGHT,
-            samples     = listOf(PathSample(0L, 0.5f, 0.5f)),
-        )
+        val step =
+            MacroStep.JoystickPath(
+                startTimeMs = 0L,
+                durationMs = 100L,
+                stick = JoystickStick.RIGHT,
+                samples = listOf(PathSample(0L, 0.5f, 0.5f)),
+            )
         val events = buildMacroEventList(macro(step))
         val axisCodes = events.filter { it.timeMs == 0L }.map { it.code }.toSet()
         assertTrue(axisCodes.contains(GamepadKeycodes.ABS_Z))
@@ -198,15 +228,17 @@ class MacroEventCompilerTest {
         // (resets before non-resets at equal timestamps) but the sample must NOT be applied
         // afterwards, otherwise the stick latches non-neutral. The compiler defends against
         // this by skipping samples whose offsetMs >= durationMs.
-        val step = MacroStep.JoystickPath(
-            startTimeMs = 0L,
-            durationMs  = 100L,
-            stick       = JoystickStick.LEFT,
-            samples     = listOf(
-                PathSample(offsetMs = 0L,   x = 0.5f, y = 0f),
-                PathSample(offsetMs = 100L, x = 1.0f, y = 0f), // boundary: offset == duration
-            ),
-        )
+        val step =
+            MacroStep.JoystickPath(
+                startTimeMs = 0L,
+                durationMs = 100L,
+                stick = JoystickStick.LEFT,
+                samples =
+                    listOf(
+                        PathSample(offsetMs = 0L, x = 0.5f, y = 0f),
+                        PathSample(offsetMs = 100L, x = 1.0f, y = 0f), // boundary: offset == duration
+                    ),
+            )
         val events = buildMacroEventList(macro(step))
         val at100 = events.filter { it.timeMs == 100L && it.code == GamepadKeycodes.ABS_X }
         // Only the reset event should land at t=100, not a JOYSTICK_SET with value != 0.
@@ -216,12 +248,13 @@ class MacroEventCompilerTest {
 
     @Test
     fun `joystick path with no samples emits only the two neutral reset events`() {
-        val step = MacroStep.JoystickPath(
-            startTimeMs = 50L,
-            durationMs  = 200L,
-            stick       = JoystickStick.LEFT,
-            samples     = emptyList(),
-        )
+        val step =
+            MacroStep.JoystickPath(
+                startTimeMs = 50L,
+                durationMs = 200L,
+                stick = JoystickStick.LEFT,
+                samples = emptyList(),
+            )
         val events = buildMacroEventList(macro(step))
         assertEquals(2, events.size)
         assertEquals(250L, events[0].timeMs)
@@ -232,15 +265,17 @@ class MacroEventCompilerTest {
     @Test
     fun `joystick path sample beyond duration is also filtered`() {
         // Guard also catches offsetMs > durationMs (not only the == boundary).
-        val step = MacroStep.JoystickPath(
-            startTimeMs = 0L,
-            durationMs  = 100L,
-            stick       = JoystickStick.LEFT,
-            samples     = listOf(
-                PathSample(offsetMs = 50L,  x = 0.5f, y = 0f), // inside → kept
-                PathSample(offsetMs = 150L, x = 1.0f, y = 0f), // beyond → filtered
-            ),
-        )
+        val step =
+            MacroStep.JoystickPath(
+                startTimeMs = 0L,
+                durationMs = 100L,
+                stick = JoystickStick.LEFT,
+                samples =
+                    listOf(
+                        PathSample(offsetMs = 50L, x = 0.5f, y = 0f), // inside → kept
+                        PathSample(offsetMs = 150L, x = 1.0f, y = 0f), // beyond → filtered
+                    ),
+            )
         val events = buildMacroEventList(macro(step))
         // 2 events from the valid sample + 2 reset events = 4 total
         assertEquals(4, events.size)
@@ -252,15 +287,18 @@ class MacroEventCompilerTest {
     fun `joystick reset value zero sorts before non-zero at same timestamp`() {
         // Two joystick steps back-to-back on the same axis: reset of step1 and set of step2
         // both land at 100ms.  The reset (value=0) must come first.
-        val events = buildMacroEventList(macro(
-            MacroStep.JoystickMove(0L,   100L, JoystickStick.LEFT, x = 1.0f, y = 0f),
-            MacroStep.JoystickMove(100L, 100L, JoystickStick.LEFT, x = -1.0f, y = 0f),
-        ))
+        val events =
+            buildMacroEventList(
+                macro(
+                    MacroStep.JoystickMove(0L, 100L, JoystickStick.LEFT, x = 1.0f, y = 0f),
+                    MacroStep.JoystickMove(100L, 100L, JoystickStick.LEFT, x = -1.0f, y = 0f),
+                ),
+            )
         val xAt100 = events.filter { it.timeMs == 100L && it.code == GamepadKeycodes.ABS_X }
         assertTrue(xAt100.size >= 2)
         // reset (value == 0) must precede set (value != 0) at the same timestamp
         val firstNonZeroIdx = xAt100.indexOfFirst { it.value != 0 }
-        val lastZeroIdx     = xAt100.indexOfLast  { it.value == 0 }
+        val lastZeroIdx = xAt100.indexOfLast { it.value == 0 }
         assertTrue(lastZeroIdx < firstNonZeroIdx)
     }
 
@@ -268,17 +306,19 @@ class MacroEventCompilerTest {
 
     @Test
     fun `touch path compiles samples correctly with pointerId and action`() {
-        val step = MacroStep.TouchPath(
-            startTimeMs = 100L,
-            durationMs = 500L,
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 100L, pointerId = 1, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
-                TouchSample(offsetMs = 200L, pointerId = 0, action = TouchAction.MOVE, normX = 0.15f, normY = 0.25f),
-                TouchSample(offsetMs = 300L, pointerId = 0, action = TouchAction.UP, normX = 0.15f, normY = 0.25f),
-                TouchSample(offsetMs = 400L, pointerId = 1, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
+        val step =
+            MacroStep.TouchPath(
+                startTimeMs = 100L,
+                durationMs = 500L,
+                samples =
+                    listOf(
+                        TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                        TouchSample(offsetMs = 100L, pointerId = 1, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                        TouchSample(offsetMs = 200L, pointerId = 0, action = TouchAction.MOVE, normX = 0.15f, normY = 0.25f),
+                        TouchSample(offsetMs = 300L, pointerId = 0, action = TouchAction.UP, normX = 0.15f, normY = 0.25f),
+                        TouchSample(offsetMs = 400L, pointerId = 1, action = TouchAction.UP, normX = 0.5f, normY = 0.6f),
+                    ),
             )
-        )
         val events = buildMacroEventList(macro(step))
         assertEquals(5, events.size)
 
@@ -309,15 +349,17 @@ class MacroEventCompilerTest {
 
     @Test
     fun `touch path sample beyond duration is filtered`() {
-        val step = MacroStep.TouchPath(
-            startTimeMs = 0L,
-            durationMs = 100L,
-            samples = listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // at boundary → kept
-                TouchSample(offsetMs = 150L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // beyond → filtered
+        val step =
+            MacroStep.TouchPath(
+                startTimeMs = 0L,
+                durationMs = 100L,
+                samples =
+                    listOf(
+                        TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                        TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // at boundary → kept
+                        TouchSample(offsetMs = 150L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f), // beyond → filtered
+                    ),
             )
-        )
         val events = buildMacroEventList(macro(step))
         assertEquals(2, events.size)
         assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
@@ -329,25 +371,27 @@ class MacroEventCompilerTest {
     fun `touch path emits synthetic UP for pointer still active when durationMs truncates stream`() {
         // durationMs = 50 ms; UP is at offsetMs = 100 ms → filtered.
         // The compiler must emit a synthetic TOUCH_UP at step end (t = 50) with the last known pos.
-        val step = MacroStep.TouchPath(
-            startTimeMs = 0L,
-            durationMs = 50L,
-            samples = listOf(
-                TouchSample(offsetMs = 0L,   pointerId = 0, action = TouchAction.DOWN, normX = 0.3f, normY = 0.4f),
-                TouchSample(offsetMs = 25L,  pointerId = 0, action = TouchAction.MOVE, normX = 0.35f, normY = 0.45f),
-                TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP,   normX = 0.35f, normY = 0.45f),
+        val step =
+            MacroStep.TouchPath(
+                startTimeMs = 0L,
+                durationMs = 50L,
+                samples =
+                    listOf(
+                        TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.3f, normY = 0.4f),
+                        TouchSample(offsetMs = 25L, pointerId = 0, action = TouchAction.MOVE, normX = 0.35f, normY = 0.45f),
+                        TouchSample(offsetMs = 100L, pointerId = 0, action = TouchAction.UP, normX = 0.35f, normY = 0.45f),
+                    ),
             )
-        )
         val events = buildMacroEventList(macro(step))
         // DOWN at t=0, MOVE at t=25, synthetic UP at t=50
         assertEquals(3, events.size)
         assertEquals(MacroEventType.TOUCH_DOWN, events[0].type)
-        assertEquals(0L,   events[0].timeMs)
+        assertEquals(0L, events[0].timeMs)
         assertEquals(MacroEventType.TOUCH_MOVE, events[1].type)
-        assertEquals(25L,  events[1].timeMs)
+        assertEquals(25L, events[1].timeMs)
         assertEquals(MacroEventType.TOUCH_UP, events[2].type)
-        assertEquals(50L,  events[2].timeMs)
-        assertEquals(0,    events[2].code)   // pointerId stored in code field
+        assertEquals(50L, events[2].timeMs)
+        assertEquals(0, events[2].code) // pointerId stored in code field
         assertEquals(0.35f, events[2].normX) // last known MOVE position
         assertEquals(0.45f, events[2].normY)
     }
@@ -355,16 +399,18 @@ class MacroEventCompilerTest {
     @Test
     fun `touch path emits synthetic UPs for all truncated pointers at step end`() {
         // Two pointers; UP for both is beyond durationMs. Both must get synthetic releases.
-        val step = MacroStep.TouchPath(
-            startTimeMs = 100L,
-            durationMs = 30L,
-            samples = listOf(
-                TouchSample(offsetMs = 0L,  pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.1f),
-                TouchSample(offsetMs = 10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.9f, normY = 0.9f),
-                TouchSample(offsetMs = 80L, pointerId = 0, action = TouchAction.UP,   normX = 0.1f, normY = 0.1f),
-                TouchSample(offsetMs = 90L, pointerId = 1, action = TouchAction.UP,   normX = 0.9f, normY = 0.9f),
+        val step =
+            MacroStep.TouchPath(
+                startTimeMs = 100L,
+                durationMs = 30L,
+                samples =
+                    listOf(
+                        TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.1f),
+                        TouchSample(offsetMs = 10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.9f, normY = 0.9f),
+                        TouchSample(offsetMs = 80L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.1f),
+                        TouchSample(offsetMs = 90L, pointerId = 1, action = TouchAction.UP, normX = 0.9f, normY = 0.9f),
+                    ),
             )
-        )
         val events = buildMacroEventList(macro(step))
         // 2 DOWNs + 2 synthetic UPs at stepEndMs=130
         assertEquals(4, events.size)
@@ -375,4 +421,3 @@ class MacroEventCompilerTest {
         assertTrue(ups.any { it.code == 1 })
     }
 }
-

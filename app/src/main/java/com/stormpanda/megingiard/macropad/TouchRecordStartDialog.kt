@@ -49,7 +49,7 @@ internal fun TouchRecordStartDialog(
         },
         confirmButton = {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 TextButton(onClick = onRecordTap) {
                     Text(

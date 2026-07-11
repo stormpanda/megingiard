@@ -6,14 +6,14 @@ import java.util.UUID
 @Serializable
 enum class CutoutShape {
     RECTANGLE,
-    CIRCLE
+    CIRCLE,
 }
 
 @Serializable
 enum class AspectRatioMode {
     FREE,
     TOP,
-    BOTTOM
+    BOTTOM,
 }
 
 /**
@@ -62,7 +62,7 @@ data class ScreenCutout(
             srcPixelWidth: Float = 1920f,
             srcPixelHeight: Float = 1080f,
             bottomPixelWidth: Float = 4f,
-            bottomPixelHeight: Float = 3f
+            bottomPixelHeight: Float = 3f,
         ): ScreenCutout {
             val srcRatio = srcPixelWidth / srcPixelHeight
             val destRatio = bottomPixelWidth / bottomPixelHeight
@@ -96,9 +96,8 @@ data class ScreenCutout(
                 destY = destY,
                 destWidth = destWidth,
                 destHeight = destHeight,
-                aspectRatioMode = AspectRatioMode.TOP
+                aspectRatioMode = AspectRatioMode.TOP,
             )
         }
     }
 }
-

@@ -40,15 +40,19 @@ fun AppSettingsRow(
     verticalPadding: Dp = SETTINGS_ROW_V_PADDING,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val clickModifier = if (onClick != null) {
-        Modifier.clickable(enabled = enabled, onClick = onClick)
-    } else Modifier
+    val clickModifier =
+        if (onClick != null) {
+            Modifier.clickable(enabled = enabled, onClick = onClick)
+        } else {
+            Modifier
+        }
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(clickModifier)
-            .defaultMinSize(minHeight = SETTINGS_ROW_MIN_HEIGHT)
-            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(clickModifier)
+                .defaultMinSize(minHeight = SETTINGS_ROW_MIN_HEIGHT)
+                .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
     )

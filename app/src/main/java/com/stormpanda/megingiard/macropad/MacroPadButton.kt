@@ -53,20 +53,20 @@ private const val TAG = "MacroPadButton"
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-internal val MP_BUTTON_UNIT_DP      = 60.dp   // 1×1 = this size on-screen; matches editor
+internal val MP_BUTTON_UNIT_DP = 60.dp // 1×1 = this size on-screen; matches editor
 
-private const val MP_BTN_PRESSED_ALPHA    = 0.80f
-private const val MP_BTN_NORMAL_ALPHA     = 0.25f
+private const val MP_BTN_PRESSED_ALPHA = 0.80f
+private const val MP_BTN_NORMAL_ALPHA = 0.25f
 
 // Pulsing animation for running macros: alpha cycles between low and high.
-private const val MP_BTN_RUNNING_PULSE_LOW  = 0.30f
+private const val MP_BTN_RUNNING_PULSE_LOW = 0.30f
 private const val MP_BTN_RUNNING_PULSE_HIGH = 0.80f
-private const val MP_PULSE_HALF_PERIOD_MS   = 600
+private const val MP_PULSE_HALF_PERIOD_MS = 600
 
-private val  MP_BTN_SQUARE_RADIUS   = 4.dp
-private val  MP_BTN_ICON_UNIT        = 44.dp  // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
+private val MP_BTN_SQUARE_RADIUS = 4.dp
+private val MP_BTN_ICON_UNIT = 44.dp // icon size per grid unit (≈ 73 % of MP_BUTTON_UNIT_DP)
 
-private const val MP_PRESS_ANIM_MS   = 80
+private const val MP_PRESS_ANIM_MS = 80
 private const val MP_RELEASE_ANIM_MS = 160
 
 // Outer gradient edge alpha at resting state; intermediate stops follow r² quadratic curve.
@@ -77,10 +77,9 @@ private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_
 // Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
 // these are muted, always-dim values designed to look unobtrusive on any background color and
 // are identical across all palettes (Dark / Light / Cyberpunk).
-internal val MP_AMBIENT_NEUTRAL_BG     = Color.White
+internal val MP_AMBIENT_NEUTRAL_BG = Color.White
 internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
-internal val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
-
+internal val MP_AMBIENT_NEUTRAL_TEXT = Color(0xFFDDDDDD).copy(alpha = 0.9f)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Individual pad button
@@ -88,20 +87,20 @@ internal val MP_AMBIENT_NEUTRAL_TEXT   = Color(0xFFDDDDDD).copy(alpha = 0.9f)
 
 @Composable
 internal fun PadButton(
-    btn:              PadButton,
-    layout:           PadLayout,
-    isPressed:        Boolean,
-    canvasSize:       IntSize,
-    accentColor:      Color,
+    btn: PadButton,
+    layout: PadLayout,
+    isPressed: Boolean,
+    canvasSize: IntSize,
+    accentColor: Color,
     isDeviceDisabled: Boolean,
-    isRunning:        Boolean = false,
+    isRunning: Boolean = false,
 ) {
     if (btn.invisible) {
         return
     }
 
     val density = LocalDensity.current
-    val colors  = LocalAppColors.current
+    val colors = LocalAppColors.current
 
     val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
     val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
@@ -112,47 +111,50 @@ internal fun PadButton(
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val effectiveContentAccent = effectiveTextTint
 
-
-    val alphaTarget  = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
+    val alphaTarget = if (isPressed) MP_BTN_PRESSED_ALPHA else MP_BTN_NORMAL_ALPHA
     val animDuration = if (isPressed) MP_PRESS_ANIM_MS else MP_RELEASE_ANIM_MS
     val pressedAlpha by animateFloatAsState(
         targetValue = alphaTarget,
         animationSpec = tween(animDuration),
         label = "btnAlpha",
     )
-    val alpha = if (isRunning) {
-        val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
-        val runningAlpha by infiniteTransition.animateFloat(
-            initialValue = MP_BTN_RUNNING_PULSE_LOW,
-            targetValue  = MP_BTN_RUNNING_PULSE_HIGH,
-            animationSpec = infiniteRepeatable(
-                animation  = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "btnRunningAlpha",
-        )
-        runningAlpha
-    } else {
-        pressedAlpha
-    }
+    val alpha =
+        if (isRunning) {
+            val infiniteTransition = rememberInfiniteTransition(label = "btnPulse")
+            val runningAlpha by infiniteTransition.animateFloat(
+                initialValue = MP_BTN_RUNNING_PULSE_LOW,
+                targetValue = MP_BTN_RUNNING_PULSE_HIGH,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "btnRunningAlpha",
+            )
+            runningAlpha
+        } else {
+            pressedAlpha
+        }
 
     val infiniteTransition = rememberInfiniteTransition(label = "btnRunning")
     val runningBreathe by infiniteTransition.animateFloat(
         initialValue = 1.0f,
-        targetValue  = 1.12f,
-        animationSpec = infiniteRepeatable(
-            animation  = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
+        targetValue = 1.12f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(MP_PULSE_HALF_PERIOD_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
         label = "btnBreathe",
     )
     val rippleProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue  = 1f,
-        animationSpec = infiniteRepeatable(
-            animation  = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart,
-        ),
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(MP_PULSE_HALF_PERIOD_MS * 2, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
         label = "btnRippleProgress",
     )
     val pressedScale by animateFloatAsState(
@@ -160,67 +162,88 @@ internal fun PadButton(
         animationSpec = tween(animDuration),
         label = "btnPressedScale",
     )
-    val contentScale = if (isPressed) {
-        pressedScale
-    } else if (isRunning) {
-        runningBreathe
-    } else {
-        1.0f
-    }
+    val contentScale =
+        if (isPressed) {
+            pressedScale
+        } else if (isRunning) {
+            runningBreathe
+        } else {
+            1.0f
+        }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
 
-    val chipShape = if (isTrackpoint) CircleShape else when (btn.buttonShape) {
-        ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
-        ButtonShape.CIRCLE -> when (btn.buttonSize) {
-            ButtonSize.SIZE_2X2                      -> CircleShape
-            ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
-            ButtonSize.SIZE_1X1                      -> CircleShape
+    val chipShape =
+        if (isTrackpoint) {
+            CircleShape
+        } else {
+            when (btn.buttonShape) {
+                ButtonShape.SQUARE, ButtonShape.ICON_ONLY -> {
+                    RoundedCornerShape(MP_BTN_SQUARE_RADIUS)
+                }
+
+                ButtonShape.CIRCLE -> {
+                    when (btn.buttonSize) {
+                        ButtonSize.SIZE_2X2 -> CircleShape
+                        ButtonSize.SIZE_2X1, ButtonSize.SIZE_1X2 -> RoundedCornerShape(percent = 50)
+                        ButtonSize.SIZE_1X1 -> CircleShape
+                    }
+                }
+            }
         }
-    }
 
     val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
 
-    val chipWidthPx  = with(density) {
-        if (isTrackpoint) (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
-        else (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
-    }
-    val chipHeightPx = with(density) {
-        if (isTrackpoint) (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
-        else (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
-    }
+    val chipWidthPx =
+        with(density) {
+            if (isTrackpoint) {
+                (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
+            } else {
+                (MP_BUTTON_UNIT_DP * btn.buttonSize.cols).toPx()
+            }
+        }
+    val chipHeightPx =
+        with(density) {
+            if (isTrackpoint) {
+                (MP_BUTTON_UNIT_DP * tpMultiplier).toPx()
+            } else {
+                (MP_BUTTON_UNIT_DP * btn.buttonSize.rows).toPx()
+            }
+        }
     val w = canvasSize.width.toFloat().coerceAtLeast(1f)
     val h = canvasSize.height.toFloat().coerceAtLeast(1f)
     val left = btn.posX * w - chipWidthPx / 2f
-    val top  = btn.posY * h - chipHeightPx / 2f
+    val top = btn.posY * h - chipHeightPx / 2f
 
-    val rippleStroke = remember(density) {
-        Stroke(width = with(density) { 2.dp.toPx() })
-    }
+    val rippleStroke =
+        remember(density) {
+            Stroke(width = with(density) { 2.dp.toPx() })
+        }
 
     val btnWidthDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.cols
     val btnHeightDp = if (isTrackpoint) MP_BUTTON_UNIT_DP * tpMultiplier else MP_BUTTON_UNIT_DP * btn.buttonSize.rows
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
-            .width(btnWidthDp)
-            .height(btnHeightDp)
-            .drawBehind {
-                if (isRunning && isIconOnly) {
-                    val maxRadius = minOf(size.width, size.height) * 0.75f
-                    val currentRadius = maxRadius * (0.2f + rippleProgress * 0.8f)
-                    val rippleAlpha = (1f - rippleProgress) * 0.6f
-                    drawCircle(
-                        color = effectiveContentAccent.copy(alpha = rippleAlpha),
-                        radius = currentRadius,
-                        center = Offset(size.width / 2f, size.height / 2f),
-                        style = rippleStroke
-                    )
-                }
-            },
+        modifier =
+            Modifier
+                .absoluteOffset { IntOffset(left.roundToInt(), top.roundToInt()) }
+                .width(btnWidthDp)
+                .height(btnHeightDp)
+                .drawBehind {
+                    if (isRunning && isIconOnly) {
+                        val maxRadius = minOf(size.width, size.height) * 0.75f
+                        val currentRadius = maxRadius * (0.2f + rippleProgress * 0.8f)
+                        val rippleAlpha = (1f - rippleProgress) * 0.6f
+                        drawCircle(
+                            color = effectiveContentAccent.copy(alpha = rippleAlpha),
+                            radius = currentRadius,
+                            center = Offset(size.width / 2f, size.height / 2f),
+                            style = rippleStroke,
+                        )
+                    }
+                },
     ) {
         PadButtonFace(
             width = btnWidthDp,
@@ -232,14 +255,15 @@ internal fun PadButton(
             bgColor = effectiveBg,
             bgAlpha = alpha,
             gradientScale = MP_BTN_GRADIENT_SCALE,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             Box(
-                modifier = Modifier.graphicsLayer {
-                    scaleX = contentScale
-                    scaleY = contentScale
-                },
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier.graphicsLayer {
+                        scaleX = contentScale
+                        scaleY = contentScale
+                    },
+                contentAlignment = Alignment.Center,
             ) {
                 if (isTrackpoint) {
                     Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
@@ -258,8 +282,8 @@ internal fun PadButton(
                         )
                     } else {
                         Text(
-                            text     = btn.label,
-                            color    = effectiveTextTint,
+                            text = btn.label,
+                            color = effectiveTextTint,
                             fontSize = (11 * btn.buttonSize.cols).sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -283,11 +307,21 @@ internal fun ScrollWheelFace(accentColor: Color) {
         modifier = Modifier.fillMaxSize(),
     ) {
         // Up chevrons
-        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
-        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowUp,
+            contentDescription = null,
+            tint = accentColor.copy(alpha = 0.5f),
+            modifier = Modifier.size(18.dp),
+        )
         Spacer(Modifier.height(4.dp))
         // Down chevrons
-        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowDown,
+            contentDescription = null,
+            tint = accentColor.copy(alpha = 0.5f),
+            modifier = Modifier.size(18.dp),
+        )
         Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
     }
 }
@@ -307,13 +341,17 @@ internal fun BackgroundPeekFace(accentColor: Color) {
     )
 }
 
-internal fun resolveColorOption(option: ColorOption, accentColor: Color, defaultNeutral: Color): Color {
-    val resolved = when (option) {
-        ColorOption.Neutral -> defaultNeutral
-        ColorOption.Accent -> accentColor
-        is ColorOption.Custom -> Color(option.argb)
-    }
+internal fun resolveColorOption(
+    option: ColorOption,
+    accentColor: Color,
+    defaultNeutral: Color,
+): Color {
+    val resolved =
+        when (option) {
+            ColorOption.Neutral -> defaultNeutral
+            ColorOption.Accent -> accentColor
+            is ColorOption.Custom -> Color(option.argb)
+        }
     val clampedAlpha = resolved.alpha.coerceIn(0.1f, 1f)
     return resolved.copy(alpha = clampedAlpha)
 }
-

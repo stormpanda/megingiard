@@ -16,7 +16,6 @@ private val IGNORED_PACKAGES = setOf("com.android.systemui", "android")
  * Excludes Megingiard itself from triggering switches to allow editing without dropping active profile context.
  */
 object AutoSwitchCoordinator {
-
     private val _foregroundApp = MutableStateFlow<String?>(null)
     val foregroundApp: StateFlow<String?> = _foregroundApp.asStateFlow()
 
@@ -46,14 +45,18 @@ object AutoSwitchCoordinator {
             return
         }
 
-        val matchedProfile = MacroPadState.profiles.value.firstOrNull {
-            it.associatedPackage.equals(normalized, ignoreCase = true)
-        }
+        val matchedProfile =
+            MacroPadState.profiles.value.firstOrNull {
+                it.associatedPackage.equals(normalized, ignoreCase = true)
+            }
 
         if (matchedProfile != null) {
             val currentActiveId = MacroPadState.activeProfileId.value
             if (matchedProfile.id != currentActiveId) {
-                AppLog.i(TAG, "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for app '$normalized'")
+                AppLog.i(
+                    TAG,
+                    "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for app '$normalized'",
+                )
                 MacroPadState.setActiveProfileId(matchedProfile.id)
             } else {
                 AppLog.d(TAG, "onPackageChanged: profile '${matchedProfile.name}' is already active")
@@ -67,4 +70,3 @@ object AutoSwitchCoordinator {
         _foregroundApp.value = null
     }
 }
-

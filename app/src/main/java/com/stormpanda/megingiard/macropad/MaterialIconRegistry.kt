@@ -7,7 +7,6 @@ private const val TAG = "MaterialIconRegistry"
  * Icons are rendered via [MaterialSymbol] using the bundled Material Symbols Rounded variable font.
  */
 internal object MaterialIconRegistry {
-
     /**
      * Returns all icon names whose lowercase representation contains [query] (case-insensitive).
      * When [query] is blank the full [ALL_ROUNDED_ICON_NAMES] list is returned unchanged.

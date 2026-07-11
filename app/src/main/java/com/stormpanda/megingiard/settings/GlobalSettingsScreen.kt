@@ -1,20 +1,24 @@
 package com.stormpanda.megingiard.settings
 
+import android.app.ActivityOptions
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.view.Display
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.Alignment
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -29,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,28 +42,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import android.app.ActivityOptions
 import androidx.compose.ui.text.font.FontWeight
-import com.stormpanda.megingiard.ui.AppTextField
-import android.view.Display
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
-
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -67,6 +65,7 @@ import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppSettingsRow
+import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -123,19 +122,20 @@ fun GlobalSettingsScreen(
     var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
- 
+
     var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
-    
+
     var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
     var isAccessibilityActive by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                isAccessibilityActive = viewModel.checkAccessibilityActive(context)
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isAccessibilityActive = viewModel.checkAccessibilityActive(context)
+                }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -154,9 +154,10 @@ fun GlobalSettingsScreen(
     var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground),
     ) {
         Scaffold(
             containerColor = Color.Transparent,
@@ -165,7 +166,7 @@ fun GlobalSettingsScreen(
                     title = {
                         Text(
                             text = stringResource(R.string.settings_global_title),
-                            color = colors.onSurface
+                            color = colors.onSurface,
                         )
                     },
                     navigationIcon = {
@@ -173,22 +174,23 @@ fun GlobalSettingsScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                                 contentDescription = stringResource(R.string.settings_back),
-                                tint = colors.onSurface
+                                tint = colors.onSurface,
                             )
                         }
                     },
                     actions = {
                         HelpIconButton(onClick = { showSettingsHelp = true })
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface)
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
                 )
-            }
+            },
         ) { paddingValues ->
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .verticalScroll(rememberScrollState()),
             ) {
                 SectionJumpRow(
                     colors = colors,
@@ -210,7 +212,7 @@ fun GlobalSettingsScreen(
                         LanguagePickerRow(
                             language = appLanguage,
                             accentColor = effectiveAccent,
-                            onChanged = { viewModel.setAppLanguage(it) }
+                            onChanged = { viewModel.setAppLanguage(it) },
                         )
                         AppDivider()
                         RememberSettingRow(
@@ -255,16 +257,17 @@ fun GlobalSettingsScreen(
                     ) {
                         AppSettingsRow(
                             onClick = {
-                                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
+                                val intent =
+                                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
                                 val options = ActivityOptions.makeBasic()
                                 options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                                 context.startActivity(intent, options.toBundle())
-                            }
+                            },
                         ) {
                             Column(
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -274,19 +277,24 @@ fun GlobalSettingsScreen(
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .background(
-                                                if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
-                                                CircleShape
-                                            )
+                                        modifier =
+                                            Modifier
+                                                .size(10.dp)
+                                                .background(
+                                                    if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
+                                                    CircleShape,
+                                                ),
                                     )
                                 }
                                 Text(
-                                    text = stringResource(
-                                        if (isAccessibilityActive) R.string.privd_status_running
-                                        else R.string.privd_status_off
-                                    ),
+                                    text =
+                                        stringResource(
+                                            if (isAccessibilityActive) {
+                                                R.string.privd_status_running
+                                            } else {
+                                                R.string.privd_status_off
+                                            },
+                                        ),
                                     color = colors.onSurfaceSecondary,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
@@ -303,12 +311,12 @@ fun GlobalSettingsScreen(
                                         isAccessibilityActive = viewModel.checkAccessibilityActive(context)
                                         AppLog.d(TAG, "Manual refresh: Accessibility active = $isAccessibilityActive")
                                     },
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(24.dp),
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Refresh,
                                         contentDescription = "Refresh status",
-                                        tint = colors.onSurfaceSecondary
+                                        tint = colors.onSurfaceSecondary,
                                     )
                                 }
                                 Spacer(Modifier.width(8.dp))
@@ -338,24 +346,24 @@ fun GlobalSettingsScreen(
                         ThemePickerRow(
                             themeMode = themeMode,
                             accentColor = effectiveAccent,
-                            onChanged = { viewModel.setThemeMode(it) }
+                            onChanged = { viewModel.setThemeMode(it) },
                         )
                         if (themeMode.supportsCustomAccent) {
                             AppDivider()
                             AccentColorRow(
                                 accentColor = accentColor,
-                                onClick = { showColorPicker = true }
+                                onClick = { showColorPicker = true },
                             )
                         }
                         AppDivider()
                         OverlayPositionRow(
                             overlayAtBottom = overlayAtBottom,
-                            onChanged = { viewModel.setOverlayAtBottom(it) }
+                            onChanged = { viewModel.setOverlayAtBottom(it) },
                         )
                         AppDivider()
                         OverlayFadeOutRow(
                             fadeEnabled = overlayFadeOut,
-                            onChanged = { viewModel.setOverlayFadeOut(it) }
+                            onChanged = { viewModel.setOverlayFadeOut(it) },
                         )
                     }
                 }
@@ -378,7 +386,12 @@ fun GlobalSettingsScreen(
                             accentColor = effectiveAccent,
                             onClick = {
                                 viewModel.resetAllTutorials()
-                                Toast.makeText(context, context.getString(R.string.settings_reset_tutorials_toast), Toast.LENGTH_SHORT).show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(R.string.settings_reset_tutorials_toast),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             },
                         )
                     }
@@ -397,9 +410,10 @@ fun GlobalSettingsScreen(
                             onAddToObtainium = {
                                 val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
                                 try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
+                                    val intent =
+                                        Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
                                     val options = ActivityOptions.makeBasic()
                                     options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                                     context.startActivity(intent, options.toBundle())
@@ -407,9 +421,10 @@ fun GlobalSettingsScreen(
                                 } catch (e: Exception) {
                                     AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
                                     try {
-                                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(GS_OBTAINIUM_FALLBACK_URL)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
+                                        val browserIntent =
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(GS_OBTAINIUM_FALLBACK_URL)).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
                                         val options = ActivityOptions.makeBasic()
                                         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                                         context.startActivity(browserIntent, options.toBundle())
@@ -417,12 +432,10 @@ fun GlobalSettingsScreen(
                                         AppLog.e(TAG, "Failed to open browser fallback: ${ex.message}")
                                     }
                                 }
-                            }
+                            },
                         )
                     }
                 }
-
-
 
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
                     SettingsSection(
@@ -432,12 +445,12 @@ fun GlobalSettingsScreen(
                         LogLevelPickerRow(
                             logLevel = logLevel,
                             accentColor = effectiveAccent,
-                            onChanged = { viewModel.setLogLevel(it) }
+                            onChanged = { viewModel.setLogLevel(it) },
                         )
                         AppDivider()
                         SaveLogReportRow(
                             accentColor = effectiveAccent,
-                            onClick = { viewModel.requestSaveLogReport() }
+                            onClick = { viewModel.requestSaveLogReport() },
                         )
                     }
                 }
@@ -471,7 +484,7 @@ fun GlobalSettingsScreen(
                     viewModel.setAccentColor(color.toArgb())
                     showColorPicker = false
                 },
-                onDismiss = { showColorPicker = false }
+                onDismiss = { showColorPicker = false },
             )
         }
         if (showRestoreBackupDialog) {
@@ -487,18 +500,19 @@ fun GlobalSettingsScreen(
                         showImportPreviewDialog = backup.export
                     }
                 },
-                onDismiss = { showRestoreBackupDialog = false }
+                onDismiss = { showRestoreBackupDialog = false },
             )
         }
         if (showRestoreDefaultsConfirm) {
             InTreeConfirmDialog(
                 title = stringResource(R.string.settings_restore_defaults),
                 text = stringResource(R.string.settings_restore_defaults_confirm),
-                confirmText = if (restoreCountdown > 0) {
-                    stringResource(R.string.settings_restore_defaults_confirm_countdown, restoreCountdown)
-                } else {
-                    stringResource(R.string.settings_restore_defaults_confirm_button)
-                },
+                confirmText =
+                    if (restoreCountdown > 0) {
+                        stringResource(R.string.settings_restore_defaults_confirm_countdown, restoreCountdown)
+                    } else {
+                        stringResource(R.string.settings_restore_defaults_confirm_button)
+                    },
                 confirmEnabled = restoreCountdown == 0,
                 dismissText = stringResource(R.string.settings_cancel),
                 colors = colors,
@@ -553,16 +567,17 @@ fun GlobalSettingsScreen(
                         runCatching {
                             when (mode) {
                                 ConfigManager.ImportMode.BACKUP_RESTORE -> ConfigManager.applyImport(export)
-                                ConfigManager.ImportMode.PROFILE_SHARE  -> ConfigManager.applyProfileImport(export)
+                                ConfigManager.ImportMode.PROFILE_SHARE -> ConfigManager.applyProfileImport(export)
                             }
+                        }.onSuccess {
+                            when (mode) {
+                                ConfigManager.ImportMode.BACKUP_RESTORE -> importSuccess = true
+                                ConfigManager.ImportMode.PROFILE_SHARE -> profileImportSuccess = true
+                            }
+                        }.onFailure { e ->
+                            importError =
+                                e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown)
                         }
-                            .onSuccess {
-                                when (mode) {
-                                    ConfigManager.ImportMode.BACKUP_RESTORE -> importSuccess = true
-                                    ConfigManager.ImportMode.PROFILE_SHARE  -> profileImportSuccess = true
-                                }
-                            }
-                            .onFailure { e -> importError = e.message?.takeIf { it.isNotBlank() } ?: context.getString(R.string.config_error_unknown) }
                         ConfigManager.clearInAppPendingImport()
                     }
                 },
@@ -613,6 +628,7 @@ fun GlobalSettingsScreen(
                     onDismiss = { ConfigManager.clearExportResult() },
                 )
             }
+
             is ConfigManager.ExportResult.Failure -> {
                 InTreeMessageDialog(
                     title = stringResource(R.string.config_error_title),
@@ -623,6 +639,7 @@ fun GlobalSettingsScreen(
                     onDismiss = { ConfigManager.clearExportResult() },
                 )
             }
+
             null -> {}
         }
         when (val logResult = logReportSaveResult) {
@@ -636,6 +653,7 @@ fun GlobalSettingsScreen(
                     onDismiss = { LogReportManager.clearSaveResult() },
                 )
             }
+
             is LogReportManager.SaveResult.Failure -> {
                 InTreeMessageDialog(
                     title = stringResource(R.string.config_error_title),
@@ -646,6 +664,7 @@ fun GlobalSettingsScreen(
                     onDismiss = { LogReportManager.clearSaveResult() },
                 )
             }
+
             null -> {}
         }
     }
@@ -657,7 +676,10 @@ fun GlobalSettingsScreen(
 }
 
 @Composable
-private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun GlobalSettingsHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_settings_title),
@@ -753,8 +775,6 @@ private fun GlobalSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
             description = stringResource(R.string.help_settings_add_to_obtainium_desc),
         )
 
-
-
         HelpSection(stringResource(R.string.settings_section_diagnostics))
         HelpEntry(
             label = stringResource(R.string.settings_log_level),
@@ -775,9 +795,10 @@ private fun SteamGridDbTokenRow(
 ) {
     val colors = LocalAppColors.current
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Text(
             text = stringResource(R.string.settings_steamgriddb_token),
@@ -788,7 +809,7 @@ private fun SteamGridDbTokenRow(
             text = stringResource(R.string.settings_steamgriddb_token_desc),
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         )
         AppTextField(
             value = token,
@@ -797,10 +818,10 @@ private fun SteamGridDbTokenRow(
             placeholder = {
                 Text(
                     text = stringResource(R.string.settings_steamgriddb_token_placeholder),
-                    color = colors.onSurfaceSecondary
+                    color = colors.onSurfaceSecondary,
                 )
             },
-            singleLine = true
+            singleLine = true,
         )
     }
 }

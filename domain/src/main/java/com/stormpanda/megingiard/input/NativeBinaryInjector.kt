@@ -38,13 +38,15 @@ abstract class NativeBinaryInjector<T>(
     private val workerThreadName: String,
     private val readyTimeoutSeconds: Long = READY_TIMEOUT_SECONDS_DEFAULT,
 ) {
-
     protected abstract val tag: String
     protected abstract val assetName: String
 
     @Volatile private var process: Process? = null
+
     @Volatile private var writer: BufferedWriter? = null
+
     @Volatile private var writerThread: Thread? = null
+
     @Volatile private var running = false
 
     private val queue = LinkedBlockingQueue<T>()
@@ -57,19 +59,24 @@ abstract class NativeBinaryInjector<T>(
     @Synchronized
     fun start(context: Context) {
         if (running && process?.isAlive == true) return
-        val binary = deployBinary(context) ?: run {
-            AppLog.e(tag, "Binary deployment failed — injection unavailable")
-            return
-        }
+        val binary =
+            deployBinary(context) ?: run {
+                AppLog.e(tag, "Binary deployment failed — injection unavailable")
+                return
+            }
         try {
-            val p = ProcessBuilder(buildProcessArgs(binary.absolutePath))
-                .redirectErrorStream(false)
-                .start()
+            val p =
+                ProcessBuilder(buildProcessArgs(binary.absolutePath))
+                    .redirectErrorStream(false)
+                    .start()
             process = p
             writer = BufferedWriter(OutputStreamWriter(p.outputStream))
             if (!waitForReady(p)) {
                 AppLog.w(tag, "Binary did not signal ready — tearing down")
-                try { writer?.close() } catch (_: Exception) {}
+                try {
+                    writer?.close()
+                } catch (_: Exception) {
+                }
                 writer = null
                 p.destroy()
                 process = null
@@ -77,10 +84,11 @@ abstract class NativeBinaryInjector<T>(
             }
             queue.clear()
             running = true
-            writerThread = Thread(::writerLoop, workerThreadName).also {
-                it.isDaemon = true
-                it.start()
-            }
+            writerThread =
+                Thread(::writerLoop, workerThreadName).also {
+                    it.isDaemon = true
+                    it.start()
+                }
         } catch (e: Exception) {
             AppLog.e(tag, "Failed to start injector: $e")
         }
@@ -92,8 +100,14 @@ abstract class NativeBinaryInjector<T>(
         writerThread?.interrupt()
         writerThread = null
         queue.clear()
-        try { writer?.close() } catch (_: Exception) {}
-        try { process?.destroy() } catch (_: Exception) {}
+        try {
+            writer?.close()
+        } catch (_: Exception) {
+        }
+        try {
+            process?.destroy()
+        } catch (_: Exception) {
+        }
         writer = null
         process = null
     }
@@ -127,7 +141,10 @@ abstract class NativeBinaryInjector<T>(
      * Only called when both commands are eligible for coalescing (i.e. [isCoalescible] is true).
      * Default: true.
      */
-    protected open fun canCoalesce(cmd1: T, cmd2: T): Boolean = true
+    protected open fun canCoalesce(
+        cmd1: T,
+        cmd2: T,
+    ): Boolean = true
 
     // -------------------------------------------------------------------------
     // Protected helper
@@ -237,18 +254,24 @@ abstract class NativeBinaryInjector<T>(
 
     private fun waitForReady(p: Process): Boolean {
         val executor = Executors.newSingleThreadExecutor()
-        val readyFuture = executor.submit<String?> {
-            try { p.inputStream.bufferedReader().readLine() } catch (_: Exception) { null }
-        }
-        val ready = try {
-            readyFuture.get(readyTimeoutSeconds, TimeUnit.SECONDS)
-        } catch (e: Exception) {
-            AppLog.e(tag, "Timed out or failed waiting for ready signal: $e")
-            readyFuture.cancel(true)
-            return false
-        } finally {
-            executor.shutdownNow()
-        }
+        val readyFuture =
+            executor.submit<String?> {
+                try {
+                    p.inputStream.bufferedReader().readLine()
+                } catch (_: Exception) {
+                    null
+                }
+            }
+        val ready =
+            try {
+                readyFuture.get(readyTimeoutSeconds, TimeUnit.SECONDS)
+            } catch (e: Exception) {
+                AppLog.e(tag, "Timed out or failed waiting for ready signal: $e")
+                readyFuture.cancel(true)
+                return false
+            } finally {
+                executor.shutdownNow()
+            }
         if (ready != "R") {
             AppLog.e(tag, "Unexpected ready signal: $ready")
             return false

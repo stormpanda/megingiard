@@ -77,13 +77,13 @@ private val IP_CELL_CORNER = 8.dp
  */
 @Composable
 internal fun IconPickerDialog(
-    selectedIcon:   String?,
-    accentColor:    Color,
-    filled:         Boolean,
+    selectedIcon: String?,
+    accentColor: Color,
+    filled: Boolean,
     onFilledChange: (Boolean) -> Unit,
-    onSelect:       (String?) -> Unit,
-    onDismiss:      () -> Unit,
-    modifier:       Modifier = Modifier,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
     var query by remember { mutableStateOf("") }
@@ -91,9 +91,10 @@ internal fun IconPickerDialog(
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.appBackground),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(colors.appBackground),
     ) {
         FullScreenTopBar(
             title = stringResource(R.string.macropad_icon_picker_title),
@@ -111,9 +112,10 @@ internal fun IconPickerDialog(
         // ── Search bar + filled toggle ──────────────────────────────────────────
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             AppTextField(
                 value = query,
@@ -128,17 +130,19 @@ internal fun IconPickerDialog(
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clickable { onFilledChange(!filled) }
-                    .padding(start = 4.dp),
+                modifier =
+                    Modifier
+                        .clickable { onFilledChange(!filled) }
+                        .padding(start = 4.dp),
             ) {
                 Checkbox(
                     checked = filled,
                     onCheckedChange = onFilledChange,
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = accentColor,
-                        uncheckedColor = colors.onSurfaceSecondary,
-                    ),
+                    colors =
+                        CheckboxDefaults.colors(
+                            checkedColor = accentColor,
+                            uncheckedColor = colors.onSurfaceSecondary,
+                        ),
                 )
                 Text(
                     text = stringResource(R.string.macropad_icon_picker_filled),
@@ -153,18 +157,20 @@ internal fun IconPickerDialog(
         if (currentIcon != null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.surface)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.surface)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(IP_PREVIEW_SIZE)
-                        .clip(RoundedCornerShape(IP_CELL_CORNER))
-                        .background(accentColor.copy(alpha = 0.2f))
-                        .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
+                    modifier =
+                        Modifier
+                            .size(IP_PREVIEW_SIZE)
+                            .clip(RoundedCornerShape(IP_CELL_CORNER))
+                            .background(accentColor.copy(alpha = 0.2f))
+                            .border(2.dp, accentColor, RoundedCornerShape(IP_CELL_CORNER)),
                 ) {
                     MaterialSymbol(
                         name = currentIcon,
@@ -174,9 +180,10 @@ internal fun IconPickerDialog(
                     )
                 }
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 12.dp),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .padding(horizontal = 12.dp),
                 ) {
                     Text(
                         text = currentIcon,
@@ -205,9 +212,10 @@ internal fun IconPickerDialog(
         if (results.isEmpty()) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
             ) {
                 Text(
                     stringResource(R.string.macropad_icon_picker_no_results),
@@ -227,19 +235,21 @@ internal fun IconPickerDialog(
                     val isSelected = name == pendingIcon
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(IP_ICON_CELL_SIZE)
-                            .clip(RoundedCornerShape(IP_CELL_CORNER))
-                            .background(
-                                if (isSelected) accentColor.copy(alpha = 0.2f)
-                                else colors.surface
-                            )
-                            .border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) accentColor else colors.accentBorder,
-                                shape = RoundedCornerShape(IP_CELL_CORNER),
-                            )
-                            .clickable { pendingIcon = name },
+                        modifier =
+                            Modifier
+                                .size(IP_ICON_CELL_SIZE)
+                                .clip(RoundedCornerShape(IP_CELL_CORNER))
+                                .background(
+                                    if (isSelected) {
+                                        accentColor.copy(alpha = 0.2f)
+                                    } else {
+                                        colors.surface
+                                    },
+                                ).border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) accentColor else colors.accentBorder,
+                                    shape = RoundedCornerShape(IP_CELL_CORNER),
+                                ).clickable { pendingIcon = name },
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,

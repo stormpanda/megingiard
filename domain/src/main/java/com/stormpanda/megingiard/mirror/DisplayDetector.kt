@@ -15,7 +15,6 @@ private const val TAG = "DisplayDetector"
  * validating whether the app is running on the correct screen.
  */
 object DisplayDetector {
-
     /**
      * Find the first non-default (secondary) display.
      *
@@ -23,8 +22,10 @@ object DisplayDetector {
      */
     fun findSecondaryDisplay(context: Context): Display? {
         val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        val secondary = displayManager.getDisplays()
-            .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        val secondary =
+            displayManager
+                .getDisplays()
+                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
         if (secondary == null) {
             AppLog.e(TAG, "No secondary display found!")
         } else {

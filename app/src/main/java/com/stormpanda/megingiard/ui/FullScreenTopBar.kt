@@ -37,11 +37,12 @@ internal fun FullScreenTopBar(
 ) {
     val colors = LocalAppColors.current
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(FS_TOP_BAR_HEIGHT)
-            .background(colors.surface)
-            .padding(horizontal = FS_TOP_BAR_H_PADDING),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(FS_TOP_BAR_HEIGHT)
+                .background(colors.surface)
+                .padding(horizontal = FS_TOP_BAR_H_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = onDismiss) {

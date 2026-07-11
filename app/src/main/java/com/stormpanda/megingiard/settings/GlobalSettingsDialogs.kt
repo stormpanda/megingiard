@@ -68,15 +68,16 @@ internal fun ExportMetadataDialog(
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var tags by rememberSaveable { mutableStateOf("") }
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
-        unfocusedBorderColor = colors.divider,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
-        unfocusedLabelColor = colors.onSurfaceSecondary,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = colors.onSurface,
-        unfocusedTextColor = colors.onSurface,
-    )
+    val fieldColors =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = colors.divider,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = colors.onSurfaceSecondary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = colors.onSurface,
+            unfocusedTextColor = colors.onSurface,
+        )
     val focusManager = LocalFocusManager.current
     val doConfirm = {
         val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
@@ -85,24 +86,26 @@ internal fun ExportMetadataDialog(
                 author = author.trim().ifEmpty { null },
                 description = description.trim().ifEmpty { null },
                 tags = parsedTags,
-            )
+            ),
         )
     }
     BackHandler(onBack = onDismiss)
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-            .clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
+                .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                .verticalScroll(rememberScrollState())
-                .clickable(enabled = true, onClick = {})
-                .padding(GSD_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .verticalScroll(rememberScrollState())
+                    .clickable(enabled = true, onClick = {})
+                    .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -165,25 +168,28 @@ internal fun ImportPreviewDialog(
     onDismiss: () -> Unit,
 ) {
     val metadata = export.metadata
-    val warningText = when (importMode) {
-        ConfigManager.ImportMode.BACKUP_RESTORE -> stringResource(R.string.config_import_warning_backup)
-        ConfigManager.ImportMode.PROFILE_SHARE  -> stringResource(R.string.config_import_warning_profile)
-    }
+    val warningText =
+        when (importMode) {
+            ConfigManager.ImportMode.BACKUP_RESTORE -> stringResource(R.string.config_import_warning_backup)
+            ConfigManager.ImportMode.PROFILE_SHARE -> stringResource(R.string.config_import_warning_profile)
+        }
     BackHandler(onBack = onDismiss)
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-            .clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
+                .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                .verticalScroll(rememberScrollState())
-                .clickable(enabled = true, onClick = {})
-                .padding(GSD_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .verticalScroll(rememberScrollState())
+                    .clickable(enabled = true, onClick = {})
+                    .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -215,10 +221,13 @@ internal fun ImportPreviewDialog(
                 )
             }
             Spacer(Modifier.height(4.dp))
-            val hasSettingsBullets = importMode == ConfigManager.ImportMode.BACKUP_RESTORE &&
-                ("global" in export.settings || "mirror" in export.settings ||
-                    "touchpad" in export.settings || "keyboard" in export.settings ||
-                    "macropad_settings" in export.settings)
+            val hasSettingsBullets =
+                importMode == ConfigManager.ImportMode.BACKUP_RESTORE &&
+                    (
+                        "global" in export.settings || "mirror" in export.settings ||
+                            "touchpad" in export.settings || "keyboard" in export.settings ||
+                            "macropad_settings" in export.settings
+                    )
             val hasSectionBullets = hasSettingsBullets || export.profiles.isNotEmpty()
             if (hasSectionBullets) {
                 Text(
@@ -229,24 +238,48 @@ internal fun ImportPreviewDialog(
             }
             if (importMode == ConfigManager.ImportMode.BACKUP_RESTORE) {
                 if ("global" in export.settings) {
-                    Text("\u2022 ${stringResource(R.string.config_import_section_global)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "\u2022 ${stringResource(R.string.config_import_section_global)}",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
                 if ("mirror" in export.settings) {
-                    Text("\u2022 ${stringResource(R.string.config_import_section_mirror)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "\u2022 ${stringResource(R.string.config_import_section_mirror)}",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
                 if ("touchpad" in export.settings) {
-                    Text("\u2022 ${stringResource(R.string.config_import_section_touchpad)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "\u2022 ${stringResource(R.string.config_import_section_touchpad)}",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
                 if ("keyboard" in export.settings) {
-                    Text("\u2022 ${stringResource(R.string.config_import_section_keyboard)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "\u2022 ${stringResource(R.string.config_import_section_keyboard)}",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
                 if ("macropad_settings" in export.settings) {
-                    Text("\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}", color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
             if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
                 Text(
-                    text = "\u2022 ${stringResource(R.string.config_import_section_macropad, export.profiles.size, export.profiles.sumOf { it.macros.size })}",
+                    text = "\u2022 ${stringResource(
+                        R.string.config_import_section_macropad,
+                        export.profiles.size,
+                        export.profiles.sumOf { it.macros.size },
+                    )}",
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -283,18 +316,20 @@ internal fun InTreeMessageDialog(
 ) {
     BackHandler(onBack = onDismiss)
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-            .clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
+                .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                .clickable(enabled = true, onClick = {})
-                .padding(GSD_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .clickable(enabled = true, onClick = {})
+                    .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
@@ -329,31 +364,34 @@ internal fun ProfileExportDialog(
     var description by rememberSaveable { mutableStateOf("") }
     var tags by rememberSaveable { mutableStateOf("") }
     val context = LocalContext.current
-    val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.primary,
-        unfocusedBorderColor = colors.divider,
-        focusedLabelColor = MaterialTheme.colorScheme.primary,
-        unfocusedLabelColor = colors.onSurfaceSecondary,
-        cursorColor = MaterialTheme.colorScheme.primary,
-        focusedTextColor = colors.onSurface,
-        unfocusedTextColor = colors.onSurface,
-    )
+    val fieldColors =
+        OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = colors.divider,
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = colors.onSurfaceSecondary,
+            cursorColor = MaterialTheme.colorScheme.primary,
+            focusedTextColor = colors.onSurface,
+            unfocusedTextColor = colors.onSurface,
+        )
     val focusManager = LocalFocusManager.current
     BackHandler(onBack = onDismiss)
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-            .clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
+                .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                .verticalScroll(rememberScrollState())
-                .clickable(enabled = true, onClick = {})
-                .padding(GSD_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .verticalScroll(rememberScrollState())
+                    .clickable(enabled = true, onClick = {})
+                    .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
@@ -417,16 +455,27 @@ internal fun ProfileExportDialog(
                     onClick = {
                         if (profile == null) return@TextButton
                         val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        val metadata = ConfigManager.defaultMetadata(context).copy(
-                            author = author.trim().ifEmpty { null },
-                            description = description.trim().ifEmpty { null },
-                            tags = parsedTags,
-                        )
+                        val metadata =
+                            ConfigManager.defaultMetadata(context).copy(
+                                author = author.trim().ifEmpty { null },
+                                description = description.trim().ifEmpty { null },
+                                tags = parsedTags,
+                            )
                         onConfirm(metadata, profile)
                     },
                     enabled = profile != null,
                 ) {
-                    Text(stringResource(R.string.config_export_confirm), color = if (profile != null) accentColor else colors.onSurfaceSecondary)
+                    Text(
+                        stringResource(R.string.config_export_confirm),
+                        color =
+                            if (profile !=
+                                null
+                            ) {
+                                accentColor
+                            } else {
+                                colors.onSurfaceSecondary
+                            },
+                    )
                 }
             }
         }
@@ -447,18 +496,20 @@ internal fun InTreeConfirmDialog(
 ) {
     BackHandler(onBack = onDismiss)
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-            .clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
+                .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                .clickable(enabled = true, onClick = {})
-                .padding(GSD_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .clickable(enabled = true, onClick = {})
+                    .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
@@ -497,7 +548,10 @@ internal fun buildExportFilename(metadata: ExportMetadata): String {
     return parts.joinToString("_") + ".mgrd"
 }
 
-internal fun buildProfileExportFilename(metadata: ExportMetadata, profileName: String): String {
+internal fun buildProfileExportFilename(
+    metadata: ExportMetadata,
+    profileName: String,
+): String {
     val parts = mutableListOf("megingiard_profile", LocalDate.now().toString())
     profileName.trim().takeIf { it.isNotBlank() }?.let { raw ->
         parts.add(raw.take(30).replace(FILENAME_UNSAFE, "_"))

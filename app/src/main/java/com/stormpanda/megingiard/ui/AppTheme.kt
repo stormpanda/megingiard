@@ -108,137 +108,140 @@ data class AppColors(
 // Default accent for Dark/Light — overridden at runtime by SettingsManager.accentColor.
 private val DEFAULT_DARK_LIGHT_ACCENT = Color(0xFFCC0000)
 
-private val DARK_QM_BAR_IDLE  = Color.White.copy(alpha = 0.4f)
+private val DARK_QM_BAR_IDLE = Color.White.copy(alpha = 0.4f)
 
-private val darkPalette = AppColors(
-    appBackground          = Color(0xFF121212),
-    surface                = Color(0xFF1C1C1E),
-    surfaceVariant         = Color(0xFF2C2C2E),
-    onSurface              = Color.White,
-    onSurfaceSecondary     = Color.White.copy(alpha = 0.6f),
-    divider                = Color.White.copy(alpha = 0.08f),
-    controlOverlay         = Color.Black.copy(alpha = 0.8f),
-    onControlOverlay       = Color.White,
-    fingerCircle           = Color.White.copy(alpha = 0.45f),
-    keyBackground          = Color(0xFF2C2C2E),
-    keyPressed             = Color(0xFF48484A),
-    keyModifierActive      = Color(0xFF3A3A3C),
-    touchpadBackground     = Color.Black,
-    touchpadIndicator      = Color.White,
-    pickerBackground       = Color(0xFF1C1C1E),
-    accentBorder           = Color.White.copy(alpha = 0.3f),
-    accent                 = DEFAULT_DARK_LIGHT_ACCENT,
-    onAccent               = Color.White,
-    quickMenuBarIdleColor  = DARK_QM_BAR_IDLE,
-    controlIndicatorActive = Color.White,
-    navQuickMenuBody       = DEFAULT_DARK_LIGHT_ACCENT,
-    buttonBody             = DEFAULT_DARK_LIGHT_ACCENT,
-    controlOverlayBorder   = Color.Transparent,
-    navQuickMenuBorder     = Color.Transparent,
-    mirrorQuickMenuBorder  = Color.Transparent,
-    buttonIconTint         = Color.White,
-    error                  = Color(0xFFCF6679),
-    onError                = Color.White,
-    actionColorGamepad     = Color(0xFFFF9800),
-    actionColorSystem      = Color(0xFF2196F3),
-    macroPadSurface        = Color(0xFF1C1C1E),
-    macroPadOnSurface      = Color.White,
-    macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
-    sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
-    settingsSeparator      = Color.White.copy(alpha = 0.10f),
-)
+private val darkPalette =
+    AppColors(
+        appBackground = Color(0xFF121212),
+        surface = Color(0xFF1C1C1E),
+        surfaceVariant = Color(0xFF2C2C2E),
+        onSurface = Color.White,
+        onSurfaceSecondary = Color.White.copy(alpha = 0.6f),
+        divider = Color.White.copy(alpha = 0.08f),
+        controlOverlay = Color.Black.copy(alpha = 0.8f),
+        onControlOverlay = Color.White,
+        fingerCircle = Color.White.copy(alpha = 0.45f),
+        keyBackground = Color(0xFF2C2C2E),
+        keyPressed = Color(0xFF48484A),
+        keyModifierActive = Color(0xFF3A3A3C),
+        touchpadBackground = Color.Black,
+        touchpadIndicator = Color.White,
+        pickerBackground = Color(0xFF1C1C1E),
+        accentBorder = Color.White.copy(alpha = 0.3f),
+        accent = DEFAULT_DARK_LIGHT_ACCENT,
+        onAccent = Color.White,
+        quickMenuBarIdleColor = DARK_QM_BAR_IDLE,
+        controlIndicatorActive = Color.White,
+        navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
+        buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
+        controlOverlayBorder = Color.Transparent,
+        navQuickMenuBorder = Color.Transparent,
+        mirrorQuickMenuBorder = Color.Transparent,
+        buttonIconTint = Color.White,
+        error = Color(0xFFCF6679),
+        onError = Color.White,
+        actionColorGamepad = Color(0xFFFF9800),
+        actionColorSystem = Color(0xFF2196F3),
+        macroPadSurface = Color(0xFF1C1C1E),
+        macroPadOnSurface = Color.White,
+        macroPadAccentBorder = Color.White.copy(alpha = 0.3f),
+        sectionHeaderColor = DEFAULT_DARK_LIGHT_ACCENT,
+        settingsSeparator = Color.White.copy(alpha = 0.10f),
+    )
 
 private val LIGHT_QM_BAR_IDLE = Color.White.copy(alpha = 0.4f)
 
-private val lightPalette = AppColors(
-    appBackground          = Color(0xFFF2F2F7),
-    surface                = Color(0xFFFFFFFF),
-    surfaceVariant         = Color(0xFFE5E5EA),
-    onSurface              = Color(0xFF1C1C1E),
-    onSurfaceSecondary     = Color(0xFF1C1C1E).copy(alpha = 0.55f),
-    divider                = Color(0xFF1C1C1E).copy(alpha = 0.08f),
-    controlOverlay         = Color.White.copy(alpha = 0.97f),
-    onControlOverlay       = Color(0xFF1C1C1E),
-    fingerCircle           = Color.White.copy(alpha = 0.45f),
-    keyBackground          = Color(0xFFE5E5EA),
-    keyPressed             = Color(0xFFCECED3),
-    keyModifierActive      = Color(0xFFD1D1D6),
-    touchpadBackground     = Color(0xFFE5E5EA),
-    touchpadIndicator      = Color(0xFF1C1C1E),
-    pickerBackground       = Color(0xFFFFFFFF),
-    accentBorder           = Color(0xFF1C1C1E).copy(alpha = 0.2f),
-    accent                 = DEFAULT_DARK_LIGHT_ACCENT,
-    onAccent               = Color.White,
-    quickMenuBarIdleColor  = LIGHT_QM_BAR_IDLE,
-    controlIndicatorActive = Color(0xFF1C1C1E),
-    navQuickMenuBody       = DEFAULT_DARK_LIGHT_ACCENT,
-    buttonBody             = DEFAULT_DARK_LIGHT_ACCENT,
-    controlOverlayBorder   = Color(0xFF1C1C1E).copy(alpha = 0.12f),
-    navQuickMenuBorder     = Color(0xFF1C1C1E).copy(alpha = 0.12f),
-    mirrorQuickMenuBorder  = Color.Transparent,
-    buttonIconTint         = Color.White,
-    error                  = Color(0xFFB00020),
-    onError                = Color.White,
-    actionColorGamepad     = Color(0xFFFF9800),
-    actionColorSystem      = Color(0xFF2196F3),
-    macroPadSurface        = Color(0xFF1C1C1E),
-    macroPadOnSurface      = Color.White,
-    macroPadAccentBorder   = Color.White.copy(alpha = 0.3f),
-    sectionHeaderColor     = DEFAULT_DARK_LIGHT_ACCENT,
-    settingsSeparator      = Color(0xFF1C1C1E).copy(alpha = 0.10f),
-)
+private val lightPalette =
+    AppColors(
+        appBackground = Color(0xFFF2F2F7),
+        surface = Color(0xFFFFFFFF),
+        surfaceVariant = Color(0xFFE5E5EA),
+        onSurface = Color(0xFF1C1C1E),
+        onSurfaceSecondary = Color(0xFF1C1C1E).copy(alpha = 0.55f),
+        divider = Color(0xFF1C1C1E).copy(alpha = 0.08f),
+        controlOverlay = Color.White.copy(alpha = 0.97f),
+        onControlOverlay = Color(0xFF1C1C1E),
+        fingerCircle = Color.White.copy(alpha = 0.45f),
+        keyBackground = Color(0xFFE5E5EA),
+        keyPressed = Color(0xFFCECED3),
+        keyModifierActive = Color(0xFFD1D1D6),
+        touchpadBackground = Color(0xFFE5E5EA),
+        touchpadIndicator = Color(0xFF1C1C1E),
+        pickerBackground = Color(0xFFFFFFFF),
+        accentBorder = Color(0xFF1C1C1E).copy(alpha = 0.2f),
+        accent = DEFAULT_DARK_LIGHT_ACCENT,
+        onAccent = Color.White,
+        quickMenuBarIdleColor = LIGHT_QM_BAR_IDLE,
+        controlIndicatorActive = Color(0xFF1C1C1E),
+        navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
+        buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
+        controlOverlayBorder = Color(0xFF1C1C1E).copy(alpha = 0.12f),
+        navQuickMenuBorder = Color(0xFF1C1C1E).copy(alpha = 0.12f),
+        mirrorQuickMenuBorder = Color.Transparent,
+        buttonIconTint = Color.White,
+        error = Color(0xFFB00020),
+        onError = Color.White,
+        actionColorGamepad = Color(0xFFFF9800),
+        actionColorSystem = Color(0xFF2196F3),
+        macroPadSurface = Color(0xFF1C1C1E),
+        macroPadOnSurface = Color.White,
+        macroPadAccentBorder = Color.White.copy(alpha = 0.3f),
+        sectionHeaderColor = DEFAULT_DARK_LIGHT_ACCENT,
+        settingsSeparator = Color(0xFF1C1C1E).copy(alpha = 0.10f),
+    )
 
 // ─── Cyberpunk palette ────────────────────────────────────────────────────────
 // Colours derived from the Cyberpunk 2077 main menu:
 //   Background → dark blood red     ~0xFF160709
 //   Menu text  → vivid red          ~0xFFED2224
 //   Selection  → cyan               ~0xFF00CCFF
-private val CP_ACCENT          = Color(0xFF8CF4FF)   // cyan — primary interactive / accent
-private val CP_BG              = Color(0xFF160709)   // dark blood-red background
-private val CP_SURFACE         = Color(0xFF220C0F)   // slightly lighter surface
-private val CP_SURFACE2        = Color(0xFF2E1115)   // elevated / dragged surface
-private val CP_TEXT            = Color(0xFFB41B1D)   // vivid red text
-private val CP_DARK_RED        = Color(0xFFA00000)   // dark red for overlay and button text
-private val CP_SECTION_HEADER  = Color(0xFFEEEEEE)   // off-white for section headers
-private val CP_QM_BAR_IDLE       = Color.White.copy(alpha = 0.4f)
+private val CP_ACCENT = Color(0xFF8CF4FF) // cyan — primary interactive / accent
+private val CP_BG = Color(0xFF160709) // dark blood-red background
+private val CP_SURFACE = Color(0xFF220C0F) // slightly lighter surface
+private val CP_SURFACE2 = Color(0xFF2E1115) // elevated / dragged surface
+private val CP_TEXT = Color(0xFFB41B1D) // vivid red text
+private val CP_DARK_RED = Color(0xFFA00000) // dark red for overlay and button text
+private val CP_SECTION_HEADER = Color(0xFFEEEEEE) // off-white for section headers
+private val CP_QM_BAR_IDLE = Color.White.copy(alpha = 0.4f)
 
-private val cyberpunkPalette = AppColors(
-    appBackground          = CP_BG,
-    surface                = CP_SURFACE,
-    surfaceVariant         = CP_SURFACE2,
-    onSurface              = CP_TEXT,
-    onSurfaceSecondary     = CP_TEXT.copy(alpha = 0.55f),
-    divider                = CP_TEXT.copy(alpha = 0.10f),
-    controlOverlay         = CP_SURFACE,
-    onControlOverlay       = CP_DARK_RED,
-    fingerCircle           = Color.White.copy(alpha = 0.45f),
-    keyBackground          = CP_SURFACE,
-    keyPressed             = CP_SURFACE2,
-    keyModifierActive      = CP_SURFACE2,
-    touchpadBackground     = CP_BG,
-    touchpadIndicator      = CP_ACCENT,
-    pickerBackground       = CP_SURFACE,
-    accentBorder           = CP_ACCENT.copy(alpha = 0.35f),
-    accent                 = CP_ACCENT,
-    onAccent               = CP_DARK_RED,
-    quickMenuBarIdleColor  = CP_QM_BAR_IDLE,
-    controlIndicatorActive = CP_ACCENT,
-    navQuickMenuBody       = CP_SURFACE,
-    buttonBody             = CP_SURFACE,
-    controlOverlayBorder   = CP_DARK_RED,
-    navQuickMenuBorder     = CP_ACCENT,
-    mirrorQuickMenuBorder  = Color.Transparent,
-    buttonIconTint         = CP_ACCENT,
-    error                  = CP_ACCENT,
-    onError                = CP_DARK_RED,
-    actionColorGamepad     = Color(0xFFFF9800),
-    actionColorSystem      = CP_ACCENT,
-    macroPadSurface        = CP_SURFACE,
-    macroPadOnSurface      = CP_TEXT,
-    macroPadAccentBorder   = CP_ACCENT.copy(alpha = 0.35f),
-    sectionHeaderColor     = CP_SECTION_HEADER,
-    settingsSeparator      = CP_SECTION_HEADER.copy(alpha = 0.12f),
-)
+private val cyberpunkPalette =
+    AppColors(
+        appBackground = CP_BG,
+        surface = CP_SURFACE,
+        surfaceVariant = CP_SURFACE2,
+        onSurface = CP_TEXT,
+        onSurfaceSecondary = CP_TEXT.copy(alpha = 0.55f),
+        divider = CP_TEXT.copy(alpha = 0.10f),
+        controlOverlay = CP_SURFACE,
+        onControlOverlay = CP_DARK_RED,
+        fingerCircle = Color.White.copy(alpha = 0.45f),
+        keyBackground = CP_SURFACE,
+        keyPressed = CP_SURFACE2,
+        keyModifierActive = CP_SURFACE2,
+        touchpadBackground = CP_BG,
+        touchpadIndicator = CP_ACCENT,
+        pickerBackground = CP_SURFACE,
+        accentBorder = CP_ACCENT.copy(alpha = 0.35f),
+        accent = CP_ACCENT,
+        onAccent = CP_DARK_RED,
+        quickMenuBarIdleColor = CP_QM_BAR_IDLE,
+        controlIndicatorActive = CP_ACCENT,
+        navQuickMenuBody = CP_SURFACE,
+        buttonBody = CP_SURFACE,
+        controlOverlayBorder = CP_DARK_RED,
+        navQuickMenuBorder = CP_ACCENT,
+        mirrorQuickMenuBorder = Color.Transparent,
+        buttonIconTint = CP_ACCENT,
+        error = CP_ACCENT,
+        onError = CP_DARK_RED,
+        actionColorGamepad = Color(0xFFFF9800),
+        actionColorSystem = CP_ACCENT,
+        macroPadSurface = CP_SURFACE,
+        macroPadOnSurface = CP_TEXT,
+        macroPadAccentBorder = CP_ACCENT.copy(alpha = 0.35f),
+        sectionHeaderColor = CP_SECTION_HEADER,
+        settingsSeparator = CP_SECTION_HEADER.copy(alpha = 0.12f),
+    )
 
 // ─── Palette selector ─────────────────────────────────────────────────────────
 
@@ -247,16 +250,22 @@ private val cyberpunkPalette = AppColors(
  * token with a user-chosen colour.  The override is only applied when
  * [ThemeMode.supportsCustomAccent] is true; fixed themes (e.g. Cyberpunk) ignore it.
  */
-fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
-    val base = when (mode) {
-        ThemeMode.DARK      -> darkPalette
-        ThemeMode.LIGHT     -> lightPalette
-        ThemeMode.CYBERPUNK -> cyberpunkPalette
-    }
+fun paletteFor(
+    mode: ThemeMode,
+    userAccent: Color? = null,
+): AppColors {
+    val base =
+        when (mode) {
+            ThemeMode.DARK -> darkPalette
+            ThemeMode.LIGHT -> lightPalette
+            ThemeMode.CYBERPUNK -> cyberpunkPalette
+        }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
         base.copy(accent = eff, navQuickMenuBody = eff, buttonBody = eff, sectionHeaderColor = eff)
-    } else base
+    } else {
+        base
+    }
 }
 
 // ─── Material 3 ColorScheme bridge ────────────────────────────────────────────
@@ -265,25 +274,28 @@ fun paletteFor(mode: ThemeMode, userAccent: Color? = null): AppColors {
 // components (Switch, Slider, OutlinedTextField, AlertDialog, TextButton, …)
 // automatically use the correct theme colors without per-call overrides.
 
-fun colorSchemeFor(colors: AppColors, mode: ThemeMode): ColorScheme {
+fun colorSchemeFor(
+    colors: AppColors,
+    mode: ThemeMode,
+): ColorScheme {
     val base = if (mode == ThemeMode.LIGHT) lightColorScheme() else darkColorScheme()
     return base.copy(
-        primary            = colors.accent,
-        onPrimary          = colors.onAccent,
-        primaryContainer   = colors.accent.copy(alpha = 0.2f),
+        primary = colors.accent,
+        onPrimary = colors.onAccent,
+        primaryContainer = colors.accent.copy(alpha = 0.2f),
         onPrimaryContainer = colors.onAccent,
-        secondary          = colors.accent,
-        onSecondary        = colors.onAccent,
-        background         = colors.appBackground,
-        onBackground       = colors.onSurface,
-        surface            = colors.surface,
-        onSurface          = colors.onSurface,
-        surfaceVariant     = colors.surfaceVariant,
-        onSurfaceVariant   = colors.onSurfaceSecondary,
-        error              = colors.error,
-        onError            = colors.onError,
-        outline            = colors.divider.copy(alpha = 0.4f),
-        outlineVariant     = colors.divider,
+        secondary = colors.accent,
+        onSecondary = colors.onAccent,
+        background = colors.appBackground,
+        onBackground = colors.onSurface,
+        surface = colors.surface,
+        onSurface = colors.onSurface,
+        surfaceVariant = colors.surfaceVariant,
+        onSurfaceVariant = colors.onSurfaceSecondary,
+        error = colors.error,
+        onError = colors.onError,
+        outline = colors.divider.copy(alpha = 0.4f),
+        outlineVariant = colors.divider,
     )
 }
 
@@ -303,17 +315,18 @@ fun colorSchemeFor(colors: AppColors, mode: ThemeMode): ColorScheme {
 //   labelMedium  13sp Medium   — dialog subtitles, key labels
 //   labelSmall   11sp Normal   — category headers (add letterSpacing 1.sp), axis labels
 
-val megingiardTypography = Typography(
-    titleLarge   = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium  = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    titleSmall   = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
-    bodyLarge    = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal),
-    bodyMedium   = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal),
-    bodySmall    = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal),
-    labelLarge   = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
-    labelMedium  = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
-    labelSmall   = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Normal),
-)
+val megingiardTypography =
+    Typography(
+        titleLarge = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+        titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+        titleSmall = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+        bodyLarge = TextStyle(fontSize = 15.sp, fontWeight = FontWeight.Normal),
+        bodyMedium = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal),
+        bodySmall = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal),
+        labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium),
+        labelMedium = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
+        labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Normal),
+    )
 
 // ─── Dimension tokens ─────────────────────────────────────────────────────────
 //
@@ -324,26 +337,26 @@ val megingiardTypography = Typography(
 @Immutable
 data class AppDimens(
     // Padding / spacing
-    val paddingXSmall: Dp  = 4.dp,
-    val paddingSmall: Dp   = 8.dp,
-    val paddingMedium: Dp  = 12.dp,
-    val paddingLarge: Dp   = 16.dp,
-    val paddingXLarge: Dp  = 20.dp,
+    val paddingXSmall: Dp = 4.dp,
+    val paddingSmall: Dp = 8.dp,
+    val paddingMedium: Dp = 12.dp,
+    val paddingLarge: Dp = 16.dp,
+    val paddingXLarge: Dp = 20.dp,
     val paddingXXLarge: Dp = 24.dp,
     // Corner radii
-    val cornerSmall: Dp    = 8.dp,
-    val cornerMedium: Dp   = 12.dp,
-    val cornerLarge: Dp    = 16.dp,
-    val cornerXLarge: Dp   = 20.dp,
-    val cornerFull: Dp     = 50.dp,
+    val cornerSmall: Dp = 8.dp,
+    val cornerMedium: Dp = 12.dp,
+    val cornerLarge: Dp = 16.dp,
+    val cornerXLarge: Dp = 20.dp,
+    val cornerFull: Dp = 50.dp,
     // Elevation / shadow
-    val elevationLow: Dp   = 2.dp,
+    val elevationLow: Dp = 2.dp,
     val elevationMedium: Dp = 4.dp,
-    val elevationHigh: Dp  = 8.dp,
+    val elevationHigh: Dp = 8.dp,
     // Icon sizes
-    val iconSizeSmall: Dp  = 16.dp,
+    val iconSizeSmall: Dp = 16.dp,
     val iconSizeMedium: Dp = 20.dp,
-    val iconSizeLarge: Dp  = 24.dp,
+    val iconSizeLarge: Dp = 24.dp,
     // Divider
     val dividerThickness: Dp = 1.dp,
 )

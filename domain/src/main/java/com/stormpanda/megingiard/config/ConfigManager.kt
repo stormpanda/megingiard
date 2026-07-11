@@ -10,9 +10,6 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.settings.SettingsManager
-import java.security.MessageDigest
-import java.time.Instant
-import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -27,6 +24,9 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import java.security.MessageDigest
+import java.time.Instant
+import java.util.UUID
 
 private const val TAG = "ConfigManager"
 
@@ -36,20 +36,22 @@ private const val MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 /** Minimum schema version accepted on import. Currently only v3 is supported. */
 private const val MIN_SUPPORTED_SCHEMA = 3
 
-private val exportJson = Json {
-    prettyPrint = true
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-}
+private val exportJson =
+    Json {
+        prettyPrint = true
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+    }
 
 private val importJson = Json { ignoreUnknownKeys = true }
 
 /** Deterministic codec for checksum computation — no pretty-print, defaults encoded. */
-private val checksumJson = Json {
-    prettyPrint = false
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-}
+private val checksumJson =
+    Json {
+        prettyPrint = false
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+    }
 
 /**
  * Unified config export/import manager.
@@ -58,15 +60,20 @@ private val checksumJson = Json {
  * map grouped by section.
  */
 object ConfigManager {
-
     // ── Coordinator SharedFlows (export) ──────────────────────────────────────
 
     /** Discriminates backup exports from profile-share exports. */
     sealed interface ExportKind {
         /** Full-app backup: all settings + all profiles. */
-        data class Backup(val metadata: ExportMetadata) : ExportKind
+        data class Backup(
+            val metadata: ExportMetadata,
+        ) : ExportKind
+
         /** Single-profile share: no settings, one profile. */
-        data class ProfileShare(val metadata: ExportMetadata, val profile: PadProfile) : ExportKind
+        data class ProfileShare(
+            val metadata: ExportMetadata,
+            val profile: PadProfile,
+        ) : ExportKind
     }
 
     /** Discriminates backup restores from profile-only imports. */
@@ -76,24 +83,32 @@ object ConfigManager {
      * Emits a one-shot export command to MainActivity.
      * Uses [BufferOverflow.DROP_OLDEST] so a second rapid call overrides a pending one.
      */
-    private val _exportRequest = MutableSharedFlow<ExportKind>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    private val _exportRequest =
+        MutableSharedFlow<ExportKind>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
     val exportRequest: SharedFlow<ExportKind> = _exportRequest.asSharedFlow()
 
     /** Suggested default filename for the "create document" picker. */
     private val _exportFilename = MutableStateFlow("")
     val exportFilename: StateFlow<String> = _exportFilename.asStateFlow()
 
-    fun requestExport(metadata: ExportMetadata, filename: String) {
+    fun requestExport(
+        metadata: ExportMetadata,
+        filename: String,
+    ) {
         AppLog.d(TAG, "requestExport filename=$filename")
         _exportFilename.value = filename
         _exportRequest.tryEmit(ExportKind.Backup(metadata))
     }
 
-    fun requestProfileExport(metadata: ExportMetadata, profile: PadProfile, filename: String) {
+    fun requestProfileExport(
+        metadata: ExportMetadata,
+        profile: PadProfile,
+        filename: String,
+    ) {
         AppLog.d(TAG, "requestProfileExport profile=${profile.name} filename=$filename")
         _exportFilename.value = filename
         _exportRequest.tryEmit(ExportKind.ProfileShare(metadata, profile))
@@ -105,11 +120,12 @@ object ConfigManager {
      * Emits a one-shot import command to MainActivity (open file picker).
      * Uses [BufferOverflow.DROP_OLDEST] — a second call while the first is processing is a no-op.
      */
-    private val _importRequest = MutableSharedFlow<ImportMode>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    private val _importRequest =
+        MutableSharedFlow<ImportMode>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
     val importRequest: SharedFlow<ImportMode> = _importRequest.asSharedFlow()
 
     fun requestImport(mode: ImportMode = ImportMode.BACKUP_RESTORE) {
@@ -162,7 +178,10 @@ object ConfigManager {
     val pendingInAppImportMode: StateFlow<ImportMode> = _pendingInAppImportMode.asStateFlow()
 
     /** Called by MainActivity when the in-app file picker returns a .mgrd URI. */
-    fun setPendingInAppUri(uri: Uri, mode: ImportMode = ImportMode.BACKUP_RESTORE) {
+    fun setPendingInAppUri(
+        uri: Uri,
+        mode: ImportMode = ImportMode.BACKUP_RESTORE,
+    ) {
         AppLog.i(TAG, "setPendingInAppUri: $uri mode=$mode")
         _pendingInAppImportMode.value = mode
         _pendingInAppUri.value = uri
@@ -199,7 +218,10 @@ object ConfigManager {
 
     sealed interface ExportResult {
         data object Success : ExportResult
-        data class Failure(val message: String?) : ExportResult
+
+        data class Failure(
+            val message: String?,
+        ) : ExportResult
     }
 
     // ── Export ────────────────────────────────────────────────────────────────
@@ -229,7 +251,10 @@ object ConfigManager {
      * Builds a profile-only export containing a single [profile].
      * Settings are always empty so importing this file never overwrites app settings.
      */
-    suspend fun buildProfileExport(metadata: ExportMetadata, profile: PadProfile): MegingiardExport {
+    suspend fun buildProfileExport(
+        metadata: ExportMetadata,
+        profile: PadProfile,
+    ): MegingiardExport {
         AppLog.i(TAG, "buildProfileExport: profile=${profile.name}")
         val profiles = listOf(profile)
         val checksum = computeChecksum(emptyMap(), profiles)
@@ -245,17 +270,18 @@ object ConfigManager {
 
     /** Creates pre-filled [ExportMetadata] with the app version and device info. */
     fun defaultMetadata(context: Context): ExportMetadata {
-        val packageInfo = runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getPackageInfo(
-                    context.packageName,
-                    PackageManager.PackageInfoFlags.of(0),
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                context.packageManager.getPackageInfo(context.packageName, 0)
-            }
-        }.getOrNull()
+        val packageInfo =
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.getPackageInfo(
+                        context.packageName,
+                        PackageManager.PackageInfoFlags.of(0),
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                }
+            }.getOrNull()
         return ExportMetadata(
             exportedAt = Instant.now().toString(),
             appVersionName = packageInfo?.versionName ?: "unknown",
@@ -265,7 +291,11 @@ object ConfigManager {
     }
 
     /** Serializes [export] as JSON and writes it to [uri] via SAF. */
-    fun writeToUri(context: Context, uri: Uri, export: MegingiardExport) {
+    fun writeToUri(
+        context: Context,
+        uri: Uri,
+        export: MegingiardExport,
+    ) {
         AppLog.i(TAG, "writeToUri: uri=$uri")
         val json = exportJson.encodeToString(export)
         context.contentResolver.openOutputStream(uri)?.use { out ->
@@ -279,12 +309,18 @@ object ConfigManager {
      * Suspend wrapper: reads and parses [uri] on [Dispatchers.IO].
      * Logs success/failure and returns a [Result].
      */
-    suspend fun parseImportUri(context: Context, uri: Uri): Result<MegingiardExport> {
+    suspend fun parseImportUri(
+        context: Context,
+        uri: Uri,
+    ): Result<MegingiardExport> {
         AppLog.i(TAG, "parseImportUri uri=$uri")
         return withContext(Dispatchers.IO) {
             readFromUri(context, uri).also { result ->
-                if (result.isSuccess) AppLog.i(TAG, "parseImportUri succeeded")
-                else AppLog.w(TAG, "parseImportUri failed: ${result.exceptionOrNull()}")
+                if (result.isSuccess) {
+                    AppLog.i(TAG, "parseImportUri succeeded")
+                } else {
+                    AppLog.w(TAG, "parseImportUri failed: ${result.exceptionOrNull()}")
+                }
             }
         }
     }
@@ -292,29 +328,39 @@ object ConfigManager {
     /**
      * Reads a `.mgrd` file from [uri], verifies checksum and schema version.
      */
-    fun readFromUri(context: Context, uri: Uri): Result<MegingiardExport> = runCatching {
-        AppLog.i(TAG, "readFromUri: uri=$uri")
-        // Reject oversized files before allocating: check declared size if available.
-        context.contentResolver.query(
-            uri, arrayOf(OpenableColumns.SIZE), null, null, null
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val declared = cursor.getLong(0)
-                check(declared <= MAX_FILE_SIZE_BYTES) {
-                    "File too large: $declared bytes (max $MAX_FILE_SIZE_BYTES)"
+    fun readFromUri(
+        context: Context,
+        uri: Uri,
+    ): Result<MegingiardExport> =
+        runCatching {
+            AppLog.i(TAG, "readFromUri: uri=$uri")
+            // Reject oversized files before allocating: check declared size if available.
+            context.contentResolver
+                .query(
+                    uri,
+                    arrayOf(OpenableColumns.SIZE),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val declared = cursor.getLong(0)
+                        check(declared <= MAX_FILE_SIZE_BYTES) {
+                            "File too large: $declared bytes (max $MAX_FILE_SIZE_BYTES)"
+                        }
+                    }
                 }
-            }
-        }
-        val json = context.contentResolver.openInputStream(uri)?.use { input ->
-            val bytes = input.readBytes()
-            check(bytes.size <= MAX_FILE_SIZE_BYTES) {
-                "File too large: ${bytes.size} bytes (max $MAX_FILE_SIZE_BYTES)"
-            }
-            bytes.toString(Charsets.UTF_8)
-        } ?: error("Could not open input stream for URI: $uri")
+            val json =
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val bytes = input.readBytes()
+                    check(bytes.size <= MAX_FILE_SIZE_BYTES) {
+                        "File too large: ${bytes.size} bytes (max $MAX_FILE_SIZE_BYTES)"
+                    }
+                    bytes.toString(Charsets.UTF_8)
+                } ?: error("Could not open input stream for URI: $uri")
 
-        parseAndVerify(json)
-    }
+            parseAndVerify(json)
+        }
 
     /**
      * Parses a JSON string, validates the schema version, verifies checksum.
@@ -370,44 +416,52 @@ object ConfigManager {
             // Build macro ID remap: old → new for all macros in this profile
             val macroIdMap = mutableMapOf<String, String>()
 
-            val remappedMacros = profile.macros.map { macro ->
-                val newId = UUID.randomUUID().toString()
-                macroIdMap[macro.id] = newId
-                macro.copy(id = newId)
-            }
+            val remappedMacros =
+                profile.macros.map { macro ->
+                    val newId = UUID.randomUUID().toString()
+                    macroIdMap[macro.id] = newId
+                    macro.copy(id = newId)
+                }
 
             // Remap macro references in button actions
-            val remappedLayouts = profile.layouts.map { layout ->
-                layout.copy(
-                    id = UUID.randomUUID().toString(),
-                    buttons = layout.buttons.map { button ->
-                        button.copy(
-                            id = UUID.randomUUID().toString(),
-                            action = remapMacroAction(button.action, macroIdMap),
-                        )
-                    }
-                )
-            }
+            val remappedLayouts =
+                profile.layouts.map { layout ->
+                    layout.copy(
+                        id = UUID.randomUUID().toString(),
+                        buttons =
+                            layout.buttons.map { button ->
+                                button.copy(
+                                    id = UUID.randomUUID().toString(),
+                                    action = remapMacroAction(button.action, macroIdMap),
+                                )
+                            },
+                    )
+                }
 
             // Preserve the source profile's active layout selection when possible.
             val layoutIdMap = profile.layouts.zip(remappedLayouts).associate { (old, new) -> old.id to new.id }
-            val preservedActiveLayoutId = layoutIdMap[profile.activeLayoutId]
-                ?: remappedLayouts.firstOrNull()?.id
-                ?: profile.activeLayoutId
+            val preservedActiveLayoutId =
+                layoutIdMap[profile.activeLayoutId]
+                    ?: remappedLayouts.firstOrNull()?.id
+                    ?: profile.activeLayoutId
 
-            val importedProfile = profile.copy(
-                id = newProfileId,
-                name = profile.name,
-                layouts = remappedLayouts,
-                macros = remappedMacros,
-                activeLayoutId = preservedActiveLayoutId,
-            )
+            val importedProfile =
+                profile.copy(
+                    id = newProfileId,
+                    name = profile.name,
+                    layouts = remappedLayouts,
+                    macros = remappedMacros,
+                    activeLayoutId = preservedActiveLayoutId,
+                )
             MacroPadState.addProfile(importedProfile)
             AppLog.d(TAG, "imported profile '${profile.name}' → $newProfileId (${remappedMacros.size} macros)")
         }
     }
 
-    private fun remapMacroAction(action: PadAction, macroIdMap: Map<String, String>): PadAction {
+    private fun remapMacroAction(
+        action: PadAction,
+        macroIdMap: Map<String, String>,
+    ): PadAction {
         if (action !is PadAction.Macro) return action
         val newMacroId = macroIdMap[action.macroId] ?: action.macroId
         return PadAction.Macro(macroId = newMacroId)

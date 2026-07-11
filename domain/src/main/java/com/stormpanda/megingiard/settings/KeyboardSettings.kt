@@ -48,7 +48,10 @@ object KeyboardSettings {
     private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = _kbMouseBtnPos.asStateFlow()
 
-    internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
+    internal fun init(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope,
+    ) {
         this.dataStore = dataStore
         this.scope = scope
     }

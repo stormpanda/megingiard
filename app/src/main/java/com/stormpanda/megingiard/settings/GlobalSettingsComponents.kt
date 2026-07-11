@@ -56,7 +56,13 @@ private val GS_SECTION_HEADER_PADDING_H = 16.dp
 private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 internal enum class SettingsSectionFilter {
-    GENERAL, PRIVILEGED_MODE, AUTOMATION, APPEARANCE, DATA, CONFIGURATION, DIAGNOSTICS
+    GENERAL,
+    PRIVILEGED_MODE,
+    AUTOMATION,
+    APPEARANCE,
+    DATA,
+    CONFIGURATION,
+    DIAGNOSTICS,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,10 +80,11 @@ internal fun SettingsCategoryHeader(
         color = accentColor,
         style = MaterialTheme.typography.labelSmall,
         letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.appBackground)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.appBackground)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
     )
 }
 
@@ -92,7 +99,7 @@ internal fun OverlayPositionRow(
             text = stringResource(R.string.settings_overlay_position),
             color = colors.onSurface,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         Switch(
             checked = overlayAtBottom,
@@ -111,7 +118,7 @@ internal fun OverlayFadeOutRow(
         SettingLabelColumn(
             label = stringResource(R.string.settings_overlay_fade_out),
             subtitle = stringResource(R.string.settings_overlay_fade_out_desc),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         Switch(
             checked = fadeEnabled,
@@ -120,11 +127,12 @@ internal fun OverlayFadeOutRow(
     }
 }
 
-internal fun ThemeMode.displayNameResId(): Int = when (this) {
-    ThemeMode.DARK -> R.string.theme_dark
-    ThemeMode.LIGHT -> R.string.theme_light
-    ThemeMode.CYBERPUNK -> R.string.theme_cyberpunk
-}
+internal fun ThemeMode.displayNameResId(): Int =
+    when (this) {
+        ThemeMode.DARK -> R.string.theme_dark
+        ThemeMode.LIGHT -> R.string.theme_light
+        ThemeMode.CYBERPUNK -> R.string.theme_cyberpunk
+    }
 
 @Composable
 internal fun ThemePickerRow(
@@ -140,8 +148,8 @@ internal fun ThemePickerRow(
             modifier = Modifier.weight(1f),
         )
         AppDropdown(
-            selected   = themeMode,
-            options    = ThemeMode.entries,
+            selected = themeMode,
+            options = ThemeMode.entries,
             optionText = { option -> stringResource(option.displayNameResId()) },
             onSelected = onChanged,
         )
@@ -161,32 +169,34 @@ internal fun AccentColorRow(
             text = stringResource(R.string.settings_accent_color),
             color = colors.onSurface,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         Box(
-            modifier = Modifier
-                .size(GS_COLOR_PREVIEW_SIZE)
-                .clip(CircleShape)
-                .background(accentColor)
-                .border(1.dp, colors.accentBorder, CircleShape)
+            modifier =
+                Modifier
+                    .size(GS_COLOR_PREVIEW_SIZE)
+                    .clip(CircleShape)
+                    .background(accentColor)
+                    .border(1.dp, colors.accentBorder, CircleShape),
         )
         Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
             contentDescription = null,
             tint = colors.onSurfaceSecondary,
-            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE)
+            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
         )
     }
 }
 
 internal fun AppLog.Level.displayName(): String = name
 
-internal fun AppLanguage.displayNameResId(): Int = when (this) {
-    AppLanguage.SYSTEM -> R.string.settings_language_system
-    AppLanguage.EN     -> R.string.settings_language_en
-    AppLanguage.DE     -> R.string.settings_language_de
-}
+internal fun AppLanguage.displayNameResId(): Int =
+    when (this) {
+        AppLanguage.SYSTEM -> R.string.settings_language_system
+        AppLanguage.EN -> R.string.settings_language_en
+        AppLanguage.DE -> R.string.settings_language_de
+    }
 
 @Composable
 internal fun LogLevelPickerRow(
@@ -202,8 +212,8 @@ internal fun LogLevelPickerRow(
             modifier = Modifier.weight(1f),
         )
         AppDropdown(
-            selected   = logLevel,
-            options    = AppLog.Level.entries,
+            selected = logLevel,
+            options = AppLog.Level.entries,
             optionText = { option -> option.displayName() },
             onSelected = onChanged,
         )
@@ -224,8 +234,8 @@ internal fun LanguagePickerRow(
             modifier = Modifier.weight(1f),
         )
         AppDropdown(
-            selected   = language,
-            options    = AppLanguage.entries,
+            selected = language,
+            options = AppLanguage.entries,
             optionText = { option -> stringResource(option.displayNameResId()) },
             onSelected = onChanged,
         )
@@ -304,11 +314,12 @@ internal fun SectionJumpRow(
     onSelectDiagnostics: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surface)
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(GS_SECTION_CHIP_SPACING),
     ) {
@@ -367,9 +378,9 @@ private fun SectionJumpChip(
     onClick: () -> Unit,
 ) {
     AppSelectableChip(
-        text     = label,
+        text = label,
         selected = selected,
-        onClick  = onClick,
+        onClick = onClick,
     )
 }
 
@@ -384,10 +395,11 @@ internal fun SettingsSection(
         color = colors.sectionHeaderColor,
         style = MaterialTheme.typography.labelSmall,
         letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surfaceVariant)
-            .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant)
+                .padding(horizontal = GS_SECTION_HEADER_PADDING_H, vertical = GS_SECTION_HEADER_PADDING_V),
     )
     Column(modifier = Modifier.fillMaxWidth().background(colors.surface)) { content() }
     AppDivider()

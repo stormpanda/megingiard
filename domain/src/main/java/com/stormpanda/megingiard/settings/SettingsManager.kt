@@ -8,17 +8,22 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.InternalBackup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -26,14 +31,12 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.longOrNull
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import com.stormpanda.megingiard.config.ConfigManager
-import com.stormpanda.megingiard.config.InternalBackup
 
-
-private val backupsJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+private val backupsJson =
+    Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 
@@ -42,14 +45,16 @@ enum class AppLanguage { SYSTEM, EN, DE }
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SETTINGS_DATASTORE_NAME,
-    corruptionHandler = ReplaceFileCorruptionHandler {
-        emptyPreferences()
-    }
+    corruptionHandler =
+        ReplaceFileCorruptionHandler {
+            emptyPreferences()
+        },
 )
 
 private const val DEFAULT_ACCENT_COLOR: Int = (0xFFCC0000).toInt()
 
 private const val TAG = "SettingsManager"
+
 // Max wait for DataStore on the main thread during the synchronous bootstrap in init().
 // If DataStore does not respond within this window, the default log level (WARN) is kept
 // and startup continues normally — preventing an ANR on slow/unavailable storage.
@@ -72,8 +77,6 @@ object SettingsManager {
     private val _internalBackups = MutableStateFlow<List<InternalBackup>>(emptyList())
     val internalBackups: StateFlow<List<InternalBackup>> = _internalBackups.asStateFlow()
 
-
-
     private val _autoSwitchProfiles = MutableStateFlow(true)
     val autoSwitchProfiles: StateFlow<Boolean> = _autoSwitchProfiles.asStateFlow()
 
@@ -94,7 +97,6 @@ object SettingsManager {
 
     private val _steamGridDbApiToken = MutableStateFlow("")
     val steamGridDbApiToken: StateFlow<String> = _steamGridDbApiToken.asStateFlow()
-
 
     private val _showWelcomeTutorial = MutableStateFlow(true)
     val showWelcomeTutorial: StateFlow<Boolean> = _showWelcomeTutorial.asStateFlow()
@@ -131,12 +133,14 @@ object SettingsManager {
         // default WARN level is retained and startup proceeds normally.
         runBlocking(Dispatchers.IO) {
             try {
-                val prefs = withTimeoutOrNull(DATASTORE_BOOTSTRAP_TIMEOUT_MS) {
-                    dataStore.data.first()
-                }
+                val prefs =
+                    withTimeoutOrNull(DATASTORE_BOOTSTRAP_TIMEOUT_MS) {
+                        dataStore.data.first()
+                    }
                 if (prefs != null) {
-                    val level = AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
-                        ?: AppLog.Level.WARN
+                    val level =
+                        AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
+                            ?: AppLog.Level.WARN
                     _logLevel.value = level
                     AppLog.level = level
                 } else {
@@ -187,16 +191,20 @@ object SettingsManager {
                     val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
                     if (backupsJsonStr != lastBackupsJsonStr) {
                         lastBackupsJsonStr = backupsJsonStr
-                        _internalBackups.value = if (backupsJsonStr != null) {
-                            runCatching {
-                                backupsJson.decodeFromString<List<InternalBackup>>(backupsJsonStr)
-                            }.getOrElse { e ->
-                                AppLog.w(TAG, "Failed to decode internal backups list: invalid JSON: ${e.javaClass.simpleName} - ${e.message}")
+                        _internalBackups.value =
+                            if (backupsJsonStr != null) {
+                                runCatching {
+                                    backupsJson.decodeFromString<List<InternalBackup>>(backupsJsonStr)
+                                }.getOrElse { e ->
+                                    AppLog.w(
+                                        TAG,
+                                        "Failed to decode internal backups list: invalid JSON: ${e.javaClass.simpleName} - ${e.message}",
+                                    )
+                                    emptyList()
+                                }
+                            } else {
                                 emptyList()
                             }
-                        } else {
-                            emptyList()
-                        }
                     }
 
                     if (!autoBackupTriggered) {
@@ -206,7 +214,6 @@ object SettingsManager {
                 }
         }
     }
-
 
     fun setShowWelcomeTutorial(value: Boolean) {
         AppLog.d(TAG, "setShowWelcomeTutorial($value)")
@@ -332,8 +339,6 @@ object SettingsManager {
         }
     }
 
-
-
     // Mirror setters + session save/restore live in [MirrorSettings].
 
     fun setAppLanguage(value: AppLanguage) {
@@ -370,14 +375,15 @@ object SettingsManager {
             val entries = mutableMapOf<String, JsonElement>()
             for (key in keys) {
                 val raw = prefs[key] ?: continue
-                entries[key.name] = when (raw) {
-                    is Boolean -> JsonPrimitive(raw)
-                    is Int -> JsonPrimitive(raw)
-                    is Long -> JsonPrimitive(raw)
-                    is Float -> JsonPrimitive(raw)
-                    is String -> JsonPrimitive(raw)
-                    else -> continue
-                }
+                entries[key.name] =
+                    when (raw) {
+                        is Boolean -> JsonPrimitive(raw)
+                        is Int -> JsonPrimitive(raw)
+                        is Long -> JsonPrimitive(raw)
+                        is Float -> JsonPrimitive(raw)
+                        is String -> JsonPrimitive(raw)
+                        else -> continue
+                    }
             }
             if (entries.isNotEmpty()) result[section] = entries
         }
@@ -411,61 +417,73 @@ object SettingsManager {
 
     private suspend fun importGroupedSettingsInternal(sections: Map<String, Map<String, JsonElement>>) {
         dataStore.edit { prefs ->
-                for ((_, entries) in sections) {
-                    for ((keyName, element) in entries) {
-                        if (element !is JsonPrimitive) continue
-                        val key = KEY_BY_NAME[keyName]
-                        if (key == null) {
-                            AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
-                            continue
+            for ((_, entries) in sections) {
+                for ((keyName, element) in entries) {
+                    if (element !is JsonPrimitive) continue
+                    val key = KEY_BY_NAME[keyName]
+                    if (key == null) {
+                        AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
+                        continue
+                    }
+                    val existingValue = prefs.asMap()[key]
+                    @Suppress("UNCHECKED_CAST")
+                    if (existingValue != null) {
+                        // Type is known from the currently stored value — safe cast by construction.
+                        when (existingValue) {
+                            is Boolean -> element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
+                            is Int -> element.intOrNull?.let { prefs[key as Preferences.Key<Int>] = it }
+                            is Long -> element.longOrNull?.let { prefs[key as Preferences.Key<Long>] = it }
+                            is Float -> element.floatOrNull?.let { prefs[key as Preferences.Key<Float>] = it }
+                            is String -> element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
                         }
-                        val existingValue = prefs.asMap()[key]
+                    } else {
+                        // Key absent on fresh install — infer type from JSON primitive.
                         @Suppress("UNCHECKED_CAST")
-                        if (existingValue != null) {
-                            // Type is known from the currently stored value — safe cast by construction.
-                            when (existingValue) {
-                                is Boolean -> element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
-                                is Int     -> element.intOrNull?.let    { prefs[key as Preferences.Key<Int>]     = it }
-                                is Long    -> element.longOrNull?.let   { prefs[key as Preferences.Key<Long>]    = it }
-                                is Float   -> element.floatOrNull?.let  { prefs[key as Preferences.Key<Float>]   = it }
-                                is String  -> element.contentOrNull?.let { prefs[key as Preferences.Key<String>]  = it }
+                        when {
+                            element.booleanOrNull != null -> {
+                                prefs[key as Preferences.Key<Boolean>] = element.booleanOrNull!!
                             }
-                        } else {
-                            // Key absent on fresh install — infer type from JSON primitive.
-                            @Suppress("UNCHECKED_CAST")
-                            when {
-                                element.booleanOrNull != null ->
-                                    prefs[key as Preferences.Key<Boolean>] = element.booleanOrNull!!
-                                element.floatOrNull != null && element.contentOrNull?.contains('.') == true ->
-                                    prefs[key as Preferences.Key<Float>] = element.floatOrNull!!
-                                element.intOrNull != null ->
-                                    prefs[key as Preferences.Key<Int>] = element.intOrNull!!
-                                else ->
-                                    element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
+
+                            element.floatOrNull != null && element.contentOrNull?.contains('.') == true -> {
+                                prefs[key as Preferences.Key<Float>] = element.floatOrNull!!
+                            }
+
+                            element.intOrNull != null -> {
+                                prefs[key as Preferences.Key<Int>] = element.intOrNull!!
+                            }
+
+                            else -> {
+                                element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
                             }
                         }
                     }
                 }
             }
         }
+    }
 
     suspend fun saveBackup(backup: InternalBackup) {
         AppLog.d(TAG, "saveBackup: date=${backup.dateString}")
         dataStore.edit { prefs ->
             val currentJson = prefs[KEY_INTERNAL_BACKUPS]
-            val currentList = if (currentJson != null) {
-                runCatching {
-                    backupsJson.decodeFromString<List<InternalBackup>>(currentJson)
-                }.getOrElse { e ->
-                    AppLog.w(TAG, "Failed to decode existing internal backups JSON during save: ${e.javaClass.simpleName} - ${e.message}")
+            val currentList =
+                if (currentJson != null) {
+                    runCatching {
+                        backupsJson.decodeFromString<List<InternalBackup>>(currentJson)
+                    }.getOrElse { e ->
+                        AppLog.w(
+                            TAG,
+                            "Failed to decode existing internal backups JSON during save: ${e.javaClass.simpleName} - ${e.message}",
+                        )
+                        emptyList()
+                    }
+                } else {
                     emptyList()
                 }
-            } else {
-                emptyList()
-            }
-            val newList = (currentList.filter { it.dateString != backup.dateString } + backup)
-                .sortedByDescending { it.timestampMs }
-                .take(5)
+            val newList =
+                (currentList.filter { it.dateString != backup.dateString } + backup)
+                    .sortedByDescending { it.timestampMs }
+                    .take(5)
             prefs[KEY_INTERNAL_BACKUPS] = backupsJson.encodeToString(newList)
         }
     }
@@ -473,7 +491,10 @@ object SettingsManager {
     private fun triggerAutoBackupIfNeeded(context: Context) {
         scope.launch {
             try {
-                val currentDateStr = java.time.LocalDate.now().toString()
+                val currentDateStr =
+                    java.time.LocalDate
+                        .now()
+                        .toString()
                 val alreadyHasBackup = _internalBackups.value.any { it.dateString == currentDateStr }
                 if (alreadyHasBackup) {
                     AppLog.d(TAG, "Auto-backup already exists for today ($currentDateStr), skipping.")
@@ -481,16 +502,18 @@ object SettingsManager {
                 }
 
                 AppLog.i(TAG, "Creating automatic daily configuration backup for $currentDateStr")
-                val metadata = ConfigManager.defaultMetadata(context).copy(
-                    author = null,
-                    description = null
-                )
+                val metadata =
+                    ConfigManager.defaultMetadata(context).copy(
+                        author = null,
+                        description = null,
+                    )
                 val export = ConfigManager.buildExport(metadata)
-                val backup = InternalBackup(
-                    dateString = currentDateStr,
-                    timestampMs = System.currentTimeMillis(),
-                    export = export
-                )
+                val backup =
+                    InternalBackup(
+                        dateString = currentDateStr,
+                        timestampMs = System.currentTimeMillis(),
+                        export = export,
+                    )
                 saveBackup(backup)
                 AppLog.i(TAG, "Automatic daily backup saved successfully.")
             } catch (e: Exception) {

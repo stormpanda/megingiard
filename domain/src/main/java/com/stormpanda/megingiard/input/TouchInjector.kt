@@ -24,7 +24,6 @@ private const val TOUCH_STOP_FLUSH_TIMEOUT_MS = 100L
  * @param normalizedY  0.0 (top edge)  … 1.0 (bottom edge) of the logical touch surface
  */
 object TouchInjector {
-
     // Physical dimensions of fts_ts (event6) in portrait orientation.
     // These are fixed hardware constants; they do not change with display rotation.
     private const val PHYS_W = 1080
@@ -37,7 +36,10 @@ object TouchInjector {
      * Coordinates start/stop across multiple active clients. Safe to call if already running.
      */
     @Synchronized
-    fun start(context: Context, token: String) {
+    fun start(
+        context: Context,
+        token: String,
+    ) {
         val wasEmpty = activeClients.isEmpty()
         activeClients.add(token)
         AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
@@ -96,7 +98,11 @@ object TouchInjector {
      * @param normalizedX  normalised coordinate, clamped to [-0.5, 1.5] (maps to logical screen bounds with safe overrun)
      * @param normalizedY  normalised coordinate, clamped to [-0.5, 1.5] (maps to logical screen bounds with safe overrun)
      */
-    fun injectTouch(action: TouchAction, normalizedX: Float, normalizedY: Float) {
+    fun injectTouch(
+        action: TouchAction,
+        normalizedX: Float,
+        normalizedY: Float,
+    ) {
         val cx = normalizedX.coerceIn(-0.5f, 1.5f)
         val cy = normalizedY.coerceIn(-0.5f, 1.5f)
         val px = ((1f - cy) * PHYS_W).toInt()
@@ -115,7 +121,12 @@ object TouchInjector {
      * @param normalizedX  normalised coordinate, clamped to [-0.5, 1.5]
      * @param normalizedY  normalised coordinate, clamped to [-0.5, 1.5]
      */
-    fun injectTouch(slot: Int, action: TouchAction, normalizedX: Float, normalizedY: Float) {
+    fun injectTouch(
+        slot: Int,
+        action: TouchAction,
+        normalizedX: Float,
+        normalizedY: Float,
+    ) {
         val cx = normalizedX.coerceIn(-0.5f, 1.5f)
         val cy = normalizedY.coerceIn(-0.5f, 1.5f)
         val px = ((1f - cy) * PHYS_W).toInt()

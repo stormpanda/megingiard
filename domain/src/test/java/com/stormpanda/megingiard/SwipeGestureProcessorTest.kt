@@ -12,10 +12,9 @@ import org.junit.Test
  * run on the JVM without touching [AppStateManager] or Android framework APIs.
  */
 class SwipeGestureProcessorTest {
-
-    private val EDGE_ZONE_PX   = 60f
-    private val THRESHOLD_PX   = 80f
-    private val CONTAINER_H    = 1000f
+    private val EDGE_ZONE_PX = 60f
+    private val THRESHOLD_PX = 80f
+    private val CONTAINER_H = 1000f
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
@@ -24,11 +23,11 @@ class SwipeGestureProcessorTest {
         onTouchingChanged: (Boolean) -> Unit = {},
         onEdgeSwipe: () -> Unit = {},
     ) = SwipeGestureProcessor(
-        edgeZonePx        = EDGE_ZONE_PX,
-        swipeThresholdPx  = THRESHOLD_PX,
-        overlayAtBottom   = false,
+        edgeZonePx = EDGE_ZONE_PX,
+        swipeThresholdPx = THRESHOLD_PX,
+        overlayAtBottom = false,
         onTouchingChanged = onTouchingChanged,
-        onEdgeSwipe       = onEdgeSwipe,
+        onEdgeSwipe = onEdgeSwipe,
     )
 
     /** Creates a bottom-edge processor (quick menu bar at bottom). */
@@ -36,11 +35,11 @@ class SwipeGestureProcessorTest {
         onTouchingChanged: (Boolean) -> Unit = {},
         onEdgeSwipe: () -> Unit = {},
     ) = SwipeGestureProcessor(
-        edgeZonePx        = EDGE_ZONE_PX,
-        swipeThresholdPx  = THRESHOLD_PX,
-        overlayAtBottom   = true,
+        edgeZonePx = EDGE_ZONE_PX,
+        swipeThresholdPx = THRESHOLD_PX,
+        overlayAtBottom = true,
         onTouchingChanged = onTouchingChanged,
-        onEdgeSwipe       = onEdgeSwipe,
+        onEdgeSwipe = onEdgeSwipe,
     )
 
     // ── onPress — touching callback ───────────────────────────────────────────
@@ -67,7 +66,7 @@ class SwipeGestureProcessorTest {
         val p = topProcessor(onTouchingChanged = { touching = it })
         p.onPress(30f, CONTAINER_H)
         assertTrue(touching)
-        p.onRelease(allPointersUp = false)  // second pointer still down
+        p.onRelease(allPointersUp = false) // second pointer still down
         assertTrue(touching)
     }
 
@@ -77,8 +76,8 @@ class SwipeGestureProcessorTest {
     fun `top edge swipe triggers onEdgeSwipe when moving down past threshold`() {
         var swipeCount = 0
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
-        p.onPress(pointerY = 40f, containerHeight = CONTAINER_H)  // within top edge zone
-        p.onMove(pointerY = 40f + THRESHOLD_PX)                   // exactly at threshold
+        p.onPress(pointerY = 40f, containerHeight = CONTAINER_H) // within top edge zone
+        p.onMove(pointerY = 40f + THRESHOLD_PX) // exactly at threshold
         assertEquals(1, swipeCount)
     }
 
@@ -87,7 +86,7 @@ class SwipeGestureProcessorTest {
         var swipeCount = 0
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
         p.onPress(40f, CONTAINER_H)
-        p.onMove(40f + THRESHOLD_PX - 1f)   // 1px short
+        p.onMove(40f + THRESHOLD_PX - 1f) // 1px short
         assertEquals(0, swipeCount)
     }
 
@@ -95,7 +94,7 @@ class SwipeGestureProcessorTest {
     fun `press outside top edge zone does not trigger swipe`() {
         var swipeCount = 0
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
-        p.onPress(pointerY = EDGE_ZONE_PX + 1f, containerHeight = CONTAINER_H)  // outside zone
+        p.onPress(pointerY = EDGE_ZONE_PX + 1f, containerHeight = CONTAINER_H) // outside zone
         p.onMove(pointerY = EDGE_ZONE_PX + 1f + THRESHOLD_PX + 10f)
         assertEquals(0, swipeCount)
     }
@@ -106,9 +105,9 @@ class SwipeGestureProcessorTest {
     fun `bottom edge swipe triggers onEdgeSwipe when moving up past threshold`() {
         var swipeCount = 0
         val p = bottomProcessor(onEdgeSwipe = { swipeCount++ })
-        val startY = CONTAINER_H - EDGE_ZONE_PX + 5f              // inside bottom edge zone
+        val startY = CONTAINER_H - EDGE_ZONE_PX + 5f // inside bottom edge zone
         p.onPress(startY, CONTAINER_H)
-        p.onMove(startY - THRESHOLD_PX)                            // moved up enough
+        p.onMove(startY - THRESHOLD_PX) // moved up enough
         assertEquals(1, swipeCount)
     }
 
@@ -129,8 +128,8 @@ class SwipeGestureProcessorTest {
         var swipeCount = 0
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
         p.onPress(10f, CONTAINER_H)
-        p.onMove(10f + THRESHOLD_PX)         // fires
-        p.onMove(10f + THRESHOLD_PX + 20f)   // should NOT fire again
+        p.onMove(10f + THRESHOLD_PX) // fires
+        p.onMove(10f + THRESHOLD_PX + 20f) // should NOT fire again
         p.onMove(10f + THRESHOLD_PX + 40f)
         assertEquals(1, swipeCount)
     }
@@ -179,14 +178,15 @@ class SwipeGestureProcessorTest {
 
     @Test
     fun `isNearEdge is true when press lands in edge zone and within quick menu bar zone`() {
-        val p = SwipeGestureProcessor(
-            edgeZonePx = EDGE_ZONE_PX,
-            swipeThresholdPx = THRESHOLD_PX,
-            overlayAtBottom = false,
-            quickMenuBarZoneWidthPx = 100f,
-            onTouchingChanged = {},
-            onEdgeSwipe = {},
-        )
+        val p =
+            SwipeGestureProcessor(
+                edgeZonePx = EDGE_ZONE_PX,
+                swipeThresholdPx = THRESHOLD_PX,
+                overlayAtBottom = false,
+                quickMenuBarZoneWidthPx = 100f,
+                onTouchingChanged = {},
+                onEdgeSwipe = {},
+            )
         // container width = 400f -> center = 200f -> quick menu bar zone = [150f, 250f]
         p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 180f, containerWidth = 400f)
         assertTrue(p.isNearEdge)
@@ -194,14 +194,15 @@ class SwipeGestureProcessorTest {
 
     @Test
     fun `isNearEdge is false when press lands in edge zone but outside quick menu bar zone`() {
-        val p = SwipeGestureProcessor(
-            edgeZonePx = EDGE_ZONE_PX,
-            swipeThresholdPx = THRESHOLD_PX,
-            overlayAtBottom = false,
-            quickMenuBarZoneWidthPx = 100f,
-            onTouchingChanged = {},
-            onEdgeSwipe = {},
-        )
+        val p =
+            SwipeGestureProcessor(
+                edgeZonePx = EDGE_ZONE_PX,
+                swipeThresholdPx = THRESHOLD_PX,
+                overlayAtBottom = false,
+                quickMenuBarZoneWidthPx = 100f,
+                onTouchingChanged = {},
+                onEdgeSwipe = {},
+            )
         // container width = 400f -> center = 200f -> quick menu bar zone = [150f, 250f]
         p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 100f, containerWidth = 400f)
         assertFalse(p.isNearEdge)

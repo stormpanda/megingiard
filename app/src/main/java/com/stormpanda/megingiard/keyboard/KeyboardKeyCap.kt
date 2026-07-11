@@ -27,10 +27,15 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 // ---------------------------------------------------------------------------
 
 internal data class KeyBounds(
-    val left: Float, val top: Float,
-    val right: Float, val bottom: Float,
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
 ) {
-    fun contains(x: Float, y: Float) = x in left..right && y in top..bottom
+    fun contains(
+        x: Float,
+        y: Float,
+    ) = x in left..right && y in top..bottom
 }
 
 // ---------------------------------------------------------------------------
@@ -54,54 +59,57 @@ internal fun KeyCap(
 ) {
     val isModifierActive = modifierState != ModifierState.INACTIVE
     val colors = LocalAppColors.current
-    val bg = when {
-        isPressed -> colors.keyPressed
-        isModifierActive -> colors.keyModifierActive
-        else -> colors.keyBackground
-    }
+    val bg =
+        when {
+            isPressed -> colors.keyPressed
+            isModifierActive -> colors.keyModifierActive
+            else -> colors.keyBackground
+        }
 
     Box(
-        modifier = modifier
-            .padding(vertical = KEY_PADDING_V)
-            .fillMaxSize()
-            .clip(RoundedCornerShape(KEY_CORNER))
-            .background(bg)
-            .border(
-                width = if (isModifierActive) 1.dp else 0.5.dp,
-                color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else colors.divider,
-                shape = RoundedCornerShape(KEY_CORNER)
-            )
-            .onGloballyPositioned { coords ->
-                // Record root-space bounds so the outer pointerInput can hit-test
-                val topLeft = coords.localToRoot(Offset.Zero)
-                onBoundsUpdate(
-                    KeyBounds(
-                        left = topLeft.x,
-                        top = topLeft.y,
-                        right = topLeft.x + coords.size.width,
-                        bottom = topLeft.y + coords.size.height,
+        modifier =
+            modifier
+                .padding(vertical = KEY_PADDING_V)
+                .fillMaxSize()
+                .clip(RoundedCornerShape(KEY_CORNER))
+                .background(bg)
+                .border(
+                    width = if (isModifierActive) 1.dp else 0.5.dp,
+                    color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else colors.divider,
+                    shape = RoundedCornerShape(KEY_CORNER),
+                ).onGloballyPositioned { coords ->
+                    // Record root-space bounds so the outer pointerInput can hit-test
+                    val topLeft = coords.localToRoot(Offset.Zero)
+                    onBoundsUpdate(
+                        KeyBounds(
+                            left = topLeft.x,
+                            top = topLeft.y,
+                            right = topLeft.x + coords.size.width,
+                            bottom = topLeft.y + coords.size.height,
+                        ),
                     )
-                )
-            },
-        contentAlignment = Alignment.Center
+                },
+        contentAlignment = Alignment.Center,
     ) {
         if (keyDef.type == KeyType.TRACKPOINT) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize(0.55f)
-                    .aspectRatio(1f)
-                    .border(2.dp, colors.accent, CircleShape)
-                    .clip(CircleShape)
-                    .background(colors.keyBackground)
+                modifier =
+                    Modifier
+                        .fillMaxSize(0.55f)
+                        .aspectRatio(1f)
+                        .border(2.dp, colors.accent, CircleShape)
+                        .clip(CircleShape)
+                        .background(colors.keyBackground),
             )
         } else {
             val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
             val useShiftLabel = isShiftActive || (isCapsActive && isLetter)
-            val displayLabel = when {
-                isAltGrActive && keyDef.altGrLabel != null -> keyDef.altGrLabel!!
-                useShiftLabel && keyDef.shiftLabel != null -> keyDef.shiftLabel!!
-                else -> keyDef.label
-            }
+            val displayLabel =
+                when {
+                    isAltGrActive && keyDef.altGrLabel != null -> keyDef.altGrLabel!!
+                    useShiftLabel && keyDef.shiftLabel != null -> keyDef.shiftLabel!!
+                    else -> keyDef.label
+                }
             Text(
                 text = displayLabel,
                 color = if (isPressed) colors.onSurface else colors.onSurfaceSecondary,

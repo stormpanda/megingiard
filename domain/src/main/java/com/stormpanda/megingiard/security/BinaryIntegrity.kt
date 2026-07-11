@@ -20,7 +20,6 @@ private const val TAG = "BinaryIntegrity"
  * substantially harder than a plain file replacement.
  */
 object BinaryIntegrity {
-
     /**
      * @return `true` if [bytes] matches the pinned SHA-256 for [assetName].
      *         `false` if the hash does not match **or if no pin is registered** for
@@ -28,7 +27,10 @@ object BinaryIntegrity {
      *         task was not run or the entry was accidentally removed, which is a
      *         build error rather than a reason to silently skip the check.
      */
-    fun verify(assetName: String, bytes: ByteArray): Boolean {
+    fun verify(
+        assetName: String,
+        bytes: ByteArray,
+    ): Boolean {
         val expected = NativeBinaryHashes.EXPECTED[assetName]
         if (expected == null) {
             AppLog.e(TAG, "No expected hash configured for '$assetName' — refusing deploy (fail-closed)")
@@ -41,7 +43,7 @@ object BinaryIntegrity {
         } else {
             AppLog.e(
                 TAG,
-                "Integrity FAIL for $assetName — expected=$expected actual=$actual"
+                "Integrity FAIL for $assetName — expected=$expected actual=$actual",
             )
             false
         }

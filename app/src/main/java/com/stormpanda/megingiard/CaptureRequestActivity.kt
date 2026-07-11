@@ -2,10 +2,10 @@ package com.stormpanda.megingiard
 
 import android.app.Activity
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
-import android.media.projection.MediaProjectionManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
 
@@ -16,10 +16,11 @@ class CaptureRequestActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 AppLog.i(TAG, "RESULT_OK → starting ScreenCaptureService")
-                val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
-                    putExtra("RESULT_CODE", result.resultCode)
-                    putExtra("DATA", result.data)
-                }
+                val serviceIntent =
+                    Intent(this, ScreenCaptureService::class.java).apply {
+                        putExtra("RESULT_CODE", result.resultCode)
+                        putExtra("DATA", result.data)
+                    }
                 startForegroundService(serviceIntent)
                 // ScreenCaptureService restores viewport state first, then calls
                 // setCapturing(true) and setPromptInFlight(false), so promptInFlight
@@ -52,4 +53,3 @@ class CaptureRequestActivity : ComponentActivity() {
         launcher.launch(mediaProjectionManager.createScreenCaptureIntent())
     }
 }
-

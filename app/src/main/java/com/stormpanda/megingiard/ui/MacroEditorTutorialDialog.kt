@@ -48,7 +48,7 @@ fun MacroEditorTutorialDialog(
         },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState())
+                modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 Text(
                     text = stringResource(R.string.macro_tutorial_intro),
@@ -118,7 +118,7 @@ fun MacroEditorTutorialDialog(
                 onClick = {
                     AppLog.d(TAG, "Macro editor tutorial dialog confirmed")
                     onDismiss()
-                }
+                },
             ) {
                 Text(
                     text = stringResource(R.string.macro_tutorial_btn_got_it),
@@ -132,7 +132,7 @@ fun MacroEditorTutorialDialog(
                 onClick = {
                     AppLog.d(TAG, "Macro editor tutorial dialog dismissed forever")
                     onDismissForever()
-                }
+                },
             ) {
                 Text(
                     text = stringResource(R.string.macro_tutorial_btn_dont_show),
@@ -140,6 +140,6 @@ fun MacroEditorTutorialDialog(
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
-        }
+        },
     )
 }

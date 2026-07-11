@@ -11,11 +11,15 @@ enum class TouchRecordingMode { TAP, GESTURE }
 
 sealed interface TouchRecordingState {
     data object Idle : TouchRecordingState
+
     data class Recording(
         val mode: TouchRecordingMode,
         val recordedGestureCount: Int,
     ) : TouchRecordingState
-    data class Done(val steps: List<MacroStep>) : TouchRecordingState
+
+    data class Done(
+        val steps: List<MacroStep>,
+    ) : TouchRecordingState
 }
 
 /**
@@ -33,12 +37,13 @@ sealed interface TouchRecordingState {
  *    corresponding step(s), then calls [consumeRecordedTap] / [resetState].
  */
 object TouchRecordingManager {
-
     private val _recordingRequested = MutableStateFlow(false)
+
     /** `true` while the recording mirror is expected to be shown. */
     val recordingRequested: StateFlow<Boolean> = _recordingRequested.asStateFlow()
 
     private val _recordingMode = MutableStateFlow(TouchRecordingMode.TAP)
+
     /** The active recording mode (TAP or GESTURE). */
     val recordingMode: StateFlow<TouchRecordingMode> = _recordingMode.asStateFlow()
 
@@ -48,6 +53,7 @@ object TouchRecordingManager {
     private val recordedGestureSteps = mutableListOf<MacroStep.TouchPath>()
 
     private val _recordedTap = MutableStateFlow<Pair<Float, Float>?>(null)
+
     /**
      * Normalised tap position (normX in 0..1, normY in 0..1) recorded by the user,
      * or `null` if no tap has been recorded yet / after consumption.
@@ -62,10 +68,11 @@ object TouchRecordingManager {
         AppLog.i(TAG, "requestRecording mode=$mode")
         _recordedTap.value = null
         recordedGestureSteps.clear()
-        _state.value = TouchRecordingState.Recording(
-            mode = mode,
-            recordedGestureCount = 0,
-        )
+        _state.value =
+            TouchRecordingState.Recording(
+                mode = mode,
+                recordedGestureCount = 0,
+            )
         _recordingMode.value = mode
         _recordingRequested.value = true
     }
@@ -74,7 +81,10 @@ object TouchRecordingManager {
      * Called by [RecordingMirrorPresentation] when the user taps the mirror in TAP mode.
      * Stores the coordinates and clears the recording request.
      */
-    fun onTapRecorded(normX: Float, normY: Float) {
+    fun onTapRecorded(
+        normX: Float,
+        normY: Float,
+    ) {
         AppLog.i(TAG, "onTapRecorded normX=$normX normY=$normY")
         _recordedTap.value = Pair(normX, normY)
         _state.value = TouchRecordingState.Idle
@@ -85,7 +95,10 @@ object TouchRecordingManager {
      * Called by [RecordingMirrorPresentation] when the user completes one gesture segment.
      * The recording mirror stays open so more gestures can be added before Stop & Save.
      */
-    fun recordGestureCompleted(samples: List<TouchSample>, startOffsetMs: Long) {
+    fun recordGestureCompleted(
+        samples: List<TouchSample>,
+        startOffsetMs: Long,
+    ) {
         val currentState = _state.value as? TouchRecordingState.Recording
         if (currentState == null) {
             AppLog.w(TAG, "recordGestureCompleted called while not recording — ignored")
@@ -98,16 +111,21 @@ object TouchRecordingManager {
         if (samples.isEmpty()) return
         val completedSamples = completeTouchPathSamples(samples)
         val durationMs = completedSamples.maxOfOrNull { it.offsetMs } ?: 0L
-        recordedGestureSteps += MacroStep.TouchPath(
-            startTimeMs = startOffsetMs,
-            durationMs = durationMs,
-            samples = completedSamples,
+        recordedGestureSteps +=
+            MacroStep.TouchPath(
+                startTimeMs = startOffsetMs,
+                durationMs = durationMs,
+                samples = completedSamples,
+            )
+        AppLog.i(
+            TAG,
+            "recordGestureCompleted samples=${samples.size} completedSamples=${completedSamples.size} startOffsetMs=$startOffsetMs",
         )
-        AppLog.i(TAG, "recordGestureCompleted samples=${samples.size} completedSamples=${completedSamples.size} startOffsetMs=$startOffsetMs")
-        _state.value = TouchRecordingState.Recording(
-            mode = TouchRecordingMode.GESTURE,
-            recordedGestureCount = recordedGestureSteps.size,
-        )
+        _state.value =
+            TouchRecordingState.Recording(
+                mode = TouchRecordingMode.GESTURE,
+                recordedGestureCount = recordedGestureSteps.size,
+            )
     }
 
     fun finishRecording() {

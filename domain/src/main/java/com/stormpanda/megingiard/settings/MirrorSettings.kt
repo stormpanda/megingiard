@@ -45,7 +45,10 @@ object MirrorSettings {
     private val _rememberProjection = MutableStateFlow(false)
     val rememberProjection: StateFlow<Boolean> = _rememberProjection.asStateFlow()
 
-    internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
+    internal fun init(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope,
+    ) {
         this.dataStore = dataStore
         this.scope = scope
     }
@@ -120,9 +123,10 @@ object MirrorSettings {
         // and the saved values from it. This avoids any race with the async init
         // block that populates the in-memory StateFlows, which may not have loaded
         // yet when this is called on first capture start.
-        val prefs = dataStore.data
-            .catch { emit(emptyPreferences()) }
-            .first()
+        val prefs =
+            dataStore.data
+                .catch { emit(emptyPreferences()) }
+                .first()
         if (prefs[KEY_REMEMBER_LOCK] ?: false) {
             prefs[KEY_SAVED_LOCKED]?.let { ScreenCaptureManager.setLocked(it) }
         }

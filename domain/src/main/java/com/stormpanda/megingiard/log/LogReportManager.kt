@@ -26,11 +26,13 @@ private const val LOG_REPORT_FORMAT = "time"
  * singleton stays free of Android Context dependencies.
  */
 object LogReportManager {
-
     /** Result of the most recent save attempt; cleared by [clearSaveResult]. */
     sealed class SaveResult {
         data object Success : SaveResult()
-        data class Failure(val message: String?) : SaveResult()
+
+        data class Failure(
+            val message: String?,
+        ) : SaveResult()
     }
 
     private val _saveResult = MutableStateFlow<SaveResult?>(null)
@@ -46,11 +48,12 @@ object LogReportManager {
 
     // ── Save request (Settings → MainActivity) ────────────────────────────────
 
-    private val _saveRequest = MutableSharedFlow<Unit>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    private val _saveRequest =
+        MutableSharedFlow<Unit>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     /**
      * Emits a one-shot signal to MainActivity to open the "Create Document"
@@ -73,8 +76,7 @@ object LogReportManager {
      * [timestamp] should be an ISO-8601-style local date-time string
      * (passed in so the caller can supply a fixed value in tests).
      */
-    fun buildReportFilename(timestamp: String): String =
-        "megingiard_log_${timestamp.replace(':', '-').replace(' ', '_')}.txt"
+    fun buildReportFilename(timestamp: String): String = "megingiard_log_${timestamp.replace(':', '-').replace(' ', '_')}.txt"
 
     /**
      * Builds the plain-text header block that precedes the logcat lines.
@@ -91,16 +93,17 @@ object LogReportManager {
         deviceModel: String,
         androidVersion: String,
         timestamp: String,
-    ): String = buildString {
-        appendLine("=== Megingiard Log Report ===")
-        appendLine("App version  : $appVersion")
-        appendLine("Device       : $deviceModel")
-        appendLine("Android      : $androidVersion")
-        appendLine("Generated at : $timestamp")
-        appendLine("Log lines    : last $LOG_REPORT_MAX_LINES")
-        appendLine("=".repeat(30))
-        appendLine()
-    }
+    ): String =
+        buildString {
+            appendLine("=== Megingiard Log Report ===")
+            appendLine("App version  : $appVersion")
+            appendLine("Device       : $deviceModel")
+            appendLine("Android      : $androidVersion")
+            appendLine("Generated at : $timestamp")
+            appendLine("Log lines    : last $LOG_REPORT_MAX_LINES")
+            appendLine("=".repeat(30))
+            appendLine()
+        }
 
     /**
      * Reads recent logcat output for the current process and returns it as a
@@ -113,15 +116,17 @@ object LogReportManager {
      * The caller is responsible for handling the exception and surfacing a [SaveResult.Failure].
      */
     fun readLogcatLines(pid: Int): String {
-        val process = ProcessBuilder(
-            "logcat",
-            "-d",
-            "--pid=$pid",
-            "-v", LOG_REPORT_FORMAT,
-            "-t", LOG_REPORT_MAX_LINES.toString(),
-        )
-            .redirectErrorStream(true)
-            .start()
+        val process =
+            ProcessBuilder(
+                "logcat",
+                "-d",
+                "--pid=$pid",
+                "-v",
+                LOG_REPORT_FORMAT,
+                "-t",
+                LOG_REPORT_MAX_LINES.toString(),
+            ).redirectErrorStream(true)
+                .start()
         val output = process.inputStream.bufferedReader().use { it.readText() }
         val exitCode = process.waitFor()
         if (exitCode != 0) {

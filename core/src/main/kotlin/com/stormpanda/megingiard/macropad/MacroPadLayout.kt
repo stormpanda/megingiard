@@ -16,7 +16,10 @@ enum class ButtonShape { SQUARE, CIRCLE, ICON_ONLY }
  * Grid multiplier for a button: cols × rows relative to the base button unit.
  * Non-square buttons always render as rounded-rectangle regardless of ButtonShape.
  */
-enum class ButtonSize(val cols: Int, val rows: Int) {
+enum class ButtonSize(
+    val cols: Int,
+    val rows: Int,
+) {
     SIZE_1X1(1, 1),
     SIZE_2X1(2, 1),
     SIZE_1X2(1, 2),
@@ -28,7 +31,9 @@ enum class ButtonSize(val cols: Int, val rows: Int) {
  * The [multiplier] is applied to the base button unit (MP_BUTTON_UNIT_DP / ED_BUTTON_UNIT_DP)
  * to derive the rendered circle diameter.
  */
-enum class TrackpointSize(val multiplier: Float) {
+enum class TrackpointSize(
+    val multiplier: Float,
+) {
     SMALL(1.5f),
     MEDIUM(2.0f),
     LARGE(3.0f),
@@ -42,7 +47,6 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Trackpoint tracking mode
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,6 +55,7 @@ enum class MouseButton { LEFT, RIGHT, MIDDLE, MOUSE4, MOUSE5 }
 enum class TrackpointMode {
     @SerialName("physical_mouse")
     PHYSICAL_MOUSE,
+
     @SerialName("virtual_touch")
     VIRTUAL_TOUCH,
 }
@@ -85,9 +90,10 @@ sealed class ColorOption {
 
     @Serializable
     @SerialName("custom")
-    data class Custom(val argb: Int) : ColorOption()
+    data class Custom(
+        val argb: Int,
+    ) : ColorOption()
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Haptic feedback strength — used by PadButton
@@ -117,7 +123,6 @@ enum class HapticStrength { OFF, LIGHT, MEDIUM, STRONG, CUSTOM }
 
 @Serializable
 sealed class PadAction {
-
     /** Injects a Linux keyboard keycode via keyinjector_arm64. */
     @Serializable
     @SerialName("keyboard_key")
@@ -152,7 +157,9 @@ sealed class PadAction {
      */
     @Serializable
     @SerialName("mouse_button")
-    data class MouseButton(val button: com.stormpanda.megingiard.macropad.MouseButton) : PadAction()
+    data class MouseButton(
+        val button: com.stormpanda.megingiard.macropad.MouseButton,
+    ) : PadAction()
 
     /**
      * A 1×2 button that translates vertical drag distance into scroll-wheel events.
@@ -182,7 +189,9 @@ sealed class PadAction {
      */
     @Serializable
     @SerialName("macro")
-    data class Macro(val macroId: String) : PadAction()
+    data class Macro(
+        val macroId: String,
+    ) : PadAction()
 
     /**
      * Toggles the Ambient Peek mode. When active, all other MacroPad buttons are hidden
@@ -259,19 +268,20 @@ sealed class PadAction {
  * Returns `null` for action types that have no meaningful icon default (e.g.
  * [PadAction.KeyboardKey], [PadAction.GamepadButton], [PadAction.MouseButton]).
  */
-fun PadAction.defaultIconName(): String? = when (this) {
-    is PadAction.LayoutNext            -> "arrow_forward"
-    is PadAction.LayoutPrevious        -> "arrow_back"
-    is PadAction.ProfileSwitcher       -> "swap_horiz"
-    is PadAction.MirrorPlayStop        -> "cast"
-    is PadAction.MirrorFreeze          -> "pause_circle"
-    is PadAction.MirrorViewportEdit    -> "crop_free"
-    is PadAction.MirrorTouchProjection -> "touch_app"
-    is PadAction.FullScreenMouse       -> "mouse"
-    is PadAction.FullScreenKeyboard    -> "keyboard"
-    is PadAction.Macro                 -> "smart_button"
-    else                               -> null
-}
+fun PadAction.defaultIconName(): String? =
+    when (this) {
+        is PadAction.LayoutNext -> "arrow_forward"
+        is PadAction.LayoutPrevious -> "arrow_back"
+        is PadAction.ProfileSwitcher -> "swap_horiz"
+        is PadAction.MirrorPlayStop -> "cast"
+        is PadAction.MirrorFreeze -> "pause_circle"
+        is PadAction.MirrorViewportEdit -> "crop_free"
+        is PadAction.MirrorTouchProjection -> "touch_app"
+        is PadAction.FullScreenMouse -> "mouse"
+        is PadAction.FullScreenKeyboard -> "keyboard"
+        is PadAction.Macro -> "smart_button"
+        else -> null
+    }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PadButton — a single interactable element on the pad
@@ -313,7 +323,6 @@ data class PadButton(
     val invisible: Boolean = false,
 )
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // PadLayout — a single button arrangement within a profile
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,7 +357,6 @@ data class PadLayout(
     val enabled: Boolean = true,
     val buttons: List<PadButton> = emptyList(),
     val ambientDim: Float = 0f,
-
     val mirrorSavedScale: Float = 1f,
     val mirrorSavedOffsetX: Float = 0f,
     val mirrorSavedOffsetY: Float = 0f,
@@ -377,7 +385,6 @@ data class PadLayout(
     val bgImageOffsetY: Float = 0f,
     val backgroundImageDim: Float = 0f,
 )
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PadProfile — a named collection of layouts, macros, and device settings

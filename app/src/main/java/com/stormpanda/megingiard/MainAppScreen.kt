@@ -4,15 +4,15 @@ import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +22,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
@@ -55,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
@@ -63,20 +64,19 @@ import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.ui.AppColors
-import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
-import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
-import com.stormpanda.megingiard.SwipeGestureProcessor
-import kotlin.math.roundToInt
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
-import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.ui.QuickMenuBar
+import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
+import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
@@ -110,7 +110,6 @@ fun MainAppScreen() {
         }
     }
 
-
     val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
     var showQuickMenuLocal by remember { mutableStateOf(true) }
 
@@ -142,7 +141,8 @@ fun MainAppScreen() {
     LaunchedEffect(pendingImportUri) {
         val uri = pendingImportUri ?: return@LaunchedEffect
         AppLog.d(TAG, "Parsing SAF import URI")
-        ConfigManager.parseImportUri(context, uri)
+        ConfigManager
+            .parseImportUri(context, uri)
             .onSuccess { export ->
                 AppLog.i(TAG, "SAF import parsed: ${export.profiles.size} profile(s)")
                 ConfigManager.setParsedImport(export)
@@ -156,7 +156,8 @@ fun MainAppScreen() {
     LaunchedEffect(pendingInAppUri) {
         val uri = pendingInAppUri ?: return@LaunchedEffect
         AppLog.d(TAG, "Parsing in-app import URI")
-        ConfigManager.parseImportUri(context, uri)
+        ConfigManager
+            .parseImportUri(context, uri)
             .onSuccess { export ->
                 AppLog.i(TAG, "In-app import parsed: ${export.profiles.size} profile(s)")
                 ConfigManager.setInAppParsedImport(export)
@@ -180,48 +181,52 @@ fun MainAppScreen() {
         BackHandler { showExitDialog = true }
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(overlayAtBottom, isValidScreen) {
-                    val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            if (!isValidScreen) {
-                                continue
-                            }
-                            val firstChange = event.changes.firstOrNull()
-                            val x = firstChange?.position?.x ?: 0f
-                            val y = firstChange?.position?.y ?: 0f
-                            when (event.type) {
-                                PointerEventType.Press -> {
-                                    swipe.onPress(
-                                        pointerY = y,
-                                        containerHeight = size.height.toFloat(),
-                                        pointerX = x,
-                                        containerWidth = size.width.toFloat(),
-                                    )
-                                    if (swipe.isNearEdge) {
-                                        event.changes.forEach { it.consume() }
-                                    }
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(overlayAtBottom, isValidScreen) {
+                        val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (!isValidScreen) {
+                                    continue
                                 }
-                                PointerEventType.Move -> {
-                                    swipe.onMove(y)
-                                    if (swipe.isNearEdge) {
-                                        event.changes.forEach { it.consume() }
+                                val firstChange = event.changes.firstOrNull()
+                                val x = firstChange?.position?.x ?: 0f
+                                val y = firstChange?.position?.y ?: 0f
+                                when (event.type) {
+                                    PointerEventType.Press -> {
+                                        swipe.onPress(
+                                            pointerY = y,
+                                            containerHeight = size.height.toFloat(),
+                                            pointerX = x,
+                                            containerWidth = size.width.toFloat(),
+                                        )
+                                        if (swipe.isNearEdge) {
+                                            event.changes.forEach { it.consume() }
+                                        }
                                     }
-                                }
-                                PointerEventType.Release -> {
-                                    swipe.onRelease(!event.changes.any { it.pressed })
-                                    if (swipe.isNearEdge) {
-                                        event.changes.forEach { it.consume() }
+
+                                    PointerEventType.Move -> {
+                                        swipe.onMove(y)
+                                        if (swipe.isNearEdge) {
+                                            event.changes.forEach { it.consume() }
+                                        }
                                     }
+
+                                    PointerEventType.Release -> {
+                                        swipe.onRelease(!event.changes.any { it.pressed })
+                                        if (swipe.isNearEdge) {
+                                            event.changes.forEach { it.consume() }
+                                        }
+                                    }
+
+                                    else -> {}
                                 }
-                                else -> {}
                             }
                         }
-                    }
-                }
+                    },
         ) {
             // MacroPad is the sole content screen
             MacroPadScreen()
@@ -230,14 +235,16 @@ fun MainAppScreen() {
             // Suppressed when ambient mode is active: the overlays are rendered on the
             // secondary display inside MirrorPresentation instead.
             if (isFullscreenMouseActive && !isCapturing) FullscreenMouseOverlay()
-            if (isFullscreenKeyboardActive && !isCapturing) KeyboardScreen(
-                modifier = Modifier.fillMaxSize(),
-                forcedLayout = fullscreenKeyboardLayout,
-            )
+            if (isFullscreenKeyboardActive && !isCapturing) {
+                KeyboardScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    forcedLayout = fullscreenKeyboardLayout,
+                )
+            }
             AnimatedVisibility(
-                visible  = isEditorActive,
-                enter    = slideInVertically { it } + fadeIn(),
-                exit     = slideOutVertically { it } + fadeOut(),
+                visible = isEditorActive,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 MacroPadEditor(
@@ -245,9 +252,9 @@ fun MainAppScreen() {
                 )
             }
             AnimatedVisibility(
-                visible  = isBackgroundSettingsActive,
-                enter    = slideInVertically { it } + fadeIn(),
-                exit     = slideOutVertically { it } + fadeOut(),
+                visible = isBackgroundSettingsActive,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 BackgroundSettingsOverlay(
@@ -262,13 +269,13 @@ fun MainAppScreen() {
             }
 
             AnimatedVisibility(
-                visible  = isGlobalSettingsOpen,
-                enter    = slideInVertically { it } + fadeIn(),
-                exit     = slideOutVertically { it } + fadeOut(),
+                visible = isGlobalSettingsOpen,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 GlobalSettingsScreen(
-                    onBack = { AppStateManager.setGlobalSettingsOpen(false) }
+                    onBack = { AppStateManager.setGlobalSettingsOpen(false) },
                 )
             }
         }
@@ -291,7 +298,7 @@ fun MainAppScreen() {
                 onDismiss = {
                     showWelcomeLocal = false
                     SettingsManager.setShowWelcomeTutorial(false)
-                }
+                },
             )
         } else if (showQuickMenuTutorial && showQuickMenuLocal) {
             QuickMenuTutorialDialog(
@@ -299,10 +306,10 @@ fun MainAppScreen() {
                 onDismiss = {
                     showQuickMenuLocal = false
                     SettingsManager.setShowQuickMenuTutorial(false)
-                }
+                },
             )
         }
-        
+
         if (showPromptDialog) {
             PrivdReconnectPromptDialog(
                 onConnect = {
@@ -315,17 +322,24 @@ fun MainAppScreen() {
                 },
                 onDone = {
                     AppStateManager.setPrivdPromptDismissed(true)
-                }
+                },
             )
         }
-
 
         importError?.let { error ->
             AlertDialog(
                 onDismissRequest = { importError = null },
                 containerColor = colors.surface,
                 title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
-                text = { Text(error.ifBlank { stringResource(R.string.config_error_unknown) }, color = colors.onSurface, style = MaterialTheme.typography.labelMedium) },
+                text = {
+                    Text(
+                        error.ifBlank {
+                            stringResource(R.string.config_error_unknown)
+                        },
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                },
                 confirmButton = {
                     TextButton(onClick = { importError = null }) {
                         Text(stringResource(R.string.config_ok), color = colors.accent)
@@ -356,85 +370,93 @@ fun MainAppScreen() {
 }
 
 @Composable
-private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
+private fun WrongScreenOverlay(
+    colors: AppColors,
+    onRetry: () -> Unit,
+) {
     val bounceTransition = rememberInfiniteTransition(label = "arrow-bounce")
     val bounceOffset by bounceTransition.animateFloat(
         initialValue = 0f,
         targetValue = MAS_ARROW_BOUNCE_PX,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = MAS_ARROW_BOUNCE_MS),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "arrow-y"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = MAS_ARROW_BOUNCE_MS),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "arrow-y",
     )
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        event.changes.forEach { change ->
-                            if (!change.isConsumed) change.consume()
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            event.changes.forEach { change ->
+                                if (!change.isConsumed) change.consume()
+                            }
                         }
                     }
-                }
-            },
-        contentAlignment = Alignment.Center
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             Text(
                 text = stringResource(R.string.wrong_screen_message),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
             Spacer(Modifier.height(16.dp))
             Icon(
                 Icons.Rounded.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.cd_wrong_screen_arrow),
                 tint = colors.onSurface,
-                modifier = Modifier
-                    .size(MAS_ARROW_SIZE)
-                    .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) }
+                modifier =
+                    Modifier
+                        .size(MAS_ARROW_SIZE)
+                        .offset { IntOffset(x = 0, y = bounceOffset.roundToInt()) },
             )
             Spacer(Modifier.height(20.dp))
 
             Column(
-                modifier = Modifier
-                    .background(colors.surface, shape = RoundedCornerShape(12.dp))
-                    .padding(20.dp)
-                    .fillMaxWidth(0.9f)
+                modifier =
+                    Modifier
+                        .background(colors.surface, shape = RoundedCornerShape(12.dp))
+                        .padding(20.dp)
+                        .fillMaxWidth(0.9f),
             ) {
                 Text(
                     text = stringResource(R.string.wrong_screen_help_title),
                     color = colors.accent,
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    modifier = Modifier.padding(bottom = 12.dp),
                 )
                 Text(
                     text = stringResource(R.string.wrong_screen_help_step1),
                     color = colors.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
                 Text(
                     text = stringResource(R.string.wrong_screen_help_step2),
                     color = colors.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
                 Text(
                     text = stringResource(R.string.wrong_screen_help_step3),
                     color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
@@ -442,13 +464,13 @@ private fun WrongScreenOverlay(colors: AppColors, onRetry: () -> Unit) {
 
             TextButton(
                 onClick = onRetry,
-                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp))
+                modifier = Modifier.background(colors.accent.copy(alpha = 0.1f), shape = RoundedCornerShape(8.dp)),
             ) {
                 Text(
                     text = stringResource(R.string.wrong_screen_retry),
                     color = colors.accent,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         }

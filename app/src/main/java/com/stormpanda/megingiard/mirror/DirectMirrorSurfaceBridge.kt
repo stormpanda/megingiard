@@ -18,10 +18,11 @@ internal object DirectMirrorSurfaceBridge {
             AppLog.w(TAG, "sendToDirectServer: no valid surfaces")
             return false
         }
-        val binder = getService(DIRECT_SURFACE_SERVICE_NAME) ?: run {
-            AppLog.w(TAG, "sendToDirectServer: direct service not registered")
-            return false
-        }
+        val binder =
+            getService(DIRECT_SURFACE_SERVICE_NAME) ?: run {
+                AppLog.w(TAG, "sendToDirectServer: direct service not registered")
+                return false
+            }
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {
@@ -51,12 +52,14 @@ internal object DirectMirrorSurfaceBridge {
         }
     }
 
-    fun sendToDirectServer(surface: Surface, width: Int, height: Int): Boolean {
-        return sendToDirectServer(listOf(Triple(surface, width, height)))
-    }
+    fun sendToDirectServer(
+        surface: Surface,
+        width: Int,
+        height: Int,
+    ): Boolean = sendToDirectServer(listOf(Triple(surface, width, height)))
 
-    private fun getService(name: String): IBinder? {
-        return try {
+    private fun getService(name: String): IBinder? =
+        try {
             val serviceManager = Class.forName("android.os.ServiceManager")
             val getService: Method = serviceManager.getDeclaredMethod("getService", String::class.java)
             getService.isAccessible = true
@@ -65,5 +68,4 @@ internal object DirectMirrorSurfaceBridge {
             AppLog.w(TAG, "getService($name) failed: $e")
             null
         }
-    }
 }

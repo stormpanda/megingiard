@@ -53,9 +53,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 private const val TAG = "HelpModal"
 
@@ -133,32 +133,33 @@ internal fun HelpModal(
         }
     }
 
-    val dragModifier = Modifier.pointerInput(Unit) {
-        detectVerticalDragGestures(
-            onDragEnd = {
-                if (offsetY.value > dragThresholdPx) {
-                    AppLog.d(TAG, "help modal dismissed via swipe down")
-                    onDismiss()
-                } else {
+    val dragModifier =
+        Modifier.pointerInput(Unit) {
+            detectVerticalDragGestures(
+                onDragEnd = {
+                    if (offsetY.value > dragThresholdPx) {
+                        AppLog.d(TAG, "help modal dismissed via swipe down")
+                        onDismiss()
+                    } else {
+                        coroutineScope.launch {
+                            offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
+                        }
+                    }
+                },
+                onDragCancel = {
                     coroutineScope.launch {
                         offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
                     }
-                }
-            },
-            onDragCancel = {
-                coroutineScope.launch {
-                    offsetY.animateTo(0f, spring(stiffness = Spring.StiffnessMedium))
-                }
-            },
-            onVerticalDrag = { change, dragAmount ->
-                change.consume()
-                coroutineScope.launch {
-                    val targetValue = (offsetY.value + dragAmount).coerceAtLeast(0f)
-                    offsetY.snapTo(targetValue)
-                }
-            }
-        )
-    }
+                },
+                onVerticalDrag = { change, dragAmount ->
+                    change.consume()
+                    coroutineScope.launch {
+                        val targetValue = (offsetY.value + dragAmount).coerceAtLeast(0f)
+                        offsetY.snapTo(targetValue)
+                    }
+                },
+            )
+        }
 
     AnimatedVisibility(
         visible = visible,
@@ -168,72 +169,77 @@ internal fun HelpModal(
     ) {
         // Scrim
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = HM_SCRIM_ALPHA))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {
-                        AppLog.d(TAG, "help modal dismissed via scrim")
-                        onDismiss()
-                    },
-                ),
-        ) {
-            // Sheet — slides in from the bottom, absorbs clicks so scrim isn't fired
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .fillMaxSize(HM_SHEET_HEIGHT_FRACTION)
-                    .animateEnterExit(
-                        enter = slideInVertically { it },
-                        exit = slideOutVertically { it }
-                    )
-                    .offset { IntOffset(0, offsetY.value.roundToInt()) }
-                    .clip(RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER))
-                    .background(colors.surface)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = HM_SCRIM_ALPHA))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                    ) { } // absorb — prevent scrim dismiss
-                    .navigationBarsPadding(),
+                        onClick = {
+                            AppLog.d(TAG, "help modal dismissed via scrim")
+                            onDismiss()
+                        },
+                    ),
+        ) {
+            // Sheet — slides in from the bottom, absorbs clicks so scrim isn't fired
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxSize(HM_SHEET_HEIGHT_FRACTION)
+                        .animateEnterExit(
+                            enter = slideInVertically { it },
+                            exit = slideOutVertically { it },
+                        ).offset { IntOffset(0, offsetY.value.roundToInt()) }
+                        .clip(RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER))
+                        .background(colors.surface)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { } // absorb — prevent scrim dismiss
+                        .navigationBarsPadding(),
             ) {
                 // Draggable Header area
                 Column(modifier = dragModifier) {
                     // Drag handle
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = HM_HANDLE_V_PADDING),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = HM_HANDLE_V_PADDING),
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(
-                            modifier = Modifier
-                                .width(HM_HANDLE_WIDTH)
-                                .height(HM_HANDLE_HEIGHT)
-                                .clip(RoundedCornerShape(50))
-                                .background(colors.onSurfaceSecondary.copy(alpha = 0.4f)),
+                            modifier =
+                                Modifier
+                                    .width(HM_HANDLE_WIDTH)
+                                    .height(HM_HANDLE_HEIGHT)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(colors.onSurfaceSecondary.copy(alpha = 0.4f)),
                         )
                     }
 
                     // Title row
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = HM_TITLE_BAR_H_PADDING,
-                                vertical = HM_TITLE_BAR_V_PADDING,
-                            ),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = HM_TITLE_BAR_H_PADDING,
+                                    vertical = HM_TITLE_BAR_V_PADDING,
+                                ),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
                             contentDescription = null,
                             tint = colors.accent,
-                            modifier = Modifier
-                                .padding(start = HM_TITLE_ICON_START_PADDING)
-                                .size(HM_TITLE_ICON_SIZE),
+                            modifier =
+                                Modifier
+                                    .padding(start = HM_TITLE_ICON_START_PADDING)
+                                    .size(HM_TITLE_ICON_SIZE),
                         )
                         Spacer(Modifier.width(HM_TITLE_ICON_TEXT_SPACER))
                         Text(
@@ -260,14 +266,14 @@ internal fun HelpModal(
 
                 // Scrollable content
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(
-                            horizontal = HM_CONTENT_H_PADDING,
-                            vertical = HM_CONTENT_TOP_PADDING,
-                        )
-                        .padding(bottom = HM_CONTENT_BOTTOM_PADDING),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(
+                                horizontal = HM_CONTENT_H_PADDING,
+                                vertical = HM_CONTENT_TOP_PADDING,
+                            ).padding(bottom = HM_CONTENT_BOTTOM_PADDING),
                     content = content,
                 )
             }
@@ -315,9 +321,10 @@ internal fun HelpEntry(
     val colors = LocalAppColors.current
     val tint = iconTint ?: colors.accent
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = HM_ENTRY_V_PADDING),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = HM_ENTRY_V_PADDING),
         verticalAlignment = Alignment.Top,
     ) {
         if (icon != null) {
@@ -325,9 +332,10 @@ internal fun HelpEntry(
                 imageVector = icon,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier
-                    .size(HM_ENTRY_ICON_SIZE)
-                    .padding(top = HM_ENTRY_ICON_TOP_PADDING),
+                modifier =
+                    Modifier
+                        .size(HM_ENTRY_ICON_SIZE)
+                        .padding(top = HM_ENTRY_ICON_TOP_PADDING),
             )
             Spacer(Modifier.width(HM_ENTRY_ICON_SPACER))
         } else {

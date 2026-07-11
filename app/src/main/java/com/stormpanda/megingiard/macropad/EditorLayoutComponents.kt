@@ -13,8 +13,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -82,13 +82,13 @@ internal fun EditorProfileChipsBar(
         Box {
             IconButton(
                 onClick = { menuExpanded = true },
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(28.dp),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = stringResource(R.string.cd_more_options),
                     tint = colors.onSurfaceSecondary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
             DropdownMenu(
@@ -97,27 +97,57 @@ internal fun EditorProfileChipsBar(
                 modifier = Modifier.background(colors.surface),
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_editor_title_edit_profile), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onEditProfile() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_title_edit_profile),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onEditProfile()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_duplicate_profile), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onDuplicateProfile() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_duplicate_profile),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDuplicateProfile()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_reorder_profiles), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onReorderProfiles() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_reorder_profiles),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onReorderProfiles()
+                    },
                 )
                 DropdownMenuItem(
                     text = {
                         Text(
                             text = stringResource(R.string.macropad_editor_delete_profile),
                             color = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     },
                     enabled = canDelete,
-                    onClick = { menuExpanded = false; onDeleteProfile() }
+                    onClick = {
+                        menuExpanded = false
+                        onDeleteProfile()
+                    },
                 )
             }
         }
@@ -142,15 +172,16 @@ internal fun EditorLayoutChipsBar(
     val canDelete = layouts.size > 1
 
     val lazyRowState = rememberLazyListState()
-    val reorderState = rememberReorderableLazyListState(lazyRowState) { from, to ->
-        val fromIdx = latestLayouts.indexOfFirst { it.id == from.key as? String }
-        val toIdx   = latestLayouts.indexOfFirst { it.id == to.key as? String }
-        if (fromIdx >= 0 && toIdx >= 0) {
-            val mutable = latestLayouts.toMutableList()
-            mutable.add(toIdx, mutable.removeAt(fromIdx))
-            MacroPadState.reorderLayouts(mutable)
+    val reorderState =
+        rememberReorderableLazyListState(lazyRowState) { from, to ->
+            val fromIdx = latestLayouts.indexOfFirst { it.id == from.key as? String }
+            val toIdx = latestLayouts.indexOfFirst { it.id == to.key as? String }
+            if (fromIdx >= 0 && toIdx >= 0) {
+                val mutable = latestLayouts.toMutableList()
+                mutable.add(toIdx, mutable.removeAt(fromIdx))
+                MacroPadState.reorderLayouts(mutable)
+            }
         }
-    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -170,8 +201,9 @@ internal fun EditorLayoutChipsBar(
                         text = layout.name,
                         selected = isActive,
                         onClick = { onSelectLayout(layout.id) },
-                        modifier = Modifier
-                            .then(Modifier.longPressDraggableHandle())
+                        modifier =
+                            Modifier
+                                .then(Modifier.longPressDraggableHandle()),
                     )
                 }
             }
@@ -180,13 +212,13 @@ internal fun EditorLayoutChipsBar(
         Box {
             IconButton(
                 onClick = { menuExpanded = true },
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(28.dp),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
                     contentDescription = stringResource(R.string.cd_more_options),
                     tint = colors.onSurfaceSecondary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
             DropdownMenu(
@@ -195,31 +227,70 @@ internal fun EditorLayoutChipsBar(
                 modifier = Modifier.background(colors.surface),
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_editor_title), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onEditLayout() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_title),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onEditLayout()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_duplicate_layout), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onDuplicateLayout() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_duplicate_layout),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDuplicateLayout()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_editor_copy_to_profile), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onCopyToProfile() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_copy_to_profile),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onCopyToProfile()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_reorder_layouts), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onReorderLayouts() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_reorder_layouts),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onReorderLayouts()
+                    },
                 )
                 DropdownMenuItem(
                     text = {
                         Text(
                             text = stringResource(R.string.macropad_editor_delete_layout),
                             color = if (canDelete) colors.error else colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     },
                     enabled = canDelete,
-                    onClick = { menuExpanded = false; onDeleteLayout() }
+                    onClick = {
+                        menuExpanded = false
+                        onDeleteLayout()
+                    },
                 )
             }
         }
@@ -228,7 +299,7 @@ internal fun EditorLayoutChipsBar(
 
 @Composable
 internal fun ButtonColorStyleRow(
-    label:    String,
+    label: String,
     selected: ButtonColorStyle,
     onSelect: (ButtonColorStyle) -> Unit,
     modifier: Modifier = Modifier,
@@ -236,18 +307,18 @@ internal fun ButtonColorStyleRow(
     val colors = LocalAppColors.current
     AppSettingsRow(modifier = modifier) {
         Text(
-            text     = label,
-            color    = colors.onSurface,
-            style    = MaterialTheme.typography.bodyMedium,
+            text = label,
+            color = colors.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
         AppDropdown(
-            selected   = selected,
-            options    = ButtonColorStyle.entries,
+            selected = selected,
+            options = ButtonColorStyle.entries,
             optionText = { style ->
                 when (style) {
                     ButtonColorStyle.ACCENTED -> stringResource(R.string.macropad_editor_button_color_accented)
-                    ButtonColorStyle.NEUTRAL  -> stringResource(R.string.macropad_editor_button_color_neutral)
+                    ButtonColorStyle.NEUTRAL -> stringResource(R.string.macropad_editor_button_color_neutral)
                 }
             },
             onSelected = onSelect,

@@ -11,11 +11,9 @@ import javax.crypto.spec.SecretKeySpec
  * without pulling in any Android classes.
  */
 internal object HmacUtil {
-
     private val HEX_PATTERN = Regex("[0-9A-Fa-f]+")
 
-    fun bytesToHex(bytes: ByteArray): String =
-        bytes.joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
+    fun bytesToHex(bytes: ByteArray): String = bytes.joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
 
     /**
      * Decodes a hex string (case-insensitive, even number of chars) to a [ByteArray].
@@ -37,7 +35,10 @@ internal object HmacUtil {
      * the client receives a 16-byte nonce from the daemon, computes the HMAC
      * with the pre-shared key, and sends `AUTH <64-hex>\n`.
      */
-    fun computeHmacHex(keyBytes: ByteArray, nonceBytes: ByteArray): String {
+    fun computeHmacHex(
+        keyBytes: ByteArray,
+        nonceBytes: ByteArray,
+    ): String {
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(keyBytes, "HmacSHA256"))
         val hmac = mac.doFinal(nonceBytes)
@@ -51,7 +52,10 @@ internal object HmacUtil {
      * A length mismatch fails immediately because protocol parsers already enforce
      * exact message lengths before calling this helper.
      */
-    fun constantTimeEqualsHex(actual: String, expected: String): Boolean {
+    fun constantTimeEqualsHex(
+        actual: String,
+        expected: String,
+    ): Boolean {
         if (actual.length != expected.length) return false
         var diff = 0
         for (i in actual.indices) {

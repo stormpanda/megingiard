@@ -25,7 +25,6 @@ private const val TAG = "GamepadInjector"
  * [stop] + [start] cycle.
  */
 object GamepadInjector {
-
     /** Currently active backend. Locked in at [start] time. */
     @Volatile private var useMerge: Boolean = false
 
@@ -55,19 +54,31 @@ object GamepadInjector {
         get() = if (useMerge) PrivdClient.isConnected else ShellGamepadInjector.isRunning
 
     fun buttonDown(btnCode: Int) {
-        if (useMerge) PrivdGamepadInjector.buttonDown(btnCode)
-        else ShellGamepadInjector.buttonDown(btnCode)
+        if (useMerge) {
+            PrivdGamepadInjector.buttonDown(btnCode)
+        } else {
+            ShellGamepadInjector.buttonDown(btnCode)
+        }
     }
 
     fun buttonUp(btnCode: Int) {
-        if (useMerge) PrivdGamepadInjector.buttonUp(btnCode)
-        else ShellGamepadInjector.buttonUp(btnCode)
+        if (useMerge) {
+            PrivdGamepadInjector.buttonUp(btnCode)
+        } else {
+            ShellGamepadInjector.buttonUp(btnCode)
+        }
     }
 
     /** Sends a D-Pad hat event. axis: 0 = X (−1 left / +1 right), 1 = Y (−1 up / +1 down) */
-    fun hat(axis: Int, value: Int) {
-        if (useMerge) PrivdGamepadInjector.hat(axis, value)
-        else ShellGamepadInjector.hat(axis, value)
+    fun hat(
+        axis: Int,
+        value: Int,
+    ) {
+        if (useMerge) {
+            PrivdGamepadInjector.hat(axis, value)
+        } else {
+            ShellGamepadInjector.hat(axis, value)
+        }
     }
 
     /**
@@ -76,11 +87,16 @@ object GamepadInjector {
      *             [GamepadKeycodes.ABS_Z]=2, [GamepadKeycodes.ABS_RZ]=5.
      * [value]: raw int16, range −32768…+32767.
      */
-    fun joystick(axisCode: Int, value: Int) {
-        if (useMerge) PrivdGamepadInjector.joystick(axisCode, value)
-        else ShellGamepadInjector.joystick(axisCode, value)
+    fun joystick(
+        axisCode: Int,
+        value: Int,
+    ) {
+        if (useMerge) {
+            PrivdGamepadInjector.joystick(axisCode, value)
+        } else {
+            ShellGamepadInjector.joystick(axisCode, value)
+        }
     }
 
-    private fun shouldUseMerge(): Boolean =
-        PrivdClient.isConnected
+    private fun shouldUseMerge(): Boolean = PrivdClient.isConnected
 }

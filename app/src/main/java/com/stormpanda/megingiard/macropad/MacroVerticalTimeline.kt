@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.graphics.Paint as NativePaint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +30,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.max
+import android.graphics.Paint as NativePaint
 
 private const val TAG = "MacroVerticalTimeline"
 
@@ -80,57 +80,63 @@ internal fun MacroVerticalTimeline(
     val tickFormat = stringResource(R.string.macropad_macro_timeline_tick)
     val tapLabel = stringResource(R.string.macropad_macro_step_label_short_tap)
     val gestureLabel = stringResource(R.string.macropad_macro_step_label_short_gesture)
-    val stepLabels = remember(steps, swapFaceButtons, tapLabel, gestureLabel) {
-        steps.map { shortStepLabel(it, swapFaceButtons, tapLabel, gestureLabel) }
-    }
+    val stepLabels =
+        remember(steps, swapFaceButtons, tapLabel, gestureLabel) {
+            steps.map { shortStepLabel(it, swapFaceButtons, tapLabel, gestureLabel) }
+        }
 
     val pxPerMs = with(density) { MTE_VERTICAL_DP_PER_MS.dp.toPx() }
     val axisWidthPx = with(density) { MTE_VERTICAL_AXIS_WIDTH.dp.toPx() }
     val contentHeightDp = (totalMs * MTE_VERTICAL_DP_PER_MS).dp
 
-    val textPaint = remember(density, colors.onSurfaceSecondary) {
-        NativePaint().apply {
-            isAntiAlias = true
-            textSize = with(density) { MTE_AXIS_TEXT_SIZE_SP.sp.toPx() }
-            color = colors.onSurfaceSecondary.toArgb()
+    val textPaint =
+        remember(density, colors.onSurfaceSecondary) {
+            NativePaint().apply {
+                isAntiAlias = true
+                textSize = with(density) { MTE_AXIS_TEXT_SIZE_SP.sp.toPx() }
+                color = colors.onSurfaceSecondary.toArgb()
+            }
         }
-    }
-    val labelPaint = remember(density, colors.onSurface) {
-        NativePaint().apply {
-            isAntiAlias = true
-            isFakeBoldText = true
-            textSize = with(density) { MTE_BAR_LABEL_TEXT_SIZE_SP.sp.toPx() }
-            color = colors.onSurface.toArgb()
+    val labelPaint =
+        remember(density, colors.onSurface) {
+            NativePaint().apply {
+                isAntiAlias = true
+                isFakeBoldText = true
+                textSize = with(density) { MTE_BAR_LABEL_TEXT_SIZE_SP.sp.toPx() }
+                color = colors.onSurface.toArgb()
+            }
         }
-    }
 
     BoxWithConstraints(
-        modifier = modifier
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            modifier
+                .verticalScroll(rememberScrollState()),
     ) {
         val canvasWidthPx = with(density) { maxWidth.toPx() }
         val laneWidthPx = max((canvasWidthPx - axisWidthPx) / numLanes.toFloat(), 1f)
 
         Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(contentHeightDp)
-                .pointerInput(steps, laneWidthPx, axisWidthPx, pxPerMs) {
-                    detectTapGestures { tap ->
-                        val y = tap.y
-                        val x = tap.x
-                        val hitIndex = steps.indices.reversed().firstOrNull { idx ->
-                            val step = steps[idx]
-                            val lane = laneAssignment.getOrElse(idx) { 0 }
-                            val left = axisWidthPx + lane * laneWidthPx + MTE_VERTICAL_BAR_PADDING
-                            val right = left + laneWidthPx - MTE_VERTICAL_BAR_PADDING * 2
-                            val top = step.startTimeMs * pxPerMs
-                            val bottom = top + (step.durationMs * pxPerMs).coerceAtLeast(6f)
-                            x in left..right && y in top..bottom
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(contentHeightDp)
+                    .pointerInput(steps, laneWidthPx, axisWidthPx, pxPerMs) {
+                        detectTapGestures { tap ->
+                            val y = tap.y
+                            val x = tap.x
+                            val hitIndex =
+                                steps.indices.reversed().firstOrNull { idx ->
+                                    val step = steps[idx]
+                                    val lane = laneAssignment.getOrElse(idx) { 0 }
+                                    val left = axisWidthPx + lane * laneWidthPx + MTE_VERTICAL_BAR_PADDING
+                                    val right = left + laneWidthPx - MTE_VERTICAL_BAR_PADDING * 2
+                                    val top = step.startTimeMs * pxPerMs
+                                    val bottom = top + (step.durationMs * pxPerMs).coerceAtLeast(6f)
+                                    x in left..right && y in top..bottom
+                                }
+                            if (hitIndex != null) onEditStep(hitIndex)
                         }
-                        if (hitIndex != null) onEditStep(hitIndex)
-                    }
-                },
+                    },
         ) {
             drawVerticalTicks(
                 totalMs = totalMs,

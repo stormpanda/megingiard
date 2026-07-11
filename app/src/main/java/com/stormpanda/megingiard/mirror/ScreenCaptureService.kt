@@ -87,10 +87,11 @@ class ScreenCaptureService : Service() {
         scope.launch {
             TouchRecordingManager.recordingRequested.collect { requested ->
                 if (requested) {
-                    val sd = capturedSecondaryDisplay ?: run {
-                        AppLog.w(TAG, "recording requested but secondary display is null — ignoring")
-                        return@collect
-                    }
+                    val sd =
+                        capturedSecondaryDisplay ?: run {
+                            AppLog.w(TAG, "recording requested but secondary display is null — ignoring")
+                            return@collect
+                        }
                     if (isPrivilegedMode) {
                         AppLog.i(TAG, "recording requested in privileged mode → starting session first")
                         scope.launch {
@@ -100,20 +101,21 @@ class ScreenCaptureService : Service() {
                             if (started) {
                                 AppLog.i(TAG, "Recording direct privileged mirror session running → showing presentation")
                                 recordingPresentation?.dismiss()
-                                
+
                                 // Tear down direct privileged mirror session first to avoid AYN Thor display conflict
                                 directPrivdSession?.release()
                                 directPrivdSession = null
                                 // Hide the main presentation window
                                 mirrorPresentation?.hide()
 
-                                val rp = RecordingMirrorPresentation(
-                                    this@ScreenCaptureService,
-                                    sd,
-                                    capturedSrcWidth,
-                                    capturedSrcHeight,
-                                    mediaProjection,
-                                )
+                                val rp =
+                                    RecordingMirrorPresentation(
+                                        this@ScreenCaptureService,
+                                        sd,
+                                        capturedSrcWidth,
+                                        capturedSrcHeight,
+                                        mediaProjection,
+                                    )
                                 recordingPresentation = rp
                                 rp.show()
                             } else {
@@ -129,7 +131,7 @@ class ScreenCaptureService : Service() {
                         }
                         AppLog.i(TAG, "recording requested → creating RecordingMirrorPresentation")
                         recordingPresentation?.dismiss()
-                        
+
                         // Release master virtualDisplay to avoid AYN Thor display conflict
                         mirrorVirtualDisplay?.release()
                         mirrorVirtualDisplay = null
@@ -137,25 +139,26 @@ class ScreenCaptureService : Service() {
                         // Hide the main presentation window
                         mirrorPresentation?.hide()
 
-                        val rp = RecordingMirrorPresentation(
-                            this@ScreenCaptureService,
-                            sd,
-                            capturedSrcWidth,
-                            capturedSrcHeight,
-                            mediaProjection,
-                        )
+                        val rp =
+                            RecordingMirrorPresentation(
+                                this@ScreenCaptureService,
+                                sd,
+                                capturedSrcWidth,
+                                capturedSrcHeight,
+                                mediaProjection,
+                            )
                         recordingPresentation = rp
                         rp.show()
                     }
                 } else {
                     recordingPresentation?.dismiss()
                     recordingPresentation = null
-                    
+
                     if (isPrivilegedMode) {
                         AppLog.i(TAG, "recording stopped in privileged mode → releasing recording session and restoring main mirror")
                         recordingPrivdSession?.release()
                         recordingPrivdSession = null
-                        
+
                         if (shouldShowMirrorPresentation()) {
                             mirrorPresentation?.show()
                         }
@@ -176,15 +179,23 @@ class ScreenCaptureService : Service() {
                         if (surface != null && surface.isValid && mirrorVirtualDisplay == null) {
                             val dpi = resources.displayMetrics.densityDpi
                             try {
-                                val vd = mediaProjection?.createVirtualDisplay(
-                                    "ScreenCapture-Master",
-                                    capturedSrcWidth, capturedSrcHeight, dpi,
-                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                                    surface, null, null
-                                )
+                                val vd =
+                                    mediaProjection?.createVirtualDisplay(
+                                        "ScreenCapture-Master",
+                                        capturedSrcWidth,
+                                        capturedSrcHeight,
+                                        dpi,
+                                        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                        surface,
+                                        null,
+                                        null,
+                                    )
                                 mirrorVirtualDisplay = vd
                                 mirrorSurface = surface
-                                AppLog.i(TAG, "VirtualDisplay recreated manually for master ${capturedSrcWidth}x${capturedSrcHeight} dpi=$dpi")
+                                AppLog.i(
+                                    TAG,
+                                    "VirtualDisplay recreated manually for master ${capturedSrcWidth}x$capturedSrcHeight dpi=$dpi",
+                                )
                             } catch (e: Exception) {
                                 AppLog.e(TAG, "Exception recreating VirtualDisplay manually for master", e)
                             }
@@ -242,13 +253,17 @@ class ScreenCaptureService : Service() {
         }
     }
 
-    private fun saveScreenshotToGallery(context: Context, bitmap: Bitmap): Uri? {
+    private fun saveScreenshotToGallery(
+        context: Context,
+        bitmap: Bitmap,
+    ): Uri? {
         val filename = "Megingiard_Screenshot_${System.currentTimeMillis()}.png"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
-            put(MediaStore.MediaColumns.RELATIVE_PATH, ScreenCaptureManager.SCREENSHOT_SUBDIR)
-        }
+        val contentValues =
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, ScreenCaptureManager.SCREENSHOT_SUBDIR)
+            }
 
         val resolver = context.contentResolver
         val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues) ?: return null
@@ -268,7 +283,11 @@ class ScreenCaptureService : Service() {
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         if (intent?.action == ACTION_STOP) {
             AppLog.i(TAG, "onStartCommand STOP → stopping self")
             stopSelf()
@@ -278,8 +297,9 @@ class ScreenCaptureService : Service() {
             return startPrivdPath()
         }
 
-        val resultCode = intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
-            ?: Activity.RESULT_CANCELED
+        val resultCode =
+            intent?.getIntExtra("RESULT_CODE", Activity.RESULT_CANCELED)
+                ?: Activity.RESULT_CANCELED
         val data: Intent? = intent?.getParcelableExtra("DATA", Intent::class.java)
         AppLog.i(TAG, "onStartCommand resultCode=$resultCode")
 
@@ -299,8 +319,10 @@ class ScreenCaptureService : Service() {
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
 
             val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-            val secondaryDisplay = displayManager.getDisplays()
-                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+            val secondaryDisplay =
+                displayManager
+                    .getDisplays()
+                    .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
 
             if (secondaryDisplay == null) {
                 AppLog.e(TAG, "No secondary display found!")
@@ -342,14 +364,19 @@ class ScreenCaptureService : Service() {
                     AppLog.d(TAG, "VirtualDisplay surface reattached for master after show()")
                 } else {
                     try {
-                        val vd = mediaProjection?.createVirtualDisplay(
-                            "ScreenCapture-Master",
-                            srcWidth, srcHeight, dpi,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                            activeSurface, null, null
-                        )
+                        val vd =
+                            mediaProjection?.createVirtualDisplay(
+                                "ScreenCapture-Master",
+                                srcWidth,
+                                srcHeight,
+                                dpi,
+                                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                                activeSurface,
+                                null,
+                                null,
+                            )
                         mirrorVirtualDisplay = vd
-                        AppLog.i(TAG, "VirtualDisplay created for master ${srcWidth}x${srcHeight} dpi=$dpi")
+                        AppLog.i(TAG, "VirtualDisplay created for master ${srcWidth}x$srcHeight dpi=$dpi")
                     } catch (e: Exception) {
                         AppLog.e(TAG, "Exception creating VirtualDisplay for master", e)
                     }
@@ -379,13 +406,14 @@ class ScreenCaptureService : Service() {
                     val secBounds = secWindowMetrics.bounds
                     val secWidth = secBounds.width().toFloat()
                     val secHeight = secBounds.height().toFloat()
-                    val defaultCutout = ScreenCutout.createDefault(
-                        srcPixelWidth = srcWidth.toFloat(),
-                        srcPixelHeight = srcHeight.toFloat(),
-                        bottomPixelWidth = secWidth,
-                        bottomPixelHeight = secHeight
-                    )
-                    AppLog.i(TAG, "onStartCommand: cutout list is empty, creating default cutout size=${secWidth}x${secHeight}")
+                    val defaultCutout =
+                        ScreenCutout.createDefault(
+                            srcPixelWidth = srcWidth.toFloat(),
+                            srcPixelHeight = srcHeight.toFloat(),
+                            bottomPixelWidth = secWidth,
+                            bottomPixelHeight = secHeight,
+                        )
+                    AppLog.i(TAG, "onStartCommand: cutout list is empty, creating default cutout size=${secWidth}x$secHeight")
                     MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
                 }
                 MirrorViewportController.restoreFromLayout()
@@ -405,11 +433,13 @@ class ScreenCaptureService : Service() {
         val channel = NotificationChannel(channelId, "Screen Mirroring", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
-        val notification = Notification.Builder(this, channelId)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_mirroring_active))
-            .setSmallIcon(android.R.drawable.ic_menu_view)
-            .build()
+        val notification =
+            Notification
+                .Builder(this, channelId)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(getString(R.string.notification_mirroring_active))
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .build()
 
         startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
     }
@@ -419,11 +449,13 @@ class ScreenCaptureService : Service() {
         val channel = NotificationChannel(channelId, "Screen Mirroring", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
 
-        val notification = Notification.Builder(this, channelId)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_mirroring_active))
-            .setSmallIcon(android.R.drawable.ic_menu_view)
-            .build()
+        val notification =
+            Notification
+                .Builder(this, channelId)
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(getString(R.string.notification_mirroring_active))
+                .setSmallIcon(android.R.drawable.ic_menu_view)
+                .build()
 
         startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
     }
@@ -442,8 +474,10 @@ class ScreenCaptureService : Service() {
         startForegroundNotificationConnectedDevice()
 
         val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        val secondaryDisplay = displayManager.getDisplays()
-            .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
+        val secondaryDisplay =
+            displayManager
+                .getDisplays()
+                .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
         if (secondaryDisplay == null) {
             AppLog.e(TAG, "startPrivdPath: no secondary display")
             stopSelf()
@@ -484,13 +518,14 @@ class ScreenCaptureService : Service() {
                 val secBounds = secWindowMetrics.bounds
                 val secWidth = secBounds.width().toFloat()
                 val secHeight = secBounds.height().toFloat()
-                val defaultCutout = ScreenCutout.createDefault(
-                    srcPixelWidth = srcWidth.toFloat(),
-                    srcPixelHeight = srcHeight.toFloat(),
-                    bottomPixelWidth = secWidth,
-                    bottomPixelHeight = secHeight
-                )
-                AppLog.i(TAG, "startPrivdPath: cutout list is empty, creating default cutout size=${secWidth}x${secHeight}")
+                val defaultCutout =
+                    ScreenCutout.createDefault(
+                        srcPixelWidth = srcWidth.toFloat(),
+                        srcPixelHeight = srcHeight.toFloat(),
+                        bottomPixelWidth = secWidth,
+                        bottomPixelHeight = secHeight,
+                    )
+                AppLog.i(TAG, "startPrivdPath: cutout list is empty, creating default cutout size=${secWidth}x$secHeight")
                 MacroPadState.updateLayout(layout.copy(mirrorCutouts = listOf(defaultCutout)))
             }
             MirrorViewportController.restoreFromLayout()
@@ -562,9 +597,10 @@ class ScreenCaptureService : Service() {
 
         val options = ActivityOptions.makeBasic()
         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-        val intent = Intent(this, CaptureRequestActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-        }
+        val intent =
+            Intent(this, CaptureRequestActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            }
         startActivity(intent, options.toBundle())
         stopSelf()
     }
@@ -579,13 +615,17 @@ class ScreenCaptureService : Service() {
         val userLeaving = AppStateManager.isUserLeaving.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
 
-        val shouldShow = capturing && validScreen &&
-            !filePickerOpen && !editorActive &&
-            (!ambientActive || ambientPreviewActive) &&
-            !userLeaving &&
-            !recordingRequested
+        val shouldShow =
+            capturing && validScreen &&
+                !filePickerOpen && !editorActive &&
+                (!ambientActive || ambientPreviewActive) &&
+                !userLeaving &&
+                !recordingRequested
 
-        AppLog.d(TAG, "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested)")
+        AppLog.d(
+            TAG,
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested)",
+        )
         return shouldShow
     }
 

@@ -33,17 +33,21 @@ class SwipeGestureProcessor(
         containerWidth: Float = 0f,
     ) {
         onTouchingChanged(true)
-        val inQuickMenuBarZoneX = if (quickMenuBarZoneWidthPx != null && containerWidth > 0f) {
-            val center = containerWidth / 2f
-            pointerX >= center - quickMenuBarZoneWidthPx / 2f && pointerX <= center + quickMenuBarZoneWidthPx / 2f
-        } else {
-            true
-        }
-        val nearEdge = (if (overlayAtBottom) {
-            pointerY >= containerHeight - edgeZonePx
-        } else {
-            pointerY <= edgeZonePx
-        }) && inQuickMenuBarZoneX
+        val inQuickMenuBarZoneX =
+            if (quickMenuBarZoneWidthPx != null && containerWidth > 0f) {
+                val center = containerWidth / 2f
+                pointerX >= center - quickMenuBarZoneWidthPx / 2f && pointerX <= center + quickMenuBarZoneWidthPx / 2f
+            } else {
+                true
+            }
+        val nearEdge =
+            (
+                if (overlayAtBottom) {
+                    pointerY >= containerHeight - edgeZonePx
+                } else {
+                    pointerY <= edgeZonePx
+                }
+            ) && inQuickMenuBarZoneX
         swipeStartY = if (nearEdge) pointerY else Float.NaN
         swipeTriggered = false
     }
@@ -51,11 +55,12 @@ class SwipeGestureProcessor(
     /** Call on every Move event with the first pointer's Y. */
     fun onMove(pointerY: Float) {
         if (!swipeStartY.isNaN() && !swipeTriggered) {
-            val delta = if (overlayAtBottom) {
-                swipeStartY - pointerY
-            } else {
-                pointerY - swipeStartY
-            }
+            val delta =
+                if (overlayAtBottom) {
+                    swipeStartY - pointerY
+                } else {
+                    pointerY - swipeStartY
+                }
             if (delta >= swipeThresholdPx) {
                 AppLog.d(TAG, "edge swipe detected (delta=${delta.toInt()}px, bottom=$overlayAtBottom)")
                 onEdgeSwipe()

@@ -28,7 +28,7 @@ class DirectPrivdMirrorSession(
     suspend fun start(): Boolean {
         if (_state.value != State.IDLE) return _state.value == State.RUNNING
         _state.value = State.STARTING
-        AppLog.i(TAG, "start() direct app surface ${width}x${height}")
+        AppLog.i(TAG, "start() direct app surface ${width}x$height")
 
         val ok = PrivdClient.startDirectMirror(width, height)
         if (!ok) {

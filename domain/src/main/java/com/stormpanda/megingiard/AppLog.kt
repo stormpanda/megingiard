@@ -18,32 +18,50 @@ private const val APPLOG_TAG_PREFIX = "Mgnrd"
  * easily filterable in logcat with `tag:Mgnrd`.
  */
 object AppLog {
-
     enum class Level { VERBOSE, DEBUG, INFO, WARN, ERROR, NONE }
 
     @Volatile var level: Level = Level.DEBUG
 
-    fun v(tag: String, msg: String) {
+    fun v(
+        tag: String,
+        msg: String,
+    ) {
         if (level <= Level.VERBOSE) Log.v("$APPLOG_TAG_PREFIX.$tag", msg)
     }
 
-    fun d(tag: String, msg: String) {
+    fun d(
+        tag: String,
+        msg: String,
+    ) {
         if (level <= Level.DEBUG) Log.d("$APPLOG_TAG_PREFIX.$tag", msg)
     }
 
-    fun i(tag: String, msg: String) {
+    fun i(
+        tag: String,
+        msg: String,
+    ) {
         if (level <= Level.INFO) Log.i("$APPLOG_TAG_PREFIX.$tag", msg)
     }
 
-    fun w(tag: String, msg: String) {
+    fun w(
+        tag: String,
+        msg: String,
+    ) {
         if (level <= Level.WARN) Log.w("$APPLOG_TAG_PREFIX.$tag", msg)
     }
 
-    fun e(tag: String, msg: String) {
+    fun e(
+        tag: String,
+        msg: String,
+    ) {
         if (level <= Level.ERROR) Log.e("$APPLOG_TAG_PREFIX.$tag", msg)
     }
 
-    fun e(tag: String, msg: String, tr: Throwable) {
+    fun e(
+        tag: String,
+        msg: String,
+        tr: Throwable,
+    ) {
         if (level <= Level.ERROR) Log.e("$APPLOG_TAG_PREFIX.$tag", msg, tr)
     }
 }

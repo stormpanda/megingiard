@@ -2,30 +2,32 @@ package com.stormpanda.megingiard.macropad
 
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
-import kotlin.math.PI
-import kotlin.math.atan2
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.PI
+import kotlin.math.atan2
 
 private const val TAG = "GamepadRecordingManager"
 
 // Full-deflection canonical directions for each of the 8 joystick octants.
 // Index matches joystickOctant(): 0=left, 1=up-left, 2=up, 3=up-right,
 // 4=right, 5=down-right, 6=down, 7=down-left.
-private val OCTANT_FULL_DEFLECTION: Array<Pair<Float, Float>> = arrayOf(
-    -1f to  0f,  // 0: left
-    -1f to -1f,  // 1: up-left
-     0f to -1f,  // 2: up
-     1f to -1f,  // 3: up-right
-     1f to  0f,  // 4: right
-     1f to  1f,  // 5: down-right
-     0f to  1f,  // 6: down
-    -1f to  1f,  // 7: down-left
-)
+private val OCTANT_FULL_DEFLECTION: Array<Pair<Float, Float>> =
+    arrayOf(
+        -1f to 0f, // 0: left
+        -1f to -1f, // 1: up-left
+        0f to -1f, // 2: up
+        1f to -1f, // 3: up-right
+        1f to 0f, // 4: right
+        1f to 1f, // 5: down-right
+        0f to 1f, // 6: down
+        -1f to 1f, // 7: down-left
+    )
 
 sealed interface GamepadRecordingState {
     data object Idle : GamepadRecordingState
+
     data class Recording(
         val pressedButtons: Set<Int>,
         val dpadDirectionX: Int,
@@ -35,7 +37,10 @@ sealed interface GamepadRecordingState {
         val rightStickX: Float,
         val rightStickY: Float,
     ) : GamepadRecordingState
-    data class Done(val steps: List<MacroStep>) : GamepadRecordingState
+
+    data class Done(
+        val steps: List<MacroStep>,
+    ) : GamepadRecordingState
 }
 
 private data class JoystickGesture(
@@ -46,7 +51,6 @@ private data class JoystickGesture(
 )
 
 object GamepadRecordingManager {
-
     private val _state = MutableStateFlow<GamepadRecordingState>(GamepadRecordingState.Idle)
     val state: StateFlow<GamepadRecordingState> = _state.asStateFlow()
 
@@ -129,17 +133,21 @@ object GamepadRecordingManager {
         pressedButtons -= code
         val durationMs = (nowMs - startMs).coerceAtLeast(1L)
         val label = GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: "BTN $code"
-        recordedSteps += MacroStep.GamepadButtonTap(
-            startTimeMs = startMs,
-            durationMs = durationMs,
-            btnCode = code,
-            label = label,
-        )
+        recordedSteps +=
+            MacroStep.GamepadButtonTap(
+                startTimeMs = startMs,
+                durationMs = durationMs,
+                btnCode = code,
+                label = label,
+            )
         AppLog.d(TAG, "Button tap code=$code start=$startMs duration=$durationMs")
         updateRecordingState()
     }
 
-    fun setDpad(dirX: Int, dirY: Int) {
+    fun setDpad(
+        dirX: Int,
+        dirY: Int,
+    ) {
         if (_state.value !is GamepadRecordingState.Recording) {
             return
         }
@@ -155,7 +163,11 @@ object GamepadRecordingManager {
      *
      * Returns (0f, 0f) when the stick is at neutral or recording is not active.
      */
-    fun setJoystick(stick: JoystickStick, x: Float, y: Float): Pair<Float, Float> {
+    fun setJoystick(
+        stick: JoystickStick,
+        x: Float,
+        y: Float,
+    ): Pair<Float, Float> {
         if (_state.value !is GamepadRecordingState.Recording) {
             return 0f to 0f
         }
@@ -164,27 +176,30 @@ object GamepadRecordingManager {
             JoystickStick.LEFT -> {
                 leftCurrentX = x.coerceIn(-1f, 1f)
                 leftCurrentY = y.coerceIn(-1f, 1f)
-                leftGesture = updateJoystickGesture(
-                    activeGesture = leftGesture,
-                    stick = JoystickStick.LEFT,
-                    nowMs = nowMs,
-                    currentX = leftCurrentX,
-                    currentY = leftCurrentY,
-                )
+                leftGesture =
+                    updateJoystickGesture(
+                        activeGesture = leftGesture,
+                        stick = JoystickStick.LEFT,
+                        nowMs = nowMs,
+                        currentX = leftCurrentX,
+                        currentY = leftCurrentY,
+                    )
                 // Reflect the snapped (full-deflection) values in the UI state.
                 leftCurrentX = leftGesture?.currentX ?: 0f
                 leftCurrentY = leftGesture?.currentY ?: 0f
             }
+
             JoystickStick.RIGHT -> {
                 rightCurrentX = x.coerceIn(-1f, 1f)
                 rightCurrentY = y.coerceIn(-1f, 1f)
-                rightGesture = updateJoystickGesture(
-                    activeGesture = rightGesture,
-                    stick = JoystickStick.RIGHT,
-                    nowMs = nowMs,
-                    currentX = rightCurrentX,
-                    currentY = rightCurrentY,
-                )
+                rightGesture =
+                    updateJoystickGesture(
+                        activeGesture = rightGesture,
+                        stick = JoystickStick.RIGHT,
+                        nowMs = nowMs,
+                        currentX = rightCurrentX,
+                        currentY = rightCurrentY,
+                    )
                 // Reflect the snapped (full-deflection) values in the UI state.
                 rightCurrentX = rightGesture?.currentX ?: 0f
                 rightCurrentY = rightGesture?.currentY ?: 0f
@@ -197,7 +212,11 @@ object GamepadRecordingManager {
         }
     }
 
-    private fun updateHat(nowMs: Long, nextX: Int, nextY: Int) {
+    private fun updateHat(
+        nowMs: Long,
+        nextX: Int,
+        nextY: Int,
+    ) {
         val previousX = currentHatX
         val previousY = currentHatY
         if (previousX == nextX && previousY == nextY) {
@@ -216,14 +235,20 @@ object GamepadRecordingManager {
         hatStartMs = if (isNeutral) null else nowMs
     }
 
-    private fun emitHatStep(startMs: Long, endMs: Long, dirX: Int, dirY: Int) {
+    private fun emitHatStep(
+        startMs: Long,
+        endMs: Long,
+        dirX: Int,
+        dirY: Int,
+    ) {
         val durationMs = (endMs - startMs).coerceAtLeast(1L)
-        recordedSteps += MacroStep.DPadTap(
-            startTimeMs = startMs,
-            durationMs = durationMs,
-            dirX = dirX,
-            dirY = dirY,
-        )
+        recordedSteps +=
+            MacroStep.DPadTap(
+                startTimeMs = startMs,
+                durationMs = durationMs,
+                dirX = dirX,
+                dirY = dirY,
+            )
         AppLog.d(TAG, "D-pad step dirX=$dirX dirY=$dirY start=$startMs duration=$durationMs")
     }
 
@@ -258,7 +283,10 @@ object GamepadRecordingManager {
         if (newOctant != activeGesture.octant) {
             // Direction crossed into a new octant — emit the previous segment and start a fresh one.
             emitJoystickStep(stick = stick, gesture = activeGesture, endMs = nowMs)
-            AppLog.d(TAG, "Joystick segment change stick=$stick octant=${activeGesture.octant}→$newOctant snapX=$snapX snapY=$snapY at=$nowMs")
+            AppLog.d(
+                TAG,
+                "Joystick segment change stick=$stick octant=${activeGesture.octant}→$newOctant snapX=$snapX snapY=$snapY at=$nowMs",
+            )
             return JoystickGesture(
                 startTimeMs = nowMs,
                 currentX = snapX,
@@ -271,15 +299,20 @@ object GamepadRecordingManager {
         return activeGesture
     }
 
-    private fun emitJoystickStep(stick: JoystickStick, gesture: JoystickGesture, endMs: Long) {
+    private fun emitJoystickStep(
+        stick: JoystickStick,
+        gesture: JoystickGesture,
+        endMs: Long,
+    ) {
         val durationMs = (endMs - gesture.startTimeMs).coerceAtLeast(1L)
-        recordedSteps += MacroStep.JoystickMove(
-            startTimeMs = gesture.startTimeMs,
-            durationMs = durationMs,
-            stick = stick,
-            x = gesture.currentX,
-            y = gesture.currentY,
-        )
+        recordedSteps +=
+            MacroStep.JoystickMove(
+                startTimeMs = gesture.startTimeMs,
+                durationMs = durationMs,
+                stick = stick,
+                x = gesture.currentX,
+                y = gesture.currentY,
+            )
         AppLog.d(
             TAG,
             "Joystick step stick=$stick start=${gesture.startTimeMs} duration=$durationMs x=${gesture.currentX} y=${gesture.currentY} octant=${gesture.octant}",
@@ -290,12 +323,13 @@ object GamepadRecordingManager {
         pendingButtonDowns.toMap().forEach { (code, startMs) ->
             val durationMs = (stopMs - startMs).coerceAtLeast(1L)
             val label = GamepadKeycodes.PRESETS.firstOrNull { it.code == code }?.label ?: "BTN $code"
-            recordedSteps += MacroStep.GamepadButtonTap(
-                startTimeMs = startMs,
-                durationMs = durationMs,
-                btnCode = code,
-                label = label,
-            )
+            recordedSteps +=
+                MacroStep.GamepadButtonTap(
+                    startTimeMs = startMs,
+                    durationMs = durationMs,
+                    btnCode = code,
+                    label = label,
+                )
             AppLog.d(TAG, "Flushed held button code=$code start=$startMs duration=$durationMs")
         }
         pendingButtonDowns.clear()
@@ -320,19 +354,23 @@ object GamepadRecordingManager {
     }
 
     private fun updateRecordingState() {
-        _state.value = GamepadRecordingState.Recording(
-            pressedButtons = pressedButtons.toSet(),
-            dpadDirectionX = currentHatX,
-            dpadDirectionY = currentHatY,
-            leftStickX = leftCurrentX,
-            leftStickY = leftCurrentY,
-            rightStickX = rightCurrentX,
-            rightStickY = rightCurrentY,
-        )
+        _state.value =
+            GamepadRecordingState.Recording(
+                pressedButtons = pressedButtons.toSet(),
+                dpadDirectionX = currentHatX,
+                dpadDirectionY = currentHatY,
+                leftStickX = leftCurrentX,
+                leftStickY = leftCurrentY,
+                rightStickX = rightCurrentX,
+                rightStickY = rightCurrentY,
+            )
     }
 
     // Maps a continuous (x, y) stick position to one of 8 octants (0–7, clockwise from left).
-    private fun joystickOctant(x: Float, y: Float): Int {
+    private fun joystickOctant(
+        x: Float,
+        y: Float,
+    ): Int {
         val angle = atan2(y.toDouble(), x.toDouble())
         return (((angle + PI) / (PI / 4)).toInt() % 8).coerceIn(0, 7)
     }

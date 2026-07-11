@@ -27,8 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
@@ -78,61 +78,81 @@ fun FullscreenMouseOverlay() {
     }
 
     // Recreate processor when sensitivity changes so the new factor applies immediately.
-    val processor = remember(sensitivity) {
-        AppLog.d(TAG, "creating TouchpadGestureProcessor useMouse=true sensitivity=$sensitivity")
-        TouchpadGestureProcessor(useMouse = true, scope = coroutineScope, sensitivity = sensitivity)
-    }
+    val processor =
+        remember(sensitivity) {
+            AppLog.d(TAG, "creating TouchpadGestureProcessor useMouse=true sensitivity=$sensitivity")
+            TouchpadGestureProcessor(useMouse = true, scope = coroutineScope, sensitivity = sensitivity)
+        }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground.copy(alpha = FMO_BG_ALPHA))
-            .pointerInput(processor) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        val sw = size.width.toFloat()
-                        val sh = size.height.toFloat()
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground.copy(alpha = FMO_BG_ALPHA))
+                .pointerInput(processor) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            val sw = size.width.toFloat()
+                            val sh = size.height.toFloat()
 
-                        for (change in event.changes) {
-                            if (change.isConsumed) continue
-                            val id = change.id.value
-                            when (event.type) {
-                                PointerEventType.Press -> {
-                                    if (!change.previousPressed) {
-                                        processor.onPress(
-                                            id, change.position.x, change.position.y,
-                                            sw, sh, overlayOpen = false
+                            for (change in event.changes) {
+                                if (change.isConsumed) continue
+                                val id = change.id.value
+                                when (event.type) {
+                                    PointerEventType.Press -> {
+                                        if (!change.previousPressed) {
+                                            processor.onPress(
+                                                id,
+                                                change.position.x,
+                                                change.position.y,
+                                                sw,
+                                                sh,
+                                                overlayOpen = false,
+                                            )
+                                            change.consume()
+                                        }
+                                    }
+
+                                    PointerEventType.Move -> {
+                                        val delta = change.positionChange()
+                                        processor.onMove(
+                                            id,
+                                            change.position.x,
+                                            change.position.y,
+                                            delta.x,
+                                            delta.y,
+                                            sw,
+                                            sh,
+                                            overlayOpen = false,
                                         )
                                         change.consume()
                                     }
-                                }
-                                PointerEventType.Move -> {
-                                    val delta = change.positionChange()
-                                    processor.onMove(
-                                        id, change.position.x, change.position.y,
-                                        delta.x, delta.y, sw, sh, overlayOpen = false
-                                    )
-                                    change.consume()
-                                }
-                                PointerEventType.Release -> {
-                                    if (!change.pressed) {
-                                        val allUp = event.changes.none { it.pressed }
-                                        processor.onRelease(
-                                            id, change.position.x, change.position.y,
-                                            sw, sh,
-                                            allPointersUp = allUp,
-                                            tapToClick = tapToClickState.value,
-                                            twoFingerTap = twoFingerTapState.value
-                                        )
-                                        change.consume()
+
+                                    PointerEventType.Release -> {
+                                        if (!change.pressed) {
+                                            val allUp = event.changes.none { it.pressed }
+                                            processor.onRelease(
+                                                id,
+                                                change.position.x,
+                                                change.position.y,
+                                                sw,
+                                                sh,
+                                                allPointersUp = allUp,
+                                                tapToClick = tapToClickState.value,
+                                                twoFingerTap = twoFingerTapState.value,
+                                            )
+                                            change.consume()
+                                        }
+                                    }
+
+                                    else -> {
+                                        Unit
                                     }
                                 }
-                                else -> Unit
                             }
                         }
                     }
-                }
-            }
+                },
     )
 }

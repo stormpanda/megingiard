@@ -13,7 +13,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsManagerTest {
-
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before

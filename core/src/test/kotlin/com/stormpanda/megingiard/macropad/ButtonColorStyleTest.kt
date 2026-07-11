@@ -18,11 +18,11 @@ import org.junit.Test
  *   ([ButtonColorStyle.ACCENTED] for no-mirror, [ButtonColorStyle.NEUTRAL] for mirror).
  */
 class ButtonColorStyleTest {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     // ── ButtonColorStyle enum ─────────────────────────────────────────────
 
@@ -52,24 +52,26 @@ class ButtonColorStyleTest {
 
     @Test
     fun `PadLayout with explicit ACCENTED no-mirror and NEUTRAL mirror survives round-trip`() {
-        val layout = PadLayout(
-            id = "layout-1",
-            name = "Test Layout",
-            buttonColorNoMirror = ButtonColorStyle.ACCENTED,
-            buttonColorMirror = ButtonColorStyle.NEUTRAL,
-        )
+        val layout =
+            PadLayout(
+                id = "layout-1",
+                name = "Test Layout",
+                buttonColorNoMirror = ButtonColorStyle.ACCENTED,
+                buttonColorMirror = ButtonColorStyle.NEUTRAL,
+            )
         val decoded = json.decodeFromString<PadLayout>(json.encodeToString(layout))
         assertEquals(layout, decoded)
     }
 
     @Test
     fun `PadLayout with swapped styles survives round-trip`() {
-        val layout = PadLayout(
-            id = "layout-2",
-            name = "Swapped",
-            buttonColorNoMirror = ButtonColorStyle.NEUTRAL,
-            buttonColorMirror = ButtonColorStyle.ACCENTED,
-        )
+        val layout =
+            PadLayout(
+                id = "layout-2",
+                name = "Swapped",
+                buttonColorNoMirror = ButtonColorStyle.NEUTRAL,
+                buttonColorMirror = ButtonColorStyle.ACCENTED,
+            )
         val decoded = json.decodeFromString<PadLayout>(json.encodeToString(layout))
         assertEquals(layout, decoded)
         assertEquals(ButtonColorStyle.NEUTRAL, decoded.buttonColorNoMirror)
@@ -125,16 +127,17 @@ class ButtonColorStyleTest {
 
     @Test
     fun `PadButton with custom color options survives JSON round-trip`() {
-        val button = PadButton(
-            id = "btn-1",
-            label = "Color Btn",
-            posX = 0.2f,
-            posY = 0.3f,
-            action = PadAction.GamepadButton(1, "A"),
-            buttonTextColor = ColorOption.Custom(0xFF112233.toInt()),
-            buttonBorderColor = ColorOption.Neutral,
-            buttonBgColor = null, // Default layout fallback
-        )
+        val button =
+            PadButton(
+                id = "btn-1",
+                label = "Color Btn",
+                posX = 0.2f,
+                posY = 0.3f,
+                action = PadAction.GamepadButton(1, "A"),
+                buttonTextColor = ColorOption.Custom(0xFF112233.toInt()),
+                buttonBorderColor = ColorOption.Neutral,
+                buttonBgColor = null, // Default layout fallback
+            )
         val decoded = json.decodeFromString<PadButton>(json.encodeToString(button))
         assertEquals(button, decoded)
         assertEquals(ColorOption.Custom(0xFF112233.toInt()), decoded.buttonTextColor)
@@ -144,22 +147,24 @@ class ButtonColorStyleTest {
 
     @Test
     fun `legacy PadButton without color options deserializes with null defaults`() {
-        val buttonWithoutColors = PadButton(
-            id = "btn-old",
-            label = "Old",
-            posX = 0.1f,
-            posY = 0.1f,
-            action = PadAction.GamepadButton(1, "A"),
-        )
+        val buttonWithoutColors =
+            PadButton(
+                id = "btn-old",
+                label = "Old",
+                posX = 0.1f,
+                posY = 0.1f,
+                action = PadAction.GamepadButton(1, "A"),
+            )
         val jsonStr = json.encodeToString(buttonWithoutColors)
-        val legacyJson = jsonStr
-            .replace("\"buttonTextColor\":null,", "")
-            .replace("\"buttonBorderColor\":null,", "")
-            .replace("\"buttonBgColor\":null,", "")
-            .replace(",\"buttonTextColor\":null", "")
-            .replace(",\"buttonBorderColor\":null", "")
-            .replace(",\"invisible\":false", "")
-            .replace("\"invisible\":false,", "")
+        val legacyJson =
+            jsonStr
+                .replace("\"buttonTextColor\":null,", "")
+                .replace("\"buttonBorderColor\":null,", "")
+                .replace("\"buttonBgColor\":null,", "")
+                .replace(",\"buttonTextColor\":null", "")
+                .replace(",\"buttonBorderColor\":null", "")
+                .replace(",\"invisible\":false", "")
+                .replace("\"invisible\":false,", "")
 
         val decoded = json.decodeFromString<PadButton>(legacyJson)
         assertEquals(null, decoded.buttonTextColor)
@@ -168,4 +173,3 @@ class ButtonColorStyleTest {
         assertEquals(false, decoded.invisible)
     }
 }
-

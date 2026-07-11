@@ -5,13 +5,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TouchSampleCompletionTest {
-
     @Test
     fun `single pointer ending in move gets synthetic up`() {
-        val samples = listOf(
-            TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-            TouchSample(offsetMs = 40L, pointerId = 0, action = TouchAction.MOVE, normX = 0.3f, normY = 0.4f),
-        )
+        val samples =
+            listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 40L, pointerId = 0, action = TouchAction.MOVE, normX = 0.3f, normY = 0.4f),
+            )
 
         val completedSamples = completeTouchPathSamples(samples)
 
@@ -26,12 +26,13 @@ class TouchSampleCompletionTest {
 
     @Test
     fun `only unfinished pointers get synthetic up`() {
-        val samples = listOf(
-            TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-            TouchSample(offsetMs = 10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
-            TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-            TouchSample(offsetMs = 30L, pointerId = 1, action = TouchAction.MOVE, normX = 0.7f, normY = 0.8f),
-        )
+        val samples =
+            listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 10L, pointerId = 1, action = TouchAction.DOWN, normX = 0.5f, normY = 0.6f),
+                TouchSample(offsetMs = 20L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 30L, pointerId = 1, action = TouchAction.MOVE, normX = 0.7f, normY = 0.8f),
+            )
 
         val completedSamples = completeTouchPathSamples(samples)
 
@@ -47,10 +48,11 @@ class TouchSampleCompletionTest {
 
     @Test
     fun `already terminated pointers are unchanged`() {
-        val samples = listOf(
-            TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-            TouchSample(offsetMs = 30L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
-        )
+        val samples =
+            listOf(
+                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                TouchSample(offsetMs = 30L, pointerId = 0, action = TouchAction.UP, normX = 0.1f, normY = 0.2f),
+            )
 
         val completedSamples = completeTouchPathSamples(samples)
 
@@ -59,21 +61,24 @@ class TouchSampleCompletionTest {
 
     @Test
     fun `compiled touch path includes synthetic up`() {
-        val completedSamples = completeTouchPathSamples(
-            listOf(
-                TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
-                TouchSample(offsetMs = 30L, pointerId = 0, action = TouchAction.MOVE, normX = 0.3f, normY = 0.4f),
+        val completedSamples =
+            completeTouchPathSamples(
+                listOf(
+                    TouchSample(offsetMs = 0L, pointerId = 0, action = TouchAction.DOWN, normX = 0.1f, normY = 0.2f),
+                    TouchSample(offsetMs = 30L, pointerId = 0, action = TouchAction.MOVE, normX = 0.3f, normY = 0.4f),
+                ),
             )
-        )
-        val step = MacroStep.TouchPath(
-            startTimeMs = 100L,
-            durationMs = completedSamples.maxOf { it.offsetMs },
-            samples = completedSamples,
-        )
+        val step =
+            MacroStep.TouchPath(
+                startTimeMs = 100L,
+                durationMs = completedSamples.maxOf { it.offsetMs },
+                samples = completedSamples,
+            )
 
-        val events = buildMacroEventList(
-            Macro(id = "test", name = "test", steps = listOf(step))
-        )
+        val events =
+            buildMacroEventList(
+                Macro(id = "test", name = "test", steps = listOf(step)),
+            )
 
         assertEquals(3, events.size)
         assertEquals(MacroEventType.TOUCH_UP, events.last().type)

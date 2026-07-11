@@ -14,9 +14,19 @@ package com.stormpanda.megingiard.input
  * events are never dropped.
  */
 internal sealed class MouseCommand {
-    data class Button(val side: Char, val down: Boolean) : MouseCommand()
-    data class Move(val dx: Int, val dy: Int) : MouseCommand()
-    data class Wheel(val delta: Int) : MouseCommand()
+    data class Button(
+        val side: Char,
+        val down: Boolean,
+    ) : MouseCommand()
+
+    data class Move(
+        val dx: Int,
+        val dy: Int,
+    ) : MouseCommand()
+
+    data class Wheel(
+        val delta: Int,
+    ) : MouseCommand()
 }
 
 internal object ShellMouseInjector : NativeBinaryInjector<MouseCommand>(
@@ -27,16 +37,21 @@ internal object ShellMouseInjector : NativeBinaryInjector<MouseCommand>(
 
     override fun isCoalescible(cmd: MouseCommand): Boolean = cmd is MouseCommand.Move
 
-    override fun formatCommand(cmd: MouseCommand): String = when (cmd) {
-        is MouseCommand.Button -> "MB ${cmd.side} ${if (cmd.down) 'D' else 'U'}\n"
-        is MouseCommand.Move   -> "MM ${cmd.dx} ${cmd.dy}\n"
-        is MouseCommand.Wheel  -> "MW ${cmd.delta}\n"
-    }
+    override fun formatCommand(cmd: MouseCommand): String =
+        when (cmd) {
+            is MouseCommand.Button -> "MB ${cmd.side} ${if (cmd.down) 'D' else 'U'}\n"
+            is MouseCommand.Move -> "MM ${cmd.dx} ${cmd.dy}\n"
+            is MouseCommand.Wheel -> "MW ${cmd.delta}\n"
+        }
 
     fun buttonDown(side: Char) = enqueue(MouseCommand.Button(side = side.uppercaseChar(), down = true))
-    fun buttonUp(side: Char)   = enqueue(MouseCommand.Button(side = side.uppercaseChar(), down = false))
 
-    fun moveMouse(dx: Int, dy: Int) {
+    fun buttonUp(side: Char) = enqueue(MouseCommand.Button(side = side.uppercaseChar(), down = false))
+
+    fun moveMouse(
+        dx: Int,
+        dy: Int,
+    ) {
         if (dx == 0 && dy == 0) return
         enqueue(MouseCommand.Move(dx = dx, dy = dy))
     }

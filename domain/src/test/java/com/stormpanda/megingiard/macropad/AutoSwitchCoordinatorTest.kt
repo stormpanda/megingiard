@@ -18,7 +18,6 @@ import java.util.UUID
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AutoSwitchCoordinatorTest {
-
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var profile1: PadProfile
@@ -32,26 +31,28 @@ class AutoSwitchCoordinatorTest {
         // Setup mock profiles with app mappings
         val p1Id = UUID.randomUUID().toString()
         val l1Id = UUID.randomUUID().toString()
-        profile1 = PadProfile(
-            id = p1Id,
-            name = "Retro Gaming",
-            layouts = listOf(PadLayout(id = l1Id, name = "Default")),
-            activeLayoutId = l1Id,
-            associatedPackage = "com.retroarch"
-        )
+        profile1 =
+            PadProfile(
+                id = p1Id,
+                name = "Retro Gaming",
+                layouts = listOf(PadLayout(id = l1Id, name = "Default")),
+                activeLayoutId = l1Id,
+                associatedPackage = "com.retroarch",
+            )
 
         val p2Id = UUID.randomUUID().toString()
         val l2Id = UUID.randomUUID().toString()
-        profile2 = PadProfile(
-            id = p2Id,
-            name = "3DS Emu",
-            layouts = listOf(PadLayout(id = l2Id, name = "Default")),
-            activeLayoutId = l2Id,
-            associatedPackage = "com.citra.emu"
-        )
+        profile2 =
+            PadProfile(
+                id = p2Id,
+                name = "3DS Emu",
+                layouts = listOf(PadLayout(id = l2Id, name = "Default")),
+                activeLayoutId = l2Id,
+                associatedPackage = "com.citra.emu",
+            )
 
         MacroPadState.loadFrom(listOf(profile1, profile2), p1Id)
-        
+
         // Enable auto-switch settings for test runs
         SettingsManager.setAutoSwitchProfiles(true)
     }

@@ -39,13 +39,18 @@ object MacroPadSettings {
     private lateinit var scope: CoroutineScope
 
     /** Receives save-trigger signals; debounced collector writes to DataStore. */
-    private val _macroPadSaveRequests = MutableSharedFlow<Unit>(
-        replay = 0,
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    private val _macroPadSaveRequests =
+        MutableSharedFlow<Unit>(
+            replay = 0,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
-    private val macropadJson = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val macropadJson =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     private var lastLoadedProfilesJson: String? = null
     private var lastLoadedActiveProfileId: String? = null
@@ -61,22 +66,27 @@ object MacroPadSettings {
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
     private val _privdShowAdbPrompt = MutableStateFlow(true)
+
     /** Whether to show a modal prompt on app start if reconnection to the daemon fails. */
     val privdShowAdbPrompt: StateFlow<Boolean> = _privdShowAdbPrompt.asStateFlow()
 
+    private val _deadzoneLeft = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
 
-    private val _deadzoneLeft  = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
     /** Dead zone radius for the left analog stick during physical gamepad recording (0.0–1.0). */
     val deadzoneLeft: StateFlow<Float> = _deadzoneLeft.asStateFlow()
 
     private val _deadzoneRight = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
+
     /** Dead zone radius for the right analog stick during physical gamepad recording (0.0–1.0). */
     val deadzoneRight: StateFlow<Float> = _deadzoneRight.asStateFlow()
 
     private val _recentColors = MutableStateFlow<List<Int>>(emptyList())
     val recentColors: StateFlow<List<Int>> = _recentColors.asStateFlow()
 
-    internal fun init(dataStore: DataStore<Preferences>, scope: CoroutineScope) {
+    internal fun init(
+        dataStore: DataStore<Preferences>,
+        scope: CoroutineScope,
+    ) {
         this.dataStore = dataStore
         this.scope = scope
 
@@ -94,15 +104,16 @@ object MacroPadSettings {
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
         _privdShowAdbPrompt.value = prefs[KEY_PRIVD_SHOW_ADB_PROMPT] ?: true
-        _deadzoneLeft.value  = prefs[KEY_PRIVD_DEADZONE_LEFT]  ?: PRIVD_DEFAULT_DEADZONE
+        _deadzoneLeft.value = prefs[KEY_PRIVD_DEADZONE_LEFT] ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
 
         val colorsStr = prefs[KEY_MACROPAD_RECENT_COLORS] ?: ""
-        _recentColors.value = if (colorsStr.isBlank()) {
-            emptyList()
-        } else {
-            colorsStr.split(",").mapNotNull { it.toIntOrNull() }
-        }
+        _recentColors.value =
+            if (colorsStr.isBlank()) {
+                emptyList()
+            } else {
+                colorsStr.split(",").mapNotNull { it.toIntOrNull() }
+            }
 
         // MacroPad profiles
         val macropadProfilesJson = prefs[KEY_MACROPAD_PROFILES]
@@ -115,13 +126,14 @@ object MacroPadSettings {
         lastLoadedProfilesJson = macropadProfilesJson
         lastLoadedActiveProfileId = activeId
 
-        val profiles = if (macropadProfilesJson != null) {
-            runCatching {
-                macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
-            }.getOrElse { emptyList() }
-        } else {
-            emptyList()
-        }
+        val profiles =
+            if (macropadProfilesJson != null) {
+                runCatching {
+                    macropadJson.decodeFromString<List<PadProfile>>(macropadProfilesJson)
+                }.getOrElse { emptyList() }
+            } else {
+                emptyList()
+            }
         MacroPadState.loadFrom(profiles, activeId)
     }
 
@@ -180,7 +192,6 @@ object MacroPadSettings {
             }
         }
     }
-
 
     /**
      * Schedules a MacroPad data persist. Rapid consecutive calls are coalesced — only the last

@@ -27,7 +27,6 @@ import kotlin.math.sqrt
  * AppLog.d() is also a no-op at the default log level (WARN).
  */
 class MacroPadHapticCallbackTest {
-
     // ─────────────────────────────────────────────────────────────────────────
     // Callback capture type
     // ─────────────────────────────────────────────────────────────────────────
@@ -68,19 +67,21 @@ class MacroPadHapticCallbackTest {
     )
 
     /** Profile with all devices enabled so hit-test is never blocked. */
-    private val enabledProfile = PadProfile(
-        id = "p",
-        name = "Test Profile",
-        enableKeyboard = true,
-        enableGamepad = true,
-        enableMouse = true,
-    )
+    private val enabledProfile =
+        PadProfile(
+            id = "p",
+            name = "Test Profile",
+            enableKeyboard = true,
+            enableGamepad = true,
+            enableMouse = true,
+        )
 
     private fun captureEngine(): Pair<MutableList<HapticCall>, MacroPadHitTestEngine> {
         val captured = mutableListOf<HapticCall>()
-        val engine = MacroPadHitTestEngine(dummyDpToPx) { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
-            captured += HapticCall(buttonId, strength, customDurationMs, customAmplitude, magnitude)
-        }
+        val engine =
+            MacroPadHitTestEngine(dummyDpToPx) { buttonId, strength, customDurationMs, customAmplitude, magnitude ->
+                captured += HapticCall(buttonId, strength, customDurationMs, customAmplitude, magnitude)
+            }
         return captured to engine
     }
 
@@ -119,16 +120,17 @@ class MacroPadHapticCallbackTest {
         val keyboardDisabledProfile = enabledProfile.copy(enableKeyboard = false)
         val button = centeredButton(PadAction.KeyboardKey(keycode = 28, label = "Enter"), HapticStrength.LIGHT)
 
-        val disabledButton = engine.onPress(
-            pointerId = 0L,
-            px = 500f,
-            py = 500f,
-            canvasW = canvasW,
-            canvasH = canvasH,
-            buttons = listOf(button),
-            profile = keyboardDisabledProfile,
-            isPeekActive = false,
-        )
+        val disabledButton =
+            engine.onPress(
+                pointerId = 0L,
+                px = 500f,
+                py = 500f,
+                canvasW = canvasW,
+                canvasH = canvasH,
+                buttons = listOf(button),
+                profile = keyboardDisabledProfile,
+                isPeekActive = false,
+            )
 
         assertEquals("btn-test", disabledButton?.id)
         assertTrue("callback must not fire when required device is disabled", !called)
@@ -141,12 +143,13 @@ class MacroPadHapticCallbackTest {
     @Test
     fun `button press with CUSTOM strength forwards custom duration and amplitude`() {
         val (captured, engine) = captureEngine()
-        val button = centeredButton(
-            action           = PadAction.KeyboardKey(keycode = 28, label = "Enter"),
-            strength         = HapticStrength.CUSTOM,
-            customDurationMs = 42,
-            customAmplitude  = 75,
-        )
+        val button =
+            centeredButton(
+                action = PadAction.KeyboardKey(keycode = 28, label = "Enter"),
+                strength = HapticStrength.CUSTOM,
+                customDurationMs = 42,
+                customAmplitude = 75,
+            )
 
         engine.onPress(0L, 500f, 500f, canvasW, canvasH, listOf(button), enabledProfile, false)
 
@@ -227,4 +230,3 @@ class MacroPadHapticCallbackTest {
         assertTrue("callback must not fire when hapticStrength is OFF", !called)
     }
 }
-

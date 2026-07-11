@@ -1,9 +1,9 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
-import kotlin.random.Random
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.random.Random
 
 private const val TOUCH_PATH_SYNTHETIC_UP_DELAY_MS = 10L
 
@@ -27,7 +27,6 @@ enum class JoystickStick { LEFT, RIGHT }
  */
 @Serializable
 sealed class MacroStep {
-
     abstract val startTimeMs: Long
     abstract val durationMs: Long
 
@@ -131,7 +130,11 @@ sealed class MacroStep {
  * [x] and [y] are normalised axis values in [−1.0, 1.0].
  */
 @Serializable
-data class PathSample(val offsetMs: Long, val x: Float, val y: Float)
+data class PathSample(
+    val offsetMs: Long,
+    val x: Float,
+    val y: Float,
+)
 
 /**
  * A single touch interaction sample within a [MacroStep.TouchPath].
@@ -158,13 +161,14 @@ fun completeTouchPathSamples(samples: List<TouchSample>): List<TouchSample> {
     for ((pointerId, pointerSamples) in samplesByPointer) {
         val lastSample = pointerSamples.last()
         if (lastSample.action != TouchAction.UP) {
-            completedSamples += TouchSample(
-                offsetMs = lastSample.offsetMs + TOUCH_PATH_SYNTHETIC_UP_DELAY_MS,
-                pointerId = pointerId,
-                action = TouchAction.UP,
-                normX = lastSample.normX,
-                normY = lastSample.normY,
-            )
+            completedSamples +=
+                TouchSample(
+                    offsetMs = lastSample.offsetMs + TOUCH_PATH_SYNTHETIC_UP_DELAY_MS,
+                    pointerId = pointerId,
+                    action = TouchAction.UP,
+                    normX = lastSample.normX,
+                    normY = lastSample.normY,
+                )
         }
     }
     return completedSamples.sortedBy { it.offsetMs }
@@ -178,28 +182,32 @@ fun completeTouchPathSamples(samples: List<TouchSample>): List<TouchSample> {
 fun List<MacroStep>.totalDurationMs(): Long = maxOfOrNull { it.endTimeMs() } ?: 0L
 
 /** Returns a copy of this step with [startTimeMs] replaced by [newStartTimeMs]. */
-fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep = when (this) {
-    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.JoystickMove     -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.JoystickPath     -> copy(startTimeMs = newStartTimeMs)
-    is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs)
-}
+fun MacroStep.withStartTime(newStartTimeMs: Long): MacroStep =
+    when (this) {
+        is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.JoystickMove -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.DPadTap -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.JoystickPath -> copy(startTimeMs = newStartTimeMs)
+        is MacroStep.TouchPath -> copy(startTimeMs = newStartTimeMs)
+    }
 
 /** Returns a copy of this step with [startTimeMs] and [durationMs] replaced by [newStartTimeMs] and [newDurationMs]. */
-fun MacroStep.withTiming(newStartTimeMs: Long, newDurationMs: Long): MacroStep = when (this) {
-    is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
-    is MacroStep.JoystickMove     -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
-    is MacroStep.DPadTap          -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
-    is MacroStep.TouchTap         -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
-    is MacroStep.JoystickPath     -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
-    is MacroStep.TouchPath        -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
-}
+fun MacroStep.withTiming(
+    newStartTimeMs: Long,
+    newDurationMs: Long,
+): MacroStep =
+    when (this) {
+        is MacroStep.GamepadButtonTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.JoystickMove -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.DPadTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.TouchTap -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.JoystickPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+        is MacroStep.TouchPath -> copy(startTimeMs = newStartTimeMs, durationMs = newDurationMs)
+    }
 
 /** Returns a new list where every step's start time is shifted by [offsetMs]. */
-fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> =
-    map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
+fun List<MacroStep>.offsetBy(offsetMs: Long): List<MacroStep> = map { step -> step.withStartTime(step.startTimeMs + offsetMs) }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Macro — a named sequence of timed steps
@@ -235,8 +243,10 @@ fun Macro.randomized(random: Random = Random): Macro {
     val maxOffset = randomizeTimingRangeMs.toLong()
 
     // Sort steps by original startTimeMs to compute chronological delay propagation.
-    val sortedWithIndex = steps.mapIndexed { index, step -> Triple(index, step.startTimeMs, step) }
-        .sortedBy { it.second }
+    val sortedWithIndex =
+        steps
+            .mapIndexed { index, step -> Triple(index, step.startTimeMs, step) }
+            .sortedBy { it.second }
 
     // Map of original index to the new randomized step
     val randomizedMap = mutableMapOf<Int, MacroStep>()
@@ -245,27 +255,33 @@ fun Macro.randomized(random: Random = Random): Macro {
     val processedDelays = mutableListOf<Pair<Long, Long>>()
 
     for ((index, originalStart, step) in sortedWithIndex) {
-        val cumulativeDelay = processedDelays
-            .filter { it.first < originalStart }
-            .sumOf { it.second }
+        val cumulativeDelay =
+            processedDelays
+                .filter { it.first < originalStart }
+                .sumOf { it.second }
 
-        val isExcluded = when (step) {
-            is MacroStep.JoystickMove,
-            is MacroStep.JoystickPath,
-            is MacroStep.TouchPath -> true
-            else -> false
-        }
+        val isExcluded =
+            when (step) {
+                is MacroStep.JoystickMove,
+                is MacroStep.JoystickPath,
+                is MacroStep.TouchPath,
+                -> true
 
-        val offsetDuration = if (!isExcluded && maxOffset > 0) {
-            random.nextLong(0, maxOffset + 1)
-        } else {
-            0L
-        }
+                else -> false
+            }
 
-        val newStep = step.withTiming(
-            newStartTimeMs = originalStart + cumulativeDelay,
-            newDurationMs = step.durationMs + offsetDuration
-        )
+        val offsetDuration =
+            if (!isExcluded && maxOffset > 0) {
+                random.nextLong(0, maxOffset + 1)
+            } else {
+                0L
+            }
+
+        val newStep =
+            step.withTiming(
+                newStartTimeMs = originalStart + cumulativeDelay,
+                newDurationMs = step.durationMs + offsetDuration,
+            )
 
         randomizedMap[index] = newStep
         processedDelays.add(Pair(originalStart, offsetDuration))

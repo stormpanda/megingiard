@@ -11,4 +11,8 @@ package com.stormpanda.megingiard.privd
  * [code] is the event code (BTN_* or ABS_*).
  * [value] is the event value (1/0 for keys, raw int16 for axes).
  */
-data class EvdevEvent(val type: Int, val code: Int, val value: Int)
+data class EvdevEvent(
+    val type: Int,
+    val code: Int,
+    val value: Int,
+)

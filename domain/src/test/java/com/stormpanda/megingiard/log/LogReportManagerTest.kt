@@ -14,7 +14,6 @@ import org.junit.Test
  * Only the pure, JVM-runnable functions are exercised.
  */
 class LogReportManagerTest {
-
     // ── buildReportFilename ───────────────────────────────────────────────────
 
     @Test
@@ -42,12 +41,13 @@ class LogReportManagerTest {
 
     @Test
     fun `buildReportHeader contains all supplied fields`() {
-        val header = LogReportManager.buildReportHeader(
-            appVersion = "0.2.0-SNAPSHOT",
-            deviceModel = "AYN Thor 2",
-            androidVersion = "14",
-            timestamp = "2026-05-18 14:32:00",
-        )
+        val header =
+            LogReportManager.buildReportHeader(
+                appVersion = "0.2.0-SNAPSHOT",
+                deviceModel = "AYN Thor 2",
+                androidVersion = "14",
+                timestamp = "2026-05-18 14:32:00",
+            )
         assertTrue(header.contains("0.2.0-SNAPSHOT"))
         assertTrue(header.contains("AYN Thor 2"))
         assertTrue(header.contains("14"))
@@ -56,35 +56,38 @@ class LogReportManagerTest {
 
     @Test
     fun `buildReportHeader contains section separator`() {
-        val header = LogReportManager.buildReportHeader(
-            appVersion = "1.0",
-            deviceModel = "TestDevice",
-            androidVersion = "13",
-            timestamp = "2026-01-01 00:00:00",
-        )
+        val header =
+            LogReportManager.buildReportHeader(
+                appVersion = "1.0",
+                deviceModel = "TestDevice",
+                androidVersion = "13",
+                timestamp = "2026-01-01 00:00:00",
+            )
         assertTrue(header.contains("==="))
     }
 
     @Test
     fun `buildReportHeader mentions max line count`() {
-        val header = LogReportManager.buildReportHeader(
-            appVersion = "1.0",
-            deviceModel = "TestDevice",
-            androidVersion = "13",
-            timestamp = "2026-01-01 00:00:00",
-        )
+        val header =
+            LogReportManager.buildReportHeader(
+                appVersion = "1.0",
+                deviceModel = "TestDevice",
+                androidVersion = "13",
+                timestamp = "2026-01-01 00:00:00",
+            )
         // Verify it documents the 3000-line cap so it survives future changes
         assertTrue("Header should mention the line limit", header.contains("3000"))
     }
 
     @Test
     fun `buildReportHeader ends with blank line before log body`() {
-        val header = LogReportManager.buildReportHeader(
-            appVersion = "1.0",
-            deviceModel = "TestDevice",
-            androidVersion = "13",
-            timestamp = "2026-01-01 00:00:00",
-        )
+        val header =
+            LogReportManager.buildReportHeader(
+                appVersion = "1.0",
+                deviceModel = "TestDevice",
+                androidVersion = "13",
+                timestamp = "2026-01-01 00:00:00",
+            )
         assertTrue("Header should end with a newline", header.endsWith("\n"))
     }
 
@@ -96,10 +99,11 @@ class LogReportManagerTest {
         val failure = LogReportManager.SaveResult.Failure("oops")
         assertEquals("oops", failure.message)
         // Verify they are different types at compile time via exhaustive when
-        val successLabel = when (success) {
-            is LogReportManager.SaveResult.Success -> "success"
-            is LogReportManager.SaveResult.Failure -> "failure"
-        }
+        val successLabel =
+            when (success) {
+                is LogReportManager.SaveResult.Success -> "success"
+                is LogReportManager.SaveResult.Failure -> "failure"
+            }
         assertEquals("success", successLabel)
     }
 

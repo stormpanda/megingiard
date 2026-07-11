@@ -50,39 +50,42 @@ internal fun InTreeNameInputDialog(
 ) {
     var name by remember { mutableStateOf("") }
     val normalizedName = name.trim()
-    val isDuplicate = existingNames.any { existing ->
-        !existing.equals(currentName?.trim(), ignoreCase = true) &&
-            existing.equals(normalizedName, ignoreCase = true)
-    }
+    val isDuplicate =
+        existingNames.any { existing ->
+            !existing.equals(currentName?.trim(), ignoreCase = true) &&
+                existing.equals(normalizedName, ignoreCase = true)
+        }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val dismissContentDescription = stringResource(R.string.quick_menu_dismiss_dialog)
     Box(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier =
+            Modifier
+                .fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(Color.Black.copy(alpha = PM_NAME_DIALOG_SCRIM_ALPHA))
-                .semantics { contentDescription = dismissContentDescription }
-                .clickable(onClick = onDismiss),
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = PM_NAME_DIALOG_SCRIM_ALPHA))
+                    .semantics { contentDescription = dismissContentDescription }
+                    .clickable(onClick = onDismiss),
         )
         Column(
-            modifier = Modifier
-                .fillMaxWidth(PM_NAME_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(PM_PANEL_CORNER))
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Final)
-                            event.changes.forEach { change ->
-                                if (!change.isConsumed) change.consume()
-                             }
+            modifier =
+                Modifier
+                    .fillMaxWidth(PM_NAME_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(PM_PANEL_CORNER))
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Final)
+                                event.changes.forEach { change ->
+                                    if (!change.isConsumed) change.consume()
+                                }
+                            }
                         }
-                    }
-                }
-                .padding(PM_CONTENT_PADDING),
+                    }.padding(PM_CONTENT_PADDING),
         ) {
             Text(
                 text = title,
@@ -104,12 +107,13 @@ internal fun InTreeNameInputDialog(
                         isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
                     }
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = colors.onSurface,
-                    unfocusedTextColor = colors.onSurface,
-                    focusedBorderColor = colors.accent,
-                    unfocusedBorderColor = colors.controlOverlayBorder,
-                ),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = colors.onSurface,
+                        unfocusedTextColor = colors.onSurface,
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.controlOverlayBorder,
+                    ),
             )
             Spacer(Modifier.height(16.dp))
             Row(

@@ -10,11 +10,11 @@ import org.junit.Test
  * Tests for [ButtonShape] serialization and backward compatibility.
  */
 class ButtonShapeTest {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
 
     @Test
     fun `ICON_ONLY survives JSON round-trip`() {
@@ -30,15 +30,16 @@ class ButtonShapeTest {
 
     @Test
     fun `PadButton with ICON_ONLY shape survives JSON round-trip`() {
-        val button = PadButton(
-            id = "btn-icon-only-1",
-            label = "Icon Button",
-            iconName = "home",
-            posX = 0.5f,
-            posY = 0.5f,
-            buttonShape = ButtonShape.ICON_ONLY,
-            action = PadAction.BackgroundPeek
-        )
+        val button =
+            PadButton(
+                id = "btn-icon-only-1",
+                label = "Icon Button",
+                iconName = "home",
+                posX = 0.5f,
+                posY = 0.5f,
+                buttonShape = ButtonShape.ICON_ONLY,
+                action = PadAction.BackgroundPeek,
+            )
         val encoded = json.encodeToString(button)
         val decoded = json.decodeFromString<PadButton>(encoded)
         assertEquals(button, decoded)

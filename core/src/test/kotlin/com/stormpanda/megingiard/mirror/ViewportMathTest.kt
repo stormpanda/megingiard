@@ -7,7 +7,6 @@ import org.junit.Test
  * Tests for [fitAspectRatio] — letterbox/pillarbox geometry.
  */
 class ViewportMathTest {
-
     @Test
     fun `same aspect ratio returns target dimensions`() {
         val (w, h) = fitAspectRatio(1920, 1080, 1920, 1080)

@@ -8,7 +8,7 @@ fun fitAspectRatio(
     srcWidth: Int,
     srcHeight: Int,
     targetWidth: Int,
-    targetHeight: Int
+    targetHeight: Int,
 ): Pair<Int, Int> {
     val srcRatio = srcWidth.toFloat() / srcHeight.toFloat()
     val targetRatio = targetWidth.toFloat() / targetHeight.toFloat()

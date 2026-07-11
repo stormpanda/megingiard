@@ -65,19 +65,21 @@ internal fun RestoreBackupSelectionDialog(
 
     BackHandler(onBack = onDismiss)
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-            .clickable(onClick = onDismiss),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
+                .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .padding(vertical = 24.dp)
-                .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                .clickable(enabled = true, onClick = {})
-                .padding(GSD_DIALOG_PADDING),
+            modifier =
+                Modifier
+                    .padding(vertical = 24.dp)
+                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .clickable(enabled = true, onClick = {})
+                    .padding(GSD_DIALOG_PADDING),
         ) {
             Text(
                 text = stringResource(R.string.config_restore_dialog_title),
@@ -87,10 +89,11 @@ internal fun RestoreBackupSelectionDialog(
             Spacer(Modifier.height(12.dp))
 
             Column(
-                modifier = Modifier
-                    .weight(1f, fill = false)
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState),
+                modifier =
+                    Modifier
+                        .weight(1f, fill = false)
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState),
             ) {
                 // External file option
                 BackupOptionRow(
@@ -99,7 +102,7 @@ internal fun RestoreBackupSelectionDialog(
                     isSelected = selectedIndex == 0,
                     accentColor = accentColor,
                     colors = colors,
-                    onClick = { selectedIndex = 0 }
+                    onClick = { selectedIndex = 0 },
                 )
 
                 // Internal backups options
@@ -108,20 +111,22 @@ internal fun RestoreBackupSelectionDialog(
                     val layoutsCount = backup.export.profiles.sumOf { it.layouts.size }
                     val macrosCount = backup.export.profiles.sumOf { it.macros.size }
 
-                    val subtitle = stringResource(
-                        R.string.config_restore_option_internal_sub,
-                        profilesCount,
-                        layoutsCount,
-                        macrosCount
-                    )
+                    val subtitle =
+                        stringResource(
+                            R.string.config_restore_option_internal_sub,
+                            profilesCount,
+                            layoutsCount,
+                            macrosCount,
+                        )
 
                     // Format localized weekday, date, and time of backup creation
-                    val formattedTime = remember(backup.timestampMs) {
-                        val instant = Instant.ofEpochMilli(backup.timestampMs)
-                        val dateTime = instant.atZone(ZoneId.systemDefault())
-                        val formatter = DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-                        dateTime.format(formatter)
-                    }
+                    val formattedTime =
+                        remember(backup.timestampMs) {
+                            val instant = Instant.ofEpochMilli(backup.timestampMs)
+                            val dateTime = instant.atZone(ZoneId.systemDefault())
+                            val formatter = DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                            dateTime.format(formatter)
+                        }
 
                     BackupOptionRow(
                         label = formattedTime,
@@ -129,7 +134,7 @@ internal fun RestoreBackupSelectionDialog(
                         isSelected = selectedIndex == index + 1,
                         accentColor = accentColor,
                         colors = colors,
-                        onClick = { selectedIndex = index + 1 }
+                        onClick = { selectedIndex = index + 1 },
                     )
                 }
             }
@@ -174,10 +179,11 @@ private fun BackupOptionRow(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {

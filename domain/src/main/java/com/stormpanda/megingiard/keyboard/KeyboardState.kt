@@ -29,7 +29,6 @@ private const val MODIFIER_HOLD_THRESHOLD_MS = 300L
  * returns the list of modifier keycodes that need a KEY_UP event.
  */
 object KeyboardState {
-
     // -----------------------------------------------------------------------
     // State flows — one per modifier key id
     // -----------------------------------------------------------------------
@@ -37,8 +36,7 @@ object KeyboardState {
     private val _modifiers: MutableMap<String, MutableStateFlow<ModifierState>> = mutableMapOf()
 
     /** Returns the [StateFlow] for the given modifier key [id], creating it lazily. */
-    fun stateFor(id: String): StateFlow<ModifierState> =
-        getOrCreate(id).asStateFlow()
+    fun stateFor(id: String): StateFlow<ModifierState> = getOrCreate(id).asStateFlow()
 
     private fun getOrCreate(id: String): MutableStateFlow<ModifierState> =
         _modifiers.getOrPut(id) { MutableStateFlow(ModifierState.INACTIVE) }
@@ -68,7 +66,10 @@ object KeyboardState {
      *
      * Returns the list of keycodes that need a KEY_UP event injected right now.
      */
-    fun onModifierTouchUp(id: String, keycode: Int): List<Int> {
+    fun onModifierTouchUp(
+        id: String,
+        keycode: Int,
+    ): List<Int> {
         val flow = getOrCreate(id)
         val downTime = touchDownTimes.remove(id) ?: System.currentTimeMillis()
         val duration = System.currentTimeMillis() - downTime
@@ -79,12 +80,14 @@ object KeyboardState {
                 flow.value = ModifierState.INACTIVE
                 if (keycode != 0) listOf(keycode) else emptyList()
             }
+
             ModifierState.STICKY -> {
                 // second tap on an already-sticky modifier cycles back to INACTIVE
                 AppLog.d(TAG, "modifier '$id' STICKY → INACTIVE (second tap)")
                 flow.value = ModifierState.INACTIVE
                 if (keycode != 0) listOf(keycode) else emptyList()
             }
+
             ModifierState.INACTIVE -> {
                 if (duration < MODIFIER_HOLD_THRESHOLD_MS) {
                     // quick tap → sticky
@@ -102,7 +105,10 @@ object KeyboardState {
      * with the finger still on the modifier key. Sets the modifier to [ModifierState.HELD]
      * and returns the keycode to inject as KEY_DOWN immediately.
      */
-    fun onModifierLongPress(id: String, keycode: Int): Int? {
+    fun onModifierLongPress(
+        id: String,
+        keycode: Int,
+    ): Int? {
         val flow = getOrCreate(id)
         if (flow.value == ModifierState.INACTIVE) {
             AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (long-press)")

@@ -59,10 +59,10 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
-import java.util.Locale
-import java.util.UUID
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import java.util.Locale
+import java.util.UUID
 
 private const val TAG = "MacroListEditor"
 
@@ -71,7 +71,7 @@ private const val TAG = "MacroListEditor"
 // ─────────────────────────────────────────────────────────────────────────────
 
 private const val ML_TOP_BAR_HEIGHT = 56
-private const val ML_PADDING        = 16
+private const val ML_PADDING = 16
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MacroListEditor — navigation host (no self-wrapping Dialog)
@@ -95,8 +95,8 @@ internal fun MacroListEditor(
     onDirectEditSave: ((Macro) -> Unit)? = null,
     onDirectEditCancel: (() -> Unit)? = null,
 ) {
-    val colors       = LocalAppColors.current
-    val accentColor  = colors.accent
+    val colors = LocalAppColors.current
+    val accentColor = colors.accent
     val isDirectEdit = initialEditMacroId != null
 
     val profile by MacroPadState.activeProfile.collectAsState()
@@ -132,23 +132,26 @@ internal fun MacroListEditor(
         }
     }
 
-    val defaultName  = stringResource(R.string.macropad_macro_default_name)
+    val defaultName = stringResource(R.string.macropad_macro_default_name)
     val copyNameFormat = stringResource(R.string.macropad_macro_copy_name)
 
     if (editingMacro == null) {
         if (!isDirectEdit) {
             MacroListView(
-                accentColor  = accentColor,
-                macros       = macros,
-                onEditMacro  = { editingMacro = it },
+                accentColor = accentColor,
+                macros = macros,
+                onEditMacro = { editingMacro = it },
                 onDuplicateMacro = { original ->
                     val existingNames = macros.map { it.name }.toSet()
                     val baseName = copyNameFormat.format(original.name)
-                    val copyName = if (baseName !in existingNames) baseName else {
-                        var n = 2
-                        while ("$baseName ($n)" in existingNames) n++
-                        "$baseName ($n)"
-                    }
+                    val copyName =
+                        if (baseName !in existingNames) {
+                            baseName
+                        } else {
+                            var n = 2
+                            while ("$baseName ($n)" in existingNames) n++
+                            "$baseName ($n)"
+                        }
                     MacroPadState.addMacro(original.copy(id = UUID.randomUUID().toString(), name = copyName))
                 },
                 onNewMacro = {
@@ -161,9 +164,9 @@ internal fun MacroListEditor(
         }
     } else {
         MacroTimelineEditor(
-            macro       = editingMacro!!,
+            macro = editingMacro!!,
             accentColor = accentColor,
-            onSave      = { saved ->
+            onSave = { saved ->
                 val isNew = macros.none { it.id == saved.id }
                 if (isNew) {
                     MacroPadState.addMacro(saved)
@@ -193,12 +196,12 @@ internal fun MacroListEditor(
 
 @Composable
 private fun MacroListView(
-    accentColor:      Color,
-    macros:           List<Macro>,
-    onEditMacro:      (Macro) -> Unit,
+    accentColor: Color,
+    macros: List<Macro>,
+    onEditMacro: (Macro) -> Unit,
     onDuplicateMacro: (Macro) -> Unit,
-    onNewMacro:       () -> Unit,
-    onDone:           () -> Unit,
+    onNewMacro: () -> Unit,
+    onDone: () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -209,32 +212,35 @@ private fun MacroListView(
 
     var deletingMacroId by remember { mutableStateOf<String?>(null) }
 
-    val lazyListState   = rememberLazyListState()
-    val latestMacros    by rememberUpdatedState(macros)
+    val lazyListState = rememberLazyListState()
+    val latestMacros by rememberUpdatedState(macros)
 
-    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val fromIdx = from.index
-        val toIdx   = to.index
-        if (fromIdx in latestMacros.indices && toIdx in latestMacros.indices) {
-            val mutable = latestMacros.toMutableList()
-            mutable.add(toIdx, mutable.removeAt(fromIdx))
-            MacroPadState.reorderMacros(mutable)
+    val reorderState =
+        rememberReorderableLazyListState(lazyListState) { from, to ->
+            val fromIdx = from.index
+            val toIdx = to.index
+            if (fromIdx in latestMacros.indices && toIdx in latestMacros.indices) {
+                val mutable = latestMacros.toMutableList()
+                mutable.add(toIdx, mutable.removeAt(fromIdx))
+                MacroPadState.reorderMacros(mutable)
+            }
         }
-    }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground)
-            .blockPointerEvents(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground)
+                .blockPointerEvents(),
     ) {
         // ── Top bar ──────────────────────────────────────────────────────────
         val profile by MacroPadState.activeProfile.collectAsState()
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(ML_TOP_BAR_HEIGHT.dp)
-                .background(colors.surface),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(ML_TOP_BAR_HEIGHT.dp)
+                    .background(colors.surface),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onDone) {
@@ -245,18 +251,19 @@ private fun MacroListView(
                 )
             }
             Text(
-                text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = colors.onSurface)) {
-                        append(stringResource(R.string.macropad_macro_list_title))
-                    }
-                    val name = profile?.name
-                    if (name != null) {
-                        withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
-                            append(" ($name)")
+                text =
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = colors.onSurface)) {
+                            append(stringResource(R.string.macropad_macro_list_title))
                         }
-                    }
-                },
-                style    = MaterialTheme.typography.titleMedium,
+                        val name = profile?.name
+                        if (name != null) {
+                            withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
+                                append(" ($name)")
+                            }
+                        }
+                    },
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onNewMacro) {
@@ -278,30 +285,31 @@ private fun MacroListView(
 
         // ── Flat macro list ──────────────────────────────────────────────────
         LazyColumn(
-            state    = lazyListState,
+            state = lazyListState,
             modifier = Modifier.fillMaxSize().background(colors.surface),
         ) {
             item(key = "section_list") {
                 Text(
-                    text     = stringResource(R.string.macropad_macro_section_list).uppercase(Locale.ROOT),
-                    color    = colors.sectionHeaderColor,
-                    style    = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.surfaceVariant)
-                        .padding(horizontal = ML_PADDING.dp, vertical = 10.dp),
+                    text = stringResource(R.string.macropad_macro_section_list).uppercase(Locale.ROOT),
+                    color = colors.sectionHeaderColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.surfaceVariant)
+                            .padding(horizontal = ML_PADDING.dp, vertical = 10.dp),
                 )
             }
             itemsIndexed(macros, key = { _, m -> m.id }) { _, macro ->
                 ReorderableItem(reorderState, key = macro.id) { isDragging ->
                     MacroRow(
-                        macro              = macro,
-                        accentColor        = accentColor,
-                        isDragging         = isDragging,
-                        onEdit             = { onEditMacro(macro) },
-                        onDuplicate        = { onDuplicateMacro(macro) },
-                        onCopy             = { copyingMacro = macro },
-                        onDelete           = { deletingMacroId = macro.id },
+                        macro = macro,
+                        accentColor = accentColor,
+                        isDragging = isDragging,
+                        onEdit = { onEditMacro(macro) },
+                        onDuplicate = { onDuplicateMacro(macro) },
+                        onCopy = { copyingMacro = macro },
+                        onDelete = { deletingMacroId = macro.id },
                         dragHandleModifier = Modifier.draggableHandle(),
                     )
                     AppDivider()
@@ -321,26 +329,30 @@ private fun MacroListView(
                 MacroPadState.copyMacroToProfile(macro, targetProfileId)
                 copyingMacro = null
             },
-            onDismiss = { copyingMacro = null }
+            onDismiss = { copyingMacro = null },
         )
     }
 
     // ── Delete macro confirmation ────────────────────────────────────────────
     if (deletingMacroId != null) {
-        val macroId  = deletingMacroId!!
-        val profile  = MacroPadState.activeProfile.value
-        val refCount = profile?.layouts?.flatMap { it.buttons }
-            ?.count { (it.action as? PadAction.Macro)?.macroId == macroId } ?: 0
+        val macroId = deletingMacroId!!
+        val profile = MacroPadState.activeProfile.value
+        val refCount =
+            profile
+                ?.layouts
+                ?.flatMap { it.buttons }
+                ?.count { (it.action as? PadAction.Macro)?.macroId == macroId } ?: 0
         AlertDialog(
-            containerColor   = colors.surface,
+            containerColor = colors.surface,
             onDismissRequest = { deletingMacroId = null },
-            title   = { Text(stringResource(R.string.macropad_macro_delete_title), color = colors.onSurface) },
-            text    = {
+            title = { Text(stringResource(R.string.macropad_macro_delete_title), color = colors.onSurface) },
+            text = {
                 Text(
-                    if (refCount > 0)
+                    if (refCount > 0) {
                         stringResource(R.string.macropad_macro_delete_confirm_referenced, refCount)
-                    else
-                        stringResource(R.string.macropad_macro_delete_confirm),
+                    } else {
+                        stringResource(R.string.macropad_macro_delete_confirm)
+                    },
                     color = colors.onSurfaceSecondary,
                 )
             },
@@ -368,43 +380,45 @@ private fun MacroListView(
 
 @Composable
 private fun MacroRow(
-    macro:              Macro,
-    accentColor:        Color,
-    isDragging:         Boolean,
-    onEdit:             () -> Unit,
-    onDuplicate:        () -> Unit,
-    onCopy:             () -> Unit,
-    onDelete:           () -> Unit,
+    macro: Macro,
+    accentColor: Color,
+    isDragging: Boolean,
+    onEdit: () -> Unit,
+    onDuplicate: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit,
     dragHandleModifier: Modifier,
 ) {
-    val colors       = LocalAppColors.current
-    val stepCount    = macro.steps.size
-    val totalMs      = macro.steps.totalDurationMs()
-    val durationText = if (macro.randomizeTimingEnabled) {
-        stringResource(
-            R.string.macropad_macro_duration_randomized,
-            totalMs,
-            macro.randomizeTimingRangeMs
-        )
-    } else {
-        stringResource(R.string.macropad_macro_duration, totalMs)
-    }
+    val colors = LocalAppColors.current
+    val stepCount = macro.steps.size
+    val totalMs = macro.steps.totalDurationMs()
+    val durationText =
+        if (macro.randomizeTimingEnabled) {
+            stringResource(
+                R.string.macropad_macro_duration_randomized,
+                totalMs,
+                macro.randomizeTimingRangeMs,
+            )
+        } else {
+            stringResource(R.string.macropad_macro_duration, totalMs)
+        }
     val summaryLabel = stringResource(R.string.macropad_macro_list_steps, stepCount, durationText)
     var menuExpanded by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
-            .clickable(onClick = onEdit)
-            .padding(start = ML_PADDING.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
+                .clickable(onClick = onEdit)
+                .padding(start = ML_PADDING.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 macro.name,
-                color    = colors.onSurface,
-                style    = MaterialTheme.typography.bodyLarge,
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -413,39 +427,80 @@ private fun MacroRow(
 
         Box {
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
+                Icon(
+                    Icons.Rounded.MoreVert,
+                    contentDescription = stringResource(R.string.cd_more_options),
+                    tint = colors.onSurfaceSecondary,
+                )
             }
             DropdownMenu(
-                expanded         = menuExpanded,
+                expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
-                modifier         = Modifier.background(colors.surface),
+                modifier = Modifier.background(colors.surface),
             ) {
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_editor_rename), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onEdit() },
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_rename),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onEdit()
+                    },
                 )
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_macro_duplicate), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onDuplicate() },
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_macro_duplicate),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDuplicate()
+                    },
                 )
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_editor_copy_to_profile), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onCopy() },
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_copy_to_profile),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onCopy()
+                    },
                 )
                 DropdownMenuItem(
-                    text    = { Text(stringResource(R.string.macropad_macro_delete_title), color = LocalAppColors.current.error, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onDelete() },
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_macro_delete_title),
+                            color = LocalAppColors.current.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDelete()
+                    },
                 )
             }
         }
 
         Icon(
-            imageVector        = Icons.Rounded.DragHandle,
+            imageVector = Icons.Rounded.DragHandle,
             contentDescription = stringResource(R.string.cd_drag_reorder),
-            tint               = colors.onSurfaceSecondary,
-            modifier           = Modifier
-                .padding(horizontal = 12.dp)
-                .then(dragHandleModifier),
+            tint = colors.onSurfaceSecondary,
+            modifier =
+                Modifier
+                    .padding(horizontal = 12.dp)
+                    .then(dragHandleModifier),
         )
     }
 }
@@ -455,18 +510,23 @@ private fun MacroRow(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun NewMacroChip(accentColor: Color, onClick: () -> Unit) {
+private fun NewMacroChip(
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = ML_PADDING.dp, end = ML_PADDING.dp, top = 8.dp, bottom = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = ML_PADDING.dp, end = ML_PADDING.dp, top = 8.dp, bottom = 8.dp),
     ) {
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Rounded.Add, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
@@ -477,7 +537,10 @@ private fun NewMacroChip(accentColor: Color, onClick: () -> Unit) {
 }
 
 @Composable
-private fun MacroListHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun MacroListHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_macrolist_title),

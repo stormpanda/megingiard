@@ -18,8 +18,11 @@ import com.stormpanda.megingiard.AppLog
 private const val TAG = "MPresentationLifecycle"
 
 class MirrorPresentationLifecycleOwner(
-    private val application: Application
-) : LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner, HasDefaultViewModelProviderFactory {
+    private val application: Application,
+) : LifecycleOwner,
+    SavedStateRegistryOwner,
+    ViewModelStoreOwner,
+    HasDefaultViewModelProviderFactory {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val store = ViewModelStore()
@@ -30,9 +33,10 @@ class MirrorPresentationLifecycleOwner(
     override val defaultViewModelProviderFactory: ViewModelProvider.Factory =
         ViewModelProvider.AndroidViewModelFactory.getInstance(application)
     override val defaultViewModelCreationExtras: CreationExtras
-        get() = MutableCreationExtras().apply {
-            set(ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY, application)
-        }
+        get() =
+            MutableCreationExtras().apply {
+                set(ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY, application)
+            }
 
     init {
         savedStateRegistryController.performRestore(null)

@@ -5,13 +5,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MacroPadFocusPolicyTest {
-
     @Test
     fun `normal secondary macropad surface keeps primary game focus`() {
         assertTrue(
             shouldKeepPrimaryGameFocus(
-                MacroPadFocusPolicyState(isMacroPadSurfaceActive = true)
-            )
+                MacroPadFocusPolicyState(isMacroPadSurfaceActive = true),
+            ),
         )
     }
 
@@ -19,8 +18,8 @@ class MacroPadFocusPolicyTest {
     fun `inactive macropad surface does not force primary game focus`() {
         assertFalse(
             shouldKeepPrimaryGameFocus(
-                MacroPadFocusPolicyState(isMacroPadSurfaceActive = false)
-            )
+                MacroPadFocusPolicyState(isMacroPadSurfaceActive = false),
+            ),
         )
     }
 
@@ -31,8 +30,8 @@ class MacroPadFocusPolicyTest {
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
                     isQuickMenuOpen = true,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -43,8 +42,8 @@ class MacroPadFocusPolicyTest {
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
                     isFilePickerOpen = true,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -55,8 +54,8 @@ class MacroPadFocusPolicyTest {
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
                     isEditorActive = true,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -67,8 +66,8 @@ class MacroPadFocusPolicyTest {
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
                     isBackgroundSettingsActive = true,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -79,8 +78,8 @@ class MacroPadFocusPolicyTest {
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = false,
                     isFullscreenKeyboardActive = true,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -93,8 +92,8 @@ class MacroPadFocusPolicyTest {
                 MacroPadFocusPolicyState(
                     isMacroPadSurfaceActive = true,
                     isFullscreenKeyboardActive = true,
-                )
-            )
+                ),
+            ),
         )
     }
 
@@ -107,8 +106,8 @@ class MacroPadFocusPolicyTest {
                     isMacroPadSurfaceActive = true,
                     isFullscreenKeyboardActive = false,
                     isQuickMenuOpen = true,
-                )
-            )
+                ),
+            ),
         )
     }
 }

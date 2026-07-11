@@ -36,12 +36,19 @@ private const val TAG = "SignatureGuard"
  *    hash verification, the bar is meaningfully raised.
  */
 object SignatureGuard {
-
     sealed class Result {
         object Ok : Result()
+
         object Skipped : Result()
-        data class Tampered(val expected: String, val actual: List<String>) : Result()
-        data class Error(val message: String) : Result()
+
+        data class Tampered(
+            val expected: String,
+            val actual: List<String>,
+        ) : Result()
+
+        data class Error(
+            val message: String,
+        ) : Result()
     }
 
     fun verify(context: Context): Result {
@@ -51,12 +58,13 @@ object SignatureGuard {
             return Result.Skipped
         }
 
-        val signatures: Array<Signature> = try {
-            collectSignatures(context)
-        } catch (e: Throwable) {
-            AppLog.e(TAG, "Failed to read signing info", e)
-            return Result.Error(e.message ?: "unknown")
-        }
+        val signatures: Array<Signature> =
+            try {
+                collectSignatures(context)
+            } catch (e: Throwable) {
+                AppLog.e(TAG, "Failed to read signing info", e)
+                return Result.Error(e.message ?: "unknown")
+            }
 
         val actualHashes = signatures.map { sha256Hex(it.toByteArray()) }
         return if (actualHashes.any { it.equals(expected, ignoreCase = true) }) {
@@ -65,7 +73,7 @@ object SignatureGuard {
         } else {
             AppLog.e(
                 TAG,
-                "Signature pinning MISMATCH — expected=$expected actual=$actualHashes"
+                "Signature pinning MISMATCH — expected=$expected actual=$actualHashes",
             )
             Result.Tampered(expected, actualHashes)
         }
@@ -74,12 +82,14 @@ object SignatureGuard {
     private fun collectSignatures(context: Context): Array<Signature> {
         val pm = context.packageManager
         val pkg = context.packageName
-        val info = pm.getPackageInfo(
-            pkg,
-            PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()),
-        )
-        val signing: SigningInfo = info.signingInfo
-            ?: error("PackageInfo.signingInfo is null")
+        val info =
+            pm.getPackageInfo(
+                pkg,
+                PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong()),
+            )
+        val signing: SigningInfo =
+            info.signingInfo
+                ?: error("PackageInfo.signingInfo is null")
         return if (signing.hasMultipleSigners()) {
             signing.apkContentsSigners
         } else {

@@ -47,15 +47,15 @@ private const val TAG = "KeyboardMouseOverlay"
 // ---------------------------------------------------------------------------
 // Mouse overlay constants
 // ---------------------------------------------------------------------------
-internal val KB_MOUSE_BTN_W = 60.dp        // MacroPad MP_BUTTON_UNIT_DP × 1
-internal val KB_MOUSE_BTN_H = 120.dp       // MacroPad MP_BUTTON_UNIT_DP × 2
+internal val KB_MOUSE_BTN_W = 60.dp // MacroPad MP_BUTTON_UNIT_DP × 1
+internal val KB_MOUSE_BTN_H = 120.dp // MacroPad MP_BUTTON_UNIT_DP × 2
 internal val KB_MOUSE_BTN_SHAPE = RoundedCornerShape(percent = 50)
 internal val KB_MOUSE_BTN_GAP = 8.dp
 internal const val KB_MOUSE_BTN_NORMAL_ALPHA = 0.25f
 internal const val KB_MOUSE_BTN_PRESSED_ALPHA = 0.80f
 internal const val KB_MOUSE_BTN_PRESS_ANIM_MS = 80
 internal const val KB_MOUSE_BTN_RELEASE_ANIM_MS = 160
-internal val KB_MOUSE_BTN_1X1 = 60.dp     // 1×1 circle: MMB, scroll wheel
+internal val KB_MOUSE_BTN_1X1 = 60.dp // 1×1 circle: MMB, scroll wheel
 internal const val KB_SCROLL_SENSITIVITY_PX = 12f
 
 // ---------------------------------------------------------------------------
@@ -174,47 +174,60 @@ internal fun MouseButton(
         label = "mouseBtnAlpha",
     )
     Box(
-        modifier = modifier
-            .size(width, height)
-            .clip(shape)
-            .background(accentColor.copy(alpha = alpha))
-            .border(1.dp, accentColor, shape)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    // Only consume events for pointers that *started* within this button.
-                    // Pointers originating outside (e.g. the trackpoint finger) are ignored
-                    // so the outer handler can still close the overlay on trackpoint release.
-                    val activePids = mutableSetOf<PointerId>()
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        for (change in event.changes) {
-                            val pid = change.id
-                            when (event.type) {
-                                PointerEventType.Press -> if (!change.previousPressed) {
-                                    if (change.position.x in 0f..size.width.toFloat() &&
-                                        change.position.y in 0f..size.height.toFloat()) {
-                                        activePids += pid
-                                        pressed = true
-                                        onDown()
-                                        change.consume()
+        modifier =
+            modifier
+                .size(width, height)
+                .clip(shape)
+                .background(accentColor.copy(alpha = alpha))
+                .border(1.dp, accentColor, shape)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        // Only consume events for pointers that *started* within this button.
+                        // Pointers originating outside (e.g. the trackpoint finger) are ignored
+                        // so the outer handler can still close the overlay on trackpoint release.
+                        val activePids = mutableSetOf<PointerId>()
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            for (change in event.changes) {
+                                val pid = change.id
+                                when (event.type) {
+                                    PointerEventType.Press -> {
+                                        if (!change.previousPressed) {
+                                            if (change.position.x in 0f..size.width.toFloat() &&
+                                                change.position.y in 0f..size.height.toFloat()
+                                            ) {
+                                                activePids += pid
+                                                pressed = true
+                                                onDown()
+                                                change.consume()
+                                            }
+                                        }
+                                    }
+
+                                    PointerEventType.Release -> {
+                                        if (!change.pressed && pid in activePids) {
+                                            activePids -= pid
+                                            if (activePids.isEmpty()) pressed = false
+                                            onUp()
+                                            change.consume()
+                                        }
+                                    }
+
+                                    PointerEventType.Move -> {
+                                        if (pid in activePids) {
+                                            change.consume()
+                                        }
+                                    }
+
+                                    else -> {
+                                        Unit
                                     }
                                 }
-                                PointerEventType.Release -> if (!change.pressed && pid in activePids) {
-                                    activePids -= pid
-                                    if (activePids.isEmpty()) pressed = false
-                                    onUp()
-                                    change.consume()
-                                }
-                                PointerEventType.Move -> if (pid in activePids) {
-                                    change.consume()
-                                }
-                                else -> Unit
                             }
                         }
                     }
-                }
-            },
-        contentAlignment = Alignment.Center
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
@@ -245,48 +258,61 @@ internal fun ScrollWheelButton(
         label = "scrollWheelAlpha",
     )
     Box(
-        modifier = modifier
-            .size(KB_MOUSE_BTN_W, KB_MOUSE_BTN_H)
-            .clip(KB_MOUSE_BTN_SHAPE)
-            .background(accentColor.copy(alpha = alpha))
-            .border(1.dp, accentColor, KB_MOUSE_BTN_SHAPE)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    val activePids = mutableSetOf<PointerId>()
-                    val accumY = mutableMapOf<PointerId, Float>()
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        for (change in event.changes) {
-                            val pid = change.id
-                            when (event.type) {
-                                PointerEventType.Press -> if (!change.previousPressed) {
-                                    if (change.position.x in 0f..size.width.toFloat() &&
-                                        change.position.y in 0f..size.height.toFloat()) {
-                                        activePids += pid
-                                        accumY[pid] = 0f
-                                        pressed = true
-                                        change.consume()
+        modifier =
+            modifier
+                .size(KB_MOUSE_BTN_W, KB_MOUSE_BTN_H)
+                .clip(KB_MOUSE_BTN_SHAPE)
+                .background(accentColor.copy(alpha = alpha))
+                .border(1.dp, accentColor, KB_MOUSE_BTN_SHAPE)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        val activePids = mutableSetOf<PointerId>()
+                        val accumY = mutableMapOf<PointerId, Float>()
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            for (change in event.changes) {
+                                val pid = change.id
+                                when (event.type) {
+                                    PointerEventType.Press -> {
+                                        if (!change.previousPressed) {
+                                            if (change.position.x in 0f..size.width.toFloat() &&
+                                                change.position.y in 0f..size.height.toFloat()
+                                            ) {
+                                                activePids += pid
+                                                accumY[pid] = 0f
+                                                pressed = true
+                                                change.consume()
+                                            }
+                                        }
+                                    }
+
+                                    PointerEventType.Move -> {
+                                        if (pid in activePids) {
+                                            val accumulated = (accumY[pid] ?: 0f) + change.positionChange().y
+                                            val units = (accumulated / KB_SCROLL_SENSITIVITY_PX).toInt()
+                                            accumY[pid] = accumulated - units * KB_SCROLL_SENSITIVITY_PX
+                                            if (units != 0) MouseInjector.scrollWheel(units)
+                                            change.consume()
+                                        }
+                                    }
+
+                                    PointerEventType.Release -> {
+                                        if (!change.pressed && pid in activePids) {
+                                            activePids -= pid
+                                            accumY -= pid
+                                            if (activePids.isEmpty()) pressed = false
+                                            change.consume()
+                                        }
+                                    }
+
+                                    else -> {
+                                        Unit
                                     }
                                 }
-                                PointerEventType.Move -> if (pid in activePids) {
-                                    val accumulated = (accumY[pid] ?: 0f) + change.positionChange().y
-                                    val units = (accumulated / KB_SCROLL_SENSITIVITY_PX).toInt()
-                                    accumY[pid] = accumulated - units * KB_SCROLL_SENSITIVITY_PX
-                                    if (units != 0) MouseInjector.scrollWheel(units)
-                                    change.consume()
-                                }
-                                PointerEventType.Release -> if (!change.pressed && pid in activePids) {
-                                    activePids -= pid
-                                    accumY -= pid
-                                    if (activePids.isEmpty()) pressed = false
-                                    change.consume()
-                                }
-                                else -> Unit
                             }
                         }
                     }
-                }
-            },
+                },
         contentAlignment = Alignment.Center,
     ) {
         ScrollWheelFace(accentColor = accentColor)
@@ -300,10 +326,20 @@ internal fun ScrollWheelFace(accentColor: Color) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize(),
     ) {
-        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor,                   modifier = Modifier.size(18.dp))
-        Icon(Icons.Rounded.KeyboardArrowUp,   contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.KeyboardArrowUp, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowUp,
+            contentDescription = null,
+            tint = accentColor.copy(alpha = 0.5f),
+            modifier = Modifier.size(18.dp),
+        )
         Spacer(Modifier.height(4.dp))
-        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor,                   modifier = Modifier.size(18.dp))
+        Icon(
+            Icons.Rounded.KeyboardArrowDown,
+            contentDescription = null,
+            tint = accentColor.copy(alpha = 0.5f),
+            modifier = Modifier.size(18.dp),
+        )
+        Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
     }
 }

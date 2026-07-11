@@ -16,6 +16,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -27,7 +28,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -136,7 +136,15 @@ internal fun BackgroundSettingsEditor(
     initialBgImageOffsetX: Float = 0f,
     initialBgImageOffsetY: Float = 0f,
     initialBackgroundImageDim: Float = 0f,
-    onConfirm: (bgImagePath: String?, useAsMask: Boolean, bgChanged: Boolean, bgScale: Float, bgOffsetX: Float, bgOffsetY: Float, bgImageDim: Float) -> Unit,
+    onConfirm: (
+        bgImagePath: String?,
+        useAsMask: Boolean,
+        bgChanged: Boolean,
+        bgScale: Float,
+        bgOffsetX: Float,
+        bgOffsetY: Float,
+        bgImageDim: Float,
+    ) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -154,24 +162,48 @@ internal fun BackgroundSettingsEditor(
     var bgOffsetY by remember { mutableFloatStateOf(initialBgImageOffsetY) }
     var bgImageDim by remember { mutableFloatStateOf(initialBackgroundImageDim) }
 
-    val bgImageDimFilter = remember(bgImageDim) {
-        if (bgImageDim > 0f) {
-            val scale = 1f - bgImageDim
-            ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
-                scale, 0f,    0f,    0f, 0f,
-                0f,    scale, 0f,    0f, 0f,
-                0f,    0f,    scale, 0f, 0f,
-                0f,    0f,    0f,    1f, 0f
-            )))
-        } else null
-    }
+    val bgImageDimFilter =
+        remember(bgImageDim) {
+            if (bgImageDim > 0f) {
+                val scale = 1f - bgImageDim
+                ColorFilter.colorMatrix(
+                    ColorMatrix(
+                        floatArrayOf(
+                            scale,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            scale,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            scale,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            1f,
+                            0f,
+                        ),
+                    ),
+                )
+            } else {
+                null
+            }
+        }
 
     val bounds = remember { windowManager.currentWindowMetrics.bounds }
-    val aspectRatio = remember(bounds) {
-        val w = bounds.width().toFloat()
-        val h = bounds.height().toFloat()
-        if (h > 0f) w / h else 16f / 9f
-    }
+    val aspectRatio =
+        remember(bounds) {
+            val w = bounds.width().toFloat()
+            val h = bounds.height().toFloat()
+            if (h > 0f) w / h else 16f / 9f
+        }
 
     var previewBitmap by remember(pendingImageUri, currentBgPath) { mutableStateOf<ImageBitmap?>(null) }
     var showPreviewModal by remember { mutableStateOf(false) }
@@ -213,17 +245,18 @@ internal fun BackgroundSettingsEditor(
         }
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            pendingImageUri = uri
-            currentBgPath = null
-            bgScale = 1f
-            bgOffsetX = 0f
-            bgOffsetY = 0f
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            if (uri != null) {
+                pendingImageUri = uri
+                currentBgPath = null
+                bgScale = 1f
+                bgOffsetX = 0f
+                bgOffsetY = 0f
+            }
         }
-    }
 
     BackHandler(onBack = onDismiss)
 
@@ -243,70 +276,73 @@ internal fun BackgroundSettingsEditor(
                                     isSaving = true
                                     scope.launch {
                                         var bgChanged = false
-                                        val finalBgPath = withContext(Dispatchers.IO) {
-                                            val pending = pendingImageUri
-                                            if (pending != null) {
-                                                bgChanged = true
-                                                val backgroundsDir = File(context.filesDir, "backgrounds")
-                                                if (!backgroundsDir.exists()) {
-                                                    backgroundsDir.mkdirs()
-                                                }
-                                                val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-                                                val saved = BitmapUtils.saveScaledWebp(
-                                                    context = context,
-                                                    srcUri = pending,
-                                                    srcFile = null,
-                                                    destFile = destFile,
-                                                    targetW = targetW,
-                                                    targetH = targetH
-                                                )
-                                                if (saved) {
-                                                    "backgrounds/bg_$layoutId"
-                                                } else {
-                                                    null
-                                                }
-                                            } else if (currentBgPath == null && initialBackgroundImagePath != null) {
-                                                bgChanged = true
-                                                val backgroundsDir = File(context.filesDir, "backgrounds")
-                                                val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                if (destFile.exists()) {
-                                                    try {
-                                                        destFile.delete()
-                                                    } catch (e: Exception) {
-                                                        AppLog.e(TAG, "Failed to delete background file", e)
+                                        val finalBgPath =
+                                            withContext(Dispatchers.IO) {
+                                                val pending = pendingImageUri
+                                                if (pending != null) {
+                                                    bgChanged = true
+                                                    val backgroundsDir = File(context.filesDir, "backgrounds")
+                                                    if (!backgroundsDir.exists()) {
+                                                        backgroundsDir.mkdirs()
                                                     }
+                                                    val destFile = File(backgroundsDir, "bg_$layoutId")
+                                                    val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
+                                                    val saved =
+                                                        BitmapUtils.saveScaledWebp(
+                                                            context = context,
+                                                            srcUri = pending,
+                                                            srcFile = null,
+                                                            destFile = destFile,
+                                                            targetW = targetW,
+                                                            targetH = targetH,
+                                                        )
+                                                    if (saved) {
+                                                        "backgrounds/bg_$layoutId"
+                                                    } else {
+                                                        null
+                                                    }
+                                                } else if (currentBgPath == null && initialBackgroundImagePath != null) {
+                                                    bgChanged = true
+                                                    val backgroundsDir = File(context.filesDir, "backgrounds")
+                                                    val destFile = File(backgroundsDir, "bg_$layoutId")
+                                                    if (destFile.exists()) {
+                                                        try {
+                                                            destFile.delete()
+                                                        } catch (e: Exception) {
+                                                            AppLog.e(TAG, "Failed to delete background file", e)
+                                                        }
+                                                    }
+                                                    null
+                                                } else {
+                                                    currentBgPath
                                                 }
-                                                null
-                                            } else {
-                                                currentBgPath
                                             }
-                                        }
                                         onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim)
                                         isSaving = false
                                     }
                                 }
                             },
-                            enabled = !isSaving
+                            enabled = !isSaving,
                         ) {
                             Text(
                                 text = stringResource(R.string.macropad_editor_done),
                                 color = if (!isSaving) accentColor else colors.onSurfaceSecondary,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                         Spacer(Modifier.width(BSE_SPACING_8))
                         HelpIconButton(onClick = { showHelpMenu = true })
                     }
                 }
-            }
+            },
         ) { paddingValues ->
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = BSE_SPACING_16)
-                    .verticalScroll(rememberScrollState())
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = BSE_SPACING_16)
+                        .verticalScroll(rememberScrollState()),
             ) {
                 Spacer(Modifier.height(BSE_SPACING_16))
 
@@ -318,17 +354,22 @@ internal fun BackgroundSettingsEditor(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Left: Preview Frame
                     Box(
-                        modifier = Modifier
-                            .height(previewHeight)
-                            .aspectRatio(aspectRatio)
-                            .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                            .background(colors.surfaceVariant)
-                            .border(BSE_BORDER_WIDTH_1, colors.divider.copy(alpha = 0.5f), RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING)),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .height(previewHeight)
+                                .aspectRatio(aspectRatio)
+                                .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                                .background(colors.surfaceVariant)
+                                .border(
+                                    BSE_BORDER_WIDTH_1,
+                                    colors.divider.copy(alpha = 0.5f),
+                                    RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
+                                ),
+                        contentAlignment = Alignment.Center,
                     ) {
                         val bitmap = previewBitmap
                         if (bitmap != null) {
@@ -337,24 +378,25 @@ internal fun BackgroundSettingsEditor(
                                 contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
                                 contentScale = ContentScale.Fit,
                                 colorFilter = bgImageDimFilter,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
                             )
                         } else {
                             Icon(
                                 imageVector = Icons.Rounded.Image,
                                 contentDescription = stringResource(R.string.layout_settings_bg_image_none),
                                 tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                                modifier = Modifier.size(BSE_ICON_SIZE_48)
+                                modifier = Modifier.size(BSE_ICON_SIZE_48),
                             )
                         }
                     }
 
                     // Right: Column of buttons
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(previewHeight),
-                        verticalArrangement = Arrangement.spacedBy(BSE_SPACING_8, Alignment.CenterVertically)
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(previewHeight),
+                        verticalArrangement = Arrangement.spacedBy(BSE_SPACING_8, Alignment.CenterVertically),
                     ) {
                         // 1. Scrape from SteamGridDB
                         Button(
@@ -366,11 +408,12 @@ internal fun BackgroundSettingsEditor(
                                     showScrapeDialog = true
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accentColor,
-                                contentColor = colors.onAccent
-                            ),
-                            modifier = Modifier.fillMaxWidth().weight(1f)
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = accentColor,
+                                    contentColor = colors.onAccent,
+                                ),
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                         ) {
                             Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
                             Spacer(Modifier.width(BSE_SPACING_8))
@@ -380,18 +423,19 @@ internal fun BackgroundSettingsEditor(
                         // 2. Browse local images
                         Button(
                             onClick = { launcher.launch("image/*") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = accentColor,
-                                contentColor = colors.onAccent
-                            ),
-                            modifier = Modifier.fillMaxWidth().weight(1f)
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = accentColor,
+                                    contentColor = colors.onAccent,
+                                ),
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                         ) {
                             Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
                             Spacer(Modifier.width(BSE_SPACING_8))
                             Text(
                                 text = stringResource(R.string.layout_settings_bg_image_browse_local),
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
 
@@ -399,11 +443,12 @@ internal fun BackgroundSettingsEditor(
                         Button(
                             onClick = { showPreviewModal = true },
                             enabled = previewBitmap != null,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.surfaceVariant,
-                                contentColor = colors.onSurface
-                            ),
-                            modifier = Modifier.fillMaxWidth().weight(1f)
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = colors.surfaceVariant,
+                                    contentColor = colors.onSurface,
+                                ),
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                         ) {
                             Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
                             Spacer(Modifier.width(BSE_SPACING_8))
@@ -421,11 +466,12 @@ internal fun BackgroundSettingsEditor(
                                 bgOffsetY = 0f
                             },
                             enabled = previewBitmap != null,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.error.copy(alpha = 0.15f),
-                                contentColor = colors.error
-                            ),
-                            modifier = Modifier.fillMaxWidth().weight(1f)
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = colors.error.copy(alpha = 0.15f),
+                                    contentColor = colors.error,
+                                ),
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                         ) {
                             Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
                             Spacer(Modifier.width(BSE_SPACING_8))
@@ -442,23 +488,23 @@ internal fun BackgroundSettingsEditor(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.layout_settings_bg_image_use_as_mask),
                                 color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
                                 text = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
                                 color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
                             )
                         }
                         Switch(
                             checked = useAsMask,
-                            onCheckedChange = { useAsMask = it }
+                            onCheckedChange = { useAsMask = it },
                         )
                     }
 
@@ -466,18 +512,18 @@ internal fun BackgroundSettingsEditor(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16)
+                        horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16),
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = stringResource(R.string.layout_settings_bg_image_dimming_title),
                                 color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
                                 text = "${(bgImageDim * 100).roundToInt()}%",
                                 color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
                             )
                         }
                         Slider(
@@ -485,11 +531,12 @@ internal fun BackgroundSettingsEditor(
                             onValueChange = { bgImageDim = it },
                             valueRange = 0f..0.9f,
                             modifier = Modifier.weight(1.5f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = accentColor,
-                                activeTrackColor = accentColor,
-                                inactiveTrackColor = colors.divider
-                            )
+                            colors =
+                                SliderDefaults.colors(
+                                    thumbColor = accentColor,
+                                    activeTrackColor = accentColor,
+                                    inactiveTrackColor = colors.divider,
+                                ),
                         )
                     }
                 }
@@ -500,7 +547,7 @@ internal fun BackgroundSettingsEditor(
 
         BackgroundSettingsHelpModal(
             visible = showHelpMenu,
-            onDismiss = { showHelpMenu = false }
+            onDismiss = { showHelpMenu = false },
         )
 
         if (showPreviewModal && previewBitmap != null) {
@@ -516,7 +563,7 @@ internal fun BackgroundSettingsEditor(
                     bgOffsetY = oy
                     showPreviewModal = false
                 },
-                onDismiss = { showPreviewModal = false }
+                onDismiss = { showPreviewModal = false },
             )
         }
 
@@ -531,7 +578,7 @@ internal fun BackgroundSettingsEditor(
                     bgOffsetY = 0f
                 },
                 onDismiss = { showScrapeDialog = false },
-                accentColor = accentColor
+                accentColor = accentColor,
             )
         }
 
@@ -543,14 +590,14 @@ internal fun BackgroundSettingsEditor(
                         text = stringResource(R.string.steamgriddb_token_missing_title),
                         color = colors.onSurface,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 },
                 text = {
                     Text(
                         text = stringResource(R.string.steamgriddb_token_missing_message),
                         color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 },
                 confirmButton = {
@@ -558,12 +605,12 @@ internal fun BackgroundSettingsEditor(
                         onClick = {
                             showApiTokenMissingDialog = false
                             AppStateManager.setGlobalSettingsOpen(true)
-                        }
+                        },
                     ) {
                         Text(
                             text = stringResource(R.string.steamgriddb_token_missing_go_settings),
                             color = colors.accent,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 },
@@ -571,12 +618,12 @@ internal fun BackgroundSettingsEditor(
                     TextButton(onClick = { showApiTokenMissingDialog = false }) {
                         Text(
                             text = stringResource(R.string.settings_color_cancel),
-                            color = colors.onSurfaceSecondary
+                            color = colors.onSurfaceSecondary,
                         )
                     }
                 },
                 containerColor = colors.surface,
-                shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS)
+                shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS),
             )
         }
     }
@@ -585,7 +632,7 @@ internal fun BackgroundSettingsEditor(
 private fun getMaxOffsets(
     containerSize: IntSize,
     imageSize: IntSize,
-    scale: Float
+    scale: Float,
 ): Pair<Float, Float> {
     if (containerSize.width <= 0 || containerSize.height <= 0 || imageSize.width <= 0 || imageSize.height <= 0) {
         return 0f to 0f
@@ -613,7 +660,7 @@ private fun ImageCropDialog(
     initialOffsetX: Float,
     initialOffsetY: Float,
     onConfirmCrop: (scale: Float, offsetX: Float, offsetY: Float) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -628,11 +675,12 @@ private fun ImageCropDialog(
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.2f,
         targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pinchIconAlpha"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "pinchIconAlpha",
     )
 
     LaunchedEffect(containerSize) {
@@ -644,31 +692,33 @@ private fun ImageCropDialog(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = BSE_PREVIEW_MODAL_BG_ALPHA))
-            .clickable(onClick = onDismiss)
-            .blockPointerEvents(),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = BSE_PREVIEW_MODAL_BG_ALPHA))
+                .clickable(onClick = onDismiss)
+                .blockPointerEvents(),
+        contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth(BSE_PREVIEW_MODAL_WIDTH_FRACTION)
-                .background(colors.surface, RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS))
-                .clickable(enabled = true, onClick = {})
-                .padding(BSE_SPACING_16),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier
+                    .fillMaxWidth(BSE_PREVIEW_MODAL_WIDTH_FRACTION)
+                    .background(colors.surface, RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS))
+                    .clickable(enabled = true, onClick = {})
+                    .padding(BSE_SPACING_16),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(
                         text = stringResource(R.string.macropad_editor_cancel),
                         color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
 
@@ -678,7 +728,7 @@ private fun ImageCropDialog(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
 
                 TextButton(
@@ -686,13 +736,13 @@ private fun ImageCropDialog(
                         val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
                         val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
                         onConfirmCrop(scale, finalOffsetX, finalOffsetY)
-                    }
+                    },
                 ) {
                     Text(
                         text = stringResource(R.string.macropad_editor_done),
                         color = colors.accent,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
@@ -700,27 +750,28 @@ private fun ImageCropDialog(
             Spacer(Modifier.height(BSE_SPACING_16))
 
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio)
-                    .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                    .clipToBounds()
-                    .background(Color.Black)
-                    .onSizeChanged { containerSize = it }
-                    .pointerInput(bitmap, isInitialized) {
-                        if (!isInitialized) return@pointerInput
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            hasInteracted = true
-                            val imageSize = IntSize(bitmap.width, bitmap.height)
-                            val newScale = (scale * zoom).coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
-                            scale = newScale
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(aspectRatio)
+                        .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                        .clipToBounds()
+                        .background(Color.Black)
+                        .onSizeChanged { containerSize = it }
+                        .pointerInput(bitmap, isInitialized) {
+                            if (!isInitialized) return@pointerInput
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                hasInteracted = true
+                                val imageSize = IntSize(bitmap.width, bitmap.height)
+                                val newScale = (scale * zoom).coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
+                                scale = newScale
 
-                            val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
-                            offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
-                            offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
-                        }
-                    },
-                contentAlignment = Alignment.Center
+                                val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
+                                offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
+                                offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
+                            }
+                        },
+                contentAlignment = Alignment.Center,
             ) {
                 if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
                     val imageSize = IntSize(bitmap.width, bitmap.height)
@@ -737,17 +788,19 @@ private fun ImageCropDialog(
                             val scaleBase = maxOf(cw / iw, ch / ih)
                             val ws = iw * scaleBase
                             val hs = ih * scaleBase
-                            
+
                             drawImage(
                                 image = bitmap,
-                                dstOffset = IntOffset(
-                                    ((cw - ws * scale) / 2f + clampedX).toInt(),
-                                    ((ch - hs * scale) / 2f + clampedY).toInt()
-                                ),
-                                dstSize = IntSize(
-                                    (ws * scale).toInt(),
-                                    (hs * scale).toInt()
-                                )
+                                dstOffset =
+                                    IntOffset(
+                                        ((cw - ws * scale) / 2f + clampedX).toInt(),
+                                        ((ch - hs * scale) / 2f + clampedY).toInt(),
+                                    ),
+                                dstSize =
+                                    IntSize(
+                                        (ws * scale).toInt(),
+                                        (hs * scale).toInt(),
+                                    ),
                             )
                         }
                     }
@@ -755,20 +808,22 @@ private fun ImageCropDialog(
 
                 if (!hasInteracted) {
                     Box(
-                        modifier = Modifier
-                            .size(BSE_ICON_SIZE_72)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(BSE_ICON_SIZE_72)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Pinch,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier
-                                .size(BSE_ICON_SIZE_40)
-                                .graphicsLayer {
-                                    this.alpha = alpha
-                                }
+                            modifier =
+                                Modifier
+                                    .size(BSE_ICON_SIZE_40)
+                                    .graphicsLayer {
+                                        this.alpha = alpha
+                                    },
                         )
                     }
                 }
@@ -779,37 +834,40 @@ private fun ImageCropDialog(
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = BSE_SPACING_12)
+                modifier = Modifier.padding(top = BSE_SPACING_12),
             )
         }
     }
 }
 
 @Composable
-private fun BackgroundSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun BackgroundSettingsHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     HelpModal(
         visible = visible,
         title = stringResource(R.string.layout_settings_bg_section_title),
-        onDismiss = onDismiss
+        onDismiss = onDismiss,
     ) {
         HelpIntro(stringResource(R.string.help_bg_settings_intro))
 
         HelpSection(stringResource(R.string.help_layout_settings_sec_properties))
         HelpEntry(
             label = stringResource(R.string.help_layout_settings_bg_title),
-            description = stringResource(R.string.help_layout_settings_bg_desc)
+            description = stringResource(R.string.help_layout_settings_bg_desc),
         )
         HelpEntry(
             label = stringResource(R.string.help_bg_settings_dimming_title),
-            description = stringResource(R.string.help_bg_settings_dimming_desc)
+            description = stringResource(R.string.help_bg_settings_dimming_desc),
         )
         HelpEntry(
             label = stringResource(R.string.help_bg_settings_crop_title),
-            description = stringResource(R.string.help_bg_settings_crop_desc)
+            description = stringResource(R.string.help_bg_settings_crop_desc),
         )
         HelpEntry(
             label = stringResource(R.string.help_layout_settings_mask_title),
-            description = stringResource(R.string.help_layout_settings_mask_desc)
+            description = stringResource(R.string.help_layout_settings_mask_desc),
         )
     }
 }

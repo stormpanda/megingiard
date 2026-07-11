@@ -62,28 +62,31 @@ fun <T> AppReorderOverlay(
     val lazyListState = rememberLazyListState()
     val latestItems by rememberUpdatedState(items)
 
-    val reorderState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val fromIdx = from.index
-        val toIdx = to.index
-        if (fromIdx in latestItems.indices && toIdx in latestItems.indices) {
-            val mutable = latestItems.toMutableList()
-            mutable.add(toIdx, mutable.removeAt(fromIdx))
-            onReorder(mutable)
+    val reorderState =
+        rememberReorderableLazyListState(lazyListState) { from, to ->
+            val fromIdx = from.index
+            val toIdx = to.index
+            if (fromIdx in latestItems.indices && toIdx in latestItems.indices) {
+                val mutable = latestItems.toMutableList()
+                mutable.add(toIdx, mutable.removeAt(fromIdx))
+                onReorder(mutable)
+            }
         }
-    }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.appBackground)
-            .blockPointerEvents(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(colors.appBackground)
+                .blockPointerEvents(),
     ) {
         // Top bar
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(RO_TOP_BAR_HEIGHT)
-                .background(colors.surface),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(RO_TOP_BAR_HEIGHT)
+                    .background(colors.surface),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onDone) {
@@ -106,17 +109,19 @@ fun <T> AppReorderOverlay(
         // List
         LazyColumn(
             state = lazyListState,
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colors.surface),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(colors.surface),
         ) {
             itemsIndexed(items, key = { _, item -> itemKey(item) }) { _, item ->
                 ReorderableItem(reorderState, key = itemKey(item)) { isDragging ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
-                            .padding(start = RO_PADDING, end = 4.dp, top = 12.dp, bottom = 12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(if (isDragging) colors.surfaceVariant else Color.Transparent)
+                                .padding(start = RO_PADDING, end = 4.dp, top = 12.dp, bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
@@ -131,9 +136,10 @@ fun <T> AppReorderOverlay(
                             imageVector = Icons.Rounded.DragHandle,
                             contentDescription = stringResource(R.string.cd_drag_reorder),
                             tint = colors.onSurfaceSecondary,
-                            modifier = Modifier
-                                .padding(horizontal = RO_PADDING)
-                                .draggableHandle(),
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = RO_PADDING)
+                                    .draggableHandle(),
                         )
                     }
                     AppDivider()

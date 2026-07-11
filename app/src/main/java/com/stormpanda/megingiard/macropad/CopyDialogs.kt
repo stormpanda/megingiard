@@ -41,26 +41,28 @@ internal fun InlineProfileSelectionOverlay(
                 text = stringResource(R.string.macropad_copy_no_profiles_available),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier.padding(vertical = 16.dp),
             )
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 240.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 240.dp),
             ) {
                 items(filteredProfiles) { profile ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(profile.id) }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(profile.id) }
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = profile.name,
                             color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                     }
                 }
@@ -78,9 +80,10 @@ internal fun InlineLayoutSelectionOverlay(
     onDismiss: () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val hasSelectableLayouts = profiles.any { profile ->
-        profile.layouts.any { it.id != excludeLayoutId }
-    }
+    val hasSelectableLayouts =
+        profiles.any { profile ->
+            profile.layouts.any { it.id != excludeLayoutId }
+        }
 
     InlineDialogOverlay(
         title = title,
@@ -91,14 +94,15 @@ internal fun InlineLayoutSelectionOverlay(
                 text = stringResource(R.string.macropad_copy_no_layouts_available),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(vertical = 16.dp)
+                modifier = Modifier.padding(vertical = 16.dp),
             )
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 profiles.forEach { profile ->
                     val layouts = profile.layouts.filter { it.id != excludeLayoutId }
@@ -109,21 +113,22 @@ internal fun InlineLayoutSelectionOverlay(
                                 color = colors.accent,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp, start = 8.dp)
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp, start = 8.dp),
                             )
                         }
                         items(layouts) { layout ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSelect(profile.id, layout.id) }
-                                    .padding(vertical = 10.dp, horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onSelect(profile.id, layout.id) }
+                                        .padding(vertical = 10.dp, horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
                                     text = layout.name,
                                     color = colors.onSurface,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MaterialTheme.typography.bodyLarge,
                                 )
                             }
                         }

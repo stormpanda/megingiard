@@ -64,25 +64,27 @@ fun AppSelectableChip(
     val effectiveAlpha = if (enabled) 1f else 0.38f
 
     Box(
-        modifier = modifier
-            .semantics {
-                this.selected = selected
-                this.contentDescription = contentDescription ?: text
-            }
-            .clip(RoundedCornerShape(CHIP_CORNER))
-            .background(
-                (if (selected) colors.accent.copy(alpha = 0.85f)
-                 else colors.navQuickMenuBody.copy(alpha = 0.5f))
-                    .copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
-            )
-            .border(
-                1.dp,
-                (if (selected) colors.accent else colors.controlOverlayBorder)
-                    .copy(alpha = effectiveAlpha),
-                RoundedCornerShape(CHIP_CORNER),
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
+        modifier =
+            modifier
+                .semantics {
+                    this.selected = selected
+                    this.contentDescription = contentDescription ?: text
+                }.clip(RoundedCornerShape(CHIP_CORNER))
+                .background(
+                    (
+                        if (selected) {
+                            colors.accent.copy(alpha = 0.85f)
+                        } else {
+                            colors.navQuickMenuBody.copy(alpha = 0.5f)
+                        }
+                    ).copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
+                ).border(
+                    1.dp,
+                    (if (selected) colors.accent else colors.controlOverlayBorder)
+                        .copy(alpha = effectiveAlpha),
+                    RoundedCornerShape(CHIP_CORNER),
+                ).clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
     ) {
         if (leadingIcon != null || trailingContent != null) {
             Row(
@@ -112,4 +114,3 @@ fun AppSelectableChip(
         }
     }
 }
-

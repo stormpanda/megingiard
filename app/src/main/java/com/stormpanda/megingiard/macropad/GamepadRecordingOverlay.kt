@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import com.stormpanda.megingiard.ui.blockPointerEvents
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.min
@@ -114,26 +114,45 @@ internal fun GamepadRecordingOverlay(
         AppLog.d(TAG, "visible")
         onDispose { AppLog.d(TAG, "disposed") }
     }
-    val faceButtons = remember(swapFaceButtons) {
-        listOf(
-            FaceButtonSpec(GamepadKeycodes.BTN_NORTH, gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_NORTH, swapFaceButtons), Alignment.TopCenter),
-            FaceButtonSpec(GamepadKeycodes.BTN_WEST, gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_WEST, swapFaceButtons), Alignment.CenterStart),
-            FaceButtonSpec(GamepadKeycodes.BTN_EAST, gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_EAST, swapFaceButtons), Alignment.CenterEnd),
-            FaceButtonSpec(GamepadKeycodes.BTN_SOUTH, gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons), Alignment.BottomCenter),
-        )
-    }
+    val faceButtons =
+        remember(swapFaceButtons) {
+            listOf(
+                FaceButtonSpec(
+                    GamepadKeycodes.BTN_NORTH,
+                    gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_NORTH, swapFaceButtons),
+                    Alignment.TopCenter,
+                ),
+                FaceButtonSpec(
+                    GamepadKeycodes.BTN_WEST,
+                    gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_WEST, swapFaceButtons),
+                    Alignment.CenterStart,
+                ),
+                FaceButtonSpec(
+                    GamepadKeycodes.BTN_EAST,
+                    gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_EAST, swapFaceButtons),
+                    Alignment.CenterEnd,
+                ),
+                FaceButtonSpec(
+                    GamepadKeycodes.BTN_SOUTH,
+                    gamepadCodeDisplayShortLabel(GamepadKeycodes.BTN_SOUTH, swapFaceButtons),
+                    Alignment.BottomCenter,
+                ),
+            )
+        }
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.appBackground)
-            .blockPointerEvents(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground)
+                .blockPointerEvents(),
     ) {
         // ── Title bar ──────────────────────────────────────────────────
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .padding(horizontal = GRO_PADDING, vertical = GRO_TITLE_VERTICAL_PADDING),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .padding(horizontal = GRO_PADDING, vertical = GRO_TITLE_VERTICAL_PADDING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -159,10 +178,11 @@ internal fun GamepadRecordingOverlay(
         }
         // ── LB + LT group ─────────────────────────────────────────────
         Row(
-            modifier = Modifier.offset(
-                x = maxWidth * GRO_LB_X,
-                y = maxHeight * GRO_SHOULDER_Y,
-            ),
+            modifier =
+                Modifier.offset(
+                    x = maxWidth * GRO_LB_X,
+                    y = maxHeight * GRO_SHOULDER_Y,
+                ),
             horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING),
         ) {
             ShoulderButton(
@@ -182,11 +202,13 @@ internal fun GamepadRecordingOverlay(
         }
         // ── SE + ST group (centered) ───────────────────────────────────
         Row(
-            modifier = Modifier.offset(
-                x = (maxWidth * GRO_CENTER_X - GRO_CENTER_BUTTON_WIDTH - GRO_CLUSTER_SPACING / 2)
-                    .coerceAtLeast(0.dp),
-                y = maxHeight * GRO_SHOULDER_Y,
-            ),
+            modifier =
+                Modifier.offset(
+                    x =
+                        (maxWidth * GRO_CENTER_X - GRO_CENTER_BUTTON_WIDTH - GRO_CLUSTER_SPACING / 2)
+                            .coerceAtLeast(0.dp),
+                    y = maxHeight * GRO_SHOULDER_Y,
+                ),
             horizontalArrangement = Arrangement.spacedBy(GRO_CLUSTER_SPACING),
         ) {
             CenterControlButton(
@@ -206,11 +228,13 @@ internal fun GamepadRecordingOverlay(
         }
         // ── RB + RT group ──────────────────────────────────────────────
         Row(
-            modifier = Modifier.offset(
-                x = (maxWidth * GRO_RB_X - GRO_SHOULDER_BUTTON_WIDTH * 2 - GRO_SHOULDER_SPACING)
-                    .coerceAtLeast(0.dp),
-                y = maxHeight * GRO_SHOULDER_Y,
-            ),
+            modifier =
+                Modifier.offset(
+                    x =
+                        (maxWidth * GRO_RB_X - GRO_SHOULDER_BUTTON_WIDTH * 2 - GRO_SHOULDER_SPACING)
+                            .coerceAtLeast(0.dp),
+                    y = maxHeight * GRO_SHOULDER_Y,
+                ),
             horizontalArrangement = Arrangement.spacedBy(GRO_SHOULDER_SPACING),
         ) {
             ShoulderButton(
@@ -230,10 +254,11 @@ internal fun GamepadRecordingOverlay(
         }
         // ── Left stick — center at GRO_LEFT_STICK_X / GRO_STICK_Y ─────
         Box(
-            modifier = Modifier.offset(
-                x = (maxWidth * GRO_LEFT_STICK_X - GRO_STICK_SIZE / 2).coerceAtLeast(GRO_PADDING),
-                y = (maxHeight * GRO_STICK_Y - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
-            ),
+            modifier =
+                Modifier.offset(
+                    x = (maxWidth * GRO_LEFT_STICK_X - GRO_STICK_SIZE / 2).coerceAtLeast(GRO_PADDING),
+                    y = (maxHeight * GRO_STICK_Y - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
+                ),
         ) {
             StickSurface(
                 x = state.leftStickX,
@@ -243,11 +268,13 @@ internal fun GamepadRecordingOverlay(
         }
         // ── Right stick — center at GRO_RIGHT_STICK_X / GRO_STICK_Y ───
         Box(
-            modifier = Modifier.offset(
-                x = (maxWidth * GRO_RIGHT_STICK_X - GRO_STICK_SIZE / 2)
-                    .coerceAtMost(maxWidth - GRO_STICK_SIZE - GRO_PADDING),
-                y = (maxHeight * GRO_STICK_Y - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
-            ),
+            modifier =
+                Modifier.offset(
+                    x =
+                        (maxWidth * GRO_RIGHT_STICK_X - GRO_STICK_SIZE / 2)
+                            .coerceAtMost(maxWidth - GRO_STICK_SIZE - GRO_PADDING),
+                    y = (maxHeight * GRO_STICK_Y - GRO_STICK_SIZE / 2).coerceAtLeast(0.dp),
+                ),
         ) {
             StickSurface(
                 x = state.rightStickX,
@@ -257,10 +284,11 @@ internal fun GamepadRecordingOverlay(
         }
         // ── D-Pad group — lower-left, below stick centers ──────────────
         Box(
-            modifier = Modifier.offset(
-                x = maxWidth * GRO_DPAD_X,
-                y = maxHeight * GRO_DPAD_Y,
-            ),
+            modifier =
+                Modifier.offset(
+                    x = maxWidth * GRO_DPAD_X,
+                    y = maxHeight * GRO_DPAD_Y,
+                ),
         ) {
             DpadButtons(
                 dirX = state.dpadDirectionX,
@@ -270,10 +298,11 @@ internal fun GamepadRecordingOverlay(
         }
         // ── Face buttons group — lower-right, below stick centers ───────
         Box(
-            modifier = Modifier.offset(
-                x = (maxWidth * GRO_FACE_X - GRO_FACE_CLUSTER_SIZE).coerceAtLeast(0.dp),
-                y = maxHeight * GRO_FACE_Y,
-            ),
+            modifier =
+                Modifier.offset(
+                    x = (maxWidth * GRO_FACE_X - GRO_FACE_CLUSTER_SIZE).coerceAtLeast(0.dp),
+                    y = maxHeight * GRO_FACE_Y,
+                ),
         ) {
             FaceButtonCluster(
                 buttons = faceButtons,
@@ -284,10 +313,11 @@ internal fun GamepadRecordingOverlay(
         }
         // ── L3 ─────────────────────────────────────────────────────────
         Box(
-            modifier = Modifier.offset(
-                x = maxWidth * GRO_L3_X,
-                y = maxHeight - GRO_FACE_BUTTON_SIZE - GRO_PADDING,
-            ),
+            modifier =
+                Modifier.offset(
+                    x = maxWidth * GRO_L3_X,
+                    y = maxHeight - GRO_FACE_BUTTON_SIZE - GRO_PADDING,
+                ),
         ) {
             PressableIconButton(
                 code = GamepadKeycodes.BTN_THUMBL,
@@ -300,10 +330,11 @@ internal fun GamepadRecordingOverlay(
         }
         // ── R3 ─────────────────────────────────────────────────────────
         Box(
-            modifier = Modifier.offset(
-                x = (maxWidth * GRO_R3_X - GRO_FACE_BUTTON_SIZE).coerceAtLeast(0.dp),
-                y = maxHeight - GRO_FACE_BUTTON_SIZE - GRO_PADDING,
-            ),
+            modifier =
+                Modifier.offset(
+                    x = (maxWidth * GRO_R3_X - GRO_FACE_BUTTON_SIZE).coerceAtLeast(0.dp),
+                    y = maxHeight - GRO_FACE_BUTTON_SIZE - GRO_PADDING,
+                ),
         ) {
             PressableIconButton(
                 code = GamepadKeycodes.BTN_THUMBR,
@@ -327,9 +358,10 @@ private fun FaceButtonCluster(
     Box(modifier = Modifier.size(GRO_FACE_CLUSTER_SIZE)) {
         buttons.forEach { spec ->
             Box(
-                modifier = Modifier
-                    .align(spec.alignment)
-                    .padding(GRO_FACE_CLUSTER_PADDING),
+                modifier =
+                    Modifier
+                        .align(spec.alignment)
+                        .padding(GRO_FACE_CLUSTER_PADDING),
             ) {
                 PressableIconButton(
                     code = spec.code,
@@ -354,9 +386,10 @@ private fun ShoulderButton(
 ) {
     val colors = LocalAppColors.current
     PressableSurface(
-        modifier = Modifier
-            .width(GRO_SHOULDER_BUTTON_WIDTH)
-            .height(GRO_SHOULDER_BUTTON_HEIGHT),
+        modifier =
+            Modifier
+                .width(GRO_SHOULDER_BUTTON_WIDTH)
+                .height(GRO_SHOULDER_BUTTON_HEIGHT),
         pressed = pressed,
         onPress = { onButtonDown(code) },
         onRelease = { onButtonUp(code) },
@@ -380,9 +413,10 @@ private fun CenterControlButton(
 ) {
     val colors = LocalAppColors.current
     PressableSurface(
-        modifier = Modifier
-            .width(GRO_CENTER_BUTTON_WIDTH)
-            .height(GRO_CENTER_BUTTON_HEIGHT),
+        modifier =
+            Modifier
+                .width(GRO_CENTER_BUTTON_WIDTH)
+                .height(GRO_CENTER_BUTTON_HEIGHT),
         pressed = isPressed,
         onPress = { onButtonDown(code) },
         onRelease = { onButtonUp(code) },
@@ -418,31 +452,32 @@ private fun DpadButtons(
     val totalSize = GRO_DPAD_ARROW_SIZE * 3
 
     Box(
-        modifier = Modifier
-            .size(totalSize)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    down.consume()
-                    try {
-                        val (dx0, dy0) = dpadPositionToDirection(down.position, size.width.toFloat(), size.height.toFloat())
-                        latestOnChanged(dx0, dy0)
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change == null || !change.pressed) {
-                                change?.consume()
-                                break
+        modifier =
+            Modifier
+                .size(totalSize)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        try {
+                            val (dx0, dy0) = dpadPositionToDirection(down.position, size.width.toFloat(), size.height.toFloat())
+                            latestOnChanged(dx0, dy0)
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null || !change.pressed) {
+                                    change?.consume()
+                                    break
+                                }
+                                val (dxN, dyN) = dpadPositionToDirection(change.position, size.width.toFloat(), size.height.toFloat())
+                                latestOnChanged(dxN, dyN)
+                                change.consume()
                             }
-                            val (dxN, dyN) = dpadPositionToDirection(change.position, size.width.toFloat(), size.height.toFloat())
-                            latestOnChanged(dxN, dyN)
-                            change.consume()
+                        } finally {
+                            latestOnChanged(0, 0)
                         }
-                    } finally {
-                        latestOnChanged(0, 0)
                     }
-                }
-            },
+                },
     ) {
         // Up arrow — top-center cell
         DpadArrowCell(
@@ -479,11 +514,12 @@ private fun DpadArrowCell(
 ) {
     val colors = LocalAppColors.current
     Box(
-        modifier = modifier
-            .size(GRO_DPAD_ARROW_SIZE)
-            .clip(RoundedCornerShape(GRO_DPAD_CORNER))
-            .background(if (active) colors.accent else colors.surface)
-            .border(1.dp, if (active) colors.accent else colors.controlOverlayBorder, RoundedCornerShape(GRO_DPAD_CORNER)),
+        modifier =
+            modifier
+                .size(GRO_DPAD_ARROW_SIZE)
+                .clip(RoundedCornerShape(GRO_DPAD_CORNER))
+                .background(if (active) colors.accent else colors.surface)
+                .border(1.dp, if (active) colors.accent else colors.controlOverlayBorder, RoundedCornerShape(GRO_DPAD_CORNER)),
         contentAlignment = Alignment.Center,
     ) {
         MaterialSymbol(
@@ -498,13 +534,15 @@ private fun DpadArrowCell(
 // Maps a touch position within the D-pad surface to a direction pair (dirX, dirY).
 // The surface is divided into a 3 × 3 grid; the center cell is the dead zone.
 // Returns a Pair<Int, Int> where each component is in {-1, 0, +1}.
-private fun dpadPositionToDirection(position: Offset, width: Float, height: Float): Pair<Int, Int> {
+private fun dpadPositionToDirection(
+    position: Offset,
+    width: Float,
+    height: Float,
+): Pair<Int, Int> {
     val col = (position.x / (width / 3f)).toInt().coerceIn(0, 2)
     val row = (position.y / (height / 3f)).toInt().coerceIn(0, 2)
     return (col - 1) to (row - 1)
 }
-
-
 
 @Composable
 private fun StickSurface(
@@ -515,40 +553,41 @@ private fun StickSurface(
     val colors = LocalAppColors.current
     val latestOnChanged by rememberUpdatedState(onChanged)
     Box(
-        modifier = Modifier
-            .size(GRO_STICK_SIZE)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val pointerId = down.id
-                    try {
-                        onChangedFromPosition(
-                            position = down.position,
-                            width = size.width.toFloat(),
-                            height = size.height.toFloat(),
-                            onChanged = latestOnChanged,
-                        )
-                        down.consume()
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == pointerId } ?: break
-                            if (!change.pressed) {
-                                change.consume()
-                                break
-                            }
+        modifier =
+            Modifier
+                .size(GRO_STICK_SIZE)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val pointerId = down.id
+                        try {
                             onChangedFromPosition(
-                                position = change.position,
+                                position = down.position,
                                 width = size.width.toFloat(),
                                 height = size.height.toFloat(),
                                 onChanged = latestOnChanged,
                             )
-                            change.consume()
+                            down.consume()
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == pointerId } ?: break
+                                if (!change.pressed) {
+                                    change.consume()
+                                    break
+                                }
+                                onChangedFromPosition(
+                                    position = change.position,
+                                    width = size.width.toFloat(),
+                                    height = size.height.toFloat(),
+                                    onChanged = latestOnChanged,
+                                )
+                                change.consume()
+                            }
+                        } finally {
+                            latestOnChanged(0f, 0f)
                         }
-                    } finally {
-                        latestOnChanged(0f, 0f)
                     }
-                }
-            },
+                },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -565,10 +604,11 @@ private fun StickSurface(
                 radius = radius,
                 center = center,
             )
-            val thumbOffset = Offset(
-                x = center.x + (x * radius * GRO_STICK_VISUAL_SCALE),
-                y = center.y + (y * radius * GRO_STICK_VISUAL_SCALE),
-            )
+            val thumbOffset =
+                Offset(
+                    x = center.x + (x * radius * GRO_STICK_VISUAL_SCALE),
+                    y = center.y + (y * radius * GRO_STICK_VISUAL_SCALE),
+                )
             drawCircle(
                 color = colors.onSurface.copy(alpha = GRO_STICK_SHADOW_ALPHA),
                 radius = GRO_STICK_THUMB_SIZE.toPx() / 2f,
@@ -625,30 +665,31 @@ private fun PressableSurface(
     val latestOnPress by rememberUpdatedState(onPress)
     val latestOnRelease by rememberUpdatedState(onRelease)
     Box(
-        modifier = modifier
-            .clip(shape)
-            .background(if (pressed) colors.accent else colors.surface)
-            .border(1.dp, if (pressed) colors.accent else colors.controlOverlayBorder, shape)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    latestOnPress()
-                    down.consume()
-                    try {
-                        do {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change == null || !change.pressed) {
-                                change?.consume()
-                                break
-                            }
-                            change.consume()
-                        } while (true)
-                    } finally {
-                        latestOnRelease()
+        modifier =
+            modifier
+                .clip(shape)
+                .background(if (pressed) colors.accent else colors.surface)
+                .border(1.dp, if (pressed) colors.accent else colors.controlOverlayBorder, shape)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        latestOnPress()
+                        down.consume()
+                        try {
+                            do {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null || !change.pressed) {
+                                    change?.consume()
+                                    break
+                                }
+                                change.consume()
+                            } while (true)
+                        } finally {
+                            latestOnRelease()
+                        }
                     }
-                }
-            },
+                },
         contentAlignment = Alignment.Center,
     ) {
         content()
@@ -679,5 +720,4 @@ private fun onChangedFromPosition(
     onChanged(normX, normY)
 }
 
-internal fun normalizedAxisValue(value: Float): Int =
-    (value.coerceIn(-1f, 1f) * GRO_INT16_MAX).roundToInt().coerceIn(-32767, 32767)
+internal fun normalizedAxisValue(value: Float): Int = (value.coerceIn(-1f, 1f) * GRO_INT16_MAX).roundToInt().coerceIn(-32767, 32767)

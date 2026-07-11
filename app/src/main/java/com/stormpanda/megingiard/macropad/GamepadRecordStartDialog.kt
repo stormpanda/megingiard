@@ -65,9 +65,10 @@ internal fun GamepadRecordStartDialog(
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { dontShowAgain = !dontShowAgain },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { dontShowAgain = !dontShowAgain },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Checkbox(

@@ -42,67 +42,99 @@ private const val TAG = "ButtonListItem"
 
 @Composable
 internal fun ButtonListItem(
-    btn:                PadButton,
-    accentColor:        Color,
-    enableKeyboard:     Boolean,
-    enableGamepad:      Boolean,
-    enableMouse:        Boolean,
-    enableTouch:        Boolean,
-    isDragging:         Boolean,
-    onEdit:             () -> Unit,
-    onDuplicate:        () -> Unit,
-    onCopyToLayout:     () -> Unit,
-    onDelete:           () -> Unit,
+    btn: PadButton,
+    accentColor: Color,
+    enableKeyboard: Boolean,
+    enableGamepad: Boolean,
+    enableMouse: Boolean,
+    enableTouch: Boolean,
+    isDragging: Boolean,
+    onEdit: () -> Unit,
+    onDuplicate: () -> Unit,
+    onCopyToLayout: () -> Unit,
+    onDelete: () -> Unit,
     dragHandleModifier: Modifier,
-    modifier:           Modifier = Modifier,
+    modifier: Modifier = Modifier,
 ) {
-    val colors      = LocalAppColors.current
+    val colors = LocalAppColors.current
     var menuExpanded by remember { mutableStateOf(false) }
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
-    val isDeviceDisabled = when (btn.action) {
-        is PadAction.KeyboardKey                 -> !enableKeyboard
-        is PadAction.GamepadButton               -> !enableGamepad
-        is PadAction.MouseButton,
-        is PadAction.ScrollWheel                 -> !enableMouse
-        is PadAction.TrackpointMove              -> {
-            if ((btn.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
+    val isDeviceDisabled =
+        when (btn.action) {
+            is PadAction.KeyboardKey -> {
+                !enableKeyboard
+            }
+
+            is PadAction.GamepadButton -> {
+                !enableGamepad
+            }
+
+            is PadAction.MouseButton,
+            is PadAction.ScrollWheel,
+            -> {
+                !enableMouse
+            }
+
+            is PadAction.TrackpointMove -> {
+                if ((btn.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH) !enableTouch else !enableMouse
+            }
+
+            is PadAction.Macro -> {
+                !enableGamepad
+            }
+
+            is PadAction.BackgroundPeek -> {
+                false
+            }
+
+            is PadAction.LayoutNext,
+            is PadAction.LayoutPrevious,
+            is PadAction.ProfileSwitcher,
+            is PadAction.MirrorPlayStop,
+            is PadAction.MirrorFreeze,
+            is PadAction.MirrorViewportEdit,
+            is PadAction.MirrorTouchProjection,
+            -> {
+                false
+            }
+
+            is PadAction.FullScreenMouse -> {
+                !enableMouse
+            }
+
+            is PadAction.FullScreenKeyboard -> {
+                !enableKeyboard
+            }
         }
-        is PadAction.Macro                       -> !enableGamepad
-        is PadAction.BackgroundPeek                 -> false
-        is PadAction.LayoutNext,
-        is PadAction.LayoutPrevious,
-        is PadAction.ProfileSwitcher,
-        is PadAction.MirrorPlayStop,
-        is PadAction.MirrorFreeze,
-        is PadAction.MirrorViewportEdit,
-        is PadAction.MirrorTouchProjection       -> false
-        is PadAction.FullScreenMouse             -> !enableMouse
-        is PadAction.FullScreenKeyboard          -> !enableKeyboard
-    }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .alpha(if (isDeviceDisabled) 0.38f else 1f)
-            .background(if (isDragging) colors.surfaceVariant else colors.surface)
-            .clickable { onEdit() }
-            .padding(start = MPE_PADDING, top = 10.dp, bottom = 10.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .alpha(if (isDeviceDisabled) 0.38f else 1f)
+                .background(if (isDragging) colors.surfaceVariant else colors.surface)
+                .clickable { onEdit() }
+                .padding(start = MPE_PADDING, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Shape indicator
         val isIconOnly = btn.buttonShape == ButtonShape.ICON_ONLY
         val chipShape = if (isTrackpoint || btn.buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(4.dp)
         Box(
-            modifier = Modifier
-                .size(32.dp)
-                .then(
-                    if (isIconOnly) Modifier
-                    else Modifier
-                        .clip(chipShape)
-                        .background(accentColor.copy(alpha = 0.2f))
-                        .border(1.dp, accentColor, chipShape)
-                ),
+            modifier =
+                Modifier
+                    .size(32.dp)
+                    .then(
+                        if (isIconOnly) {
+                            Modifier
+                        } else {
+                            Modifier
+                                .clip(chipShape)
+                                .background(accentColor.copy(alpha = 0.2f))
+                                .border(1.dp, accentColor, chipShape)
+                        },
+                    ),
             contentAlignment = Alignment.Center,
         ) {
             if (isTrackpoint) {
@@ -124,40 +156,64 @@ internal fun ButtonListItem(
 
         Spacer(Modifier.width(12.dp))
 
-        val hapticLabel = when (btn.hapticStrength) {
-            HapticStrength.OFF    -> stringResource(R.string.macropad_haptic_off)
-            HapticStrength.LIGHT  -> stringResource(R.string.macropad_haptic_light)
-            HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-            HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-            HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-        }
+        val hapticLabel =
+            when (btn.hapticStrength) {
+                HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
+                HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
+                HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+            }
 
         Column(modifier = Modifier.weight(1f)) {
             if (isTrackpoint) {
-                val sizeLabel = when ((btn.action as PadAction.TrackpointMove).size) {
-                    TrackpointSize.SMALL  -> stringResource(R.string.macropad_trackpoint_size_small)
-                    TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                    TrackpointSize.LARGE  -> stringResource(R.string.macropad_trackpoint_size_large)
-                }
+                val sizeLabel =
+                    when ((btn.action as PadAction.TrackpointMove).size) {
+                        TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
+                        TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
+                        TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
+                    }
                 val desc = listOf(sizeLabel, hapticLabel).joinToString(" • ")
-                Text(stringResource(R.string.macropad_action_trackpoint), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                Text(
+                    stringResource(R.string.macropad_action_trackpoint),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                )
                 Text(desc, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
             } else {
                 val actionLabel = btn.action.displayLabel()
-                val sizeLabel = if (btn.action !is PadAction.ScrollWheel) {
-                    "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
-                } else {
-                    null
-                }
+                val sizeLabel =
+                    if (btn.action !is PadAction.ScrollWheel) {
+                        "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+                    } else {
+                        null
+                    }
                 val desc = listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
-                Text(btn.label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(desc, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    btn.label,
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    desc,
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
 
         Box {
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_more_options), tint = colors.onSurfaceSecondary)
+                Icon(
+                    Icons.Rounded.MoreVert,
+                    contentDescription = stringResource(R.string.cd_more_options),
+                    tint = colors.onSurfaceSecondary,
+                )
             }
             DropdownMenu(
                 expanded = menuExpanded,
@@ -165,31 +221,67 @@ internal fun ButtonListItem(
                 modifier = Modifier.background(colors.surface),
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.settings_macropad_edit), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onEdit() }
+                    text = {
+                        Text(
+                            stringResource(R.string.settings_macropad_edit),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onEdit()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_editor_copy_button_duplicate), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onDuplicate() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_copy_button_duplicate),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDuplicate()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_editor_copy_to_layout), color = colors.onSurface, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onCopyToLayout() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_copy_to_layout),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onCopyToLayout()
+                    },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.macropad_editor_delete_button), color = colors.error, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { menuExpanded = false; onDelete() }
+                    text = {
+                        Text(
+                            stringResource(R.string.macropad_editor_delete_button),
+                            color = colors.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onDelete()
+                    },
                 )
             }
         }
         Icon(
-            imageVector        = Icons.Rounded.DragHandle,
+            imageVector = Icons.Rounded.DragHandle,
             contentDescription = stringResource(R.string.cd_drag_reorder),
-            tint               = colors.onSurfaceSecondary,
-            modifier           = Modifier
-                .padding(horizontal = 12.dp)
-                .then(dragHandleModifier),
+            tint = colors.onSurfaceSecondary,
+            modifier =
+                Modifier
+                    .padding(horizontal = 12.dp)
+                    .then(dragHandleModifier),
         )
     }
-
 }

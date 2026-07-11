@@ -27,13 +27,16 @@ private const val KB_TRACKPOINT_MOUSE_SENSITIVITY = 3f
  *
  * Create one instance per keyboard screen session.
  */
-class KeyRepeatController(private val scope: CoroutineScope) {
-
+class KeyRepeatController(
+    private val scope: CoroutineScope,
+) {
     private val _pressedKeys = MutableStateFlow(emptySet<String>())
+
     /** Set of currently pressed key IDs (for visual highlighting in the UI). */
     val pressedKeys: StateFlow<Set<String>> = _pressedKeys.asStateFlow()
 
     private val _trackpointVisible = MutableStateFlow(false)
+
     /** Whether the trackpoint overlay should be shown. */
     val trackpointVisible: StateFlow<Boolean> = _trackpointVisible.asStateFlow()
 
@@ -71,23 +74,27 @@ class KeyRepeatController(private val scope: CoroutineScope) {
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = keyDef
                 if (keyDef.linuxKeycode != 0) {
-                    KeyboardState.activeModifierKeycodes(layout)
+                    KeyboardState
+                        .activeModifierKeycodes(layout)
                         .forEach { KeyInjector.keyDown(it) }
                     KeyInjector.keyDown(keyDef.linuxKeycode)
                     if (!repeatEnabled) {
                         KeyInjector.keyUp(keyDef.linuxKeycode)
-                        KeyboardState.activeModifierKeycodes(layout)
+                        KeyboardState
+                            .activeModifierKeycodes(layout)
                             .forEach { KeyInjector.keyUp(it) }
                     }
                 }
                 startRepeat(keyDef, layout, repeatEnabled)
             }
+
             KeyType.MODIFIER -> {
                 pointerKeyMap[pointerId] = id
                 modifierBeingHeld = keyDef
                 KeyboardState.onModifierTouchDown(id)
                 startModifierHold(keyDef)
             }
+
             KeyType.TRACKPOINT -> {
                 trackpointPointers += pointerId
                 pointerKeyMap[pointerId] = id
@@ -137,7 +144,8 @@ class KeyRepeatController(private val scope: CoroutineScope) {
             repeatJob?.cancel()
             if (repeatEnabled) {
                 KeyInjector.keyUp(prevDef.linuxKeycode)
-                KeyboardState.activeModifierKeycodes(layout)
+                KeyboardState
+                    .activeModifierKeycodes(layout)
                     .forEach { KeyInjector.keyUp(it) }
             }
             _pressedKeys.value = _pressedKeys.value - prevId
@@ -149,12 +157,14 @@ class KeyRepeatController(private val scope: CoroutineScope) {
             _pressedKeys.value = _pressedKeys.value + newId
             heldKey = newDef
             if (newDef.linuxKeycode != 0) {
-                KeyboardState.activeModifierKeycodes(layout)
+                KeyboardState
+                    .activeModifierKeycodes(layout)
                     .forEach { KeyInjector.keyDown(it) }
                 KeyInjector.keyDown(newDef.linuxKeycode)
                 if (!repeatEnabled) {
                     KeyInjector.keyUp(newDef.linuxKeycode)
-                    KeyboardState.activeModifierKeycodes(layout)
+                    KeyboardState
+                        .activeModifierKeycodes(layout)
                         .forEach { KeyInjector.keyUp(it) }
                 }
             }
@@ -194,20 +204,25 @@ class KeyRepeatController(private val scope: CoroutineScope) {
                 repeatJob?.cancel()
                 if (keyDef.linuxKeycode != 0 && repeatEnabled) {
                     KeyInjector.keyUp(keyDef.linuxKeycode)
-                    KeyboardState.releaseStickyModifiers(layout)
+                    KeyboardState
+                        .releaseStickyModifiers(layout)
                         .forEach { KeyInjector.keyUp(it) }
                 } else if (keyDef.linuxKeycode != 0) {
-                    KeyboardState.releaseStickyModifiers(layout)
+                    KeyboardState
+                        .releaseStickyModifiers(layout)
                         .forEach { KeyInjector.keyUp(it) }
                 }
                 _pressedKeys.value = _pressedKeys.value - releasedId
             }
+
             KeyType.MODIFIER -> {
                 modifierBeingHeld = null
                 modifierHoldJob?.cancel()
-                KeyboardState.onModifierTouchUp(releasedId, keyDef.linuxKeycode)
+                KeyboardState
+                    .onModifierTouchUp(releasedId, keyDef.linuxKeycode)
                     .forEach { KeyInjector.keyUp(it) }
             }
+
             KeyType.TRACKPOINT -> { /* handled in trackpoint block above */ }
         }
         return true
@@ -228,30 +243,36 @@ class KeyRepeatController(private val scope: CoroutineScope) {
         modifierBeingHeld = null
     }
 
-    private fun startRepeat(keyDef: KeyDef, layout: List<List<KeyDef>>, enabled: Boolean) {
+    private fun startRepeat(
+        keyDef: KeyDef,
+        layout: List<List<KeyDef>>,
+        enabled: Boolean,
+    ) {
         repeatJob?.cancel()
         if (!enabled || keyDef.linuxKeycode == 0) return
-        repeatJob = scope.launch {
-            delay(KB_REPEAT_INITIAL_DELAY_MS)
-            while (heldKey == keyDef) {
-                val mods = KeyboardState.activeModifierKeycodes(layout)
-                mods.forEach { KeyInjector.keyDown(it) }
-                KeyInjector.keyDown(keyDef.linuxKeycode)
-                KeyInjector.keyUp(keyDef.linuxKeycode)
-                mods.forEach { KeyInjector.keyUp(it) }
-                delay(KB_REPEAT_INTERVAL_MS)
+        repeatJob =
+            scope.launch {
+                delay(KB_REPEAT_INITIAL_DELAY_MS)
+                while (heldKey == keyDef) {
+                    val mods = KeyboardState.activeModifierKeycodes(layout)
+                    mods.forEach { KeyInjector.keyDown(it) }
+                    KeyInjector.keyDown(keyDef.linuxKeycode)
+                    KeyInjector.keyUp(keyDef.linuxKeycode)
+                    mods.forEach { KeyInjector.keyUp(it) }
+                    delay(KB_REPEAT_INTERVAL_MS)
+                }
             }
-        }
     }
 
     private fun startModifierHold(keyDef: KeyDef) {
         modifierHoldJob?.cancel()
-        modifierHoldJob = scope.launch {
-            delay(KB_MODIFIER_HOLD_MS)
-            if (modifierBeingHeld == keyDef) {
-                val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode)
-                if (keycode != null) KeyInjector.keyDown(keycode)
+        modifierHoldJob =
+            scope.launch {
+                delay(KB_MODIFIER_HOLD_MS)
+                if (modifierBeingHeld == keyDef) {
+                    val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode)
+                    if (keycode != null) KeyInjector.keyDown(keycode)
+                }
             }
-        }
     }
 }

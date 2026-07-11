@@ -3,17 +3,16 @@ package com.stormpanda.megingiard.macropad
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import com.stormpanda.megingiard.ui.blockPointerEvents
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,8 +36,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AmbientPreviewConfig
@@ -60,21 +61,19 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
-import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
-import androidx.compose.material.icons.rounded.Edit
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.blockPointerEvents
 import java.util.Locale
-import androidx.compose.ui.text.style.TextAlign
 import kotlin.math.roundToInt
-
 
 private const val TAG = "BackgroundSettingsOverlay"
 
@@ -108,7 +107,6 @@ private const val ASO_SMOOTHING_VAL_STRONG = 85
 // ─────────────────────────────────────────────────────────────────────────────
 // Entry point
 // ─────────────────────────────────────────────────────────────────────────────
-
 
 /**
  * Full-screen overlay for per-layout ambient display settings.
@@ -158,8 +156,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     }
 
     // Pre-captured for use inside onPreviewClick lambdas (non-composable context).
-    val labelDim              = stringResource(R.string.settings_macropad_dim)
-    val labelEdgeBlending     = stringResource(R.string.mirror_edge_blend_label)
+    val labelDim = stringResource(R.string.settings_macropad_dim)
+    val labelEdgeBlending = stringResource(R.string.mirror_edge_blend_label)
 
     // Back: exit preview first; otherwise close background settings.
     BackHandler(enabled = true) {
@@ -191,29 +189,32 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var showAmbientHelp by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .blockPointerEvents(),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .blockPointerEvents(),
     ) {
-
         // ── Main settings panel — hidden while previewing ──
         if (!isInPreview) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(colors.appBackground),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(colors.appBackground),
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
                 ) {
                     // Title + Back button — styled like GlobalSettingsScreen TopAppBar
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(colors.surface)
-                            .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(colors.surface)
+                                .padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = onDone) {
@@ -224,15 +225,16 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                             )
                         }
                         Text(
-                            text = buildAnnotatedString {
-                                withStyle(SpanStyle(color = colors.onSurface)) {
-                                    append(stringResource(R.string.quick_menu_ambient_settings))
-                                }
-                                withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
-                                    append(" (${currentLayout.name})")
-                                }
-                            },
-                            style    = MaterialTheme.typography.titleLarge,
+                            text =
+                                buildAnnotatedString {
+                                    withStyle(SpanStyle(color = colors.onSurface)) {
+                                        append(stringResource(R.string.quick_menu_ambient_settings))
+                                    }
+                                    withStyle(SpanStyle(color = colors.onSurfaceSecondary)) {
+                                        append(" (${currentLayout.name})")
+                                    }
+                                },
+                            style = MaterialTheme.typography.titleLarge,
                             modifier = Modifier.weight(1f),
                         )
                         HelpIconButton(onClick = { showAmbientHelp = true })
@@ -253,12 +255,14 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(ambientDim = dimAlpha) }
                             },
                             onPreviewClick = {
-                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                    type = AmbientPreviewType.DIM,
-                                    label = labelDim,
-                                    originalValue = dimAlpha,
-                                    valueRange = 0f..ASO_DIM_MAX,
-                                ))
+                                AppStateManager.setAmbientPreviewConfig(
+                                    AmbientPreviewConfig(
+                                        type = AmbientPreviewType.DIM,
+                                        label = labelDim,
+                                        originalValue = dimAlpha,
+                                        valueRange = 0f..ASO_DIM_MAX,
+                                    ),
+                                )
                             },
                         )
 
@@ -287,12 +291,14 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
                             },
                             onPreviewClick = {
-                                AppStateManager.setAmbientPreviewConfig(AmbientPreviewConfig(
-                                    type = AmbientPreviewType.EDGE_BLENDING,
-                                    label = labelEdgeBlending,
-                                    originalValue = edgeBlendWidth,
-                                    valueRange = 0f..100f,
-                                ))
+                                AppStateManager.setAmbientPreviewConfig(
+                                    AmbientPreviewConfig(
+                                        type = AmbientPreviewType.EDGE_BLENDING,
+                                        label = labelEdgeBlending,
+                                        originalValue = edgeBlendWidth,
+                                        valueRange = 0f..100f,
+                                    ),
+                                )
                             },
                         )
 
@@ -312,9 +318,10 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 )
                             }
                             val selectedCutoutId = currentLayout.mirrorCutouts.find { it.followTouch }?.id
-                            val dropdownOptions = remember(currentLayout.mirrorCutouts) {
-                                listOf<String?>(null) + currentLayout.mirrorCutouts.map { it.id }
-                            }
+                            val dropdownOptions =
+                                remember(currentLayout.mirrorCutouts) {
+                                    listOf<String?>(null) + currentLayout.mirrorCutouts.map { it.id }
+                                }
                             AppDropdown(
                                 selected = selectedCutoutId,
                                 options = dropdownOptions,
@@ -323,22 +330,26 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                         stringResource(R.string.settings_mirror_follow_touch_off)
                                     } else {
                                         val defaultName = stringResource(R.string.settings_mirror_cutout_default)
-                                        currentLayout.mirrorCutouts.find { it.id == id }?.name?.ifBlank { defaultName } ?: defaultName
+                                        currentLayout.mirrorCutouts
+                                            .find { it.id == id }
+                                            ?.name
+                                            ?.ifBlank { defaultName } ?: defaultName
                                     }
                                 },
                                 onSelected = { id ->
                                     AppLog.d(TAG, "mirrorFollowCutoutId → $id")
-                                    val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                        c.copy(followTouch = (c.id == id))
-                                    }
+                                    val updatedCutouts =
+                                        currentLayout.mirrorCutouts.map { c ->
+                                            c.copy(followTouch = (c.id == id))
+                                        }
                                     commitLayout {
                                         copy(
                                             mirrorCutouts = updatedCutouts,
-                                            mirrorFollowActive = (id != null)
+                                            mirrorFollowActive = (id != null),
                                         )
                                     }
                                     ScreenCaptureManager.setFollowActive(id != null, persist = false)
-                                }
+                                },
                             )
                         }
                     }
@@ -347,17 +358,18 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
                     if (currentLayout.mirrorCutouts.isEmpty()) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(colors.surface)
-                                .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(colors.surface)
+                                    .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_mirror_no_cutouts),
                                 color = colors.onSurfaceSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
                             )
                         }
                     } else {
@@ -368,29 +380,36 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 }
 
                                 Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V)
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = ASO_ROW_PADDING_H, vertical = ASO_ROW_PADDING_V),
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth().padding(bottom = ASO_SPACING_8)
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = ASO_SPACING_8),
                                     ) {
                                         Text(
-                                            text = cutout.name.ifBlank { stringResource(R.string.settings_mirror_cutout_default_name_fmt, index + 1) },
+                                            text =
+                                                cutout.name.ifBlank {
+                                                    stringResource(
+                                                        R.string.settings_mirror_cutout_default_name_fmt,
+                                                        index + 1,
+                                                    )
+                                                },
                                             color = colors.onSurface,
                                             style = MaterialTheme.typography.titleMedium,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier.weight(1f),
                                         )
                                         IconButton(
                                             onClick = { renamingCutout = cutout },
-                                            modifier = Modifier.size(ASO_EDIT_ICON_SIZE)
+                                            modifier = Modifier.size(ASO_EDIT_ICON_SIZE),
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.Edit,
                                                 contentDescription = stringResource(R.string.macropad_editor_rename),
                                                 tint = colors.accent,
-                                                modifier = Modifier.size(ASO_EDIT_ICON_INNER_SIZE)
+                                                modifier = Modifier.size(ASO_EDIT_ICON_INNER_SIZE),
                                             )
                                         }
                                     }
@@ -398,18 +417,19 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     // Motion Smoothing Slider Row
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = ASO_CUTOUT_ROW_V_PADDING),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        val cutoutValue = if (cutout.motionSmoothing) {
-                                            when (cutout.motionSmoothingStrength) {
-                                                ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
-                                                ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
-                                                ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
-                                                else -> ASO_SMOOTHING_STRONG
+                                        val cutoutValue =
+                                            if (cutout.motionSmoothing) {
+                                                when (cutout.motionSmoothingStrength) {
+                                                    ASO_SMOOTHING_VAL_LIGHT -> ASO_SMOOTHING_LIGHT
+                                                    ASO_SMOOTHING_VAL_MEDIUM -> ASO_SMOOTHING_MEDIUM
+                                                    ASO_SMOOTHING_VAL_STRONG -> ASO_SMOOTHING_STRONG
+                                                    else -> ASO_SMOOTHING_STRONG
+                                                }
+                                            } else {
+                                                ASO_SMOOTHING_OFF
                                             }
-                                        } else {
-                                            ASO_SMOOTHING_OFF
-                                        }
                                         val sliderValue = localSmoothingValues[cutout.id] ?: cutoutValue
                                         Column(modifier = Modifier.weight(1f).padding(end = ASO_SPACING_8)) {
                                             Text(
@@ -417,13 +437,32 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                                 color = colors.onSurface,
                                                 style = MaterialTheme.typography.bodyMedium,
                                             )
-                                            val strengthText = when (sliderValue.roundToInt()) {
-                                                ASO_SMOOTHING_OFF.toInt() -> stringResource(R.string.mirror_smoothing_strength_off)
-                                                ASO_SMOOTHING_LIGHT.toInt() -> stringResource(R.string.mirror_smoothing_strength_light)
-                                                ASO_SMOOTHING_MEDIUM.toInt() -> stringResource(R.string.mirror_smoothing_strength_medium)
-                                                ASO_SMOOTHING_STRONG.toInt() -> stringResource(R.string.mirror_smoothing_strength_strong)
-                                                else -> stringResource(R.string.mirror_smoothing_strength_off)
-                                            }
+                                            val strengthText =
+                                                when (sliderValue.roundToInt()) {
+                                                    ASO_SMOOTHING_OFF.toInt() -> {
+                                                        stringResource(R.string.mirror_smoothing_strength_off)
+                                                    }
+
+                                                    ASO_SMOOTHING_LIGHT.toInt() -> {
+                                                        stringResource(R.string.mirror_smoothing_strength_light)
+                                                    }
+
+                                                    ASO_SMOOTHING_MEDIUM.toInt() -> {
+                                                        stringResource(
+                                                            R.string.mirror_smoothing_strength_medium,
+                                                        )
+                                                    }
+
+                                                    ASO_SMOOTHING_STRONG.toInt() -> {
+                                                        stringResource(
+                                                            R.string.mirror_smoothing_strength_strong,
+                                                        )
+                                                    }
+
+                                                    else -> {
+                                                        stringResource(R.string.mirror_smoothing_strength_off)
+                                                    }
+                                                }
                                             Text(
                                                 text = strengthText,
                                                 color = colors.onSurfaceSecondary,
@@ -434,28 +473,43 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                             modifier = Modifier.weight(1.5f),
                                             value = sliderValue,
                                             onValueChange = { newValue ->
-                                                val idx = newValue.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
+                                                val idx =
+                                                    newValue.roundToInt().coerceIn(
+                                                        ASO_SMOOTHING_OFF.toInt(),
+                                                        ASO_SMOOTHING_STRONG.toInt(),
+                                                    )
                                                 localSmoothingValues[cutout.id] = idx.toFloat()
                                             },
                                             onValueChangeFinished = {
                                                 val valFloat = localSmoothingValues[cutout.id] ?: cutoutValue
-                                                val idx = valFloat.roundToInt().coerceIn(ASO_SMOOTHING_OFF.toInt(), ASO_SMOOTHING_STRONG.toInt())
+                                                val idx =
+                                                    valFloat.roundToInt().coerceIn(
+                                                        ASO_SMOOTHING_OFF.toInt(),
+                                                        ASO_SMOOTHING_STRONG.toInt(),
+                                                    )
                                                 val isSmooth = idx > 0
-                                                val strength = when (idx) {
-                                                    ASO_SMOOTHING_LIGHT.toInt() -> ASO_SMOOTHING_VAL_LIGHT
-                                                    ASO_SMOOTHING_MEDIUM.toInt() -> ASO_SMOOTHING_VAL_MEDIUM
-                                                    ASO_SMOOTHING_STRONG.toInt() -> ASO_SMOOTHING_VAL_STRONG
-                                                    else -> cutout.motionSmoothingStrength
-                                                }
-                                                AppLog.d(TAG, "cutout '${cutout.name}' smoothing slider finished → $idx (strength: $strength)")
-                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                                    if (c.id == cutout.id) {
-                                                        c.copy(
-                                                            motionSmoothing = isSmooth,
-                                                            motionSmoothingStrength = strength
-                                                        )
-                                                    } else c
-                                                }
+                                                val strength =
+                                                    when (idx) {
+                                                        ASO_SMOOTHING_LIGHT.toInt() -> ASO_SMOOTHING_VAL_LIGHT
+                                                        ASO_SMOOTHING_MEDIUM.toInt() -> ASO_SMOOTHING_VAL_MEDIUM
+                                                        ASO_SMOOTHING_STRONG.toInt() -> ASO_SMOOTHING_VAL_STRONG
+                                                        else -> cutout.motionSmoothingStrength
+                                                    }
+                                                AppLog.d(
+                                                    TAG,
+                                                    "cutout '${cutout.name}' smoothing slider finished → $idx (strength: $strength)",
+                                                )
+                                                val updatedCutouts =
+                                                    currentLayout.mirrorCutouts.map { c ->
+                                                        if (c.id == cutout.id) {
+                                                            c.copy(
+                                                                motionSmoothing = isSmooth,
+                                                                motionSmoothingStrength = strength,
+                                                            )
+                                                        } else {
+                                                            c
+                                                        }
+                                                    }
                                                 commitLayout {
                                                     copy(mirrorCutouts = updatedCutouts)
                                                 }
@@ -468,7 +522,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                     // Touch Projection Switch
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = ASO_CUTOUT_ROW_V_PADDING),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
@@ -486,14 +540,15 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                             checked = cutout.touchProjectionEnabled,
                                             onCheckedChange = { isChecked ->
                                                 AppLog.d(TAG, "cutout '${cutout.name}' touchProjectionEnabled → $isChecked")
-                                                val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                                                    if (c.id == cutout.id) c.copy(touchProjectionEnabled = isChecked) else c
-                                                }
+                                                val updatedCutouts =
+                                                    currentLayout.mirrorCutouts.map { c ->
+                                                        if (c.id == cutout.id) c.copy(touchProjectionEnabled = isChecked) else c
+                                                    }
                                                 commitLayout { copy(mirrorCutouts = updatedCutouts) }
                                                 if (isChecked) {
                                                     ScreenCaptureManager.setLocked(true)
                                                 }
-                                            }
+                                            },
                                         )
                                     }
                                 }
@@ -515,26 +570,27 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                 TextButton(onClick = { renamingCutout = null }) {
                     Text(
                         text = stringResource(R.string.macropad_editor_cancel),
-                        color = colors.onSurfaceSecondary
+                        color = colors.onSurfaceSecondary,
                     )
                 }
                 val newName = renameText.trim()
                 TextButton(
                     onClick = {
-                        val updatedCutouts = currentLayout.mirrorCutouts.map { c ->
-                            if (c.id == targetCutout.id) c.copy(name = newName) else c
-                        }
+                        val updatedCutouts =
+                            currentLayout.mirrorCutouts.map { c ->
+                                if (c.id == targetCutout.id) c.copy(name = newName) else c
+                            }
                         commitLayout { copy(mirrorCutouts = updatedCutouts) }
                         renamingCutout = null
                     },
-                    enabled = true
+                    enabled = true,
                 ) {
                     Text(
                         text = stringResource(R.string.macropad_editor_done),
-                        color = colors.accent
+                        color = colors.accent,
                     )
                 }
-            }
+            },
         ) {
             AppTextField(
                 value = renameText,
@@ -544,9 +600,9 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                 placeholder = {
                     Text(
                         text = stringResource(R.string.mirror_editor_cutout_name_hint),
-                        color = colors.onSurfaceSecondary
+                        color = colors.onSurfaceSecondary,
                     )
-                }
+                },
             )
         }
     }
@@ -556,7 +612,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         onDismiss = { showAmbientHelp = false },
     )
 }
-
 
 /**
  * Section header used in ambient settings to match the shared settings visual language.
@@ -570,10 +625,11 @@ private fun AsoSectionHeader(text: String) {
         text = text.uppercase(Locale.ROOT),
         color = colors.sectionHeaderColor,
         style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(colors.surfaceVariant)
-            .padding(horizontal = ASO_SECTION_HEADER_PADDING_H, vertical = ASO_SECTION_HEADER_PADDING_V),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant)
+                .padding(horizontal = ASO_SECTION_HEADER_PADDING_H, vertical = ASO_SECTION_HEADER_PADDING_V),
     )
 }
 
@@ -635,18 +691,19 @@ internal fun AsoPreviewBar(
 ) {
     val colors = LocalAppColors.current
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                colors.surface.copy(alpha = 0.95f),
-                RoundedCornerShape(topStart = ASO_PREVIEW_BAR_CORNER, topEnd = ASO_PREVIEW_BAR_CORNER),
-            )
-            .padding(horizontal = ASO_PREVIEW_BAR_H_PADDING, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    colors.surface.copy(alpha = 0.95f),
+                    RoundedCornerShape(topStart = ASO_PREVIEW_BAR_CORNER, topEnd = ASO_PREVIEW_BAR_CORNER),
+                ).padding(horizontal = ASO_PREVIEW_BAR_H_PADDING, vertical = 12.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.labelMedium)
@@ -681,7 +738,10 @@ internal fun AsoPreviewBar(
 }
 
 @Composable
-private fun BackgroundSettingsHelpModal(visible: Boolean, onDismiss: () -> Unit) {
+private fun BackgroundSettingsHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
     HelpModal(
         visible = visible,
         title = stringResource(R.string.help_ambient_title),

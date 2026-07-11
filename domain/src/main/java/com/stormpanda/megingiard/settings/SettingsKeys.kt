@@ -25,9 +25,9 @@ internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_OVERLAY_FADE_OUT = booleanPreferencesKey("overlay_fade_out")
 internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_token")
 
-
 // Mirror touch projection settings
 internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
+
 // Mirror session state persistence — "remember" flags
 internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
 internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
@@ -38,8 +38,8 @@ internal val KEY_REMEMBER_PROJECTION = booleanPreferencesKey("mirror_remember_pr
 internal val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
 
 // MacroPad settings
-internal val KEY_MACROPAD_PROFILES           = stringPreferencesKey("macropad_profiles")
-internal val KEY_MACROPAD_ACTIVE_PROFILE_ID  = stringPreferencesKey("macropad_active_profile_id")
+internal val KEY_MACROPAD_PROFILES = stringPreferencesKey("macropad_profiles")
+internal val KEY_MACROPAD_ACTIVE_PROFILE_ID = stringPreferencesKey("macropad_active_profile_id")
 
 // Keyboard settings
 internal val KEY_KB_LAYOUT = stringPreferencesKey("kb_layout")
@@ -75,7 +75,7 @@ internal val KEY_MACROPAD_RECENT_COLORS = stringPreferencesKey("macropad_recent_
 internal val KEY_PRIVD_SHOW_ADB_PROMPT = booleanPreferencesKey("privd_show_adb_prompt")
 
 // Privileged Mode — per-stick evdev dead zone for physical gamepad recording (0.0–1.0, default 0.15).
-internal val KEY_PRIVD_DEADZONE_LEFT  = floatPreferencesKey("privd_deadzone_left")
+internal val KEY_PRIVD_DEADZONE_LEFT = floatPreferencesKey("privd_deadzone_left")
 internal val KEY_PRIVD_DEADZONE_RIGHT = floatPreferencesKey("privd_deadzone_right")
 
 // MacroPad ambient display settings
@@ -94,43 +94,61 @@ internal val KEY_SHOW_QUICK_MENU_TUTORIAL = booleanPreferencesKey("show_quick_me
 // Internal backups storage key — isolated from SECTION_MAP export/import
 internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 
-
 // ── Section key groups for config export/import ───────────────────────────
 
-private val GLOBAL_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_ACCENT_COLOR, KEY_OVERLAY_AT_BOTTOM, KEY_OVERLAY_FADE_OUT, KEY_THEME_MODE,
-    KEY_APP_LANGUAGE, KEY_LOG_LEVEL,
-    KEY_AUTO_SWITCH_PROFILES, KEY_EXCLUDE_FROM_RECENTS, KEY_STEAMGRIDDB_API_TOKEN,
-)
-private val MIRROR_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_PINCH_WHILE_PROJECTING,
-    KEY_REMEMBER_VIEWPORT, KEY_REMEMBER_LOCK, KEY_REMEMBER_PROJECTION,
-)
-private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_TOUCHPAD_USE_MOUSE, KEY_TOUCHPAD_TAP_TO_CLICK, KEY_TOUCHPAD_TWO_FINGER_TAP,
-)
-private val KEYBOARD_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_KB_LAYOUT, KEY_KB_TRACKPOINT_ENABLED, KEY_KB_REPEAT_ENABLED,
-    KEY_KB_FULLSCREEN, KEY_KB_MOUSE_BTN_POS,
-)
-private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> = setOf(
-    KEY_MACROPAD_AMBIENT_DIM,
-    KEY_MACROPAD_AMBIENT_PREVIEW, KEY_MACROPAD_AMBIENT_APPLY_THEME,
-    KEY_GAMEPAD_SWAP_FACE_BUTTONS,
-    KEY_MACROPAD_RECENT_COLORS,
-    KEY_PRIVD_SHOW_ADB_PROMPT,
-    KEY_PRIVD_DEADZONE_LEFT,
-    KEY_PRIVD_DEADZONE_RIGHT,
-)
+private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_ACCENT_COLOR,
+        KEY_OVERLAY_AT_BOTTOM,
+        KEY_OVERLAY_FADE_OUT,
+        KEY_THEME_MODE,
+        KEY_APP_LANGUAGE,
+        KEY_LOG_LEVEL,
+        KEY_AUTO_SWITCH_PROFILES,
+        KEY_EXCLUDE_FROM_RECENTS,
+        KEY_STEAMGRIDDB_API_TOKEN,
+    )
+private val MIRROR_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_PINCH_WHILE_PROJECTING,
+        KEY_REMEMBER_VIEWPORT,
+        KEY_REMEMBER_LOCK,
+        KEY_REMEMBER_PROJECTION,
+    )
+private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_TOUCHPAD_USE_MOUSE,
+        KEY_TOUCHPAD_TAP_TO_CLICK,
+        KEY_TOUCHPAD_TWO_FINGER_TAP,
+    )
+private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_KB_LAYOUT,
+        KEY_KB_TRACKPOINT_ENABLED,
+        KEY_KB_REPEAT_ENABLED,
+        KEY_KB_FULLSCREEN,
+        KEY_KB_MOUSE_BTN_POS,
+    )
+private val MACROPAD_SETTINGS_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_MACROPAD_AMBIENT_DIM,
+        KEY_MACROPAD_AMBIENT_PREVIEW,
+        KEY_MACROPAD_AMBIENT_APPLY_THEME,
+        KEY_GAMEPAD_SWAP_FACE_BUTTONS,
+        KEY_MACROPAD_RECENT_COLORS,
+        KEY_PRIVD_SHOW_ADB_PROMPT,
+        KEY_PRIVD_DEADZONE_LEFT,
+        KEY_PRIVD_DEADZONE_RIGHT,
+    )
 
-
-internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> = mapOf(
-    "global" to GLOBAL_KEYS,
-    "mirror" to MIRROR_KEYS,
-    "touchpad" to TOUCHPAD_KEYS,
-    "keyboard" to KEYBOARD_KEYS,
-    "macropad_settings" to MACROPAD_SETTINGS_KEYS,
-)
+internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> =
+    mapOf(
+        "global" to GLOBAL_KEYS,
+        "mirror" to MIRROR_KEYS,
+        "touchpad" to TOUCHPAD_KEYS,
+        "keyboard" to KEYBOARD_KEYS,
+        "macropad_settings" to MACROPAD_SETTINGS_KEYS,
+    )
 
 /** Reverse lookup: DataStore key name → section name. */
 internal val KEY_TO_SECTION: Map<String, String> by lazy {

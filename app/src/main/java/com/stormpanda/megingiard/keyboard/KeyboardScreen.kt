@@ -59,7 +59,10 @@ private val KB_QUICK_MENU_BAR_INSET = QUICK_MENU_BAR_INSET
 private const val TAG = "KeyboardScreen"
 
 @Composable
-fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null) {
+fun KeyboardScreen(
+    modifier: Modifier = Modifier,
+    forcedLayout: KbLayout? = null,
+) {
     val viewModel: KeyboardViewModel = viewModel()
     val context = LocalContext.current
     val kbLayoutSetting by viewModel.kbLayout.collectAsState()
@@ -80,11 +83,11 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
     val rshiftState by KeyboardState.stateFor("rshift").collectAsState()
-    val capsState   by KeyboardState.stateFor("caps").collectAsState()
-    val altGrState  by KeyboardState.stateFor("ralt").collectAsState()
+    val capsState by KeyboardState.stateFor("caps").collectAsState()
+    val altGrState by KeyboardState.stateFor("ralt").collectAsState()
     val isShiftActive = lshiftState != ModifierState.INACTIVE || rshiftState != ModifierState.INACTIVE
-    val isCapsActive  = capsState   != ModifierState.INACTIVE
-    val isAltGrActive = altGrState  != ModifierState.INACTIVE
+    val isCapsActive = capsState != ModifierState.INACTIVE
+    val isAltGrActive = altGrState != ModifierState.INACTIVE
 
     // Start injectors via ViewModel (waits for overlay to close).
     LaunchedEffect(Unit) {
@@ -97,13 +100,14 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
         }
     }
 
-    val layout = remember(kbLayout) {
-        when (kbLayout) {
-            KbLayout.QWERTY -> qwertyLayout()
-            KbLayout.AZERTY -> azertyLayout()
-            KbLayout.QWERTZ -> qwertzLayout()
+    val layout =
+        remember(kbLayout) {
+            when (kbLayout) {
+                KbLayout.QWERTY -> qwertyLayout()
+                KbLayout.AZERTY -> azertyLayout()
+                KbLayout.QWERTZ -> qwertzLayout()
+            }
         }
-    }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned
     val keyBounds = remember(kbLayout) { mutableMapOf<String, KeyBounds>() }
@@ -117,122 +121,134 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
     val trackpointAlpha by animateFloatAsState(
         targetValue = if (trackpointVisible) KB_TRACKPOINT_OVERLAY_ALPHA else 0f,
         animationSpec = tween(KB_TRACKPOINT_FADE_MS),
-        label = "trackpointAlpha"
+        label = "trackpointAlpha",
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.appBackground)
-            .onGloballyPositioned { boxCoordsState.value = it }
-            .pointerInput(layout) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        // While the quick menu overlay is visible, block new key input.
-                        if (isQuickMenuOpenState.value) {
-                            when (event.type) {
-                                PointerEventType.Press -> {
-                                    if (event.changes.none { it.isConsumed }) {
-                                        viewModel.closeQuickMenu()
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(colors.appBackground)
+                .onGloballyPositioned { boxCoordsState.value = it }
+                .pointerInput(layout) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            // While the quick menu overlay is visible, block new key input.
+                            if (isQuickMenuOpenState.value) {
+                                when (event.type) {
+                                    PointerEventType.Press -> {
+                                        if (event.changes.none { it.isConsumed }) {
+                                            viewModel.closeQuickMenu()
+                                        }
+                                        event.changes.forEach { it.consume() }
+                                        continue
                                     }
-                                    event.changes.forEach { it.consume() }
-                                    continue
+
+                                    PointerEventType.Move -> {
+                                        event.changes.forEach { it.consume() }
+                                        continue
+                                    }
+
+                                    else -> {
+                                        Unit
+                                    } // Release: fall through for held-key cleanup
                                 }
-                                PointerEventType.Move -> {
-                                    event.changes.forEach { it.consume() }
-                                    continue
-                                }
-                                else -> Unit // Release: fall through for held-key cleanup
                             }
-                        }
-                        val boxCoords = boxCoordsState.value ?: continue
-                        for (change in event.changes) {
-                            val pid = change.id.value
+                            val boxCoords = boxCoordsState.value ?: continue
+                            for (change in event.changes) {
+                                val pid = change.id.value
 
-                            // Trackpoint pointers must be handled even if consumed by a child
-                            // (e.g. mouse button press in trackpoint overlay).
-                            if (controller.isTrackpointPointer(pid)) {
-                                when {
-                                    change.pressed && event.type == PointerEventType.Move -> {
-                                        val delta = change.positionChange()
-                                        controller.onKeyMove(pid, null, delta.x, delta.y, layout, kbRepeatEnabled)
-                                        change.consume()
-                                    }
-                                    !change.pressed && change.previousPressed -> {
-                                        controller.onKeyUp(pid, layout, kbRepeatEnabled)
-                                        change.consume()
-                                    }
-                                }
-                                continue
-                            }
+                                // Trackpoint pointers must be handled even if consumed by a child
+                                // (e.g. mouse button press in trackpoint overlay).
+                                if (controller.isTrackpointPointer(pid)) {
+                                    when {
+                                        change.pressed && event.type == PointerEventType.Move -> {
+                                            val delta = change.positionChange()
+                                            controller.onKeyMove(pid, null, delta.x, delta.y, layout, kbRepeatEnabled)
+                                            change.consume()
+                                        }
 
-                            // Non-trackpoint events consumed by a child are skipped.
-                            if (change.isConsumed) continue
-
-                            // Convert pointer position to root space for hit testing
-                            val rootPos = boxCoords.localToRoot(change.position)
-                            val keyId = keyBounds.entries
-                                .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
-                                ?.key
-
-                            when (event.type) {
-                                PointerEventType.Press -> {
-                                    if (!change.previousPressed) {
-                                        if (controller.onKeyDown(pid, keyId, layout, kbRepeatEnabled)) {
+                                        !change.pressed && change.previousPressed -> {
+                                            controller.onKeyUp(pid, layout, kbRepeatEnabled)
                                             change.consume()
                                         }
                                     }
+                                    continue
                                 }
 
-                                PointerEventType.Move -> {
-                                    val delta = change.positionChange()
-                                    if (controller.onKeyMove(pid, keyId, delta.x, delta.y, layout, kbRepeatEnabled)) {
-                                        change.consume()
+                                // Non-trackpoint events consumed by a child are skipped.
+                                if (change.isConsumed) continue
+
+                                // Convert pointer position to root space for hit testing
+                                val rootPos = boxCoords.localToRoot(change.position)
+                                val keyId =
+                                    keyBounds.entries
+                                        .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
+                                        ?.key
+
+                                when (event.type) {
+                                    PointerEventType.Press -> {
+                                        if (!change.previousPressed) {
+                                            if (controller.onKeyDown(pid, keyId, layout, kbRepeatEnabled)) {
+                                                change.consume()
+                                            }
+                                        }
+                                    }
+
+                                    PointerEventType.Move -> {
+                                        val delta = change.positionChange()
+                                        if (controller.onKeyMove(pid, keyId, delta.x, delta.y, layout, kbRepeatEnabled)) {
+                                            change.consume()
+                                        }
+                                    }
+
+                                    PointerEventType.Release -> {
+                                        if (!change.pressed && change.previousPressed) {
+                                            controller.onKeyUp(pid, layout, kbRepeatEnabled)
+                                            change.consume()
+                                        }
+                                    }
+
+                                    else -> {
+                                        Unit
                                     }
                                 }
-
-                                PointerEventType.Release -> {
-                                    if (!change.pressed && change.previousPressed) {
-                                        controller.onKeyUp(pid, layout, kbRepeatEnabled)
-                                        change.consume()
-                                    }
-                                }
-
-                                else -> Unit
                             }
                         }
                     }
-                }
-            }
+                },
     ) {
         // Visual keyboard layout — Crossfade for smooth layout transitions
         Crossfade(targetState = kbLayout, label = "Layout Switch") { activeLayout ->
-            val animatedLayout = remember(activeLayout) {
-                when (activeLayout) {
-                    KbLayout.QWERTY -> qwertyLayout()
-                    KbLayout.AZERTY -> azertyLayout()
-                    KbLayout.QWERTZ -> qwertzLayout()
+            val animatedLayout =
+                remember(activeLayout) {
+                    when (activeLayout) {
+                        KbLayout.QWERTY -> qwertyLayout()
+                        KbLayout.AZERTY -> azertyLayout()
+                        KbLayout.QWERTZ -> qwertzLayout()
+                    }
                 }
-            }
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = 4.dp,
-                        end = 4.dp,
-                        top = if (overlayAtBottom) 4.dp else KB_QUICK_MENU_BAR_INSET,
-                        bottom = if (effectiveFullscreen) (if (overlayAtBottom) KB_QUICK_MENU_BAR_INSET else 4.dp) else KB_IME_BOTTOM_PADDING
-                    ),
-                verticalArrangement = Arrangement.SpaceEvenly
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(
+                            start = 4.dp,
+                            end = 4.dp,
+                            top = if (overlayAtBottom) 4.dp else KB_QUICK_MENU_BAR_INSET,
+                            bottom = if (effectiveFullscreen) (if (overlayAtBottom) KB_QUICK_MENU_BAR_INSET else 4.dp) else KB_IME_BOTTOM_PADDING,
+                        ),
+                verticalArrangement = Arrangement.SpaceEvenly,
             ) {
                 animatedLayout.forEachIndexed { rowIndex, row ->
                     val heightWeight = if (rowIndex == 0) F_ROW_HEIGHT_WEIGHT else 1f
                     Row(
-                        modifier = Modifier
-                            .weight(heightWeight)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H)
+                        modifier =
+                            Modifier
+                                .weight(heightWeight)
+                                .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
                     ) {
                         row.forEach { key ->
                             // Skip trackpoint key if disabled in settings
@@ -247,7 +263,7 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
                                 modifier = Modifier.weight(key.widthWeight),
-                                onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds }
+                                onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
                             )
                         }
                     }
@@ -258,14 +274,15 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
         // Trackpoint overlay: mouse buttons own their pointerInput; outer Box handles trackpoint moves.
         if (trackpointAlpha > 0f) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .align(Alignment.Center)
-                    .alpha(trackpointAlpha)
-                    .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                    .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .align(Alignment.Center)
+                        .alpha(trackpointAlpha)
+                        .background(colors.keyBackground, RoundedCornerShape(8.dp))
+                        .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = stringResource(R.string.cd_keyboard_trackpoint),
@@ -284,9 +301,10 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                             onLmbUp = { MouseInjector.leftUp() },
                             onRmbDown = { MouseInjector.rightDown() },
                             onRmbUp = { MouseInjector.rightUp() },
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .padding(start = 8.dp),
+                            modifier =
+                                Modifier
+                                    .align(Alignment.CenterStart)
+                                    .padding(start = 8.dp),
                         )
                     }
                     if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
@@ -297,14 +315,14 @@ fun KeyboardScreen(modifier: Modifier = Modifier, forcedLayout: KbLayout? = null
                             onRmbDown = { MouseInjector.rightDown() },
                             onRmbUp = { MouseInjector.rightUp() },
                             mirrored = true,
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 8.dp),
+                            modifier =
+                                Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 8.dp),
                         )
                     }
                 }
             }
         }
-
     }
 }
