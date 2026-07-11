@@ -7,11 +7,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -162,65 +164,72 @@ fun ColorWheelPicker(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
 
-            if (preview != null) {
-                preview(currentColor)
-            }
-
-            // HSV color wheel canvas
-            Canvas(
-                modifier = Modifier
-                    .size(WHEEL_SIZE)
-                    .clip(CircleShape)
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                if (event.type == PointerEventType.Press || event.type == PointerEventType.Move) {
-                                    val pos = event.changes.firstOrNull()?.position ?: continue
-                                    val cx = size.width / 2f
-                                    val cy = size.height / 2f
-                                    val dx = pos.x - cx
-                                    val dy = pos.y - cy
-                                    val maxR = size.width / 2f
-                                    hue = ((atan2(dy, dx) * 180.0 / PI).toFloat() + 360f) % 360f
-                                    sat = (sqrt(dx * dx + dy * dy) / maxR).coerceIn(0f, 1f)
-                                    event.changes.forEach { it.consume() }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // HSV color wheel canvas
+                Canvas(
+                    modifier = Modifier
+                        .size(WHEEL_SIZE)
+                        .clip(CircleShape)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.type == PointerEventType.Press || event.type == PointerEventType.Move) {
+                                        val pos = event.changes.firstOrNull()?.position ?: continue
+                                        val cx = size.width / 2f
+                                        val cy = size.height / 2f
+                                        val dx = pos.x - cx
+                                        val dy = pos.y - cy
+                                        val maxR = size.width / 2f
+                                        hue = ((atan2(dy, dx) * 180.0 / PI).toFloat() + 360f) % 360f
+                                        sat = (sqrt(dx * dx + dy * dy) / maxR).coerceIn(0f, 1f)
+                                        event.changes.forEach { it.consume() }
+                                    }
                                 }
                             }
                         }
-                    }
-            ) {
-                val center = Offset(size.width / 2f, size.height / 2f)
-                val radius = size.width / 2f
+                ) {
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val radius = size.width / 2f
 
-                // Hue sweep gradient
-                drawCircle(
-                    brush = sweepBrush,
-                    radius = radius
-                )
-                // Saturation: white center fading to transparent edge
-                drawCircle(
-                    brush = radialBrush,
-                    radius = radius
-                )
-                // Brightness: black overlay
-                drawCircle(color = Color.Black.copy(alpha = 1f - bri), radius = radius)
+                    // Hue sweep gradient
+                    drawCircle(
+                        brush = sweepBrush,
+                        radius = radius
+                    )
+                    // Saturation: white center fading to transparent edge
+                    drawCircle(
+                        brush = radialBrush,
+                        radius = radius
+                    )
+                    // Brightness: black overlay
+                    drawCircle(color = Color.Black.copy(alpha = 1f - bri), radius = radius)
 
-                // Selector dot
-                val selAngleRad = (hue * PI / 180.0).toFloat()
-                val selDist = sat * radius
-                val selX = center.x + cos(selAngleRad) * selDist
-                val selY = center.y + sin(selAngleRad) * selDist
-                val dotCenter = Offset(selX, selY)
-                drawCircle(color = Color.White, radius = 10.dp.toPx(), center = dotCenter)
-                drawHsvArray[0] = hue
-                drawHsvArray[1] = sat
-                drawHsvArray[2] = bri
-                drawCircle(
-                    color = Color(AndroidColor.HSVToColor(drawHsvArray)),
-                    radius = 7.dp.toPx(),
-                    center = dotCenter
-                )
+                    // Selector dot
+                    val selAngleRad = (hue * PI / 180.0).toFloat()
+                    val selDist = sat * radius
+                    val selX = center.x + cos(selAngleRad) * selDist
+                    val selY = center.y + sin(selAngleRad) * selDist
+                    val dotCenter = Offset(selX, selY)
+                    drawCircle(color = Color.White, radius = 10.dp.toPx(), center = dotCenter)
+                    drawHsvArray[0] = hue
+                    drawHsvArray[1] = sat
+                    drawHsvArray[2] = bri
+                    drawCircle(
+                        color = Color(AndroidColor.HSVToColor(drawHsvArray)),
+                        radius = 7.dp.toPx(),
+                        center = dotCenter
+                    )
+                }
+
+                if (preview != null) {
+                    Spacer(Modifier.width(24.dp))
+                    preview(currentColor)
+                }
             }
 
             // Brightness slider

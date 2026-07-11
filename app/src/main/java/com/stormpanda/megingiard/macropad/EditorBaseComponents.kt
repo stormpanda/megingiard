@@ -28,12 +28,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import kotlin.math.sqrt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -185,19 +191,41 @@ internal fun SwordsButtonPreview(
     borderColor: Color,
     bgColor: Color,
     modifier: Modifier = Modifier,
-    size: Dp = 56.dp,
+    size: Dp = 60.dp,
 ) {
+    val density = LocalDensity.current
+    val alpha = 0.25f
+    val gradientScale = 2.8f // 0.7f / 0.25f
+
+    val bgBrush = remember(bgColor, density) {
+        val wPx = with(density) { size.toPx() }
+        val hPx = with(density) { size.toPx() }
+        val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
+        Brush.radialGradient(
+            0.00f to bgColor.copy(alpha = 0f),
+            0.50f to bgColor.copy(alpha = alpha * gradientScale * 0.25f),
+            0.75f to bgColor.copy(alpha = alpha * gradientScale * 0.5625f),
+            1.00f to bgColor.copy(alpha = alpha * gradientScale),
+            center = Offset(wPx / 2f, hPx / 2f),
+            radius = halfDiag,
+        )
+    }
+
     Box(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(bgColor)
+            .drawWithContent {
+                drawRect(color = Color(0x80121212))
+                drawRect(brush = bgBrush)
+                drawContent()
+            }
             .border(1.dp, borderColor, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         MaterialSymbol(
             name = "swords",
-            size = size * 0.73f,
+            size = 44.dp,
             tint = textColor,
             filled = true
         )

@@ -322,7 +322,7 @@ internal fun LayoutSettingsEditor(
                         textColor = if (activeWheelTarget == ColorPickerTarget.TEXT) liveColor else currentText,
                         borderColor = if (activeWheelTarget == ColorPickerTarget.BORDER) liveColor else currentBorder,
                         bgColor = if (activeWheelTarget == ColorPickerTarget.BG) liveColor else currentBg,
-                        size = 72.dp
+                        size = 60.dp
                     )
                 }
             )
@@ -368,7 +368,7 @@ internal fun LayoutSettingsEditor(
                         textColor = if (activePaletteTarget == ColorPickerTarget.TEXT) resolved else currentText,
                         borderColor = if (activePaletteTarget == ColorPickerTarget.BORDER) resolved else currentBorder,
                         bgColor = if (activePaletteTarget == ColorPickerTarget.BG) resolved else currentBg,
-                        size = 32.dp
+                        size = 60.dp
                     )
                 }
             )
@@ -495,7 +495,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(60.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(ColorOption.Neutral)
@@ -518,7 +518,7 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(60.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         preview(ColorOption.Accent)
@@ -554,12 +554,12 @@ private fun QuickColorSelectionDialog(
                     columns = GridCells.Fixed(5),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(80.dp)
+                    modifier = Modifier.fillMaxWidth().height(128.dp)
                 ) {
                     items(recentColors) { argb ->
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(60.dp)
                                 .clickable { onSelected(ColorOption.Custom(argb)) },
                             contentAlignment = Alignment.Center
                         ) {
