@@ -119,6 +119,8 @@ private val LSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val LSE_SPACING_16 = 16.dp
 private const val LSE_CROP_MIN_SCALE = 1f
 private const val LSE_CROP_MAX_SCALE = 5f
+private val LSE_PREVIEW_BUTTON_SIZE = 60.dp
+private val LSE_RECENT_COLORS_GRID_HEIGHT = 128.dp
 
 @Composable
 internal fun LayoutSettingsEditor(
@@ -290,13 +292,21 @@ internal fun LayoutSettingsEditor(
     // Color Wheel overlays
         val activeWheelTarget = activeColorPickerTarget
         if (activeWheelTarget != null) {
+            val currentText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+            val currentBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+            val currentBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
             val initialColor = when (activeWheelTarget) {
-                ColorPickerTarget.TEXT -> resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-                ColorPickerTarget.BORDER -> resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-                ColorPickerTarget.BG -> resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+                ColorPickerTarget.TEXT -> currentText
+                ColorPickerTarget.BORDER -> currentBorder
+                ColorPickerTarget.BG -> currentBg
             }
             ColorWheelPicker(
                 initialColor = initialColor,
+                title = when (activeWheelTarget) {
+                    ColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
+                    ColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
+                    ColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
+                },
                 showAlphaSlider = true,
                 onColorSelected = { selectedColor ->
                     val customOpt = ColorOption.Custom(selectedColor.toArgb())
@@ -308,7 +318,15 @@ internal fun LayoutSettingsEditor(
                     MacroPadSettings.addRecentColor(selectedColor.toArgb())
                     activeColorPickerTarget = null
                 },
-                onDismiss = { activeColorPickerTarget = null }
+                onDismiss = { activeColorPickerTarget = null },
+                preview = { liveColor ->
+                    SwordsButtonPreview(
+                        textColor = if (activeWheelTarget == ColorPickerTarget.TEXT) liveColor else currentText,
+                        borderColor = if (activeWheelTarget == ColorPickerTarget.BORDER) liveColor else currentBorder,
+                        bgColor = if (activeWheelTarget == ColorPickerTarget.BG) liveColor else currentBg,
+                        size = LSE_PREVIEW_BUTTON_SIZE
+                    )
+                }
             )
         }
 
@@ -320,14 +338,15 @@ internal fun LayoutSettingsEditor(
                 ColorPickerTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
                 ColorPickerTarget.BG -> MP_AMBIENT_NEUTRAL_BG
             }
+            val currentText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+            val currentBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+            val currentBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
             QuickColorSelectionDialog(
                 title = when (activePaletteTarget) {
                     ColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
                     ColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
                     ColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
                 },
-                neutralColor = defaultNeutralColor,
-                accentColor = globalAccentColor,
                 recentColors = recentColors,
                 onSelected = { opt ->
                     when (activePaletteTarget) {
@@ -340,7 +359,20 @@ internal fun LayoutSettingsEditor(
                     }
                     activePaletteDialogTarget = null
                 },
-                onDismiss = { activePaletteDialogTarget = null }
+                onDismiss = { activePaletteDialogTarget = null },
+                preview = { option ->
+                    val resolved = when (option) {
+                        ColorOption.Neutral -> defaultNeutralColor
+                        ColorOption.Accent -> globalAccentColor
+                        is ColorOption.Custom -> Color(option.argb)
+                    }
+                    SwordsButtonPreview(
+                        textColor = if (activePaletteTarget == ColorPickerTarget.TEXT) resolved else currentText,
+                        borderColor = if (activePaletteTarget == ColorPickerTarget.BORDER) resolved else currentBorder,
+                        bgColor = if (activePaletteTarget == ColorPickerTarget.BG) resolved else currentBg,
+                        size = LSE_PREVIEW_BUTTON_SIZE
+                    )
+                }
             )
         }
 
@@ -419,11 +451,10 @@ private fun ColorPickerRow(
 @Composable
 private fun QuickColorSelectionDialog(
     title: String,
-    neutralColor: Color,
-    accentColor: Color,
     recentColors: List<Int>,
     onSelected: (ColorOption) -> Unit,
     onDismiss: () -> Unit,
+    preview: @Composable (ColorOption) -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -466,12 +497,11 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(neutralColor)
-                            .border(1.dp, colors.divider, CircleShape)
-                    )
+                        modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        preview(ColorOption.Neutral)
+                    }
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.layout_settings_color_neutral),
@@ -490,12 +520,11 @@ private fun QuickColorSelectionDialog(
                         .padding(8.dp)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(accentColor)
-                            .border(1.dp, colors.divider, CircleShape)
-                    )
+                        modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        preview(ColorOption.Accent)
+                    }
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.layout_settings_color_accent),
@@ -527,17 +556,17 @@ private fun QuickColorSelectionDialog(
                     columns = GridCells.Fixed(5),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(80.dp)
+                    modifier = Modifier.fillMaxWidth().height(LSE_RECENT_COLORS_GRID_HEIGHT)
                 ) {
                     items(recentColors) { argb ->
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color(argb))
-                                .border(1.dp, colors.divider, CircleShape)
-                                .clickable { onSelected(ColorOption.Custom(argb)) }
-                        )
+                                .size(LSE_PREVIEW_BUTTON_SIZE)
+                                .clickable { onSelected(ColorOption.Custom(argb)) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            preview(ColorOption.Custom(argb))
+                        }
                     }
                 }
             }

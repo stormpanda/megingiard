@@ -5,13 +5,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.Dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
@@ -25,12 +28,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import kotlin.math.sqrt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,6 +48,13 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
 private const val TAG = "EditorBaseComponents"
+
+internal val EBC_PREVIEW_DEFAULT_SIZE = 60.dp
+private const val EBC_PREVIEW_BG_ALPHA = 0.25f
+private const val EBC_PREVIEW_GRADIENT_SCALE = 2.8f
+private val EBC_PREVIEW_ICON_SIZE = 44.dp
+private val EBC_PREVIEW_BORDER_WIDTH = 1.dp
+private val EBC_PREVIEW_SCRIM_COLOR = Color(0x80121212)
 
 @Composable
 internal fun EditorSectionHeader(
@@ -175,3 +191,49 @@ internal fun EditorToolbar(
         )
     }
 }
+
+@Composable
+internal fun SwordsButtonPreview(
+    textColor: Color,
+    borderColor: Color,
+    bgColor: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = EBC_PREVIEW_DEFAULT_SIZE,
+) {
+    val density = LocalDensity.current
+
+    val bgBrush = remember(bgColor, density) {
+        val wPx = with(density) { size.toPx() }
+        val hPx = with(density) { size.toPx() }
+        val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
+        Brush.radialGradient(
+            0.00f to bgColor.copy(alpha = 0f),
+            0.50f to bgColor.copy(alpha = EBC_PREVIEW_BG_ALPHA * EBC_PREVIEW_GRADIENT_SCALE * 0.25f),
+            0.75f to bgColor.copy(alpha = EBC_PREVIEW_BG_ALPHA * EBC_PREVIEW_GRADIENT_SCALE * 0.5625f),
+            1.00f to bgColor.copy(alpha = EBC_PREVIEW_BG_ALPHA * EBC_PREVIEW_GRADIENT_SCALE),
+            center = Offset(wPx / 2f, hPx / 2f),
+            radius = halfDiag,
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .drawWithContent {
+                drawRect(color = EBC_PREVIEW_SCRIM_COLOR)
+                drawRect(brush = bgBrush)
+                drawContent()
+            }
+            .border(EBC_PREVIEW_BORDER_WIDTH, borderColor, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        MaterialSymbol(
+            name = "swords",
+            size = EBC_PREVIEW_ICON_SIZE,
+            tint = textColor,
+            filled = true
+        )
+    }
+}
+
