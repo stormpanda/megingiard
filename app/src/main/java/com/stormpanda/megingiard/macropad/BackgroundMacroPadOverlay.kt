@@ -91,9 +91,42 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
     val quickMenuBarZoneWidthPx = with(density) { AM_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
-    val swipeProcessor =
+
+    val kbBarWidthPx = with(density) { 72.dp.toPx() }
+    val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
+    val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
+    val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
+    val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
+    val qmSwipe =
         remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx) {
-            SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
+            SwipeGestureProcessor(
+                edgeZonePx = edgeZonePx,
+                swipeThresholdPx = swipeThresholdPx,
+                overlayAtBottom = overlayAtBottom,
+                quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
+                onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+            )
+        }
+
+    val kbSwipe =
+        remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, kbBarMinX, kbBarMaxX) {
+            SwipeGestureProcessor(
+                edgeZonePx = edgeZonePx,
+                swipeThresholdPx = swipeThresholdPx,
+                overlayAtBottom = overlayAtBottom,
+                customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                onEdgeSwipe = {
+                    if (AppStateManager.isAnyModalActive.value) {
+                        AppStateManager.closeActiveModal()
+                    } else if (AppStateManager.isQuickMenuOpen.value) {
+                        AppStateManager.closeQuickMenu()
+                    } else {
+                        AppStateManager.setFullscreenKeyboardActive(true)
+                    }
+                },
+            )
         }
 
     // Effective dim: overridden to 0 when peeking
@@ -173,7 +206,15 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
         modifier =
             Modifier
                 .fillMaxSize()
-                .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx, previewConfig == null) {
+                .pointerInput(
+                    overlayAtBottom,
+                    edgeZonePx,
+                    swipeThresholdPx,
+                    quickMenuBarZoneWidthPx,
+                    kbBarMinX,
+                    kbBarMaxX,
+                    previewConfig == null,
+                ) {
                     if (previewConfig != null) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
@@ -183,28 +224,36 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                             val y = primaryChange?.position?.y ?: 0f
                             when (event.type) {
                                 PointerEventType.Press -> {
-                                    swipeProcessor.onPress(
+                                    qmSwipe.onPress(
                                         pointerY = y,
                                         containerHeight = size.height.toFloat(),
                                         pointerX = x,
                                         containerWidth = size.width.toFloat(),
                                     )
-                                    if (swipeProcessor.isNearEdge) {
+                                    kbSwipe.onPress(
+                                        pointerY = y,
+                                        containerHeight = size.height.toFloat(),
+                                        pointerX = x,
+                                        containerWidth = size.width.toFloat(),
+                                    )
+                                    if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
 
                                 PointerEventType.Move -> {
-                                    swipeProcessor.onMove(y)
-                                    if (swipeProcessor.isNearEdge) {
+                                    qmSwipe.onMove(y)
+                                    kbSwipe.onMove(y)
+                                    if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
 
                                 PointerEventType.Release -> {
                                     val allPointersLifted = !event.changes.any { it.pressed }
-                                    swipeProcessor.onRelease(allPointersLifted)
-                                    if (swipeProcessor.isNearEdge) {
+                                    qmSwipe.onRelease(allPointersLifted)
+                                    kbSwipe.onRelease(allPointersLifted)
+                                    if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }

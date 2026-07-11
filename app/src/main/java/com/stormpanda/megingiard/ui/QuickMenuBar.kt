@@ -67,11 +67,12 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
     val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val colors = LocalAppColors.current
 
     val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
-    LaunchedEffect(isQuickMenuOpen, overlayFadeOut) {
-        if (overlayFadeOut && !isQuickMenuOpen) {
+    LaunchedEffect(isQuickMenuOpen, isFullscreenKeyboardActive, overlayFadeOut) {
+        if (overlayFadeOut && !isQuickMenuOpen && !isFullscreenKeyboardActive) {
             alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
             delay(QM_BAR_FADE_OUT_DELAY_MS)
             alpha.animateTo(QM_BAR_ALPHA_FADED, animationSpec = tween(QM_BAR_FADE_OUT_DURATION_MS))
@@ -81,7 +82,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Bar tab
+        // Bar tab (Center)
         QuickMenuBarTab(
             overlayAtBottom = overlayAtBottom,
             colors = colors,
@@ -91,6 +92,20 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                         if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
                     ).graphicsLayer(alpha = alpha.value),
         )
+
+        // Keyboard Bar tab (Left/Start)
+        if (!isFullscreenKeyboardActive) {
+            QuickMenuBarTab(
+                overlayAtBottom = overlayAtBottom,
+                colors = colors,
+                modifier =
+                    Modifier
+                        .align(
+                            if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
+                        ).padding(start = 24.dp)
+                        .graphicsLayer(alpha = alpha.value),
+            )
+        }
 
         // Quick Menu overlay — rendered as a sibling so it covers MacroPadScreen
         QuickMenu(

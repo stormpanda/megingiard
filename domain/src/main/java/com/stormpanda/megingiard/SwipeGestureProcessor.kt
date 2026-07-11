@@ -21,6 +21,7 @@ class SwipeGestureProcessor(
     private val quickMenuBarZoneWidthPx: Float? = null,
     private val onTouchingChanged: (Boolean) -> Unit = { AppStateManager.setTouching(it) },
     private val onEdgeSwipe: () -> Unit = { AppStateManager.handleEdgeSwipe() },
+    private val customZoneCheck: ((pointerX: Float, containerWidth: Float) -> Boolean)? = null,
 ) {
     private var swipeStartY = Float.NaN
     private var swipeTriggered = false
@@ -33,8 +34,10 @@ class SwipeGestureProcessor(
         containerWidth: Float = 0f,
     ) {
         onTouchingChanged(true)
-        val inQuickMenuBarZoneX =
-            if (quickMenuBarZoneWidthPx != null && containerWidth > 0f) {
+        val inZoneX =
+            if (customZoneCheck != null) {
+                customZoneCheck(pointerX, containerWidth)
+            } else if (quickMenuBarZoneWidthPx != null && containerWidth > 0f) {
                 val center = containerWidth / 2f
                 pointerX >= center - quickMenuBarZoneWidthPx / 2f && pointerX <= center + quickMenuBarZoneWidthPx / 2f
             } else {
@@ -47,7 +50,7 @@ class SwipeGestureProcessor(
                 } else {
                     pointerY <= edgeZonePx
                 }
-            ) && inQuickMenuBarZoneX
+            ) && inZoneX
         swipeStartY = if (nearEdge) pointerY else Float.NaN
         swipeTriggered = false
     }

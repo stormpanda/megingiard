@@ -129,6 +129,13 @@ fun MainAppScreen() {
     val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
     val quickMenuBarZoneWidthPx = with(density) { MAS_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
+    val kbBarWidthPx = with(density) { 72.dp.toPx() }
+    val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
+    val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
+    val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
+    val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
     val context = LocalContext.current
 
     var showExitDialog by remember { mutableStateOf(false) }
@@ -184,8 +191,31 @@ fun MainAppScreen() {
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(overlayAtBottom, isValidScreen) {
-                        val swipe = SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
+                    .pointerInput(overlayAtBottom, isValidScreen, kbBarMinX, kbBarMaxX) {
+                        val qmSwipe =
+                            SwipeGestureProcessor(
+                                edgeZonePx = edgeZonePx,
+                                swipeThresholdPx = swipeThresholdPx,
+                                overlayAtBottom = overlayAtBottom,
+                                quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
+                                onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+                            )
+                        val kbSwipe =
+                            SwipeGestureProcessor(
+                                edgeZonePx = edgeZonePx,
+                                swipeThresholdPx = swipeThresholdPx,
+                                overlayAtBottom = overlayAtBottom,
+                                customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                                onEdgeSwipe = {
+                                    if (AppStateManager.isAnyModalActive.value) {
+                                        AppStateManager.closeActiveModal()
+                                    } else if (AppStateManager.isQuickMenuOpen.value) {
+                                        AppStateManager.closeQuickMenu()
+                                    } else {
+                                        AppStateManager.setFullscreenKeyboardActive(true)
+                                    }
+                                },
+                            )
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -197,27 +227,36 @@ fun MainAppScreen() {
                                 val y = firstChange?.position?.y ?: 0f
                                 when (event.type) {
                                     PointerEventType.Press -> {
-                                        swipe.onPress(
+                                        qmSwipe.onPress(
                                             pointerY = y,
                                             containerHeight = size.height.toFloat(),
                                             pointerX = x,
                                             containerWidth = size.width.toFloat(),
                                         )
-                                        if (swipe.isNearEdge) {
+                                        kbSwipe.onPress(
+                                            pointerY = y,
+                                            containerHeight = size.height.toFloat(),
+                                            pointerX = x,
+                                            containerWidth = size.width.toFloat(),
+                                        )
+                                        if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
                                             event.changes.forEach { it.consume() }
                                         }
                                     }
 
                                     PointerEventType.Move -> {
-                                        swipe.onMove(y)
-                                        if (swipe.isNearEdge) {
+                                        qmSwipe.onMove(y)
+                                        kbSwipe.onMove(y)
+                                        if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
                                             event.changes.forEach { it.consume() }
                                         }
                                     }
 
                                     PointerEventType.Release -> {
-                                        swipe.onRelease(!event.changes.any { it.pressed })
-                                        if (swipe.isNearEdge) {
+                                        val allPointersUp = !event.changes.any { it.pressed }
+                                        qmSwipe.onRelease(allPointersUp)
+                                        kbSwipe.onRelease(allPointersUp)
+                                        if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
                                             event.changes.forEach { it.consume() }
                                         }
                                     }
@@ -235,7 +274,20 @@ fun MainAppScreen() {
             // Suppressed when ambient mode is active: the overlays are rendered on the
             // secondary display inside MirrorPresentation instead.
             if (isFullscreenMouseActive && !isCapturing) FullscreenMouseOverlay()
-            if (isFullscreenKeyboardActive && !isCapturing) {
+            AnimatedVisibility(
+                visible = isFullscreenKeyboardActive && !isCapturing,
+                enter =
+                    slideInVertically(
+                        animationSpec = tween(300),
+                        initialOffsetY = { if (overlayAtBottom) it else -it },
+                    ) + fadeIn(animationSpec = tween(300)),
+                exit =
+                    slideOutVertically(
+                        animationSpec = tween(300),
+                        targetOffsetY = { if (overlayAtBottom) it else -it },
+                    ) + fadeOut(animationSpec = tween(300)),
+                modifier = Modifier.fillMaxSize(),
+            ) {
                 KeyboardScreen(
                     modifier = Modifier.fillMaxSize(),
                     forcedLayout = fullscreenKeyboardLayout,

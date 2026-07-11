@@ -61,6 +61,14 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - The keyboard MUST function without root access or additional Android permissions beyond the app's declared set.
 - On the AYN Thor, the `/dev/uinput` device node is accessible under the standard shell UID (2000).
 
+### FR-K7: Quick Keyboard Bar
+
+- A slim rounded bar tab (QuickKeyboardBar) MUST be rendered at the left/start side of the configured screen edge, matching the styling and behavior of the Quick Menu Bar.
+- Swiping this bar from the edge MUST open the virtual keyboard overlay with a slide-in + fade animation:
+  - From the bottom up if the Quick Menu is configured at the bottom.
+  - From the top down if the Quick Menu is configured at the top.
+- While the keyboard is active, the QuickKeyboardBar MUST be hidden. Swiping from the edge closes the keyboard overlay.
+
 ---
 
 ## Technical Implementation
@@ -236,4 +244,10 @@ When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `K
 
 `MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `KeyInjector` runs at a time.
 
-Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenKeyboardActive.value = false`.
+Both screens feature a left-aligned visual `QuickKeyboardBarTab` and use a dedicated `SwipeGestureProcessor` covering the left-most 120 dp edge zone (representing the `QuickKeyboardBar`) to swipe and toggle the virtual keyboard overlay. 
+
+When toggled, `KeyboardScreen` is shown/hidden via `AnimatedVisibility` with a slide-in + fade transition:
+- Animates from the bottom up when `SettingsManager.overlayAtBottom` is true.
+- Animates from the top down when `SettingsManager.overlayAtBottom` is false.
+
+Dismissal on both displays reuses the edge-swipe gesture path: swiping any edge bar zone (center or left) while the keyboard is open resolves to `AppStateManager.closeActiveModal()`, closing the overlay with a matching slide-out and fade-out animation.
