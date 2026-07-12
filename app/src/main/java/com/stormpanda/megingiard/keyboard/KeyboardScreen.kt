@@ -386,7 +386,7 @@ fun KeyboardScreen(
                                 Column(
                                     modifier =
                                         Modifier
-                                            .weight(6.6f)
+                                            .weight(7.3f)
                                             .fillMaxHeight(),
                                     verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
                                 ) {

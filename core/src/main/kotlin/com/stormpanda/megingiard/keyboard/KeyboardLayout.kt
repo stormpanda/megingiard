@@ -416,37 +416,37 @@ private fun numericLayout(): List<List<KeyDef>> =
         // operator column keys + row 1 keys
         listOf(
             KeyDef("plus", "+", KEY_EQUAL, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("num_1", "1", KEY_1),
-            KeyDef("num_2", "2", KEY_2),
-            KeyDef("num_3", "3", KEY_3),
-            KeyDef("percent", "%", KEY_5, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("num_1", "1", KEY_1, widthWeight = 2.0f),
+            KeyDef("num_2", "2", KEY_2, widthWeight = 2.0f),
+            KeyDef("num_3", "3", KEY_3, widthWeight = 2.0f),
+            KeyDef("percent", "%", KEY_5, widthWeight = 1.3f, autoModifiers = listOf(KEY_LEFTSHIFT)),
         ),
         // operators column minus + row 2 keys
         listOf(
             KeyDef("minus", "-", KEY_MINUS),
-            KeyDef("num_4", "4", KEY_4),
-            KeyDef("num_5", "5", KEY_5),
-            KeyDef("num_6", "6", KEY_6),
-            KeyDef("space_num", "␣", KEY_SPACE),
+            KeyDef("num_4", "4", KEY_4, widthWeight = 2.0f),
+            KeyDef("num_5", "5", KEY_5, widthWeight = 2.0f),
+            KeyDef("num_6", "6", KEY_6, widthWeight = 2.0f),
+            KeyDef("space_num", "␣", KEY_SPACE, widthWeight = 1.3f),
         ),
         // operators column asterisk + row 3 keys
         listOf(
             KeyDef("asterisk", "*", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("num_7", "7", KEY_7),
-            KeyDef("num_8", "8", KEY_8),
-            KeyDef("num_9", "9", KEY_9),
-            KeyDef("bksp", "⌫", KEY_BACKSPACE),
+            KeyDef("num_7", "7", KEY_7, widthWeight = 2.0f),
+            KeyDef("num_8", "8", KEY_8, widthWeight = 2.0f),
+            KeyDef("num_9", "9", KEY_9, widthWeight = 2.0f),
+            KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
         ),
         // operators column slash + row 4 bottom row keys
         listOf(
             KeyDef("slash", "/", KEY_SLASH),
-            KeyDef("mode_switch_abc", "ABC", 0, widthWeight = 1.4f),
-            KeyDef("comma", ",", KEY_COMMA),
-            KeyDef("mode_switch", "!?#", 0),
-            KeyDef("num_0", "0", KEY_0),
-            KeyDef("equal", "=", KEY_EQUAL),
-            KeyDef("dot", ".", KEY_DOT),
-            KeyDef("enter", "Enter", KEY_ENTER),
+            KeyDef("mode_switch_abc", "ABC", 0, widthWeight = 1.3f),
+            KeyDef("comma", ",", KEY_COMMA, widthWeight = 1.0f),
+            KeyDef("mode_switch", "!?#", 0, widthWeight = 1.0f),
+            KeyDef("num_0", "0", KEY_0, widthWeight = 2.0f),
+            KeyDef("equal", "=", KEY_EQUAL, widthWeight = 1.0f),
+            KeyDef("dot", ".", KEY_DOT, widthWeight = 1.0f),
+            KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.3f),
         ),
     )
 
