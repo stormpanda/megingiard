@@ -90,6 +90,7 @@ internal class PopupState(
     val options: List<String>,
     val initialSelectedIndex: Int,
     val keyBounds: KeyBounds,
+    val isLongPress: Boolean,
 ) {
     var selectedIndex by mutableStateOf(initialSelectedIndex)
 }
@@ -548,23 +549,42 @@ fun KeyboardScreen(
                                                             keyId != null && keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
                                                                 keyId != "enter"
                                                         if (keyDef != null && isCharKey) {
-                                                            val opts = getPopupOptions(keyDef, isShiftActive || isCapsActive)
-                                                            if (opts.isNotEmpty()) {
-                                                                pressPositions[pid] = change.position
-                                                                longPressJobs[pid]?.cancel()
-                                                                longPressJobs[pid] =
-                                                                    coroutineScope.launch {
-                                                                        delay(400L)
-                                                                        val bounds = keyBounds[keyId]
-                                                                        if (bounds != null) {
-                                                                            val defaultIndex =
-                                                                                opts
-                                                                                    .indexOfFirst { it == keyDef.superscript }
-                                                                                    .coerceAtLeast(0)
-                                                                            activePopupState =
-                                                                                PopupState(keyDef, opts, defaultIndex, bounds)
-                                                                        }
+                                                            val bounds = keyBounds[keyId]
+                                                            if (bounds != null) {
+                                                                val label =
+                                                                    if (isShiftActive ||
+                                                                        isCapsActive
+                                                                    ) {
+                                                                        keyDef.label.uppercase()
+                                                                    } else {
+                                                                        keyDef.label.lowercase()
                                                                     }
+                                                                activePopupState =
+                                                                    PopupState(keyDef, listOf(label), 0, bounds, isLongPress = false)
+                                                                val extraOpts = getPopupOptions(keyDef, isShiftActive || isCapsActive)
+                                                                if (extraOpts.isNotEmpty()) {
+                                                                    pressPositions[pid] = change.position
+                                                                    longPressJobs[pid]?.cancel()
+                                                                    longPressJobs[pid] =
+                                                                        coroutineScope.launch {
+                                                                            delay(400L)
+                                                                            val fullOpts = listOf(label) + extraOpts
+                                                                            val defaultIndex =
+                                                                                fullOpts
+                                                                                    .indexOfFirst {
+                                                                                        it ==
+                                                                                            keyDef.superscript
+                                                                                    }.coerceAtLeast(1)
+                                                                            activePopupState =
+                                                                                PopupState(
+                                                                                    keyDef,
+                                                                                    fullOpts,
+                                                                                    defaultIndex,
+                                                                                    bounds,
+                                                                                    isLongPress = true,
+                                                                                )
+                                                                        }
+                                                                }
                                                             }
                                                         }
                                                         if (controller.onKeyDown(pid, keyId, layoutState.grid, kbRepeatEnabled)) {
@@ -581,15 +601,28 @@ fun KeyboardScreen(
                                                 } else {
                                                     val popup = activePopupState
                                                     if (popup != null) {
-                                                        val keyCenterX =
-                                                            popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
-                                                        val currentX = change.position.x
-                                                        val deltaX = currentX - keyCenterX
-                                                        val cellWidthPx = with(density) { 48.dp.toPx() }
-                                                        val shift = (deltaX / cellWidthPx).roundToInt()
-                                                        popup.selectedIndex =
-                                                            (popup.initialSelectedIndex + shift).coerceIn(0, popup.options.lastIndex)
-                                                        change.consume()
+                                                        if (popup.isLongPress) {
+                                                            val keyCenterX =
+                                                                popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
+                                                            val currentX = change.position.x
+                                                            val deltaX = currentX - keyCenterX
+                                                            val cellWidthPx = with(density) { 48.dp.toPx() }
+                                                            val shift = (deltaX / cellWidthPx).roundToInt()
+                                                            popup.selectedIndex =
+                                                                (popup.initialSelectedIndex + shift).coerceIn(0, popup.options.lastIndex)
+                                                            change.consume()
+                                                        } else {
+                                                            val startPos = pressPositions[pid]
+                                                            if (startPos != null) {
+                                                                val dist = (change.position - startPos).getDistance()
+                                                                val thresholdPx = with(density) { 24.dp.toPx() }
+                                                                if (dist > thresholdPx) {
+                                                                    longPressJobs[pid]?.cancel()
+                                                                    longPressJobs.remove(pid)
+                                                                    activePopupState = null
+                                                                }
+                                                            }
+                                                        }
                                                     } else {
                                                         val startPos = pressPositions[pid]
                                                         if (startPos != null) {
