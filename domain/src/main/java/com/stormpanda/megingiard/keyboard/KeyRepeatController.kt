@@ -73,7 +73,8 @@ class KeyRepeatController(
                 pointerKeyMap[pointerId] = id
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = keyDef
-                if (keyDef.linuxKeycode != 0) {
+                val isCharKey = id != "bksp" && id != "space" && id != "space_num" && id != "enter"
+                if (!isCharKey && keyDef.linuxKeycode != 0) {
                     KeyboardState
                         .activeModifierKeycodes(layout)
                         .forEach { KeyInjector.keyDown(it) }
@@ -87,7 +88,9 @@ class KeyRepeatController(
                             .forEach { KeyInjector.keyUp(it) }
                     }
                 }
-                startRepeat(keyDef, layout, repeatEnabled)
+                if (!isCharKey) {
+                    startRepeat(keyDef, layout, repeatEnabled)
+                }
             }
 
             KeyType.MODIFIER -> {
@@ -144,7 +147,8 @@ class KeyRepeatController(
         if (prevDef?.type == KeyType.NORMAL && prevDef.linuxKeycode != 0) {
             heldKey = null
             repeatJob?.cancel()
-            if (repeatEnabled) {
+            val isPrevCharKey = prevId != "bksp" && prevId != "space" && prevId != "space_num" && prevId != "enter"
+            if (!isPrevCharKey && repeatEnabled) {
                 KeyInjector.keyUp(prevDef.linuxKeycode)
                 prevDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                 KeyboardState
@@ -159,7 +163,8 @@ class KeyRepeatController(
             pointerKeyMap[pointerId] = newId
             _pressedKeys.value = _pressedKeys.value + newId
             heldKey = newDef
-            if (newDef.linuxKeycode != 0) {
+            val isNewCharKey = newId != "bksp" && newId != "space" && newId != "space_num" && newId != "enter"
+            if (!isNewCharKey && newDef.linuxKeycode != 0) {
                 KeyboardState
                     .activeModifierKeycodes(layout)
                     .forEach { KeyInjector.keyDown(it) }
@@ -173,7 +178,9 @@ class KeyRepeatController(
                         .forEach { KeyInjector.keyUp(it) }
                 }
             }
-            startRepeat(newDef, layout, repeatEnabled)
+            if (!isNewCharKey) {
+                startRepeat(newDef, layout, repeatEnabled)
+            }
             return true
         }
         return false
@@ -207,16 +214,29 @@ class KeyRepeatController(
             KeyType.NORMAL -> {
                 heldKey = null
                 repeatJob?.cancel()
-                if (keyDef.linuxKeycode != 0 && repeatEnabled) {
+                val isCharKey = releasedId != "bksp" && releasedId != "space" && releasedId != "space_num" && releasedId != "enter"
+                if (isCharKey && keyDef.linuxKeycode != 0) {
+                    val activeMods = KeyboardState.activeModifierKeycodes(layout)
+                    activeMods.forEach { KeyInjector.keyDown(it) }
+                    keyDef.autoModifiers.forEach { KeyInjector.keyDown(it) }
+                    KeyInjector.keyDown(keyDef.linuxKeycode)
                     KeyInjector.keyUp(keyDef.linuxKeycode)
                     keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                     KeyboardState
                         .releaseStickyModifiers(layout)
                         .forEach { KeyInjector.keyUp(it) }
-                } else if (keyDef.linuxKeycode != 0) {
-                    KeyboardState
-                        .releaseStickyModifiers(layout)
-                        .forEach { KeyInjector.keyUp(it) }
+                } else {
+                    if (keyDef.linuxKeycode != 0 && repeatEnabled) {
+                        KeyInjector.keyUp(keyDef.linuxKeycode)
+                        keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
+                        KeyboardState
+                            .releaseStickyModifiers(layout)
+                            .forEach { KeyInjector.keyUp(it) }
+                    } else if (keyDef.linuxKeycode != 0) {
+                        KeyboardState
+                            .releaseStickyModifiers(layout)
+                            .forEach { KeyInjector.keyUp(it) }
+                    }
                 }
                 _pressedKeys.value = _pressedKeys.value - releasedId
             }
@@ -255,7 +275,7 @@ class KeyRepeatController(
         enabled: Boolean,
     ) {
         repeatJob?.cancel()
-        if (!enabled || keyDef.linuxKeycode == 0) return
+        if (!enabled || keyDef.linuxKeycode == 0 || keyDef.id != "bksp") return
         repeatJob =
             scope.launch {
                 delay(KB_REPEAT_INITIAL_DELAY_MS)

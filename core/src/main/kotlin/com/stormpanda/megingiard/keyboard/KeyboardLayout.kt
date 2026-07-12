@@ -117,6 +117,46 @@ data class KeyboardLayoutState(
     val grid: List<List<KeyDef>>,
 )
 
+fun getPopupOptions(
+    keyDef: KeyDef,
+    isUpper: Boolean,
+): List<String> {
+    val base = keyDef.label
+    val baseLower = base.lowercase()
+    if (baseLower.length != 1) return emptyList()
+    val char = baseLower[0]
+    val variants =
+        when (char) {
+            'a' -> listOf("ä", "ā", "à", "á", "â", "ã", "å", "æ")
+            'c' -> listOf("ç", "ć", "č")
+            'e' -> listOf("ë", "ē", "ė", "è", "é", "ê")
+            'i' -> listOf("ï", "ī", "ì", "í", "î")
+            'n' -> listOf("ñ", "ń")
+            'o' -> listOf("ö", "ō", "ò", "ó", "ô", "õ", "œ", "ø")
+            's' -> listOf("ß", "ś", "š")
+            'u' -> listOf("ü", "ū", "ù", "ú", "û")
+            'y' -> listOf("ÿ")
+            'z' -> listOf("ž")
+            else -> emptyList()
+        }
+    val result = mutableListOf<String>()
+
+    val half = variants.size / 2
+    result.addAll(variants.take(half))
+    keyDef.superscript?.let { result.add(it) }
+    result.addAll(variants.drop(half))
+
+    if (result.isEmpty()) return emptyList()
+
+    return result.map { opt ->
+        if (opt.length == 1 && opt[0].isLetter()) {
+            if (isUpper) opt.uppercase() else opt.lowercase()
+        } else {
+            opt
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Layout factories
 // ---------------------------------------------------------------------------

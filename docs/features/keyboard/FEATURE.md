@@ -56,10 +56,13 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - When placed on the **right** side, the layout is mirrored so LMB/MMB/RMB remain at the outer edge and the scroll column (M4/ScrollWheel/M5) is inward.
 - Button events MUST be consumed at `PointerEventPass.Initial` so they do not accidentally close the overlay.
 
-### FR-K4: Key Repeat
+### FR-K4: Key Repeat & Long-Press Character Popup
 
-- When **Key Repeat** is enabled in Settings, holding a normal key MUST trigger the initial key injection after **500 ms**, followed by repeated injections every **30 ms**.
-- When Key Repeat is **disabled**, a key-up event MUST be sent immediately at the moment of the initial key-down — this prevents the Linux kernel's built-in repeat from firing.
+- When **Key Repeat** is enabled in Settings, holding the backspace key (`"bksp"`) MUST trigger the initial key injection after **500 ms**, followed by repeated injections every **30 ms**.
+- Holding a character key (letters, digits, punctuation, etc.) instead triggers a popup options bubble showing umlauts, accents, or numeric alternatives after **400 ms**.
+- Standard character keys do not support repeated key inputs upon press/hold; instead, their single key injection is deferred to finger release to prevent conflicts with the long-press overlay.
+- Dragging horizontally on the popup overlay selects alternate character options. Releasing the finger injects the selected character and dismisses the popup.
+- When Key Repeat is **disabled** for control keys, a key-up event MUST be sent immediately at the moment of the initial key-down to prevent the system-level repeat from firing.
 
 ### FR-K5: No Special Permissions Required
 

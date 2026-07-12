@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,12 +43,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -56,6 +59,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -68,6 +72,10 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QUICK_MENU_BAR_INSET
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -76,6 +84,257 @@ private val KEY_PADDING_H = 2.dp
 private val KEY_PADDING_V = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
+
+internal class PopupState(
+    val keyDef: KeyDef,
+    val options: List<String>,
+    val initialSelectedIndex: Int,
+    val keyBounds: KeyBounds,
+) {
+    var selectedIndex by mutableStateOf(initialSelectedIndex)
+}
+
+fun injectPopupChar(
+    char: String,
+    kbLayout: KbLayout,
+) {
+    val lower = char.lowercase()
+    val isUpper = char.length == 1 && char[0].isUpperCase()
+
+    fun sendKey(
+        keycode: Int,
+        autoModifiers: List<Int> = emptyList(),
+    ) {
+        val mods = mutableListOf<Int>()
+        if (isUpper) {
+            mods.add(LinuxKeycodes.KEY_LEFTSHIFT)
+        }
+        mods.addAll(autoModifiers)
+
+        mods.forEach { KeyInjector.keyDown(it) }
+        KeyInjector.keyDown(keycode)
+        KeyInjector.keyUp(keycode)
+        mods.forEach { KeyInjector.keyUp(it) }
+    }
+
+    when (lower) {
+        "1" -> {
+            sendKey(LinuxKeycodes.KEY_1)
+        }
+
+        "2" -> {
+            sendKey(LinuxKeycodes.KEY_2)
+        }
+
+        "3" -> {
+            sendKey(LinuxKeycodes.KEY_3)
+        }
+
+        "4" -> {
+            sendKey(LinuxKeycodes.KEY_4)
+        }
+
+        "5" -> {
+            sendKey(LinuxKeycodes.KEY_5)
+        }
+
+        "6" -> {
+            sendKey(LinuxKeycodes.KEY_6)
+        }
+
+        "7" -> {
+            sendKey(LinuxKeycodes.KEY_7)
+        }
+
+        "8" -> {
+            sendKey(LinuxKeycodes.KEY_8)
+        }
+
+        "9" -> {
+            sendKey(LinuxKeycodes.KEY_9)
+        }
+
+        "0" -> {
+            sendKey(LinuxKeycodes.KEY_0)
+        }
+
+        "ä" -> {
+            if (kbLayout == KbLayout.QWERTZ) {
+                sendKey(LinuxKeycodes.KEY_APOSTROPHE)
+            } else {
+                sendKey(LinuxKeycodes.KEY_A, autoModifiers = listOf(LinuxKeycodes.KEY_RIGHTALT))
+            }
+        }
+
+        "ö" -> {
+            if (kbLayout == KbLayout.QWERTZ) {
+                sendKey(LinuxKeycodes.KEY_SEMICOLON)
+            } else {
+                sendKey(LinuxKeycodes.KEY_O, autoModifiers = listOf(LinuxKeycodes.KEY_RIGHTALT))
+            }
+        }
+
+        "ü" -> {
+            if (kbLayout == KbLayout.QWERTZ) {
+                sendKey(LinuxKeycodes.KEY_LEFTBRACE)
+            } else {
+                sendKey(LinuxKeycodes.KEY_U, autoModifiers = listOf(LinuxKeycodes.KEY_RIGHTALT))
+            }
+        }
+
+        "ß" -> {
+            if (kbLayout == KbLayout.QWERTZ) {
+                sendKey(LinuxKeycodes.KEY_MINUS)
+            } else {
+                sendKey(LinuxKeycodes.KEY_S, autoModifiers = listOf(LinuxKeycodes.KEY_RIGHTALT))
+            }
+        }
+
+        "a" -> {
+            sendKey(LinuxKeycodes.KEY_A)
+        }
+
+        "b" -> {
+            sendKey(LinuxKeycodes.KEY_B)
+        }
+
+        "c" -> {
+            sendKey(LinuxKeycodes.KEY_C)
+        }
+
+        "d" -> {
+            sendKey(LinuxKeycodes.KEY_D)
+        }
+
+        "e" -> {
+            sendKey(LinuxKeycodes.KEY_E)
+        }
+
+        "f" -> {
+            sendKey(LinuxKeycodes.KEY_F)
+        }
+
+        "g" -> {
+            sendKey(LinuxKeycodes.KEY_G)
+        }
+
+        "h" -> {
+            sendKey(LinuxKeycodes.KEY_H)
+        }
+
+        "i" -> {
+            sendKey(LinuxKeycodes.KEY_I)
+        }
+
+        "j" -> {
+            sendKey(LinuxKeycodes.KEY_J)
+        }
+
+        "k" -> {
+            sendKey(LinuxKeycodes.KEY_K)
+        }
+
+        "l" -> {
+            sendKey(LinuxKeycodes.KEY_L)
+        }
+
+        "m" -> {
+            sendKey(LinuxKeycodes.KEY_M)
+        }
+
+        "n" -> {
+            sendKey(LinuxKeycodes.KEY_N)
+        }
+
+        "o" -> {
+            sendKey(LinuxKeycodes.KEY_O)
+        }
+
+        "p" -> {
+            sendKey(LinuxKeycodes.KEY_P)
+        }
+
+        "q" -> {
+            sendKey(LinuxKeycodes.KEY_Q)
+        }
+
+        "r" -> {
+            sendKey(LinuxKeycodes.KEY_R)
+        }
+
+        "s" -> {
+            sendKey(LinuxKeycodes.KEY_S)
+        }
+
+        "t" -> {
+            sendKey(LinuxKeycodes.KEY_T)
+        }
+
+        "u" -> {
+            sendKey(LinuxKeycodes.KEY_U)
+        }
+
+        "v" -> {
+            sendKey(LinuxKeycodes.KEY_V)
+        }
+
+        "w" -> {
+            sendKey(LinuxKeycodes.KEY_W)
+        }
+
+        "x" -> {
+            sendKey(LinuxKeycodes.KEY_X)
+        }
+
+        "y" -> {
+            sendKey(LinuxKeycodes.KEY_Y)
+        }
+
+        "z" -> {
+            sendKey(LinuxKeycodes.KEY_Z)
+        }
+
+        "é", "è", "ê", "ë", "ē", "ė" -> {
+            sendKey(LinuxKeycodes.KEY_E)
+        }
+
+        "à", "á", "â", "ã", "å", "æ", "ā" -> {
+            sendKey(LinuxKeycodes.KEY_A)
+        }
+
+        "ò", "ó", "ô", "õ", "œ", "ø", "ō" -> {
+            sendKey(LinuxKeycodes.KEY_O)
+        }
+
+        "ù", "ú", "û", "ū" -> {
+            sendKey(LinuxKeycodes.KEY_U)
+        }
+
+        "ì", "í", "î", "ï", "ī" -> {
+            sendKey(LinuxKeycodes.KEY_I)
+        }
+
+        "ñ", "ń" -> {
+            sendKey(LinuxKeycodes.KEY_N)
+        }
+
+        "ç", "ć", "č" -> {
+            sendKey(LinuxKeycodes.KEY_C)
+        }
+
+        "ÿ" -> {
+            sendKey(LinuxKeycodes.KEY_Y)
+        }
+
+        "ž" -> {
+            sendKey(LinuxKeycodes.KEY_Z)
+        }
+
+        "ś", "š" -> {
+            sendKey(LinuxKeycodes.KEY_S)
+        }
+    }
+}
 
 private const val TAG = "KeyboardScreen"
 
@@ -86,6 +345,7 @@ fun KeyboardScreen(
 ) {
     val viewModel: KeyboardViewModel = viewModel()
     val context = LocalContext.current
+    val density = LocalDensity.current
     val kbLayoutSetting by viewModel.kbLayout.collectAsState()
     val kbLayout = forcedLayout ?: kbLayoutSetting
     val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsState()
@@ -136,6 +396,11 @@ fun KeyboardScreen(
     val keyBounds = remember { mutableMapOf<String, KeyBounds>() }
     // Outer Box layout coords — used to convert pointer positions to root space
     val boxCoordsState = remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+    val coroutineScope = rememberCoroutineScope()
+    var activePopupState by remember { mutableStateOf<PopupState?>(null) }
+    val longPressJobs = remember { mutableMapOf<Long, Job>() }
+    val pressPositions = remember { mutableMapOf<Long, Offset>() }
 
     // UI state from controller
     val pressedKeys by controller.pressedKeys.collectAsState()
@@ -265,6 +530,30 @@ fun KeyboardScreen(
                                                         viewModel.cycleKbLayout()
                                                         change.consume()
                                                     } else {
+                                                        val keyDef = if (keyId != null) findKeyInLayout(layoutState.grid, keyId) else null
+                                                        val isCharKey =
+                                                            keyId != null && keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
+                                                                keyId != "enter"
+                                                        if (keyDef != null && isCharKey) {
+                                                            val opts = getPopupOptions(keyDef, isShiftActive || isCapsActive)
+                                                            if (opts.isNotEmpty()) {
+                                                                pressPositions[pid] = change.position
+                                                                longPressJobs[pid]?.cancel()
+                                                                longPressJobs[pid] =
+                                                                    coroutineScope.launch {
+                                                                        delay(400L)
+                                                                        val bounds = keyBounds[keyId]
+                                                                        if (bounds != null) {
+                                                                            val defaultIndex =
+                                                                                opts
+                                                                                    .indexOfFirst { it == keyDef.superscript }
+                                                                                    .coerceAtLeast(0)
+                                                                            activePopupState =
+                                                                                PopupState(keyDef, opts, defaultIndex, bounds)
+                                                                        }
+                                                                    }
+                                                            }
+                                                        }
                                                         if (controller.onKeyDown(pid, keyId, layoutState.grid, kbRepeatEnabled)) {
                                                             change.consume()
                                                         }
@@ -277,24 +566,58 @@ fun KeyboardScreen(
                                                 if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
                                                     change.consume()
                                                 } else {
-                                                    if (controller.onKeyMove(
-                                                            pid,
-                                                            keyId,
-                                                            delta.x,
-                                                            delta.y,
-                                                            layoutState.grid,
-                                                            kbRepeatEnabled,
-                                                        )
-                                                    ) {
+                                                    val popup = activePopupState
+                                                    if (popup != null) {
+                                                        val keyCenterX =
+                                                            popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
+                                                        val currentX = change.position.x
+                                                        val deltaX = currentX - keyCenterX
+                                                        val cellWidthPx = with(density) { 48.dp.toPx() }
+                                                        val shift = (deltaX / cellWidthPx).roundToInt()
+                                                        popup.selectedIndex =
+                                                            (popup.initialSelectedIndex + shift).coerceIn(0, popup.options.lastIndex)
                                                         change.consume()
+                                                    } else {
+                                                        val startPos = pressPositions[pid]
+                                                        if (startPos != null) {
+                                                            val dist = (change.position - startPos).getDistance()
+                                                            if (dist > 20f) {
+                                                                longPressJobs[pid]?.cancel()
+                                                                longPressJobs.remove(pid)
+                                                            }
+                                                        }
+                                                        if (controller.onKeyMove(
+                                                                pid,
+                                                                keyId,
+                                                                delta.x,
+                                                                delta.y,
+                                                                layoutState.grid,
+                                                                kbRepeatEnabled,
+                                                            )
+                                                        ) {
+                                                            change.consume()
+                                                        }
                                                     }
                                                 }
                                             }
 
                                             PointerEventType.Release -> {
-                                                if (!change.pressed && change.previousPressed) {
+                                                longPressJobs[pid]?.cancel()
+                                                longPressJobs.remove(pid)
+                                                pressPositions.remove(pid)
+
+                                                val popup = activePopupState
+                                                if (popup != null) {
+                                                    val charToInject = popup.options[popup.selectedIndex]
+                                                    injectPopupChar(charToInject, kbLayout)
+                                                    activePopupState = null
                                                     controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
                                                     change.consume()
+                                                } else {
+                                                    if (!change.pressed && change.previousPressed) {
+                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
+                                                        change.consume()
+                                                    }
                                                 }
                                             }
                                         }
@@ -520,6 +843,60 @@ fun KeyboardScreen(
                                             .align(Alignment.CenterEnd)
                                             .padding(end = 8.dp),
                                 )
+                            }
+                        }
+                    }
+                }
+
+                // 4. Long press popup overlay layer
+                val popup = activePopupState
+                if (popup != null) {
+                    val keyCenterX = popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
+                    val keyTop = popup.keyBounds.top
+
+                    val keyCenterXDp = with(density) { keyCenterX.toDp() }
+                    val keyTopDp = with(density) { keyTop.toDp() }
+
+                    val cellWidth = 48.dp
+                    val popupWidth = cellWidth * popup.options.size + 16.dp
+                    val popupHeight = 64.dp
+
+                    val popupLeft = (keyCenterXDp - popupWidth / 2).coerceAtLeast(4.dp)
+                    val popupTop = keyTopDp - popupHeight - 8.dp
+
+                    Box(
+                        modifier =
+                            Modifier
+                                .offset(x = popupLeft, y = popupTop)
+                                .width(popupWidth)
+                                .height(popupHeight)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF2C3033))
+                                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .padding(8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            popup.options.forEachIndexed { index, opt ->
+                                val isSelected = index == popup.selectedIndex
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isSelected) accentColor else Color.Transparent),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = opt,
+                                        color = if (isSelected) Color.White else Color.LightGray,
+                                        fontSize = 18.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    )
+                                }
                             }
                         }
                     }

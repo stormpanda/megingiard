@@ -143,4 +143,22 @@ class KeyboardLayoutTest {
         assertEquals(KeyboardMode.LETTERS, state.mode)
         assertEquals(grid, state.grid)
     }
+
+    @Test
+    fun `getPopupOptions generates expected options list`() {
+        val eKey = KeyDef("e", "e", 18, superscript = "3")
+        val optionsLower = getPopupOptions(eKey, isUpper = false)
+        assertTrue(optionsLower.contains("3"))
+        assertTrue(optionsLower.contains("ë"))
+        assertTrue(optionsLower.contains("é"))
+        // Check uppercase behavior
+        val optionsUpper = getPopupOptions(eKey, isUpper = true)
+        assertTrue(optionsUpper.contains("3")) // numbers shouldn't capitalize
+        assertTrue(optionsUpper.contains("Ë"))
+        assertTrue(optionsUpper.contains("É"))
+
+        // Keys without superscript or variants return empty list
+        val fKey = KeyDef("f", "f", 33)
+        assertTrue(getPopupOptions(fKey, isUpper = false).isEmpty())
+    }
 }
