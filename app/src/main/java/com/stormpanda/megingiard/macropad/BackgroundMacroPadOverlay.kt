@@ -36,7 +36,10 @@ import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.macropad.ButtonColorStyle
+import com.stormpanda.megingiard.macropad.GamepadInjector
+import com.stormpanda.megingiard.macropad.PadAction
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.TrackpointMode
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuBar
@@ -145,19 +148,34 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             AppStateManager.isFullscreenKeyboardActive,
             AppStateManager.isFullscreenMouseActive,
             AppStateManager.isViewportEditActive,
+            MacroPadState.activeLayout,
         ) { array ->
-            val quickMenu = array[0]
-            val editor = array[1]
-            val ambient = array[2]
-            val kb = array[3]
-            val mouse = array[4]
-            val vp = array[5]
+            val quickMenu = array[0] as Boolean
+            val editor = array[1] as Boolean
+            val ambient = array[2] as Boolean
+            val kb = array[3] as Boolean
+            val mouse = array[4] as Boolean
+            val vp = array[5] as Boolean
+            val activeL = array[6] as? PadLayout
+
+            val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+            val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
+            val hasMouse =
+                activeL?.buttons?.any {
+                    it.action is PadAction.MouseButton ||
+                        it.action is PadAction.ScrollWheel ||
+                        (
+                            it.action is PadAction.TrackpointMove &&
+                                (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
+                        ) ||
+                        it.action is PadAction.Macro
+                } == true
 
             val blockingModal = editor || ambient || vp
             AmbientInjectorGate(
-                stopKeyboard = blockingModal && !kb,
-                stopMouse = blockingModal && !kb && !mouse,
-                stopGamepad = blockingModal || quickMenu || kb || mouse,
+                stopKeyboard = (blockingModal && !kb) || !hasKeyboard,
+                stopMouse = (blockingModal && !kb && !mouse) || !hasMouse,
+                stopGamepad = blockingModal || quickMenu || kb || mouse || !hasGamepad,
             )
         }.distinctUntilChanged()
             .collectLatest { gate ->
@@ -179,27 +197,50 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 // if any gate flips back to stop-mode within the delay window.
                 delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
                 withContext(Dispatchers.IO) {
-                    val ap = MacroPadState.activeProfile.value
+                    val activeL = MacroPadState.activeLayout.value
+                    val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+                    val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
+                    val hasMouse =
+                        activeL?.buttons?.any {
+                            it.action is PadAction.MouseButton ||
+                                it.action is PadAction.ScrollWheel ||
+                                (
+                                    it.action is PadAction.TrackpointMove &&
+                                        (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
+                                ) ||
+                                it.action is PadAction.Macro
+                        } == true
+                    val hasTouch =
+                        activeL?.buttons?.any {
+                            (
+                                it.action is PadAction.TrackpointMove &&
+                                    (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH
+                            ) ||
+                                it.action is PadAction.Macro
+                        } == true
+
                     val blockingModalActive =
                         AppStateManager.isEditorActive.value || AppStateManager.isBackgroundSettingsActive.value ||
                             AppStateManager.isViewportEditActive.value
 
-                    if (!gate.stopKeyboard && ap?.enableKeyboard == true) {
+                    if (!gate.stopKeyboard && hasKeyboard) {
                         KeyInjector.start(context)
                     }
-                    if (!gate.stopGamepad && ap?.enableGamepad == true) {
+                    if (!gate.stopGamepad && hasGamepad) {
                         GamepadInjector.start(context)
                     }
-                    if (!gate.stopMouse && ap?.enableMouse == true) {
+                    if (!gate.stopMouse && hasMouse) {
                         MouseInjector.start(context)
                     }
 
-                    if (ap?.enableTouch == true) {
+                    if (hasTouch) {
                         if (!blockingModalActive) {
                             TouchInjector.start(context, "BackgroundMacroPadOverlay")
                         } else {
                             TouchInjector.stop("BackgroundMacroPadOverlay")
                         }
+                    } else {
+                        TouchInjector.stop("BackgroundMacroPadOverlay")
                     }
                 }
             }

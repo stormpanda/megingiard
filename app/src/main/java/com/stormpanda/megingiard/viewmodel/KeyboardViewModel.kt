@@ -14,6 +14,8 @@ import com.stormpanda.megingiard.keyboard.KeyRepeatController
 import com.stormpanda.megingiard.keyboard.KeyboardMode
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadAction
+import com.stormpanda.megingiard.macropad.TrackpointMode
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -75,11 +77,19 @@ class KeyboardViewModel(
     fun stopAndReset() {
         AppLog.i(TAG, "stopAndReset called")
         controller.dispose()
-        val ap = MacroPadState.activeProfile.value
-        if (ap?.enableKeyboard != true) {
+        val activeL = MacroPadState.activeLayout.value
+        val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+        val hasMouse =
+            activeL?.buttons?.any {
+                it.action is PadAction.MouseButton ||
+                    it.action is PadAction.ScrollWheel ||
+                    (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE) ||
+                    it.action is PadAction.Macro
+            } == true
+        if (!hasKeyboard) {
             KeyInjector.stop()
         }
-        if (ap?.enableMouse != true) {
+        if (!hasMouse) {
             MouseInjector.stop()
         }
         KeyboardState.reset()
