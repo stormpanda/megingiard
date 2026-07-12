@@ -73,7 +73,6 @@ class KeyboardViewModel(
 
     fun stopAndReset() {
         AppLog.i(TAG, "stopAndReset called")
-        _keyboardMode.value = KeyboardMode.LETTERS
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()

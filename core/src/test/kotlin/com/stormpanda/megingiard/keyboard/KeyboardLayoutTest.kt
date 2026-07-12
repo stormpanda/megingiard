@@ -135,4 +135,12 @@ class KeyboardLayoutTest {
             assertNotNull("Numeric has digit $i", findKeyInLayout(numLayout, "num_$i"))
         }
     }
+
+    @Test
+    fun `KeyboardLayoutState holds correct mode and grid`() {
+        val grid = qwertzLayout(KeyboardMode.LETTERS)
+        val state = KeyboardLayoutState(KeyboardMode.LETTERS, grid)
+        assertEquals(KeyboardMode.LETTERS, state.mode)
+        assertEquals(grid, state.grid)
+    }
 }

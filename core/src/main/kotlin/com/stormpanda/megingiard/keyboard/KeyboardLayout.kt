@@ -112,6 +112,11 @@ enum class KbLayout { QWERTZ, QWERTY, AZERTY }
 
 enum class KbMouseBtnPos { LEFT, RIGHT, BOTH }
 
+data class KeyboardLayoutState(
+    val mode: KeyboardMode,
+    val grid: List<List<KeyDef>>,
+)
+
 // ---------------------------------------------------------------------------
 // Layout factories
 // ---------------------------------------------------------------------------

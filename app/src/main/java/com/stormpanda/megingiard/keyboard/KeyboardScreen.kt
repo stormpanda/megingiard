@@ -121,13 +121,15 @@ fun KeyboardScreen(
         }
     }
 
-    val layout =
+    val layoutState =
         remember(kbLayout, keyboardMode) {
-            when (kbLayout) {
-                KbLayout.QWERTY -> qwertyLayout(keyboardMode)
-                KbLayout.AZERTY -> azertyLayout(keyboardMode)
-                KbLayout.QWERTZ -> qwertzLayout(keyboardMode)
-            }
+            val grid =
+                when (kbLayout) {
+                    KbLayout.QWERTY -> qwertyLayout(keyboardMode)
+                    KbLayout.AZERTY -> azertyLayout(keyboardMode)
+                    KbLayout.QWERTZ -> qwertzLayout(keyboardMode)
+                }
+            KeyboardLayoutState(keyboardMode, grid)
         }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned
@@ -202,7 +204,7 @@ fun KeyboardScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                         .onGloballyPositioned { boxCoordsState.value = it }
-                        .pointerInput(layout) {
+                        .pointerInput(layoutState) {
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent(PointerEventPass.Main)
@@ -224,12 +226,12 @@ fun KeyboardScreen(
                                             when {
                                                 change.pressed && event.type == PointerEventType.Move -> {
                                                     val delta = change.positionChange()
-                                                    controller.onKeyMove(pid, null, delta.x, delta.y, layout, kbRepeatEnabled)
+                                                    controller.onKeyMove(pid, null, delta.x, delta.y, layoutState.grid, kbRepeatEnabled)
                                                     change.consume()
                                                 }
 
                                                 !change.pressed && change.previousPressed -> {
-                                                    controller.onKeyUp(pid, layout, kbRepeatEnabled)
+                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
                                                     change.consume()
                                                 }
                                             }
@@ -241,7 +243,7 @@ fun KeyboardScreen(
                                         val rootPos = boxCoords.localToRoot(change.position)
                                         val keyId =
                                             keyBounds.entries
-                                                .filter { (id, _) -> findKeyInLayout(layout, id) != null }
+                                                .filter { (id, _) -> findKeyInLayout(layoutState.grid, id) != null }
                                                 .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
                                                 ?.key
 
@@ -263,7 +265,7 @@ fun KeyboardScreen(
                                                         viewModel.cycleKbLayout()
                                                         change.consume()
                                                     } else {
-                                                        if (controller.onKeyDown(pid, keyId, layout, kbRepeatEnabled)) {
+                                                        if (controller.onKeyDown(pid, keyId, layoutState.grid, kbRepeatEnabled)) {
                                                             change.consume()
                                                         }
                                                     }
@@ -275,7 +277,15 @@ fun KeyboardScreen(
                                                 if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
                                                     change.consume()
                                                 } else {
-                                                    if (controller.onKeyMove(pid, keyId, delta.x, delta.y, layout, kbRepeatEnabled)) {
+                                                    if (controller.onKeyMove(
+                                                            pid,
+                                                            keyId,
+                                                            delta.x,
+                                                            delta.y,
+                                                            layoutState.grid,
+                                                            kbRepeatEnabled,
+                                                        )
+                                                    ) {
                                                         change.consume()
                                                     }
                                                 }
@@ -283,7 +293,7 @@ fun KeyboardScreen(
 
                                             PointerEventType.Release -> {
                                                 if (!change.pressed && change.previousPressed) {
-                                                    controller.onKeyUp(pid, layout, kbRepeatEnabled)
+                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
                                                     change.consume()
                                                 }
                                             }
@@ -294,46 +304,46 @@ fun KeyboardScreen(
                         },
             ) {
                 // Crossfade layout switch
-                Crossfade(targetState = layout, label = "Layout Switch") { activeLayout ->
-                    val isNumericLayout = findKeyInLayout(activeLayout, "num_1") != null
+                Crossfade(targetState = layoutState, label = "Layout Switch") { activeState ->
+                    val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
                     if (isNumericLayout) {
                         val ops =
                             listOf(
-                                findKeyInLayout(activeLayout, "plus") ?: KeyDef("plus", "+", 0),
-                                findKeyInLayout(activeLayout, "minus") ?: KeyDef("minus", "-", 0),
-                                findKeyInLayout(activeLayout, "asterisk") ?: KeyDef("asterisk", "*", 0),
-                                findKeyInLayout(activeLayout, "slash") ?: KeyDef("slash", "/", 0),
+                                findKeyInLayout(activeState.grid, "plus") ?: KeyDef("plus", "+", 0),
+                                findKeyInLayout(activeState.grid, "minus") ?: KeyDef("minus", "-", 0),
+                                findKeyInLayout(activeState.grid, "asterisk") ?: KeyDef("asterisk", "*", 0),
+                                findKeyInLayout(activeState.grid, "slash") ?: KeyDef("slash", "/", 0),
                             )
                         val gridRows =
                             listOf(
                                 listOf(
-                                    findKeyInLayout(activeLayout, "num_1") ?: KeyDef("num_1", "1", 0),
-                                    findKeyInLayout(activeLayout, "num_2") ?: KeyDef("num_2", "2", 0),
-                                    findKeyInLayout(activeLayout, "num_3") ?: KeyDef("num_3", "3", 0),
-                                    findKeyInLayout(activeLayout, "percent") ?: KeyDef("percent", "%", 0),
+                                    findKeyInLayout(activeState.grid, "num_1") ?: KeyDef("num_1", "1", 0),
+                                    findKeyInLayout(activeState.grid, "num_2") ?: KeyDef("num_2", "2", 0),
+                                    findKeyInLayout(activeState.grid, "num_3") ?: KeyDef("num_3", "3", 0),
+                                    findKeyInLayout(activeState.grid, "percent") ?: KeyDef("percent", "%", 0),
                                 ),
                                 listOf(
-                                    findKeyInLayout(activeLayout, "num_4") ?: KeyDef("num_4", "4", 0),
-                                    findKeyInLayout(activeLayout, "num_5") ?: KeyDef("num_5", "5", 0),
-                                    findKeyInLayout(activeLayout, "num_6") ?: KeyDef("num_6", "6", 0),
-                                    findKeyInLayout(activeLayout, "space_num") ?: KeyDef("space_num", "␣", 0),
+                                    findKeyInLayout(activeState.grid, "num_4") ?: KeyDef("num_4", "4", 0),
+                                    findKeyInLayout(activeState.grid, "num_5") ?: KeyDef("num_5", "5", 0),
+                                    findKeyInLayout(activeState.grid, "num_6") ?: KeyDef("num_6", "6", 0),
+                                    findKeyInLayout(activeState.grid, "space_num") ?: KeyDef("space_num", "␣", 0),
                                 ),
                                 listOf(
-                                    findKeyInLayout(activeLayout, "num_7") ?: KeyDef("num_7", "7", 0),
-                                    findKeyInLayout(activeLayout, "num_8") ?: KeyDef("num_8", "8", 0),
-                                    findKeyInLayout(activeLayout, "num_9") ?: KeyDef("num_9", "9", 0),
-                                    findKeyInLayout(activeLayout, "bksp") ?: KeyDef("bksp", "⌫", 0),
+                                    findKeyInLayout(activeState.grid, "num_7") ?: KeyDef("num_7", "7", 0),
+                                    findKeyInLayout(activeState.grid, "num_8") ?: KeyDef("num_8", "8", 0),
+                                    findKeyInLayout(activeState.grid, "num_9") ?: KeyDef("num_9", "9", 0),
+                                    findKeyInLayout(activeState.grid, "bksp") ?: KeyDef("bksp", "⌫", 0),
                                 ),
                             )
                         val bottomRow =
                             listOf(
-                                findKeyInLayout(activeLayout, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
-                                findKeyInLayout(activeLayout, "comma") ?: KeyDef("comma", ",", 0),
-                                findKeyInLayout(activeLayout, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
-                                findKeyInLayout(activeLayout, "num_0") ?: KeyDef("num_0", "0", 0),
-                                findKeyInLayout(activeLayout, "equal") ?: KeyDef("equal", "=", 0),
-                                findKeyInLayout(activeLayout, "dot") ?: KeyDef("dot", ".", 0),
-                                findKeyInLayout(activeLayout, "enter") ?: KeyDef("enter", "Enter", 0),
+                                findKeyInLayout(activeState.grid, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
+                                findKeyInLayout(activeState.grid, "comma") ?: KeyDef("comma", ",", 0),
+                                findKeyInLayout(activeState.grid, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
+                                findKeyInLayout(activeState.grid, "num_0") ?: KeyDef("num_0", "0", 0),
+                                findKeyInLayout(activeState.grid, "equal") ?: KeyDef("equal", "=", 0),
+                                findKeyInLayout(activeState.grid, "dot") ?: KeyDef("dot", ".", 0),
+                                findKeyInLayout(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
                             )
 
                         Column(
@@ -436,7 +446,7 @@ fun KeyboardScreen(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.SpaceEvenly,
                         ) {
-                            activeLayout.forEach { row ->
+                            activeState.grid.forEach { row ->
                                 Row(
                                     modifier =
                                         Modifier
