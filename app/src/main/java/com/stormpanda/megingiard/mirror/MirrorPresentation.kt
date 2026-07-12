@@ -498,24 +498,23 @@ class MirrorPresentation(
                                                                 pointerX = x,
                                                                 containerWidth = size.width.toFloat(),
                                                             )
-                                                            if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
-                                                                event.changes.forEach { it.consume() }
-                                                            }
                                                         }
 
                                                         PointerEventType.Move -> {
                                                             qmSwipe.onMove(y)
                                                             kbSwipe.onMove(y)
-                                                            if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
+                                                            if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
 
                                                         PointerEventType.Release -> {
                                                             val allPointersUp = !event.changes.any { it.pressed }
+                                                            val qmTriggered = qmSwipe.isSwipeTriggered
+                                                            val kbTriggered = kbSwipe.isSwipeTriggered
                                                             qmSwipe.onRelease(allPointersUp)
                                                             kbSwipe.onRelease(allPointersUp)
-                                                            if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
+                                                            if (qmTriggered || kbTriggered) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }

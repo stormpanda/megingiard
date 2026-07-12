@@ -236,24 +236,24 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                                         pointerX = x,
                                         containerWidth = size.width.toFloat(),
                                     )
-                                    if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
-                                        event.changes.forEach { it.consume() }
-                                    }
+                                    // No Press consumption
                                 }
 
                                 PointerEventType.Move -> {
                                     qmSwipe.onMove(y)
                                     kbSwipe.onMove(y)
-                                    if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
+                                    if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
 
                                 PointerEventType.Release -> {
                                     val allPointersLifted = !event.changes.any { it.pressed }
+                                    val qmTriggered = qmSwipe.isSwipeTriggered
+                                    val kbTriggered = kbSwipe.isSwipeTriggered
                                     qmSwipe.onRelease(allPointersLifted)
                                     kbSwipe.onRelease(allPointersLifted)
-                                    if (qmSwipe.isNearEdge || kbSwipe.isNearEdge) {
+                                    if (qmTriggered || kbTriggered) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }

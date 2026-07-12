@@ -83,4 +83,7 @@ class SwipeGestureProcessor(
 
     /** Whether the current touch started in the edge zone. */
     val isNearEdge: Boolean get() = !swipeStartY.isNaN()
+
+    /** Whether the edge-swipe gesture has been triggered during the current touch sequence. */
+    val isSwipeTriggered: Boolean get() = swipeTriggered
 }
