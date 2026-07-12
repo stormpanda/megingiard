@@ -296,20 +296,7 @@ fun KeyboardScreen(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.SpaceEvenly,
                     ) {
-                        activeLayout.forEachIndexed { rowIndex, row ->
-                            // Dynamically inject trackpoint key if enabled
-                            val finalRow =
-                                if (rowIndex == 1 && keyboardMode == KeyboardMode.LETTERS && kbTrackpointEnabled) {
-                                    row.toMutableList().apply {
-                                        val gIndex = indexOfFirst { it.id == "g" }
-                                        if (gIndex != -1) {
-                                            add(gIndex + 1, KeyDef("tp", "●", 0, type = KeyType.TRACKPOINT, widthWeight = 1.0f))
-                                        }
-                                    }
-                                } else {
-                                    row
-                                }
-
+                        activeLayout.forEach { row ->
                             Row(
                                 modifier =
                                     Modifier
@@ -317,7 +304,7 @@ fun KeyboardScreen(
                                         .fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
                             ) {
-                                finalRow.forEach { key ->
+                                row.forEach { key ->
                                     val modState by KeyboardState.stateFor(key.id).collectAsState()
                                     KeyCap(
                                         keyDef = key,

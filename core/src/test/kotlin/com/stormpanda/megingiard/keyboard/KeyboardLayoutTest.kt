@@ -14,10 +14,9 @@ import org.junit.Test
  *   (the trackpoint sentinel uses 0; modifier keys still inject and must be > 0).
  *
  * Plus structural invariants:
- * - Every layout has 6 rows (F-row, number-row, top, home, bottom, bottom-bar).
+ * - Every layout has 4 rows.
  * - Key IDs are unique within a layout.
- * - The trackpoint key exists, has KeyType.TRACKPOINT and linuxKeycode == 0.
- * - All non-trackpoint keys have linuxKeycode in 1..255.
+ * - All non-trackpoint keys have linuxKeycode in 0..255.
  */
 class KeyboardLayoutTest {
     private val layouts =
@@ -58,20 +57,6 @@ class KeyboardLayoutTest {
                     key.linuxKeycode in 0..255,
                 )
             }
-        }
-    }
-
-    @Test
-    fun `trackpoint key can be injected dynamically in letters layout`() {
-        for ((name, layout) in layouts) {
-            val row = layout[1].toMutableList() // home row
-            val gIndex = row.indexOfFirst { it.id == "g" }
-            if (gIndex != -1) {
-                row.add(gIndex + 1, KeyDef("tp", "●", 0, type = KeyType.TRACKPOINT))
-            }
-            val trackpoint = row.firstOrNull { it.type == KeyType.TRACKPOINT }
-            assertNotNull("$name should support trackpoint key", trackpoint)
-            assertEquals(0, trackpoint!!.linuxKeycode)
         }
     }
 
