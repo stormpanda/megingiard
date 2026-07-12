@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,7 +63,7 @@ internal fun KeyCap(
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
     modifier: Modifier = Modifier,
-    onBoundsUpdate: (KeyBounds) -> Unit,
+    onBoundsUpdate: (LayoutCoordinates) -> Unit,
 ) {
     val colors = LocalAppColors.current
     val isModifierActive = modifierState != ModifierState.INACTIVE
@@ -105,16 +106,7 @@ internal fun KeyCap(
                 .clip(RoundedCornerShape(KEY_CORNER))
                 .background(bg)
                 .onGloballyPositioned { coords ->
-                    // Record root-space bounds so the outer pointerInput can hit-test
-                    val topLeft = coords.localToRoot(Offset.Zero)
-                    onBoundsUpdate(
-                        KeyBounds(
-                            left = topLeft.x,
-                            top = topLeft.y,
-                            right = topLeft.x + coords.size.width,
-                            bottom = topLeft.y + coords.size.height,
-                        ),
-                    )
+                    onBoundsUpdate(coords)
                 },
         contentAlignment = Alignment.Center,
     ) {

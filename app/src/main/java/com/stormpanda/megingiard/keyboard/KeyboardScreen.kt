@@ -397,6 +397,20 @@ fun KeyboardScreen(
     // Outer Box layout coords — used to convert pointer positions to root space
     val boxCoordsState = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
+    val updateBounds: (String, LayoutCoordinates) -> Unit = { id, coords ->
+        val boxCoords = boxCoordsState.value
+        if (boxCoords != null && coords.isAttached) {
+            val localTopLeft = boxCoords.localPositionOf(coords, Offset.Zero)
+            keyBounds[id] =
+                KeyBounds(
+                    left = localTopLeft.x,
+                    top = localTopLeft.y,
+                    right = localTopLeft.x + coords.size.width,
+                    bottom = localTopLeft.y + coords.size.height,
+                )
+        }
+    }
+
     val coroutineScope = rememberCoroutineScope()
     var activePopupState by remember { mutableStateOf<PopupState?>(null) }
     val longPressJobs = remember { mutableMapOf<Long, Job>() }
@@ -505,11 +519,10 @@ fun KeyboardScreen(
 
                                         if (change.isConsumed) continue
 
-                                        val rootPos = boxCoords.localToRoot(change.position)
                                         val keyId =
                                             keyBounds.entries
                                                 .filter { (id, _) -> findKeyInLayout(layoutState.grid, id) != null }
-                                                .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
+                                                .firstOrNull { (_, r) -> r.contains(change.position.x, change.position.y) }
                                                 ?.key
 
                                         when (event.type) {
@@ -581,7 +594,8 @@ fun KeyboardScreen(
                                                         val startPos = pressPositions[pid]
                                                         if (startPos != null) {
                                                             val dist = (change.position - startPos).getDistance()
-                                                            if (dist > 20f) {
+                                                            val thresholdPx = with(density) { 24.dp.toPx() }
+                                                            if (dist > thresholdPx) {
                                                                 longPressJobs[pid]?.cancel()
                                                                 longPressJobs.remove(pid)
                                                             }
@@ -611,11 +625,11 @@ fun KeyboardScreen(
                                                     val charToInject = popup.options[popup.selectedIndex]
                                                     injectPopupChar(charToInject, kbLayout)
                                                     activePopupState = null
-                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
+                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
                                                     change.consume()
                                                 } else {
                                                     if (!change.pressed && change.previousPressed) {
-                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
+                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = false)
                                                         change.consume()
                                                     }
                                                 }
@@ -700,7 +714,7 @@ fun KeyboardScreen(
                                             isCapsActive = isCapsActive,
                                             isAltGrActive = isAltGrActive,
                                             modifier = Modifier.weight(1f),
-                                            onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                            onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                         )
                                     }
                                 }
@@ -732,7 +746,7 @@ fun KeyboardScreen(
                                                     isCapsActive = isCapsActive,
                                                     isAltGrActive = isAltGrActive,
                                                     modifier = Modifier.weight(key.widthWeight),
-                                                    onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                                    onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                                 )
                                             }
                                         }
@@ -759,7 +773,7 @@ fun KeyboardScreen(
                                         isCapsActive = isCapsActive,
                                         isAltGrActive = isAltGrActive,
                                         modifier = Modifier.weight(key.widthWeight),
-                                        onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                        onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                     )
                                 }
                             }
@@ -788,7 +802,7 @@ fun KeyboardScreen(
                                             isCapsActive = isCapsActive,
                                             isAltGrActive = isAltGrActive,
                                             modifier = Modifier.weight(key.widthWeight),
-                                            onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                            onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                         )
                                     }
                                 }

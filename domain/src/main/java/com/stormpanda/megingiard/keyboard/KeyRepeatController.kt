@@ -198,6 +198,7 @@ class KeyRepeatController(
         pointerId: Long,
         layout: List<List<KeyDef>>,
         repeatEnabled: Boolean,
+        skipInjection: Boolean = false,
     ): Boolean {
         // Trackpoint pointer release
         if (pointerId in trackpointPointers) {
@@ -214,28 +215,30 @@ class KeyRepeatController(
             KeyType.NORMAL -> {
                 heldKey = null
                 repeatJob?.cancel()
-                val isCharKey = releasedId != "bksp" && releasedId != "space" && releasedId != "space_num" && releasedId != "enter"
-                if (isCharKey && keyDef.linuxKeycode != 0) {
-                    val activeMods = KeyboardState.activeModifierKeycodes(layout)
-                    activeMods.forEach { KeyInjector.keyDown(it) }
-                    keyDef.autoModifiers.forEach { KeyInjector.keyDown(it) }
-                    KeyInjector.keyDown(keyDef.linuxKeycode)
-                    KeyInjector.keyUp(keyDef.linuxKeycode)
-                    keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
-                    KeyboardState
-                        .releaseStickyModifiers(layout)
-                        .forEach { KeyInjector.keyUp(it) }
-                } else {
-                    if (keyDef.linuxKeycode != 0 && repeatEnabled) {
+                if (!skipInjection) {
+                    val isCharKey = releasedId != "bksp" && releasedId != "space" && releasedId != "space_num" && releasedId != "enter"
+                    if (isCharKey && keyDef.linuxKeycode != 0) {
+                        val activeMods = KeyboardState.activeModifierKeycodes(layout)
+                        activeMods.forEach { KeyInjector.keyDown(it) }
+                        keyDef.autoModifiers.forEach { KeyInjector.keyDown(it) }
+                        KeyInjector.keyDown(keyDef.linuxKeycode)
                         KeyInjector.keyUp(keyDef.linuxKeycode)
                         keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                         KeyboardState
                             .releaseStickyModifiers(layout)
                             .forEach { KeyInjector.keyUp(it) }
-                    } else if (keyDef.linuxKeycode != 0) {
-                        KeyboardState
-                            .releaseStickyModifiers(layout)
-                            .forEach { KeyInjector.keyUp(it) }
+                    } else {
+                        if (keyDef.linuxKeycode != 0 && repeatEnabled) {
+                            KeyInjector.keyUp(keyDef.linuxKeycode)
+                            keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
+                            KeyboardState
+                                .releaseStickyModifiers(layout)
+                                .forEach { KeyInjector.keyUp(it) }
+                        } else if (keyDef.linuxKeycode != 0) {
+                            KeyboardState
+                                .releaseStickyModifiers(layout)
+                                .forEach { KeyInjector.keyUp(it) }
+                        }
                     }
                 }
                 _pressedKeys.value = _pressedKeys.value - releasedId
