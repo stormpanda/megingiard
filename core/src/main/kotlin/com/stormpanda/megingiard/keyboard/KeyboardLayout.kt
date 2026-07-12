@@ -99,9 +99,13 @@ data class KeyDef(
     val type: KeyType = KeyType.NORMAL,
     val shiftLabel: String? = null,
     val altGrLabel: String? = null,
+    val superscript: String? = null,
+    val autoModifiers: List<Int> = emptyList(),
 )
 
 enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
+
+enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2 }
 
 @Serializable
 enum class KbLayout { QWERTZ, QWERTY, AZERTY }
@@ -112,258 +116,283 @@ enum class KbMouseBtnPos { LEFT, RIGHT, BOTH }
 // Layout factories
 // ---------------------------------------------------------------------------
 
-fun qwertzLayout(): List<List<KeyDef>> =
-    listOf(
-        fRow(),
-        numberRow(),
-        topRowQwertz(),
-        homeRowQwertz(),
-        bottomRowQwertz(),
-        bottomBarRow(),
-    )
+fun qwertzLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> =
+    when (mode) {
+        KeyboardMode.LETTERS -> {
+            listOf(
+                qwertzLettersRow1(),
+                homeRowQwertz(),
+                bottomRowQwertz(),
+                bottomBarRow(),
+            )
+        }
 
-fun qwertyLayout(): List<List<KeyDef>> =
-    listOf(
-        fRow(),
-        numberRow(),
-        topRowQwerty(),
-        homeRowQwerty(),
-        bottomRowQwerty(),
-        bottomBarRow(),
-    )
+        KeyboardMode.SYMBOLS_1 -> {
+            symbols1Layout()
+        }
 
-fun azertyLayout(): List<List<KeyDef>> =
-    listOf(
-        fRow(),
-        numberRow(),
-        topRowAzerty(),
-        homeRowAzerty(),
-        bottomRowAzerty(),
-        bottomBarRow(),
-    )
+        KeyboardMode.SYMBOLS_2 -> {
+            symbols2Layout()
+        }
+    }
 
-// ---------------------------------------------------------------------------
-// Shared rows
-// ---------------------------------------------------------------------------
+fun qwertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> =
+    when (mode) {
+        KeyboardMode.LETTERS -> {
+            listOf(
+                qwertyLettersRow1(),
+                homeRowQwerty(),
+                bottomRowQwerty(),
+                bottomBarRow(),
+            )
+        }
 
-private fun fRow(): List<KeyDef> =
-    listOf(
-        KeyDef("esc", "Esc", KEY_ESC, widthWeight = 1.0f),
-        KeyDef("f1", "F1", KEY_F1, widthWeight = 1.0f),
-        KeyDef("f2", "F2", KEY_F2, widthWeight = 1.0f),
-        KeyDef("f3", "F3", KEY_F3, widthWeight = 1.0f),
-        KeyDef("f4", "F4", KEY_F4, widthWeight = 1.0f),
-        KeyDef("f5", "F5", KEY_F5, widthWeight = 1.0f),
-        KeyDef("f6", "F6", KEY_F6, widthWeight = 1.0f),
-        KeyDef("f7", "F7", KEY_F7, widthWeight = 1.0f),
-        KeyDef("f8", "F8", KEY_F8, widthWeight = 1.0f),
-        KeyDef("f9", "F9", KEY_F9, widthWeight = 1.0f),
-        KeyDef("f10", "F10", KEY_F10, widthWeight = 1.0f),
-        KeyDef("f11", "F11", KEY_F11, widthWeight = 1.0f),
-        KeyDef("f12", "F12", KEY_F12, widthWeight = 1.0f),
-        KeyDef("prtsc", "PrtSc", KEY_SYSRQ, widthWeight = 1.0f),
-        KeyDef("ins", "Ins", KEY_INSERT, widthWeight = 1.0f),
-        KeyDef("del", "Del", KEY_DELETE, widthWeight = 1.0f),
-    )
+        KeyboardMode.SYMBOLS_1 -> {
+            symbols1Layout()
+        }
 
-private fun numberRow(): List<KeyDef> =
-    listOf(
-        KeyDef("grave", "`", KEY_GRAVE, shiftLabel = "~"),
-        KeyDef("1", "1", KEY_1, shiftLabel = "!"),
-        KeyDef("2", "2", KEY_2, shiftLabel = "@"),
-        KeyDef("3", "3", KEY_3, shiftLabel = "#"),
-        KeyDef("4", "4", KEY_4, shiftLabel = "\$"),
-        KeyDef("5", "5", KEY_5, shiftLabel = "%"),
-        KeyDef("6", "6", KEY_6, shiftLabel = "^"),
-        KeyDef("7", "7", KEY_7, shiftLabel = "&"),
-        KeyDef("8", "8", KEY_8, shiftLabel = "*"),
-        KeyDef("9", "9", KEY_9, shiftLabel = "("),
-        KeyDef("0", "0", KEY_0, shiftLabel = ")"),
-        KeyDef("minus", "-", KEY_MINUS, shiftLabel = "_"),
-        KeyDef("equal", "=", KEY_EQUAL, shiftLabel = "+"),
-        KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 2.0f),
-    )
+        KeyboardMode.SYMBOLS_2 -> {
+            symbols2Layout()
+        }
+    }
 
-private fun bottomBarRow(): List<KeyDef> =
-    listOf(
-        KeyDef("lctrl", "Ctrl", KEY_LEFTCTRL, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("lmeta", "Win", KEY_LEFTMETA, widthWeight = 1.2f, type = KeyType.MODIFIER),
-        KeyDef("lalt", "Alt", KEY_LEFTALT, widthWeight = 1.2f, type = KeyType.MODIFIER),
-        KeyDef("space", " ", KEY_SPACE, widthWeight = 5.5f),
-        KeyDef("ralt", "AltGr", KEY_RIGHTALT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("larrow", "←", KEY_LEFT, widthWeight = 1.7f),
-        KeyDef("darrow", "↓", KEY_DOWN, widthWeight = 1.7f),
-        KeyDef("rarrow", "→", KEY_RIGHT, widthWeight = 1.7f),
-    )
+fun azertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> =
+    when (mode) {
+        KeyboardMode.LETTERS -> {
+            listOf(
+                azertyLettersRow1(),
+                homeRowAzerty(),
+                bottomRowAzerty(),
+                bottomBarRow(),
+            )
+        }
+
+        KeyboardMode.SYMBOLS_1 -> {
+            symbols1Layout()
+        }
+
+        KeyboardMode.SYMBOLS_2 -> {
+            symbols2Layout()
+        }
+    }
 
 // ---------------------------------------------------------------------------
-// QWERTZ-specific rows
+// Gboard visual rows
 // ---------------------------------------------------------------------------
 
-private fun topRowQwertz(): List<KeyDef> =
+private fun qwertzLettersRow1(): List<KeyDef> =
     listOf(
-        KeyDef("tab", "Tab", KEY_TAB, widthWeight = 1.5f),
-        KeyDef("q", "q", KEY_Q, shiftLabel = "Q"),
-        KeyDef("w", "w", KEY_W, shiftLabel = "W"),
-        KeyDef("e", "e", KEY_E, shiftLabel = "E"),
-        KeyDef("r", "r", KEY_R, shiftLabel = "R"),
-        KeyDef("t", "t", KEY_T, shiftLabel = "T"),
-        KeyDef("z", "z", KEY_Z, shiftLabel = "Z"), // QWERTZ: Z visual position in top row, but KEY_Z for correct output
-        KeyDef("u", "u", KEY_U, shiftLabel = "U"),
-        KeyDef("i", "i", KEY_I, shiftLabel = "I"),
-        KeyDef("o", "o", KEY_O, shiftLabel = "O"),
-        KeyDef("p", "p", KEY_P, shiftLabel = "P"),
-        KeyDef("lbrc", "[", KEY_LEFTBRACE, shiftLabel = "{"),
-        KeyDef("rbrc", "]", KEY_RIGHTBRACE, shiftLabel = "}"),
-        KeyDef("bsls", "\\", KEY_BACKSLASH, widthWeight = 1.5f, shiftLabel = "|"),
+        KeyDef("q", "q", KEY_Q, superscript = "1"),
+        KeyDef("w", "w", KEY_W, superscript = "2"),
+        KeyDef("e", "e", KEY_E, superscript = "3"),
+        KeyDef("r", "r", KEY_R, superscript = "4"),
+        KeyDef("t", "t", KEY_T, superscript = "5"),
+        KeyDef("z", "z", KEY_Z, superscript = "6"),
+        KeyDef("u", "u", KEY_U, superscript = "7"),
+        KeyDef("i", "i", KEY_I, superscript = "8"),
+        KeyDef("o", "o", KEY_O, superscript = "9"),
+        KeyDef("p", "p", KEY_P, superscript = "0"),
+    )
+
+private fun qwertyLettersRow1(): List<KeyDef> =
+    listOf(
+        KeyDef("q", "q", KEY_Q, superscript = "1"),
+        KeyDef("w", "w", KEY_W, superscript = "2"),
+        KeyDef("e", "e", KEY_E, superscript = "3"),
+        KeyDef("r", "r", KEY_R, superscript = "4"),
+        KeyDef("t", "t", KEY_T, superscript = "5"),
+        KeyDef("y", "y", KEY_Y, superscript = "6"),
+        KeyDef("u", "u", KEY_U, superscript = "7"),
+        KeyDef("i", "i", KEY_I, superscript = "8"),
+        KeyDef("o", "o", KEY_O, superscript = "9"),
+        KeyDef("p", "p", KEY_P, superscript = "0"),
+    )
+
+private fun azertyLettersRow1(): List<KeyDef> =
+    listOf(
+        KeyDef("a", "a", KEY_A, superscript = "1"),
+        KeyDef("z", "z", KEY_Z, superscript = "2"),
+        KeyDef("e", "e", KEY_E, superscript = "3"),
+        KeyDef("r", "r", KEY_R, superscript = "4"),
+        KeyDef("t", "t", KEY_T, superscript = "5"),
+        KeyDef("y", "y", KEY_Y, superscript = "6"),
+        KeyDef("u", "u", KEY_U, superscript = "7"),
+        KeyDef("i", "i", KEY_I, superscript = "8"),
+        KeyDef("o", "o", KEY_O, superscript = "9"),
+        KeyDef("p", "p", KEY_P, superscript = "0"),
     )
 
 private fun homeRowQwertz(): List<KeyDef> =
     listOf(
-        KeyDef("caps", "Caps", KEY_CAPSLOCK, widthWeight = 1.2f, type = KeyType.MODIFIER),
-        KeyDef("a", "a", KEY_A, shiftLabel = "A"),
-        KeyDef("s", "s", KEY_S, shiftLabel = "S"),
-        KeyDef("d", "d", KEY_D, shiftLabel = "D"),
-        KeyDef("f", "f", KEY_F, shiftLabel = "F"),
-        KeyDef("g", "g", KEY_G, shiftLabel = "G"),
-        KeyDef("tp", "●", 0, widthWeight = 1.93f, type = KeyType.TRACKPOINT),
-        KeyDef("h", "h", KEY_H, shiftLabel = "H"),
-        KeyDef("j", "j", KEY_J, shiftLabel = "J"),
-        KeyDef("k", "k", KEY_K, shiftLabel = "K"),
-        KeyDef("l", "l", KEY_L, shiftLabel = "L"),
-        KeyDef("semi", ";", KEY_SEMICOLON, shiftLabel = ":"),
-        KeyDef("apos", "'", KEY_APOSTROPHE, shiftLabel = "\""),
-        KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.47f),
+        KeyDef("a", "a", KEY_A),
+        KeyDef("s", "s", KEY_S),
+        KeyDef("d", "d", KEY_D),
+        KeyDef("f", "f", KEY_F),
+        KeyDef("g", "g", KEY_G),
+        KeyDef("h", "h", KEY_H),
+        KeyDef("j", "j", KEY_J),
+        KeyDef("k", "k", KEY_K),
+        KeyDef("l", "l", KEY_L),
+    )
+
+private fun homeRowQwerty(): List<KeyDef> = homeRowQwertz()
+
+private fun homeRowAzerty(): List<KeyDef> =
+    listOf(
+        KeyDef("q", "q", KEY_Q),
+        KeyDef("s", "s", KEY_S),
+        KeyDef("d", "d", KEY_D),
+        KeyDef("f", "f", KEY_F),
+        KeyDef("g", "g", KEY_G),
+        KeyDef("h", "h", KEY_H),
+        KeyDef("j", "j", KEY_J),
+        KeyDef("k", "k", KEY_K),
+        KeyDef("l", "l", KEY_L),
+        KeyDef("m", "m", KEY_M),
     )
 
 private fun bottomRowQwertz(): List<KeyDef> =
     listOf(
-        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 2.3f, type = KeyType.MODIFIER),
-        KeyDef("y", "y", KEY_Y, shiftLabel = "Y"), // QWERTZ: Y visual position in bottom row, but KEY_Y for correct output
-        KeyDef("x", "x", KEY_X, shiftLabel = "X"),
-        KeyDef("c", "c", KEY_C, shiftLabel = "C"),
-        KeyDef("v", "v", KEY_V, shiftLabel = "V"),
-        KeyDef("b", "b", KEY_B, shiftLabel = "B"),
-        KeyDef("n", "n", KEY_N, shiftLabel = "N"),
-        KeyDef("m", "m", KEY_M, shiftLabel = "M"),
-        KeyDef("comma", ",", KEY_COMMA, shiftLabel = "<"),
-        KeyDef("dot", ".", KEY_DOT, shiftLabel = ">"),
-        KeyDef("slash", "/", KEY_SLASH, shiftLabel = "?"),
-        KeyDef("uarrow", "↑", KEY_UP, widthWeight = 1.7f), // swapped with rshift, wider
-        KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.5f, type = KeyType.MODIFIER),
-    )
-
-// ---------------------------------------------------------------------------
-// QWERTY-specific rows (only Z/Y swapped)
-// ---------------------------------------------------------------------------
-
-private fun topRowQwerty(): List<KeyDef> =
-    listOf(
-        KeyDef("tab", "Tab", KEY_TAB, widthWeight = 1.5f),
-        KeyDef("q", "q", KEY_Q, shiftLabel = "Q"),
-        KeyDef("w", "w", KEY_W, shiftLabel = "W"),
-        KeyDef("e", "e", KEY_E, shiftLabel = "E"),
-        KeyDef("r", "r", KEY_R, shiftLabel = "R"),
-        KeyDef("t", "t", KEY_T, shiftLabel = "T"),
-        KeyDef("y", "y", KEY_Y, shiftLabel = "Y"),
-        KeyDef("u", "u", KEY_U, shiftLabel = "U"),
-        KeyDef("i", "i", KEY_I, shiftLabel = "I"),
-        KeyDef("o", "o", KEY_O, shiftLabel = "O"),
-        KeyDef("p", "p", KEY_P, shiftLabel = "P"),
-        KeyDef("lbrc", "[", KEY_LEFTBRACE, shiftLabel = "{"),
-        KeyDef("rbrc", "]", KEY_RIGHTBRACE, shiftLabel = "}"),
-        KeyDef("bsls", "\\", KEY_BACKSLASH, widthWeight = 1.5f, shiftLabel = "|"),
-    )
-
-private fun homeRowQwerty(): List<KeyDef> =
-    listOf(
-        KeyDef("caps", "Caps", KEY_CAPSLOCK, widthWeight = 1.2f, type = KeyType.MODIFIER),
-        KeyDef("a", "a", KEY_A, shiftLabel = "A"),
-        KeyDef("s", "s", KEY_S, shiftLabel = "S"),
-        KeyDef("d", "d", KEY_D, shiftLabel = "D"),
-        KeyDef("f", "f", KEY_F, shiftLabel = "F"),
-        KeyDef("g", "g", KEY_G, shiftLabel = "G"),
-        KeyDef("tp", "●", 0, widthWeight = 1.93f, type = KeyType.TRACKPOINT),
-        KeyDef("h", "h", KEY_H, shiftLabel = "H"),
-        KeyDef("j", "j", KEY_J, shiftLabel = "J"),
-        KeyDef("k", "k", KEY_K, shiftLabel = "K"),
-        KeyDef("l", "l", KEY_L, shiftLabel = "L"),
-        KeyDef("semi", ";", KEY_SEMICOLON, shiftLabel = ":"),
-        KeyDef("apos", "'", KEY_APOSTROPHE, shiftLabel = "\""),
-        KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.47f),
+        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
+        KeyDef("y", "y", KEY_Y),
+        KeyDef("x", "x", KEY_X),
+        KeyDef("c", "c", KEY_C),
+        KeyDef("v", "v", KEY_V),
+        KeyDef("b", "b", KEY_B),
+        KeyDef("n", "n", KEY_N),
+        KeyDef("m", "m", KEY_M),
+        KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
     )
 
 private fun bottomRowQwerty(): List<KeyDef> =
     listOf(
-        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 2.3f, type = KeyType.MODIFIER),
-        KeyDef("z", "z", KEY_Z, shiftLabel = "Z"),
-        KeyDef("x", "x", KEY_X, shiftLabel = "X"),
-        KeyDef("c", "c", KEY_C, shiftLabel = "C"),
-        KeyDef("v", "v", KEY_V, shiftLabel = "V"),
-        KeyDef("b", "b", KEY_B, shiftLabel = "B"),
-        KeyDef("n", "n", KEY_N, shiftLabel = "N"),
-        KeyDef("m", "m", KEY_M, shiftLabel = "M"),
-        KeyDef("comma", ",", KEY_COMMA, shiftLabel = "<"),
-        KeyDef("dot", ".", KEY_DOT, shiftLabel = ">"),
-        KeyDef("slash", "/", KEY_SLASH, shiftLabel = "?"),
-        KeyDef("uarrow", "↑", KEY_UP, widthWeight = 1.7f), // swapped with rshift, wider
-        KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.5f, type = KeyType.MODIFIER),
-    )
-
-// ---------------------------------------------------------------------------
-// AZERTY-specific rows (French layout — A/Q and Z/W transposed, M in home row)
-// ---------------------------------------------------------------------------
-
-private fun topRowAzerty(): List<KeyDef> =
-    listOf(
-        KeyDef("tab", "Tab", KEY_TAB, widthWeight = 1.5f),
-        KeyDef("a", "a", KEY_A, shiftLabel = "A"), // AZERTY: A at top-left (Q position)
-        KeyDef("z", "z", KEY_Z, shiftLabel = "Z"), // AZERTY: Z at W position
-        KeyDef("e", "e", KEY_E, shiftLabel = "E"),
-        KeyDef("r", "r", KEY_R, shiftLabel = "R"),
-        KeyDef("t", "t", KEY_T, shiftLabel = "T"),
-        KeyDef("y", "y", KEY_Y, shiftLabel = "Y"),
-        KeyDef("u", "u", KEY_U, shiftLabel = "U"),
-        KeyDef("i", "i", KEY_I, shiftLabel = "I"),
-        KeyDef("o", "o", KEY_O, shiftLabel = "O"),
-        KeyDef("p", "p", KEY_P, shiftLabel = "P"),
-        KeyDef("lbrc", "[", KEY_LEFTBRACE, shiftLabel = "{"),
-        KeyDef("rbrc", "]", KEY_RIGHTBRACE, shiftLabel = "}"),
-        KeyDef("bsls", "\\", KEY_BACKSLASH, widthWeight = 1.5f, shiftLabel = "|"),
-    )
-
-private fun homeRowAzerty(): List<KeyDef> =
-    listOf(
-        KeyDef("caps", "Caps", KEY_CAPSLOCK, widthWeight = 1.7f, type = KeyType.MODIFIER),
-        KeyDef("q", "q", KEY_Q, shiftLabel = "Q"), // AZERTY: Q at A position
-        KeyDef("s", "s", KEY_S, shiftLabel = "S"),
-        KeyDef("d", "d", KEY_D, shiftLabel = "D"),
-        KeyDef("f", "f", KEY_F, shiftLabel = "F"),
-        KeyDef("g", "g", KEY_G, shiftLabel = "G"),
-        KeyDef("tp", "●", 0, widthWeight = 1.93f, type = KeyType.TRACKPOINT),
-        KeyDef("h", "h", KEY_H, shiftLabel = "H"),
-        KeyDef("j", "j", KEY_J, shiftLabel = "J"),
-        KeyDef("k", "k", KEY_K, shiftLabel = "K"),
-        KeyDef("l", "l", KEY_L, shiftLabel = "L"),
-        KeyDef("m", "m", KEY_M, shiftLabel = "M"), // same width as other letters
-        KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.97f),
+        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
+        KeyDef("z", "z", KEY_Z),
+        KeyDef("x", "x", KEY_X),
+        KeyDef("c", "c", KEY_C),
+        KeyDef("v", "v", KEY_V),
+        KeyDef("b", "b", KEY_B),
+        KeyDef("n", "n", KEY_N),
+        KeyDef("m", "m", KEY_M),
+        KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
     )
 
 private fun bottomRowAzerty(): List<KeyDef> =
     listOf(
-        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 2.3f, type = KeyType.MODIFIER),
-        KeyDef("w", "w", KEY_W, shiftLabel = "W"), // AZERTY: W at Z position
-        KeyDef("x", "x", KEY_X, shiftLabel = "X"),
-        KeyDef("c", "c", KEY_C, shiftLabel = "C"),
-        KeyDef("v", "v", KEY_V, shiftLabel = "V"),
-        KeyDef("b", "b", KEY_B, shiftLabel = "B"),
-        KeyDef("n", "n", KEY_N, shiftLabel = "N"),
-        KeyDef("comma", ",", KEY_COMMA, shiftLabel = "<"),
-        KeyDef("semi", ";", KEY_SEMICOLON, shiftLabel = ":"),
-        KeyDef("dot", ".", KEY_DOT, shiftLabel = ">"),
-        KeyDef("slash", "/", KEY_SLASH, shiftLabel = "?"),
-        KeyDef("uarrow", "↑", KEY_UP, widthWeight = 1.7f),
-        KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.5f, type = KeyType.MODIFIER),
+        KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
+        KeyDef("w", "w", KEY_W),
+        KeyDef("x", "x", KEY_X),
+        KeyDef("c", "c", KEY_C),
+        KeyDef("v", "v", KEY_V),
+        KeyDef("b", "b", KEY_B),
+        KeyDef("n", "n", KEY_N),
+        KeyDef("question_azerty", "?", KEY_SLASH, autoModifiers = listOf(KEY_LEFTSHIFT)),
+        KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
+    )
+
+private fun bottomBarRow(): List<KeyDef> =
+    listOf(
+        KeyDef("mode_switch", "?123", 0, widthWeight = 1.4f),
+        KeyDef("comma", ",", KEY_COMMA, widthWeight = 1.0f),
+        KeyDef("globe", "🌐", 0, widthWeight = 1.0f),
+        KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
+        KeyDef("dot", ".", KEY_DOT, widthWeight = 1.0f),
+        KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
+    )
+
+private fun symbols1Layout(): List<List<KeyDef>> =
+    listOf(
+        listOf(
+            KeyDef("1", "1", KEY_1),
+            KeyDef("2", "2", KEY_2),
+            KeyDef("3", "3", KEY_3),
+            KeyDef("4", "4", KEY_4),
+            KeyDef("5", "5", KEY_5),
+            KeyDef("6", "6", KEY_6),
+            KeyDef("7", "7", KEY_7),
+            KeyDef("8", "8", KEY_8),
+            KeyDef("9", "9", KEY_9),
+            KeyDef("0", "0", KEY_0),
+        ),
+        listOf(
+            KeyDef("at", "@", KEY_2, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("hash", "#", KEY_3, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("euro", "€", KEY_E, autoModifiers = listOf(KEY_RIGHTALT)),
+            KeyDef("underscore", "_", KEY_MINUS, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("ampersand", "&", KEY_7, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("hyphen", "-", KEY_MINUS),
+            KeyDef("plus", "+", KEY_EQUAL, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("lparen", "(", KEY_9, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("rparen", ")", KEY_0, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("slash", "/", KEY_SLASH),
+        ),
+        listOf(
+            KeyDef("mode_switch_2", "=\\<", 0, widthWeight = 1.3f),
+            KeyDef("asterisk", "*", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("quote", "\"", KEY_APOSTROPHE, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("singlequote", "'", KEY_APOSTROPHE),
+            KeyDef("colon", ":", KEY_SEMICOLON, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("semicolon", ";", KEY_SEMICOLON),
+            KeyDef("excl", "!", KEY_1, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("question", "?", KEY_SLASH, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
+        ),
+        listOf(
+            KeyDef("mode_switch_abc", "ABC", 0, widthWeight = 1.4f),
+            KeyDef("comma", ",", KEY_COMMA, widthWeight = 1.0f),
+            KeyDef("mode_switch_1234", "1234", 0, widthWeight = 1.0f),
+            KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
+            KeyDef("dot", ".", KEY_DOT, widthWeight = 1.0f),
+            KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
+        ),
+    )
+
+private fun symbols2Layout(): List<List<KeyDef>> =
+    listOf(
+        listOf(
+            KeyDef("tilde", "~", KEY_GRAVE, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("backtick", "`", KEY_GRAVE),
+            KeyDef("pipe", "|", KEY_BACKSLASH, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("bullet", "•", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT, KEY_RIGHTALT)),
+            KeyDef("root", "√", 0),
+            KeyDef("pi", "π", 0),
+            KeyDef("div", "÷", KEY_SLASH),
+            KeyDef("mul", "×", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("para", "¶", 0),
+            KeyDef("delta", "∆", 0),
+        ),
+        listOf(
+            KeyDef("pound", "£", KEY_3, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("yen", "¥", 0),
+            KeyDef("dollar", "$", KEY_4, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("cent", "¢", 0),
+            KeyDef("caret", "^", KEY_6, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("deg", "°", 0),
+            KeyDef("equal", "=", KEY_EQUAL),
+            KeyDef("lbrace", "{", KEY_LEFTBRACE, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("rbrace", "}", KEY_RIGHTBRACE, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("bslash", "\\", KEY_BACKSLASH),
+        ),
+        listOf(
+            KeyDef("mode_switch_1", "?123", 0, widthWeight = 1.3f),
+            KeyDef("percent", "%", KEY_5, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("underscore", "_", KEY_MINUS, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("lbracket", "[", KEY_LEFTBRACE),
+            KeyDef("rbracket", "]", KEY_RIGHTBRACE),
+            KeyDef("less", "<", KEY_COMMA, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("greater", ">", KEY_DOT, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("excl_inv", "¡", 0),
+            KeyDef("ques_inv", "¿", 0),
+            KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
+        ),
+        listOf(
+            KeyDef("mode_switch_abc", "ABC", 0, widthWeight = 1.4f),
+            KeyDef("comma", ",", KEY_COMMA, widthWeight = 1.0f),
+            KeyDef("mode_switch_1234", "1234", 0, widthWeight = 1.0f),
+            KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
+            KeyDef("dot", ".", KEY_DOT, widthWeight = 1.0f),
+            KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
+        ),
     )
 
 // ---------------------------------------------------------------------------

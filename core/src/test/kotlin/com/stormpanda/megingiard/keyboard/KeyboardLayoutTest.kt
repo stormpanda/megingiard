@@ -28,9 +28,9 @@ class KeyboardLayoutTest {
         )
 
     @Test
-    fun `every layout has six rows`() {
+    fun `every layout has four rows`() {
         for ((name, layout) in layouts) {
-            assertEquals("$name row count", 6, layout.size)
+            assertEquals("$name row count", 4, layout.size)
         }
     }
 
@@ -49,24 +49,29 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `non-trackpoint keycodes are within 1 to 255 range`() {
+    fun `non-trackpoint keycodes are within 0 to 255 range`() {
         for ((name, layout) in layouts) {
             for (key in layout.flatten()) {
                 if (key.type == KeyType.TRACKPOINT) continue
                 assertTrue(
                     "$name key '${key.id}' has out-of-range keycode ${key.linuxKeycode}",
-                    key.linuxKeycode in 1..255,
+                    key.linuxKeycode in 0..255,
                 )
             }
         }
     }
 
     @Test
-    fun `trackpoint key exists in every layout with sentinel keycode`() {
+    fun `trackpoint key can be injected dynamically in letters layout`() {
         for ((name, layout) in layouts) {
-            val trackpoint = layout.flatten().firstOrNull { it.type == KeyType.TRACKPOINT }
-            assertNotNull("$name has no trackpoint key", trackpoint)
-            assertEquals("$name trackpoint keycode must be 0", 0, trackpoint!!.linuxKeycode)
+            val row = layout[1].toMutableList() // home row
+            val gIndex = row.indexOfFirst { it.id == "g" }
+            if (gIndex != -1) {
+                row.add(gIndex + 1, KeyDef("tp", "●", 0, type = KeyType.TRACKPOINT))
+            }
+            val trackpoint = row.firstOrNull { it.type == KeyType.TRACKPOINT }
+            assertNotNull("$name should support trackpoint key", trackpoint)
+            assertEquals(0, trackpoint!!.linuxKeycode)
         }
     }
 

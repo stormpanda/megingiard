@@ -18,9 +18,14 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K1: Virtual Keyboard Layout
 
-- The secondary display MUST show a **full virtual keyboard** occupying the screen.
-- The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings.
-- The keyboard MUST include a **number row** (0–9 with symbol alternates), a **function row** (F1–F12), **letter rows**, and a **bottom bar** with Ctrl, Meta, Alt, Space, AltGr, and arrow keys.
+- The secondary display MUST show a **Gboard-style virtual keyboard** anchored to the bottom.
+- The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings or the keyboard's globe key.
+- The keyboard MUST feature a **4-row key layout** consisting of letter rows and a bottom spacebar bar, alongside two horizontal toolbars (top toolbar above the keys, and bottom toolbar below the keys).
+- The keyboard MUST support dynamic layout sub-modes:
+  - **LETTERS:** standard alphabetic keys, with superscript digits (1–0) visible on the top row.
+  - **SYMBOLS 1:** numbers and common symbols layout, accessed via the `?123` switcher key.
+  - **SYMBOLS 2:** alternate math/currency symbols layout, accessed via the `=\<` switcher key.
+- Tapping switcher keys toggles the active sub-mode locally in the UI, while the globe key cycles regional layouts.
 - Shift and AltGr alternate labels MUST be shown on individual keys when the respective modifier is active.
 
 ### FR-K2: Modifier Keys

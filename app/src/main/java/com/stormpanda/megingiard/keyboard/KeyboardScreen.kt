@@ -5,15 +5,33 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Assignment
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -36,25 +56,24 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QUICK_MENU_BAR_INSET
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
-import kotlinx.coroutines.delay
 
 // ---------------------------------------------------------------------------
 // Layout constants
 // ---------------------------------------------------------------------------
-private const val F_ROW_HEIGHT_WEIGHT = 0.7f
 private val KEY_PADDING_H = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
-private val KB_IME_BOTTOM_PADDING = 56.dp
-private val KB_QUICK_MENU_BAR_INSET = QUICK_MENU_BAR_INSET
 
 private const val TAG = "KeyboardScreen"
 
@@ -70,15 +89,15 @@ fun KeyboardScreen(
     val kbRepeatEnabled by viewModel.kbRepeatEnabled.collectAsState()
     val kbTrackpointEnabled by viewModel.kbTrackpointEnabled.collectAsState()
     val kbFullscreen by viewModel.kbFullscreen.collectAsState()
-    // When a forcedLayout is set the keyboard is always shown as a fullscreen overlay.
-    val effectiveFullscreen = forcedLayout != null || kbFullscreen
     val kbMouseBtnPos by viewModel.kbMouseBtnPos.collectAsState()
-    val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val isQuickMenuOpen by viewModel.isQuickMenuOpen.collectAsState()
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
     val colors = LocalAppColors.current
     val accentColor = colors.accent
     val controller = viewModel.controller
+
+    // Sub-mode and layout tracking
+    val keyboardMode by viewModel.keyboardMode.collectAsState()
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -101,16 +120,16 @@ fun KeyboardScreen(
     }
 
     val layout =
-        remember(kbLayout) {
+        remember(kbLayout, keyboardMode) {
             when (kbLayout) {
-                KbLayout.QWERTY -> qwertyLayout()
-                KbLayout.AZERTY -> azertyLayout()
-                KbLayout.QWERTZ -> qwertzLayout()
+                KbLayout.QWERTY -> qwertyLayout(keyboardMode)
+                KbLayout.AZERTY -> azertyLayout(keyboardMode)
+                KbLayout.QWERTZ -> qwertzLayout(keyboardMode)
             }
         }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned
-    val keyBounds = remember(kbLayout) { mutableMapOf<String, KeyBounds>() }
+    val keyBounds = remember(kbLayout, keyboardMode) { mutableMapOf<String, KeyBounds>() }
     // Outer Box layout coords — used to convert pointer positions to root space
     val boxCoordsState = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
@@ -124,205 +143,336 @@ fun KeyboardScreen(
         label = "trackpointAlpha",
     )
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.appBackground)
-                .onGloballyPositioned { boxCoordsState.value = it }
-                .pointerInput(layout) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Main)
-                            // While the quick menu overlay is visible, block new key input.
-                            if (isQuickMenuOpenState.value) {
-                                when (event.type) {
-                                    PointerEventType.Press -> {
-                                        if (event.changes.none { it.isConsumed }) {
-                                            viewModel.closeQuickMenu()
-                                        }
-                                        event.changes.forEach { it.consume() }
-                                        continue
-                                    }
-
-                                    PointerEventType.Move -> {
-                                        event.changes.forEach { it.consume() }
-                                        continue
-                                    }
-
-                                    else -> {
-                                        Unit
-                                    } // Release: fall through for held-key cleanup
-                                }
-                            }
-                            val boxCoords = boxCoordsState.value ?: continue
-                            for (change in event.changes) {
-                                val pid = change.id.value
-
-                                // Trackpoint pointers must be handled even if consumed by a child
-                                // (e.g. mouse button press in trackpoint overlay).
-                                if (controller.isTrackpointPointer(pid)) {
-                                    when {
-                                        change.pressed && event.type == PointerEventType.Move -> {
-                                            val delta = change.positionChange()
-                                            controller.onKeyMove(pid, null, delta.x, delta.y, layout, kbRepeatEnabled)
-                                            change.consume()
-                                        }
-
-                                        !change.pressed && change.previousPressed -> {
-                                            controller.onKeyUp(pid, layout, kbRepeatEnabled)
-                                            change.consume()
-                                        }
-                                    }
-                                    continue
-                                }
-
-                                // Non-trackpoint events consumed by a child are skipped.
-                                if (change.isConsumed) continue
-
-                                // Convert pointer position to root space for hit testing
-                                val rootPos = boxCoords.localToRoot(change.position)
-                                val keyId =
-                                    keyBounds.entries
-                                        .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
-                                        ?.key
-
-                                when (event.type) {
-                                    PointerEventType.Press -> {
-                                        if (!change.previousPressed) {
-                                            if (controller.onKeyDown(pid, keyId, layout, kbRepeatEnabled)) {
-                                                change.consume()
-                                            }
-                                        }
-                                    }
-
-                                    PointerEventType.Move -> {
-                                        val delta = change.positionChange()
-                                        if (controller.onKeyMove(pid, keyId, delta.x, delta.y, layout, kbRepeatEnabled)) {
-                                            change.consume()
-                                        }
-                                    }
-
-                                    PointerEventType.Release -> {
-                                        if (!change.pressed && change.previousPressed) {
-                                            controller.onKeyUp(pid, layout, kbRepeatEnabled)
-                                            change.consume()
-                                        }
-                                    }
-
-                                    else -> {
-                                        Unit
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Bottom,
     ) {
-        // Visual keyboard layout — Crossfade for smooth layout transitions
-        Crossfade(targetState = kbLayout, label = "Layout Switch") { activeLayout ->
-            val animatedLayout =
-                remember(activeLayout) {
-                    when (activeLayout) {
-                        KbLayout.QWERTY -> qwertyLayout()
-                        KbLayout.AZERTY -> azertyLayout()
-                        KbLayout.QWERTZ -> qwertzLayout()
-                    }
-                }
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            start = 4.dp,
-                            end = 4.dp,
-                            top = if (overlayAtBottom) 4.dp else KB_QUICK_MENU_BAR_INSET,
-                            bottom = if (effectiveFullscreen) (if (overlayAtBottom) KB_QUICK_MENU_BAR_INSET else 4.dp) else KB_IME_BOTTOM_PADDING,
-                        ),
-                verticalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                animatedLayout.forEachIndexed { rowIndex, row ->
-                    val heightWeight = if (rowIndex == 0) F_ROW_HEIGHT_WEIGHT else 1f
-                    Row(
-                        modifier =
-                            Modifier
-                                .weight(heightWeight)
-                                .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
-                    ) {
-                        row.forEach { key ->
-                            // Skip trackpoint key if disabled in settings
-                            if (key.type == KeyType.TRACKPOINT && !kbTrackpointEnabled) return@forEach
-                            val modState by KeyboardState.stateFor(key.id).collectAsState()
-                            KeyCap(
-                                keyDef = key,
-                                isPressed = key.id in pressedKeys,
-                                modifierState = modState,
-                                accentColor = accentColor,
-                                isShiftActive = isShiftActive,
-                                isCapsActive = isCapsActive,
-                                isAltGrActive = isAltGrActive,
-                                modifier = Modifier.weight(key.widthWeight),
-                                onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        // Transparent Top Spacer to let Zelda wallpaper/ambient background shine through
+        Spacer(modifier = Modifier.weight(1f))
 
-        // Trackpoint overlay: mouse buttons own their pointerInput; outer Box handles trackpoint moves.
-        if (trackpointAlpha > 0f) {
-            Box(
+        // Gboard Container (top toolbar, grid, bottom toolbar)
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(230.dp)
+                    .background(Color(0xFF17191D)),
+        ) {
+            // 1. Top Toolbar
+            Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .align(Alignment.Center)
-                        .alpha(trackpointAlpha)
-                        .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                        .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center,
+                        .height(36.dp)
+                        .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround,
             ) {
-                Text(
-                    text = stringResource(R.string.cd_keyboard_trackpoint),
-                    color = colors.onAccent.copy(alpha = 0.25f),
-                    style = MaterialTheme.typography.labelMedium,
-                    textAlign = TextAlign.Center,
+                ToolbarIcon(imageVector = Icons.Rounded.GridView, contentDescription = "Apps")
+                ToolbarIcon(imageVector = Icons.Rounded.EmojiEmotions, contentDescription = "Emoji")
+                GifToolbarIcon()
+                ToolbarIcon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = "Settings",
+                    onClick = {
+                        AppStateManager.setFullscreenKeyboardActive(false)
+                        AppStateManager.setGlobalSettingsOpen(true)
+                    },
                 )
-                // Virtual mouse buttons: only rendered while trackpoint is actively touched
-                // so they disappear from composition (and stop intercepting events) as soon
-                // as the user lifts all fingers from the trackpoint.
-                if (trackpointVisible) {
-                    if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
-                        MouseButtonColumn(
-                            accentColor = accentColor,
-                            onLmbDown = { MouseInjector.leftDown() },
-                            onLmbUp = { MouseInjector.leftUp() },
-                            onRmbDown = { MouseInjector.rightDown() },
-                            onRmbUp = { MouseInjector.rightUp() },
-                            modifier =
-                                Modifier
-                                    .align(Alignment.CenterStart)
-                                    .padding(start = 8.dp),
-                        )
+                ToolbarIcon(imageVector = Icons.Rounded.Translate, contentDescription = "Translate")
+                ToolbarIcon(
+                    imageVector = Icons.Rounded.Palette,
+                    contentDescription = "Theme",
+                    onClick = {
+                        AppStateManager.setFullscreenKeyboardActive(false)
+                        AppStateManager.setBackgroundSettingsActive(true)
+                    },
+                )
+                ToolbarIcon(imageVector = Icons.AutoMirrored.Rounded.Assignment, contentDescription = "Clipboard")
+                ToolbarIcon(imageVector = Icons.Rounded.Mic, contentDescription = "Voice Search")
+            }
+
+            // 2. Keyboard Grid (isolated touch interception)
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .onGloballyPositioned { boxCoordsState.value = it }
+                        .pointerInput(layout) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Main)
+                                    if (isQuickMenuOpenState.value) {
+                                        if (event.type == PointerEventType.Press) {
+                                            if (event.changes.none { it.isConsumed }) {
+                                                viewModel.closeQuickMenu()
+                                            }
+                                        }
+                                        event.changes.forEach { it.consume() }
+                                        continue
+                                    }
+
+                                    val boxCoords = boxCoordsState.value ?: continue
+                                    for (change in event.changes) {
+                                        val pid = change.id.value
+
+                                        if (controller.isTrackpointPointer(pid)) {
+                                            when {
+                                                change.pressed && event.type == PointerEventType.Move -> {
+                                                    val delta = change.positionChange()
+                                                    controller.onKeyMove(pid, null, delta.x, delta.y, layout, kbRepeatEnabled)
+                                                    change.consume()
+                                                }
+
+                                                !change.pressed && change.previousPressed -> {
+                                                    controller.onKeyUp(pid, layout, kbRepeatEnabled)
+                                                    change.consume()
+                                                }
+                                            }
+                                            continue
+                                        }
+
+                                        if (change.isConsumed) continue
+
+                                        val rootPos = boxCoords.localToRoot(change.position)
+                                        val keyId =
+                                            keyBounds.entries
+                                                .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
+                                                ?.key
+
+                                        when (event.type) {
+                                            PointerEventType.Press -> {
+                                                if (!change.previousPressed) {
+                                                    if (keyId != null && keyId.startsWith("mode_switch")) {
+                                                        val targetMode =
+                                                            when (keyId) {
+                                                                "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
+                                                                "mode_switch_abc" -> KeyboardMode.LETTERS
+                                                                "mode_switch_2", "mode_switch_1234" -> KeyboardMode.SYMBOLS_2
+                                                                else -> KeyboardMode.LETTERS
+                                                            }
+                                                        viewModel.setKeyboardMode(targetMode)
+                                                        change.consume()
+                                                    } else if (keyId == "globe") {
+                                                        viewModel.cycleKbLayout()
+                                                        change.consume()
+                                                    } else {
+                                                        if (controller.onKeyDown(pid, keyId, layout, kbRepeatEnabled)) {
+                                                            change.consume()
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            PointerEventType.Move -> {
+                                                val delta = change.positionChange()
+                                                if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
+                                                    change.consume()
+                                                } else {
+                                                    if (controller.onKeyMove(pid, keyId, delta.x, delta.y, layout, kbRepeatEnabled)) {
+                                                        change.consume()
+                                                    }
+                                                }
+                                            }
+
+                                            PointerEventType.Release -> {
+                                                if (!change.pressed && change.previousPressed) {
+                                                    controller.onKeyUp(pid, layout, kbRepeatEnabled)
+                                                    change.consume()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+            ) {
+                // Crossfade layout switch
+                Crossfade(targetState = layout, label = "Layout Switch") { activeLayout ->
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        activeLayout.forEachIndexed { rowIndex, row ->
+                            // Dynamically inject trackpoint key if enabled
+                            val finalRow =
+                                if (rowIndex == 1 && keyboardMode == KeyboardMode.LETTERS && kbTrackpointEnabled) {
+                                    row.toMutableList().apply {
+                                        val gIndex = indexOfFirst { it.id == "g" }
+                                        if (gIndex != -1) {
+                                            add(gIndex + 1, KeyDef("tp", "●", 0, type = KeyType.TRACKPOINT, widthWeight = 1.0f))
+                                        }
+                                    }
+                                } else {
+                                    row
+                                }
+
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                            ) {
+                                finalRow.forEach { key ->
+                                    val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                    KeyCap(
+                                        keyDef = key,
+                                        isPressed = key.id in pressedKeys,
+                                        modifierState = modState,
+                                        accentColor = accentColor,
+                                        isShiftActive = isShiftActive,
+                                        isCapsActive = isCapsActive,
+                                        isAltGrActive = isAltGrActive,
+                                        modifier = Modifier.weight(key.widthWeight),
+                                        onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                    )
+                                }
+                            }
+                        }
                     }
-                    if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
-                        MouseButtonColumn(
-                            accentColor = accentColor,
-                            onLmbDown = { MouseInjector.leftDown() },
-                            onLmbUp = { MouseInjector.leftUp() },
-                            onRmbDown = { MouseInjector.rightDown() },
-                            onRmbUp = { MouseInjector.rightUp() },
-                            mirrored = true,
-                            modifier =
-                                Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .padding(end = 8.dp),
+                }
+
+                // Trackpoint overlay: mouse buttons own their pointerInput; outer Box handles trackpoint moves.
+                if (trackpointAlpha > 0f) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .align(Alignment.Center)
+                                .alpha(trackpointAlpha)
+                                .background(colors.keyBackground, RoundedCornerShape(8.dp))
+                                .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cd_keyboard_trackpoint),
+                            color = colors.onAccent.copy(alpha = 0.25f),
+                            style = MaterialTheme.typography.labelMedium,
+                            textAlign = TextAlign.Center,
                         )
+                        if (trackpointVisible) {
+                            if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                                MouseButtonColumn(
+                                    accentColor = accentColor,
+                                    onLmbDown = { MouseInjector.leftDown() },
+                                    onLmbUp = { MouseInjector.leftUp() },
+                                    onRmbDown = { MouseInjector.rightDown() },
+                                    onRmbUp = { MouseInjector.rightUp() },
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.CenterStart)
+                                            .padding(start = 8.dp),
+                                )
+                            }
+                            if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                                MouseButtonColumn(
+                                    accentColor = accentColor,
+                                    onLmbDown = { MouseInjector.leftDown() },
+                                    onLmbUp = { MouseInjector.leftUp() },
+                                    onRmbDown = { MouseInjector.rightDown() },
+                                    onRmbUp = { MouseInjector.rightUp() },
+                                    mirrored = true,
+                                    modifier =
+                                        Modifier
+                                            .align(Alignment.CenterEnd)
+                                            .padding(end = 8.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }
+
+            // 3. Bottom Toolbar
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(30.dp)
+                        .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .clickable { AppStateManager.setFullscreenKeyboardActive(false) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = "Collapse Keyboard",
+                        tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Icon(
+                    imageVector = Icons.Rounded.PushPin,
+                    contentDescription = "Pin",
+                    tint = colors.onSurface.copy(alpha = 0.4f),
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(
+                    imageVector = Icons.Rounded.Apps,
+                    contentDescription = "Switcher",
+                    tint = colors.onSurface.copy(alpha = 0.4f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun ToolbarIcon(
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit = {},
+) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier =
+            Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = colors.onSurface.copy(alpha = 0.8f),
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun GifToolbarIcon(onClick: () -> Unit = {}) {
+    val colors = LocalAppColors.current
+    Box(
+        modifier =
+            Modifier
+                .size(width = 36.dp, height = 24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .border(1.5.dp, colors.onSurface.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "GIF",
+            color = colors.onSurface.copy(alpha = 0.8f),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }

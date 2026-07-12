@@ -77,9 +77,11 @@ class KeyRepeatController(
                     KeyboardState
                         .activeModifierKeycodes(layout)
                         .forEach { KeyInjector.keyDown(it) }
+                    keyDef.autoModifiers.forEach { KeyInjector.keyDown(it) }
                     KeyInjector.keyDown(keyDef.linuxKeycode)
                     if (!repeatEnabled) {
                         KeyInjector.keyUp(keyDef.linuxKeycode)
+                        keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                         KeyboardState
                             .activeModifierKeycodes(layout)
                             .forEach { KeyInjector.keyUp(it) }
@@ -144,6 +146,7 @@ class KeyRepeatController(
             repeatJob?.cancel()
             if (repeatEnabled) {
                 KeyInjector.keyUp(prevDef.linuxKeycode)
+                prevDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                 KeyboardState
                     .activeModifierKeycodes(layout)
                     .forEach { KeyInjector.keyUp(it) }
@@ -160,9 +163,11 @@ class KeyRepeatController(
                 KeyboardState
                     .activeModifierKeycodes(layout)
                     .forEach { KeyInjector.keyDown(it) }
+                newDef.autoModifiers.forEach { KeyInjector.keyDown(it) }
                 KeyInjector.keyDown(newDef.linuxKeycode)
                 if (!repeatEnabled) {
                     KeyInjector.keyUp(newDef.linuxKeycode)
+                    newDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                     KeyboardState
                         .activeModifierKeycodes(layout)
                         .forEach { KeyInjector.keyUp(it) }
@@ -204,6 +209,7 @@ class KeyRepeatController(
                 repeatJob?.cancel()
                 if (keyDef.linuxKeycode != 0 && repeatEnabled) {
                     KeyInjector.keyUp(keyDef.linuxKeycode)
+                    keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                     KeyboardState
                         .releaseStickyModifiers(layout)
                         .forEach { KeyInjector.keyUp(it) }
@@ -256,8 +262,10 @@ class KeyRepeatController(
                 while (heldKey == keyDef) {
                     val mods = KeyboardState.activeModifierKeycodes(layout)
                     mods.forEach { KeyInjector.keyDown(it) }
+                    keyDef.autoModifiers.forEach { KeyInjector.keyDown(it) }
                     KeyInjector.keyDown(keyDef.linuxKeycode)
                     KeyInjector.keyUp(keyDef.linuxKeycode)
+                    keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
                     mods.forEach { KeyInjector.keyUp(it) }
                     delay(KB_REPEAT_INTERVAL_MS)
                 }

@@ -11,11 +11,14 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.keyboard.KbMouseBtnPos
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.keyboard.KeyRepeatController
+import com.stormpanda.megingiard.keyboard.KeyboardMode
 import com.stormpanda.megingiard.keyboard.KeyboardState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,9 +40,23 @@ class KeyboardViewModel(
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
+    private val _keyboardMode = MutableStateFlow(KeyboardMode.LETTERS)
+    val keyboardMode: StateFlow<KeyboardMode> = _keyboardMode.asStateFlow()
+
+    fun setKeyboardMode(mode: KeyboardMode) {
+        _keyboardMode.value = mode
+    }
+
     val controller = KeyRepeatController(viewModelScope)
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
+
+    fun cycleKbLayout() {
+        val current = kbLayout.value
+        val layouts = KbLayout.entries
+        val nextIndex = (layouts.indexOf(current) + 1) % layouts.size
+        KeyboardSettings.setKbLayout(layouts[nextIndex])
+    }
 
     fun startInjectors(context: Context) {
         viewModelScope.launch {
@@ -56,6 +73,7 @@ class KeyboardViewModel(
 
     fun stopAndReset() {
         AppLog.i(TAG, "stopAndReset called")
+        _keyboardMode.value = KeyboardMode.LETTERS
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()
@@ -65,6 +83,7 @@ class KeyboardViewModel(
     override fun onCleared() {
         super.onCleared()
         AppLog.i(TAG, "onCleared → KeyInjector + MouseInjector stopped, KeyboardState reset")
+        _keyboardMode.value = KeyboardMode.LETTERS
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()
