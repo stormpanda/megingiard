@@ -249,69 +249,69 @@ private fun azertyLettersRow1(): List<KeyDef> =
 
 private fun homeRowQwertz(): List<KeyDef> =
     listOf(
-        KeyDef("a", "a", KEY_A),
-        KeyDef("s", "s", KEY_S),
-        KeyDef("d", "d", KEY_D),
-        KeyDef("f", "f", KEY_F),
-        KeyDef("g", "g", KEY_G),
-        KeyDef("h", "h", KEY_H),
-        KeyDef("j", "j", KEY_J),
-        KeyDef("k", "k", KEY_K),
-        KeyDef("l", "l", KEY_L),
+        KeyDef("a", "a", KEY_A, superscript = "@"),
+        KeyDef("s", "s", KEY_S, superscript = "#"),
+        KeyDef("d", "d", KEY_D, superscript = "_"),
+        KeyDef("f", "f", KEY_F, superscript = "&"),
+        KeyDef("g", "g", KEY_G, superscript = "-"),
+        KeyDef("h", "h", KEY_H, superscript = "+"),
+        KeyDef("j", "j", KEY_J, superscript = "("),
+        KeyDef("k", "k", KEY_K, superscript = ")"),
+        KeyDef("l", "l", KEY_L, superscript = "/"),
     )
 
 private fun homeRowQwerty(): List<KeyDef> = homeRowQwertz()
 
 private fun homeRowAzerty(): List<KeyDef> =
     listOf(
-        KeyDef("q", "q", KEY_Q),
-        KeyDef("s", "s", KEY_S),
-        KeyDef("d", "d", KEY_D),
-        KeyDef("f", "f", KEY_F),
-        KeyDef("g", "g", KEY_G),
-        KeyDef("h", "h", KEY_H),
-        KeyDef("j", "j", KEY_J),
-        KeyDef("k", "k", KEY_K),
-        KeyDef("l", "l", KEY_L),
+        KeyDef("q", "q", KEY_Q, superscript = "@"),
+        KeyDef("s", "s", KEY_S, superscript = "#"),
+        KeyDef("d", "d", KEY_D, superscript = "_"),
+        KeyDef("f", "f", KEY_F, superscript = "&"),
+        KeyDef("g", "g", KEY_G, superscript = "-"),
+        KeyDef("h", "h", KEY_H, superscript = "+"),
+        KeyDef("j", "j", KEY_J, superscript = "("),
+        KeyDef("k", "k", KEY_K, superscript = ")"),
+        KeyDef("l", "l", KEY_L, superscript = "/"),
         KeyDef("m", "m", KEY_M),
     )
 
 private fun bottomRowQwertz(): List<KeyDef> =
     listOf(
         KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("y", "y", KEY_Y),
-        KeyDef("x", "x", KEY_X),
-        KeyDef("c", "c", KEY_C),
-        KeyDef("v", "v", KEY_V),
-        KeyDef("b", "b", KEY_B),
-        KeyDef("n", "n", KEY_N),
-        KeyDef("m", "m", KEY_M),
+        KeyDef("y", "y", KEY_Y, superscript = "*"),
+        KeyDef("x", "x", KEY_X, superscript = "\""),
+        KeyDef("c", "c", KEY_C, superscript = "'"),
+        KeyDef("v", "v", KEY_V, superscript = ":"),
+        KeyDef("b", "b", KEY_B, superscript = ";"),
+        KeyDef("n", "n", KEY_N, superscript = "!"),
+        KeyDef("m", "m", KEY_M, superscript = "?"),
         KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
     )
 
 private fun bottomRowQwerty(): List<KeyDef> =
     listOf(
         KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("z", "z", KEY_Z),
-        KeyDef("x", "x", KEY_X),
-        KeyDef("c", "c", KEY_C),
-        KeyDef("v", "v", KEY_V),
-        KeyDef("b", "b", KEY_B),
-        KeyDef("n", "n", KEY_N),
-        KeyDef("m", "m", KEY_M),
+        KeyDef("z", "z", KEY_Z, superscript = "*"),
+        KeyDef("x", "x", KEY_X, superscript = "\""),
+        KeyDef("c", "c", KEY_C, superscript = "'"),
+        KeyDef("v", "v", KEY_V, superscript = ":"),
+        KeyDef("b", "b", KEY_B, superscript = ";"),
+        KeyDef("n", "n", KEY_N, superscript = "!"),
+        KeyDef("m", "m", KEY_M, superscript = "?"),
         KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
     )
 
 private fun bottomRowAzerty(): List<KeyDef> =
     listOf(
         KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.3f, type = KeyType.MODIFIER),
-        KeyDef("w", "w", KEY_W),
-        KeyDef("x", "x", KEY_X),
-        KeyDef("c", "c", KEY_C),
-        KeyDef("v", "v", KEY_V),
-        KeyDef("b", "b", KEY_B),
-        KeyDef("n", "n", KEY_N),
-        KeyDef("question_azerty", "?", KEY_SLASH, autoModifiers = listOf(KEY_LEFTSHIFT)),
+        KeyDef("w", "w", KEY_W, superscript = "*"),
+        KeyDef("x", "x", KEY_X, superscript = "\""),
+        KeyDef("c", "c", KEY_C, superscript = "'"),
+        KeyDef("v", "v", KEY_V, superscript = ":"),
+        KeyDef("b", "b", KEY_B, superscript = ";"),
+        KeyDef("n", "n", KEY_N, superscript = "!"),
+        KeyDef("question_azerty", "?", KEY_SLASH, autoModifiers = listOf(KEY_LEFTSHIFT), superscript = "?"),
         KeyDef("bksp", "⌫", KEY_BACKSPACE, widthWeight = 1.3f),
     )
 
@@ -342,7 +342,6 @@ private fun symbols1Layout(): List<List<KeyDef>> =
         listOf(
             KeyDef("at", "@", KEY_2, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("hash", "#", KEY_3, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("euro", "€", KEY_E, autoModifiers = listOf(KEY_RIGHTALT)),
             KeyDef("underscore", "_", KEY_MINUS, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("ampersand", "&", KEY_7, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("hyphen", "-", KEY_MINUS),
