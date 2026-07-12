@@ -319,8 +319,7 @@ private fun bottomBarRow(): List<KeyDef> =
     listOf(
         KeyDef("mode_switch", "?123", 0, widthWeight = 1.4f),
         KeyDef("comma", ",", KEY_COMMA, widthWeight = 1.0f),
-        KeyDef("globe", "🌐", 0, widthWeight = 1.0f),
-        KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
+        KeyDef("space", " ", KEY_SPACE, widthWeight = 5.5f),
         KeyDef("dot", ".", KEY_DOT, widthWeight = 1.0f),
         KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
     )
