@@ -654,11 +654,17 @@ fun KeyboardScreen(
                                                 pressPositions.remove(pid)
 
                                                 val popup = activePopupState
-                                                if (popup != null) {
-                                                    val charToInject = popup.options[popup.selectedIndex]
-                                                    injectPopupChar(charToInject, kbLayout)
+                                                val releasedId = controller.getKeyIdForPointer(pid)
+                                                if (popup != null && releasedId == popup.keyDef.id) {
+                                                    val index = popup.selectedIndex
+                                                    if (index == 0) {
+                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = false)
+                                                    } else {
+                                                        val charToInject = popup.options[index]
+                                                        injectPopupChar(charToInject, kbLayout)
+                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
+                                                    }
                                                     activePopupState = null
-                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
                                                     change.consume()
                                                 } else {
                                                     if (!change.pressed && change.previousPressed) {

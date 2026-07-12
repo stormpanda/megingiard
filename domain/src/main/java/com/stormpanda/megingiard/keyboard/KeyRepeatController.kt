@@ -257,6 +257,9 @@ class KeyRepeatController(
         return true
     }
 
+    /** Return the currently held key ID for a given pointer ID. */
+    fun getKeyIdForPointer(pointerId: Long): String? = pointerKeyMap[pointerId]
+
     /** Whether a given pointer is being tracked as a trackpoint finger. */
     fun isTrackpointPointer(pointerId: Long): Boolean = pointerId in trackpointPointers
 
