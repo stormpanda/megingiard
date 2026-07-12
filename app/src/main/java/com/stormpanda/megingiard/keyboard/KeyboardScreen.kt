@@ -159,6 +159,70 @@ fun injectPopupChar(
             sendKey(LinuxKeycodes.KEY_0)
         }
 
+        "@" -> {
+            sendKey(LinuxKeycodes.KEY_2, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "#" -> {
+            sendKey(LinuxKeycodes.KEY_3, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "_" -> {
+            sendKey(LinuxKeycodes.KEY_MINUS, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "&" -> {
+            sendKey(LinuxKeycodes.KEY_7, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "-" -> {
+            sendKey(LinuxKeycodes.KEY_MINUS)
+        }
+
+        "+" -> {
+            sendKey(LinuxKeycodes.KEY_EQUAL, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "(" -> {
+            sendKey(LinuxKeycodes.KEY_9, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        ")" -> {
+            sendKey(LinuxKeycodes.KEY_0, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "/" -> {
+            sendKey(LinuxKeycodes.KEY_SLASH)
+        }
+
+        "*" -> {
+            sendKey(LinuxKeycodes.KEY_8, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "\"" -> {
+            sendKey(LinuxKeycodes.KEY_APOSTROPHE, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "'" -> {
+            sendKey(LinuxKeycodes.KEY_APOSTROPHE)
+        }
+
+        ":" -> {
+            sendKey(LinuxKeycodes.KEY_SEMICOLON, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        ";" -> {
+            sendKey(LinuxKeycodes.KEY_SEMICOLON)
+        }
+
+        "!" -> {
+            sendKey(LinuxKeycodes.KEY_1, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "?" -> {
+            sendKey(LinuxKeycodes.KEY_SLASH, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
         "ä" -> {
             if (kbLayout == KbLayout.QWERTZ) {
                 sendKey(LinuxKeycodes.KEY_APOSTROPHE)
