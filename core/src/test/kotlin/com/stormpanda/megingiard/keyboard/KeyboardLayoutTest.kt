@@ -109,4 +109,26 @@ class KeyboardLayoutTest {
             assertTrue("$name has no MODIFIER keys", modifiers.isNotEmpty())
         }
     }
+
+    @Test
+    fun `symbols layouts contain ABC switcher key`() {
+        val sym1 = qwertzLayout(KeyboardMode.SYMBOLS_1)
+        val sym2 = qwertzLayout(KeyboardMode.SYMBOLS_2)
+        assertNotNull("Symbols 1 has ABC switcher key", findKeyInLayout(sym1, "mode_switch_abc"))
+        assertNotNull("Symbols 2 has ABC switcher key", findKeyInLayout(sym2, "mode_switch_abc"))
+    }
+
+    @Test
+    fun `findKeyInLayout filters switcher keys correctly across modes`() {
+        val letters = qwertzLayout(KeyboardMode.LETTERS)
+        val symbols = qwertzLayout(KeyboardMode.SYMBOLS_1)
+
+        // mode_switch (?123) exists in letters mode but not symbols mode
+        assertNotNull(findKeyInLayout(letters, "mode_switch"))
+        assertNull(findKeyInLayout(symbols, "mode_switch"))
+
+        // mode_switch_abc (ABC) exists in symbols mode but not letters mode
+        assertNotNull(findKeyInLayout(symbols, "mode_switch_abc"))
+        assertNull(findKeyInLayout(letters, "mode_switch_abc"))
+    }
 }

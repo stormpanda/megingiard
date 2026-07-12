@@ -129,7 +129,7 @@ fun KeyboardScreen(
         }
 
     // Key bounds: id → root-space Rect, populated by KeyCap.onGloballyPositioned
-    val keyBounds = remember(kbLayout, keyboardMode) { mutableMapOf<String, KeyBounds>() }
+    val keyBounds = remember { mutableMapOf<String, KeyBounds>() }
     // Outer Box layout coords — used to convert pointer positions to root space
     val boxCoordsState = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
@@ -239,6 +239,7 @@ fun KeyboardScreen(
                                         val rootPos = boxCoords.localToRoot(change.position)
                                         val keyId =
                                             keyBounds.entries
+                                                .filter { (id, _) -> findKeyInLayout(layout, id) != null }
                                                 .firstOrNull { (_, r) -> r.contains(rootPos.x, rootPos.y) }
                                                 ?.key
 
