@@ -191,7 +191,15 @@ fun MainAppScreen() {
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(overlayAtBottom, isValidScreen, kbBarMinX, kbBarMaxX) {
+                    .pointerInput(
+                        overlayAtBottom,
+                        isValidScreen,
+                        kbBarMinX,
+                        kbBarMaxX,
+                        isEditorActive,
+                        isGlobalSettingsOpen,
+                        isBackgroundSettingsActive,
+                    ) {
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
@@ -219,7 +227,8 @@ fun MainAppScreen() {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                if (!isValidScreen) {
+                                val isMenuOpen = isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive
+                                if (!isValidScreen || isMenuOpen) {
                                     continue
                                 }
                                 val firstChange = event.changes.firstOrNull()
