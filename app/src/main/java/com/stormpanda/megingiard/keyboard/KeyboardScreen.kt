@@ -295,7 +295,8 @@ fun KeyboardScreen(
             ) {
                 // Crossfade layout switch
                 Crossfade(targetState = layout, label = "Layout Switch") { activeLayout ->
-                    if (keyboardMode == KeyboardMode.NUMERIC) {
+                    val isNumericLayout = findKeyInLayout(activeLayout, "plus") != null
+                    if (isNumericLayout) {
                         val ops =
                             listOf(
                                 findKeyInLayout(activeLayout, "plus")!!,
