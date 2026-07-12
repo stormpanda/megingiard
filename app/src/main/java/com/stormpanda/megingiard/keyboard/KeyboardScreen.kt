@@ -295,45 +295,45 @@ fun KeyboardScreen(
             ) {
                 // Crossfade layout switch
                 Crossfade(targetState = layout, label = "Layout Switch") { activeLayout ->
-                    val isNumericLayout = findKeyInLayout(activeLayout, "plus") != null
+                    val isNumericLayout = findKeyInLayout(activeLayout, "num_1") != null
                     if (isNumericLayout) {
                         val ops =
                             listOf(
-                                findKeyInLayout(activeLayout, "plus")!!,
-                                findKeyInLayout(activeLayout, "minus")!!,
-                                findKeyInLayout(activeLayout, "asterisk")!!,
-                                findKeyInLayout(activeLayout, "slash")!!,
+                                findKeyInLayout(activeLayout, "plus") ?: KeyDef("plus", "+", 0),
+                                findKeyInLayout(activeLayout, "minus") ?: KeyDef("minus", "-", 0),
+                                findKeyInLayout(activeLayout, "asterisk") ?: KeyDef("asterisk", "*", 0),
+                                findKeyInLayout(activeLayout, "slash") ?: KeyDef("slash", "/", 0),
                             )
                         val gridRows =
                             listOf(
                                 listOf(
-                                    findKeyInLayout(activeLayout, "num_1")!!,
-                                    findKeyInLayout(activeLayout, "num_2")!!,
-                                    findKeyInLayout(activeLayout, "num_3")!!,
-                                    findKeyInLayout(activeLayout, "percent")!!,
+                                    findKeyInLayout(activeLayout, "num_1") ?: KeyDef("num_1", "1", 0),
+                                    findKeyInLayout(activeLayout, "num_2") ?: KeyDef("num_2", "2", 0),
+                                    findKeyInLayout(activeLayout, "num_3") ?: KeyDef("num_3", "3", 0),
+                                    findKeyInLayout(activeLayout, "percent") ?: KeyDef("percent", "%", 0),
                                 ),
                                 listOf(
-                                    findKeyInLayout(activeLayout, "num_4")!!,
-                                    findKeyInLayout(activeLayout, "num_5")!!,
-                                    findKeyInLayout(activeLayout, "num_6")!!,
-                                    findKeyInLayout(activeLayout, "space_num")!!,
+                                    findKeyInLayout(activeLayout, "num_4") ?: KeyDef("num_4", "4", 0),
+                                    findKeyInLayout(activeLayout, "num_5") ?: KeyDef("num_5", "5", 0),
+                                    findKeyInLayout(activeLayout, "num_6") ?: KeyDef("num_6", "6", 0),
+                                    findKeyInLayout(activeLayout, "space_num") ?: KeyDef("space_num", "␣", 0),
                                 ),
                                 listOf(
-                                    findKeyInLayout(activeLayout, "num_7")!!,
-                                    findKeyInLayout(activeLayout, "num_8")!!,
-                                    findKeyInLayout(activeLayout, "num_9")!!,
-                                    findKeyInLayout(activeLayout, "bksp")!!,
+                                    findKeyInLayout(activeLayout, "num_7") ?: KeyDef("num_7", "7", 0),
+                                    findKeyInLayout(activeLayout, "num_8") ?: KeyDef("num_8", "8", 0),
+                                    findKeyInLayout(activeLayout, "num_9") ?: KeyDef("num_9", "9", 0),
+                                    findKeyInLayout(activeLayout, "bksp") ?: KeyDef("bksp", "⌫", 0),
                                 ),
                             )
                         val bottomRow =
                             listOf(
-                                findKeyInLayout(activeLayout, "mode_switch_abc")!!,
-                                findKeyInLayout(activeLayout, "comma")!!,
-                                findKeyInLayout(activeLayout, "mode_switch")!!,
-                                findKeyInLayout(activeLayout, "num_0")!!,
-                                findKeyInLayout(activeLayout, "equal")!!,
-                                findKeyInLayout(activeLayout, "dot")!!,
-                                findKeyInLayout(activeLayout, "enter")!!,
+                                findKeyInLayout(activeLayout, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
+                                findKeyInLayout(activeLayout, "comma") ?: KeyDef("comma", ",", 0),
+                                findKeyInLayout(activeLayout, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
+                                findKeyInLayout(activeLayout, "num_0") ?: KeyDef("num_0", "0", 0),
+                                findKeyInLayout(activeLayout, "equal") ?: KeyDef("equal", "=", 0),
+                                findKeyInLayout(activeLayout, "dot") ?: KeyDef("dot", ".", 0),
+                                findKeyInLayout(activeLayout, "enter") ?: KeyDef("enter", "Enter", 0),
                             )
 
                         Column(
