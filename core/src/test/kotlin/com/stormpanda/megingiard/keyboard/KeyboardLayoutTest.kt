@@ -116,4 +116,23 @@ class KeyboardLayoutTest {
         assertNotNull(findKeyInLayout(symbols, "mode_switch_abc"))
         assertNull(findKeyInLayout(letters, "mode_switch_abc"))
     }
+
+    @Test
+    fun `numeric layout contains expected keys and row count`() {
+        val numLayout = qwertzLayout(KeyboardMode.NUMERIC)
+        assertEquals("Numeric layout has 4 rows", 4, numLayout.size)
+
+        // Verify key existences
+        assertNotNull("Numeric has ABC switcher", findKeyInLayout(numLayout, "mode_switch_abc"))
+        assertNotNull("Numeric has !?# switcher", findKeyInLayout(numLayout, "mode_switch"))
+        assertNotNull("Numeric has plus key", findKeyInLayout(numLayout, "plus"))
+        assertNotNull("Numeric has minus key", findKeyInLayout(numLayout, "minus"))
+        assertNotNull("Numeric has asterisk key", findKeyInLayout(numLayout, "asterisk"))
+        assertNotNull("Numeric has slash key", findKeyInLayout(numLayout, "slash"))
+
+        // Verify digits 0-9 exist
+        for (i in 0..9) {
+            assertNotNull("Numeric has digit $i", findKeyInLayout(numLayout, "num_$i"))
+        }
+    }
 }

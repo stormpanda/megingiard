@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -72,6 +73,7 @@ import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 // Layout constants
 // ---------------------------------------------------------------------------
 private val KEY_PADDING_H = 2.dp
+private val KEY_PADDING_V = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
 
@@ -251,7 +253,8 @@ fun KeyboardScreen(
                                                             when (keyId) {
                                                                 "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
                                                                 "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                                "mode_switch_2", "mode_switch_1234" -> KeyboardMode.SYMBOLS_2
+                                                                "mode_switch_2" -> KeyboardMode.SYMBOLS_2
+                                                                "mode_switch_1234" -> KeyboardMode.NUMERIC
                                                                 else -> KeyboardMode.LETTERS
                                                             }
                                                         viewModel.setKeyboardMode(targetMode)
@@ -292,11 +295,118 @@ fun KeyboardScreen(
             ) {
                 // Crossfade layout switch
                 Crossfade(targetState = layout, label = "Layout Switch") { activeLayout ->
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        activeLayout.forEach { row ->
+                    if (keyboardMode == KeyboardMode.NUMERIC) {
+                        val ops =
+                            listOf(
+                                findKeyInLayout(activeLayout, "plus")!!,
+                                findKeyInLayout(activeLayout, "minus")!!,
+                                findKeyInLayout(activeLayout, "asterisk")!!,
+                                findKeyInLayout(activeLayout, "slash")!!,
+                            )
+                        val gridRows =
+                            listOf(
+                                listOf(
+                                    findKeyInLayout(activeLayout, "num_1")!!,
+                                    findKeyInLayout(activeLayout, "num_2")!!,
+                                    findKeyInLayout(activeLayout, "num_3")!!,
+                                    findKeyInLayout(activeLayout, "percent")!!,
+                                ),
+                                listOf(
+                                    findKeyInLayout(activeLayout, "num_4")!!,
+                                    findKeyInLayout(activeLayout, "num_5")!!,
+                                    findKeyInLayout(activeLayout, "num_6")!!,
+                                    findKeyInLayout(activeLayout, "space_num")!!,
+                                ),
+                                listOf(
+                                    findKeyInLayout(activeLayout, "num_7")!!,
+                                    findKeyInLayout(activeLayout, "num_8")!!,
+                                    findKeyInLayout(activeLayout, "num_9")!!,
+                                    findKeyInLayout(activeLayout, "bksp")!!,
+                                ),
+                            )
+                        val bottomRow =
+                            listOf(
+                                findKeyInLayout(activeLayout, "mode_switch_abc")!!,
+                                findKeyInLayout(activeLayout, "comma")!!,
+                                findKeyInLayout(activeLayout, "mode_switch")!!,
+                                findKeyInLayout(activeLayout, "num_0")!!,
+                                findKeyInLayout(activeLayout, "equal")!!,
+                                findKeyInLayout(activeLayout, "dot")!!,
+                                findKeyInLayout(activeLayout, "enter")!!,
+                            )
+
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
+                        ) {
+                            // Top part: Left Operators + Middle/Right Grid
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .weight(3f)
+                                        .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                            ) {
+                                // Left Operators Column (spans height of rows 1-3)
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .weight(1.3f)
+                                            .fillMaxHeight(),
+                                    verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
+                                ) {
+                                    ops.forEach { key ->
+                                        val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                        KeyCap(
+                                            keyDef = key,
+                                            isPressed = key.id in pressedKeys,
+                                            modifierState = modState,
+                                            accentColor = accentColor,
+                                            isShiftActive = isShiftActive,
+                                            isCapsActive = isCapsActive,
+                                            isAltGrActive = isAltGrActive,
+                                            modifier = Modifier.weight(1f),
+                                            onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                        )
+                                    }
+                                }
+
+                                // Middle + Right Grid (occupies the rest of the width)
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .weight(6.6f)
+                                            .fillMaxHeight(),
+                                    verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
+                                ) {
+                                    gridRows.forEach { row ->
+                                        Row(
+                                            modifier =
+                                                Modifier
+                                                    .weight(1f)
+                                                    .fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                                        ) {
+                                            row.forEach { key ->
+                                                val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                                KeyCap(
+                                                    keyDef = key,
+                                                    isPressed = key.id in pressedKeys,
+                                                    modifierState = modState,
+                                                    accentColor = accentColor,
+                                                    isShiftActive = isShiftActive,
+                                                    isCapsActive = isCapsActive,
+                                                    isAltGrActive = isAltGrActive,
+                                                    modifier = Modifier.weight(key.widthWeight),
+                                                    onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Bottom Row (weight 1f)
                             Row(
                                 modifier =
                                     Modifier
@@ -304,7 +414,7 @@ fun KeyboardScreen(
                                         .fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
                             ) {
-                                row.forEach { key ->
+                                bottomRow.forEach { key ->
                                     val modState by KeyboardState.stateFor(key.id).collectAsState()
                                     KeyCap(
                                         keyDef = key,
@@ -317,6 +427,36 @@ fun KeyboardScreen(
                                         modifier = Modifier.weight(key.widthWeight),
                                         onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
                                     )
+                                }
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceEvenly,
+                        ) {
+                            activeLayout.forEach { row ->
+                                Row(
+                                    modifier =
+                                        Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                                ) {
+                                    row.forEach { key ->
+                                        val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                        KeyCap(
+                                            keyDef = key,
+                                            isPressed = key.id in pressedKeys,
+                                            modifierState = modState,
+                                            accentColor = accentColor,
+                                            isShiftActive = isShiftActive,
+                                            isCapsActive = isCapsActive,
+                                            isAltGrActive = isAltGrActive,
+                                            modifier = Modifier.weight(key.widthWeight),
+                                            onBoundsUpdate = { bounds -> keyBounds[key.id] = bounds },
+                                        )
+                                    }
                                 }
                             }
                         }

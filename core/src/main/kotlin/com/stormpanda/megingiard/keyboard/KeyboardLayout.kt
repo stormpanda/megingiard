@@ -105,7 +105,7 @@ data class KeyDef(
 
 enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
 
-enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2 }
+enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2, NUMERIC }
 
 @Serializable
 enum class KbLayout { QWERTZ, QWERTY, AZERTY }
@@ -134,6 +134,10 @@ fun qwertzLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> 
         KeyboardMode.SYMBOLS_2 -> {
             symbols2Layout()
         }
+
+        KeyboardMode.NUMERIC -> {
+            numericLayout()
+        }
     }
 
 fun qwertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> =
@@ -154,6 +158,10 @@ fun qwertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> 
         KeyboardMode.SYMBOLS_2 -> {
             symbols2Layout()
         }
+
+        KeyboardMode.NUMERIC -> {
+            numericLayout()
+        }
     }
 
 fun azertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> =
@@ -173,6 +181,10 @@ fun azertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> 
 
         KeyboardMode.SYMBOLS_2 -> {
             symbols2Layout()
+        }
+
+        KeyboardMode.NUMERIC -> {
+            numericLayout()
         }
     }
 
@@ -391,6 +403,45 @@ private fun symbols2Layout(): List<List<KeyDef>> =
             KeyDef("space", " ", KEY_SPACE, widthWeight = 4.5f),
             KeyDef("greater", ">", KEY_DOT, widthWeight = 1.0f, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 1.4f),
+        ),
+    )
+
+private fun numericLayout(): List<List<KeyDef>> =
+    listOf(
+        // operator column keys + row 1 keys
+        listOf(
+            KeyDef("plus", "+", KEY_EQUAL, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("num_1", "1", KEY_1),
+            KeyDef("num_2", "2", KEY_2),
+            KeyDef("num_3", "3", KEY_3),
+            KeyDef("percent", "%", KEY_5, autoModifiers = listOf(KEY_LEFTSHIFT)),
+        ),
+        // operators column minus + row 2 keys
+        listOf(
+            KeyDef("minus", "-", KEY_MINUS),
+            KeyDef("num_4", "4", KEY_4),
+            KeyDef("num_5", "5", KEY_5),
+            KeyDef("num_6", "6", KEY_6),
+            KeyDef("space_num", "␣", KEY_SPACE),
+        ),
+        // operators column asterisk + row 3 keys
+        listOf(
+            KeyDef("asterisk", "*", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("num_7", "7", KEY_7),
+            KeyDef("num_8", "8", KEY_8),
+            KeyDef("num_9", "9", KEY_9),
+            KeyDef("bksp", "⌫", KEY_BACKSPACE),
+        ),
+        // operators column slash + row 4 bottom row keys
+        listOf(
+            KeyDef("slash", "/", KEY_SLASH),
+            KeyDef("mode_switch_abc", "ABC", 0, widthWeight = 1.4f),
+            KeyDef("comma", ",", KEY_COMMA),
+            KeyDef("mode_switch", "!?#", 0),
+            KeyDef("num_0", "0", KEY_0),
+            KeyDef("equal", "=", KEY_EQUAL),
+            KeyDef("dot", ".", KEY_DOT),
+            KeyDef("enter", "Enter", KEY_ENTER),
         ),
     )
 
