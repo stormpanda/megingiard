@@ -66,7 +66,8 @@ private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
 private data class AmbientInjectorGate(
     val stopKeyboard: Boolean,
-    val stopMouseAndGamepad: Boolean,
+    val stopMouse: Boolean,
+    val stopGamepad: Boolean,
 )
 
 private const val TAG = "BackgroundMacroPadOverlay"
@@ -151,39 +152,53 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             val kb = array[3]
             val mouse = array[4]
             val vp = array[5]
-            val stopAll = editor || ambient || kb || mouse || vp
+
+            val blockingModal = editor || ambient || vp
             AmbientInjectorGate(
-                stopKeyboard = stopAll,
-                stopMouseAndGamepad = stopAll || quickMenu,
+                stopKeyboard = blockingModal && !kb,
+                stopMouse = blockingModal && !kb && !mouse,
+                stopGamepad = blockingModal || quickMenu || kb || mouse,
             )
         }.distinctUntilChanged()
             .collectLatest { gate ->
-                when {
-                    gate.stopKeyboard -> {
-                        AppLog.d(TAG, "blocking modal open → stopping keyboard/gamepad/mouse injectors")
-                        KeyInjector.stop()
-                        GamepadInjector.stop()
-                        MouseInjector.stop()
+                if (gate.stopKeyboard) {
+                    AppLog.d(TAG, "stopping keyboard injector")
+                    KeyInjector.stop()
+                }
+                if (gate.stopMouse) {
+                    AppLog.d(TAG, "stopping mouse injector")
+                    MouseInjector.stop()
+                }
+                if (gate.stopGamepad) {
+                    AppLog.d(TAG, "stopping gamepad injector")
+                    GamepadInjector.stop()
+                }
+
+                // Absorb rapid transitions (e.g. QuickMenu closes then Editor opens
+                // in the same frame). collectLatest will cancel this branch
+                // if any gate flips back to stop-mode within the delay window.
+                delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
+                withContext(Dispatchers.IO) {
+                    val ap = MacroPadState.activeProfile.value
+                    val blockingModalActive =
+                        AppStateManager.isEditorActive.value || AppStateManager.isBackgroundSettingsActive.value ||
+                            AppStateManager.isViewportEditActive.value
+
+                    if (!gate.stopKeyboard && ap?.enableKeyboard == true) {
+                        KeyInjector.start(context)
+                    }
+                    if (!gate.stopGamepad && ap?.enableGamepad == true) {
+                        GamepadInjector.start(context)
+                    }
+                    if (!gate.stopMouse && ap?.enableMouse == true) {
+                        MouseInjector.start(context)
                     }
 
-                    gate.stopMouseAndGamepad -> {
-                        AppLog.d(TAG, "quick menu open → stopping gamepad/mouse injectors")
-                        GamepadInjector.stop()
-                        MouseInjector.stop()
-                    }
-
-                    else -> {
-                        delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
-                        withContext(Dispatchers.IO) {
-                            val ap = MacroPadState.activeProfile.value
-                            AppLog.i(
-                                TAG,
-                                "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})",
-                            )
-                            if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                            if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                            if (ap?.enableMouse == true) MouseInjector.start(context)
-                            if (ap?.enableTouch == true) TouchInjector.start(context, "BackgroundMacroPadOverlay")
+                    if (ap?.enableTouch == true) {
+                        if (!blockingModalActive) {
+                            TouchInjector.start(context, "BackgroundMacroPadOverlay")
+                        } else {
+                            TouchInjector.stop("BackgroundMacroPadOverlay")
                         }
                     }
                 }

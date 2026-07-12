@@ -31,7 +31,8 @@ private const val INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
 private data class InjectorGate(
     val stopKeyboard: Boolean,
-    val stopMouseAndGamepad: Boolean,
+    val stopMouse: Boolean,
+    val stopGamepad: Boolean,
 )
 
 /**
@@ -86,50 +87,66 @@ class MacroPadViewModel(
                 val kb = array[4]
                 val mouse = array[5]
                 val vp = array[6]
-                val stopAll = editor || ambient || prompt || kb || mouse || vp
+
+                val blockingModal = editor || ambient || prompt || vp
                 InjectorGate(
-                    stopKeyboard = stopAll,
-                    stopMouseAndGamepad = stopAll || quickMenu,
+                    stopKeyboard = blockingModal && !kb,
+                    stopMouse = blockingModal && !kb && !mouse,
+                    stopGamepad = blockingModal || quickMenu || kb || mouse,
                 )
             }.distinctUntilChanged()
                 .collectLatest { gate ->
-                    when {
-                        gate.stopKeyboard -> {
-                            AppLog.i(TAG, "blocking modal/prompt open \u2192 stopping keyboard/gamepad/mouse injectors")
-                            KeyInjector.stop()
-                            GamepadInjector.stop()
-                            MouseInjector.stop()
+                    if (gate.stopKeyboard) {
+                        AppLog.d(TAG, "stopping keyboard injector")
+                        KeyInjector.stop()
+                    }
+                    if (gate.stopMouse) {
+                        AppLog.d(TAG, "stopping mouse injector")
+                        MouseInjector.stop()
+                    }
+                    if (gate.stopGamepad) {
+                        AppLog.d(TAG, "stopping gamepad injector")
+                        GamepadInjector.stop()
+                    }
+
+                    // Absorb rapid transitions (e.g. QuickMenu closes then Editor opens
+                    // in the same frame). collectLatest will cancel this branch
+                    // if any gate flips back to stop-mode within the delay window.
+                    delay(INJECTOR_RESTART_DEBOUNCE_MS)
+                    withContext(Dispatchers.IO) {
+                        val ap = MacroPadState.activeProfile.value
+                        val blockingModalActive =
+                            editorStateFlowValue() || ambientStateFlowValue() || promptStateFlowValue() || vpStateFlowValue()
+
+                        if (!gate.stopKeyboard && ap?.enableKeyboard == true) {
+                            KeyInjector.start(context)
+                        }
+                        if (!gate.stopGamepad && ap?.enableGamepad == true) {
+                            GamepadInjector.start(context)
+                        }
+                        if (!gate.stopMouse && ap?.enableMouse == true) {
+                            MouseInjector.start(context)
                         }
 
-                        gate.stopMouseAndGamepad -> {
-                            AppLog.i(TAG, "quick menu open \u2192 stopping gamepad/mouse injectors")
-                            GamepadInjector.stop()
-                            MouseInjector.stop()
-                        }
-
-                        else -> {
-                            // Absorb rapid transitions (e.g. QuickMenu closes then Editor opens
-                            // in the same frame).  collectLatest will cancel this branch
-                            // if any gate flips back to stop-mode within the delay window,
-                            // preventing
-                            // a spurious injector restart from racing ahead of the modal open.
-                            delay(INJECTOR_RESTART_DEBOUNCE_MS)
-                            withContext(Dispatchers.IO) {
-                                val ap = MacroPadState.activeProfile.value
-                                AppLog.i(
-                                    TAG,
-                                    "all guards clear \u2192 starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})",
-                                )
-                                if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                                if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                                if (ap?.enableMouse == true) MouseInjector.start(context)
-                                if (ap?.enableTouch == true) TouchInjector.start(context, "MacroPadViewModel")
+                        if (ap?.enableTouch == true) {
+                            if (!blockingModalActive) {
+                                TouchInjector.start(context, "MacroPadViewModel")
+                            } else {
+                                TouchInjector.stop("MacroPadViewModel")
                             }
                         }
                     }
                 }
         }
     }
+
+    private fun editorStateFlowValue() = AppStateManager.isEditorActive.value
+
+    private fun ambientStateFlowValue() = AppStateManager.isBackgroundSettingsActive.value
+
+    private fun promptStateFlowValue() = AppStateManager.promptInFlight.value
+
+    private fun vpStateFlowValue() = AppStateManager.isViewportEditActive.value
 
     fun stopInjectors() {
         AppLog.i(TAG, "stopInjectors called")
