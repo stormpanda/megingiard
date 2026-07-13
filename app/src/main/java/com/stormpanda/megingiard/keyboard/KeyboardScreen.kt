@@ -550,7 +550,7 @@ fun KeyboardScreen(
                         .height(44.dp)
                         .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceAround,
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
                 ToolbarIcon(
                     imageVector = Icons.Rounded.SelectAll,
@@ -1199,7 +1199,7 @@ private fun ToolbarIcon(
     Box(
         modifier =
             Modifier
-                .size(36.dp)
+                .size(44.dp)
                 .clip(CircleShape)
                 .clickable { onClick() },
         contentAlignment = Alignment.Center,
@@ -1208,7 +1208,7 @@ private fun ToolbarIcon(
             imageVector = imageVector,
             contentDescription = contentDescription,
             tint = colors.onSurface.copy(alpha = 0.8f),
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(24.dp),
         )
     }
 }
