@@ -23,16 +23,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Assignment
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.EmojiEmotions
-import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Mic
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -516,28 +511,46 @@ fun KeyboardScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
-                ToolbarIcon(imageVector = Icons.Rounded.GridView, contentDescription = "Apps")
-                ToolbarIcon(imageVector = Icons.Rounded.EmojiEmotions, contentDescription = "Emoji")
-                GifToolbarIcon()
                 ToolbarIcon(
-                    imageVector = Icons.Rounded.Settings,
-                    contentDescription = "Settings",
+                    imageVector = Icons.Rounded.SelectAll,
+                    contentDescription = "Select All",
                     onClick = {
-                        AppStateManager.setFullscreenKeyboardActive(false)
-                        AppStateManager.setGlobalSettingsOpen(true)
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
                     },
                 )
-                ToolbarIcon(imageVector = Icons.Rounded.Translate, contentDescription = "Translate")
                 ToolbarIcon(
-                    imageVector = Icons.Rounded.Palette,
-                    contentDescription = "Theme",
+                    imageVector = Icons.Rounded.ContentCut,
+                    contentDescription = "Cut",
                     onClick = {
-                        AppStateManager.setFullscreenKeyboardActive(false)
-                        AppStateManager.setBackgroundSettingsActive(true)
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
                     },
                 )
-                ToolbarIcon(imageVector = Icons.AutoMirrored.Rounded.Assignment, contentDescription = "Clipboard")
-                ToolbarIcon(imageVector = Icons.Rounded.Mic, contentDescription = "Voice Search")
+                ToolbarIcon(
+                    imageVector = Icons.Rounded.ContentCopy,
+                    contentDescription = "Copy",
+                    onClick = {
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                    },
+                )
+                ToolbarIcon(
+                    imageVector = Icons.Rounded.ContentPaste,
+                    contentDescription = "Paste",
+                    onClick = {
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                        KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                    },
+                )
             }
 
             // 2. Keyboard Grid (isolated touch interception)
@@ -1044,22 +1057,6 @@ fun KeyboardScreen(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Icon(
-                    imageVector = Icons.Rounded.PushPin,
-                    contentDescription = "Pin",
-                    tint = colors.onSurface.copy(alpha = 0.4f),
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Icon(
-                    imageVector = Icons.Rounded.Apps,
-                    contentDescription = "Switcher",
-                    tint = colors.onSurface.copy(alpha = 0.4f),
-                    modifier = Modifier.size(16.dp),
-                )
             }
         }
     }
@@ -1085,27 +1082,6 @@ private fun ToolbarIcon(
             contentDescription = contentDescription,
             tint = colors.onSurface.copy(alpha = 0.8f),
             modifier = Modifier.size(20.dp),
-        )
-    }
-}
-
-@Composable
-private fun GifToolbarIcon(onClick: () -> Unit = {}) {
-    val colors = LocalAppColors.current
-    Box(
-        modifier =
-            Modifier
-                .size(width = 36.dp, height = 24.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .border(1.5.dp, colors.onSurface.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
-                .clickable { onClick() },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "GIF",
-            color = colors.onSurface.copy(alpha = 0.8f),
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
         )
     }
 }
