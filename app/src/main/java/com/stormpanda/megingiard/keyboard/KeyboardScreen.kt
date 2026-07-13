@@ -540,7 +540,7 @@ fun KeyboardScreen(
                 Modifier
                     .fillMaxWidth()
                     .height(262.dp)
-                    .background(Color(0xFF1D1F26)),
+                    .background(colors.keyboardBackground),
         ) {
             // 1. Top Toolbar
             Row(
@@ -1127,8 +1127,8 @@ fun KeyboardScreen(
                                 .width(popupWidth)
                                 .height(popupHeight)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF2C3033))
-                                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .background(colors.surfaceVariant)
+                                .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                                 .padding(8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1148,7 +1148,7 @@ fun KeyboardScreen(
                                 ) {
                                     Text(
                                         text = opt,
-                                        color = if (isSelected) Color.White else Color.LightGray,
+                                        color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
                                         fontSize = 18.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     )

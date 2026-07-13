@@ -47,6 +47,8 @@ data class AppColors(
     val keyPressed: Color,
     /** Keyboard modifier key when active / sticky. */
     val keyModifierActive: Color,
+    /** Keyboard container background. */
+    val keyboardBackground: Color,
     /** Touchpad surface. */
     val touchpadBackground: Color,
     /** Touchpad indicator dots / borders. */
@@ -124,6 +126,7 @@ private val darkPalette =
         keyBackground = Color(0xFF2C2C2E),
         keyPressed = Color(0xFF48484A),
         keyModifierActive = Color(0xFF3A3A3C),
+        keyboardBackground = Color(0xFF1D1F26),
         touchpadBackground = Color.Black,
         touchpadIndicator = Color.White,
         pickerBackground = Color(0xFF1C1C1E),
@@ -165,6 +168,7 @@ private val lightPalette =
         keyBackground = Color(0xFFE5E5EA),
         keyPressed = Color(0xFFCECED3),
         keyModifierActive = Color(0xFFD1D1D6),
+        keyboardBackground = Color(0xFFECEFF1),
         touchpadBackground = Color(0xFFE5E5EA),
         touchpadIndicator = Color(0xFF1C1C1E),
         pickerBackground = Color(0xFFFFFFFF),
@@ -218,6 +222,7 @@ private val cyberpunkPalette =
         keyBackground = CP_SURFACE,
         keyPressed = CP_SURFACE2,
         keyModifierActive = CP_SURFACE2,
+        keyboardBackground = CP_BG,
         touchpadBackground = CP_BG,
         touchpadIndicator = CP_ACCENT,
         pickerBackground = CP_SURFACE,
