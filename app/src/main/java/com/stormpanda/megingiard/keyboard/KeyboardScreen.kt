@@ -721,7 +721,7 @@ fun KeyboardScreen(
                                                             val currentX = change.position.x
                                                             val deltaX = currentX - keyCenterX
                                                             val cellWidthPx = with(density) { 48.dp.toPx() }
-                                                            val shift = (deltaX * 1.5f / cellWidthPx).roundToInt()
+                                                            val shift = (deltaX * 2.5f / cellWidthPx).roundToInt()
                                                             popup.selectedIndex =
                                                                 (popup.initialSelectedIndex + shift).coerceIn(0, popup.options.lastIndex)
                                                             change.consume()
