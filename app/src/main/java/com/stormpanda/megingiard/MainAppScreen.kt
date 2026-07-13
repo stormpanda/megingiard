@@ -199,6 +199,7 @@ fun MainAppScreen() {
                         isEditorActive,
                         isGlobalSettingsOpen,
                         isBackgroundSettingsActive,
+                        isFullscreenKeyboardActive,
                     ) {
                         val qmSwipe =
                             SwipeGestureProcessor(
@@ -227,7 +228,8 @@ fun MainAppScreen() {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val isMenuOpen = isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive
+                                val isMenuOpen =
+                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive || isFullscreenKeyboardActive
                                 if (!isValidScreen || isMenuOpen) {
                                     continue
                                 }
@@ -324,7 +326,8 @@ fun MainAppScreen() {
 
             // Quick Menu Bar + Quick Menu overlay — hidden while editor or ambient settings
             // are open because those modals render their own full-screen chrome.
-            if (!isEditorActive && !isBackgroundSettingsActive) {
+            // Also hidden when fullscreen keyboard is active.
+            if (!isEditorActive && !isBackgroundSettingsActive && !isFullscreenKeyboardActive) {
                 QuickMenuBar()
             }
 
