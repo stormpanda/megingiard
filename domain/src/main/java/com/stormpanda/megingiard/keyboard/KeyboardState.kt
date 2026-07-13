@@ -158,7 +158,6 @@ object KeyboardState {
         return keycodes
     }
 
-    /** Returns the keycodes of all currently STICKY or HELD modifiers (for KEY_DOWN on press). */
     fun activeModifierKeycodes(layout: List<List<KeyDef>>): List<Int> {
         val keycodes = mutableListOf<Int>()
         for (row in layout) {
@@ -175,6 +174,23 @@ object KeyboardState {
         if (capsState != ModifierState.INACTIVE) {
             if (LinuxKeycodes.KEY_LEFTSHIFT !in keycodes) {
                 keycodes += LinuxKeycodes.KEY_LEFTSHIFT
+            }
+        }
+        return keycodes
+    }
+
+    /** Returns the keycodes of all active modifiers, filtering out Shift for non-letter keys if not held. */
+    fun activeModifierKeycodesFor(
+        key: KeyDef,
+        layout: List<List<KeyDef>>,
+    ): List<Int> {
+        val keycodes = activeModifierKeycodes(layout)
+        val isLetter = key.label.length == 1 && key.label[0].isLetter()
+        if (!isLetter) {
+            val lshiftHeld = _modifiers["lshift"]?.value == ModifierState.HELD
+            val rshiftHeld = _modifiers["rshift"]?.value == ModifierState.HELD
+            if (!lshiftHeld && !rshiftHeld) {
+                return keycodes.filter { it != LinuxKeycodes.KEY_LEFTSHIFT }
             }
         }
         return keycodes

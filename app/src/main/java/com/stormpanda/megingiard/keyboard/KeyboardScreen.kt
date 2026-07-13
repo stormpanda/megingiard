@@ -664,10 +664,12 @@ fun KeyboardScreen(
                                                                     else -> KeyboardMode.LETTERS
                                                                 }
                                                             viewModel.setKeyboardMode(targetMode)
+                                                            KeyboardState.reset()
                                                         }
                                                         change.consume()
                                                     } else if (keyId == "globe") {
                                                         viewModel.cycleKbLayout()
+                                                        KeyboardState.reset()
                                                         change.consume()
                                                     } else {
                                                         val keyDef = if (keyId != null) findKeyInLayout(layoutState.grid, keyId) else null

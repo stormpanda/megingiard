@@ -187,6 +187,8 @@ Layouts share a common **function row** (F1–F12) and **bottom bar** (Ctrl / Me
 #### CapsLock Toggle (via Shift Button)
 - Long pressing the Shift button (`"lshift"` / `"rshift"`) for `≥ 300 ms` activates CapsLock (`caps` state set to `HELD`). Lift-release leaves CapsLock active so subsequent characters remain capitalized.
 - Tapping the Shift button once (quick press/release) while CapsLock is active turns off both Shift and CapsLock, returning the keyboard to lowercase input.
+- **Letter Constraints**: Shift/CapsLock modifiers only apply to alphabetical letter keys. Non-letter keys (numbers, symbols, spaces, backspaces) do not receive the Shift modifier keycode unless a Shift key is physically held down.
+- **Layout Switch Reset**: Both CapsLock and Shift states are immediately reset to `INACTIVE` when switching keyboard layout or mode.
 
 `KeyboardState.activeModifierKeycodes()` collects the Linux keycodes of all modifiers that are currently STICKY or HELD. These are injected as key-down events before the primary key and key-up events after it.
 
