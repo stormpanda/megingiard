@@ -721,7 +721,7 @@ fun KeyboardScreen(
                                                             val currentX = change.position.x
                                                             val deltaX = currentX - keyCenterX
                                                             val cellWidthPx = with(density) { 48.dp.toPx() }
-                                                            val shift = (deltaX / cellWidthPx).roundToInt()
+                                                            val shift = (deltaX * 1.5f / cellWidthPx).roundToInt()
                                                             popup.selectedIndex =
                                                                 (popup.initialSelectedIndex + shift).coerceIn(0, popup.options.lastIndex)
                                                             change.consume()
@@ -1028,7 +1028,12 @@ fun KeyboardScreen(
                     val popupWidth = cellWidth * popup.options.size + 16.dp
                     val popupHeight = 64.dp
 
-                    val popupLeft = (keyCenterXDp - popupWidth / 2).coerceAtLeast(4.dp)
+                    val screenWidthDp = with(density) { (boxCoordsState.value?.size?.width ?: 1240).toDp() }
+                    val maxPopupLeft = screenWidthDp - popupWidth - 4.dp
+                    val popupLeft =
+                        (keyCenterXDp - popupWidth / 2)
+                            .coerceAtLeast(4.dp)
+                            .coerceAtMost(maxPopupLeft)
                     val popupTop = keyTopDp - popupHeight - 8.dp
 
                     Box(
