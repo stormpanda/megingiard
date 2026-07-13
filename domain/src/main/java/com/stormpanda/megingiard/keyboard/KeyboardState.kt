@@ -171,6 +171,12 @@ object KeyboardState {
                 }
             }
         }
+        val capsState = _modifiers["caps"]?.value ?: ModifierState.INACTIVE
+        if (capsState != ModifierState.INACTIVE) {
+            if (LinuxKeycodes.KEY_LEFTSHIFT !in keycodes) {
+                keycodes += LinuxKeycodes.KEY_LEFTSHIFT
+            }
+        }
         return keycodes
     }
 
