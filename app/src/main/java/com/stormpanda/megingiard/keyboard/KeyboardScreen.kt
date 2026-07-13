@@ -766,12 +766,6 @@ fun KeyboardScreen(
                                                                 isSpaceDragging = true
                                                                 spaceDragStartX = currentX
                                                                 accumulatedSpaceDeltaX = 0f
-                                                                controller.onKeyUp(
-                                                                    pid,
-                                                                    layoutState.grid,
-                                                                    kbRepeatEnabled,
-                                                                    skipInjection = true,
-                                                                )
                                                             }
 
                                                             if (isSpaceDragging) {
@@ -840,6 +834,7 @@ fun KeyboardScreen(
                                                 }
 
                                                 if (wasDragging) {
+                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
                                                     change.consume()
                                                 } else {
                                                     val popup = activePopupState
