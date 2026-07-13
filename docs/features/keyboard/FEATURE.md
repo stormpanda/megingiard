@@ -77,6 +77,13 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - From the top down if the Quick Menu is configured at the top.
 - While the keyboard is active, the QuickKeyboardBar MUST be hidden. Swiping from the edge closes the keyboard overlay.
 
+### FR-K8: Spacebar Cursor Navigation
+
+- Pressing and holding the spacebar key (`"space"` or `"space_num"`) and dragging horizontally MUST trigger cursor navigation.
+- If the drag distance exceeds **12 dp**, cursor sliding mode is activated. The visual key press is cancelled and no space character will be typed on finger release.
+- Moving the finger horizontally during cursor sliding mode by every **10 dp** MUST inject a single `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) keypress.
+- If the finger is released without triggering the drag threshold, a single space character event MUST be injected on up release.
+
 ---
 
 ## Technical Implementation

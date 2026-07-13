@@ -512,6 +512,9 @@ fun KeyboardScreen(
     var virtualAnchorX by remember { mutableStateOf(0f) }
     val longPressJobs = remember { mutableMapOf<Long, Job>() }
     val pressPositions = remember { mutableMapOf<Long, Offset>() }
+    var spaceDragStartX by remember { mutableStateOf(0f) }
+    var isSpaceDragging by remember { mutableStateOf(false) }
+    var accumulatedSpaceDeltaX by remember { mutableStateOf(0f) }
 
     // UI state from controller
     val pressedKeys by controller.pressedKeys.collectAsState()
@@ -643,6 +646,12 @@ fun KeyboardScreen(
                                         when (event.type) {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
+                                                    pressPositions[pid] = change.position
+                                                    if (keyId == "space" || keyId == "space_num") {
+                                                        spaceDragStartX = change.position.x
+                                                        isSpaceDragging = false
+                                                        accumulatedSpaceDeltaX = 0f
+                                                    }
                                                     if (keyId != null && keyId.startsWith("mode_switch")) {
                                                         if (keyId != "mode_switch_2") {
                                                             val targetMode =
@@ -746,25 +755,72 @@ fun KeyboardScreen(
                                                             }
                                                         }
                                                     } else {
-                                                        val startPos = pressPositions[pid]
-                                                        if (startPos != null) {
-                                                            val dist = (change.position - startPos).getDistance()
-                                                            val thresholdPx = with(density) { 24.dp.toPx() }
-                                                            if (dist > thresholdPx) {
-                                                                longPressJobs[pid]?.cancel()
-                                                                longPressJobs.remove(pid)
+                                                        val initialKeyId = controller.getKeyIdForPointer(pid)
+                                                        if (initialKeyId == "space" || initialKeyId == "space_num") {
+                                                            val currentX = change.position.x
+                                                            val dragDeltaX = currentX - spaceDragStartX
+                                                            val thresholdPx = with(density) { 12.dp.toPx() }
+
+                                                            if (!isSpaceDragging && kotlin.math.abs(dragDeltaX) > thresholdPx) {
+                                                                isSpaceDragging = true
+                                                                spaceDragStartX = currentX
+                                                                accumulatedSpaceDeltaX = 0f
+                                                                controller.onKeyUp(
+                                                                    pid,
+                                                                    layoutState.grid,
+                                                                    kbRepeatEnabled,
+                                                                    skipInjection = true,
+                                                                )
+                                                            }
+
+                                                            if (isSpaceDragging) {
+                                                                accumulatedSpaceDeltaX += dragDeltaX
+                                                                spaceDragStartX = currentX
+
+                                                                val cursorStepPx = with(density) { 10.dp.toPx() }
+                                                                if (kotlin.math.abs(accumulatedSpaceDeltaX) >= cursorStepPx) {
+                                                                    val steps = (accumulatedSpaceDeltaX / cursorStepPx).toInt()
+                                                                    if (steps != 0) {
+                                                                        val keycode =
+                                                                            if (steps <
+                                                                                0
+                                                                            ) {
+                                                                                LinuxKeycodes.KEY_LEFT
+                                                                            } else {
+                                                                                LinuxKeycodes.KEY_RIGHT
+                                                                            }
+                                                                        repeat(kotlin.math.abs(steps)) {
+                                                                            KeyInjector.keyDown(keycode)
+                                                                            KeyInjector.keyUp(keycode)
+                                                                        }
+                                                                        accumulatedSpaceDeltaX -= steps * cursorStepPx
+                                                                    }
+                                                                }
+                                                                change.consume()
                                                             }
                                                         }
-                                                        if (controller.onKeyMove(
-                                                                pid,
-                                                                keyId,
-                                                                delta.x,
-                                                                delta.y,
-                                                                layoutState.grid,
-                                                                kbRepeatEnabled,
-                                                            )
-                                                        ) {
-                                                            change.consume()
+
+                                                        if (!isSpaceDragging) {
+                                                            val startPos = pressPositions[pid]
+                                                            if (startPos != null) {
+                                                                val dist = (change.position - startPos).getDistance()
+                                                                val thresholdPx = with(density) { 24.dp.toPx() }
+                                                                if (dist > thresholdPx) {
+                                                                    longPressJobs[pid]?.cancel()
+                                                                    longPressJobs.remove(pid)
+                                                                }
+                                                            }
+                                                            if (controller.onKeyMove(
+                                                                    pid,
+                                                                    keyId,
+                                                                    delta.x,
+                                                                    delta.y,
+                                                                    layoutState.grid,
+                                                                    kbRepeatEnabled,
+                                                                )
+                                                            ) {
+                                                                change.consume()
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -774,25 +830,41 @@ fun KeyboardScreen(
                                                 longPressJobs[pid]?.cancel()
                                                 longPressJobs.remove(pid)
                                                 pressPositions.remove(pid)
+                                                virtualAnchorX = 0f
 
-                                                val popup = activePopupState
-                                                val releasedId = controller.getKeyIdForPointer(pid)
-                                                if (popup != null && releasedId == popup.keyDef.id) {
-                                                    val index = popup.selectedIndex
-                                                    if (index == 0) {
-                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = false)
-                                                    } else {
-                                                        val charToInject = popup.options[index]
-                                                        injectPopupChar(charToInject, kbLayout)
-                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
-                                                    }
-                                                    activePopupState = null
-                                                    virtualAnchorX = 0f
+                                                if (isSpaceDragging) {
+                                                    isSpaceDragging = false
                                                     change.consume()
                                                 } else {
-                                                    if (!change.pressed && change.previousPressed) {
-                                                        controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = false)
+                                                    val popup = activePopupState
+                                                    val releasedId = controller.getKeyIdForPointer(pid)
+                                                    if (popup != null && releasedId == popup.keyDef.id) {
+                                                        val index = popup.selectedIndex
+                                                        if (index == 0) {
+                                                            controller.onKeyUp(
+                                                                pid,
+                                                                layoutState.grid,
+                                                                kbRepeatEnabled,
+                                                                skipInjection = false,
+                                                            )
+                                                        } else {
+                                                            val charToInject = popup.options[index]
+                                                            injectPopupChar(charToInject, kbLayout)
+                                                            controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
+                                                        }
+                                                        activePopupState = null
+                                                        virtualAnchorX = 0f
                                                         change.consume()
+                                                    } else {
+                                                        if (!change.pressed && change.previousPressed) {
+                                                            controller.onKeyUp(
+                                                                pid,
+                                                                layoutState.grid,
+                                                                kbRepeatEnabled,
+                                                                skipInjection = false,
+                                                            )
+                                                            change.consume()
+                                                        }
                                                     }
                                                 }
                                             }

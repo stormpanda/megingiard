@@ -73,7 +73,7 @@ class KeyRepeatController(
                 pointerKeyMap[pointerId] = id
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = keyDef
-                val isCharKey = id != "bksp" && id != "space" && id != "space_num" && id != "enter"
+                val isCharKey = id != "bksp" && id != "enter"
                 if (!isCharKey && keyDef.linuxKeycode != 0) {
                     KeyboardState
                         .activeModifierKeycodes(layout)
@@ -147,7 +147,7 @@ class KeyRepeatController(
         if (prevDef?.type == KeyType.NORMAL && prevDef.linuxKeycode != 0) {
             heldKey = null
             repeatJob?.cancel()
-            val isPrevCharKey = prevId != "bksp" && prevId != "space" && prevId != "space_num" && prevId != "enter"
+            val isPrevCharKey = prevId != "bksp" && prevId != "enter"
             if (!isPrevCharKey && repeatEnabled) {
                 KeyInjector.keyUp(prevDef.linuxKeycode)
                 prevDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
@@ -163,7 +163,7 @@ class KeyRepeatController(
             pointerKeyMap[pointerId] = newId
             _pressedKeys.value = _pressedKeys.value + newId
             heldKey = newDef
-            val isNewCharKey = newId != "bksp" && newId != "space" && newId != "space_num" && newId != "enter"
+            val isNewCharKey = newId != "bksp" && newId != "enter"
             if (!isNewCharKey && newDef.linuxKeycode != 0) {
                 KeyboardState
                     .activeModifierKeycodes(layout)
@@ -216,7 +216,7 @@ class KeyRepeatController(
                 heldKey = null
                 repeatJob?.cancel()
                 if (!skipInjection) {
-                    val isCharKey = releasedId != "bksp" && releasedId != "space" && releasedId != "space_num" && releasedId != "enter"
+                    val isCharKey = releasedId != "bksp" && releasedId != "enter"
                     if (isCharKey && keyDef.linuxKeycode != 0) {
                         val activeMods = KeyboardState.activeModifierKeycodes(layout)
                         activeMods.forEach { KeyInjector.keyDown(it) }
