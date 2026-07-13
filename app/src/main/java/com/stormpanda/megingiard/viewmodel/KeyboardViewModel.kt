@@ -19,6 +19,7 @@ import com.stormpanda.megingiard.macropad.TrackpointMode
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,6 +52,7 @@ class KeyboardViewModel(
     }
 
     val controller = KeyRepeatController(viewModelScope)
+    private var injectorsJob: Job? = null
 
     fun closeQuickMenu() = AppStateManager.closeQuickMenu()
 
@@ -62,20 +64,24 @@ class KeyboardViewModel(
     }
 
     fun startInjectors(context: Context) {
-        viewModelScope.launch {
-            KeyboardState.reset()
-            AppStateManager.isQuickMenuOpen.first { !it }
-            AppLog.i(TAG, "quick menu closed, starting KeyInjector + MouseInjector")
-            withContext(Dispatchers.IO) {
-                KeyInjector.start(context)
-                MouseInjector.start(context)
+        injectorsJob?.cancel()
+        injectorsJob =
+            viewModelScope.launch {
+                KeyboardState.reset()
+                AppStateManager.isQuickMenuOpen.first { !it }
+                AppLog.i(TAG, "quick menu closed, starting KeyInjector + MouseInjector")
+                withContext(Dispatchers.IO) {
+                    KeyInjector.start(context)
+                    MouseInjector.start(context)
+                }
+                AppLog.i(TAG, "KeyInjector + MouseInjector started")
             }
-            AppLog.i(TAG, "KeyInjector + MouseInjector started")
-        }
     }
 
     fun stopAndReset() {
         AppLog.i(TAG, "stopAndReset called")
+        injectorsJob?.cancel()
+        injectorsJob = null
         controller.dispose()
         val activeL = MacroPadState.activeLayout.value
         val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
@@ -98,6 +104,8 @@ class KeyboardViewModel(
         super.onCleared()
         AppLog.i(TAG, "onCleared → KeyInjector + MouseInjector stopped, KeyboardState reset")
         _keyboardMode.value = KeyboardMode.LETTERS
+        injectorsJob?.cancel()
+        injectorsJob = null
         controller.dispose()
         KeyInjector.stop()
         MouseInjector.stop()
