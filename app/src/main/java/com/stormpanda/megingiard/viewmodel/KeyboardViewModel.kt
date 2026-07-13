@@ -78,13 +78,12 @@ class KeyboardViewModel(
         AppLog.i(TAG, "stopAndReset called")
         controller.dispose()
         val activeL = MacroPadState.activeLayout.value
-        val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+        val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
         val hasMouse =
             activeL?.buttons?.any {
                 it.action is PadAction.MouseButton ||
                     it.action is PadAction.ScrollWheel ||
-                    (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE) ||
-                    it.action is PadAction.Macro
+                    (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE)
             } == true
         if (!hasKeyboard) {
             KeyInjector.stop()

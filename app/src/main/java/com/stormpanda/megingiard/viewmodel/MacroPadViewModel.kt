@@ -92,7 +92,7 @@ class MacroPadViewModel(
                 val vp = array[6] as Boolean
                 val activeL = array[7] as? PadLayout
 
-                val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+                val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
                 val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
                 val hasMouse =
                     activeL?.buttons?.any {
@@ -101,8 +101,7 @@ class MacroPadViewModel(
                             (
                                 it.action is PadAction.TrackpointMove &&
                                     (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                            ) ||
-                            it.action is PadAction.Macro
+                            )
                     } == true
 
                 val blockingModal = editor || ambient || prompt || vp
@@ -137,7 +136,7 @@ class MacroPadViewModel(
                     withContext(Dispatchers.IO) {
                         val activeL = MacroPadState.activeLayout.value
                         val hasKeyboard =
-                            activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+                            activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
                         val hasGamepad =
                             activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
                         val hasMouse =
@@ -147,8 +146,7 @@ class MacroPadViewModel(
                                     (
                                         it.action is PadAction.TrackpointMove &&
                                             (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                                    ) ||
-                                    it.action is PadAction.Macro
+                                    )
                             } == true
                         val hasTouch =
                             activeL?.buttons?.any {

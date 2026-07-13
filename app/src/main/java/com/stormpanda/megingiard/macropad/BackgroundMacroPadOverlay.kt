@@ -158,7 +158,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             val vp = array[5] as Boolean
             val activeL = array[6] as? PadLayout
 
-            val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+            val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
             val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
             val hasMouse =
                 activeL?.buttons?.any {
@@ -167,8 +167,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                         (
                             it.action is PadAction.TrackpointMove &&
                                 (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                        ) ||
-                        it.action is PadAction.Macro
+                        )
                 } == true
 
             val blockingModal = editor || ambient || vp
@@ -202,7 +201,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
                 withContext(Dispatchers.IO) {
                     val activeL = MacroPadState.activeLayout.value
-                    val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey || it.action is PadAction.Macro } == true
+                    val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
                     val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
                     val hasMouse =
                         activeL?.buttons?.any {
@@ -211,8 +210,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                                 (
                                     it.action is PadAction.TrackpointMove &&
                                         (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                                ) ||
-                                it.action is PadAction.Macro
+                                )
                         } == true
                     val hasTouch =
                         activeL?.buttons?.any {
