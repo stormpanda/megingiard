@@ -66,7 +66,9 @@ internal fun KeyCap(
     onBoundsUpdate: (LayoutCoordinates) -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val isModifierActive = modifierState != ModifierState.INACTIVE
+    val isModifierActive =
+        modifierState != ModifierState.INACTIVE ||
+            ((keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
 
     // Gboard style classification
     val isSpecialKey =
