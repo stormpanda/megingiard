@@ -6,6 +6,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1164,17 +1166,24 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(50.dp)
+                        .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
             ) {
+                val interactionSource = remember { MutableInteractionSource() }
+                val isPressed by interactionSource.collectIsPressedAsState()
                 Box(
                     modifier =
                         Modifier
                             .fillMaxHeight()
                             .width(72.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { AppStateManager.setFullscreenKeyboardActive(false) },
+                            .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = { AppStateManager.setFullscreenKeyboardActive(false) },
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -1196,12 +1205,19 @@ private fun ToolbarIcon(
     onClick: () -> Unit = {},
 ) {
     val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
     Box(
         modifier =
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .clickable { onClick() },
+                .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
