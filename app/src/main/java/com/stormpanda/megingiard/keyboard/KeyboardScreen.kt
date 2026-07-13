@@ -1177,6 +1177,7 @@ fun KeyboardScreen(
                         Modifier
                             .fillMaxHeight()
                             .width(72.dp)
+                            .offset(y = (-3).dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isPressed) colors.keyPressed else Color.Transparent)
                             .clickable(
@@ -1211,6 +1212,7 @@ private fun ToolbarIcon(
         modifier =
             Modifier
                 .size(44.dp)
+                .offset(y = 2.dp)
                 .clip(CircleShape)
                 .background(if (isPressed) colors.keyPressed else Color.Transparent)
                 .clickable(
