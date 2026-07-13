@@ -503,15 +503,15 @@ fun KeyboardScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(230.dp)
-                    .background(Color(0xFF17191D)),
+                    .height(262.dp)
+                    .background(Color(0xFF1D1F26)),
         ) {
             // 1. Top Toolbar
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(36.dp)
+                        .height(44.dp)
                         .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround,
@@ -544,8 +544,8 @@ fun KeyboardScreen(
             Box(
                 modifier =
                     Modifier
-                        .weight(1f)
                         .fillMaxWidth()
+                        .height(168.dp)
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                         .onGloballyPositioned { boxCoordsState.value = it }
                         .pointerInput(layoutState) {
@@ -1025,7 +1025,7 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(30.dp)
+                        .height(50.dp)
                         .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
