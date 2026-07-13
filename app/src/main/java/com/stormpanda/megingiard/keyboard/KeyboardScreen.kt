@@ -1164,15 +1164,16 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
-                        .padding(horizontal = 16.dp),
+                        .height(50.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Box(
                     modifier =
                         Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
+                            .fillMaxHeight()
+                            .width(72.dp)
+                            .clip(RoundedCornerShape(8.dp))
                             .clickable { AppStateManager.setFullscreenKeyboardActive(false) },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1180,7 +1181,7 @@ fun KeyboardScreen(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = "Collapse Keyboard",
                         tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
