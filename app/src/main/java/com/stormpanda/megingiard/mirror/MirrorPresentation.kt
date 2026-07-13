@@ -646,7 +646,7 @@ class MirrorPresentation(
                                     exit =
                                         slideOutVertically(
                                             animationSpec = tween(300),
-                                            targetOffsetY = { if (overlayAtBottom) it else -it },
+                                            targetOffsetY = { it },
                                         ) + fadeOut(animationSpec = tween(300)),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
