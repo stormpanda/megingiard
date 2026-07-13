@@ -190,7 +190,7 @@ internal fun KeyCap(
             }
 
             // Draw Gboard-style Superscript numeric/symbol labels on top-right of letters keys
-            val superLabel = keyDef.superscript
+            val superLabel = getSuperscriptDisplayLabel(keyDef)
             if (superLabel != null && !isShiftActive && !isCapsActive && !isAltGrActive) {
                 Box(
                     modifier =

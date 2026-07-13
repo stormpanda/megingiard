@@ -218,6 +218,42 @@ fun injectPopupChar(
             sendKey(LinuxKeycodes.KEY_SLASH, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
         }
 
+        "[" -> {
+            sendKey(LinuxKeycodes.KEY_LEFTBRACE)
+        }
+
+        "]" -> {
+            sendKey(LinuxKeycodes.KEY_RIGHTBRACE)
+        }
+
+        "{" -> {
+            sendKey(LinuxKeycodes.KEY_LEFTBRACE, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "}" -> {
+            sendKey(LinuxKeycodes.KEY_RIGHTBRACE, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "<" -> {
+            sendKey(LinuxKeycodes.KEY_COMMA, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        ">" -> {
+            sendKey(LinuxKeycodes.KEY_DOT, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "\\" -> {
+            sendKey(LinuxKeycodes.KEY_BACKSLASH)
+        }
+
+        "$" -> {
+            sendKey(LinuxKeycodes.KEY_4, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
+        "%" -> {
+            sendKey(LinuxKeycodes.KEY_5, autoModifiers = listOf(LinuxKeycodes.KEY_LEFTSHIFT))
+        }
+
         "ä" -> {
             if (kbLayout == KbLayout.QWERTZ) {
                 sendKey(LinuxKeycodes.KEY_APOSTROPHE)
@@ -607,15 +643,16 @@ fun KeyboardScreen(
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
                                                     if (keyId != null && keyId.startsWith("mode_switch")) {
-                                                        val targetMode =
-                                                            when (keyId) {
-                                                                "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
-                                                                "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                                "mode_switch_2" -> KeyboardMode.SYMBOLS_2
-                                                                "mode_switch_1234" -> KeyboardMode.NUMERIC
-                                                                else -> KeyboardMode.LETTERS
-                                                            }
-                                                        viewModel.setKeyboardMode(targetMode)
+                                                        if (keyId != "mode_switch_2") {
+                                                            val targetMode =
+                                                                when (keyId) {
+                                                                    "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
+                                                                    "mode_switch_abc" -> KeyboardMode.LETTERS
+                                                                    "mode_switch_1234" -> KeyboardMode.NUMERIC
+                                                                    else -> KeyboardMode.LETTERS
+                                                                }
+                                                            viewModel.setKeyboardMode(targetMode)
+                                                        }
                                                         change.consume()
                                                     } else if (keyId == "globe") {
                                                         viewModel.cycleKbLayout()

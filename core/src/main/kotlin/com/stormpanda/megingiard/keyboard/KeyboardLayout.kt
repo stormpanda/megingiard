@@ -121,9 +121,33 @@ fun getPopupOptions(
     keyDef: KeyDef,
     isUpper: Boolean,
 ): List<String> {
+    val id = keyDef.id
+    when (id) {
+        "j" -> return listOf("(", "[", "{", "<")
+        "k" -> return listOf(")", "]", "}", ">")
+        "l" -> return listOf("/", "\\")
+        "s" -> return listOf("#", "$", "%")
+        "lparen" -> return listOf("[", "{", "<")
+        "rparen" -> return listOf("]", "}", ">")
+        "slash" -> return listOf("\\")
+        "hash" -> return listOf("$", "%")
+    }
     val superscript = keyDef.superscript ?: return emptyList()
     return listOf(superscript)
 }
+
+fun getSuperscriptDisplayLabel(keyDef: KeyDef): String? =
+    when (keyDef.id) {
+        "j" -> "([{<"
+        "k" -> ")]}>"
+        "l" -> "/\\"
+        "s" -> "#$%"
+        "lparen" -> "[{<"
+        "rparen" -> "]}>"
+        "slash" -> "\\"
+        "hash" -> "$%"
+        else -> keyDef.superscript
+    }
 
 // ---------------------------------------------------------------------------
 // Layout factories
@@ -350,7 +374,7 @@ private fun symbols1Layout(): List<List<KeyDef>> =
             KeyDef("slash", "/", KEY_SLASH),
         ),
         listOf(
-            KeyDef("mode_switch_2", "=\\<", 0, widthWeight = 1.3f),
+            KeyDef("mode_switch_2", "", 0, widthWeight = 1.3f),
             KeyDef("asterisk", "*", KEY_8, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("quote", "\"", KEY_APOSTROPHE, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("singlequote", "'", KEY_APOSTROPHE),

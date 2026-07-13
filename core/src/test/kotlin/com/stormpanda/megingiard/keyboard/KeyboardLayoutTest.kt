@@ -158,5 +158,26 @@ class KeyboardLayoutTest {
         // Keys without superscript return empty list
         val fKey = KeyDef("f", "f", 33)
         assertTrue(getPopupOptions(fKey, isUpper = false).isEmpty())
+
+        // Multi-option keys popup lists
+        val jKey = KeyDef("j", "j", 36, superscript = "(")
+        val jOptions = getPopupOptions(jKey, isUpper = false)
+        assertEquals(listOf("(", "[", "{", "<"), jOptions)
+
+        val lparenKey = KeyDef("lparen", "(", 10)
+        val lparenOptions = getPopupOptions(lparenKey, isUpper = false)
+        assertEquals(listOf("[", "{", "<"), lparenOptions)
+    }
+
+    @Test
+    fun `getSuperscriptDisplayLabel returns correct combined superscript strings`() {
+        val jKey = KeyDef("j", "j", 36, superscript = "(")
+        assertEquals("([{<", getSuperscriptDisplayLabel(jKey))
+
+        val lparenKey = KeyDef("lparen", "(", 10)
+        assertEquals("[{<", getSuperscriptDisplayLabel(lparenKey))
+
+        val eKey = KeyDef("e", "e", 18, superscript = "3")
+        assertEquals("3", getSuperscriptDisplayLabel(eKey))
     }
 }
