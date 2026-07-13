@@ -172,10 +172,10 @@ class KeyboardLayoutTest {
     @Test
     fun `getSuperscriptDisplayLabel returns correct combined superscript strings`() {
         val jKey = KeyDef("j", "j", 36, superscript = "(")
-        assertEquals("([{<", getSuperscriptDisplayLabel(jKey))
+        assertEquals("( [ { <", getSuperscriptDisplayLabel(jKey))
 
         val lparenKey = KeyDef("lparen", "(", 10)
-        assertEquals("[{<", getSuperscriptDisplayLabel(lparenKey))
+        assertEquals("[ { <", getSuperscriptDisplayLabel(lparenKey))
 
         val eKey = KeyDef("e", "e", 18, superscript = "3")
         assertEquals("3", getSuperscriptDisplayLabel(eKey))

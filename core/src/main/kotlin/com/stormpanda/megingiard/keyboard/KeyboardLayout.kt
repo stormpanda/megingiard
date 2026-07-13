@@ -138,14 +138,14 @@ fun getPopupOptions(
 
 fun getSuperscriptDisplayLabel(keyDef: KeyDef): String? =
     when (keyDef.id) {
-        "j" -> "([{<"
-        "k" -> ")]}>"
-        "l" -> "/\\"
-        "s" -> "#$%"
-        "lparen" -> "[{<"
-        "rparen" -> "]}>"
+        "j" -> "( [ { <"
+        "k" -> ") ] } >"
+        "l" -> "/ \\"
+        "s" -> "# $ %"
+        "lparen" -> "[ { <"
+        "rparen" -> "] } >"
         "slash" -> "\\"
-        "hash" -> "$%"
+        "hash" -> "$ %"
         else -> keyDef.superscript
     }
 
