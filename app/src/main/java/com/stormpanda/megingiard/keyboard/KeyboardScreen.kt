@@ -515,6 +515,7 @@ fun KeyboardScreen(
     var spaceDragStartX by remember { mutableStateOf(0f) }
     var isSpaceDragging by remember { mutableStateOf(false) }
     var accumulatedSpaceDeltaX by remember { mutableStateOf(0f) }
+    var spaceDragPointerId by remember { mutableStateOf<Long?>(null) }
 
     // UI state from controller
     val pressedKeys by controller.pressedKeys.collectAsState()
@@ -651,6 +652,7 @@ fun KeyboardScreen(
                                                         spaceDragStartX = change.position.x
                                                         isSpaceDragging = false
                                                         accumulatedSpaceDeltaX = 0f
+                                                        spaceDragPointerId = pid
                                                     }
                                                     if (keyId != null && keyId.startsWith("mode_switch")) {
                                                         if (keyId != "mode_switch_2") {
@@ -755,8 +757,7 @@ fun KeyboardScreen(
                                                             }
                                                         }
                                                     } else {
-                                                        val initialKeyId = controller.getKeyIdForPointer(pid)
-                                                        if (initialKeyId == "space" || initialKeyId == "space_num") {
+                                                        if (pid == spaceDragPointerId) {
                                                             val currentX = change.position.x
                                                             val dragDeltaX = currentX - spaceDragStartX
                                                             val thresholdPx = with(density) { 12.dp.toPx() }
@@ -832,8 +833,13 @@ fun KeyboardScreen(
                                                 pressPositions.remove(pid)
                                                 virtualAnchorX = 0f
 
-                                                if (isSpaceDragging) {
+                                                val wasDragging = isSpaceDragging && pid == spaceDragPointerId
+                                                if (pid == spaceDragPointerId) {
+                                                    spaceDragPointerId = null
                                                     isSpaceDragging = false
+                                                }
+
+                                                if (wasDragging) {
                                                     change.consume()
                                                 } else {
                                                     val popup = activePopupState
