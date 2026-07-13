@@ -106,10 +106,14 @@ class MacroPadViewModel(
                     } == true
 
                 val blockingModal = editor || ambient || prompt || vp
+                val startKeyboard = kb || (hasKeyboard && !blockingModal)
+                val startMouse = mouse || (hasMouse && !blockingModal && !kb)
+                val startGamepad = hasGamepad && !blockingModal && !quickMenu && !kb && !mouse
+
                 InjectorGate(
-                    stopKeyboard = (blockingModal && !kb) || !hasKeyboard,
-                    stopMouse = (blockingModal && !kb && !mouse) || !hasMouse,
-                    stopGamepad = blockingModal || quickMenu || kb || mouse || !hasGamepad,
+                    stopKeyboard = !startKeyboard,
+                    stopMouse = !startMouse,
+                    stopGamepad = !startGamepad,
                 )
             }.distinctUntilChanged()
                 .collectLatest { gate ->

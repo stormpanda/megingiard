@@ -172,10 +172,14 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 } == true
 
             val blockingModal = editor || ambient || vp
+            val startKeyboard = kb || (hasKeyboard && !blockingModal)
+            val startMouse = mouse || (hasMouse && !blockingModal && !kb)
+            val startGamepad = hasGamepad && !blockingModal && !quickMenu && !kb && !mouse
+
             AmbientInjectorGate(
-                stopKeyboard = (blockingModal && !kb) || !hasKeyboard,
-                stopMouse = (blockingModal && !kb && !mouse) || !hasMouse,
-                stopGamepad = blockingModal || quickMenu || kb || mouse || !hasGamepad,
+                stopKeyboard = !startKeyboard,
+                stopMouse = !startMouse,
+                stopGamepad = !startGamepad,
             )
         }.distinctUntilChanged()
             .collectLatest { gate ->
