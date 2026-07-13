@@ -184,6 +184,10 @@ Layouts share a common **function row** (F1–F12) and **bottom bar** (Ctrl / Me
 | `STICKY`   | Quick tap (< 300 ms press duration) | Any non-modifier key injection |
 | `HELD`     | Long press (≥ 300 ms)               | Finger lifted from modifier    |
 
+#### CapsLock Toggle (via Shift Button)
+- Long pressing the Shift button (`"lshift"` / `"rshift"`) for `≥ 300 ms` activates CapsLock (`caps` state set to `HELD`). Lift-release leaves CapsLock active so subsequent characters remain capitalized.
+- Tapping the Shift button once (quick press/release) while CapsLock is active turns off both Shift and CapsLock, returning the keyboard to lowercase input.
+
 `KeyboardState.activeModifierKeycodes()` collects the Linux keycodes of all modifiers that are currently STICKY or HELD. These are injected as key-down events before the primary key and key-up events after it.
 
 `KeyboardState.releaseStickyModifiers()` is called after each non-modifier key injection to transition all STICKY states back to INACTIVE.

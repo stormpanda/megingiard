@@ -74,6 +74,9 @@ object KeyboardState {
         val downTime = touchDownTimes.remove(id) ?: System.currentTimeMillis()
         val duration = System.currentTimeMillis() - downTime
 
+        val capsFlow = getOrCreate("caps")
+        val wasCapsActive = capsFlow.value != ModifierState.INACTIVE
+
         return when (flow.value) {
             ModifierState.HELD -> {
                 AppLog.d(TAG, "modifier '$id' HELD → INACTIVE (keycode=$keycode)")
@@ -85,10 +88,21 @@ object KeyboardState {
                 // second tap on an already-sticky modifier cycles back to INACTIVE
                 AppLog.d(TAG, "modifier '$id' STICKY → INACTIVE (second tap)")
                 flow.value = ModifierState.INACTIVE
+                if (id == "lshift" || id == "rshift") {
+                    if (wasCapsActive) {
+                        capsFlow.value = ModifierState.INACTIVE
+                    }
+                }
                 if (keycode != 0) listOf(keycode) else emptyList()
             }
 
             ModifierState.INACTIVE -> {
+                if (id == "lshift" || id == "rshift") {
+                    if (wasCapsActive) {
+                        capsFlow.value = ModifierState.INACTIVE
+                        return if (keycode != 0) listOf(keycode) else emptyList()
+                    }
+                }
                 if (duration < MODIFIER_HOLD_THRESHOLD_MS) {
                     // quick tap → sticky
                     AppLog.d(TAG, "modifier '$id' INACTIVE → STICKY (${duration}ms < ${MODIFIER_HOLD_THRESHOLD_MS}ms)")
@@ -113,6 +127,9 @@ object KeyboardState {
         if (flow.value == ModifierState.INACTIVE) {
             AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (long-press)")
             flow.value = ModifierState.HELD
+            if (id == "lshift" || id == "rshift") {
+                getOrCreate("caps").value = ModifierState.HELD
+            }
             return if (keycode != 0) keycode else null
         }
         return null
