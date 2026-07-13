@@ -509,6 +509,7 @@ fun KeyboardScreen(
 
     val coroutineScope = rememberCoroutineScope()
     var activePopupState by remember { mutableStateOf<PopupState?>(null) }
+    var virtualAnchorX by remember { mutableStateOf(0f) }
     val longPressJobs = remember { mutableMapOf<Long, Job>() }
     val pressPositions = remember { mutableMapOf<Long, Offset>() }
 
@@ -716,14 +717,20 @@ fun KeyboardScreen(
                                                     val popup = activePopupState
                                                     if (popup != null) {
                                                         if (popup.isLongPress) {
-                                                            val keyCenterX =
-                                                                popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
+                                                            if (virtualAnchorX == 0f) {
+                                                                virtualAnchorX = change.position.x
+                                                            }
                                                             val currentX = change.position.x
-                                                            val deltaX = currentX - keyCenterX
+                                                            val deltaX = currentX - virtualAnchorX
                                                             val cellWidthPx = with(density) { 48.dp.toPx() }
-                                                            val shift = (deltaX * 2.5f / cellWidthPx).roundToInt()
-                                                            popup.selectedIndex =
-                                                                (popup.initialSelectedIndex + shift).coerceIn(0, popup.options.lastIndex)
+                                                            val stepWidthPx = cellWidthPx / 2.5f
+                                                            val shift = (deltaX / stepWidthPx).toInt()
+                                                            if (shift != 0) {
+                                                                val oldIndex = popup.selectedIndex
+                                                                val newIndex = (oldIndex + shift).coerceIn(0, popup.options.lastIndex)
+                                                                popup.selectedIndex = newIndex
+                                                                virtualAnchorX = currentX
+                                                            }
                                                             change.consume()
                                                         } else {
                                                             val startPos = pressPositions[pid]
@@ -734,6 +741,7 @@ fun KeyboardScreen(
                                                                     longPressJobs[pid]?.cancel()
                                                                     longPressJobs.remove(pid)
                                                                     activePopupState = null
+                                                                    virtualAnchorX = 0f
                                                                 }
                                                             }
                                                         }
@@ -779,6 +787,7 @@ fun KeyboardScreen(
                                                         controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
                                                     }
                                                     activePopupState = null
+                                                    virtualAnchorX = 0f
                                                     change.consume()
                                                 } else {
                                                     if (!change.pressed && change.previousPressed) {
