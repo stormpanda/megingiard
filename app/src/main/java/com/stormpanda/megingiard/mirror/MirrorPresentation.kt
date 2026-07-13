@@ -454,6 +454,7 @@ class MirrorPresentation(
                                             kbBarMaxX,
                                         ) {
                                             if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
+                                            if (isFullscreenKeyboardActive) return@pointerInput
                                             val qmSwipe =
                                                 SwipeGestureProcessor(
                                                     edgeZonePx = edgeZonePx,
@@ -661,7 +662,7 @@ class MirrorPresentation(
                                 // overlays (keyboard / mouse). Suppressed inside
                                 // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
                                 // only one QuickMenuBar instance exists at a time.
-                                if (capturing) {
+                                if (capturing && !isFullscreenKeyboardActive) {
                                     QuickMenuBar()
                                 }
 

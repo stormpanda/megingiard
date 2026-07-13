@@ -90,6 +90,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
@@ -272,8 +273,9 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                     kbBarMinX,
                     kbBarMaxX,
                     previewConfig == null,
+                    isFullscreenKeyboardActive,
                 ) {
-                    if (previewConfig != null) return@pointerInput
+                    if (previewConfig != null || isFullscreenKeyboardActive) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -439,6 +441,6 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             }
         }
 
-        if (showQuickMenuBar) QuickMenuBar()
+        if (showQuickMenuBar && !isFullscreenKeyboardActive) QuickMenuBar()
     }
 }
