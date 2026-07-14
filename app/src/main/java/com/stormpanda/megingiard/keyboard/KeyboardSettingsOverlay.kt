@@ -20,6 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -28,6 +31,11 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.LayoutDropdownRow
 import com.stormpanda.megingiard.settings.SettingsSection
+import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
+import com.stormpanda.megingiard.ui.HelpIntro
+import com.stormpanda.megingiard.ui.HelpModal
+import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
@@ -41,6 +49,7 @@ fun KeyboardSettingsOverlay(
 ) {
     val colors = LocalAppColors.current
     val currentLayout by viewModel.kbLayout.collectAsState()
+    var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "KeyboardSettingsOverlay composed")
@@ -74,6 +83,9 @@ fun KeyboardSettingsOverlay(
                             )
                         }
                     },
+                    actions = {
+                        HelpIconButton(onClick = { showHelp = true })
+                    },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
                 )
             },
@@ -96,5 +108,30 @@ fun KeyboardSettingsOverlay(
                 }
             }
         }
+
+        KeyboardSettingsHelpModal(
+            visible = showHelp,
+            onDismiss = { showHelp = false },
+        )
+    }
+}
+
+@Composable
+private fun KeyboardSettingsHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_keyboard_settings_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_keyboard_settings_intro))
+
+        HelpSection(stringResource(R.string.settings_kb_layout))
+        HelpEntry(
+            label = stringResource(R.string.settings_kb_layout),
+            description = stringResource(R.string.help_keyboard_settings_layout_desc),
+        )
     }
 }
