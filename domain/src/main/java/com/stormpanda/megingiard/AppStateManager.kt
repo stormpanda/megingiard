@@ -260,8 +260,11 @@ object AppStateManager {
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
-    private val _fullscreenKeyboardLayout = MutableStateFlow(KbLayout.QWERTZ)
-    val fullscreenKeyboardLayout: StateFlow<KbLayout> = _fullscreenKeyboardLayout.asStateFlow()
+    private val _forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
+    val fullscreenKeyboardLayout: StateFlow<KbLayout> =
+        combine(_forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
+            forced ?: settings
+        }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
 
     /** Whether the MacroPad layout editor is currently open. */
     private val _isEditorActive = MutableStateFlow(false)
@@ -289,10 +292,12 @@ object AppStateManager {
     ) {
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
-            _fullscreenKeyboardLayout.value = layout ?: KeyboardSettings.kbLayout.value
+            _forcedKeyboardLayout.value = layout
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
             _isBackgroundSettingsActive.value = false
+        } else {
+            _forcedKeyboardLayout.value = null
         }
         _isFullscreenKeyboardActive.value = active
     }
