@@ -59,6 +59,7 @@ import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
+import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
@@ -100,6 +101,7 @@ fun MainAppScreen() {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
+    val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
@@ -198,6 +200,7 @@ fun MainAppScreen() {
                         kbBarMaxX,
                         isEditorActive,
                         isGlobalSettingsOpen,
+                        isKeyboardSettingsOpen,
                         isBackgroundSettingsActive,
                         isFullscreenKeyboardActive,
                     ) {
@@ -339,6 +342,17 @@ fun MainAppScreen() {
             ) {
                 GlobalSettingsScreen(
                     onBack = { AppStateManager.setGlobalSettingsOpen(false) },
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isKeyboardSettingsOpen,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                KeyboardSettingsOverlay(
+                    onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
                 )
             }
         }

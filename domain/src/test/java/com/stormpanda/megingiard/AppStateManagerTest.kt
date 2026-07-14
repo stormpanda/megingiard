@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -118,5 +120,23 @@ class AppStateManagerTest {
             testScheduler.advanceUntilIdle()
             assertFalse(AppStateManager.isPrivdPromptActive.value)
             assertTrue(AppStateManager.isPrivdPromptDismissed.value)
+        }
+
+    @Test
+    fun `setFullscreenKeyboardActive falls back to KeyboardSettings layout when null`() =
+        runTest {
+            // Assert initial state
+            AppStateManager.setFullscreenKeyboardActive(false)
+
+            // Set layout explicitly
+            AppStateManager.setFullscreenKeyboardActive(true, KbLayout.AZERTY)
+            assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
+
+            // Reset
+            AppStateManager.setFullscreenKeyboardActive(false)
+
+            // Activate with null/default layout, it should fall back to KeyboardSettings (default QWERTZ)
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertEquals(KbLayout.QWERTZ, AppStateManager.fullscreenKeyboardLayout.value)
         }
 }

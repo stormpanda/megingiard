@@ -61,6 +61,7 @@
     <string name="settings_color_apply">Apply</string>
 
     <!-- Keyboard settings -->
+    <string name="settings_keyboard_title">Keyboard Settings</string>
     <string name="cd_keyboard_trackpoint">Trackpoint</string>
     <string name="settings_kb_layout">Keyboard layout</string>
     <string name="settings_kb_layout_desc">Key arrangement for letters</string>

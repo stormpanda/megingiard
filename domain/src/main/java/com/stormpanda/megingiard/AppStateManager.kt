@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -225,6 +226,14 @@ object AppStateManager {
         _isGlobalSettingsOpen.value = open
     }
 
+    private val _isKeyboardSettingsOpen = MutableStateFlow(false)
+    val isKeyboardSettingsOpen: StateFlow<Boolean> = _isKeyboardSettingsOpen.asStateFlow()
+
+    fun setKeyboardSettingsOpen(open: Boolean) {
+        AppLog.d(TAG, "setKeyboardSettingsOpen($open)")
+        _isKeyboardSettingsOpen.value = open
+    }
+
     private var wasViewportEditActiveBeforeSettings = false
 
     /**
@@ -270,16 +279,17 @@ object AppStateManager {
             _isBackgroundSettingsActive,
             MacroPadState.isPeekActive,
             _isGlobalSettingsOpen,
+            _isKeyboardSettingsOpen,
         ) { array: Array<Boolean> -> array.any { it } }
             .stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(
         active: Boolean,
-        layout: KbLayout = KbLayout.QWERTZ,
+        layout: KbLayout? = null,
     ) {
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
-            _fullscreenKeyboardLayout.value = layout
+            _fullscreenKeyboardLayout.value = layout ?: KeyboardSettings.kbLayout.value
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
             _isBackgroundSettingsActive.value = false
@@ -342,6 +352,7 @@ object AppStateManager {
         _isViewportEditActive.value = false
         _isBackgroundSettingsActive.value = false
         _isGlobalSettingsOpen.value = false
+        _isKeyboardSettingsOpen.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
         _activeCropCutoutId.value = null

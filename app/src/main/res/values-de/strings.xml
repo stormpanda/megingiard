@@ -66,6 +66,7 @@
     <string name="settings_color_apply">Anwenden</string>
 
     <!-- Keyboard settings -->
+    <string name="settings_keyboard_title">Tastatur-Einstellungen</string>
     <string name="settings_kb_layout">Tastaturlayout</string>
     <string name="settings_kb_layout_desc">Buchstabenanordnung</string>
     <string name="settings_kb_layout_qwertz">QWERTZ</string>

@@ -95,6 +95,7 @@ import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
+import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
@@ -392,6 +393,7 @@ class MirrorPresentation(
                             val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
                             val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
                             val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
+                            val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
@@ -448,6 +450,7 @@ class MirrorPresentation(
                                         .pointerInput(
                                             isFullscreenMouseActive,
                                             isFullscreenKeyboardActive,
+                                            isKeyboardSettingsOpen,
                                             overlayAtBottom,
                                             quickMenuBarZoneWidthPx,
                                             kbBarMinX,
@@ -676,6 +679,17 @@ class MirrorPresentation(
                                 ) {
                                     GlobalSettingsScreen(
                                         onBack = { AppStateManager.setGlobalSettingsOpen(false) },
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = isKeyboardSettingsOpen,
+                                    enter = slideInVertically { it } + fadeIn(),
+                                    exit = slideOutVertically { it } + fadeOut(),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    KeyboardSettingsOverlay(
+                                        onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
                                     )
                                 }
                             }

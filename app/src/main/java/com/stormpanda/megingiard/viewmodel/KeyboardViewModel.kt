@@ -63,6 +63,10 @@ class KeyboardViewModel(
         KeyboardSettings.setKbLayout(layouts[nextIndex])
     }
 
+    fun setKbLayout(value: KbLayout) {
+        KeyboardSettings.setKbLayout(value)
+    }
+
     fun startInjectors(context: Context) {
         injectorsJob?.cancel()
         injectorsJob =

@@ -84,6 +84,13 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - Moving the finger horizontally during cursor sliding mode by every **10 dp** MUST inject a single `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) keypress.
 - If the finger is released without triggering the drag threshold, a single space character event MUST be injected on up release.
 
+### FR-K9: Keyboard Settings Toolbar Button & Screen
+
+- The bottom toolbar MUST render a Settings Cog button on the right-hand side.
+- Tapping this button MUST open a fullscreen Keyboard Settings screen overlay.
+- The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
+- Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
+
 ---
 
 ## Technical Implementation
@@ -241,6 +248,7 @@ When a full-screen UI overlay is visible:
 | Module / Path | File | Responsibility |
 | --- | --- | --- |
 | **`:app`** | [KeyboardScreen.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardScreen.kt) | Compose UI: layout rendering, gesture handling, and trackpoint overlay integration |
+| **`:app`** | [KeyboardSettingsOverlay.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardSettingsOverlay.kt) | Fullscreen Settings Composable: dropdown select for regional keyboard layouts |
 | **`:app`** | [KeyboardKeyCap.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardKeyCap.kt) | KeyCap Composable: rendering, highlighting, and bounds reporting |
 | **`:app`** | [KeyboardMouseOverlay.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardMouseOverlay.kt) | Mouse Overlay: renders columns for mouse buttons (LMB/MMB/RMB/M4/M5) and scroll wheel |
 | **`:app`** | [KeyboardViewModel.kt](../../../app/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt) | VM coordinating keyboard state, repeat controller scope, and injector startup/shutdown |

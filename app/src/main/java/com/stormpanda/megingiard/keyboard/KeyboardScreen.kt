@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -674,7 +675,14 @@ fun KeyboardScreen(
                                                         KeyboardState.reset()
                                                         change.consume()
                                                     } else {
-                                                        val keyDef = if (keyId != null) findKeyInLayout(layoutState.grid, keyId) else null
+                                                        val keyDef =
+                                                            if (keyId !=
+                                                                null
+                                                            ) {
+                                                                findKeyInLayout(layoutState.grid, keyId)
+                                                            } else {
+                                                                null
+                                                            }
                                                         val isCharKey =
                                                             keyId != null && keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
                                                                 keyId != "enter"
@@ -855,7 +863,12 @@ fun KeyboardScreen(
                                                         } else {
                                                             val charToInject = popup.options[index]
                                                             injectPopupChar(charToInject, kbLayout)
-                                                            controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
+                                                            controller.onKeyUp(
+                                                                pid,
+                                                                layoutState.grid,
+                                                                kbRepeatEnabled,
+                                                                skipInjection = true,
+                                                            )
                                                         }
                                                         activePopupState = null
                                                         virtualAnchorX = 0f
@@ -1190,6 +1203,33 @@ fun KeyboardScreen(
                     Icon(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = "Collapse Keyboard",
+                        tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                val interactionSourceSettings = remember { MutableInteractionSource() }
+                val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .width(72.dp)
+                            .offset(y = (-3).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
+                            .clickable(
+                                interactionSource = interactionSourceSettings,
+                                indication = null,
+                                onClick = { AppStateManager.setKeyboardSettingsOpen(true) },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Settings,
+                        contentDescription = "Keyboard Settings",
                         tint = colors.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(24.dp),
                     )
