@@ -116,234 +116,219 @@ fun FullscreenMouseOverlay() {
         }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = if (overlayAtBottom) Arrangement.Bottom else Arrangement.Top,
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.keyboardBackground),
     ) {
-        if (overlayAtBottom) {
-            Spacer(modifier = Modifier.weight(1f))
-        }
-
-        // Touchpad Panel (styled to match Keyboard Gboard container)
-        Column(
+        // 1. Top Toolbar (header/branding + mode selection)
+        Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(TP_CONTAINER_HEIGHT)
-                    .background(colors.keyboardBackground),
+                    .height(TP_TOOLBAR_HEIGHT)
+                    .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // 1. Top Toolbar (header/branding + mode selection)
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(TP_TOOLBAR_HEIGHT)
-                        .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Text(
+                text = if (touchpadUseMouse) "Relative Mouse Trackpad" else "Absolute Touch Mapping",
+                color = colors.onSurface.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
             ) {
-                Text(
-                    text = if (touchpadUseMouse) "Relative Mouse Trackpad" else "Absolute Touch Mapping",
-                    color = colors.onSurface.copy(alpha = 0.9f),
-                    style = MaterialTheme.typography.titleSmall,
+                Icon(
+                    imageVector = if (touchpadUseMouse) Icons.Rounded.Mouse else Icons.Rounded.TouchApp,
+                    contentDescription = "Toggle Input Method",
+                    tint = colors.onSurface.copy(alpha = 0.8f),
                 )
-                Spacer(Modifier.weight(1f))
-                IconButton(
-                    onClick = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
-                ) {
-                    Icon(
-                        imageVector = if (touchpadUseMouse) Icons.Rounded.Mouse else Icons.Rounded.TouchApp,
-                        contentDescription = "Toggle Input Method",
-                        tint = colors.onSurface.copy(alpha = 0.8f),
-                    )
-                }
             }
+        }
 
-            // 2. Center Touchpad Area
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.appBackground)
-                        .pointerInput(processor) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Main)
-                                    val sw = size.width.toFloat()
-                                    val sh = size.height.toFloat()
+        // 2. Center Touchpad Area
+        Box(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.appBackground)
+                    .pointerInput(processor) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                val sw = size.width.toFloat()
+                                val sh = size.height.toFloat()
 
-                                    for (change in event.changes) {
-                                        if (change.isConsumed) continue
-                                        val id = change.id.value
-                                        when (event.type) {
-                                            PointerEventType.Press -> {
-                                                if (!change.previousPressed) {
-                                                    processor.onPress(
-                                                        id,
-                                                        change.position.x,
-                                                        change.position.y,
-                                                        sw,
-                                                        sh,
-                                                        overlayOpen = false,
-                                                    )
-                                                    change.consume()
-                                                }
-                                            }
-
-                                            PointerEventType.Move -> {
-                                                val delta = change.positionChange()
-                                                processor.onMove(
+                                for (change in event.changes) {
+                                    if (change.isConsumed) continue
+                                    val id = change.id.value
+                                    when (event.type) {
+                                        PointerEventType.Press -> {
+                                            if (!change.previousPressed) {
+                                                processor.onPress(
                                                     id,
                                                     change.position.x,
                                                     change.position.y,
-                                                    delta.x,
-                                                    delta.y,
                                                     sw,
                                                     sh,
                                                     overlayOpen = false,
                                                 )
                                                 change.consume()
                                             }
+                                        }
 
-                                            PointerEventType.Release -> {
-                                                if (!change.pressed) {
-                                                    val allUp = event.changes.none { it.pressed }
-                                                    processor.onRelease(
-                                                        id,
-                                                        change.position.x,
-                                                        change.position.y,
-                                                        sw,
-                                                        sh,
-                                                        allPointersUp = allUp,
-                                                        tapToClick = tapToClickState.value,
-                                                        twoFingerTap = twoFingerTapState.value,
-                                                    )
-                                                    change.consume()
-                                                }
-                                            }
+                                        PointerEventType.Move -> {
+                                            val delta = change.positionChange()
+                                            processor.onMove(
+                                                id,
+                                                change.position.x,
+                                                change.position.y,
+                                                delta.x,
+                                                delta.y,
+                                                sw,
+                                                sh,
+                                                overlayOpen = false,
+                                            )
+                                            change.consume()
+                                        }
 
-                                            else -> {
-                                                Unit
+                                        PointerEventType.Release -> {
+                                            if (!change.pressed) {
+                                                val allUp = event.changes.none { it.pressed }
+                                                processor.onRelease(
+                                                    id,
+                                                    change.position.x,
+                                                    change.position.y,
+                                                    sw,
+                                                    sh,
+                                                    allPointersUp = allUp,
+                                                    tapToClick = tapToClickState.value,
+                                                    twoFingerTap = twoFingerTapState.value,
+                                                )
+                                                change.consume()
                                             }
+                                        }
+
+                                        else -> {
+                                            Unit
                                         }
                                     }
                                 }
                             }
-                        },
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (touchpadUseMouse) "Swipe to move cursor" else "Touch mapped to primary display",
-                        color = colors.onSurface.copy(alpha = 0.5f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = if (touchpadUseMouse) "Tap = Left Click • 2-Finger Tap = Right Click" else "Coordinates projected directly",
-                        color = colors.onSurface.copy(alpha = 0.35f),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                // Render Left / Right physical buttons at the bottom of the touchpad area if in mouse mode
-                if (touchpadUseMouse) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.BottomCenter,
-                    ) {
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            TouchpadMouseButton(
-                                label = "LMB",
-                                accentColor = colors.accent,
-                                onDown = { MouseInjector.leftDown() },
-                                onUp = { MouseInjector.leftUp() },
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                            )
-                            TouchpadMouseButton(
-                                label = "RMB",
-                                accentColor = colors.accent,
-                                onDown = { MouseInjector.rightDown() },
-                                onUp = { MouseInjector.rightUp() },
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                            )
                         }
-                    }
-                }
+                    },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = if (touchpadUseMouse) "Swipe to move cursor" else "Touch mapped to primary display",
+                    color = colors.onSurface.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = if (touchpadUseMouse) "Tap = Left Click • 2-Finger Tap = Right Click" else "Coordinates projected directly",
+                    color = colors.onSurface.copy(alpha = 0.35f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
 
-            // 3. Bottom Toolbar (Collapse and settings button)
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(TP_BOTTOM_BAR_HEIGHT)
-                        .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val interactionSource = remember { MutableInteractionSource() }
-                val isPressed by interactionSource.collectIsPressedAsState()
+            // Render Left / Right physical buttons at the bottom of the touchpad area if in mouse mode
+            if (touchpadUseMouse) {
                 Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .width(TP_GLOBE_BUTTON_WIDTH)
-                            .offset(y = (-3).dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isPressed) colors.keyPressed else Color.Transparent)
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                                onClick = { AppStateManager.setFullscreenMouseActive(false) },
-                            ),
-                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.cd_touchpad_collapse),
-                        tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                val interactionSourceSettings = remember { MutableInteractionSource() }
-                val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .width(TP_GLOBE_BUTTON_WIDTH)
-                            .offset(y = (-3).dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
-                            .clickable(
-                                interactionSource = interactionSourceSettings,
-                                indication = null,
-                                onClick = { AppStateManager.setTouchpadSettingsOpen(true) },
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = stringResource(R.string.cd_touchpad_settings),
-                        tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
-                    )
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        TouchpadMouseButton(
+                            label = "LMB",
+                            accentColor = colors.accent,
+                            onDown = { MouseInjector.leftDown() },
+                            onUp = { MouseInjector.leftUp() },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                        TouchpadMouseButton(
+                            label = "RMB",
+                            accentColor = colors.accent,
+                            onDown = { MouseInjector.rightDown() },
+                            onUp = { MouseInjector.rightUp() },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
                 }
             }
         }
 
-        if (!overlayAtBottom) {
+        // 3. Bottom Toolbar (Collapse and settings button)
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(TP_BOTTOM_BAR_HEIGHT)
+                    .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxHeight()
+                        .width(TP_GLOBE_BUTTON_WIDTH)
+                        .offset(y = (-3).dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                            onClick = { AppStateManager.setFullscreenMouseActive(false) },
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.cd_touchpad_collapse),
+                    tint = colors.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
+                )
+            }
+
             Spacer(modifier = Modifier.weight(1f))
+
+            val interactionSourceSettings = remember { MutableInteractionSource() }
+            val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxHeight()
+                        .width(TP_GLOBE_BUTTON_WIDTH)
+                        .offset(y = (-3).dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
+                        .clickable(
+                            interactionSource = interactionSourceSettings,
+                            indication = null,
+                            onClick = { AppStateManager.setTouchpadSettingsOpen(true) },
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Settings,
+                    contentDescription = stringResource(R.string.cd_touchpad_settings),
+                    tint = colors.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
+                )
+            }
         }
     }
 }
