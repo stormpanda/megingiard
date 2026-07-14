@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1241,7 +1242,7 @@ fun KeyboardScreen(
 
 @Composable
 private fun ToolbarIcon(
-    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    imageVector: ImageVector,
     contentDescription: String,
     onClick: () -> Unit = {},
 ) {
