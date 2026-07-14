@@ -234,6 +234,14 @@ object AppStateManager {
         _isKeyboardSettingsOpen.value = open
     }
 
+    private val _isTouchpadSettingsOpen = MutableStateFlow(false)
+    val isTouchpadSettingsOpen: StateFlow<Boolean> = _isTouchpadSettingsOpen.asStateFlow()
+
+    fun setTouchpadSettingsOpen(open: Boolean) {
+        AppLog.d(TAG, "setTouchpadSettingsOpen($open)")
+        _isTouchpadSettingsOpen.value = open
+    }
+
     private var wasViewportEditActiveBeforeSettings = false
 
     /**
@@ -283,6 +291,7 @@ object AppStateManager {
             MacroPadState.isPeekActive,
             _isGlobalSettingsOpen,
             _isKeyboardSettingsOpen,
+            _isTouchpadSettingsOpen,
         ) { array: Array<Boolean> -> array.any { it } }
             .stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -358,6 +367,7 @@ object AppStateManager {
         _isBackgroundSettingsActive.value = false
         _isGlobalSettingsOpen.value = false
         _isKeyboardSettingsOpen.value = false
+        _isTouchpadSettingsOpen.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
         _activeCropCutoutId.value = null

@@ -69,6 +69,7 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
+import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
@@ -103,6 +104,7 @@ fun MainAppScreen() {
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
     val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
+    val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
@@ -138,6 +140,10 @@ fun MainAppScreen() {
     val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
     val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
     val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
+    val tpBarWidthPx = with(density) { 72.dp.toPx() }
+    val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
+    val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
 
     val context = LocalContext.current
 
@@ -202,8 +208,10 @@ fun MainAppScreen() {
                         isEditorActive,
                         isGlobalSettingsOpen,
                         isKeyboardSettingsOpen,
+                        isTouchpadSettingsOpen,
                         isBackgroundSettingsActive,
                         isFullscreenKeyboardActive,
+                        isFullscreenMouseActive,
                     ) {
                         val qmSwipe =
                             SwipeGestureProcessor(
@@ -229,11 +237,36 @@ fun MainAppScreen() {
                                     }
                                 },
                             )
+                        val tpSwipe =
+                            SwipeGestureProcessor(
+                                edgeZonePx = edgeZonePx,
+                                swipeThresholdPx = swipeThresholdPx,
+                                overlayAtBottom = overlayAtBottom,
+                                customZoneCheck = { x, width ->
+                                    val tpBarWidth = tpBarWidthPx
+                                    val tpBarEndPadding = tpBarEndPaddingPx
+                                    val tpBarZoneWidth = tpBarZoneWidthPx
+                                    val tpBarCenter = width - tpBarEndPadding - (tpBarWidth / 2f)
+                                    val tpBarMinX = tpBarCenter - (tpBarZoneWidth / 2f)
+                                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidth / 2f)
+                                    x >= tpBarMinX && x <= tpBarMaxX
+                                },
+                                onEdgeSwipe = {
+                                    if (AppStateManager.isAnyModalActive.value) {
+                                        AppStateManager.closeActiveModal()
+                                    } else if (AppStateManager.isQuickMenuOpen.value) {
+                                        AppStateManager.closeQuickMenu()
+                                    } else {
+                                        AppStateManager.setFullscreenMouseActive(true)
+                                    }
+                                },
+                            )
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val isMenuOpen =
-                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive || isFullscreenKeyboardActive
+                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive || isFullscreenKeyboardActive ||
+                                        isTouchpadSettingsOpen
                                 if (!isValidScreen || isMenuOpen) {
                                     continue
                                 }
@@ -254,12 +287,19 @@ fun MainAppScreen() {
                                             pointerX = x,
                                             containerWidth = size.width.toFloat(),
                                         )
+                                        tpSwipe.onPress(
+                                            pointerY = y,
+                                            containerHeight = size.height.toFloat(),
+                                            pointerX = x,
+                                            containerWidth = size.width.toFloat(),
+                                        )
                                     }
 
                                     PointerEventType.Move -> {
                                         qmSwipe.onMove(y)
                                         kbSwipe.onMove(y)
-                                        if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
+                                        tpSwipe.onMove(y)
+                                        if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered || tpSwipe.isSwipeTriggered) {
                                             event.changes.forEach { it.consume() }
                                         }
                                     }
@@ -268,9 +308,11 @@ fun MainAppScreen() {
                                         val allPointersUp = !event.changes.any { it.pressed }
                                         val qmTriggered = qmSwipe.isSwipeTriggered
                                         val kbTriggered = kbSwipe.isSwipeTriggered
+                                        val tpTriggered = tpSwipe.isSwipeTriggered
                                         qmSwipe.onRelease(allPointersUp)
                                         kbSwipe.onRelease(allPointersUp)
-                                        if (qmTriggered || kbTriggered) {
+                                        tpSwipe.onRelease(allPointersUp)
+                                        if (qmTriggered || kbTriggered || tpTriggered) {
                                             event.changes.forEach { it.consume() }
                                         }
                                     }
@@ -287,7 +329,22 @@ fun MainAppScreen() {
             // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
             // Suppressed when ambient mode is active: the overlays are rendered on the
             // secondary display inside MirrorPresentation instead.
-            if (isFullscreenMouseActive && !isCapturing) FullscreenMouseOverlay()
+            AnimatedVisibility(
+                visible = isFullscreenMouseActive && !isCapturing,
+                enter =
+                    slideInVertically(
+                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
+                        initialOffsetY = { if (overlayAtBottom) it else -it },
+                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                exit =
+                    slideOutVertically(
+                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
+                        targetOffsetY = { if (overlayAtBottom) it else -it },
+                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                FullscreenMouseOverlay()
+            }
             AnimatedVisibility(
                 visible = isFullscreenKeyboardActive && !isCapturing,
                 enter =
@@ -354,6 +411,16 @@ fun MainAppScreen() {
             ) {
                 KeyboardSettingsOverlay(
                     onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
+                )
+            }
+            AnimatedVisibility(
+                visible = isTouchpadSettingsOpen,
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                TouchpadSettingsOverlay(
+                    onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
                 )
             }
         }

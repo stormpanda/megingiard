@@ -68,11 +68,12 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
     val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val colors = LocalAppColors.current
 
     val alpha = remember { Animatable(QM_BAR_ALPHA_VISIBLE) }
-    LaunchedEffect(isQuickMenuOpen, isFullscreenKeyboardActive, overlayFadeOut) {
-        if (overlayFadeOut && !isQuickMenuOpen && !isFullscreenKeyboardActive) {
+    LaunchedEffect(isQuickMenuOpen, isFullscreenKeyboardActive, isFullscreenMouseActive, overlayFadeOut) {
+        if (overlayFadeOut && !isQuickMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
             alpha.snapTo(QM_BAR_ALPHA_VISIBLE)
             delay(QM_BAR_FADE_OUT_DELAY_MS)
             alpha.animateTo(QM_BAR_ALPHA_FADED, animationSpec = tween(QM_BAR_FADE_OUT_DURATION_MS))
@@ -103,6 +104,20 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                         .align(
                             if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
                         ).padding(start = 24.dp)
+                        .graphicsLayer(alpha = alpha.value),
+            )
+        }
+
+        // Touchpad Bar tab (Right/End)
+        if (!isFullscreenMouseActive) {
+            QuickMenuBarTab(
+                overlayAtBottom = overlayAtBottom,
+                colors = colors,
+                modifier =
+                    Modifier
+                        .align(
+                            if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
+                        ).padding(end = 24.dp)
                         .graphicsLayer(alpha = alpha.value),
             )
         }

@@ -104,6 +104,7 @@ import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
+import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
@@ -395,6 +396,7 @@ class MirrorPresentation(
                             val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
                             val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
                             val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
+                            val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
@@ -406,6 +408,10 @@ class MirrorPresentation(
                             val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
                             val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
                             val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
+                            val tpBarWidthPx = with(density) { 72.dp.toPx() }
+                            val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
+                            val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
 
                             val projectionController =
                                 remember(edgeZonePx, overlayAtBottom) {
@@ -452,6 +458,7 @@ class MirrorPresentation(
                                             isFullscreenMouseActive,
                                             isFullscreenKeyboardActive,
                                             isKeyboardSettingsOpen,
+                                            isTouchpadSettingsOpen,
                                             overlayAtBottom,
                                             quickMenuBarZoneWidthPx,
                                             kbBarMinX,
@@ -483,6 +490,27 @@ class MirrorPresentation(
                                                         }
                                                     },
                                                 )
+                                            val tpSwipe =
+                                                SwipeGestureProcessor(
+                                                    edgeZonePx = edgeZonePx,
+                                                    swipeThresholdPx = swipeThresholdPx,
+                                                    overlayAtBottom = overlayAtBottom,
+                                                    customZoneCheck = { x, width ->
+                                                        val tpBarCenter = width - tpBarEndPaddingPx - (tpBarWidthPx / 2f)
+                                                        val tpBarMinX = tpBarCenter - (tpBarZoneWidthPx / 2f)
+                                                        val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
+                                                        x >= tpBarMinX && x <= tpBarMaxX
+                                                    },
+                                                    onEdgeSwipe = {
+                                                        if (AppStateManager.isAnyModalActive.value) {
+                                                            AppStateManager.closeActiveModal()
+                                                        } else if (AppStateManager.isQuickMenuOpen.value) {
+                                                            AppStateManager.closeQuickMenu()
+                                                        } else {
+                                                            AppStateManager.setFullscreenMouseActive(true)
+                                                        }
+                                                    },
+                                                )
                                             awaitPointerEventScope {
                                                 while (true) {
                                                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -503,12 +531,21 @@ class MirrorPresentation(
                                                                 pointerX = x,
                                                                 containerWidth = size.width.toFloat(),
                                                             )
+                                                            tpSwipe.onPress(
+                                                                pointerY = y,
+                                                                containerHeight = size.height.toFloat(),
+                                                                pointerX = x,
+                                                                containerWidth = size.width.toFloat(),
+                                                            )
                                                         }
 
                                                         PointerEventType.Move -> {
                                                             qmSwipe.onMove(y)
                                                             kbSwipe.onMove(y)
-                                                            if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
+                                                            tpSwipe.onMove(y)
+                                                            if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered ||
+                                                                tpSwipe.isSwipeTriggered
+                                                            ) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
@@ -517,9 +554,11 @@ class MirrorPresentation(
                                                             val allPointersUp = !event.changes.any { it.pressed }
                                                             val qmTriggered = qmSwipe.isSwipeTriggered
                                                             val kbTriggered = kbSwipe.isSwipeTriggered
+                                                            val tpTriggered = tpSwipe.isSwipeTriggered
                                                             qmSwipe.onRelease(allPointersUp)
                                                             kbSwipe.onRelease(allPointersUp)
-                                                            if (qmTriggered || kbTriggered) {
+                                                            tpSwipe.onRelease(allPointersUp)
+                                                            if (qmTriggered || kbTriggered || tpTriggered) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
@@ -634,7 +673,20 @@ class MirrorPresentation(
                                 // content when triggered from BackgroundMacroPadOverlay buttons.
                                 // Dismissed via edge-swipe → BackgroundMacroPadOverlay's
                                 // SwipeGestureProcessor → AppStateManager.closeActiveModal().
-                                if (capturing && isFullscreenMouseActive) {
+                                AnimatedVisibility(
+                                    visible = capturing && isFullscreenMouseActive,
+                                    enter =
+                                        slideInVertically(
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
+                                            initialOffsetY = { if (overlayAtBottom) it else -it },
+                                        ) + fadeIn(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
+                                    exit =
+                                        slideOutVertically(
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
+                                            targetOffsetY = { if (overlayAtBottom) it else -it },
+                                        ) + fadeOut(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
                                     FullscreenMouseOverlay()
                                 }
 
@@ -691,6 +743,17 @@ class MirrorPresentation(
                                 ) {
                                     KeyboardSettingsOverlay(
                                         onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = isTouchpadSettingsOpen,
+                                    enter = slideInVertically { it } + fadeIn(),
+                                    exit = slideOutVertically { it } + fadeOut(),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    TouchpadSettingsOverlay(
+                                        onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
                                     )
                                 }
                             }

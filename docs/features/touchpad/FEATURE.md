@@ -13,33 +13,33 @@
 
 The Virtual Touchpad feature turns the secondary display into a touch surface that controls the primary screen's cursor/input in real-time — enabling the user to interact with the primary screen from the secondary one.
 
-In the current implementation, the Virtual Touchpad is mapped to the `FullScreenMouse` pad action and is instantiated via the **Fullscreen Mouse Overlay** (`FullscreenMouseOverlay`), which operates exclusively in relative **Mouse Mode** (forwarding relative cursor deltas). Absolute **Touch Mode** (forwarding absolute coordinate taps/drags) is fully supported by the underlying `:domain` gesture processor and is shared with the Mirror Touch Projection feature, but is not exposed as an active mode in the touchpad overlay.
+The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`FullscreenMouseOverlay`). It supports two distinct input methods: relative **Mouse Mode** (forwarding relative cursor movements and simulating clicks via taps or physical buttons) and absolute **Touch Mode** (projecting touch coordinates directly to the primary screen).
 
 ### FR-T1: Touch Surface & Overlay
 
-- The relative touchpad is activated as a fullscreen, semi-transparent modal overlay (`FullscreenMouseOverlay`) on the secondary display (bottom screen).
-- Dragging a finger across the surface MUST translate into relative mouse cursor movement on the primary display with minimal latency.
-- The touchpad MUST support relative **drag** and **tap** gestures to control the primary screen.
+- The touchpad is activated as a fullscreen, semi-transparent modal overlay (`FullscreenMouseOverlay`) on the secondary display (bottom screen) with slide-in/out animations matching the virtual keyboard.
+- Dragging a finger across the touchpad area MUST translate into either relative mouse cursor movement or absolute touch projection on the primary display depending on the active mode.
+- A swipe from the right end of the screen edge (QuickTouchpadBar) toggles the touchpad overlay on/off, mirroring the keyboard bar on the left side.
 
-### FR-T2: Visual Feedback
+### FR-T2: Visual Feedback & UI Style
 
-- In relative mouse mode, the overlay dimming provides clear visual feedback of the active touchpad session. No custom touch pointer/circle is rendered, as the primary screen's native OS mouse cursor provides the active visual feedback.
-- If absolute Touch Mode were to be used, the domain-level gesture processor tracks finger positions via `touchPos` for visual feedback if needed.
-
+- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing the active mode and a mode toggle button, a middle touch surface with informational text, and physical LMB/RMB click buttons (in Mouse Mode).
+- A bottom toolbar contains a collapse button (down arrow) and a settings button (cog icon).
 
 ### FR-T4: No Special Permissions Required
 
-- The relative touchpad MUST function within the standard app permission set on the AYN Thor.
+- The touchpad MUST function within the standard app permission set on the AYN Thor.
 - No root access or additional Android permissions beyond the app's declared set are required (the `/dev/uinput` and `/dev/input/event6` device nodes have permissions allowing access for the standard shell/app UID).
 
-### FR-T5: Mouse Mode (Active Implementation)
+### FR-T5: Input Modes & Settings
 
-- The touchpad operates in relative **mouse mode**, translating touch input into relative mouse cursor movements.
-- In this mode, the `TouchInjector` lifecycle is NOT started; instead, `MouseInjector` (shared `input/` package) is started and stopped alongside the touchpad session.
-- **Tap-to-click:** When enabled, a single short tap (below a slop of `20f` pixels and a timeout of `200ms`) sends a left-button click (down + up) via `MouseInjector`.
-- **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
-- Only the **primary pointer** (first finger down) drives cursor movement; additional fingers are tracked solely for two-finger tap detection.
-- When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through, before closing the menu.
+- **Mouse Mode:** Translates touch input into relative mouse cursor movements.
+  - **Tap-to-click:** When enabled, a single short tap sends a left-button click via `MouseInjector`.
+  - **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
+  - **Physical click buttons:** Two visual buttons (LMB, RMB) are rendered at the bottom of the touch area for manual click dragging.
+- **Touch Mode:** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
+- **Touchpad Settings:** A dedicated settings overlay is available via the settings cog button in the bottom toolbar, offering toggles for input mode, tap-to-click, two-finger tap, and access to a touchpad help guide.
+- When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
 

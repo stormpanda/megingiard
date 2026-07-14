@@ -1023,4 +1023,19 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_error_generic_message">An unexpected error occurred. Please try again.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
 
+    <!-- Touchpad settings -->
+    <string name="settings_touchpad_title">Touchpad Settings</string>
+    <string name="cd_touchpad_collapse">Collapse Touchpad</string>
+    <string name="cd_touchpad_settings">Touchpad Settings</string>
+    <string name="settings_touchpad_use_mouse">Input Mode</string>
+    <string name="settings_touchpad_use_mouse_desc">Toggle between relative mouse mode and absolute touchscreen mode</string>
+    <string name="settings_touchpad_tap_to_click">Tap to Click</string>
+    <string name="settings_touchpad_tap_to_click_desc">Single tap acts as a left mouse click (Mouse Mode only)</string>
+    <string name="settings_touchpad_two_finger_tap">Two-Finger Tap</string>
+    <string name="settings_touchpad_two_finger_tap_desc">Two-finger tap acts as a right mouse click (Mouse Mode only)</string>
+    <string name="help_touchpad_settings_title">Touchpad Help</string>
+    <string name="help_touchpad_settings_intro">Configure options for the fullscreen virtual touchpad.</string>
+    <string name="help_touchpad_settings_mode_desc">Relative mouse mode moves the cursor using relative finger deltas, while absolute mode projects touch coordinates directly.</string>
+    <string name="help_touchpad_settings_click_desc">Left and right clicks can be simulated by single or two-finger short taps.</string>
+
 </resources>
