@@ -133,6 +133,7 @@ private val MP_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
 private const val UNCROPPED_THRESHOLD = 0.999f
+private const val MP_KB_SLIDE_ANIM_DURATION_MS = 300
 
 class MirrorPresentation(
     context: Context,
@@ -644,14 +645,14 @@ class MirrorPresentation(
                                     visible = capturing && isFullscreenKeyboardActive,
                                     enter =
                                         slideInVertically(
-                                            animationSpec = tween(300),
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
                                             initialOffsetY = { if (overlayAtBottom) it else -it },
-                                        ) + fadeIn(animationSpec = tween(300)),
+                                        ) + fadeIn(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
                                     exit =
                                         slideOutVertically(
-                                            animationSpec = tween(300),
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
                                             targetOffsetY = { it },
-                                        ) + fadeOut(animationSpec = tween(300)),
+                                        ) + fadeOut(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
                                     KeyboardScreen(

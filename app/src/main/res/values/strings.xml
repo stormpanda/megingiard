@@ -63,6 +63,16 @@
     <!-- Keyboard settings -->
     <string name="settings_keyboard_title">Keyboard Settings</string>
     <string name="cd_keyboard_trackpoint">Trackpoint</string>
+    <string name="cd_kb_select_all">Select All</string>
+    <string name="cd_kb_cut">Cut</string>
+    <string name="cd_kb_copy">Copy</string>
+    <string name="cd_kb_paste">Paste</string>
+    <string name="cd_kb_shift">Shift</string>
+    <string name="cd_kb_backspace">Backspace</string>
+    <string name="cd_kb_enter">Enter</string>
+    <string name="cd_kb_layout">Keyboard Layout</string>
+    <string name="cd_kb_collapse">Collapse Keyboard</string>
+    <string name="cd_kb_settings">Keyboard Settings</string>
     <string name="settings_kb_layout">Keyboard layout</string>
     <string name="settings_kb_layout_desc">Key arrangement for letters</string>
     <string name="settings_kb_layout_qwertz">QWERTZ</string>

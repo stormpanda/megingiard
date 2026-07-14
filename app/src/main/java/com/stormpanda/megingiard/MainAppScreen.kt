@@ -86,6 +86,7 @@ private val MAS_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
+private const val MAS_KB_SLIDE_ANIM_DURATION_MS = 300
 
 @Composable
 fun MainAppScreen() {
@@ -291,14 +292,14 @@ fun MainAppScreen() {
                 visible = isFullscreenKeyboardActive && !isCapturing,
                 enter =
                     slideInVertically(
-                        animationSpec = tween(300),
+                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         initialOffsetY = { if (overlayAtBottom) it else -it },
-                    ) + fadeIn(animationSpec = tween(300)),
+                    ) + fadeIn(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
                 exit =
                     slideOutVertically(
-                        animationSpec = tween(300),
+                        animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
                         targetOffsetY = { it },
-                    ) + fadeOut(animationSpec = tween(300)),
+                    ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
                 modifier = Modifier.fillMaxSize(),
             ) {
                 KeyboardScreen(

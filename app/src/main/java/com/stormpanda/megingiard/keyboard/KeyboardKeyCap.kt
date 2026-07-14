@@ -24,10 +24,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 // ---------------------------------------------------------------------------
@@ -128,7 +130,7 @@ internal fun KeyCap(
                 "lshift", "rshift" -> {
                     Icon(
                         imageVector = Icons.Rounded.ArrowUpward,
-                        contentDescription = "Shift",
+                        contentDescription = stringResource(R.string.cd_kb_shift),
                         tint = contentColor,
                         modifier = Modifier.size(18.dp),
                     )
@@ -137,7 +139,7 @@ internal fun KeyCap(
                 "bksp" -> {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Backspace,
-                        contentDescription = "Backspace",
+                        contentDescription = stringResource(R.string.cd_kb_backspace),
                         tint = contentColor,
                         modifier = Modifier.size(18.dp),
                     )
@@ -146,7 +148,7 @@ internal fun KeyCap(
                 "enter" -> {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
-                        contentDescription = "Enter",
+                        contentDescription = stringResource(R.string.cd_kb_enter),
                         tint = contentColor,
                         modifier = Modifier.size(18.dp),
                     )
@@ -155,7 +157,7 @@ internal fun KeyCap(
                 "globe" -> {
                     Icon(
                         imageVector = Icons.Rounded.Language,
-                        contentDescription = "Layout",
+                        contentDescription = stringResource(R.string.cd_kb_layout),
                         tint = contentColor,
                         modifier = Modifier.size(18.dp),
                     )

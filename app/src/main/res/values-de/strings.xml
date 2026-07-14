@@ -67,6 +67,16 @@
 
     <!-- Keyboard settings -->
     <string name="settings_keyboard_title">Tastatur-Einstellungen</string>
+    <string name="cd_kb_select_all">Alles auswählen</string>
+    <string name="cd_kb_cut">Ausschneiden</string>
+    <string name="cd_kb_copy">Kopieren</string>
+    <string name="cd_kb_paste">Einfügen</string>
+    <string name="cd_kb_shift">Umschalt</string>
+    <string name="cd_kb_backspace">Rücktaste</string>
+    <string name="cd_kb_enter">Eingabe</string>
+    <string name="cd_kb_layout">Tastaturlayout</string>
+    <string name="cd_kb_collapse">Tastatur einklappen</string>
+    <string name="cd_kb_settings">Tastatur-Einstellungen</string>
     <string name="settings_kb_layout">Tastaturlayout</string>
     <string name="settings_kb_layout_desc">Buchstabenanordnung</string>
     <string name="settings_kb_layout_qwertz">QWERTZ</string>

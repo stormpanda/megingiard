@@ -84,6 +84,21 @@ private val KEY_PADDING_V = 2.dp
 private const val KB_TRACKPOINT_OVERLAY_ALPHA = 0.82f
 private const val KB_TRACKPOINT_FADE_MS = 200
 
+private val KB_CONTAINER_HEIGHT = 262.dp
+private val KB_TOOLBAR_HEIGHT = 44.dp
+private val KB_GRID_HEIGHT = 168.dp
+private val KB_BOTTOM_BAR_HEIGHT = 50.dp
+private val KB_CELL_WIDTH = 48.dp
+private val KB_POPUP_HEIGHT = 64.dp
+private val KB_POPUP_CELL_SIZE = 44.dp
+private val KB_GLOBE_BUTTON_WIDTH = 72.dp
+private val KB_CLOSE_BUTTON_SIZE = 44.dp
+private val KB_ICON_SIZE_MEDIUM = 24.dp
+
+private val KB_SWIPE_THRESHOLD_DP = 12.dp
+private val KB_SWIPE_STEP_DP = 10.dp
+private val KB_LONG_PRESS_SWIPE_THRESHOLD_DP = 24.dp
+
 internal class PopupState(
     val keyDef: KeyDef,
     val options: List<String>,
@@ -543,7 +558,7 @@ fun KeyboardScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(262.dp)
+                    .height(KB_CONTAINER_HEIGHT)
                     .background(colors.keyboardBackground),
         ) {
             // 1. Top Toolbar
@@ -551,14 +566,14 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(44.dp)
+                        .height(KB_TOOLBAR_HEIGHT)
                         .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
                 ToolbarIcon(
                     imageVector = Icons.Rounded.SelectAll,
-                    contentDescription = "Select All",
+                    contentDescription = stringResource(R.string.cd_kb_select_all),
                     onClick = {
                         KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
                         KeyInjector.keyDown(LinuxKeycodes.KEY_A)
@@ -568,7 +583,7 @@ fun KeyboardScreen(
                 )
                 ToolbarIcon(
                     imageVector = Icons.Rounded.ContentCut,
-                    contentDescription = "Cut",
+                    contentDescription = stringResource(R.string.cd_kb_cut),
                     onClick = {
                         KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
                         KeyInjector.keyDown(LinuxKeycodes.KEY_X)
@@ -578,7 +593,7 @@ fun KeyboardScreen(
                 )
                 ToolbarIcon(
                     imageVector = Icons.Rounded.ContentCopy,
-                    contentDescription = "Copy",
+                    contentDescription = stringResource(R.string.cd_kb_copy),
                     onClick = {
                         KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
                         KeyInjector.keyDown(LinuxKeycodes.KEY_C)
@@ -588,7 +603,7 @@ fun KeyboardScreen(
                 )
                 ToolbarIcon(
                     imageVector = Icons.Rounded.ContentPaste,
-                    contentDescription = "Paste",
+                    contentDescription = stringResource(R.string.cd_kb_paste),
                     onClick = {
                         KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
                         KeyInjector.keyDown(LinuxKeycodes.KEY_V)
@@ -603,7 +618,7 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(168.dp)
+                        .height(KB_GRID_HEIGHT)
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                         .onGloballyPositioned { boxCoordsState.value = it }
                         .pointerInput(layoutState) {
@@ -746,7 +761,7 @@ fun KeyboardScreen(
                                                             }
                                                             val currentX = change.position.x
                                                             val deltaX = currentX - virtualAnchorX
-                                                            val cellWidthPx = with(density) { 48.dp.toPx() }
+                                                            val cellWidthPx = with(density) { KB_CELL_WIDTH.toPx() }
                                                             val stepWidthPx = cellWidthPx / 2.5f
                                                             val shift = (deltaX / stepWidthPx).toInt()
                                                             if (shift != 0) {
@@ -760,7 +775,7 @@ fun KeyboardScreen(
                                                             val startPos = pressPositions[pid]
                                                             if (startPos != null) {
                                                                 val dist = (change.position - startPos).getDistance()
-                                                                val thresholdPx = with(density) { 24.dp.toPx() }
+                                                                val thresholdPx = with(density) { KB_LONG_PRESS_SWIPE_THRESHOLD_DP.toPx() }
                                                                 if (dist > thresholdPx) {
                                                                     longPressJobs[pid]?.cancel()
                                                                     longPressJobs.remove(pid)
@@ -773,8 +788,7 @@ fun KeyboardScreen(
                                                         if (pid == spaceDragPointerId) {
                                                             val currentX = change.position.x
                                                             val dragDeltaX = currentX - spaceDragStartX
-                                                            val thresholdPx = with(density) { 12.dp.toPx() }
-
+                                                            val thresholdPx = with(density) { KB_SWIPE_THRESHOLD_DP.toPx() }
                                                             if (!isSpaceDragging && kotlin.math.abs(dragDeltaX) > thresholdPx) {
                                                                 isSpaceDragging = true
                                                                 spaceDragStartX = currentX
@@ -785,7 +799,7 @@ fun KeyboardScreen(
                                                                 accumulatedSpaceDeltaX += dragDeltaX
                                                                 spaceDragStartX = currentX
 
-                                                                val cursorStepPx = with(density) { 10.dp.toPx() }
+                                                                val cursorStepPx = with(density) { KB_SWIPE_STEP_DP.toPx() }
                                                                 if (kotlin.math.abs(accumulatedSpaceDeltaX) >= cursorStepPx) {
                                                                     val steps = (accumulatedSpaceDeltaX / cursorStepPx).toInt()
                                                                     if (steps != 0) {
@@ -812,7 +826,7 @@ fun KeyboardScreen(
                                                             val startPos = pressPositions[pid]
                                                             if (startPos != null) {
                                                                 val dist = (change.position - startPos).getDistance()
-                                                                val thresholdPx = with(density) { 24.dp.toPx() }
+                                                                val thresholdPx = with(density) { KB_LONG_PRESS_SWIPE_THRESHOLD_DP.toPx() }
                                                                 if (dist > thresholdPx) {
                                                                     longPressJobs[pid]?.cancel()
                                                                     longPressJobs.remove(pid)
@@ -1124,9 +1138,9 @@ fun KeyboardScreen(
                     val keyCenterXDp = with(density) { keyCenterX.toDp() }
                     val keyTopDp = with(density) { keyTop.toDp() }
 
-                    val cellWidth = 48.dp
+                    val cellWidth = KB_CELL_WIDTH
                     val popupWidth = cellWidth * popup.options.size + 16.dp
-                    val popupHeight = 64.dp
+                    val popupHeight = KB_POPUP_HEIGHT
 
                     val screenWidthDp = with(density) { (boxCoordsState.value?.size?.width ?: 1240).toDp() }
                     val maxPopupLeft = screenWidthDp - popupWidth - 4.dp
@@ -1157,7 +1171,7 @@ fun KeyboardScreen(
                                 Box(
                                     modifier =
                                         Modifier
-                                            .size(44.dp)
+                                            .size(KB_POPUP_CELL_SIZE)
                                             .clip(CircleShape)
                                             .background(if (isSelected) accentColor else Color.Transparent),
                                     contentAlignment = Alignment.Center,
@@ -1180,7 +1194,7 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(KB_BOTTOM_BAR_HEIGHT)
                         .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1190,7 +1204,7 @@ fun KeyboardScreen(
                     modifier =
                         Modifier
                             .fillMaxHeight()
-                            .width(72.dp)
+                            .width(KB_GLOBE_BUTTON_WIDTH)
                             .offset(y = (-3).dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isPressed) colors.keyPressed else Color.Transparent)
@@ -1203,9 +1217,9 @@ fun KeyboardScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = "Collapse Keyboard",
+                        contentDescription = stringResource(R.string.cd_kb_collapse),
                         tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
                     )
                 }
 
@@ -1217,7 +1231,7 @@ fun KeyboardScreen(
                     modifier =
                         Modifier
                             .fillMaxHeight()
-                            .width(72.dp)
+                            .width(KB_GLOBE_BUTTON_WIDTH)
                             .offset(y = (-3).dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
@@ -1230,9 +1244,9 @@ fun KeyboardScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Settings,
-                        contentDescription = "Keyboard Settings",
+                        contentDescription = stringResource(R.string.cd_kb_settings),
                         tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
                     )
                 }
             }
@@ -1252,7 +1266,7 @@ private fun ToolbarIcon(
     Box(
         modifier =
             Modifier
-                .size(44.dp)
+                .size(KB_CLOSE_BUTTON_SIZE)
                 .offset(y = 2.dp)
                 .clip(CircleShape)
                 .background(if (isPressed) colors.keyPressed else Color.Transparent)
@@ -1267,7 +1281,7 @@ private fun ToolbarIcon(
             imageVector = imageVector,
             contentDescription = contentDescription,
             tint = colors.onSurface.copy(alpha = 0.8f),
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
         )
     }
 }
