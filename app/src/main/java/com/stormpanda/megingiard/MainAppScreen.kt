@@ -388,7 +388,7 @@ fun MainAppScreen() {
             // Quick Menu Bar + Quick Menu overlay — hidden while editor or ambient settings
             // are open because those modals render their own full-screen chrome.
             // Also hidden when fullscreen keyboard is active.
-            if (!isEditorActive && !isBackgroundSettingsActive && !isFullscreenKeyboardActive) {
+            if (!isEditorActive && !isBackgroundSettingsActive && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                 QuickMenuBar()
             }
 

@@ -718,7 +718,7 @@ class MirrorPresentation(
                                 // overlays (keyboard / mouse). Suppressed inside
                                 // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
                                 // only one QuickMenuBar instance exists at a time.
-                                if (capturing && !isFullscreenKeyboardActive) {
+                                if (capturing && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                                     QuickMenuBar()
                                 }
 
