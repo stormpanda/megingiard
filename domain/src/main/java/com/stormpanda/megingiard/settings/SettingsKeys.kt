@@ -58,6 +58,7 @@ internal val KEY_LOG_LEVEL = stringPreferencesKey("log_level")
 internal val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse")
 internal val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
 internal val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
+internal val KEY_TOUCHPAD_TWO_FINGER_SCROLL = booleanPreferencesKey("touchpad_two_finger_scroll")
 
 // MacroPad touch recording
 internal val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
@@ -120,6 +121,7 @@ private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_USE_MOUSE,
         KEY_TOUCHPAD_TAP_TO_CLICK,
         KEY_TOUCHPAD_TWO_FINGER_TAP,
+        KEY_TOUCHPAD_TWO_FINGER_SCROLL,
     )
 private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
     setOf(

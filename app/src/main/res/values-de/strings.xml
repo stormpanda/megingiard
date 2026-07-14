@@ -1040,9 +1040,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_touchpad_tap_to_click_desc">Einfaches Tippen als Linksklick ausführen (nur im Mausmodus)</string>
     <string name="settings_touchpad_two_finger_tap">Zwei-Finger-Tippen</string>
     <string name="settings_touchpad_two_finger_tap_desc">Zwei-Finger-Tippen als Rechtsklick ausführen (nur im Mausmodus)</string>
+    <string name="settings_touchpad_two_finger_scroll">Zwei-Finger-Scrollen</string>
+    <string name="settings_touchpad_two_finger_scroll_desc">Zwei Finger vertikal ziehen, um den Bildschirm zu scrollen (nur im Mausmodus)</string>
     <string name="help_touchpad_settings_title">Touchpad-Hilfe</string>
     <string name="help_touchpad_settings_intro">Optionen für das virtuelle Vollbild-Touchpad konfigurieren.</string>
     <string name="help_touchpad_settings_mode_desc">Der relative Mausmodus bewegt den Cursor basierend auf Finger-Deltas, während der absolute Modus Touch-Koordinaten direkt projiziert.</string>
     <string name="help_touchpad_settings_click_desc">Links- und Rechtsklicks können durch kurzes Tippen mit einem oder zwei Fingern simuliert werden.</string>
-
 </resources>

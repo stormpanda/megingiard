@@ -40,6 +40,7 @@ class TouchpadGestureProcessor(
     private val useMouse: Boolean,
     private val scope: CoroutineScope,
     sensitivity: Float = 1.0f,
+    private val twoFingerScrollEnabled: Boolean = true,
 ) {
     // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
     private val sensitivity: Float =
@@ -61,6 +62,7 @@ class TouchpadGestureProcessor(
     private val movedTooFar = HashSet<Long>()
     private val releasedAsTap = ArrayList<Long>()
     private var primaryPointer: Long? = null
+    private var scrollAccumY = 0f
 
     /**
      * Handle a Press event.
@@ -89,6 +91,9 @@ class TouchpadGestureProcessor(
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
             if (primaryPointer == null) primaryPointer = pointerId
+            if (downPositions.size != 2) {
+                scrollAccumY = 0f
+            }
         } else {
             val nx = (x / surfaceW).coerceIn(0f, 1f)
             val ny = (y / surfaceH).coerceIn(0f, 1f)
@@ -131,8 +136,17 @@ class TouchpadGestureProcessor(
                     movedTooFar.add(pointerId)
                 }
             }
-            // Only primary pointer drives cursor
-            if (pointerId == primaryPointer) {
+            if (twoFingerScrollEnabled && downPositions.size == 2) {
+                if (pointerId == primaryPointer) {
+                    scrollAccumY += deltaY
+                    val scrollThreshold = 12f // Sensitivity threshold in pixels
+                    val units = (scrollAccumY / scrollThreshold).toInt()
+                    if (units != 0) {
+                        MouseInjector.scrollWheel(units)
+                        scrollAccumY -= units * scrollThreshold
+                    }
+                }
+            } else if (pointerId == primaryPointer) {
                 val dx = (deltaX * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
                 val dy = (deltaY * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
@@ -179,6 +193,9 @@ class TouchpadGestureProcessor(
                 primaryPointer = null // caller should set new primary if needed
             }
             if (isTap) releasedAsTap.add(pointerId)
+            if (downPositions.size != 2) {
+                scrollAccumY = 0f
+            }
 
             // When all fingers are up, evaluate taps
             if (allPointersUp) {

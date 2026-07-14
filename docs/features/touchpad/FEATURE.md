@@ -36,9 +36,10 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 - **Mouse Mode:** Translates touch input into relative mouse cursor movements.
   - **Tap-to-click:** When enabled, a single short tap sends a left-button click via `MouseInjector`.
   - **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
+  - **Two-finger scroll:** When enabled, dragging two fingers vertically scroll the screen (Mouse Mode only).
   - **Physical click buttons:** Two visual buttons (LMB, RMB) are rendered at the bottom of the touch area for manual click dragging.
 - **Touch Mode:** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
-- **Touchpad Settings:** A dedicated settings overlay is available via the settings cog button in the bottom toolbar, offering toggles for input mode, tap-to-click, two-finger tap, and access to a touchpad help guide.
+- **Touchpad Settings:** A dedicated settings overlay is available via the settings cog button in the bottom toolbar, offering toggles for input mode, tap-to-click, two-finger tap, two-finger scroll, and access to a touchpad help guide.
 - When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
@@ -109,6 +110,7 @@ loop:
 In relative **Mouse Mode** (`useMouse = true`):
 
 - Touch coordinates are measured. Relative delta values (`change.positionChange()`) are retrieved, scaled by a baseline speed (`TP_MOUSE_SENSITIVITY = 2f`) and the user's `sensitivity` setting (clamped between `0.1f` and `10.0f`), and forwarded to `MouseInjector.moveMouse(dx, dy)`.
+- If two-finger scroll is enabled and exactly two fingers are placed on the touchpad (`downPositions.size == 2`), vertical scroll wheel events are generated instead of cursor movement. Vertical movement (`deltaY`) is accumulated, and when crossing a threshold of `12f` pixels, `MouseInjector.scrollWheel(units)` is invoked.
 - Tap detection tracks pointer down times (`pressTimes`) and positions (`downPositions`).
   - If a single finger is released within `TP_TAP_TIMEOUT_MS = 200L` without moving beyond `TP_TAP_SLOP_PX = 20f` pixels, a Left Click (LMB down + up) is simulated via a coroutine:
     ```kotlin

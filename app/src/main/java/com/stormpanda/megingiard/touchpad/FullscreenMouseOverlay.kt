@@ -82,10 +82,12 @@ fun FullscreenMouseOverlay() {
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
     val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
+    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
 
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
+    val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
 
     // Injector Lifecycle
     LaunchedEffect(touchpadUseMouse) {
@@ -108,11 +110,19 @@ fun FullscreenMouseOverlay() {
         }
     }
 
-    // Recreate processor when sensitivity/mode changes so the parameters apply immediately.
+    // Recreate processor when sensitivity/mode/scrolling changes so the parameters apply immediately.
     val processor =
-        remember(touchpadUseMouse, sensitivity) {
-            AppLog.d(TAG, "creating TouchpadGestureProcessor useMouse=$touchpadUseMouse sensitivity=$sensitivity")
-            TouchpadGestureProcessor(useMouse = touchpadUseMouse, scope = coroutineScope, sensitivity = sensitivity)
+        remember(touchpadUseMouse, sensitivity, twoFingerScrollState.value) {
+            AppLog.d(
+                TAG,
+                "creating TouchpadGestureProcessor useMouse=$touchpadUseMouse sensitivity=$sensitivity twoFingerScroll=${twoFingerScrollState.value}",
+            )
+            TouchpadGestureProcessor(
+                useMouse = touchpadUseMouse,
+                scope = coroutineScope,
+                sensitivity = sensitivity,
+                twoFingerScrollEnabled = twoFingerScrollState.value,
+            )
         }
 
     Column(

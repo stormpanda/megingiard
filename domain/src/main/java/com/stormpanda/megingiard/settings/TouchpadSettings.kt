@@ -36,6 +36,10 @@ object TouchpadSettings {
     private val _touchpadTwoFingerTap = MutableStateFlow(true)
     val touchpadTwoFingerTap: StateFlow<Boolean> = _touchpadTwoFingerTap.asStateFlow()
 
+    // Two-finger scroll — only active in touchpad mouse mode
+    private val _touchpadTwoFingerScroll = MutableStateFlow(true)
+    val touchpadTwoFingerScroll: StateFlow<Boolean> = _touchpadTwoFingerScroll.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -48,6 +52,7 @@ object TouchpadSettings {
         _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
         _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
         _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
+        _touchpadTwoFingerScroll.value = prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] ?: true
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
@@ -66,5 +71,11 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadTwoFingerTap($value)")
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+    }
+
+    fun setTouchpadTwoFingerScroll(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadTwoFingerScroll($value)")
+        _touchpadTwoFingerScroll.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] = value } }
     }
 }

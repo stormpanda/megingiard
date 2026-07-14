@@ -47,6 +47,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsState()
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val touchpadTwoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
+    val touchpadTwoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -118,6 +119,12 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                             checked = touchpadTwoFingerTap,
                             onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
                         )
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_touchpad_two_finger_scroll),
+                            description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
+                            checked = touchpadTwoFingerScroll,
+                            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
+                        )
                     }
                 }
             }
@@ -152,6 +159,12 @@ private fun TouchpadSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_tap_to_click),
             description = stringResource(R.string.help_touchpad_settings_click_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_touchpad_two_finger_scroll))
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_two_finger_scroll),
+            description = stringResource(R.string.help_touchpad_settings_scroll_desc),
         )
     }
 }
