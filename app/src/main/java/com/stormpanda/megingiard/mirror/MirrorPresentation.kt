@@ -95,6 +95,7 @@ import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
+import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
@@ -132,6 +133,7 @@ private val MP_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
 private const val UNCROPPED_THRESHOLD = 0.999f
+private const val MP_KB_SLIDE_ANIM_DURATION_MS = 300
 
 class MirrorPresentation(
     context: Context,
@@ -392,10 +394,19 @@ class MirrorPresentation(
                             val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
                             val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
                             val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
+                            val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
                             val quickMenuBarZoneWidthPx = with(density) { MP_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+
+                            val kbBarWidthPx = with(density) { 72.dp.toPx() }
+                            val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
+                            val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+                            val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
+                            val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
+                            val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
                             val projectionController =
                                 remember(edgeZonePx, overlayAtBottom) {
                                     TouchProjectionController(edgeZonePx, overlayAtBottom)
@@ -440,16 +451,37 @@ class MirrorPresentation(
                                         .pointerInput(
                                             isFullscreenMouseActive,
                                             isFullscreenKeyboardActive,
+                                            isKeyboardSettingsOpen,
                                             overlayAtBottom,
                                             quickMenuBarZoneWidthPx,
+                                            kbBarMinX,
+                                            kbBarMaxX,
                                         ) {
                                             if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                            val swipe =
+                                            if (isFullscreenKeyboardActive) return@pointerInput
+                                            val qmSwipe =
                                                 SwipeGestureProcessor(
-                                                    edgeZonePx,
-                                                    swipeThresholdPx,
-                                                    overlayAtBottom,
-                                                    quickMenuBarZoneWidthPx,
+                                                    edgeZonePx = edgeZonePx,
+                                                    swipeThresholdPx = swipeThresholdPx,
+                                                    overlayAtBottom = overlayAtBottom,
+                                                    quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
+                                                    onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+                                                )
+                                            val kbSwipe =
+                                                SwipeGestureProcessor(
+                                                    edgeZonePx = edgeZonePx,
+                                                    swipeThresholdPx = swipeThresholdPx,
+                                                    overlayAtBottom = overlayAtBottom,
+                                                    customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                                                    onEdgeSwipe = {
+                                                        if (AppStateManager.isAnyModalActive.value) {
+                                                            AppStateManager.closeActiveModal()
+                                                        } else if (AppStateManager.isQuickMenuOpen.value) {
+                                                            AppStateManager.closeQuickMenu()
+                                                        } else {
+                                                            AppStateManager.setFullscreenKeyboardActive(true)
+                                                        }
+                                                    },
                                                 )
                                             awaitPointerEventScope {
                                                 while (true) {
@@ -459,27 +491,35 @@ class MirrorPresentation(
                                                     val y = firstChange?.position?.y ?: 0f
                                                     when (event.type) {
                                                         PointerEventType.Press -> {
-                                                            swipe.onPress(
+                                                            qmSwipe.onPress(
                                                                 pointerY = y,
                                                                 containerHeight = size.height.toFloat(),
                                                                 pointerX = x,
                                                                 containerWidth = size.width.toFloat(),
                                                             )
-                                                            if (swipe.isNearEdge) {
-                                                                event.changes.forEach { it.consume() }
-                                                            }
+                                                            kbSwipe.onPress(
+                                                                pointerY = y,
+                                                                containerHeight = size.height.toFloat(),
+                                                                pointerX = x,
+                                                                containerWidth = size.width.toFloat(),
+                                                            )
                                                         }
 
                                                         PointerEventType.Move -> {
-                                                            swipe.onMove(y)
-                                                            if (swipe.isNearEdge) {
+                                                            qmSwipe.onMove(y)
+                                                            kbSwipe.onMove(y)
+                                                            if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
 
                                                         PointerEventType.Release -> {
-                                                            swipe.onRelease(!event.changes.any { it.pressed })
-                                                            if (swipe.isNearEdge) {
+                                                            val allPointersUp = !event.changes.any { it.pressed }
+                                                            val qmTriggered = qmSwipe.isSwipeTriggered
+                                                            val kbTriggered = kbSwipe.isSwipeTriggered
+                                                            qmSwipe.onRelease(allPointersUp)
+                                                            kbSwipe.onRelease(allPointersUp)
+                                                            if (qmTriggered || kbTriggered) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
@@ -601,7 +641,20 @@ class MirrorPresentation(
                                 // Layer 5: Fullscreen Keyboard Overlay — rendered above background
                                 // content when triggered from BackgroundMacroPadOverlay buttons.
                                 // Dismissed via edge-swipe → AppStateManager.closeActiveModal().
-                                if (capturing && isFullscreenKeyboardActive) {
+                                AnimatedVisibility(
+                                    visible = capturing && isFullscreenKeyboardActive,
+                                    enter =
+                                        slideInVertically(
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
+                                            initialOffsetY = { if (overlayAtBottom) it else -it },
+                                        ) + fadeIn(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
+                                    exit =
+                                        slideOutVertically(
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
+                                            targetOffsetY = { it },
+                                        ) + fadeOut(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
                                     KeyboardScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         forcedLayout = fullscreenKeyboardLayout,
@@ -613,7 +666,7 @@ class MirrorPresentation(
                                 // overlays (keyboard / mouse). Suppressed inside
                                 // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
                                 // only one QuickMenuBar instance exists at a time.
-                                if (capturing) {
+                                if (capturing && !isFullscreenKeyboardActive) {
                                     QuickMenuBar()
                                 }
 
@@ -627,6 +680,17 @@ class MirrorPresentation(
                                 ) {
                                     GlobalSettingsScreen(
                                         onBack = { AppStateManager.setGlobalSettingsOpen(false) },
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = isKeyboardSettingsOpen,
+                                    enter = slideInVertically { it } + fadeIn(),
+                                    exit = slideOutVertically { it } + fadeOut(),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    KeyboardSettingsOverlay(
+                                        onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
                                     )
                                 }
                             }

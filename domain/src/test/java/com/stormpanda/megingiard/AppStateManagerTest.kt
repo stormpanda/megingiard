@@ -1,18 +1,27 @@
 package com.stormpanda.megingiard
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.emptyPreferences
+import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -26,6 +35,13 @@ class AppStateManagerTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        val dummyDataStore =
+            object : DataStore<Preferences> {
+                override val data: Flow<Preferences> = emptyFlow()
+
+                override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences = emptyPreferences()
+            }
+        KeyboardSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
     }
 
     @After
@@ -118,5 +134,41 @@ class AppStateManagerTest {
             testScheduler.advanceUntilIdle()
             assertFalse(AppStateManager.isPrivdPromptActive.value)
             assertTrue(AppStateManager.isPrivdPromptDismissed.value)
+        }
+
+    @Test
+    fun `setFullscreenKeyboardActive falls back to KeyboardSettings layout when null`() =
+        runTest {
+            // Assert initial state
+            AppStateManager.setFullscreenKeyboardActive(false)
+
+            // Set layout explicitly
+            AppStateManager.setFullscreenKeyboardActive(true, KbLayout.AZERTY)
+            assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
+
+            // Reset
+            AppStateManager.setFullscreenKeyboardActive(false)
+
+            // Activate with null/default layout, it should fall back to KeyboardSettings (default QWERTZ)
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertEquals(KbLayout.QWERTZ, AppStateManager.fullscreenKeyboardLayout.value)
+        }
+
+    @Test
+    fun `fullscreenKeyboardLayout updates dynamically when KeyboardSettings layout changes`() =
+        runTest {
+            // Activate keyboard with no layout override (null)
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertEquals(KbLayout.QWERTZ, AppStateManager.fullscreenKeyboardLayout.value)
+
+            // Change persistent setting layout
+            KeyboardSettings.setKbLayout(KbLayout.AZERTY)
+
+            // Verify fullscreenKeyboardLayout changes immediately
+            assertEquals(KbLayout.AZERTY, AppStateManager.fullscreenKeyboardLayout.value)
+
+            // Clean up
+            AppStateManager.setFullscreenKeyboardActive(false)
+            KeyboardSettings.setKbLayout(KbLayout.QWERTZ)
         }
 }

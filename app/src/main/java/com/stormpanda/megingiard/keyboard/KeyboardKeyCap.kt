@@ -6,8 +6,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Backspace
+import androidx.compose.material.icons.automirrored.rounded.KeyboardReturn
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,11 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 // ---------------------------------------------------------------------------
@@ -42,8 +52,8 @@ internal data class KeyBounds(
 // Key cap composable
 // ---------------------------------------------------------------------------
 
-private val KEY_CORNER = 6.dp
-private val KEY_PADDING_V = 2.dp
+private val KEY_CORNER = 5.dp
+private val KEY_PADDING_V = 3.dp
 
 @Composable
 internal fun KeyCap(
@@ -55,15 +65,41 @@ internal fun KeyCap(
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
     modifier: Modifier = Modifier,
-    onBoundsUpdate: (KeyBounds) -> Unit,
+    onBoundsUpdate: (LayoutCoordinates) -> Unit,
 ) {
-    val isModifierActive = modifierState != ModifierState.INACTIVE
     val colors = LocalAppColors.current
+    val isModifierActive =
+        modifierState != ModifierState.INACTIVE ||
+            ((keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
+
+    // Gboard style classification
+    val isSpecialKey =
+        keyDef.id == "lshift" || keyDef.id == "rshift" ||
+            keyDef.id == "bksp" || keyDef.id.startsWith("mode_switch") ||
+            keyDef.id == "globe" || keyDef.id == "comma" || keyDef.id == "dot"
+    val isEnterKey = keyDef.id == "enter"
+
     val bg =
         when {
-            isPressed -> colors.keyPressed
-            isModifierActive -> colors.keyModifierActive
-            else -> colors.keyBackground
+            isEnterKey -> if (isPressed) accentColor.copy(alpha = 0.8f) else accentColor
+
+            isPressed -> if (isSpecialKey) colors.keyPressed.copy(alpha = 0.8f) else colors.keyPressed
+
+            isModifierActive -> accentColor.copy(alpha = 0.7f)
+
+            isSpecialKey -> colors.keyBackground.copy(alpha = 0.5f)
+
+            // Darker modifier keycap surface
+            else -> colors.keyBackground // Normal letter/number surface
+        }
+
+    val contentColor =
+        when {
+            isEnterKey -> colors.appBackground
+            isPressed -> colors.onSurface
+            isModifierActive -> colors.onSurface
+            isSpecialKey -> colors.onSurface.copy(alpha = 0.8f)
+            else -> colors.onSurface
         }
 
     Box(
@@ -73,51 +109,108 @@ internal fun KeyCap(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(KEY_CORNER))
                 .background(bg)
-                .border(
-                    width = if (isModifierActive) 1.dp else 0.5.dp,
-                    color = if (isModifierActive) accentColor.copy(alpha = 0.7f) else colors.divider,
-                    shape = RoundedCornerShape(KEY_CORNER),
-                ).onGloballyPositioned { coords ->
-                    // Record root-space bounds so the outer pointerInput can hit-test
-                    val topLeft = coords.localToRoot(Offset.Zero)
-                    onBoundsUpdate(
-                        KeyBounds(
-                            left = topLeft.x,
-                            top = topLeft.y,
-                            right = topLeft.x + coords.size.width,
-                            bottom = topLeft.y + coords.size.height,
-                        ),
-                    )
+                .onGloballyPositioned { coords ->
+                    onBoundsUpdate(coords)
                 },
         contentAlignment = Alignment.Center,
     ) {
         if (keyDef.type == KeyType.TRACKPOINT) {
+            // Renders trackpoint dot
             Box(
                 modifier =
                     Modifier
-                        .fillMaxSize(0.55f)
-                        .aspectRatio(1f)
+                        .size(16.dp)
                         .border(2.dp, colors.accent, CircleShape)
                         .clip(CircleShape)
                         .background(colors.keyBackground),
             )
         } else {
-            val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
-            val useShiftLabel = isShiftActive || (isCapsActive && isLetter)
-            val displayLabel =
-                when {
-                    isAltGrActive && keyDef.altGrLabel != null -> keyDef.altGrLabel!!
-                    useShiftLabel && keyDef.shiftLabel != null -> keyDef.shiftLabel!!
-                    else -> keyDef.label
+            // Render specific keys with Icons
+            when (keyDef.id) {
+                "lshift", "rshift" -> {
+                    Icon(
+                        imageVector = Icons.Rounded.ArrowUpward,
+                        contentDescription = stringResource(R.string.cd_kb_shift),
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
-            Text(
-                text = displayLabel,
-                color = if (isPressed) colors.onSurface else colors.onSurfaceSecondary,
-                fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 12.sp,
-                fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-            )
+
+                "bksp" -> {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Backspace,
+                        contentDescription = stringResource(R.string.cd_kb_backspace),
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                "enter" -> {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
+                        contentDescription = stringResource(R.string.cd_kb_enter),
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                "globe" -> {
+                    Icon(
+                        imageVector = Icons.Rounded.Language,
+                        contentDescription = stringResource(R.string.cd_kb_layout),
+                        tint = contentColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                else -> {
+                    val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
+                    val useShiftLabel = isShiftActive || isCapsActive
+                    val displayLabel =
+                        when {
+                            isAltGrActive && keyDef.altGrLabel != null -> {
+                                keyDef.altGrLabel!!
+                            }
+
+                            useShiftLabel -> {
+                                val s = keyDef.shiftLabel ?: keyDef.label
+                                if (isLetter) s.uppercase() else s
+                            }
+
+                            else -> {
+                                keyDef.label
+                            }
+                        }
+
+                    Text(
+                        text = displayLabel,
+                        color = contentColor,
+                        fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
+                        fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                }
+            }
+
+            // Draw Gboard-style Superscript numeric/symbol labels on top-right of letters keys
+            val superLabel = getSuperscriptDisplayLabel(keyDef)
+            if (superLabel != null && !isShiftActive && !isCapsActive && !isAltGrActive) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(top = 2.dp, end = 5.dp),
+                    contentAlignment = Alignment.TopEnd,
+                ) {
+                    Text(
+                        text = superLabel,
+                        color = contentColor.copy(alpha = 0.5f),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Light,
+                    )
+                }
+            }
         }
     }
 }

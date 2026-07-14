@@ -18,9 +18,14 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K1: Virtual Keyboard Layout
 
-- The secondary display MUST show a **full virtual keyboard** occupying the screen.
-- The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings.
-- The keyboard MUST include a **number row** (0–9 with symbol alternates), a **function row** (F1–F12), **letter rows**, and a **bottom bar** with Ctrl, Meta, Alt, Space, AltGr, and arrow keys.
+- The secondary display MUST show a **Gboard-style virtual keyboard** anchored to the bottom.
+- The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings or the keyboard's globe key.
+- The keyboard MUST feature a **4-row key layout** consisting of letter rows and a bottom spacebar bar, alongside two horizontal toolbars (top toolbar above the keys, and bottom toolbar below the keys).
+- The keyboard MUST support dynamic layout sub-modes:
+  - **LETTERS:** standard alphabetic keys, with superscript digits (1–0) visible on the top row.
+  - **SYMBOLS 1:** numbers and common symbols layout, accessed via the `?123` switcher key.
+  - **SYMBOLS 2:** alternate math/currency symbols layout, accessed via the `=\<` switcher key.
+- Tapping switcher keys toggles the active sub-mode locally in the UI, while the globe key cycles regional layouts.
 - Shift and AltGr alternate labels MUST be shown on individual keys when the respective modifier is active.
 
 ### FR-K2: Modifier Keys
@@ -51,15 +56,40 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - When placed on the **right** side, the layout is mirrored so LMB/MMB/RMB remain at the outer edge and the scroll column (M4/ScrollWheel/M5) is inward.
 - Button events MUST be consumed at `PointerEventPass.Initial` so they do not accidentally close the overlay.
 
-### FR-K4: Key Repeat
+### FR-K4: Key Repeat & Long-Press Character Popup
 
-- When **Key Repeat** is enabled in Settings, holding a normal key MUST trigger the initial key injection after **500 ms**, followed by repeated injections every **30 ms**.
-- When Key Repeat is **disabled**, a key-up event MUST be sent immediately at the moment of the initial key-down — this prevents the Linux kernel's built-in repeat from firing.
+- When **Key Repeat** is enabled in Settings, holding the backspace key (`"bksp"`) MUST trigger the initial key injection after **500 ms**, followed by repeated injections every **30 ms**.
+- Holding a top-row character key (which displays a superscript number) instead triggers a popup options bubble showing its numeric alternative after **400 ms** (no letter variants or umlauts are displayed).
+- Standard character keys do not support repeated key inputs upon press/hold; instead, their single key injection is deferred to finger release to prevent conflicts with the long-press overlay.
+- Dragging horizontally on the popup overlay selects the alternative number. Releasing the finger injects the selected number and dismisses the popup.
+- When Key Repeat is **disabled** for control keys, a key-up event MUST be sent immediately at the moment of the initial key-down to prevent the system-level repeat from firing.
 
 ### FR-K5: No Special Permissions Required
 
 - The keyboard MUST function without root access or additional Android permissions beyond the app's declared set.
 - On the AYN Thor, the `/dev/uinput` device node is accessible under the standard shell UID (2000).
+
+### FR-K7: Quick Keyboard Bar
+
+- A slim rounded bar tab (QuickKeyboardBar) MUST be rendered at the left/start side of the configured screen edge, matching the styling and behavior of the Quick Menu Bar.
+- Swiping this bar from the edge MUST open the virtual keyboard overlay with a slide-in + fade animation:
+  - From the bottom up if the Quick Menu is configured at the bottom.
+  - From the top down if the Quick Menu is configured at the top.
+- While the keyboard is active, the QuickKeyboardBar MUST be hidden. Swiping from the edge closes the keyboard overlay.
+
+### FR-K8: Spacebar Cursor Navigation
+
+- Pressing and holding the spacebar key (`"space"` or `"space_num"`) and dragging horizontally MUST trigger cursor navigation.
+- If the drag distance exceeds **12 dp**, cursor sliding mode is activated. The visual key press is cancelled and no space character will be typed on finger release.
+- Moving the finger horizontally during cursor sliding mode by every **10 dp** MUST inject a single `KEY_LEFT` (for leftward swipe) or `KEY_RIGHT` (for rightward swipe) keypress.
+- If the finger is released without triggering the drag threshold, a single space character event MUST be injected on up release.
+
+### FR-K9: Keyboard Settings Toolbar Button & Screen
+
+- The bottom toolbar MUST render a Settings Cog button on the right-hand side.
+- Tapping this button MUST open a fullscreen Keyboard Settings screen overlay.
+- The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
+- Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
 
 ---
 
@@ -161,6 +191,12 @@ Layouts share a common **function row** (F1–F12) and **bottom bar** (Ctrl / Me
 | `STICKY`   | Quick tap (< 300 ms press duration) | Any non-modifier key injection |
 | `HELD`     | Long press (≥ 300 ms)               | Finger lifted from modifier    |
 
+#### CapsLock Toggle (via Shift Button)
+- Long pressing the Shift button (`"lshift"` / `"rshift"`) for `≥ 300 ms` activates CapsLock (`caps` state set to `HELD`). Lift-release leaves CapsLock active so subsequent characters remain capitalized.
+- Tapping the Shift button once (quick press/release) while CapsLock is active turns off both Shift and CapsLock, returning the keyboard to lowercase input.
+- **Letter Constraints**: Shift/CapsLock modifiers only apply to alphabetical letter keys. Non-letter keys (numbers, symbols, spaces, backspaces) do not receive the Shift modifier keycode unless a Shift key is physically held down.
+- **Layout Switch Reset**: Both CapsLock and Shift states are immediately reset to `INACTIVE` when switching keyboard layout or mode.
+
 `KeyboardState.activeModifierKeycodes()` collects the Linux keycodes of all modifiers that are currently STICKY or HELD. These are injected as key-down events before the primary key and key-up events after it.
 
 `KeyboardState.releaseStickyModifiers()` is called after each non-modifier key injection to transition all STICKY states back to INACTIVE.
@@ -212,6 +248,7 @@ When a full-screen UI overlay is visible:
 | Module / Path | File | Responsibility |
 | --- | --- | --- |
 | **`:app`** | [KeyboardScreen.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardScreen.kt) | Compose UI: layout rendering, gesture handling, and trackpoint overlay integration |
+| **`:app`** | [KeyboardSettingsOverlay.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardSettingsOverlay.kt) | Fullscreen Settings Composable: dropdown select for regional keyboard layouts |
 | **`:app`** | [KeyboardKeyCap.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardKeyCap.kt) | KeyCap Composable: rendering, highlighting, and bounds reporting |
 | **`:app`** | [KeyboardMouseOverlay.kt](../../../app/src/main/java/com/stormpanda/megingiard/keyboard/KeyboardMouseOverlay.kt) | Mouse Overlay: renders columns for mouse buttons (LMB/MMB/RMB/M4/M5) and scroll wheel |
 | **`:app`** | [KeyboardViewModel.kt](../../../app/src/main/java/com/stormpanda/megingiard/viewmodel/KeyboardViewModel.kt) | VM coordinating keyboard state, repeat controller scope, and injector startup/shutdown |
@@ -236,4 +273,10 @@ When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `K
 
 `MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `KeyInjector` runs at a time.
 
-Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenKeyboardActive.value = false`.
+Both screens feature a left-aligned visual `QuickKeyboardBarTab` and use a dedicated `SwipeGestureProcessor` covering the left-most 120 dp edge zone (representing the `QuickKeyboardBar`) to swipe and toggle the virtual keyboard overlay. 
+
+When toggled, `KeyboardScreen` is shown/hidden via `AnimatedVisibility` with a slide-in + fade transition:
+- Animates from the bottom up when `SettingsManager.overlayAtBottom` is true.
+- Animates from the top down when `SettingsManager.overlayAtBottom` is false.
+
+Dismissal on both displays reuses the edge-swipe gesture path: swiping any edge bar zone (center or left) while the keyboard is open resolves to `AppStateManager.closeActiveModal()`, closing the overlay with a matching slide-out and fade-out animation.

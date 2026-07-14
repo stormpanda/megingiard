@@ -317,6 +317,34 @@ class MacroPadStateTest {
     }
 
     @Test
+    fun `fullscreen keyboard and mouse actions do not enable background injector flags`() {
+        val p1Id = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val p1 =
+            PadProfile(
+                id = p1Id,
+                name = "P1",
+                layouts =
+                    listOf(
+                        PadLayout(
+                            id = l1Id,
+                            name = "L1",
+                            buttons =
+                                listOf(
+                                    PadButton(id = "b1", label = "KB", posX = 0.1f, posY = 0.1f, action = PadAction.FullScreenKeyboard()),
+                                    PadButton(id = "b2", label = "MS", posX = 0.2f, posY = 0.2f, action = PadAction.FullScreenMouse()),
+                                ),
+                        ),
+                    ),
+                activeLayoutId = l1Id,
+            )
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+        val active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(false, active.enableMouse)
+    }
+
+    @Test
     fun `copyMacroToProfile clones macro to target profile with new ID and name on collision`() {
         val p1Id = UUID.randomUUID().toString()
         val p2Id = UUID.randomUUID().toString()

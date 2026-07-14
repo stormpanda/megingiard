@@ -291,9 +291,9 @@ internal fun ActionCategory.isEnabled(
         ActionCategory.MIRROR_TOUCH_PROJECTION,
         -> true
 
-        ActionCategory.FULLSCREEN_MOUSE -> enableMouse
-
-        ActionCategory.FULLSCREEN_KEYBOARD -> enableKeyboard
+        ActionCategory.FULLSCREEN_MOUSE,
+        ActionCategory.FULLSCREEN_KEYBOARD,
+        -> true
     }
 
 @Composable

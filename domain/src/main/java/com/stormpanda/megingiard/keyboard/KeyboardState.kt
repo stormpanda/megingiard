@@ -74,6 +74,9 @@ object KeyboardState {
         val downTime = touchDownTimes.remove(id) ?: System.currentTimeMillis()
         val duration = System.currentTimeMillis() - downTime
 
+        val capsFlow = getOrCreate("caps")
+        val wasCapsActive = capsFlow.value != ModifierState.INACTIVE
+
         return when (flow.value) {
             ModifierState.HELD -> {
                 AppLog.d(TAG, "modifier '$id' HELD → INACTIVE (keycode=$keycode)")
@@ -85,10 +88,21 @@ object KeyboardState {
                 // second tap on an already-sticky modifier cycles back to INACTIVE
                 AppLog.d(TAG, "modifier '$id' STICKY → INACTIVE (second tap)")
                 flow.value = ModifierState.INACTIVE
+                if (id == "lshift" || id == "rshift") {
+                    if (wasCapsActive) {
+                        capsFlow.value = ModifierState.INACTIVE
+                    }
+                }
                 if (keycode != 0) listOf(keycode) else emptyList()
             }
 
             ModifierState.INACTIVE -> {
+                if (id == "lshift" || id == "rshift") {
+                    if (wasCapsActive) {
+                        capsFlow.value = ModifierState.INACTIVE
+                        return if (keycode != 0) listOf(keycode) else emptyList()
+                    }
+                }
                 if (duration < MODIFIER_HOLD_THRESHOLD_MS) {
                     // quick tap → sticky
                     AppLog.d(TAG, "modifier '$id' INACTIVE → STICKY (${duration}ms < ${MODIFIER_HOLD_THRESHOLD_MS}ms)")
@@ -113,6 +127,9 @@ object KeyboardState {
         if (flow.value == ModifierState.INACTIVE) {
             AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (long-press)")
             flow.value = ModifierState.HELD
+            if (id == "lshift" || id == "rshift") {
+                getOrCreate("caps").value = ModifierState.HELD
+            }
             return if (keycode != 0) keycode else null
         }
         return null
@@ -141,7 +158,6 @@ object KeyboardState {
         return keycodes
     }
 
-    /** Returns the keycodes of all currently STICKY or HELD modifiers (for KEY_DOWN on press). */
     fun activeModifierKeycodes(layout: List<List<KeyDef>>): List<Int> {
         val keycodes = mutableListOf<Int>()
         for (row in layout) {
@@ -152,6 +168,29 @@ object KeyboardState {
                         keycodes += key.linuxKeycode
                     }
                 }
+            }
+        }
+        val capsState = _modifiers["caps"]?.value ?: ModifierState.INACTIVE
+        if (capsState != ModifierState.INACTIVE) {
+            if (LinuxKeycodes.KEY_LEFTSHIFT !in keycodes) {
+                keycodes += LinuxKeycodes.KEY_LEFTSHIFT
+            }
+        }
+        return keycodes
+    }
+
+    /** Returns the keycodes of all active modifiers, filtering out Shift for non-letter keys if not held. */
+    fun activeModifierKeycodesFor(
+        key: KeyDef,
+        layout: List<List<KeyDef>>,
+    ): List<Int> {
+        val keycodes = activeModifierKeycodes(layout)
+        val isLetter = key.label.length == 1 && key.label[0].isLetter()
+        if (!isLetter) {
+            val lshiftHeld = _modifiers["lshift"]?.value == ModifierState.HELD
+            val rshiftHeld = _modifiers["rshift"]?.value == ModifierState.HELD
+            if (!lshiftHeld && !rshiftHeld) {
+                return keycodes.filter { it != LinuxKeycodes.KEY_LEFTSHIFT }
             }
         }
         return keycodes

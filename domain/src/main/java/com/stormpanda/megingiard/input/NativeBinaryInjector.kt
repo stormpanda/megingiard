@@ -106,6 +106,7 @@ abstract class NativeBinaryInjector<T>(
         }
         try {
             process?.destroy()
+            process?.destroyForcibly()
         } catch (_: Exception) {
         }
         writer = null

@@ -14,10 +14,9 @@ import org.junit.Test
  *   (the trackpoint sentinel uses 0; modifier keys still inject and must be > 0).
  *
  * Plus structural invariants:
- * - Every layout has 6 rows (F-row, number-row, top, home, bottom, bottom-bar).
+ * - Every layout has 4 rows.
  * - Key IDs are unique within a layout.
- * - The trackpoint key exists, has KeyType.TRACKPOINT and linuxKeycode == 0.
- * - All non-trackpoint keys have linuxKeycode in 1..255.
+ * - All non-trackpoint keys have linuxKeycode in 0..255.
  */
 class KeyboardLayoutTest {
     private val layouts =
@@ -28,9 +27,9 @@ class KeyboardLayoutTest {
         )
 
     @Test
-    fun `every layout has six rows`() {
+    fun `every layout has four rows`() {
         for ((name, layout) in layouts) {
-            assertEquals("$name row count", 6, layout.size)
+            assertEquals("$name row count", 4, layout.size)
         }
     }
 
@@ -49,24 +48,15 @@ class KeyboardLayoutTest {
     }
 
     @Test
-    fun `non-trackpoint keycodes are within 1 to 255 range`() {
+    fun `non-trackpoint keycodes are within 0 to 255 range`() {
         for ((name, layout) in layouts) {
             for (key in layout.flatten()) {
                 if (key.type == KeyType.TRACKPOINT) continue
                 assertTrue(
                     "$name key '${key.id}' has out-of-range keycode ${key.linuxKeycode}",
-                    key.linuxKeycode in 1..255,
+                    key.linuxKeycode in 0..255,
                 )
             }
-        }
-    }
-
-    @Test
-    fun `trackpoint key exists in every layout with sentinel keycode`() {
-        for ((name, layout) in layouts) {
-            val trackpoint = layout.flatten().firstOrNull { it.type == KeyType.TRACKPOINT }
-            assertNotNull("$name has no trackpoint key", trackpoint)
-            assertEquals("$name trackpoint keycode must be 0", 0, trackpoint!!.linuxKeycode)
         }
     }
 
@@ -103,5 +93,91 @@ class KeyboardLayoutTest {
             val modifiers = layout.flatten().filter { it.type == KeyType.MODIFIER }
             assertTrue("$name has no MODIFIER keys", modifiers.isNotEmpty())
         }
+    }
+
+    @Test
+    fun `symbols layouts contain ABC switcher key`() {
+        val sym1 = qwertzLayout(KeyboardMode.SYMBOLS_1)
+        val sym2 = qwertzLayout(KeyboardMode.SYMBOLS_2)
+        assertNotNull("Symbols 1 has ABC switcher key", findKeyInLayout(sym1, "mode_switch_abc"))
+        assertNotNull("Symbols 2 has ABC switcher key", findKeyInLayout(sym2, "mode_switch_abc"))
+    }
+
+    @Test
+    fun `findKeyInLayout filters switcher keys correctly across modes`() {
+        val letters = qwertzLayout(KeyboardMode.LETTERS)
+        val symbols = qwertzLayout(KeyboardMode.SYMBOLS_1)
+
+        // mode_switch (?123) exists in letters mode but not symbols mode
+        assertNotNull(findKeyInLayout(letters, "mode_switch"))
+        assertNull(findKeyInLayout(symbols, "mode_switch"))
+
+        // mode_switch_abc (ABC) exists in symbols mode but not letters mode
+        assertNotNull(findKeyInLayout(symbols, "mode_switch_abc"))
+        assertNull(findKeyInLayout(letters, "mode_switch_abc"))
+    }
+
+    @Test
+    fun `numeric layout contains expected keys and row count`() {
+        val numLayout = qwertzLayout(KeyboardMode.NUMERIC)
+        assertEquals("Numeric layout has 4 rows", 4, numLayout.size)
+
+        // Verify key existences
+        assertNotNull("Numeric has ABC switcher", findKeyInLayout(numLayout, "mode_switch_abc"))
+        assertNotNull("Numeric has !?# switcher", findKeyInLayout(numLayout, "mode_switch"))
+        assertNotNull("Numeric has plus key", findKeyInLayout(numLayout, "plus"))
+        assertNotNull("Numeric has minus key", findKeyInLayout(numLayout, "minus"))
+        assertNotNull("Numeric has asterisk key", findKeyInLayout(numLayout, "asterisk"))
+        assertNotNull("Numeric has slash key", findKeyInLayout(numLayout, "slash"))
+
+        // Verify digits 0-9 exist
+        for (i in 0..9) {
+            assertNotNull("Numeric has digit $i", findKeyInLayout(numLayout, "num_$i"))
+        }
+    }
+
+    @Test
+    fun `KeyboardLayoutState holds correct mode and grid`() {
+        val grid = qwertzLayout(KeyboardMode.LETTERS)
+        val state = KeyboardLayoutState(KeyboardMode.LETTERS, grid)
+        assertEquals(KeyboardMode.LETTERS, state.mode)
+        assertEquals(grid, state.grid)
+    }
+
+    @Test
+    fun `getPopupOptions generates expected options list`() {
+        val eKey = KeyDef("e", "e", 18, superscript = "3")
+        val optionsLower = getPopupOptions(eKey, isUpper = false)
+        assertEquals(1, optionsLower.size)
+        assertTrue(optionsLower.contains("3"))
+
+        val optionsUpper = getPopupOptions(eKey, isUpper = true)
+        assertEquals(1, optionsUpper.size)
+        assertTrue(optionsUpper.contains("3"))
+
+        // Keys without superscript return empty list
+        val fKey = KeyDef("f", "f", 33)
+        assertTrue(getPopupOptions(fKey, isUpper = false).isEmpty())
+
+        // Multi-option keys popup lists
+        val jKey = KeyDef("j", "j", 36, superscript = "(")
+        val jOptions = getPopupOptions(jKey, isUpper = false)
+        assertEquals(listOf("(", "[", "{", "<"), jOptions)
+
+        val lparenKey = KeyDef("lparen", "(", 10)
+        val lparenOptions = getPopupOptions(lparenKey, isUpper = false)
+        assertEquals(listOf("[", "{", "<"), lparenOptions)
+    }
+
+    @Test
+    fun `getSuperscriptDisplayLabel returns correct combined superscript strings`() {
+        val jKey = KeyDef("j", "j", 36, superscript = "(")
+        assertEquals("( [ { <", getSuperscriptDisplayLabel(jKey))
+
+        val lparenKey = KeyDef("lparen", "(", 10)
+        assertEquals("[ { <", getSuperscriptDisplayLabel(lparenKey))
+
+        val eKey = KeyDef("e", "e", 18, superscript = "3")
+        assertEquals("3", getSuperscriptDisplayLabel(eKey))
     }
 }

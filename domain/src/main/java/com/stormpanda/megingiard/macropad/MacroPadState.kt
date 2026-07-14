@@ -45,8 +45,7 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
     val kb =
         hasMacro ||
             allButtons.any {
-                it.action is PadAction.KeyboardKey ||
-                    it.action is PadAction.FullScreenKeyboard
+                it.action is PadAction.KeyboardKey
             }
     val gp = hasMacro || allButtons.any { it.action is PadAction.GamepadButton }
     val ms =
@@ -54,8 +53,7 @@ private fun PadProfile.withSyncedDeviceFlags(): PadProfile {
             allButtons.any {
                 it.action is PadAction.MouseButton ||
                     it.action is PadAction.ScrollWheel ||
-                    (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE) ||
-                    it.action is PadAction.FullScreenMouse
+                    (it.action is PadAction.TrackpointMove && (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE)
             }
     val ts =
         hasMacro ||

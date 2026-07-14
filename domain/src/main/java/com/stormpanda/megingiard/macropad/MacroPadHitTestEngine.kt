@@ -528,12 +528,10 @@ class MacroPadHitTestEngine(
                     null
                 }
 
-                is PadAction.FullScreenMouse -> {
-                    if (!profile.enableMouse) DisabledReason.MOUSE else null
-                }
-
-                is PadAction.FullScreenKeyboard -> {
-                    if (!profile.enableKeyboard) DisabledReason.KEYBOARD else null
+                is PadAction.FullScreenMouse,
+                is PadAction.FullScreenKeyboard,
+                -> {
+                    null
                 }
             }
     }

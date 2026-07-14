@@ -207,4 +207,34 @@ class SwipeGestureProcessorTest {
         p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 100f, containerWidth = 400f)
         assertFalse(p.isNearEdge)
     }
+
+    @Test
+    fun `isNearEdge is true when press lands in edge zone and within custom zone check`() {
+        val p =
+            SwipeGestureProcessor(
+                edgeZonePx = EDGE_ZONE_PX,
+                swipeThresholdPx = THRESHOLD_PX,
+                overlayAtBottom = false,
+                customZoneCheck = { x, _ -> x >= 20f && x <= 80f },
+                onTouchingChanged = {},
+                onEdgeSwipe = {},
+            )
+        p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 50f, containerWidth = 400f)
+        assertTrue(p.isNearEdge)
+    }
+
+    @Test
+    fun `isNearEdge is false when press lands in edge zone but outside custom zone check`() {
+        val p =
+            SwipeGestureProcessor(
+                edgeZonePx = EDGE_ZONE_PX,
+                swipeThresholdPx = THRESHOLD_PX,
+                overlayAtBottom = false,
+                customZoneCheck = { x, _ -> x >= 20f && x <= 80f },
+                onTouchingChanged = {},
+                onEdgeSwipe = {},
+            )
+        p.onPress(pointerY = 30f, containerHeight = CONTAINER_H, pointerX = 100f, containerWidth = 400f)
+        assertFalse(p.isNearEdge)
+    }
 }

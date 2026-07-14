@@ -61,7 +61,18 @@
     <string name="settings_color_apply">Apply</string>
 
     <!-- Keyboard settings -->
+    <string name="settings_keyboard_title">Keyboard Settings</string>
     <string name="cd_keyboard_trackpoint">Trackpoint</string>
+    <string name="cd_kb_select_all">Select All</string>
+    <string name="cd_kb_cut">Cut</string>
+    <string name="cd_kb_copy">Copy</string>
+    <string name="cd_kb_paste">Paste</string>
+    <string name="cd_kb_shift">Shift</string>
+    <string name="cd_kb_backspace">Backspace</string>
+    <string name="cd_kb_enter">Enter</string>
+    <string name="cd_kb_layout">Keyboard Layout</string>
+    <string name="cd_kb_collapse">Collapse Keyboard</string>
+    <string name="cd_kb_settings">Keyboard Settings</string>
     <string name="settings_kb_layout">Keyboard layout</string>
     <string name="settings_kb_layout_desc">Key arrangement for letters</string>
     <string name="settings_kb_layout_qwertz">QWERTZ</string>
@@ -924,6 +935,10 @@ Open Settings to create a layout.</string>
     <string name="help_settings_reconnect_prompt_desc">If active, shows a helpful reconnect wizard dialog on app start if the background helper connection drops, allowing you to pair and resume instantly.</string>
     <string name="help_settings_log_level_desc">Leave at Warn or Info for normal gameplay. Set to Debug or Verbose only when reproducing an issue to gather detailed logs for a bug report.</string>
     <string name="help_settings_save_log_desc">Exports the latest system logs. Generate this immediately after experiencing a bug or crash to attach it to a GitHub issue or developer report.</string>
+    <!-- Keyboard settings help -->
+    <string name="help_keyboard_settings_title">Keyboard Settings — Help</string>
+    <string name="help_keyboard_settings_intro">Configure layouts and keys for the Gboard-style virtual keyboard.</string>
+    <string name="help_keyboard_settings_layout_desc">Select your preferred letters arrangement (QWERTY, QWERTZ, or AZERTY). Note that this configuration only impacts the letters (ABC) keyboard layout mode. Numeric and symbols layout layers remain identical across regional formats.</string>
 
     <!-- Quick Menu help -->
     <string name="help_quickmenu_title">Quick Menu — Help</string>

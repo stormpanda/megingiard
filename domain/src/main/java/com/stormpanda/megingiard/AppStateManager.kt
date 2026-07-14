@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -225,6 +226,14 @@ object AppStateManager {
         _isGlobalSettingsOpen.value = open
     }
 
+    private val _isKeyboardSettingsOpen = MutableStateFlow(false)
+    val isKeyboardSettingsOpen: StateFlow<Boolean> = _isKeyboardSettingsOpen.asStateFlow()
+
+    fun setKeyboardSettingsOpen(open: Boolean) {
+        AppLog.d(TAG, "setKeyboardSettingsOpen($open)")
+        _isKeyboardSettingsOpen.value = open
+    }
+
     private var wasViewportEditActiveBeforeSettings = false
 
     /**
@@ -251,8 +260,11 @@ object AppStateManager {
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
-    private val _fullscreenKeyboardLayout = MutableStateFlow(KbLayout.QWERTZ)
-    val fullscreenKeyboardLayout: StateFlow<KbLayout> = _fullscreenKeyboardLayout.asStateFlow()
+    private val _forcedKeyboardLayout = MutableStateFlow<KbLayout?>(null)
+    val fullscreenKeyboardLayout: StateFlow<KbLayout> =
+        combine(_forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
+            forced ?: settings
+        }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
 
     /** Whether the MacroPad layout editor is currently open. */
     private val _isEditorActive = MutableStateFlow(false)
@@ -270,19 +282,22 @@ object AppStateManager {
             _isBackgroundSettingsActive,
             MacroPadState.isPeekActive,
             _isGlobalSettingsOpen,
+            _isKeyboardSettingsOpen,
         ) { array: Array<Boolean> -> array.any { it } }
             .stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(
         active: Boolean,
-        layout: KbLayout = KbLayout.QWERTZ,
+        layout: KbLayout? = null,
     ) {
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
-            _fullscreenKeyboardLayout.value = layout
+            _forcedKeyboardLayout.value = layout
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
             _isBackgroundSettingsActive.value = false
+        } else {
+            _forcedKeyboardLayout.value = null
         }
         _isFullscreenKeyboardActive.value = active
     }
@@ -342,6 +357,7 @@ object AppStateManager {
         _isViewportEditActive.value = false
         _isBackgroundSettingsActive.value = false
         _isGlobalSettingsOpen.value = false
+        _isKeyboardSettingsOpen.value = false
         _isAmbientPreviewActive.value = false
         _ambientPreviewConfig.value = null
         _activeCropCutoutId.value = null

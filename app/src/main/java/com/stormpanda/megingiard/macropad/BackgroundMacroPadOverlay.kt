@@ -36,7 +36,10 @@ import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.macropad.ButtonColorStyle
+import com.stormpanda.megingiard.macropad.GamepadInjector
+import com.stormpanda.megingiard.macropad.PadAction
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.TrackpointMode
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuBar
@@ -66,7 +69,8 @@ private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
 
 private data class AmbientInjectorGate(
     val stopKeyboard: Boolean,
-    val stopMouseAndGamepad: Boolean,
+    val stopMouse: Boolean,
+    val stopGamepad: Boolean,
 )
 
 private const val TAG = "BackgroundMacroPadOverlay"
@@ -86,14 +90,48 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
     val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
     val quickMenuBarZoneWidthPx = with(density) { AM_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
-    val swipeProcessor =
+
+    val kbBarWidthPx = with(density) { 72.dp.toPx() }
+    val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
+    val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
+    val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
+    val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
+    val qmSwipe =
         remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx) {
-            SwipeGestureProcessor(edgeZonePx, swipeThresholdPx, overlayAtBottom, quickMenuBarZoneWidthPx)
+            SwipeGestureProcessor(
+                edgeZonePx = edgeZonePx,
+                swipeThresholdPx = swipeThresholdPx,
+                overlayAtBottom = overlayAtBottom,
+                quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
+                onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+            )
+        }
+
+    val kbSwipe =
+        remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, kbBarMinX, kbBarMaxX) {
+            SwipeGestureProcessor(
+                edgeZonePx = edgeZonePx,
+                swipeThresholdPx = swipeThresholdPx,
+                overlayAtBottom = overlayAtBottom,
+                customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                onEdgeSwipe = {
+                    if (AppStateManager.isAnyModalActive.value) {
+                        AppStateManager.closeActiveModal()
+                    } else if (AppStateManager.isQuickMenuOpen.value) {
+                        AppStateManager.closeQuickMenu()
+                    } else {
+                        AppStateManager.setFullscreenKeyboardActive(true)
+                    }
+                },
+            )
         }
 
     // Effective dim: overridden to 0 when peeking
@@ -111,47 +149,101 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             AppStateManager.isFullscreenKeyboardActive,
             AppStateManager.isFullscreenMouseActive,
             AppStateManager.isViewportEditActive,
+            MacroPadState.activeLayout,
         ) { array ->
-            val quickMenu = array[0]
-            val editor = array[1]
-            val ambient = array[2]
-            val kb = array[3]
-            val mouse = array[4]
-            val vp = array[5]
-            val stopAll = editor || ambient || kb || mouse || vp
+            val quickMenu = array[0] as Boolean
+            val editor = array[1] as Boolean
+            val ambient = array[2] as Boolean
+            val kb = array[3] as Boolean
+            val mouse = array[4] as Boolean
+            val vp = array[5] as Boolean
+            val activeL = array[6] as? PadLayout
+
+            val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
+            val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
+            val hasMouse =
+                activeL?.buttons?.any {
+                    it.action is PadAction.MouseButton ||
+                        it.action is PadAction.ScrollWheel ||
+                        (
+                            it.action is PadAction.TrackpointMove &&
+                                (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
+                        )
+                } == true
+
+            val blockingModal = editor || ambient || vp
+            val startKeyboard = kb || (hasKeyboard && !blockingModal)
+            val startMouse = mouse || (hasMouse && !blockingModal && !kb)
+            val startGamepad = hasGamepad && !blockingModal && !quickMenu && !kb && !mouse
+
             AmbientInjectorGate(
-                stopKeyboard = stopAll,
-                stopMouseAndGamepad = stopAll || quickMenu,
+                stopKeyboard = !startKeyboard,
+                stopMouse = !startMouse,
+                stopGamepad = !startGamepad,
             )
         }.distinctUntilChanged()
             .collectLatest { gate ->
-                when {
-                    gate.stopKeyboard -> {
-                        AppLog.d(TAG, "blocking modal open → stopping keyboard/gamepad/mouse injectors")
-                        KeyInjector.stop()
-                        GamepadInjector.stop()
-                        MouseInjector.stop()
+                if (gate.stopKeyboard) {
+                    AppLog.d(TAG, "stopping keyboard injector")
+                    KeyInjector.stop()
+                }
+                if (gate.stopMouse) {
+                    AppLog.d(TAG, "stopping mouse injector")
+                    MouseInjector.stop()
+                }
+                if (gate.stopGamepad) {
+                    AppLog.d(TAG, "stopping gamepad injector")
+                    GamepadInjector.stop()
+                }
+
+                // Absorb rapid transitions (e.g. QuickMenu closes then Editor opens
+                // in the same frame). collectLatest will cancel this branch
+                // if any gate flips back to stop-mode within the delay window.
+                delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
+                withContext(Dispatchers.IO) {
+                    val activeL = MacroPadState.activeLayout.value
+                    val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
+                    val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
+                    val hasMouse =
+                        activeL?.buttons?.any {
+                            it.action is PadAction.MouseButton ||
+                                it.action is PadAction.ScrollWheel ||
+                                (
+                                    it.action is PadAction.TrackpointMove &&
+                                        (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
+                                )
+                        } == true
+                    val hasTouch =
+                        activeL?.buttons?.any {
+                            (
+                                it.action is PadAction.TrackpointMove &&
+                                    (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH
+                            ) ||
+                                it.action is PadAction.Macro
+                        } == true
+
+                    val blockingModalActive =
+                        AppStateManager.isEditorActive.value || AppStateManager.isBackgroundSettingsActive.value ||
+                            AppStateManager.isViewportEditActive.value
+
+                    if (!gate.stopKeyboard && hasKeyboard) {
+                        KeyInjector.start(context)
+                    }
+                    if (!gate.stopGamepad && hasGamepad) {
+                        GamepadInjector.start(context)
+                    }
+                    if (!gate.stopMouse && hasMouse) {
+                        MouseInjector.start(context)
                     }
 
-                    gate.stopMouseAndGamepad -> {
-                        AppLog.d(TAG, "quick menu open → stopping gamepad/mouse injectors")
-                        GamepadInjector.stop()
-                        MouseInjector.stop()
-                    }
-
-                    else -> {
-                        delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
-                        withContext(Dispatchers.IO) {
-                            val ap = MacroPadState.activeProfile.value
-                            AppLog.i(
-                                TAG,
-                                "all guards clear → starting injectors for profile '${ap?.name}' (kb=${ap?.enableKeyboard} gp=${ap?.enableGamepad} ms=${ap?.enableMouse} ts=${ap?.enableTouch})",
-                            )
-                            if (ap?.enableKeyboard == true) KeyInjector.start(context)
-                            if (ap?.enableGamepad == true) GamepadInjector.start(context)
-                            if (ap?.enableMouse == true) MouseInjector.start(context)
-                            if (ap?.enableTouch == true) TouchInjector.start(context, "BackgroundMacroPadOverlay")
+                    if (hasTouch) {
+                        if (!blockingModalActive) {
+                            TouchInjector.start(context, "BackgroundMacroPadOverlay")
+                        } else {
+                            TouchInjector.stop("BackgroundMacroPadOverlay")
                         }
+                    } else {
+                        TouchInjector.stop("BackgroundMacroPadOverlay")
                     }
                 }
             }
@@ -173,8 +265,17 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
         modifier =
             Modifier
                 .fillMaxSize()
-                .pointerInput(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx, previewConfig == null) {
-                    if (previewConfig != null) return@pointerInput
+                .pointerInput(
+                    overlayAtBottom,
+                    edgeZonePx,
+                    swipeThresholdPx,
+                    quickMenuBarZoneWidthPx,
+                    kbBarMinX,
+                    kbBarMaxX,
+                    previewConfig == null,
+                    isFullscreenKeyboardActive,
+                ) {
+                    if (previewConfig != null || isFullscreenKeyboardActive) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -183,28 +284,36 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                             val y = primaryChange?.position?.y ?: 0f
                             when (event.type) {
                                 PointerEventType.Press -> {
-                                    swipeProcessor.onPress(
+                                    qmSwipe.onPress(
                                         pointerY = y,
                                         containerHeight = size.height.toFloat(),
                                         pointerX = x,
                                         containerWidth = size.width.toFloat(),
                                     )
-                                    if (swipeProcessor.isNearEdge) {
-                                        event.changes.forEach { it.consume() }
-                                    }
+                                    kbSwipe.onPress(
+                                        pointerY = y,
+                                        containerHeight = size.height.toFloat(),
+                                        pointerX = x,
+                                        containerWidth = size.width.toFloat(),
+                                    )
+                                    // No Press consumption
                                 }
 
                                 PointerEventType.Move -> {
-                                    swipeProcessor.onMove(y)
-                                    if (swipeProcessor.isNearEdge) {
+                                    qmSwipe.onMove(y)
+                                    kbSwipe.onMove(y)
+                                    if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
 
                                 PointerEventType.Release -> {
                                     val allPointersLifted = !event.changes.any { it.pressed }
-                                    swipeProcessor.onRelease(allPointersLifted)
-                                    if (swipeProcessor.isNearEdge) {
+                                    val qmTriggered = qmSwipe.isSwipeTriggered
+                                    val kbTriggered = kbSwipe.isSwipeTriggered
+                                    qmSwipe.onRelease(allPointersLifted)
+                                    kbSwipe.onRelease(allPointersLifted)
+                                    if (qmTriggered || kbTriggered) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
@@ -332,6 +441,6 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             }
         }
 
-        if (showQuickMenuBar) QuickMenuBar()
+        if (showQuickMenuBar && !isFullscreenKeyboardActive) QuickMenuBar()
     }
 }
