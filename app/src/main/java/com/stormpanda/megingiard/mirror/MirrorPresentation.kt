@@ -289,6 +289,10 @@ class MirrorPresentation(
                 TouchpadSettings.touchpadMirroringEnabled,
                 AppStateManager.touchpadBounds,
             ) { cutouts, isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled, touchpadBounds ->
+                AppLog.d(
+                    TAG,
+                    "cutout-combine: active=$isFullscreenMouseActive mouse=$touchpadUseMouse mirror=$touchpadMirroringEnabled bounds=$touchpadBounds",
+                )
                 if (isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled && touchpadBounds != null) {
                     val w = targetWidth.toFloat()
                     val h = targetHeight.toFloat()
@@ -388,6 +392,7 @@ class MirrorPresentation(
             )
         val composeView =
             ComposeView(composeViewContext).apply {
+                alpha = 0.999f
                 setContent {
                     val themeMode by SettingsManager.themeMode.collectAsState()
                     val userAccentArgb by SettingsManager.accentColor.collectAsState()

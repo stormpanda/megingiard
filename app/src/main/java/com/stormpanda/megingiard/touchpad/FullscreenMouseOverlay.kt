@@ -48,9 +48,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
@@ -168,26 +169,33 @@ fun FullscreenMouseOverlay() {
                             event.changes.forEach { it.consume() }
                         }
                     }
-                }.graphicsLayer(alpha = 0.999f)
-                .drawBehind {
-                    drawRect(colors.keyboardBackground)
+                }.drawBehind {
                     if (isMirroringActive && touchpadBounds != null) {
                         val tb = touchpadBounds!!
-                        val rect =
-                            androidx.compose.ui.geometry.Rect(
-                                left = tb.left,
-                                top = tb.top,
-                                right = tb.right,
-                                bottom = tb.bottom,
-                            )
-                        val corner = 12.dp.toPx()
-                        drawRoundRect(
-                            color = Color.Transparent,
-                            topLeft = rect.topLeft,
-                            size = rect.size,
-                            cornerRadius = CornerRadius(corner, corner),
-                            blendMode = BlendMode.Clear,
-                        )
+                        val path =
+                            Path().apply {
+                                addRect(
+                                    androidx.compose.ui.geometry
+                                        .Rect(0f, 0f, size.width, size.height),
+                                )
+                                val corner = 12.dp.toPx()
+                                addRoundRect(
+                                    RoundRect(
+                                        rect =
+                                            androidx.compose.ui.geometry.Rect(
+                                                left = tb.left,
+                                                top = tb.top,
+                                                right = tb.right,
+                                                bottom = tb.bottom,
+                                            ),
+                                        cornerRadius = CornerRadius(corner, corner),
+                                    ),
+                                )
+                                fillType = PathFillType.EvenOdd
+                            }
+                        drawPath(path, colors.keyboardBackground)
+                    } else {
+                        drawRect(colors.keyboardBackground)
                     }
                 },
     ) {
