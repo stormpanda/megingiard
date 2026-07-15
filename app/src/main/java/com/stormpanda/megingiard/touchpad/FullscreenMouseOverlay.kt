@@ -481,7 +481,7 @@ fun FullscreenMouseOverlay() {
                 Icon(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = stringResource(R.string.cd_touchpad_collapse),
-                    tint = colors.onSurface.copy(alpha = if (hasActivePointers) 0.3f else 0.7f),
+                    tint = colors.onSurface.copy(alpha = 0.7f),
                     modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
                 )
             }
