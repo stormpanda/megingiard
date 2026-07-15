@@ -524,7 +524,7 @@ private fun TouchpadMouseButton(
     Box(
         modifier =
             modifier
-                .background(bg, RoundedCornerShape(5.dp))
+                .background(bg, RoundedCornerShape(12.dp))
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         val activePids = mutableSetOf<PointerId>()
