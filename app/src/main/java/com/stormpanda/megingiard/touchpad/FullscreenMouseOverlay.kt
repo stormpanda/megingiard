@@ -129,7 +129,15 @@ fun FullscreenMouseOverlay() {
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(colors.keyboardBackground),
+                .background(colors.keyboardBackground)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                },
     ) {
         // 1. Top Toolbar (header/branding + mode selection)
         Row(
