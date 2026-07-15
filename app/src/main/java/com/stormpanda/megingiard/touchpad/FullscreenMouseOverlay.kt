@@ -156,6 +156,8 @@ fun FullscreenMouseOverlay() {
             )
         }
 
+    val pointersInsideTouchpad = remember { HashSet<Long>() }
+
     Box(
         modifier =
             Modifier
@@ -236,6 +238,10 @@ fun FullscreenMouseOverlay() {
                                         when (event.type) {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
+                                                    val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+                                                    if (isInside && !touchpadUseMouse) {
+                                                        pointersInsideTouchpad.add(id)
+                                                    }
                                                     processor.onPress(
                                                         id,
                                                         clampedX,
@@ -248,21 +254,42 @@ fun FullscreenMouseOverlay() {
                                             }
 
                                             PointerEventType.Move -> {
-                                                val delta = change.positionChange()
-                                                processor.onMove(
-                                                    id,
-                                                    clampedX,
-                                                    clampedY,
-                                                    delta.x,
-                                                    delta.y,
-                                                    sw,
-                                                    sh,
-                                                    overlayOpen = false,
-                                                )
+                                                val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+                                                val wasInside = pointersInsideTouchpad.contains(id)
+                                                if (wasInside && !isInside && !touchpadUseMouse) {
+                                                    pointersInsideTouchpad.remove(id)
+                                                    val allUp = event.changes.none { it.pressed }
+                                                    processor.onRelease(
+                                                        id,
+                                                        clampedX,
+                                                        clampedY,
+                                                        sw,
+                                                        sh,
+                                                        allPointersUp = allUp,
+                                                        tapToClick = tapToClickState.value,
+                                                        twoFingerTap = twoFingerTapState.value,
+                                                    )
+                                                } else {
+                                                    if (isInside && !touchpadUseMouse) {
+                                                        pointersInsideTouchpad.add(id)
+                                                    }
+                                                    val delta = change.positionChange()
+                                                    processor.onMove(
+                                                        id,
+                                                        clampedX,
+                                                        clampedY,
+                                                        delta.x,
+                                                        delta.y,
+                                                        sw,
+                                                        sh,
+                                                        overlayOpen = false,
+                                                    )
+                                                }
                                             }
 
                                             PointerEventType.Release -> {
                                                 if (!change.pressed) {
+                                                    pointersInsideTouchpad.remove(id)
                                                     val allUp = event.changes.none { it.pressed }
                                                     processor.onRelease(
                                                         id,
