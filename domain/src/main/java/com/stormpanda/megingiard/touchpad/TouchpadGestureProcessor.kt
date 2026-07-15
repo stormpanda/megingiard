@@ -191,6 +191,7 @@ class TouchpadGestureProcessor(
      * @param allPointersUp true if no pointers remain pressed
      * @param tapToClick    whether tap-to-click is enabled
      * @param twoFingerTap  whether two-finger-tap right-click is enabled
+     * @param threeFingerTap whether three-finger-tap middle-click is enabled
      */
     fun onRelease(
         pointerId: Long,
@@ -201,6 +202,7 @@ class TouchpadGestureProcessor(
         allPointersUp: Boolean,
         tapToClick: Boolean,
         twoFingerTap: Boolean,
+        threeFingerTap: Boolean,
     ) {
         if (useMouse) {
             val pressTime = pressTimes.remove(pointerId)
@@ -235,11 +237,19 @@ class TouchpadGestureProcessor(
                         }
                     }
 
-                    tapCount >= 2 && twoFingerTap -> {
+                    tapCount == 2 && twoFingerTap -> {
                         scope.launch {
                             MouseInjector.rightDown()
                             delay(TP_CLICK_DURATION_MS)
                             MouseInjector.rightUp()
+                        }
+                    }
+
+                    tapCount >= 3 && threeFingerTap -> {
+                        scope.launch {
+                            MouseInjector.middleDown()
+                            delay(TP_CLICK_DURATION_MS)
+                            MouseInjector.middleUp()
                         }
                     }
                 }

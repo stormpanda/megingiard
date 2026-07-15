@@ -36,6 +36,10 @@ object TouchpadSettings {
     private val _touchpadTwoFingerTap = MutableStateFlow(true)
     val touchpadTwoFingerTap: StateFlow<Boolean> = _touchpadTwoFingerTap.asStateFlow()
 
+    // Three-finger tap = middle click — only active in touchpad mouse mode
+    private val _touchpadThreeFingerTap = MutableStateFlow(true)
+    val touchpadThreeFingerTap: StateFlow<Boolean> = _touchpadThreeFingerTap.asStateFlow()
+
     // Two-finger scroll — only active in touchpad mouse mode
     private val _touchpadTwoFingerScroll = MutableStateFlow(true)
     val touchpadTwoFingerScroll: StateFlow<Boolean> = _touchpadTwoFingerScroll.asStateFlow()
@@ -60,6 +64,7 @@ object TouchpadSettings {
         _touchpadUseMouse.value = prefs[KEY_TOUCHPAD_USE_MOUSE] ?: false
         _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
         _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
+        _touchpadThreeFingerTap.value = prefs[KEY_TOUCHPAD_THREE_FINGER_TAP] ?: true
         _touchpadTwoFingerScroll.value = prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] ?: true
         _touchpadMirroringEnabled.value = prefs[KEY_TOUCHPAD_MIRRORING_ENABLED] ?: false
         _touchpadMirrorDim.value = prefs[KEY_TOUCHPAD_MIRROR_DIM] ?: 50
@@ -81,6 +86,12 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadTwoFingerTap($value)")
         _touchpadTwoFingerTap.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] = value } }
+    }
+
+    fun setTouchpadThreeFingerTap(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadThreeFingerTap($value)")
+        _touchpadThreeFingerTap.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_THREE_FINGER_TAP] = value } }
     }
 
     fun setTouchpadTwoFingerScroll(value: Boolean) {

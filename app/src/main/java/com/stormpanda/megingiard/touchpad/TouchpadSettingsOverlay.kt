@@ -48,6 +48,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
 
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val touchpadTwoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
+    val touchpadThreeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
     val touchpadTwoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
@@ -114,6 +115,12 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                         description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
                         checked = touchpadTwoFingerTap,
                         onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
+                    )
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_three_finger_tap),
+                        description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
+                        checked = touchpadThreeFingerTap,
+                        onCheckedChange = { TouchpadSettings.setTouchpadThreeFingerTap(it) },
                     )
                     RememberSettingRow(
                         label = stringResource(R.string.settings_touchpad_two_finger_scroll),

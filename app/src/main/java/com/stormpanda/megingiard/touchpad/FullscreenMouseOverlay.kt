@@ -96,6 +96,7 @@ fun FullscreenMouseOverlay() {
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
     val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
+    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
@@ -106,6 +107,7 @@ fun FullscreenMouseOverlay() {
 
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
+    val threeFingerTapState = rememberUpdatedState(threeFingerTap)
     val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
 
     // Injector Lifecycle
@@ -308,6 +310,7 @@ fun FullscreenMouseOverlay() {
                                                         allPointersUp = allUp,
                                                         tapToClick = tapToClickState.value,
                                                         twoFingerTap = twoFingerTapState.value,
+                                                        threeFingerTap = threeFingerTapState.value,
                                                     )
                                                 } else {
                                                     val delta = change.positionChange()
@@ -336,6 +339,7 @@ fun FullscreenMouseOverlay() {
                                                         allPointersUp = allUp,
                                                         tapToClick = tapToClickState.value,
                                                         twoFingerTap = twoFingerTapState.value,
+                                                        threeFingerTap = threeFingerTapState.value,
                                                     )
                                                 }
                                             }
