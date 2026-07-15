@@ -6,6 +6,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,6 +70,7 @@ class TouchpadGestureProcessor(
     private var scrollAccumY = 0f
     private var lastTapReleaseTime = 0L
     private var isDragging = false
+    private var pendingClickJob: Job? = null
 
     /**
      * Handle a Press event.
@@ -104,11 +106,20 @@ class TouchpadGestureProcessor(
             }
             if (tapDrag && downPositions.size == 1) {
                 val now = System.currentTimeMillis()
+                AppLog.d(TAG, "onPress: tapDrag=true, delta=${now - lastTapReleaseTime}ms, limit=$TP_DOUBLE_TAP_TIMEOUT_MS")
                 if (now - lastTapReleaseTime < TP_DOUBLE_TAP_TIMEOUT_MS) {
                     isDragging = true
                     lastTapReleaseTime = 0L
-                    scope.launch {
-                        MouseInjector.leftDown()
+                    AppLog.d(TAG, "onPress: starting drag lock")
+                    val job = pendingClickJob
+                    if (job != null && job.isActive) {
+                        AppLog.d(TAG, "onPress: cancelling pending click job to inherit down state")
+                        job.cancel()
+                        pendingClickJob = null
+                    } else {
+                        scope.launch {
+                            MouseInjector.leftDown()
+                        }
                     }
                 }
             }
@@ -227,6 +238,7 @@ class TouchpadGestureProcessor(
                 pressTime != null &&
                     !disqualified &&
                     (System.currentTimeMillis() - pressTime) < TP_TAP_TIMEOUT_MS
+            AppLog.d(TAG, "onRelease: pressTime=$pressTime, disqualified=$disqualified, isTap=$isTap")
             if (pointerId == primaryPointer) {
                 primaryPointer = null // caller should set new primary if needed
             }
@@ -242,6 +254,7 @@ class TouchpadGestureProcessor(
                 downPositions.clear()
                 movedTooFar.clear()
                 primaryPointer = null
+                AppLog.d(TAG, "onRelease: ending drag lock")
                 scope.launch {
                     MouseInjector.leftUp()
                 }
@@ -259,11 +272,16 @@ class TouchpadGestureProcessor(
                 when {
                     tapCount == 1 && tapToClick -> {
                         lastTapReleaseTime = System.currentTimeMillis()
-                        scope.launch {
-                            MouseInjector.leftDown()
-                            delay(TP_CLICK_DURATION_MS)
-                            MouseInjector.leftUp()
-                        }
+                        pendingClickJob =
+                            scope.launch {
+                                try {
+                                    MouseInjector.leftDown()
+                                    delay(TP_CLICK_DURATION_MS)
+                                    MouseInjector.leftUp()
+                                } finally {
+                                    pendingClickJob = null
+                                }
+                            }
                     }
 
                     tapCount == 2 && twoFingerTap -> {
