@@ -159,6 +159,7 @@ fun FullscreenMouseOverlay() {
         }
 
     val pointersInsideTouchpad = remember { HashSet<Long>() }
+    var hasActivePointers by remember { mutableStateOf(false) }
 
     val insetBezelBrush =
         Brush.linearGradient(
@@ -252,7 +253,7 @@ fun FullscreenMouseOverlay() {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
                                                     val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-                                                    if (isInside && !touchpadUseMouse) {
+                                                    if (isInside) {
                                                         pointersInsideTouchpad.add(id)
                                                     }
                                                     processor.onPress(
@@ -283,7 +284,7 @@ fun FullscreenMouseOverlay() {
                                                         twoFingerTap = twoFingerTapState.value,
                                                     )
                                                 } else {
-                                                    if (isInside && !touchpadUseMouse) {
+                                                    if (isInside) {
                                                         pointersInsideTouchpad.add(id)
                                                     }
                                                     val delta = change.positionChange()
@@ -324,6 +325,7 @@ fun FullscreenMouseOverlay() {
                                     }
                                     change.consume()
                                 }
+                                hasActivePointers = pointersInsideTouchpad.isNotEmpty()
                             }
                         }
                     },
@@ -447,6 +449,7 @@ fun FullscreenMouseOverlay() {
                         .clip(RoundedCornerShape(8.dp))
                         .background(if (isPressed) colors.keyPressed else Color.Transparent)
                         .clickable(
+                            enabled = !hasActivePointers,
                             interactionSource = interactionSource,
                             indication = null,
                             onClick = { AppStateManager.setFullscreenMouseActive(false) },
@@ -456,7 +459,7 @@ fun FullscreenMouseOverlay() {
                 Icon(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = stringResource(R.string.cd_touchpad_collapse),
-                    tint = colors.onSurface.copy(alpha = 0.7f),
+                    tint = colors.onSurface.copy(alpha = if (hasActivePointers) 0.3f else 0.7f),
                     modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
                 )
             }
