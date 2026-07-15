@@ -266,7 +266,7 @@ fun MainAppScreen() {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val isMenuOpen =
                                     isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive || isFullscreenKeyboardActive ||
-                                        isTouchpadSettingsOpen
+                                        isTouchpadSettingsOpen || isFullscreenMouseActive
                                 if (!isValidScreen || isMenuOpen) {
                                     continue
                                 }
@@ -339,7 +339,7 @@ fun MainAppScreen() {
                 exit =
                     slideOutVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
-                        targetOffsetY = { if (overlayAtBottom) it else -it },
+                        targetOffsetY = { it },
                     ) + fadeOut(animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS)),
                 modifier = Modifier.fillMaxSize(),
             ) {

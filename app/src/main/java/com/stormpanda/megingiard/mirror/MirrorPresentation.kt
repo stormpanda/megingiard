@@ -471,7 +471,7 @@ class MirrorPresentation(
                                             kbBarMaxX,
                                         ) {
                                             if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                            if (isFullscreenKeyboardActive) return@pointerInput
+                                            if (isFullscreenKeyboardActive || isFullscreenMouseActive) return@pointerInput
                                             val qmSwipe =
                                                 SwipeGestureProcessor(
                                                     edgeZonePx = edgeZonePx,
@@ -691,7 +691,7 @@ class MirrorPresentation(
                                     exit =
                                         slideOutVertically(
                                             animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
-                                            targetOffsetY = { if (overlayAtBottom) it else -it },
+                                            targetOffsetY = { it },
                                         ) + fadeOut(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
                                     modifier = Modifier.fillMaxSize(),
                                 ) {
