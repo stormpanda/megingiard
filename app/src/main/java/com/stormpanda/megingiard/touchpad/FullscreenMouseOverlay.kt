@@ -53,6 +53,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -84,6 +86,8 @@ fun FullscreenMouseOverlay() {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
+    var outerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var innerCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsState()
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
@@ -196,38 +200,32 @@ fun FullscreenMouseOverlay() {
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            val bg = if (isMirroringActive) Color.Transparent else colors.appBackground
-            Box(
-                modifier =
-                    Modifier
-                        .then(
-                            if (!touchpadUseMouse) {
-                                Modifier.aspectRatio(16f / 9f)
-                            } else {
-                                Modifier.fillMaxSize()
-                            },
-                        ).clip(RoundedCornerShape(12.dp))
-                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
-                        .pointerInput(processor) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Main)
-                                    val sw = size.width.toFloat()
-                                    val sh = size.height.toFloat()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .onGloballyPositioned { outerCoords = it }
+                    .pointerInput(processor) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                val inner = innerCoords
+                                val outer = outerCoords
+                                if (inner != null && outer != null) {
+                                    val sw = inner.size.width.toFloat()
+                                    val sh = inner.size.height.toFloat()
 
                                     for (change in event.changes) {
                                         if (change.isConsumed) continue
                                         val id = change.id.value
+                                        val localPos = inner.localPositionOf(outer, change.position)
+                                        val clampedX = localPos.x.coerceIn(0f, sw)
+                                        val clampedY = localPos.y.coerceIn(0f, sh)
+
                                         when (event.type) {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
                                                     processor.onPress(
                                                         id,
-                                                        change.position.x,
-                                                        change.position.y,
+                                                        clampedX,
+                                                        clampedY,
                                                         sw,
                                                         sh,
                                                         overlayOpen = false,
@@ -240,8 +238,8 @@ fun FullscreenMouseOverlay() {
                                                 val delta = change.positionChange()
                                                 processor.onMove(
                                                     id,
-                                                    change.position.x,
-                                                    change.position.y,
+                                                    clampedX,
+                                                    clampedY,
                                                     delta.x,
                                                     delta.y,
                                                     sw,
@@ -256,8 +254,8 @@ fun FullscreenMouseOverlay() {
                                                     val allUp = event.changes.none { it.pressed }
                                                     processor.onRelease(
                                                         id,
-                                                        change.position.x,
-                                                        change.position.y,
+                                                        clampedX,
+                                                        clampedY,
                                                         sw,
                                                         sh,
                                                         allPointersUp = allUp,
@@ -275,7 +273,27 @@ fun FullscreenMouseOverlay() {
                                     }
                                 }
                             }
-                        },
+                        }
+                    },
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .then(
+                            if (!touchpadUseMouse) {
+                                Modifier.aspectRatio(16f / 9f)
+                            } else {
+                                Modifier.fillMaxSize()
+                            },
+                        ).onGloballyPositioned { innerCoords = it }
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
+                        .border(
+                            width = 1.dp,
+                            color = if (isMirroringActive) Color.Transparent else colors.touchpadIndicator,
+                            shape = RoundedCornerShape(12.dp),
+                        ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (isMirroringActive) {
@@ -296,19 +314,6 @@ fun FullscreenMouseOverlay() {
                             Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (touchpadUseMouse) "Swipe to move cursor" else "Touch mapped to primary display",
-                        color = colors.onSurface.copy(alpha = 0.5f),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        text = if (touchpadUseMouse) "Tap = Left Click • 2-Finger Tap = Right Click" else "Coordinates projected directly",
-                        color = colors.onSurface.copy(alpha = 0.35f),
-                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
 
