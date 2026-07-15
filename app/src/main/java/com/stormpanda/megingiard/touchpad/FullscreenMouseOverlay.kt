@@ -191,9 +191,40 @@ fun FullscreenMouseOverlay() {
                                 val inner = innerCoords
                                 val outer = outerCoords
                                 for (change in event.changes) {
-                                    if (change.isConsumed) continue
                                     val id = change.id.value
 
+                                    // 1. Maintain active pointer tracking state unconditionally (even if consumed by overlay buttons)
+                                    if (inner != null && outer != null) {
+                                        val sw = inner.size.width.toFloat()
+                                        val sh = inner.size.height.toFloat()
+                                        val localPos = inner.localPositionOf(outer, change.position)
+                                        val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+
+                                        when (event.type) {
+                                            PointerEventType.Press -> {
+                                                if (!change.previousPressed && isInside) {
+                                                    pointersInsideTouchpad.add(id)
+                                                }
+                                            }
+
+                                            PointerEventType.Move -> {
+                                                val wasInside = pointersInsideTouchpad.contains(id)
+                                                if (wasInside && !isInside && !touchpadUseMouse) {
+                                                    pointersInsideTouchpad.remove(id)
+                                                }
+                                            }
+
+                                            PointerEventType.Release -> {
+                                                if (!change.pressed) {
+                                                    pointersInsideTouchpad.remove(id)
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if (change.isConsumed) continue
+
+                                    // 2. Dispatch events to TouchpadGestureProcessor
                                     if (inner != null && outer != null) {
                                         val sw = inner.size.width.toFloat()
                                         val sh = inner.size.height.toFloat()
@@ -252,10 +283,6 @@ fun FullscreenMouseOverlay() {
                                         when (event.type) {
                                             PointerEventType.Press -> {
                                                 if (!change.previousPressed) {
-                                                    val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-                                                    if (isInside) {
-                                                        pointersInsideTouchpad.add(id)
-                                                    }
                                                     processor.onPress(
                                                         id,
                                                         clampedX,
@@ -271,7 +298,6 @@ fun FullscreenMouseOverlay() {
                                                 val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
                                                 val wasInside = pointersInsideTouchpad.contains(id)
                                                 if (wasInside && !isInside && !touchpadUseMouse) {
-                                                    pointersInsideTouchpad.remove(id)
                                                     val allUp = event.changes.none { it.pressed }
                                                     processor.onRelease(
                                                         id,
@@ -284,9 +310,6 @@ fun FullscreenMouseOverlay() {
                                                         twoFingerTap = twoFingerTapState.value,
                                                     )
                                                 } else {
-                                                    if (isInside) {
-                                                        pointersInsideTouchpad.add(id)
-                                                    }
                                                     val delta = change.positionChange()
                                                     processor.onMove(
                                                         id,
@@ -303,7 +326,6 @@ fun FullscreenMouseOverlay() {
 
                                             PointerEventType.Release -> {
                                                 if (!change.pressed) {
-                                                    pointersInsideTouchpad.remove(id)
                                                     val allUp = event.changes.none { it.pressed }
                                                     processor.onRelease(
                                                         id,
