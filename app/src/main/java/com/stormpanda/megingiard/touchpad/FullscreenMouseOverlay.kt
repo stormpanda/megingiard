@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.touchpad
 
 import android.view.TextureView
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -419,15 +420,10 @@ fun FullscreenMouseOverlay() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End,
         ) {
-            IconButton(
-                onClick = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
-            ) {
-                Icon(
-                    imageVector = if (touchpadUseMouse) Icons.Rounded.Mouse else Icons.Rounded.TouchApp,
-                    contentDescription = "Toggle Input Method",
-                    tint = colors.onSurface.copy(alpha = 0.8f),
-                )
-            }
+            ModeToggleButton(
+                useMouse = touchpadUseMouse,
+                onToggle = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
+            )
         }
 
         // 4. Bottom Toolbar (Collapse and settings button)
@@ -619,5 +615,71 @@ private fun TouchpadMouseButton(
                         shape = buttonShape,
                     ),
         )
+    }
+}
+
+@Composable
+private fun ModeToggleButton(
+    useMouse: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val containerBg = colors.keyBackground.copy(alpha = 0.5f)
+    val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
+    val shape = RoundedCornerShape(18.dp)
+
+    val thumbOffset by animateDpAsState(
+        targetValue = if (useMouse) 0.dp else 32.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "ThumbOffset",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .width(68.dp)
+                .height(36.dp)
+                .clip(shape)
+                .background(containerBg)
+                .clickable(onClick = onToggle)
+                .padding(2.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .offset(x = thumbOffset)
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(thumbBg),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Mouse,
+                    contentDescription = "Relative Mouse Mode",
+                    tint = colors.onSurface.copy(alpha = 0.8f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Box(
+                modifier = Modifier.size(32.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.TouchApp,
+                    contentDescription = "Absolute Touch Mode",
+                    tint = colors.onSurface.copy(alpha = 0.8f),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
     }
 }
