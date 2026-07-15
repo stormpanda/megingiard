@@ -338,8 +338,8 @@ fun FullscreenMouseOverlay() {
                         .padding(
                             top = TP_TOOLBAR_HEIGHT + 4.dp,
                             bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
-                            start = 16.dp,
-                            end = 16.dp,
+                            start = 8.dp,
+                            end = 8.dp,
                         ).then(
                             if (!touchpadUseMouse) {
                                 Modifier.aspectRatio(16f / 9f)
