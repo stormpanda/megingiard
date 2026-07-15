@@ -392,7 +392,6 @@ class MirrorPresentation(
             )
         val composeView =
             ComposeView(composeViewContext).apply {
-                alpha = 0.999f
                 setContent {
                     val themeMode by SettingsManager.themeMode.collectAsState()
                     val userAccentArgb by SettingsManager.accentColor.collectAsState()
