@@ -56,6 +56,9 @@ class TouchpadGestureProcessor(
     /** Current finger position (touch mode only), null when not touching. */
     val touchPos: StateFlow<Pair<Float, Float>?> = _touchPos.asStateFlow()
 
+    private val pointerToSlotMap = HashMap<Long, Int>()
+    private val activeSlots = BooleanArray(10) { false }
+
     // ── Mouse mode state ────────────────────────────────────────────────────
     private val pressTimes = HashMap<Long, Long>()
     private val downPositions = HashMap<Long, Pair<Float, Float>>()
@@ -95,10 +98,23 @@ class TouchpadGestureProcessor(
                 scrollAccumY = 0f
             }
         } else {
-            val nx = (x / surfaceW).coerceIn(0f, 1f)
-            val ny = (y / surfaceH).coerceIn(0f, 1f)
-            _touchPos.value = Pair(x, y)
-            TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
+            var slot = -1
+            for (i in 0..9) {
+                if (!activeSlots[i]) {
+                    slot = i
+                    break
+                }
+            }
+            if (slot != -1) {
+                activeSlots[slot] = true
+                pointerToSlotMap[pointerId] = slot
+                val nx = (x / surfaceW).coerceIn(0f, 1f)
+                val ny = (y / surfaceH).coerceIn(0f, 1f)
+                if (pointerToSlotMap.size == 1) {
+                    _touchPos.value = Pair(x, y)
+                }
+                TouchInjector.injectTouch(slot, TouchAction.DOWN, nx, ny)
+            }
         }
     }
 
@@ -152,10 +168,15 @@ class TouchpadGestureProcessor(
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
             }
         } else {
-            val nx = (x / surfaceW).coerceIn(0f, 1f)
-            val ny = (y / surfaceH).coerceIn(0f, 1f)
-            _touchPos.value = Pair(x, y)
-            TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
+            val slot = pointerToSlotMap[pointerId]
+            if (slot != null) {
+                val nx = (x / surfaceW).coerceIn(0f, 1f)
+                val ny = (y / surfaceH).coerceIn(0f, 1f)
+                if (pointerToSlotMap.keys.firstOrNull() == pointerId) {
+                    _touchPos.value = Pair(x, y)
+                }
+                TouchInjector.injectTouch(slot, TouchAction.MOVE, nx, ny)
+            }
         }
     }
 
@@ -224,10 +245,14 @@ class TouchpadGestureProcessor(
                 }
             }
         } else {
-            val nx = (x / surfaceW).coerceIn(0f, 1f)
-            val ny = (y / surfaceH).coerceIn(0f, 1f)
-            _touchPos.value = null
-            TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+            val slot = pointerToSlotMap.remove(pointerId)
+            if (slot != null) {
+                activeSlots[slot] = false
+                val nx = (x / surfaceW).coerceIn(0f, 1f)
+                val ny = (y / surfaceH).coerceIn(0f, 1f)
+                _touchPos.value = null
+                TouchInjector.injectTouch(slot, TouchAction.UP, nx, ny)
+            }
         }
     }
 

@@ -135,7 +135,7 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
   sensorX = (1.0f - normalizedY) * 1080
   sensorY = normalizedX * 1920
   ```
-- These coordinates are sent to `TouchInjector.injectTouch(action, normX, normY)` which writes `D/M/U` commands to `touchinjector_arm64`.
+- These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux uinput input slots (`0..9`) and writes slot-aware commands to `touchinjector_arm64`, enabling slot-aware multi-touch on the absolute touchpad.
 - When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and waits briefly for the writer queue to flush before terminating `touchinjector_arm64`. This prevents Android from retaining a visible touch indicator if a final release command was still queued during teardown.
 
 ### Secondary Display Rendering & Touchpad Mirroring

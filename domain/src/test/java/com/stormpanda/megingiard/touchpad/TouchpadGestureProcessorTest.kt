@@ -33,4 +33,35 @@ class TouchpadGestureProcessorTest {
             processor.onRelease(1L, 150f, 250f, 1000f, 1000f, true, true, true)
             assertNull(processor.touchPos.value)
         }
+
+    @Test
+    fun `absolute mode multi touch allocates distinct slots`() =
+        runTest(testDispatcher) {
+            val processor =
+                TouchpadGestureProcessor(
+                    useMouse = false,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                )
+
+            assertNull(processor.touchPos.value)
+
+            // Press first pointer (should be mapped to slot 0)
+            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
+            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+
+            // Press second pointer (should be mapped to slot 1)
+            processor.onPress(2L, 300f, 400f, 1000f, 1000f, false)
+            // Primary touch position should still be the first one
+            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+
+            // Release first pointer
+            processor.onRelease(1L, 150f, 250f, 1000f, 1000f, false, true, true)
+            assertNull(processor.touchPos.value)
+
+            // Release second pointer
+            processor.onRelease(2L, 350f, 450f, 1000f, 1000f, true, true, true)
+            assertNull(processor.touchPos.value)
+        }
 }

@@ -25,9 +25,6 @@ internal val KEY_OVERLAY_AT_BOTTOM = booleanPreferencesKey("overlay_at_bottom")
 internal val KEY_OVERLAY_FADE_OUT = booleanPreferencesKey("overlay_fade_out")
 internal val KEY_STEAMGRIDDB_API_TOKEN = stringPreferencesKey("steamgriddb_api_token")
 
-// Mirror touch projection settings
-internal val KEY_PINCH_WHILE_PROJECTING = booleanPreferencesKey("mirror_pinch_while_projecting")
-
 // Mirror session state persistence — "remember" flags
 internal val KEY_REMEMBER_VIEWPORT = booleanPreferencesKey("mirror_remember_viewport")
 internal val KEY_REMEMBER_LOCK = booleanPreferencesKey("mirror_remember_lock")
@@ -113,7 +110,6 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
     )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> =
     setOf(
-        KEY_PINCH_WHILE_PROJECTING,
         KEY_REMEMBER_VIEWPORT,
         KEY_REMEMBER_LOCK,
         KEY_REMEMBER_PROJECTION,

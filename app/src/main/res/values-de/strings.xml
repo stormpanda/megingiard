@@ -97,9 +97,6 @@
     <string name="settings_two_finger_tap">Zwei-Finger-Tippen</string>
     <string name="settings_two_finger_tap_desc">Zwei-Finger-Tippen = Rechtsklick</string>
 
-    <!-- Mirror touch projection -->
-    <string name="settings_pinch_while_projecting">Pinch-to-Zoom während Projektion</string>
-    <string name="settings_pinch_while_projecting_desc">Zwei-Finger-Zoomen und Schwenken während die Touch-Projektion aktiv ist. Zwei-Finger-Gesten werden nicht an das primäre Display weitergeleitet.</string>
 
     <!-- Mirror session state persistence -->
     <string name="settings_remember_viewport">Ansichtsausschnitt merken</string>

@@ -42,7 +42,6 @@ class MirrorViewModel(
     val frozenBitmap: StateFlow<Bitmap?> = ScreenCaptureManager.frozenBitmap
     val isLocked: StateFlow<Boolean> = ScreenCaptureManager.isLocked
     val isTouchProjectionActive: StateFlow<Boolean> = ScreenCaptureManager.isTouchProjectionActive
-    val pinchWhileProjecting: StateFlow<Boolean> = MirrorSettings.pinchWhileProjecting
 
     // ── Viewport state ──────────────────────────────────────────────────────
     val scale: StateFlow<Float> = MirrorViewportController.scale

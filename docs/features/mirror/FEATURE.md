@@ -60,7 +60,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 - Touch Projection is configured on a per-cutout level in the layout settings overlay.
 - When active for any cutout, touch events inside that cutout on the mirror surface MUST be forwarded to the **primary display**'s input system using the same native injection mechanism as the Virtual Touchpad feature.
-- The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them.
+- The projected touch position MUST account for the active cutout crop and placement bounds: when a user touches a cutout, the controller MUST determine which cutout's destination bounds contain the touch, check if touch projection is enabled for that cutout, map the touch coordinates relative to that destination rectangle, project them back to the corresponding normalized source crop coordinates on the primary display, and forward them using slot-aware multi-touch injection (up to 10 slots `0..9`).
 - Touch events originating in the **edge zone** (40 dp from the configured overlay edge) MUST NOT be forwarded — that zone remains reserved for the edge-swipe gesture to open the Quick Menu.
 - When the user's finger moves outside the visible content area of the matched cutout, an **UP event** MUST be sent to the primary display immediately to prevent a dangling touch.
 - Enabling Touch Projection on any cutout MUST automatically activate View Lock internally (preventing manual viewport zoom/pan gestures in background logic while maintaining support for follow-touch tracking).
@@ -360,8 +360,8 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
    contentY = (touchY − destTop) / destHeight
    normalizedY = srcY + contentY * srcHeight
    ```
-   If the touch is outside the destination bounds of the active cutout, the coordinates are null (or an UP is sent if a gesture was in progress).
-3. **Injection**: normalised coordinates are forwarded to `TouchInjector.injectTouch()` (the shared `input/` package), which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop(token)` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
+   If the touch is outside the destination bounds of the active cutout, the coordinates are null (or a slot-aware UP is sent if a gesture was in progress for that pointer).
+3. **Injection**: normalised coordinates are forwarded to slot-aware `TouchInjector.injectTouch(slot, action, nx, ny)` (the shared `input/` package), mapping each pointer to its respective uinput slot `0..9`, which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop(token)` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
 
 During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
 

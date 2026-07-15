@@ -585,69 +585,71 @@ class MirrorPresentation(
                                                     if (gestureBoxSize == IntSize.Zero) continue
                                                     val scW = gestureBoxSize.width.toFloat()
                                                     val scH = gestureBoxSize.height.toFloat()
-                                                    when (event.type) {
-                                                        PointerEventType.Press -> {
-                                                            val change = event.changes.firstOrNull() ?: continue
-                                                            val y = change.position.y
-                                                            val nearEdge =
-                                                                if (overlayAtBottom) {
-                                                                    y >= scH - edgeZonePx
-                                                                } else {
-                                                                    y <= edgeZonePx
-                                                                }
-                                                            swipeStartY = if (nearEdge) y else Float.NaN
-                                                            if (!nearEdge) {
-                                                                projectionController.onPress(
-                                                                    pointerId = change.id.value,
-                                                                    x = change.position.x,
-                                                                    y = y,
-                                                                    boxW = scW,
-                                                                    boxH = scH,
-                                                                    isConsumed = change.isConsumed,
-                                                                    pointerCount = event.changes.size,
-                                                                )
-                                                            }
-                                                        }
-
-                                                        PointerEventType.Move -> {
-                                                            val change = event.changes.firstOrNull() ?: continue
-                                                            val y = change.position.y
-                                                            if (!swipeStartY.isNaN()) {
-                                                                val delta =
-                                                                    if (overlayAtBottom) {
-                                                                        swipeStartY - y
-                                                                    } else {
-                                                                        y - swipeStartY
+                                                    for (change in event.changes) {
+                                                        val y = change.position.y
+                                                        when (event.type) {
+                                                            PointerEventType.Press -> {
+                                                                if (!change.previousPressed) {
+                                                                    val nearEdge =
+                                                                        if (overlayAtBottom) {
+                                                                            y >= scH - edgeZonePx
+                                                                        } else {
+                                                                            y <= edgeZonePx
+                                                                        }
+                                                                    if (event.changes.size == 1) {
+                                                                        swipeStartY = if (nearEdge) y else Float.NaN
                                                                     }
-                                                                if (delta >= swipeThresholdPx) {
-                                                                    swipeStartY = Float.NaN
+                                                                    if (!nearEdge) {
+                                                                        projectionController.onPress(
+                                                                            pointerId = change.id.value,
+                                                                            x = change.position.x,
+                                                                            y = y,
+                                                                            boxW = scW,
+                                                                            boxH = scH,
+                                                                            isConsumed = change.isConsumed,
+                                                                            pointerCount = event.changes.size,
+                                                                        )
+                                                                    }
                                                                 }
-                                                            } else {
-                                                                projectionController.onMove(
-                                                                    pointerId = change.id.value,
-                                                                    x = change.position.x,
-                                                                    y = y,
-                                                                    boxW = scW,
-                                                                    boxH = scH,
-                                                                    isConsumed = change.isConsumed,
-                                                                )
                                                             }
-                                                        }
 
-                                                        PointerEventType.Release -> {
-                                                            val change = event.changes.firstOrNull()
-                                                            swipeStartY = Float.NaN
-                                                            projectionController.onRelease(
-                                                                pointerId = change?.id?.value ?: -1L,
-                                                                x = change?.position?.x,
-                                                                y = change?.position?.y,
-                                                                boxW = scW,
-                                                                boxH = scH,
-                                                            )
-                                                        }
+                                                            PointerEventType.Move -> {
+                                                                if (event.changes.size == 1 && !swipeStartY.isNaN()) {
+                                                                    val delta =
+                                                                        if (overlayAtBottom) {
+                                                                            swipeStartY - y
+                                                                        } else {
+                                                                            y - swipeStartY
+                                                                        }
+                                                                    if (delta >= swipeThresholdPx) {
+                                                                        swipeStartY = Float.NaN
+                                                                    }
+                                                                } else {
+                                                                    projectionController.onMove(
+                                                                        pointerId = change.id.value,
+                                                                        x = change.position.x,
+                                                                        y = y,
+                                                                        boxW = scW,
+                                                                        boxH = scH,
+                                                                        isConsumed = change.isConsumed,
+                                                                    )
+                                                                }
+                                                            }
 
-                                                        else -> {
-                                                            Unit
+                                                            PointerEventType.Release -> {
+                                                                if (!change.pressed) {
+                                                                    if (event.changes.size == 1) {
+                                                                        swipeStartY = Float.NaN
+                                                                    }
+                                                                    projectionController.onRelease(
+                                                                        pointerId = change.id.value,
+                                                                        x = change.position.x,
+                                                                        y = y,
+                                                                        boxW = scW,
+                                                                        boxH = scH,
+                                                                    )
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }

@@ -93,9 +93,6 @@
     <string name="settings_two_finger_tap">Two-finger tap</string>
     <string name="settings_two_finger_tap_desc">Two-finger tap = right click</string>
 
-    <!-- Mirror touch projection -->
-    <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>
-    <string name="settings_pinch_while_projecting_desc">Allow two-finger zoom and pan gestures while Touch Projection is active. Two-finger touches are not forwarded to the primary display.</string>
 
     <!-- Mirror session state persistence -->
     <string name="settings_remember_viewport">Remember viewport</string>
