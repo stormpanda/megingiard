@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.touchpad
 
+import android.view.TextureView
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -46,27 +47,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.mirror.LocalMirrorPresentation
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
@@ -99,8 +95,6 @@ fun FullscreenMouseOverlay() {
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val touchpadBounds by AppStateManager.touchpadBounds.collectAsState()
-
     val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
 
     val tapToClickState = rememberUpdatedState(tapToClick)
@@ -139,7 +133,6 @@ fun FullscreenMouseOverlay() {
             AppLog.i(TAG, "dispose: stopping both injectors")
             MouseInjector.stop()
             TouchInjector.stop("FullscreenTouchpad")
-            AppStateManager.clearTouchpadBounds()
         }
     }
 
@@ -169,35 +162,7 @@ fun FullscreenMouseOverlay() {
                             event.changes.forEach { it.consume() }
                         }
                     }
-                }.drawBehind {
-                    if (isMirroringActive && touchpadBounds != null) {
-                        val tb = touchpadBounds!!
-                        val path =
-                            Path().apply {
-                                addRect(
-                                    androidx.compose.ui.geometry
-                                        .Rect(0f, 0f, size.width, size.height),
-                                )
-                                val corner = 12.dp.toPx()
-                                addRoundRect(
-                                    RoundRect(
-                                        rect =
-                                            androidx.compose.ui.geometry.Rect(
-                                                left = tb.left,
-                                                top = tb.top,
-                                                right = tb.right,
-                                                bottom = tb.bottom,
-                                            ),
-                                        cornerRadius = CornerRadius(corner, corner),
-                                    ),
-                                )
-                                fillType = PathFillType.EvenOdd
-                            }
-                        drawPath(path, colors.keyboardBackground)
-                    } else {
-                        drawRect(colors.keyboardBackground)
-                    }
-                },
+                }.background(colors.keyboardBackground),
     ) {
         // 1. Top Toolbar (header/branding + mode selection)
         Row(
@@ -244,17 +209,8 @@ fun FullscreenMouseOverlay() {
                             } else {
                                 Modifier.fillMaxSize()
                             },
-                        ).onGloballyPositioned { coords ->
-                            val pos = coords.positionInWindow()
-                            val size = coords.size
-                            AppStateManager.setTouchpadBounds(
-                                left = pos.x,
-                                top = pos.y,
-                                right = pos.x + size.width,
-                                bottom = pos.y + size.height,
-                            )
-                        }.clip(RoundedCornerShape(12.dp))
-                        .background(bg)
+                        ).clip(RoundedCornerShape(12.dp))
+                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
                         .pointerInput(processor) {
                             awaitPointerEventScope {
                                 while (true) {
@@ -323,6 +279,18 @@ fun FullscreenMouseOverlay() {
                 contentAlignment = Alignment.Center,
             ) {
                 if (isMirroringActive) {
+                    val presentation = LocalMirrorPresentation.current
+                    if (presentation != null) {
+                        AndroidView(
+                            factory = { ctx ->
+                                presentation.acquireMasterTextureView() ?: TextureView(ctx)
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            onRelease = {
+                                presentation.releaseMasterTextureView()
+                            },
+                        )
+                    }
                     Box(
                         modifier =
                             Modifier

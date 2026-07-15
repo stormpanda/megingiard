@@ -185,34 +185,11 @@ object AppStateManager {
         _hasAdbCredentials.value = has
     }
 
-    data class TouchpadMirrorBounds(
-        val left: Float,
-        val top: Float,
-        val right: Float,
-        val bottom: Float,
-    )
-
     private val _wasMirroringStartedByTouchpad = MutableStateFlow(false)
     val wasMirroringStartedByTouchpad: StateFlow<Boolean> = _wasMirroringStartedByTouchpad.asStateFlow()
 
     fun setWasMirroringStartedByTouchpad(started: Boolean) {
         _wasMirroringStartedByTouchpad.value = started
-    }
-
-    private val _touchpadBounds = MutableStateFlow<TouchpadMirrorBounds?>(null)
-    val touchpadBounds: StateFlow<TouchpadMirrorBounds?> = _touchpadBounds.asStateFlow()
-
-    fun setTouchpadBounds(
-        left: Float,
-        top: Float,
-        right: Float,
-        bottom: Float,
-    ) {
-        _touchpadBounds.value = TouchpadMirrorBounds(left, top, right, bottom)
-    }
-
-    fun clearTouchpadBounds() {
-        _touchpadBounds.value = null
     }
 
     private val _isBackgroundSettingsActive = MutableStateFlow(false)

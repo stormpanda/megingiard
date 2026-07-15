@@ -147,8 +147,9 @@ When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `F
 Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
 
 **Touchpad Mirroring Integration:**
-- When absolute touchpad mirroring is active, the `MirrorPresentation` intercept-combines the regular layout cutouts and overrides them with a single `ScreenCutout` targeted at the touchpad Box coordinates (`AppStateManager.touchpadBounds`).
-- In Compose, the touchpad Box background becomes transparent to let the underlying `TextureView` stream show through, and overlays a semi-transparent black Box matching the user-configured `touchpadMirrorDim` level.
+- When absolute touchpad mirroring is active, the touchpad Composable (`FullscreenMouseOverlay`) dynamically acquires the master `TextureView` instance from the `MirrorPresentation` via `LocalMirrorPresentation.current` and renders it directly inside the Compose layout using an `AndroidView`.
+- Upon disposal or mirroring deactivation, the master `TextureView` is safely detached and returned back to the background `MultiCutoutContainer` (`mcc`) for standard MacroPad cutout rendering.
+- A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
 - The lifecycle of the capture service is managed: if the capture service was started *by* the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
 
 ### Source Files

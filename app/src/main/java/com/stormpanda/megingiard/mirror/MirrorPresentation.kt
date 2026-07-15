@@ -66,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -136,6 +137,8 @@ private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
 private const val UNCROPPED_THRESHOLD = 0.999f
 private const val MP_KB_SLIDE_ANIM_DURATION_MS = 300
+
+val LocalMirrorPresentation = staticCompositionLocalOf<MirrorPresentation?> { null }
 
 class MirrorPresentation(
     context: Context,
@@ -282,49 +285,7 @@ class MirrorPresentation(
             }
 
         scope.launch {
-            combine(
-                ScreenCaptureManager.cutouts,
-                AppStateManager.isFullscreenMouseActive,
-                TouchpadSettings.touchpadUseMouse,
-                TouchpadSettings.touchpadMirroringEnabled,
-                AppStateManager.touchpadBounds,
-            ) { cutouts, isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled, touchpadBounds ->
-                AppLog.d(
-                    TAG,
-                    "cutout-combine: active=$isFullscreenMouseActive mouse=$touchpadUseMouse mirror=$touchpadMirroringEnabled bounds=$touchpadBounds",
-                )
-                if (isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled && touchpadBounds != null) {
-                    val w = targetWidth.toFloat()
-                    val h = targetHeight.toFloat()
-                    if (w > 0f && h > 0f) {
-                        val destX = touchpadBounds.left / w
-                        val destY = touchpadBounds.top / h
-                        val destWidth = (touchpadBounds.right - touchpadBounds.left) / w
-                        val destHeight = (touchpadBounds.bottom - touchpadBounds.top) / h
-
-                        listOf(
-                            ScreenCutout(
-                                id = "touchpad_mirror",
-                                name = "Touchpad Mirror",
-                                srcX = 0f,
-                                srcY = 0f,
-                                srcWidth = 1f,
-                                srcHeight = 1f,
-                                destX = destX,
-                                destY = destY,
-                                destWidth = destWidth,
-                                destHeight = destHeight,
-                                opacity = 1f,
-                                shape = CutoutShape.RECTANGLE,
-                            ),
-                        )
-                    } else {
-                        cutouts
-                    }
-                } else {
-                    cutouts
-                }
-            }.collect { activeCutouts ->
+            ScreenCaptureManager.cutouts.collect { activeCutouts ->
                 mcc.cutouts = activeCutouts
             }
         }
@@ -420,6 +381,7 @@ class MirrorPresentation(
                         LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
                         LocalAppColors provides appColors,
                         LocalAppDimens provides AppDimens(),
+                        LocalMirrorPresentation provides this@MirrorPresentation,
                     ) {
                         MaterialTheme(
                             colorScheme = colorSchemeFor(appColors, themeMode),
@@ -816,6 +778,24 @@ class MirrorPresentation(
         setContentView(container)
 
         bindStateFlows(container)
+    }
+
+    fun acquireMasterTextureView(): TextureView? {
+        val tv = masterTextureView ?: return null
+        AppLog.d(TAG, "acquireMasterTextureView: detaching master TextureView")
+        val parent = tv.parent as? ViewGroup
+        parent?.removeView(tv)
+        return tv
+    }
+
+    fun releaseMasterTextureView() {
+        val tv = masterTextureView ?: return
+        AppLog.d(TAG, "releaseMasterTextureView: reattaching master TextureView to mcc")
+        val parent = tv.parent as? ViewGroup
+        if (parent != multiCutoutContainer) {
+            parent?.removeView(tv)
+            multiCutoutContainer?.addView(tv)
+        }
     }
 
     private fun bindStateFlows(container: FrameLayout) {
