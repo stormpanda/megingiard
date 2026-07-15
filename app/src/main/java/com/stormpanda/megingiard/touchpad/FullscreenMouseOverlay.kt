@@ -4,7 +4,6 @@ import android.view.TextureView
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -333,12 +332,7 @@ fun FullscreenMouseOverlay() {
                             },
                         ).onGloballyPositioned { innerCoords = it }
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
-                        .border(
-                            width = 1.dp,
-                            color = if (isMirroringActive) Color.Transparent else colors.touchpadIndicator,
-                            shape = RoundedCornerShape(12.dp),
-                        ),
+                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground),
                 contentAlignment = Alignment.Center,
             ) {
                 if (isMirroringActive) {
