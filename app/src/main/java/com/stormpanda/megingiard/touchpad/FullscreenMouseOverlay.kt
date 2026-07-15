@@ -46,7 +46,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
@@ -94,6 +98,9 @@ fun FullscreenMouseOverlay() {
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+    val touchpadBounds by AppStateManager.touchpadBounds.collectAsState()
+
+    val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
 
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
@@ -154,13 +161,33 @@ fun FullscreenMouseOverlay() {
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(colors.keyboardBackground)
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Main)
                             event.changes.forEach { it.consume() }
                         }
+                    }
+                }.graphicsLayer(alpha = 0.999f)
+                .drawBehind {
+                    drawRect(colors.keyboardBackground)
+                    if (isMirroringActive && touchpadBounds != null) {
+                        val tb = touchpadBounds!!
+                        val rect =
+                            androidx.compose.ui.geometry.Rect(
+                                left = tb.left,
+                                top = tb.top,
+                                right = tb.right,
+                                bottom = tb.bottom,
+                            )
+                        val corner = 12.dp.toPx()
+                        drawRoundRect(
+                            color = Color.Transparent,
+                            topLeft = rect.topLeft,
+                            size = rect.size,
+                            cornerRadius = CornerRadius(corner, corner),
+                            blendMode = BlendMode.Clear,
+                        )
                     }
                 },
     ) {
@@ -199,7 +226,6 @@ fun FullscreenMouseOverlay() {
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
             val bg = if (isMirroringActive) Color.Transparent else colors.appBackground
             Box(
                 modifier =
