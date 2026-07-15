@@ -1041,6 +1041,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_touchpad_two_finger_tap_desc">Zwei-Finger-Tippen als Rechtsklick ausführen (nur im Mausmodus)</string>
     <string name="settings_touchpad_three_finger_tap">Drei-Finger-Tippen</string>
     <string name="settings_touchpad_three_finger_tap_desc">Drei-Finger-Tippen als Mittelklick ausführen (nur im Mausmodus)</string>
+    <string name="settings_touchpad_tap_drag">Tippen und Ziehen</string>
+    <string name="settings_touchpad_tap_drag_desc">Doppeltippen und Halten zum Ziehen von Elementen (nur im Mausmodus)</string>
     <string name="settings_touchpad_two_finger_scroll">Zwei-Finger-Scrollen</string>
     <string name="settings_touchpad_two_finger_scroll_desc">Zwei Finger vertikal ziehen, um den Bildschirm zu scrollen (nur im Mausmodus)</string>
     <string name="help_touchpad_settings_title">Touchpad-Hilfe</string>

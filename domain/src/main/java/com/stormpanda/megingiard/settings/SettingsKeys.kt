@@ -56,6 +56,7 @@ internal val KEY_TOUCHPAD_USE_MOUSE = booleanPreferencesKey("touchpad_use_mouse"
 internal val KEY_TOUCHPAD_TAP_TO_CLICK = booleanPreferencesKey("touchpad_tap_to_click")
 internal val KEY_TOUCHPAD_TWO_FINGER_TAP = booleanPreferencesKey("touchpad_two_finger_tap")
 internal val KEY_TOUCHPAD_THREE_FINGER_TAP = booleanPreferencesKey("touchpad_three_finger_tap")
+internal val KEY_TOUCHPAD_TAP_DRAG = booleanPreferencesKey("touchpad_tap_drag")
 internal val KEY_TOUCHPAD_TWO_FINGER_SCROLL = booleanPreferencesKey("touchpad_two_finger_scroll")
 internal val KEY_TOUCHPAD_MIRRORING_ENABLED = booleanPreferencesKey("touchpad_mirroring_enabled")
 internal val KEY_TOUCHPAD_MIRROR_DIM = intPreferencesKey("touchpad_mirror_dim")
@@ -121,6 +122,7 @@ private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_TAP_TO_CLICK,
         KEY_TOUCHPAD_TWO_FINGER_TAP,
         KEY_TOUCHPAD_THREE_FINGER_TAP,
+        KEY_TOUCHPAD_TAP_DRAG,
         KEY_TOUCHPAD_TWO_FINGER_SCROLL,
         KEY_TOUCHPAD_MIRRORING_ENABLED,
         KEY_TOUCHPAD_MIRROR_DIM,

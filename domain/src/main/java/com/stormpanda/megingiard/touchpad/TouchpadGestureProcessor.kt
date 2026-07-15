@@ -19,6 +19,7 @@ private const val TP_MOUSE_SENSITIVITY = 2f
 private const val TP_TAP_TIMEOUT_MS = 200L
 private const val TP_TAP_SLOP_PX = 20f
 private const val TP_CLICK_DURATION_MS = 40L
+private const val TP_DOUBLE_TAP_TIMEOUT_MS = 300L
 private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 10f
 
@@ -66,6 +67,8 @@ class TouchpadGestureProcessor(
     private val releasedAsTap = ArrayList<Long>()
     private var primaryPointer: Long? = null
     private var scrollAccumY = 0f
+    private var lastTapReleaseTime = 0L
+    private var isDragging = false
 
     /**
      * Handle a Press event.
@@ -76,6 +79,7 @@ class TouchpadGestureProcessor(
      * @param surfaceW     width of the touch surface in pixels
      * @param surfaceH     height of the touch surface in pixels
      * @param overlayOpen  true if the quick menu overlay is currently visible
+     * @param tapDrag      true if double-tap-to-drag is enabled
      */
     fun onPress(
         pointerId: Long,
@@ -84,6 +88,7 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
         overlayOpen: Boolean,
+        tapDrag: Boolean,
     ) {
         if (overlayOpen) {
             AppStateManager.closeQuickMenu()
@@ -96,6 +101,16 @@ class TouchpadGestureProcessor(
             if (primaryPointer == null) primaryPointer = pointerId
             if (downPositions.size != 2) {
                 scrollAccumY = 0f
+            }
+            if (tapDrag && downPositions.size == 1) {
+                val now = System.currentTimeMillis()
+                if (now - lastTapReleaseTime < TP_DOUBLE_TAP_TIMEOUT_MS) {
+                    isDragging = true
+                    lastTapReleaseTime = 0L
+                    scope.launch {
+                        MouseInjector.leftDown()
+                    }
+                }
             }
         } else {
             var slot = -1
@@ -220,6 +235,19 @@ class TouchpadGestureProcessor(
                 scrollAccumY = 0f
             }
 
+            if (isDragging) {
+                isDragging = false
+                releasedAsTap.clear()
+                pressTimes.clear()
+                downPositions.clear()
+                movedTooFar.clear()
+                primaryPointer = null
+                scope.launch {
+                    MouseInjector.leftUp()
+                }
+                return
+            }
+
             // When all fingers are up, evaluate taps
             if (allPointersUp) {
                 val tapCount = releasedAsTap.size
@@ -230,6 +258,7 @@ class TouchpadGestureProcessor(
                 primaryPointer = null
                 when {
                     tapCount == 1 && tapToClick -> {
+                        lastTapReleaseTime = System.currentTimeMillis()
                         scope.launch {
                             MouseInjector.leftDown()
                             delay(TP_CLICK_DURATION_MS)

@@ -98,6 +98,7 @@ fun FullscreenMouseOverlay() {
     val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
+    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
@@ -108,6 +109,7 @@ fun FullscreenMouseOverlay() {
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
     val threeFingerTapState = rememberUpdatedState(threeFingerTap)
+    val tapDragState = rememberUpdatedState(tapDrag)
     val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
 
     // Injector Lifecycle
@@ -292,6 +294,7 @@ fun FullscreenMouseOverlay() {
                                                         sw,
                                                         sh,
                                                         overlayOpen = false,
+                                                        tapDrag = tapDragState.value,
                                                     )
                                                 }
                                             }

@@ -37,13 +37,14 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **Tap-to-click:** When enabled, a single short tap sends a left-button click via `MouseInjector`.
   - **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
   - **Three-finger tap:** When enabled, a three-finger short tap sends a middle-button click via `MouseInjector`.
+  - **Tap-and-drag:** When enabled, a quick double-tap and hold on the second tap triggers a click-and-hold (LMB down) that can be used for dragging, releasing the click (LMB up) when the finger is lifted.
   - **Two-finger scroll:** When enabled, dragging two fingers vertically scroll the screen (Mouse Mode only).
   - **Physical click buttons:** Three visual buttons (LMB, MMB, RMB) are rendered at the bottom of the touch area, styled like the space bar of the keyboard.
 - **Touch Mode (Absolute Touch):** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
   - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
   - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
   - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
-- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, three-finger tap, and two-finger scroll) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level slider). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
+- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, three-finger tap, tap-and-drag, and two-finger scroll) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level slider). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
 - When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
@@ -134,6 +135,10 @@ In relative **Mouse Mode** (`useMouse = true`):
     delay(TP_CLICK_DURATION_MS)
     MouseInjector.middleUp()
     ```
+  - If a double tap is initiated (a finger press within `TP_DOUBLE_TAP_TIMEOUT_MS = 300L` after a single-finger tap release) and held down, a drag state (`isDragging = true`) is activated:
+    - On press: triggers `MouseInjector.leftDown()`.
+    - During movements: relative cursor deltas are sent while left click is held down.
+    - On release: triggers `MouseInjector.leftUp()` and terminates the drag sequence.
 
 In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch Projection):
 

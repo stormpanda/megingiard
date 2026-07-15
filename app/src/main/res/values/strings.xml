@@ -1034,6 +1034,8 @@ Open Settings to create a layout.</string>
     <string name="settings_touchpad_two_finger_tap_desc">Two-finger tap acts as a right mouse click (Mouse Mode only)</string>
     <string name="settings_touchpad_three_finger_tap">Three-Finger Tap</string>
     <string name="settings_touchpad_three_finger_tap_desc">Three-finger tap acts as a middle mouse click (Mouse Mode only)</string>
+    <string name="settings_touchpad_tap_drag">Tap and Drag</string>
+    <string name="settings_touchpad_tap_drag_desc">Double-tap and hold to drag items (Mouse Mode only)</string>
     <string name="settings_touchpad_two_finger_scroll">Two-Finger Scroll</string>
     <string name="settings_touchpad_two_finger_scroll_desc">Drag two fingers vertically to scroll the screen (Mouse Mode only)</string>
     <string name="help_touchpad_settings_title">Touchpad Help</string>
