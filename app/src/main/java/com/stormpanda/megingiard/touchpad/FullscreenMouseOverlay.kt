@@ -155,52 +155,17 @@ fun FullscreenMouseOverlay() {
             )
         }
 
-    Column(
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Main)
-                            event.changes.forEach { it.consume() }
-                        }
-                    }
-                }.background(colors.keyboardBackground),
+                .background(colors.keyboardBackground),
     ) {
-        // 1. Top Toolbar (header/branding + mode selection)
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(TP_TOOLBAR_HEIGHT)
-                    .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = if (touchpadUseMouse) "Relative Mouse Trackpad" else "Absolute Touch Mapping",
-                color = colors.onSurface.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Spacer(Modifier.weight(1f))
-            IconButton(
-                onClick = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
-            ) {
-                Icon(
-                    imageVector = if (touchpadUseMouse) Icons.Rounded.Mouse else Icons.Rounded.TouchApp,
-                    contentDescription = "Toggle Input Method",
-                    tint = colors.onSurface.copy(alpha = 0.8f),
-                )
-            }
-        }
-
-        // 2. Center Touchpad Area
+        // 1. Outer Box (touch receiver)
         Box(
             modifier =
                 Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .fillMaxSize()
                     .onGloballyPositioned { outerCoords = it }
                     .pointerInput(processor) {
                         awaitPointerEventScope {
@@ -208,13 +173,13 @@ fun FullscreenMouseOverlay() {
                                 val event = awaitPointerEvent(PointerEventPass.Main)
                                 val inner = innerCoords
                                 val outer = outerCoords
-                                if (inner != null && outer != null) {
-                                    val sw = inner.size.width.toFloat()
-                                    val sh = inner.size.height.toFloat()
+                                for (change in event.changes) {
+                                    if (change.isConsumed) continue
+                                    val id = change.id.value
 
-                                    for (change in event.changes) {
-                                        if (change.isConsumed) continue
-                                        val id = change.id.value
+                                    if (inner != null && outer != null) {
+                                        val sw = inner.size.width.toFloat()
+                                        val sh = inner.size.height.toFloat()
                                         val localPos = inner.localPositionOf(outer, change.position)
                                         val clampedX = localPos.x.coerceIn(0f, sw)
                                         val clampedY = localPos.y.coerceIn(0f, sh)
@@ -230,7 +195,6 @@ fun FullscreenMouseOverlay() {
                                                         sh,
                                                         overlayOpen = false,
                                                     )
-                                                    change.consume()
                                                 }
                                             }
 
@@ -246,7 +210,6 @@ fun FullscreenMouseOverlay() {
                                                     sh,
                                                     overlayOpen = false,
                                                 )
-                                                change.consume()
                                             }
 
                                             PointerEventType.Release -> {
@@ -262,7 +225,6 @@ fun FullscreenMouseOverlay() {
                                                         tapToClick = tapToClickState.value,
                                                         twoFingerTap = twoFingerTapState.value,
                                                     )
-                                                    change.consume()
                                                 }
                                             }
 
@@ -271,16 +233,23 @@ fun FullscreenMouseOverlay() {
                                             }
                                         }
                                     }
+                                    change.consume()
                                 }
                             }
                         }
                     },
-            contentAlignment = Alignment.BottomCenter,
         ) {
+            // 2. Inner Touchpad Box
             Box(
                 modifier =
                     Modifier
-                        .then(
+                        .align(Alignment.BottomCenter)
+                        .padding(
+                            top = TP_TOOLBAR_HEIGHT + 4.dp,
+                            bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
+                            start = 16.dp,
+                            end = 16.dp,
+                        ).then(
                             if (!touchpadUseMouse) {
                                 Modifier.aspectRatio(16f / 9f)
                             } else {
@@ -352,10 +321,38 @@ fun FullscreenMouseOverlay() {
             }
         }
 
-        // 3. Bottom Toolbar (Collapse and settings button)
+        // 3. Top Toolbar (header/branding + mode selection)
         Row(
             modifier =
                 Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(TP_TOOLBAR_HEIGHT)
+                    .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (touchpadUseMouse) "Relative Mouse Trackpad" else "Absolute Touch Mapping",
+                color = colors.onSurface.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
+            ) {
+                Icon(
+                    imageVector = if (touchpadUseMouse) Icons.Rounded.Mouse else Icons.Rounded.TouchApp,
+                    contentDescription = "Toggle Input Method",
+                    tint = colors.onSurface.copy(alpha = 0.8f),
+                )
+            }
+        }
+
+        // 4. Bottom Toolbar (Collapse and settings button)
+        Row(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(TP_BOTTOM_BAR_HEIGHT)
                     .padding(horizontal = 16.dp),
