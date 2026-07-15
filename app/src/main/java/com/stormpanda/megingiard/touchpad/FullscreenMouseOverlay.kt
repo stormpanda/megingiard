@@ -261,18 +261,22 @@ fun FullscreenMouseOverlay() {
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         TouchpadMouseButton(
-                            label = "LMB",
                             accentColor = colors.accent,
                             onDown = { MouseInjector.leftDown() },
                             onUp = { MouseInjector.leftUp() },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
                         )
                         TouchpadMouseButton(
-                            label = "RMB",
+                            accentColor = colors.accent,
+                            onDown = { MouseInjector.middleDown() },
+                            onUp = { MouseInjector.middleUp() },
+                            modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                        )
+                        TouchpadMouseButton(
                             accentColor = colors.accent,
                             onDown = { MouseInjector.rightDown() },
                             onUp = { MouseInjector.rightUp() },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
                         )
                     }
                 }
@@ -345,7 +349,6 @@ fun FullscreenMouseOverlay() {
 
 @Composable
 private fun TouchpadMouseButton(
-    label: String,
     accentColor: Color,
     onDown: () -> Unit,
     onUp: () -> Unit,
@@ -407,12 +410,5 @@ private fun TouchpadMouseButton(
                         }
                     }
                 },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.labelMedium,
-        )
-    }
+    )
 }
