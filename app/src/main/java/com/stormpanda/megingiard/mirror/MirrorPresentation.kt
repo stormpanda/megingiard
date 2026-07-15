@@ -275,6 +275,7 @@ class MirrorPresentation(
                     val interval = 1000L / fps
                     if (now - lastUpdateTime >= interval) {
                         mcc.updateAccumulator(tv)
+                        mcc.invalidate()
                         lastUpdateTime = now
                     }
                 }
