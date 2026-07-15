@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -157,6 +158,17 @@ fun FullscreenMouseOverlay() {
         }
 
     val pointersInsideTouchpad = remember { HashSet<Long>() }
+
+    val insetBezelBrush =
+        Brush.linearGradient(
+            colors =
+                listOf(
+                    Color.Black.copy(alpha = 0.6f),
+                    Color.White.copy(alpha = 0.25f),
+                ),
+            start = Offset(0f, 0f),
+            end = Offset.Infinite,
+        )
 
     Box(
         modifier =
@@ -336,7 +348,7 @@ fun FullscreenMouseOverlay() {
                         .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
                         .border(
                             width = 1.dp,
-                            color = Color.Black.copy(alpha = 0.4f),
+                            brush = insetBezelBrush,
                             shape = RoundedCornerShape(12.dp),
                         ),
                 contentAlignment = Alignment.Center,
@@ -373,7 +385,7 @@ fun FullscreenMouseOverlay() {
                                 Modifier
                                     .fillMaxWidth()
                                     .height(56.dp)
-                                    .padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
+                                    .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             TouchpadMouseButton(
@@ -522,7 +534,18 @@ private fun TouchpadMouseButton(
     val colors = LocalAppColors.current
     val buttonShape = RoundedCornerShape(8.dp)
     val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
-    val depthColor = Color.Black.copy(alpha = 0.25f)
+    val depthColor = Color.Black.copy(alpha = 0.55f)
+
+    val buttonBezelBrush =
+        Brush.linearGradient(
+            colors =
+                listOf(
+                    Color.White.copy(alpha = 0.4f),
+                    Color.Black.copy(alpha = 0.5f),
+                ),
+            start = Offset(0f, 0f),
+            end = Offset.Infinite,
+        )
 
     Box(
         modifier =
@@ -581,7 +604,7 @@ private fun TouchpadMouseButton(
         )
 
         // 2. Active button surface layer (animated translation)
-        val offsetY = if (pressed) 0.dp else (-3).dp
+        val offsetY = if (pressed) 0.dp else (-2).dp
         Box(
             modifier =
                 Modifier
@@ -590,7 +613,7 @@ private fun TouchpadMouseButton(
                     .background(surfaceColor, buttonShape)
                     .border(
                         width = 0.5.dp,
-                        color = Color.White.copy(alpha = 0.15f),
+                        brush = buttonBezelBrush,
                         shape = buttonShape,
                     ),
         )
