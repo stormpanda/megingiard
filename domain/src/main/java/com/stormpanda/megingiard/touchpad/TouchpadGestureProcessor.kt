@@ -20,7 +20,7 @@ private const val TP_MOUSE_SENSITIVITY = 2f
 private const val TP_TAP_TIMEOUT_MS = 200L
 private const val TP_TAP_SLOP_PX = 20f
 private const val TP_CLICK_DURATION_MS = 40L
-private const val TP_DOUBLE_TAP_TIMEOUT_MS = 300L
+private const val TP_DOUBLE_TAP_TIMEOUT_MS = 500L
 private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 10f
 

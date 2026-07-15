@@ -135,7 +135,7 @@ In relative **Mouse Mode** (`useMouse = true`):
     delay(TP_CLICK_DURATION_MS)
     MouseInjector.middleUp()
     ```
-  - If a double tap is initiated (a finger press within `TP_DOUBLE_TAP_TIMEOUT_MS = 300L` after a single-finger tap release) and held down, a drag state (`isDragging = true`) is activated:
+  - If a double tap is initiated (a finger press within `TP_DOUBLE_TAP_TIMEOUT_MS = 500L` after a single-finger tap release) and held down, a drag state (`isDragging = true`) is activated:
     - On press: triggers `MouseInjector.leftDown()`.
     - During movements: relative cursor deltas are sent while left click is held down.
     - On release: triggers `MouseInjector.leftUp()` and terminates the drag sequence.
