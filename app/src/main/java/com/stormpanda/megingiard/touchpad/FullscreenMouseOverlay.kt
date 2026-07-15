@@ -257,23 +257,20 @@ fun FullscreenMouseOverlay() {
                             Modifier
                                 .fillMaxWidth()
                                 .height(56.dp)
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         TouchpadMouseButton(
-                            accentColor = colors.accent,
                             onDown = { MouseInjector.leftDown() },
                             onUp = { MouseInjector.leftUp() },
                             modifier = Modifier.weight(1.2f).fillMaxHeight(),
                         )
                         TouchpadMouseButton(
-                            accentColor = colors.accent,
                             onDown = { MouseInjector.middleDown() },
                             onUp = { MouseInjector.middleUp() },
                             modifier = Modifier.weight(0.4f).fillMaxHeight(),
                         )
                         TouchpadMouseButton(
-                            accentColor = colors.accent,
                             onDown = { MouseInjector.rightDown() },
                             onUp = { MouseInjector.rightUp() },
                             modifier = Modifier.weight(1.2f).fillMaxHeight(),
@@ -349,23 +346,17 @@ fun FullscreenMouseOverlay() {
 
 @Composable
 private fun TouchpadMouseButton(
-    accentColor: Color,
     onDown: () -> Unit,
     onUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var pressed by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
-    val alpha by animateFloatAsState(
-        targetValue = if (pressed) 0.4f else 0.15f,
-        animationSpec = tween(100),
-        label = "touchpadBtnAlpha",
-    )
+    val bg = if (pressed) colors.keyPressed else colors.keyBackground
     Box(
         modifier =
             modifier
-                .background(accentColor.copy(alpha = alpha), RoundedCornerShape(8.dp))
-                .border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                .background(bg, RoundedCornerShape(5.dp))
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         val activePids = mutableSetOf<PointerId>()
