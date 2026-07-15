@@ -23,7 +23,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 ### FR-T2: Visual Feedback & UI Style
 
-- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing the active mode and a mode toggle button, a middle touch surface with informational text, and physical LMB, MMB (middle mouse button, scaled to 1/3 size of LMB/RMB), and RMB click buttons (in Mouse Mode) with no text labels.
+- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing a mode toggle button, a middle touch surface with informational text, and physical LMB, MMB (middle mouse button, scaled to 1/3 size of LMB/RMB), and RMB click buttons (in Mouse Mode) with no text labels.
 - A bottom toolbar contains a collapse button (down arrow), a play/pause button (visible only in absolute touch mode to toggle top screen mirroring), and a settings button (cog icon).
 
 ### FR-T4: No Special Permissions Required
@@ -42,7 +42,7 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
   - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
   - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
-- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar. It includes toggles for input mode, tap-to-click, two-finger tap, two-finger scroll, "Touchpad Mirroring", and a "Mirror Dim Level" slider (range 0% to 90%, default 50%). These settings are persisted across app sessions and full backups.
+- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar. It groups options into two concurrent sections: **Relative Mouse Mode** (including toggles for tap-to-click, two-finger tap, and two-finger scroll) and **Absolute Touch Mode** (including a toggle for touchpad mirroring and a mirror dim level slider). The active input mode is persistent in the background but not exposed as a settings preference option. These settings are persisted across app sessions and full backups.
 - When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
@@ -147,16 +147,17 @@ When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `F
 Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
 
 **Touchpad Mirroring Integration:**
+
 - When absolute touchpad mirroring is active, the touchpad Composable (`FullscreenMouseOverlay`) dynamically acquires the master `TextureView` instance from the `MirrorPresentation` via `LocalMirrorPresentation.current` and renders it directly inside the Compose layout using an `AndroidView`.
 - Upon disposal or mirroring deactivation, the master `TextureView` is safely detached and returned back to the background `MultiCutoutContainer` (`mcc`) for standard MacroPad cutout rendering.
 - A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
-- The lifecycle of the capture service is managed: if the capture service was started *by* the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
+- The lifecycle of the capture service is managed: if the capture service was started _by_ the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
 
 ### Source Files
 
 | File                          | Layer           | Responsibility                                                                        |
 | ----------------------------- | --------------- | ------------------------------------------------------------------------------------- |
-| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, pointer event loop                        |
+| `FullscreenMouseOverlay.kt`   | `:app` UI       | Fullscreen relative-mouse Compose overlay, pointer event loop                         |
 | `TouchpadGestureProcessor.kt` | `:domain` Logic | Compose-free gesture tracking; mouse (relative + taps) and touch (absolute) processor |
 | `TouchpadSettings.kt`         | `:domain` Logic | Persistent settings for touchpad mode (tap-to-click, two-finger-tap, etc.)            |
 | `MouseInjector.kt`            | `:domain` Logic | Public relative mouse injection facade (LMB/RMB clicks, scroll, move deltas)          |

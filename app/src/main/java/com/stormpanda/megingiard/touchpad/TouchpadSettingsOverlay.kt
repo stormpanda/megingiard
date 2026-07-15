@@ -45,7 +45,7 @@ private const val TAG = "TouchpadSettingsOverlay"
 @Composable
 fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val colors = LocalAppColors.current
-    val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsState()
+
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val touchpadTwoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val touchpadTwoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
@@ -100,50 +100,47 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                         .verticalScroll(rememberScrollState()),
             ) {
                 SettingsSection(
-                    title = stringResource(R.string.settings_section_general),
+                    title = stringResource(R.string.settings_section_relative_mouse),
                     colors = colors,
                 ) {
                     RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_use_mouse),
-                        description = stringResource(R.string.settings_touchpad_use_mouse_desc),
-                        checked = touchpadUseMouse,
-                        onCheckedChange = { TouchpadSettings.setTouchpadUseMouse(it) },
+                        label = stringResource(R.string.settings_touchpad_tap_to_click),
+                        description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
+                        checked = touchpadTapToClick,
+                        onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
                     )
-                    if (touchpadUseMouse) {
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_touchpad_tap_to_click),
-                            description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-                            checked = touchpadTapToClick,
-                            onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_two_finger_tap),
+                        description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
+                        checked = touchpadTwoFingerTap,
+                        onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
+                    )
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_two_finger_scroll),
+                        description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
+                        checked = touchpadTwoFingerScroll,
+                        onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
+                    )
+                }
+
+                SettingsSection(
+                    title = stringResource(R.string.settings_section_absolute_touch),
+                    colors = colors,
+                ) {
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_mirroring),
+                        description = stringResource(R.string.settings_touchpad_mirroring_desc),
+                        checked = touchpadMirroringEnabled,
+                        onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
+                    )
+                    if (touchpadMirroringEnabled) {
+                        SliderSettingRow(
+                            label = stringResource(R.string.settings_touchpad_mirror_dim),
+                            value = touchpadMirrorDim.toFloat(),
+                            valueRange = 0f..90f,
+                            formatLabel = { "${it.toInt()}%" },
+                            onValueChange = { TouchpadSettings.setTouchpadMirrorDim(it.toInt()) },
                         )
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_touchpad_two_finger_tap),
-                            description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-                            checked = touchpadTwoFingerTap,
-                            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
-                        )
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_touchpad_two_finger_scroll),
-                            description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-                            checked = touchpadTwoFingerScroll,
-                            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
-                        )
-                    } else {
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_touchpad_mirroring),
-                            description = stringResource(R.string.settings_touchpad_mirroring_desc),
-                            checked = touchpadMirroringEnabled,
-                            onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
-                        )
-                        if (touchpadMirroringEnabled) {
-                            SliderSettingRow(
-                                label = stringResource(R.string.settings_touchpad_mirror_dim),
-                                value = touchpadMirrorDim.toFloat(),
-                                valueRange = 0f..90f,
-                                formatLabel = { "${it.toInt()}%" },
-                                onValueChange = { TouchpadSettings.setTouchpadMirrorDim(it.toInt()) },
-                            )
-                        }
                     }
                 }
             }
@@ -167,12 +164,6 @@ private fun TouchpadSettingsHelpModal(
         onDismiss = onDismiss,
     ) {
         HelpIntro(stringResource(R.string.help_touchpad_settings_intro))
-
-        HelpSection(stringResource(R.string.settings_touchpad_use_mouse))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_use_mouse),
-            description = stringResource(R.string.help_touchpad_settings_mode_desc),
-        )
 
         HelpSection(stringResource(R.string.settings_touchpad_tap_to_click))
         HelpEntry(

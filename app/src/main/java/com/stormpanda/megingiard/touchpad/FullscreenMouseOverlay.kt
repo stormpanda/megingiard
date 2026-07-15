@@ -391,7 +391,6 @@ fun FullscreenMouseOverlay() {
             }
         }
 
-        // 3. Top Toolbar (header/branding + mode selection)
         Row(
             modifier =
                 Modifier
@@ -400,13 +399,8 @@ fun FullscreenMouseOverlay() {
                     .height(TP_TOOLBAR_HEIGHT)
                     .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(
-                text = if (touchpadUseMouse) "Relative Mouse Trackpad" else "Absolute Touch Mapping",
-                color = colors.onSurface.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Spacer(Modifier.weight(1f))
             IconButton(
                 onClick = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
             ) {

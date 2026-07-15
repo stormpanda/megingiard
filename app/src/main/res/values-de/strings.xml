@@ -1029,6 +1029,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Touchpad settings -->
     <string name="settings_touchpad_title">Touchpad-Einstellungen</string>
+    <string name="settings_section_relative_mouse">Relative-Maus-Modus</string>
+    <string name="settings_section_absolute_touch">Absolut-Touch-Modus</string>
     <string name="cd_touchpad_collapse">Touchpad einklappen</string>
     <string name="cd_touchpad_settings">Touchpad-Einstellungen</string>
     <string name="settings_touchpad_use_mouse">Eingabemodus</string>
