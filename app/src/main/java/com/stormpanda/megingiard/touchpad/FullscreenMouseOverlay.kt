@@ -163,8 +163,8 @@ fun FullscreenMouseOverlay() {
         Brush.linearGradient(
             colors =
                 listOf(
-                    Color.Black.copy(alpha = 0.6f),
-                    Color.White.copy(alpha = 0.25f),
+                    Color.Black.copy(alpha = 0.45f),
+                    Color.White.copy(alpha = 0.12f),
                 ),
             start = Offset(0f, 0f),
             end = Offset.Infinite,
@@ -538,10 +538,12 @@ private fun TouchpadMouseButton(
 
     val buttonBezelBrush =
         Brush.linearGradient(
-            colors =
-                listOf(
-                    Color.White.copy(alpha = 0.4f),
-                    Color.Black.copy(alpha = 0.5f),
+            colorStops =
+                arrayOf(
+                    0.0f to Color.White.copy(alpha = 0.25f),
+                    0.25f to Color.White.copy(alpha = 0.05f),
+                    0.5f to Color.Transparent,
+                    1.0f to Color.Black.copy(alpha = 0.4f),
                 ),
             start = Offset(0f, 0f),
             end = Offset.Infinite,
