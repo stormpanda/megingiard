@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -171,118 +172,130 @@ fun FullscreenMouseOverlay() {
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.appBackground)
-                    .pointerInput(processor) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Main)
-                                val sw = size.width.toFloat()
-                                val sh = size.height.toFloat()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .then(
+                            if (!touchpadUseMouse) {
+                                Modifier.aspectRatio(16f / 9f)
+                            } else {
+                                Modifier.fillMaxSize()
+                            },
+                        ).clip(RoundedCornerShape(12.dp))
+                        .background(colors.appBackground)
+                        .pointerInput(processor) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Main)
+                                    val sw = size.width.toFloat()
+                                    val sh = size.height.toFloat()
 
-                                for (change in event.changes) {
-                                    if (change.isConsumed) continue
-                                    val id = change.id.value
-                                    when (event.type) {
-                                        PointerEventType.Press -> {
-                                            if (!change.previousPressed) {
-                                                processor.onPress(
+                                    for (change in event.changes) {
+                                        if (change.isConsumed) continue
+                                        val id = change.id.value
+                                        when (event.type) {
+                                            PointerEventType.Press -> {
+                                                if (!change.previousPressed) {
+                                                    processor.onPress(
+                                                        id,
+                                                        change.position.x,
+                                                        change.position.y,
+                                                        sw,
+                                                        sh,
+                                                        overlayOpen = false,
+                                                    )
+                                                    change.consume()
+                                                }
+                                            }
+
+                                            PointerEventType.Move -> {
+                                                val delta = change.positionChange()
+                                                processor.onMove(
                                                     id,
                                                     change.position.x,
                                                     change.position.y,
+                                                    delta.x,
+                                                    delta.y,
                                                     sw,
                                                     sh,
                                                     overlayOpen = false,
                                                 )
                                                 change.consume()
                                             }
-                                        }
 
-                                        PointerEventType.Move -> {
-                                            val delta = change.positionChange()
-                                            processor.onMove(
-                                                id,
-                                                change.position.x,
-                                                change.position.y,
-                                                delta.x,
-                                                delta.y,
-                                                sw,
-                                                sh,
-                                                overlayOpen = false,
-                                            )
-                                            change.consume()
-                                        }
-
-                                        PointerEventType.Release -> {
-                                            if (!change.pressed) {
-                                                val allUp = event.changes.none { it.pressed }
-                                                processor.onRelease(
-                                                    id,
-                                                    change.position.x,
-                                                    change.position.y,
-                                                    sw,
-                                                    sh,
-                                                    allPointersUp = allUp,
-                                                    tapToClick = tapToClickState.value,
-                                                    twoFingerTap = twoFingerTapState.value,
-                                                )
-                                                change.consume()
+                                            PointerEventType.Release -> {
+                                                if (!change.pressed) {
+                                                    val allUp = event.changes.none { it.pressed }
+                                                    processor.onRelease(
+                                                        id,
+                                                        change.position.x,
+                                                        change.position.y,
+                                                        sw,
+                                                        sh,
+                                                        allPointersUp = allUp,
+                                                        tapToClick = tapToClickState.value,
+                                                        twoFingerTap = twoFingerTapState.value,
+                                                    )
+                                                    change.consume()
+                                                }
                                             }
-                                        }
 
-                                        else -> {
-                                            Unit
+                                            else -> {
+                                                Unit
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = if (touchpadUseMouse) "Swipe to move cursor" else "Touch mapped to primary display",
-                    color = colors.onSurface.copy(alpha = 0.5f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = if (touchpadUseMouse) "Tap = Left Click • 2-Finger Tap = Right Click" else "Coordinates projected directly",
-                    color = colors.onSurface.copy(alpha = 0.35f),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+                        },
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (touchpadUseMouse) "Swipe to move cursor" else "Touch mapped to primary display",
+                        color = colors.onSurface.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = if (touchpadUseMouse) "Tap = Left Click • 2-Finger Tap = Right Click" else "Coordinates projected directly",
+                        color = colors.onSurface.copy(alpha = 0.35f),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
 
-            // Render Left / Right physical buttons at the bottom of the touchpad area if in mouse mode
-            if (touchpadUseMouse) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                // Render Left / Right physical buttons at the bottom of the touchpad area if in mouse mode
+                if (touchpadUseMouse) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.BottomCenter,
                     ) {
-                        TouchpadMouseButton(
-                            onDown = { MouseInjector.leftDown() },
-                            onUp = { MouseInjector.leftUp() },
-                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                        )
-                        TouchpadMouseButton(
-                            onDown = { MouseInjector.middleDown() },
-                            onUp = { MouseInjector.middleUp() },
-                            modifier = Modifier.weight(0.4f).fillMaxHeight(),
-                        )
-                        TouchpadMouseButton(
-                            onDown = { MouseInjector.rightDown() },
-                            onUp = { MouseInjector.rightUp() },
-                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                        )
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            TouchpadMouseButton(
+                                onDown = { MouseInjector.leftDown() },
+                                onUp = { MouseInjector.leftUp() },
+                                modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                            )
+                            TouchpadMouseButton(
+                                onDown = { MouseInjector.middleDown() },
+                                onUp = { MouseInjector.middleUp() },
+                                modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                            )
+                            TouchpadMouseButton(
+                                onDown = { MouseInjector.rightDown() },
+                                onUp = { MouseInjector.rightUp() },
+                                modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                            )
+                        }
                     }
                 }
             }
