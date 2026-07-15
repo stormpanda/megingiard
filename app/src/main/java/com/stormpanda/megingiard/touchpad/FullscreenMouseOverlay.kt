@@ -4,6 +4,7 @@ import android.view.TextureView
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -332,7 +333,12 @@ fun FullscreenMouseOverlay() {
                             },
                         ).onGloballyPositioned { innerCoords = it }
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground),
+                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
+                        .border(
+                            width = 1.dp,
+                            color = Color.Black.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(12.dp),
+                        ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (isMirroringActive) {
@@ -514,11 +520,13 @@ private fun TouchpadMouseButton(
 ) {
     var pressed by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
-    val bg = if (pressed) colors.keyPressed else colors.keyBackground
+    val buttonShape = RoundedCornerShape(8.dp)
+    val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
+    val depthColor = Color.Black.copy(alpha = 0.25f)
+
     Box(
         modifier =
             modifier
-                .background(bg, RoundedCornerShape(12.dp))
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         val activePids = mutableSetOf<PointerId>()
@@ -563,5 +571,28 @@ private fun TouchpadMouseButton(
                         }
                     }
                 },
-    )
+    ) {
+        // 1. Depth shadow layer
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(depthColor, buttonShape),
+        )
+
+        // 2. Active button surface layer (animated translation)
+        val offsetY = if (pressed) 0.dp else (-3).dp
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .offset(y = offsetY)
+                    .background(surfaceColor, buttonShape)
+                    .border(
+                        width = 0.5.dp,
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = buttonShape,
+                    ),
+        )
+    }
 }
