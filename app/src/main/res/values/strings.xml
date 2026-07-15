@@ -1040,5 +1040,8 @@ Open Settings to create a layout.</string>
     <string name="help_touchpad_settings_mode_desc">Relative mouse mode moves the cursor using relative finger deltas, while absolute mode projects touch coordinates directly.</string>
     <string name="help_touchpad_settings_click_desc">Left and right clicks can be simulated by single or two-finger short taps.</string>
     <string name="help_touchpad_settings_scroll_desc">Drag with two fingers vertically to issue mouse scroll wheel events.</string>
+    <string name="settings_touchpad_mirroring">Touchpad Mirroring</string>
+    <string name="settings_touchpad_mirroring_desc">Mirror the top display inside the touchpad area</string>
+    <string name="settings_touchpad_mirror_dim">Mirror Dim Level</string>
 
 </resources>

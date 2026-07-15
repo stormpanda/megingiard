@@ -40,6 +40,14 @@ object TouchpadSettings {
     private val _touchpadTwoFingerScroll = MutableStateFlow(true)
     val touchpadTwoFingerScroll: StateFlow<Boolean> = _touchpadTwoFingerScroll.asStateFlow()
 
+    // Absolute touchpad mirroring: false = disabled (default), true = enabled
+    private val _touchpadMirroringEnabled = MutableStateFlow(false)
+    val touchpadMirroringEnabled: StateFlow<Boolean> = _touchpadMirroringEnabled.asStateFlow()
+
+    // Dim percentage of the mirrored screen: default 50, range 0 to 90
+    private val _touchpadMirrorDim = MutableStateFlow(50)
+    val touchpadMirrorDim: StateFlow<Int> = _touchpadMirrorDim.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -53,6 +61,8 @@ object TouchpadSettings {
         _touchpadTapToClick.value = prefs[KEY_TOUCHPAD_TAP_TO_CLICK] ?: true
         _touchpadTwoFingerTap.value = prefs[KEY_TOUCHPAD_TWO_FINGER_TAP] ?: true
         _touchpadTwoFingerScroll.value = prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] ?: true
+        _touchpadMirroringEnabled.value = prefs[KEY_TOUCHPAD_MIRRORING_ENABLED] ?: false
+        _touchpadMirrorDim.value = prefs[KEY_TOUCHPAD_MIRROR_DIM] ?: 50
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
@@ -77,5 +87,18 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadTwoFingerScroll($value)")
         _touchpadTwoFingerScroll.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] = value } }
+    }
+
+    fun setTouchpadMirroringEnabled(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadMirroringEnabled($value)")
+        _touchpadMirroringEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MIRRORING_ENABLED] = value } }
+    }
+
+    fun setTouchpadMirrorDim(value: Int) {
+        val clamped = value.coerceIn(0, 90)
+        AppLog.d(TAG, "setTouchpadMirrorDim($clamped)")
+        _touchpadMirrorDim.value = clamped
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MIRROR_DIM] = clamped } }
     }
 }

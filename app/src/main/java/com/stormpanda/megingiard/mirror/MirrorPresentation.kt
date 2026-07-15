@@ -102,6 +102,7 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
@@ -280,8 +281,46 @@ class MirrorPresentation(
             }
 
         scope.launch {
-            ScreenCaptureManager.cutouts.collect { cutouts ->
-                mcc.cutouts = cutouts
+            combine(
+                ScreenCaptureManager.cutouts,
+                AppStateManager.isFullscreenMouseActive,
+                TouchpadSettings.touchpadUseMouse,
+                TouchpadSettings.touchpadMirroringEnabled,
+                AppStateManager.touchpadBounds,
+            ) { cutouts, isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled, touchpadBounds ->
+                if (isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled && touchpadBounds != null) {
+                    val w = targetWidth.toFloat()
+                    val h = targetHeight.toFloat()
+                    if (w > 0f && h > 0f) {
+                        val destX = touchpadBounds.left / w
+                        val destY = touchpadBounds.top / h
+                        val destWidth = (touchpadBounds.right - touchpadBounds.left) / w
+                        val destHeight = (touchpadBounds.bottom - touchpadBounds.top) / h
+
+                        listOf(
+                            ScreenCutout(
+                                id = "touchpad_mirror",
+                                name = "Touchpad Mirror",
+                                srcX = 0f,
+                                srcY = 0f,
+                                srcWidth = 1f,
+                                srcHeight = 1f,
+                                destX = destX,
+                                destY = destY,
+                                destWidth = destWidth,
+                                destHeight = destHeight,
+                                opacity = 1f,
+                                shape = CutoutShape.RECTANGLE,
+                            ),
+                        )
+                    } else {
+                        cutouts
+                    }
+                } else {
+                    cutouts
+                }
+            }.collect { activeCutouts ->
+                mcc.cutouts = activeCutouts
             }
         }
 

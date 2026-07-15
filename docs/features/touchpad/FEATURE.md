@@ -23,8 +23,8 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
 
 ### FR-T2: Visual Feedback & UI Style
 
-- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing the active mode and a mode toggle button, a middle touch surface with informational text, and physical LMB/RMB click buttons (in Mouse Mode).
-- A bottom toolbar contains a collapse button (down arrow) and a settings button (cog icon).
+- The touchpad overlay is styled similarly to the keyboard layout with a top toolbar showing the active mode and a mode toggle button, a middle touch surface with informational text, and physical LMB, MMB (middle mouse button, scaled to 1/3 size of LMB/RMB), and RMB click buttons (in Mouse Mode) with no text labels.
+- A bottom toolbar contains a collapse button (down arrow), a play/pause button (visible only in absolute touch mode to toggle top screen mirroring), and a settings button (cog icon).
 
 ### FR-T4: No Special Permissions Required
 
@@ -37,9 +37,12 @@ The Virtual Touchpad is instantiated via the **Fullscreen Mouse Overlay** (`Full
   - **Tap-to-click:** When enabled, a single short tap sends a left-button click via `MouseInjector`.
   - **Two-finger tap:** When enabled, a two-finger short tap sends a right-button click via `MouseInjector`.
   - **Two-finger scroll:** When enabled, dragging two fingers vertically scroll the screen (Mouse Mode only).
-  - **Physical click buttons:** Two visual buttons (LMB, RMB) are rendered at the bottom of the touch area for manual click dragging.
-- **Touch Mode:** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
-- **Touchpad Settings:** A dedicated settings overlay is available via the settings cog button in the bottom toolbar, offering toggles for input mode, tap-to-click, two-finger tap, two-finger scroll, and access to a touchpad help guide.
+  - **Physical click buttons:** Three visual buttons (LMB, MMB, RMB) are rendered at the bottom of the touch area, styled like the space bar of the keyboard.
+- **Touch Mode (Absolute Touch):** Maps coordinates directly to the native `TouchInjector` client registry to perform absolute touch projection.
+  - **16:9 Aspect Ratio:** The touch surface is constrained to a `16:9` aspect ratio aligned to the bottom part of the screen, matching the primary screen dimensions to prevent mapping scaling distortion.
+  - **Touchpad Screen Mirroring:** Can display a real-time mirror of the full top screen inside the touch area. A play button in the bottom toolbar toggles mirroring.
+  - **Restore State:** Closing the touchpad (or turning off touchpad mirroring) stops the screen capture if it was initiated by the touchpad, restoring the macro pad's mirror capture to its exact prior state.
+- **Touchpad Settings:** A settings overlay is available via the settings cog button in the bottom toolbar. It includes toggles for input mode, tap-to-click, two-finger tap, two-finger scroll, "Touchpad Mirroring", and a "Mirror Dim Level" slider (range 0% to 90%, default 50%). These settings are persisted across app sessions and full backups.
 - When the Quick Menu is visible, all pointer changes are consumed to ensure touches do not bleed through.
 
 ---
@@ -135,13 +138,18 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
 - These coordinates are sent to `TouchInjector.injectTouch(action, normX, normY)` which writes `D/M/U` commands to `touchinjector_arm64`.
 - When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and waits briefly for the writer queue to flush before terminating `touchinjector_arm64`. This prevents Android from retaining a visible touch indicator if a final release command was still queued during teardown.
 
-### Secondary Display Rendering (Background Display Mode)
+### Secondary Display Rendering & Touchpad Mirroring
 
 When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
 
 `MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `MouseInjector` runs at a time.
 
 Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+
+**Touchpad Mirroring Integration:**
+- When absolute touchpad mirroring is active, the `MirrorPresentation` intercept-combines the regular layout cutouts and overrides them with a single `ScreenCutout` targeted at the touchpad Box coordinates (`AppStateManager.touchpadBounds`).
+- In Compose, the touchpad Box background becomes transparent to let the underlying `TextureView` stream show through, and overlays a semi-transparent black Box matching the user-configured `touchpadMirrorDim` level.
+- The lifecycle of the capture service is managed: if the capture service was started *by* the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
 
 ### Source Files
 

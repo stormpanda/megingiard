@@ -30,6 +30,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.settings.SettingsSection
+import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -48,6 +49,8 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val touchpadTwoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val touchpadTwoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
+    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
+    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -125,6 +128,22 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                             checked = touchpadTwoFingerScroll,
                             onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
                         )
+                    } else {
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_touchpad_mirroring),
+                            description = stringResource(R.string.settings_touchpad_mirroring_desc),
+                            checked = touchpadMirroringEnabled,
+                            onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
+                        )
+                        if (touchpadMirroringEnabled) {
+                            SliderSettingRow(
+                                label = stringResource(R.string.settings_touchpad_mirror_dim),
+                                value = touchpadMirrorDim.toFloat(),
+                                valueRange = 0f..90f,
+                                formatLabel = { "${it.toInt()}%" },
+                                onValueChange = { TouchpadSettings.setTouchpadMirrorDim(it.toInt()) },
+                            )
+                        }
                     }
                 }
             }

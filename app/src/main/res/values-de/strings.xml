@@ -1046,4 +1046,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_touchpad_settings_intro">Optionen für das virtuelle Vollbild-Touchpad konfigurieren.</string>
     <string name="help_touchpad_settings_mode_desc">Der relative Mausmodus bewegt den Cursor basierend auf Finger-Deltas, während der absolute Modus Touch-Koordinaten direkt projiziert.</string>
     <string name="help_touchpad_settings_click_desc">Links- und Rechtsklicks können durch kurzes Tippen mit einem oder zwei Fingern simuliert werden.</string>
+    <string name="settings_touchpad_mirroring">Touchpad-Spiegelung</string>
+    <string name="settings_touchpad_mirroring_desc">Den oberen Bildschirm im Touchpad-Bereich spiegeln</string>
+    <string name="settings_touchpad_mirror_dim">Spiegelung-Dimmstufe</string>
 </resources>

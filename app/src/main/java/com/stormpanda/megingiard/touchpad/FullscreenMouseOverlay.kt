@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
@@ -50,6 +52,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -85,6 +90,10 @@ fun FullscreenMouseOverlay() {
     val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+    val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
+    val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
 
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
@@ -103,11 +112,26 @@ fun FullscreenMouseOverlay() {
         }
     }
 
+    LaunchedEffect(isFullscreenMouseActive, touchpadUseMouse, touchpadMirroringEnabled) {
+        if (isFullscreenMouseActive && !touchpadUseMouse && touchpadMirroringEnabled) {
+            if (!isCapturing) {
+                AppStateManager.setWasMirroringStartedByTouchpad(true)
+                AppStateManager.requestMirrorStart()
+            }
+        } else {
+            if (AppStateManager.wasMirroringStartedByTouchpad.value) {
+                AppStateManager.requestMirrorStop()
+                AppStateManager.setWasMirroringStartedByTouchpad(false)
+            }
+        }
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             AppLog.i(TAG, "dispose: stopping both injectors")
             MouseInjector.stop()
             TouchInjector.stop("FullscreenTouchpad")
+            AppStateManager.clearTouchpadBounds()
         }
     }
 
@@ -175,6 +199,8 @@ fun FullscreenMouseOverlay() {
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
+            val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
+            val bg = if (isMirroringActive) Color.Transparent else colors.appBackground
             Box(
                 modifier =
                     Modifier
@@ -184,8 +210,17 @@ fun FullscreenMouseOverlay() {
                             } else {
                                 Modifier.fillMaxSize()
                             },
-                        ).clip(RoundedCornerShape(12.dp))
-                        .background(colors.appBackground)
+                        ).onGloballyPositioned { coords ->
+                            val pos = coords.positionInWindow()
+                            val size = coords.size
+                            AppStateManager.setTouchpadBounds(
+                                left = pos.x,
+                                top = pos.y,
+                                right = pos.x + size.width,
+                                bottom = pos.y + size.height,
+                            )
+                        }.clip(RoundedCornerShape(12.dp))
+                        .background(bg)
                         .pointerInput(processor) {
                             awaitPointerEventScope {
                                 while (true) {
@@ -253,6 +288,15 @@ fun FullscreenMouseOverlay() {
                         },
                 contentAlignment = Alignment.Center,
             ) {
+                if (isMirroringActive) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
+                    )
+                }
+
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = if (touchpadUseMouse) "Swipe to move cursor" else "Touch mapped to primary display",
@@ -336,6 +380,35 @@ fun FullscreenMouseOverlay() {
             }
 
             Spacer(modifier = Modifier.weight(1f))
+
+            if (!touchpadUseMouse) {
+                val interactionSourcePlay = remember { MutableInteractionSource() }
+                val isPlayPressed by interactionSourcePlay.collectIsPressedAsState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .width(TP_GLOBE_BUTTON_WIDTH)
+                            .offset(y = (-3).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isPlayPressed) colors.keyPressed else Color.Transparent)
+                            .clickable(
+                                interactionSource = interactionSourcePlay,
+                                indication = null,
+                                onClick = {
+                                    TouchpadSettings.setTouchpadMirroringEnabled(!touchpadMirroringEnabled)
+                                },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (touchpadMirroringEnabled) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = "Toggle Touchpad Mirroring",
+                        tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
+                    )
+                }
+            }
 
             val interactionSourceSettings = remember { MutableInteractionSource() }
             val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
