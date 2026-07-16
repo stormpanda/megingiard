@@ -1053,6 +1053,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_touchpad_mouse_4_5_desc">Zeige physische Zurück- (M4) und Vorwärts-Tasten (M5) in den oberen Ecken</string>
     <string name="settings_touchpad_sensitivity">Zeigergeschwindigkeit</string>
     <string name="settings_touchpad_sensitivity_desc">Multiplikator für Cursor-Empfindlichkeit anpassen</string>
+    <string name="settings_touchpad_haptics">Haptisches Feedback</string>
+    <string name="settings_touchpad_haptics_desc">Leicht vibrieren bei Klicks und Gesten</string>
     <string name="help_touchpad_settings_title">Touchpad-Hilfe</string>
     <string name="help_touchpad_settings_intro">Optionen für das virtuelle Vollbild-Touchpad konfigurieren.</string>
     <string name="help_touchpad_settings_mode_desc">Der relative Mausmodus bewegt den Cursor basierend auf Finger-Deltas, während der absolute Modus Touch-Koordinaten direkt projiziert.</string>
@@ -1077,5 +1079,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_touchpad_settings_sensitivity_desc">Passt den Cursor-Bewegungs-Multiplikator im relativen Mausmodus an.</string>
     <string name="help_touchpad_settings_natural_scroll_desc">Aktiviert die natürliche Scrollrichtung: Das Ziehen von Fingern nach unten zieht den Bildschirminhalt nach unten.</string>
     <string name="help_touchpad_settings_scroll_speed_desc">Passt die Empfindlichkeit/Geschwindigkeit des Zwei-Finger-Scrollens an.</string>
+    <string name="help_touchpad_settings_haptics_desc">Aktiviert subtile physische Klick-Vibrationen beim Drücken von Knöpfen oder Ausführen von Klick-Gesten.</string>
 
 </resources>

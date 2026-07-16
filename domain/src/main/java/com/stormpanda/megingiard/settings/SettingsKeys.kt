@@ -64,6 +64,7 @@ internal val KEY_TOUCHPAD_MOUSE_4_5_ENABLED = booleanPreferencesKey("touchpad_mo
 internal val KEY_TOUCHPAD_SENSITIVITY = floatPreferencesKey("touchpad_sensitivity")
 internal val KEY_TOUCHPAD_NATURAL_SCROLL = booleanPreferencesKey("touchpad_natural_scroll")
 internal val KEY_TOUCHPAD_SCROLL_SPEED = floatPreferencesKey("touchpad_scroll_speed")
+internal val KEY_TOUCHPAD_HAPTICS_ENABLED = booleanPreferencesKey("touchpad_haptics_enabled")
 
 // MacroPad touch recording
 internal val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
@@ -134,6 +135,7 @@ private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_SENSITIVITY,
         KEY_TOUCHPAD_NATURAL_SCROLL,
         KEY_TOUCHPAD_SCROLL_SPEED,
+        KEY_TOUCHPAD_HAPTICS_ENABLED,
     )
 private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
     setOf(
@@ -195,6 +197,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_MIRRORING_ENABLED,
         KEY_TOUCHPAD_MOUSE_4_5_ENABLED,
         KEY_TOUCHPAD_NATURAL_SCROLL,
+        KEY_TOUCHPAD_HAPTICS_ENABLED,
         KEY_SKIP_TOUCH_RECORD_DIALOG,
         KEY_SKIP_GAMEPAD_RECORD_DIALOG,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,

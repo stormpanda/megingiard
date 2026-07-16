@@ -1046,6 +1046,8 @@ Open Settings to create a layout.</string>
     <string name="settings_touchpad_mouse_4_5_desc">Show physical back (M4) and forward (M5) buttons in the top corners</string>
     <string name="settings_touchpad_sensitivity">Pointer Speed</string>
     <string name="settings_touchpad_sensitivity_desc">Adjust cursor sensitivity multiplier</string>
+    <string name="settings_touchpad_haptics">Haptic Feedback</string>
+    <string name="settings_touchpad_haptics_desc">Vibrate slightly on clicks and gestures</string>
     <string name="help_touchpad_settings_title">Touchpad Help</string>
     <string name="help_touchpad_settings_intro">Configure options for the fullscreen virtual touchpad.</string>
     <string name="help_touchpad_settings_mode_desc">Relative mouse mode moves the cursor using relative finger deltas, while absolute mode projects touch coordinates directly.</string>
@@ -1070,5 +1072,6 @@ Open Settings to create a layout.</string>
     <string name="help_touchpad_settings_sensitivity_desc">Adjusts the cursor movement speed multiplier in relative mouse mode.</string>
     <string name="help_touchpad_settings_natural_scroll_desc">Enables natural scrolling direction: dragging fingers down pulls screen content down.</string>
     <string name="help_touchpad_settings_scroll_speed_desc">Adjusts the sensitivity/speed of two-finger scrolling.</string>
+    <string name="help_touchpad_settings_haptics_desc">Enables subtle physical haptic feedback ticks when clicking visual buttons or performing click gestures.</string>
 
 </resources>

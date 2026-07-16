@@ -57,6 +57,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
     val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
     val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -167,6 +168,12 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                         formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
                         onValueChange = { TouchpadSettings.setTouchpadSensitivity(it) },
                     )
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_haptics),
+                        description = stringResource(R.string.settings_touchpad_haptics_desc),
+                        checked = touchpadHapticsEnabled,
+                        onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
+                    )
                 }
 
                 SettingsSection(
@@ -259,6 +266,10 @@ private fun TouchpadSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_sensitivity),
             description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_haptics),
+            description = stringResource(R.string.help_touchpad_settings_haptics_desc),
         )
 
         HelpSection(stringResource(R.string.settings_touchpad_mirroring))

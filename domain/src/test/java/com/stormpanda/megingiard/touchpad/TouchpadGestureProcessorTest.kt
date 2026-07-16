@@ -152,4 +152,89 @@ class TouchpadGestureProcessorTest {
             // Should produce +4 scroll wheel units.
             naturalProcessor.onMove(1L, 100f, 224f, 0f, 24f, 1000f, 1000f, false)
         }
+
+    @Test
+    fun `haptic feedback triggers on single tap`() =
+        runTest(testDispatcher) {
+            var hapticCount = 0
+            val processor =
+                TouchpadGestureProcessor(
+                    useMouse = true,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                    onHapticFeedback = { hapticCount++ },
+                )
+
+            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false, true)
+            processor.onRelease(1L, 100f, 200f, 1000f, 1000f, true, true, true, false)
+            assertEquals(1, hapticCount)
+        }
+
+    @Test
+    fun `haptic feedback triggers on drag start`() =
+        runTest(testDispatcher) {
+            var hapticCount = 0
+            val processor =
+                TouchpadGestureProcessor(
+                    useMouse = true,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                    onHapticFeedback = { hapticCount++ },
+                )
+
+            // First tap
+            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false, true)
+            processor.onRelease(1L, 100f, 200f, 1000f, 1000f, true, true, true, false)
+            assertEquals(1, hapticCount)
+
+            // Second tap (drag start)
+            processor.onPress(2L, 100f, 200f, 1000f, 1000f, false, true)
+            assertEquals(2, hapticCount)
+
+            processor.onRelease(2L, 100f, 200f, 1000f, 1000f, true, true, true, false)
+        }
+
+    @Test
+    fun `haptic feedback triggers on two finger tap`() =
+        runTest(testDispatcher) {
+            var hapticCount = 0
+            val processor =
+                TouchpadGestureProcessor(
+                    useMouse = true,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                    onHapticFeedback = { hapticCount++ },
+                )
+
+            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false, false)
+            processor.onPress(2L, 120f, 220f, 1000f, 1000f, false, false)
+            processor.onRelease(1L, 100f, 200f, 1000f, 1000f, false, true, true, false)
+            processor.onRelease(2L, 120f, 220f, 1000f, 1000f, true, true, true, false)
+            assertEquals(1, hapticCount)
+        }
+
+    @Test
+    fun `haptic feedback triggers on three finger tap`() =
+        runTest(testDispatcher) {
+            var hapticCount = 0
+            val processor =
+                TouchpadGestureProcessor(
+                    useMouse = true,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                    onHapticFeedback = { hapticCount++ },
+                )
+
+            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false, false)
+            processor.onPress(2L, 120f, 220f, 1000f, 1000f, false, false)
+            processor.onPress(3L, 140f, 240f, 1000f, 1000f, false, false)
+            processor.onRelease(1L, 100f, 200f, 1000f, 1000f, false, true, true, true)
+            processor.onRelease(2L, 120f, 220f, 1000f, 1000f, false, true, true, true)
+            processor.onRelease(3L, 140f, 240f, 1000f, 1000f, true, true, true, true)
+            assertEquals(1, hapticCount)
+        }
 }

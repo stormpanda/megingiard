@@ -45,6 +45,7 @@ class TouchpadGestureProcessor(
     private val twoFingerScrollEnabled: Boolean = true,
     private val naturalScrollEnabled: Boolean = true,
     scrollSpeed: Float = 1.0f,
+    private val onHapticFeedback: () -> Unit = {},
 ) {
     // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
     private val sensitivity: Float =
@@ -120,6 +121,7 @@ class TouchpadGestureProcessor(
                     isDragging = true
                     lastTapReleaseTime = 0L
                     AppLog.d(TAG, "onPress: starting drag lock")
+                    onHapticFeedback()
                     val job = pendingClickJob
                     if (job != null && job.isActive) {
                         AppLog.d(TAG, "onPress: cancelling pending click job to inherit down state")
@@ -282,6 +284,7 @@ class TouchpadGestureProcessor(
                 when {
                     tapCount == 1 && tapToClick -> {
                         lastTapReleaseTime = System.currentTimeMillis()
+                        onHapticFeedback()
                         pendingClickJob =
                             scope.launch {
                                 try {
@@ -295,6 +298,7 @@ class TouchpadGestureProcessor(
                     }
 
                     tapCount == 2 && twoFingerTap -> {
+                        onHapticFeedback()
                         scope.launch {
                             MouseInjector.rightDown()
                             delay(TP_CLICK_DURATION_MS)
@@ -303,6 +307,7 @@ class TouchpadGestureProcessor(
                     }
 
                     tapCount >= 3 && threeFingerTap -> {
+                        onHapticFeedback()
                         scope.launch {
                             MouseInjector.middleDown()
                             delay(TP_CLICK_DURATION_MS)

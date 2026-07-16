@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.touchpad
 
+import android.os.Vibrator
 import android.view.TextureView
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -67,6 +68,8 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
+import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.mirror.LocalMirrorPresentation
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -103,6 +106,8 @@ fun FullscreenMouseOverlay() {
     val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsState()
     val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
     val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
+    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
@@ -157,6 +162,11 @@ fun FullscreenMouseOverlay() {
 
     // Recreate processor when sensitivity/mode/scrolling changes so the parameters apply immediately.
     val finalSensitivity = touchpadSensitivity * sensitivity
+    val currentOnHapticFeedback by rememberUpdatedState {
+        if (touchpadHapticsEnabled && vibrator != null) {
+            triggerHaptic(vibrator, HapticStrength.LIGHT)
+        }
+    }
     val processor =
         remember(
             touchpadUseMouse,
@@ -176,6 +186,7 @@ fun FullscreenMouseOverlay() {
                 twoFingerScrollEnabled = twoFingerScrollState.value,
                 naturalScrollEnabled = touchpadNaturalScroll,
                 scrollSpeed = touchpadScrollSpeed,
+                onHapticFeedback = { currentOnHapticFeedback() },
             )
         }
 
@@ -600,6 +611,9 @@ private fun TouchpadMouseButton(
     text: String? = null,
 ) {
     var pressed by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
     val colors = LocalAppColors.current
     val buttonShape = RoundedCornerShape(8.dp)
     val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
@@ -636,6 +650,9 @@ private fun TouchpadMouseButton(
                                             ) {
                                                 activePids += pid
                                                 pressed = true
+                                                if (touchpadHapticsEnabled && vibrator != null) {
+                                                    triggerHaptic(vibrator, HapticStrength.LIGHT)
+                                                }
                                                 onDown()
                                                 change.consume()
                                             }

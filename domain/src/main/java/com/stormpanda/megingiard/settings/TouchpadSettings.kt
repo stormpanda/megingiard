@@ -72,6 +72,10 @@ object TouchpadSettings {
     private val _touchpadScrollSpeed = MutableStateFlow(1.0f)
     val touchpadScrollSpeed: StateFlow<Float> = _touchpadScrollSpeed.asStateFlow()
 
+    // Enable physical haptic feedback tick on clicks / taps
+    private val _touchpadHapticsEnabled = MutableStateFlow(true)
+    val touchpadHapticsEnabled: StateFlow<Boolean> = _touchpadHapticsEnabled.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -93,6 +97,7 @@ object TouchpadSettings {
         _touchpadSensitivity.value = prefs[KEY_TOUCHPAD_SENSITIVITY] ?: 1.0f
         _touchpadNaturalScroll.value = prefs[KEY_TOUCHPAD_NATURAL_SCROLL] ?: true
         _touchpadScrollSpeed.value = prefs[KEY_TOUCHPAD_SCROLL_SPEED] ?: 1.0f
+        _touchpadHapticsEnabled.value = prefs[KEY_TOUCHPAD_HAPTICS_ENABLED] ?: true
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
@@ -168,5 +173,11 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadScrollSpeed($clamped)")
         _touchpadScrollSpeed.value = clamped
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_SCROLL_SPEED] = clamped } }
+    }
+
+    fun setTouchpadHapticsEnabled(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadHapticsEnabled($value)")
+        _touchpadHapticsEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_HAPTICS_ENABLED] = value } }
     }
 }

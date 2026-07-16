@@ -160,4 +160,29 @@ class TouchpadSettingsTest {
             testScheduler.advanceUntilIdle()
             assertEquals(3.0f, TouchpadSettings.touchpadScrollSpeed.value, 1e-5f)
         }
+
+    @Test
+    fun testHapticsSettingDefaultAndUpdates() =
+        runTest(testDispatcher) {
+            val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    produceFile = { tempFile },
+                    scope = testScope,
+                )
+
+            TouchpadSettings.init(testDataStore, testScope)
+
+            // 1. Verify default value is true
+            assertTrue(TouchpadSettings.touchpadHapticsEnabled.value)
+
+            // 2. Set to false and verify it updates in flow
+            TouchpadSettings.setTouchpadHapticsEnabled(false)
+            testScheduler.advanceUntilIdle()
+            assertFalse(TouchpadSettings.touchpadHapticsEnabled.value)
+
+            // 3. Verify it is persisted in the DataStore
+            val prefs = testDataStore.data.first()
+            assertTrue(prefs[KEY_TOUCHPAD_HAPTICS_ENABLED] == false)
+        }
 }
