@@ -195,15 +195,15 @@ private fun TouchpadSettingsHelpModal(
         HelpSection(stringResource(R.string.settings_touchpad_tap_to_click))
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_tap_to_click),
-            description = stringResource(R.string.help_touchpad_settings_click_desc),
+            description = stringResource(R.string.help_touchpad_settings_tap_to_click_desc),
         )
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_two_finger_tap),
-            description = stringResource(R.string.help_touchpad_settings_click_desc),
+            description = stringResource(R.string.help_touchpad_settings_two_finger_tap_desc),
         )
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_three_finger_tap),
-            description = stringResource(R.string.help_touchpad_settings_click_desc),
+            description = stringResource(R.string.help_touchpad_settings_three_finger_tap_desc),
         )
 
         HelpSection(stringResource(R.string.settings_touchpad_tap_drag))
