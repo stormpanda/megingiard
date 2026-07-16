@@ -41,6 +41,7 @@ class KeyboardViewModel(
     val kbTrackpointEnabled: StateFlow<Boolean> = KeyboardSettings.kbTrackpointEnabled
     val kbFullscreen: StateFlow<Boolean> = KeyboardSettings.kbFullscreen
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = KeyboardSettings.kbMouseBtnPos
+    val kbTouchpadEnabled: StateFlow<Boolean> = KeyboardSettings.kbTouchpadEnabled
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val isQuickMenuOpen: StateFlow<Boolean> = AppStateManager.isQuickMenuOpen
 
@@ -49,6 +50,10 @@ class KeyboardViewModel(
 
     fun setKeyboardMode(mode: KeyboardMode) {
         _keyboardMode.value = mode
+    }
+
+    fun setKbTouchpadEnabled(value: Boolean) {
+        KeyboardSettings.setKbTouchpadEnabled(value)
     }
 
     val controller = KeyRepeatController(viewModelScope)

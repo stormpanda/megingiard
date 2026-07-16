@@ -84,6 +84,9 @@
     <string name="settings_kb_repeat_desc">Hold a key to repeat it</string>
     <string name="settings_kb_fullscreen">Fullscreen keyboard</string>
     <string name="settings_kb_fullscreen_desc">No bottom gap — keyboard fills the entire screen</string>
+    <string name="settings_kb_touchpad">Keyboard Touchpad</string>
+    <string name="settings_kb_touchpad_desc">Show touchpad on top of the keyboard</string>
+
 
     <!-- Input method (touchpad + keyboard trackpoint) -->
     <string name="settings_input_method">Mouse mode</string>
@@ -936,6 +939,8 @@ Open Settings to create a layout.</string>
     <string name="help_keyboard_settings_title">Keyboard Settings — Help</string>
     <string name="help_keyboard_settings_intro">Configure layouts and keys for the Gboard-style virtual keyboard.</string>
     <string name="help_keyboard_settings_layout_desc">Select your preferred letters arrangement (QWERTY, QWERTZ, or AZERTY). Note that this configuration only impacts the letters (ABC) keyboard layout mode. Numeric and symbols layout layers remain identical across regional formats.</string>
+    <string name="help_keyboard_settings_touchpad_desc">Show a small relative touchpad in the area above the keyboard layout when the keyboard is open. Gestures like tap-to-click, two-finger tap (right click), and two-finger scroll are supported.</string>
+
 
     <!-- Quick Menu help -->
     <string name="help_quickmenu_title">Quick Menu — Help</string>

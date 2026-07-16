@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -31,12 +32,14 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.LayoutDropdownRow
 import com.stormpanda.megingiard.settings.SettingsSection
+import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.SettingLabelColumn
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
 private const val TAG = "KbSettingsOverlay"
@@ -49,6 +52,7 @@ fun KeyboardSettingsOverlay(
 ) {
     val colors = LocalAppColors.current
     val currentLayout by viewModel.kbLayout.collectAsState()
+    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -105,6 +109,18 @@ fun KeyboardSettingsOverlay(
                         currentLayout = currentLayout,
                         onLayoutSelected = { viewModel.setKbLayout(it) },
                     )
+
+                    AppSettingsRow {
+                        SettingLabelColumn(
+                            label = stringResource(R.string.settings_kb_touchpad),
+                            subtitle = stringResource(R.string.settings_kb_touchpad_desc),
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = kbTouchpadEnabled,
+                            onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
+                        )
+                    }
                 }
             }
         }
@@ -132,6 +148,12 @@ private fun KeyboardSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_kb_layout),
             description = stringResource(R.string.help_keyboard_settings_layout_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_kb_touchpad))
+        HelpEntry(
+            label = stringResource(R.string.settings_kb_touchpad),
+            description = stringResource(R.string.help_keyboard_settings_touchpad_desc),
         )
     }
 }

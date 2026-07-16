@@ -91,6 +91,12 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - The settings screen MUST include a dropdown to select between **QWERTZ**, **QWERTY**, and **AZERTY** regional layouts.
 - Switching layout via this dropdown MUST only impact the alphabetic (`LETTERS` / ABC) keyboard layout, leaving symbol and numeric layouts unaffected.
 
+### FR-K10: Keyboard-Top Touchpad
+
+- When enabled in Settings, the keyboard screen MUST show a relative touchpad in the area above the Gboard-style layout.
+- The touchpad MUST support relative cursor movement and gesture clicks/taps (tap-to-click, two-finger-tap, three-finger-tap, tap-drag, and two-finger scrolling) by reusing `TouchpadGestureProcessor` and piping mouse events to `MouseInjector`.
+- The touchpad MUST not feature physical click buttons.
+
 ---
 
 ## Technical Implementation
@@ -242,6 +248,7 @@ When a full-screen UI overlay is visible:
 | Key Repeat Enabled | `kb_repeat_enabled`     | `true`   | Enable/disable key repeat (disabled: keyUp sent on press) |
 | Fullscreen Mode    | `kb_fullscreen`         | `false`  | Expand keyboard to use full screen area                   |
 | Button Position    | `kb_mouse_btn_pos`      | `LEFT`   | Mouse button overlay placement (`LEFT`, `RIGHT`, or `BOTH`) |
+| Keyboard Touchpad  | `kb_touchpad_enabled`   | `true`   | Show touchpad on top of the keyboard layout              |
 
 ### Source Files
 
