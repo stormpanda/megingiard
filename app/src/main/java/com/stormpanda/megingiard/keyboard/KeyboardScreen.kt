@@ -628,138 +628,145 @@ fun KeyboardScreen(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.touchpadBackground.copy(alpha = 0.6f))
-                        .border(
-                            width = 1.dp,
-                            brush = insetBezelBrush,
-                            shape = RoundedCornerShape(12.dp),
-                        ).onGloballyPositioned { touchpadCoords = it }
-                        .pointerInput(processor) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Main)
-                                    val coords = touchpadCoords ?: continue
-                                    val sw = coords.size.width.toFloat()
-                                    val sh = coords.size.height.toFloat()
-                                    for (change in event.changes) {
-                                        val id = change.id.value
-                                        val localPos = change.position
-
-                                        val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-                                        when (event.type) {
-                                            PointerEventType.Press -> {
-                                                if (!change.previousPressed && isInside) {
-                                                    pointersInsideTouchpad.add(id)
-                                                }
-                                            }
-
-                                            PointerEventType.Move -> {
-                                                val wasInside = pointersInsideTouchpad.contains(id)
-                                                if (wasInside && !isInside) {
-                                                    pointersInsideTouchpad.remove(id)
-                                                }
-                                            }
-
-                                            PointerEventType.Release -> {
-                                                if (!change.pressed) {
-                                                    pointersInsideTouchpad.remove(id)
-                                                }
-                                            }
-                                        }
-
-                                        if (change.isConsumed) continue
-
-                                        val clampedX = localPos.x.coerceIn(0f, sw)
-                                        val clampedY = localPos.y.coerceIn(0f, sh)
-
-                                        when (event.type) {
-                                            PointerEventType.Press -> {
-                                                if (!change.previousPressed) {
-                                                    processor.onPress(
-                                                        pointerId = id,
-                                                        x = clampedX,
-                                                        y = clampedY,
-                                                        surfaceW = sw,
-                                                        surfaceH = sh,
-                                                        overlayOpen = false,
-                                                        tapDrag = tapDragState.value,
-                                                    )
-                                                }
-                                            }
-
-                                            PointerEventType.Move -> {
-                                                val wasInside = pointersInsideTouchpad.contains(id)
-                                                if (wasInside && !isInside) {
-                                                    val allUp = event.changes.none { it.pressed }
-                                                    processor.onRelease(
-                                                        pointerId = id,
-                                                        x = clampedX,
-                                                        y = clampedY,
-                                                        surfaceW = sw,
-                                                        surfaceH = sh,
-                                                        allPointersUp = allUp,
-                                                        tapToClick = tapToClickState.value,
-                                                        twoFingerTap = twoFingerTapState.value,
-                                                        threeFingerTap = threeFingerTapState.value,
-                                                    )
-                                                } else {
-                                                    val delta = change.positionChange()
-                                                    processor.onMove(
-                                                        pointerId = id,
-                                                        x = clampedX,
-                                                        y = clampedY,
-                                                        deltaX = delta.x,
-                                                        deltaY = delta.y,
-                                                        surfaceW = sw,
-                                                        surfaceH = sh,
-                                                        overlayOpen = false,
-                                                    )
-                                                }
-                                            }
-
-                                            PointerEventType.Release -> {
-                                                if (!change.pressed) {
-                                                    val allUp = event.changes.none { it.pressed }
-                                                    processor.onRelease(
-                                                        pointerId = id,
-                                                        x = clampedX,
-                                                        y = clampedY,
-                                                        surfaceW = sw,
-                                                        surfaceH = sh,
-                                                        allPointersUp = allUp,
-                                                        tapToClick = tapToClickState.value,
-                                                        twoFingerTap = twoFingerTapState.value,
-                                                        threeFingerTap = threeFingerTapState.value,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        change.consume()
-                                    }
-                                    hasActivePointers = pointersInsideTouchpad.isNotEmpty()
-                                }
-                            }
-                        },
-                contentAlignment = Alignment.Center,
+                        .background(colors.keyboardBackground),
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.appBackground)
+                            .border(
+                                width = 1.dp,
+                                brush = insetBezelBrush,
+                                shape = RoundedCornerShape(12.dp),
+                            ).onGloballyPositioned { touchpadCoords = it }
+                            .pointerInput(processor) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Main)
+                                        val coords = touchpadCoords ?: continue
+                                        val sw = coords.size.width.toFloat()
+                                        val sh = coords.size.height.toFloat()
+                                        for (change in event.changes) {
+                                            val id = change.id.value
+                                            val localPos = change.position
+
+                                            val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+                                            when (event.type) {
+                                                PointerEventType.Press -> {
+                                                    if (!change.previousPressed && isInside) {
+                                                        pointersInsideTouchpad.add(id)
+                                                    }
+                                                }
+
+                                                PointerEventType.Move -> {
+                                                    val wasInside = pointersInsideTouchpad.contains(id)
+                                                    if (wasInside && !isInside) {
+                                                        pointersInsideTouchpad.remove(id)
+                                                    }
+                                                }
+
+                                                PointerEventType.Release -> {
+                                                    if (!change.pressed) {
+                                                        pointersInsideTouchpad.remove(id)
+                                                    }
+                                                }
+                                            }
+
+                                            if (change.isConsumed) continue
+
+                                            val clampedX = localPos.x.coerceIn(0f, sw)
+                                            val clampedY = localPos.y.coerceIn(0f, sh)
+
+                                            when (event.type) {
+                                                PointerEventType.Press -> {
+                                                    if (!change.previousPressed) {
+                                                        processor.onPress(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            overlayOpen = false,
+                                                            tapDrag = tapDragState.value,
+                                                        )
+                                                    }
+                                                }
+
+                                                PointerEventType.Move -> {
+                                                    val wasInside = pointersInsideTouchpad.contains(id)
+                                                    if (wasInside && !isInside) {
+                                                        val allUp = event.changes.none { it.pressed }
+                                                        processor.onRelease(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            allPointersUp = allUp,
+                                                            tapToClick = tapToClickState.value,
+                                                            twoFingerTap = twoFingerTapState.value,
+                                                            threeFingerTap = threeFingerTapState.value,
+                                                        )
+                                                    } else {
+                                                        val delta = change.positionChange()
+                                                        processor.onMove(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            deltaX = delta.x,
+                                                            deltaY = delta.y,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            overlayOpen = false,
+                                                        )
+                                                    }
+                                                }
+
+                                                PointerEventType.Release -> {
+                                                    if (!change.pressed) {
+                                                        val allUp = event.changes.none { it.pressed }
+                                                        processor.onRelease(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            allPointersUp = allUp,
+                                                            tapToClick = tapToClickState.value,
+                                                            twoFingerTap = twoFingerTapState.value,
+                                                            threeFingerTap = threeFingerTapState.value,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            change.consume()
+                                        }
+                                        hasActivePointers = pointersInsideTouchpad.isNotEmpty()
+                                    }
+                                }
+                            },
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.TouchApp,
-                        contentDescription = null,
-                        tint = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                        modifier = Modifier.size(32.dp),
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.touchpad_hint_mouse),
-                        color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.TouchApp,
+                            contentDescription = null,
+                            tint = colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                            modifier = Modifier.size(32.dp),
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.touchpad_hint_mouse),
+                            color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         } else {
