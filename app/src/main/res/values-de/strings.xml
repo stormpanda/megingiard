@@ -1045,6 +1045,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_touchpad_tap_drag_desc">Doppeltippen und Halten zum Ziehen von Elementen</string>
     <string name="settings_touchpad_two_finger_scroll">Zwei-Finger-Scrollen</string>
     <string name="settings_touchpad_two_finger_scroll_desc">Zwei Finger vertikal ziehen, um den Bildschirm zu scrollen</string>
+    <string name="settings_touchpad_natural_scroll">Natürliches Scrollen</string>
+    <string name="settings_touchpad_natural_scroll_desc">Inhalte bewegen sich in Richtung der Fingerbewegung</string>
+    <string name="settings_touchpad_scroll_speed">Scrollgeschwindigkeit</string>
+    <string name="settings_touchpad_scroll_speed_desc">Scrollrad-Empfindlichkeit anpassen</string>
     <string name="settings_touchpad_mouse_4_5">Maustasten 4/5 aktivieren</string>
     <string name="settings_touchpad_mouse_4_5_desc">Zeige physische Zurück- (M4) und Vorwärts-Tasten (M5) in den oberen Ecken</string>
     <string name="settings_touchpad_sensitivity">Zeigergeschwindigkeit</string>
@@ -1071,5 +1075,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_touchpad_settings_mirroring_desc">Aktiviert die absolute Touch-Projektion mit einer Echtzeit-Spiegelung des primären Bildschirms.</string>
     <string name="help_touchpad_settings_mirror_dim_desc">Passt die Helligkeit des gespiegelten Bildschirms im Touchpad an.</string>
     <string name="help_touchpad_settings_sensitivity_desc">Passt den Cursor-Bewegungs-Multiplikator im relativen Mausmodus an.</string>
+    <string name="help_touchpad_settings_natural_scroll_desc">Aktiviert die natürliche Scrollrichtung: Das Ziehen von Fingern nach unten zieht den Bildschirminhalt nach unten.</string>
+    <string name="help_touchpad_settings_scroll_speed_desc">Passt die Empfindlichkeit/Geschwindigkeit des Zwei-Finger-Scrollens an.</string>
 
 </resources>

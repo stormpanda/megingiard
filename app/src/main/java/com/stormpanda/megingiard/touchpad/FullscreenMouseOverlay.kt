@@ -101,6 +101,8 @@ fun FullscreenMouseOverlay() {
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
     val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsState()
+    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
+    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
@@ -156,16 +158,24 @@ fun FullscreenMouseOverlay() {
     // Recreate processor when sensitivity/mode/scrolling changes so the parameters apply immediately.
     val finalSensitivity = touchpadSensitivity * sensitivity
     val processor =
-        remember(touchpadUseMouse, finalSensitivity, twoFingerScrollState.value) {
+        remember(
+            touchpadUseMouse,
+            finalSensitivity,
+            twoFingerScrollState.value,
+            touchpadNaturalScroll,
+            touchpadScrollSpeed,
+        ) {
             AppLog.d(
                 TAG,
-                "creating TouchpadGestureProcessor useMouse=$touchpadUseMouse sensitivity=$finalSensitivity twoFingerScroll=${twoFingerScrollState.value}",
+                "creating TouchpadGestureProcessor useMouse=$touchpadUseMouse sensitivity=$finalSensitivity twoFingerScroll=${twoFingerScrollState.value} naturalScroll=$touchpadNaturalScroll scrollSpeed=$touchpadScrollSpeed",
             )
             TouchpadGestureProcessor(
                 useMouse = touchpadUseMouse,
                 scope = coroutineScope,
                 sensitivity = finalSensitivity,
                 twoFingerScrollEnabled = twoFingerScrollState.value,
+                naturalScrollEnabled = touchpadNaturalScroll,
+                scrollSpeed = touchpadScrollSpeed,
             )
         }
 

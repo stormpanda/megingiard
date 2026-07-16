@@ -110,4 +110,46 @@ class TouchpadGestureProcessorTest {
 
             // No exception thrown
         }
+
+    @Test
+    fun `relative mode scroll handles speed and natural scrolling`() =
+        runTest(testDispatcher) {
+            // Test traditional scrolling (naturalScrollEnabled = false, scrollSpeed = 1.0f)
+            val traditionalProcessor =
+                TouchpadGestureProcessor(
+                    useMouse = true,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                    naturalScrollEnabled = false,
+                    scrollSpeed = 1.0f,
+                )
+
+            traditionalProcessor.onPress(1L, 100f, 200f, 1000f, 1000f, false, false)
+            traditionalProcessor.onPress(2L, 120f, 220f, 1000f, 1000f, false, false)
+
+            // Drag down 24px (should produce +2 scroll wheel units, traditional direction)
+            traditionalProcessor.onMove(1L, 100f, 224f, 0f, 24f, 1000f, 1000f, false)
+
+            // Test natural scrolling (naturalScrollEnabled = true, scrollSpeed = 2.0f)
+            val naturalProcessor =
+                TouchpadGestureProcessor(
+                    useMouse = true,
+                    scope = this,
+                    sensitivity = 1.0f,
+                    twoFingerScrollEnabled = true,
+                    naturalScrollEnabled = true,
+                    scrollSpeed = 2.0f,
+                )
+
+            naturalProcessor.onPress(1L, 100f, 200f, 1000f, 1000f, false, false)
+            naturalProcessor.onPress(2L, 120f, 220f, 1000f, 1000f, false, false)
+
+            // Drag down 24px:
+            // scrollThreshold = 12f / 2.0f = 6f
+            // units = 24 / 6 = 4 units.
+            // directionMultiplier = -1 (natural scroll active).
+            // Should produce -4 scroll wheel units.
+            naturalProcessor.onMove(1L, 100f, 224f, 0f, 24f, 1000f, 1000f, false)
+        }
 }

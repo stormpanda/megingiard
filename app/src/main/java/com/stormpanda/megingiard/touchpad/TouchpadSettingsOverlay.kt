@@ -55,6 +55,8 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
     val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
+    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
+    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -137,6 +139,21 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                         checked = touchpadTwoFingerScroll,
                         onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
                     )
+                    if (touchpadTwoFingerScroll) {
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_touchpad_natural_scroll),
+                            description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
+                            checked = touchpadNaturalScroll,
+                            onCheckedChange = { TouchpadSettings.setTouchpadNaturalScroll(it) },
+                        )
+                        SliderSettingRow(
+                            label = stringResource(R.string.settings_touchpad_scroll_speed),
+                            value = touchpadScrollSpeed,
+                            valueRange = 0.5f..3.0f,
+                            formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
+                            onValueChange = { TouchpadSettings.setTouchpadScrollSpeed(it) },
+                        )
+                    }
                     RememberSettingRow(
                         label = stringResource(R.string.settings_touchpad_mouse_4_5),
                         description = stringResource(R.string.settings_touchpad_mouse_4_5_desc),
@@ -224,6 +241,14 @@ private fun TouchpadSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_two_finger_scroll),
             description = stringResource(R.string.help_touchpad_settings_scroll_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_natural_scroll),
+            description = stringResource(R.string.help_touchpad_settings_natural_scroll_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_scroll_speed),
+            description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
         )
 
         HelpSection(stringResource(R.string.settings_touchpad_mouse_4_5))

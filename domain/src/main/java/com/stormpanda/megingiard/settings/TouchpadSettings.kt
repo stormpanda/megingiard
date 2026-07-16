@@ -64,6 +64,14 @@ object TouchpadSettings {
     private val _touchpadSensitivity = MutableStateFlow(1.0f)
     val touchpadSensitivity: StateFlow<Float> = _touchpadSensitivity.asStateFlow()
 
+    // Natural scrolling direction: true = enabled (default), false = traditional
+    private val _touchpadNaturalScroll = MutableStateFlow(true)
+    val touchpadNaturalScroll: StateFlow<Boolean> = _touchpadNaturalScroll.asStateFlow()
+
+    // Scroll speed sensitivity multiplier: default 1.0f, range 0.5f to 3.0f
+    private val _touchpadScrollSpeed = MutableStateFlow(1.0f)
+    val touchpadScrollSpeed: StateFlow<Float> = _touchpadScrollSpeed.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -83,6 +91,8 @@ object TouchpadSettings {
         _touchpadMirrorDim.value = prefs[KEY_TOUCHPAD_MIRROR_DIM] ?: 50
         _touchpadMouse45Enabled.value = prefs[KEY_TOUCHPAD_MOUSE_4_5_ENABLED] ?: false
         _touchpadSensitivity.value = prefs[KEY_TOUCHPAD_SENSITIVITY] ?: 1.0f
+        _touchpadNaturalScroll.value = prefs[KEY_TOUCHPAD_NATURAL_SCROLL] ?: true
+        _touchpadScrollSpeed.value = prefs[KEY_TOUCHPAD_SCROLL_SPEED] ?: 1.0f
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
@@ -145,5 +155,18 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadSensitivity($clamped)")
         _touchpadSensitivity.value = clamped
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_SENSITIVITY] = clamped } }
+    }
+
+    fun setTouchpadNaturalScroll(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadNaturalScroll($value)")
+        _touchpadNaturalScroll.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_NATURAL_SCROLL] = value } }
+    }
+
+    fun setTouchpadScrollSpeed(value: Float) {
+        val clamped = value.coerceIn(0.5f, 3.0f)
+        AppLog.d(TAG, "setTouchpadScrollSpeed($clamped)")
+        _touchpadScrollSpeed.value = clamped
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_SCROLL_SPEED] = clamped } }
     }
 }

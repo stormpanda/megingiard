@@ -43,11 +43,20 @@ class TouchpadGestureProcessor(
     private val scope: CoroutineScope,
     sensitivity: Float = 1.0f,
     private val twoFingerScrollEnabled: Boolean = true,
+    private val naturalScrollEnabled: Boolean = true,
+    scrollSpeed: Float = 1.0f,
 ) {
     // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
     private val sensitivity: Float =
         if (sensitivity.isFinite() && sensitivity > 0f) {
             sensitivity.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
+        } else {
+            1.0f
+        }
+
+    private val scrollSpeed: Float =
+        if (scrollSpeed.isFinite() && scrollSpeed > 0f) {
+            scrollSpeed.coerceIn(0.1f, 10.0f)
         } else {
             1.0f
         }
@@ -181,10 +190,11 @@ class TouchpadGestureProcessor(
             if (twoFingerScrollEnabled && downPositions.size == 2) {
                 if (pointerId == primaryPointer) {
                     scrollAccumY += deltaY
-                    val scrollThreshold = 12f // Sensitivity threshold in pixels
+                    val scrollThreshold = 12f / scrollSpeed // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
-                        MouseInjector.scrollWheel(units)
+                        val directionMultiplier = if (naturalScrollEnabled) -1 else 1
+                        MouseInjector.scrollWheel(units * directionMultiplier)
                         scrollAccumY -= units * scrollThreshold
                     }
                 }

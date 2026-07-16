@@ -100,4 +100,64 @@ class TouchpadSettingsTest {
             testScheduler.advanceUntilIdle()
             assertEquals(3.0f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
         }
+
+    @Test
+    fun testNaturalScrollSettingDefaultAndUpdates() =
+        runTest(testDispatcher) {
+            val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    produceFile = { tempFile },
+                    scope = testScope,
+                )
+
+            TouchpadSettings.init(testDataStore, testScope)
+
+            // 1. Verify default value is true
+            assertTrue(TouchpadSettings.touchpadNaturalScroll.value)
+
+            // 2. Set to false and verify it updates in flow
+            TouchpadSettings.setTouchpadNaturalScroll(false)
+            testScheduler.advanceUntilIdle()
+            assertFalse(TouchpadSettings.touchpadNaturalScroll.value)
+
+            // 3. Verify it is persisted in the DataStore
+            val prefs = testDataStore.data.first()
+            assertTrue(prefs[KEY_TOUCHPAD_NATURAL_SCROLL] == false)
+        }
+
+    @Test
+    fun testScrollSpeedSettingDefaultAndUpdates() =
+        runTest(testDispatcher) {
+            val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    produceFile = { tempFile },
+                    scope = testScope,
+                )
+
+            TouchpadSettings.init(testDataStore, testScope)
+
+            // 1. Verify default value is 1.0f
+            assertEquals(1.0f, TouchpadSettings.touchpadScrollSpeed.value, 1e-5f)
+
+            // 2. Set to 2.0f and verify it updates in flow
+            TouchpadSettings.setTouchpadScrollSpeed(2.0f)
+            testScheduler.advanceUntilIdle()
+            assertEquals(2.0f, TouchpadSettings.touchpadScrollSpeed.value, 1e-5f)
+
+            // 3. Verify it is persisted in the DataStore
+            val prefs = testDataStore.data.first()
+            assertEquals(2.0f, prefs[KEY_TOUCHPAD_SCROLL_SPEED] ?: 1.0f, 1e-5f)
+
+            // 4. Out-of-bounds lower clamping
+            TouchpadSettings.setTouchpadScrollSpeed(0.0f)
+            testScheduler.advanceUntilIdle()
+            assertEquals(0.5f, TouchpadSettings.touchpadScrollSpeed.value, 1e-5f)
+
+            // 5. Out-of-bounds upper clamping
+            TouchpadSettings.setTouchpadScrollSpeed(4.0f)
+            testScheduler.advanceUntilIdle()
+            assertEquals(3.0f, TouchpadSettings.touchpadScrollSpeed.value, 1e-5f)
+        }
 }

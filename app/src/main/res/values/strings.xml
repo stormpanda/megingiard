@@ -1038,6 +1038,10 @@ Open Settings to create a layout.</string>
     <string name="settings_touchpad_tap_drag_desc">Double-tap and hold to drag items</string>
     <string name="settings_touchpad_two_finger_scroll">Two-Finger Scroll</string>
     <string name="settings_touchpad_two_finger_scroll_desc">Drag two fingers vertically to scroll the screen</string>
+    <string name="settings_touchpad_natural_scroll">Natural Scrolling</string>
+    <string name="settings_touchpad_natural_scroll_desc">Scroll content along with finger movement</string>
+    <string name="settings_touchpad_scroll_speed">Scroll Speed</string>
+    <string name="settings_touchpad_scroll_speed_desc">Adjust scroll sensitivity multiplier</string>
     <string name="settings_touchpad_mouse_4_5">Enable Mouse 4/5 Buttons</string>
     <string name="settings_touchpad_mouse_4_5_desc">Show physical back (M4) and forward (M5) buttons in the top corners</string>
     <string name="settings_touchpad_sensitivity">Pointer Speed</string>
@@ -1064,5 +1068,7 @@ Open Settings to create a layout.</string>
     <string name="help_touchpad_settings_mirroring_desc">Enables absolute touch projection with a real-time video mirror of the primary display.</string>
     <string name="help_touchpad_settings_mirror_dim_desc">Adjusts the brightness overlay of the mirrored screen inside the touchpad.</string>
     <string name="help_touchpad_settings_sensitivity_desc">Adjusts the cursor movement speed multiplier in relative mouse mode.</string>
+    <string name="help_touchpad_settings_natural_scroll_desc">Enables natural scrolling direction: dragging fingers down pulls screen content down.</string>
+    <string name="help_touchpad_settings_scroll_speed_desc">Adjusts the sensitivity/speed of two-finger scrolling.</string>
 
 </resources>
