@@ -425,36 +425,22 @@ object SettingsManager {
                         AppLog.w(TAG, "importGroupedSettings: unknown key '$keyName', skipping")
                         continue
                     }
-                    val existingValue = prefs.asMap()[key]
                     @Suppress("UNCHECKED_CAST")
-                    if (existingValue != null) {
-                        // Type is known from the currently stored value — safe cast by construction.
-                        when (existingValue) {
-                            is Boolean -> element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
-                            is Int -> element.intOrNull?.let { prefs[key as Preferences.Key<Int>] = it }
-                            is Long -> element.longOrNull?.let { prefs[key as Preferences.Key<Long>] = it }
-                            is Float -> element.floatOrNull?.let { prefs[key as Preferences.Key<Float>] = it }
-                            is String -> element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
+                    when (key) {
+                        in BOOLEAN_KEYS -> {
+                            element.booleanOrNull?.let { prefs[key as Preferences.Key<Boolean>] = it }
                         }
-                    } else {
-                        // Key absent on fresh install — infer type from JSON primitive.
-                        @Suppress("UNCHECKED_CAST")
-                        when {
-                            element.booleanOrNull != null -> {
-                                prefs[key as Preferences.Key<Boolean>] = element.booleanOrNull!!
-                            }
 
-                            element.floatOrNull != null && element.contentOrNull?.contains('.') == true -> {
-                                prefs[key as Preferences.Key<Float>] = element.floatOrNull!!
-                            }
+                        in INT_KEYS -> {
+                            element.intOrNull?.let { prefs[key as Preferences.Key<Int>] = it }
+                        }
 
-                            element.intOrNull != null -> {
-                                prefs[key as Preferences.Key<Int>] = element.intOrNull!!
-                            }
+                        in FLOAT_KEYS -> {
+                            element.floatOrNull?.let { prefs[key as Preferences.Key<Float>] = it }
+                        }
 
-                            else -> {
-                                element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
-                            }
+                        in STRING_KEYS -> {
+                            element.contentOrNull?.let { prefs[key as Preferences.Key<String>] = it }
                         }
                     }
                 }
