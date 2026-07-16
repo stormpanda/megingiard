@@ -450,7 +450,7 @@ fun FullscreenMouseOverlay() {
                                 modifier =
                                     Modifier
                                         .align(Alignment.TopStart)
-                                        .padding(start = 4.dp, top = 4.dp)
+                                        .padding(start = 4.dp, top = 2.dp)
                                         .size(56.dp),
                             )
                             TouchpadMouseButton(
@@ -460,7 +460,7 @@ fun FullscreenMouseOverlay() {
                                 modifier =
                                     Modifier
                                         .align(Alignment.TopEnd)
-                                        .padding(end = 4.dp, top = 4.dp)
+                                        .padding(end = 4.dp, top = 2.dp)
                                         .size(56.dp),
                             )
                         }
