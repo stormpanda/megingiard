@@ -175,10 +175,6 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_USE_MOUSE,
         KEY_TOUCHPAD_TAP_TO_CLICK,
         KEY_TOUCHPAD_TWO_FINGER_TAP,
-        KEY_TOUCHPAD_THREE_FINGER_TAP,
-        KEY_TOUCHPAD_TAP_DRAG,
-        KEY_TOUCHPAD_TWO_FINGER_SCROLL,
-        KEY_TOUCHPAD_MIRRORING_ENABLED,
         KEY_SKIP_TOUCH_RECORD_DIALOG,
         KEY_SKIP_GAMEPAD_RECORD_DIALOG,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
@@ -195,7 +191,6 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
 internal val INT_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_ACCENT_COLOR,
-        KEY_TOUCHPAD_MIRROR_DIM,
     )
 
 internal val FLOAT_KEYS: Set<Preferences.Key<*>> =
