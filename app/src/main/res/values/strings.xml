@@ -1040,6 +1040,8 @@ Open Settings to create a layout.</string>
     <string name="settings_touchpad_two_finger_scroll_desc">Drag two fingers vertically to scroll the screen</string>
     <string name="settings_touchpad_mouse_4_5">Enable Mouse 4/5 Buttons</string>
     <string name="settings_touchpad_mouse_4_5_desc">Show physical back (M4) and forward (M5) buttons in the top corners</string>
+    <string name="settings_touchpad_sensitivity">Pointer Speed</string>
+    <string name="settings_touchpad_sensitivity_desc">Adjust cursor sensitivity multiplier</string>
     <string name="help_touchpad_settings_title">Touchpad Help</string>
     <string name="help_touchpad_settings_intro">Configure options for the fullscreen virtual touchpad.</string>
     <string name="help_touchpad_settings_mode_desc">Relative mouse mode moves the cursor using relative finger deltas, while absolute mode projects touch coordinates directly.</string>
@@ -1061,5 +1063,6 @@ Open Settings to create a layout.</string>
     <string name="help_touchpad_settings_mouse_4_5_desc">Shows M4 (Back) and M5 (Forward) buttons in the corners of the relative mouse area.</string>
     <string name="help_touchpad_settings_mirroring_desc">Enables absolute touch projection with a real-time video mirror of the primary display.</string>
     <string name="help_touchpad_settings_mirror_dim_desc">Adjusts the brightness overlay of the mirrored screen inside the touchpad.</string>
+    <string name="help_touchpad_settings_sensitivity_desc">Adjusts the cursor movement speed multiplier in relative mouse mode.</string>
 
 </resources>

@@ -54,6 +54,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsState()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
     val touchpadMirrorDim by TouchpadSettings.touchpadMirrorDim.collectAsState()
+    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
     var showHelp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
@@ -142,6 +143,13 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
                         checked = touchpadMouse45Enabled,
                         onCheckedChange = { TouchpadSettings.setTouchpadMouse45Enabled(it) },
                     )
+                    SliderSettingRow(
+                        label = stringResource(R.string.settings_touchpad_sensitivity),
+                        value = touchpadSensitivity,
+                        valueRange = 0.1f..3.0f,
+                        formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
+                        onValueChange = { TouchpadSettings.setTouchpadSensitivity(it) },
+                    )
                 }
 
                 SettingsSection(
@@ -222,6 +230,10 @@ private fun TouchpadSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_mouse_4_5),
             description = stringResource(R.string.help_touchpad_settings_mouse_4_5_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_sensitivity),
+            description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
         )
 
         HelpSection(stringResource(R.string.settings_touchpad_mirroring))

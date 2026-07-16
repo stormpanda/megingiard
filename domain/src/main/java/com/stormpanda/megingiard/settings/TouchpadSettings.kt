@@ -60,6 +60,10 @@ object TouchpadSettings {
     private val _touchpadMouse45Enabled = MutableStateFlow(false)
     val touchpadMouse45Enabled: StateFlow<Boolean> = _touchpadMouse45Enabled.asStateFlow()
 
+    // Pointer sensitivity speed multiplier
+    private val _touchpadSensitivity = MutableStateFlow(1.0f)
+    val touchpadSensitivity: StateFlow<Float> = _touchpadSensitivity.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -78,6 +82,7 @@ object TouchpadSettings {
         _touchpadMirroringEnabled.value = prefs[KEY_TOUCHPAD_MIRRORING_ENABLED] ?: false
         _touchpadMirrorDim.value = prefs[KEY_TOUCHPAD_MIRROR_DIM] ?: 50
         _touchpadMouse45Enabled.value = prefs[KEY_TOUCHPAD_MOUSE_4_5_ENABLED] ?: false
+        _touchpadSensitivity.value = prefs[KEY_TOUCHPAD_SENSITIVITY] ?: 1.0f
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
@@ -133,5 +138,12 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadMouse45Enabled($value)")
         _touchpadMouse45Enabled.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MOUSE_4_5_ENABLED] = value } }
+    }
+
+    fun setTouchpadSensitivity(value: Float) {
+        val clamped = value.coerceIn(0.1f, 3.0f)
+        AppLog.d(TAG, "setTouchpadSensitivity($clamped)")
+        _touchpadSensitivity.value = clamped
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_SENSITIVITY] = clamped } }
     }
 }

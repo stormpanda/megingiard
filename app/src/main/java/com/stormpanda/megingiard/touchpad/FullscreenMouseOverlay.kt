@@ -94,6 +94,7 @@ fun FullscreenMouseOverlay() {
 
     val touchpadUseMouse by TouchpadSettings.touchpadUseMouse.collectAsState()
     val sensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
+    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
     val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
     val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
     val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
@@ -153,16 +154,17 @@ fun FullscreenMouseOverlay() {
     }
 
     // Recreate processor when sensitivity/mode/scrolling changes so the parameters apply immediately.
+    val finalSensitivity = touchpadSensitivity * sensitivity
     val processor =
-        remember(touchpadUseMouse, sensitivity, twoFingerScrollState.value) {
+        remember(touchpadUseMouse, finalSensitivity, twoFingerScrollState.value) {
             AppLog.d(
                 TAG,
-                "creating TouchpadGestureProcessor useMouse=$touchpadUseMouse sensitivity=$sensitivity twoFingerScroll=${twoFingerScrollState.value}",
+                "creating TouchpadGestureProcessor useMouse=$touchpadUseMouse sensitivity=$finalSensitivity twoFingerScroll=${twoFingerScrollState.value}",
             )
             TouchpadGestureProcessor(
                 useMouse = touchpadUseMouse,
                 scope = coroutineScope,
-                sensitivity = sensitivity,
+                sensitivity = finalSensitivity,
                 twoFingerScrollEnabled = twoFingerScrollState.value,
             )
         }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -63,5 +64,40 @@ class TouchpadSettingsTest {
             TouchpadSettings.setTouchpadMouse45Enabled(false)
             testScheduler.advanceUntilIdle()
             assertFalse(TouchpadSettings.touchpadMouse45Enabled.value)
+        }
+
+    @Test
+    fun testSensitivitySettingDefaultAndUpdates() =
+        runTest(testDispatcher) {
+            val testScope = CoroutineScope(SupervisorJob() + testDispatcher)
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    produceFile = { tempFile },
+                    scope = testScope,
+                )
+
+            TouchpadSettings.init(testDataStore, testScope)
+
+            // 1. Verify default value is 1.0f
+            assertEquals(1.0f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
+
+            // 2. Set to 1.5f and verify it updates in flow
+            TouchpadSettings.setTouchpadSensitivity(1.5f)
+            testScheduler.advanceUntilIdle()
+            assertEquals(1.5f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
+
+            // 3. Verify it is persisted in the DataStore
+            val prefs = testDataStore.data.first()
+            assertEquals(1.5f, prefs[KEY_TOUCHPAD_SENSITIVITY] ?: 1.0f, 1e-5f)
+
+            // 4. Out-of-bounds lower clamping
+            TouchpadSettings.setTouchpadSensitivity(0.0f)
+            testScheduler.advanceUntilIdle()
+            assertEquals(0.1f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
+
+            // 5. Out-of-bounds upper clamping
+            TouchpadSettings.setTouchpadSensitivity(4.0f)
+            testScheduler.advanceUntilIdle()
+            assertEquals(3.0f, TouchpadSettings.touchpadSensitivity.value, 1e-5f)
         }
 }
