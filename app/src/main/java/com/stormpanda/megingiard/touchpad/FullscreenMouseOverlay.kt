@@ -99,6 +99,7 @@ fun FullscreenMouseOverlay() {
     val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
     val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
     val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
+    val touchpadMouse45Enabled by TouchpadSettings.touchpadMouse45Enabled.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val touchpadMirroringEnabled by TouchpadSettings.touchpadMirroringEnabled.collectAsState()
@@ -436,6 +437,29 @@ fun FullscreenMouseOverlay() {
                                 modifier = Modifier.weight(1.2f).fillMaxHeight(),
                             )
                         }
+
+                        if (touchpadMouse45Enabled) {
+                            TouchpadMouseButton(
+                                onDown = { MouseInjector.mouse4Down() },
+                                onUp = { MouseInjector.mouse4Up() },
+                                text = "M4",
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(start = 4.dp, top = 4.dp)
+                                        .size(56.dp),
+                            )
+                            TouchpadMouseButton(
+                                onDown = { MouseInjector.mouse5Down() },
+                                onUp = { MouseInjector.mouse5Up() },
+                                text = "M5",
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(end = 4.dp, top = 4.dp)
+                                        .size(56.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -557,6 +581,7 @@ private fun TouchpadMouseButton(
     onDown: () -> Unit,
     onUp: () -> Unit,
     modifier: Modifier = Modifier,
+    text: String? = null,
 ) {
     var pressed by remember { mutableStateOf(false) }
     val colors = LocalAppColors.current
@@ -646,7 +671,16 @@ private fun TouchpadMouseButton(
                         brush = buttonBezelBrush,
                         shape = buttonShape,
                     ),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            if (text != null) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurface.copy(alpha = 0.5f),
+                )
+            }
+        }
     }
 }
 

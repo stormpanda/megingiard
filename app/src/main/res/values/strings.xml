@@ -1038,6 +1038,8 @@ Open Settings to create a layout.</string>
     <string name="settings_touchpad_tap_drag_desc">Double-tap and hold to drag items (Mouse Mode only)</string>
     <string name="settings_touchpad_two_finger_scroll">Two-Finger Scroll</string>
     <string name="settings_touchpad_two_finger_scroll_desc">Drag two fingers vertically to scroll the screen (Mouse Mode only)</string>
+    <string name="settings_touchpad_mouse_4_5">Enable Mouse 4/5 Buttons</string>
+    <string name="settings_touchpad_mouse_4_5_desc">Show physical back (M4) and forward (M5) buttons in the top corners (Mouse Mode only)</string>
     <string name="help_touchpad_settings_title">Touchpad Help</string>
     <string name="help_touchpad_settings_intro">Configure options for the fullscreen virtual touchpad.</string>
     <string name="help_touchpad_settings_mode_desc">Relative mouse mode moves the cursor using relative finger deltas, while absolute mode projects touch coordinates directly.</string>

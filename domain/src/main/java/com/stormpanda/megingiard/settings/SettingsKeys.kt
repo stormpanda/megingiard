@@ -60,6 +60,7 @@ internal val KEY_TOUCHPAD_TAP_DRAG = booleanPreferencesKey("touchpad_tap_drag")
 internal val KEY_TOUCHPAD_TWO_FINGER_SCROLL = booleanPreferencesKey("touchpad_two_finger_scroll")
 internal val KEY_TOUCHPAD_MIRRORING_ENABLED = booleanPreferencesKey("touchpad_mirroring_enabled")
 internal val KEY_TOUCHPAD_MIRROR_DIM = intPreferencesKey("touchpad_mirror_dim")
+internal val KEY_TOUCHPAD_MOUSE_4_5_ENABLED = booleanPreferencesKey("touchpad_mouse_4_5_enabled")
 
 // MacroPad touch recording
 internal val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
@@ -126,6 +127,7 @@ private val TOUCHPAD_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_TWO_FINGER_SCROLL,
         KEY_TOUCHPAD_MIRRORING_ENABLED,
         KEY_TOUCHPAD_MIRROR_DIM,
+        KEY_TOUCHPAD_MOUSE_4_5_ENABLED,
     )
 private val KEYBOARD_KEYS: Set<Preferences.Key<*>> =
     setOf(
@@ -185,6 +187,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_TAP_DRAG,
         KEY_TOUCHPAD_TWO_FINGER_SCROLL,
         KEY_TOUCHPAD_MIRRORING_ENABLED,
+        KEY_TOUCHPAD_MOUSE_4_5_ENABLED,
         KEY_SKIP_TOUCH_RECORD_DIALOG,
         KEY_SKIP_GAMEPAD_RECORD_DIALOG,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,

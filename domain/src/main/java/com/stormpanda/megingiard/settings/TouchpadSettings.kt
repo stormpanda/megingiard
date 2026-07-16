@@ -56,6 +56,10 @@ object TouchpadSettings {
     private val _touchpadMirrorDim = MutableStateFlow(50)
     val touchpadMirrorDim: StateFlow<Int> = _touchpadMirrorDim.asStateFlow()
 
+    // Enable Mouse 4/5 buttons in relative mouse mode
+    private val _touchpadMouse45Enabled = MutableStateFlow(false)
+    val touchpadMouse45Enabled: StateFlow<Boolean> = _touchpadMouse45Enabled.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -73,6 +77,7 @@ object TouchpadSettings {
         _touchpadTwoFingerScroll.value = prefs[KEY_TOUCHPAD_TWO_FINGER_SCROLL] ?: true
         _touchpadMirroringEnabled.value = prefs[KEY_TOUCHPAD_MIRRORING_ENABLED] ?: false
         _touchpadMirrorDim.value = prefs[KEY_TOUCHPAD_MIRROR_DIM] ?: 50
+        _touchpadMouse45Enabled.value = prefs[KEY_TOUCHPAD_MOUSE_4_5_ENABLED] ?: false
     }
 
     fun setTouchpadUseMouse(value: Boolean) {
@@ -122,5 +127,11 @@ object TouchpadSettings {
         AppLog.d(TAG, "setTouchpadMirrorDim($clamped)")
         _touchpadMirrorDim.value = clamped
         scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MIRROR_DIM] = clamped } }
+    }
+
+    fun setTouchpadMouse45Enabled(value: Boolean) {
+        AppLog.d(TAG, "setTouchpadMouse45Enabled($value)")
+        _touchpadMouse45Enabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_TOUCHPAD_MOUSE_4_5_ENABLED] = value } }
     }
 }
