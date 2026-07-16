@@ -186,16 +186,52 @@ private fun TouchpadSettingsHelpModal(
     ) {
         HelpIntro(stringResource(R.string.help_touchpad_settings_intro))
 
+        HelpSection(stringResource(R.string.settings_touchpad_use_mouse))
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_use_mouse),
+            description = stringResource(R.string.help_touchpad_settings_mode_desc),
+        )
+
         HelpSection(stringResource(R.string.settings_touchpad_tap_to_click))
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_tap_to_click),
             description = stringResource(R.string.help_touchpad_settings_click_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_two_finger_tap),
+            description = stringResource(R.string.help_touchpad_settings_click_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_three_finger_tap),
+            description = stringResource(R.string.help_touchpad_settings_click_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_touchpad_tap_drag))
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_tap_drag),
+            description = stringResource(R.string.help_touchpad_settings_tap_drag_desc),
         )
 
         HelpSection(stringResource(R.string.settings_touchpad_two_finger_scroll))
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_two_finger_scroll),
             description = stringResource(R.string.help_touchpad_settings_scroll_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_touchpad_mouse_4_5))
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_mouse_4_5),
+            description = stringResource(R.string.help_touchpad_settings_mouse_4_5_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_touchpad_mirroring))
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_mirroring),
+            description = stringResource(R.string.help_touchpad_settings_mirroring_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_touchpad_mirror_dim),
+            description = stringResource(R.string.help_touchpad_settings_mirror_dim_desc),
         )
     }
 }

@@ -2,6 +2,11 @@ package com.stormpanda.megingiard.config
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.settings.KEY_ACCENT_COLOR
+import com.stormpanda.megingiard.settings.KEY_MACROPAD_AMBIENT_DIM
+import com.stormpanda.megingiard.settings.KEY_MACROPAD_RECENT_COLORS
+import com.stormpanda.megingiard.settings.KEY_OVERLAY_AT_BOTTOM
+import com.stormpanda.megingiard.settings.KEY_PRIVD_DEADZONE_LEFT
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
@@ -120,17 +125,17 @@ class ConfigExportImportStructureTest {
 
                 val firstPrefs = testDataStore.data.first()
 
-                assertTrue(firstPrefs[com.stormpanda.megingiard.settings.KEY_ACCENT_COLOR] is Int)
-                assertTrue(firstPrefs[com.stormpanda.megingiard.settings.KEY_OVERLAY_AT_BOTTOM] is Boolean)
-                assertTrue(firstPrefs[com.stormpanda.megingiard.settings.KEY_MACROPAD_RECENT_COLORS] is String)
-                assertTrue(firstPrefs[com.stormpanda.megingiard.settings.KEY_MACROPAD_AMBIENT_DIM] is Float)
-                assertTrue(firstPrefs[com.stormpanda.megingiard.settings.KEY_PRIVD_DEADZONE_LEFT] is Float)
+                assertTrue(firstPrefs[KEY_ACCENT_COLOR] is Int)
+                assertTrue(firstPrefs[KEY_OVERLAY_AT_BOTTOM] is Boolean)
+                assertTrue(firstPrefs[KEY_MACROPAD_RECENT_COLORS] is String)
+                assertTrue(firstPrefs[KEY_MACROPAD_AMBIENT_DIM] is Float)
+                assertTrue(firstPrefs[KEY_PRIVD_DEADZONE_LEFT] is Float)
 
-                assertEquals(-6087623, firstPrefs[com.stormpanda.megingiard.settings.KEY_ACCENT_COLOR])
-                assertEquals(false, firstPrefs[com.stormpanda.megingiard.settings.KEY_OVERLAY_AT_BOTTOM])
-                assertEquals("-1716912067,-421677056,-430776976", firstPrefs[com.stormpanda.megingiard.settings.KEY_MACROPAD_RECENT_COLORS])
-                assertEquals(0.0f, firstPrefs[com.stormpanda.megingiard.settings.KEY_MACROPAD_AMBIENT_DIM])
-                assertEquals(0.15f, firstPrefs[com.stormpanda.megingiard.settings.KEY_PRIVD_DEADZONE_LEFT])
+                assertEquals(-6087623, firstPrefs[KEY_ACCENT_COLOR])
+                assertEquals(false, firstPrefs[KEY_OVERLAY_AT_BOTTOM])
+                assertEquals("-1716912067,-421677056,-430776976", firstPrefs[KEY_MACROPAD_RECENT_COLORS])
+                assertEquals(0.0f, firstPrefs[KEY_MACROPAD_AMBIENT_DIM])
+                assertEquals(0.15f, firstPrefs[KEY_PRIVD_DEADZONE_LEFT])
             } finally {
                 Dispatchers.resetMain()
             }

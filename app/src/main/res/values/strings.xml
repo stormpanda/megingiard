@@ -1049,4 +1049,14 @@ Open Settings to create a layout.</string>
     <string name="settings_touchpad_mirroring_desc">Mirror the top display inside the touchpad area</string>
     <string name="settings_touchpad_mirror_dim">Mirror Dim Level</string>
 
+    <string name="settings_touchpad_m4_label">M4</string>
+    <string name="settings_touchpad_m5_label">M5</string>
+    <string name="cd_touchpad_relative_mouse_mode">Relative Mouse Mode</string>
+    <string name="cd_touchpad_absolute_touch_mode">Absolute Touch Mode</string>
+    <string name="cd_touchpad_toggle_mirroring">Toggle Touchpad Mirroring</string>
+    <string name="help_touchpad_settings_tap_drag_desc">Double-tap and hold to initiate click-and-hold dragging (Mouse Mode only).</string>
+    <string name="help_touchpad_settings_mouse_4_5_desc">Shows M4 (Back) and M5 (Forward) buttons in the corners of the relative mouse area.</string>
+    <string name="help_touchpad_settings_mirroring_desc">Enables absolute touch projection with a real-time video mirror of the primary display.</string>
+    <string name="help_touchpad_settings_mirror_dim_desc">Adjusts the brightness overlay of the mirrored screen inside the touchpad.</string>
+
 </resources>

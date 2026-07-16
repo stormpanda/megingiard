@@ -148,7 +148,7 @@ Before marking a task as done, verify:
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
 - [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
-- [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed
+- [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
 
 ---
 
@@ -188,7 +188,7 @@ After implementing any change that affects a feature’s behaviour, interface, o
 5. **New features** — create a new `docs/features/<feature>/FEATURE.md` using
    [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
    point, then **add a row to the Documentation Map table in §2**.
-6. **In-App Help & Tutorials** — if the change adds, removes, or modifies how the user interacts with the app (e.g. adding new buttons, modes, settings, or gesture flows), you MUST review and update the corresponding in-app help menus, `HelpModal` files, onboarding popups, and localized strings (`strings.xml`, `values-de/strings.xml`).
+6. **In-App Help & Tutorials** — if the change adds, removes, or modifies how the user interacts with the app (e.g. adding new buttons, modes, settings, or gesture flows), you MUST review and update the corresponding in-app help menus, `HelpModal` files, onboarding popups, and localized strings (`strings.xml`, `values-de/strings.xml`). Ensure that **every settings preference option visible in the UI has a corresponding explanation entry in the HelpModal** to avoid undocumented features.
 
 This rule applies to all changes, including bug fixes, refactors, and dependency updates that
 affect runtime behaviour or user-facing interactions.

@@ -145,6 +145,10 @@ fun FullscreenMouseOverlay() {
             AppLog.i(TAG, "dispose: stopping both injectors")
             MouseInjector.stop()
             TouchInjector.stop("FullscreenTouchpad")
+            if (AppStateManager.wasMirroringStartedByTouchpad.value) {
+                AppStateManager.requestMirrorStop()
+                AppStateManager.setWasMirroringStartedByTouchpad(false)
+            }
         }
     }
 
@@ -442,7 +446,7 @@ fun FullscreenMouseOverlay() {
                             TouchpadMouseButton(
                                 onDown = { MouseInjector.mouse4Down() },
                                 onUp = { MouseInjector.mouse4Up() },
-                                text = "M4",
+                                text = stringResource(R.string.settings_touchpad_m4_label),
                                 modifier =
                                     Modifier
                                         .align(Alignment.TopStart)
@@ -452,7 +456,7 @@ fun FullscreenMouseOverlay() {
                             TouchpadMouseButton(
                                 onDown = { MouseInjector.mouse5Down() },
                                 onUp = { MouseInjector.mouse5Up() },
-                                text = "M5",
+                                text = stringResource(R.string.settings_touchpad_m5_label),
                                 modifier =
                                     Modifier
                                         .align(Alignment.TopEnd)
@@ -541,7 +545,7 @@ fun FullscreenMouseOverlay() {
                 ) {
                     Icon(
                         imageVector = if (touchpadMirroringEnabled) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        contentDescription = "Toggle Touchpad Mirroring",
+                        contentDescription = stringResource(R.string.cd_touchpad_toggle_mirroring),
                         tint = colors.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
                     )
@@ -730,7 +734,7 @@ private fun ModeToggleButton(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Mouse,
-                    contentDescription = "Relative Mouse Mode",
+                    contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
                     tint = colors.onSurface.copy(alpha = 0.8f),
                     modifier = Modifier.size(18.dp),
                 )
@@ -741,7 +745,7 @@ private fun ModeToggleButton(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.TouchApp,
-                    contentDescription = "Absolute Touch Mode",
+                    contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
                     tint = colors.onSurface.copy(alpha = 0.8f),
                     modifier = Modifier.size(18.dp),
                 )
