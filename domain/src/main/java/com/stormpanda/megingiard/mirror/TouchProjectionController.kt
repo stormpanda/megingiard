@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "TouchProjectionCtrl"
+private const val MAX_TOUCH_SLOTS = 10
 
 /**
  * Gesture state machine for mirror touch projection.
@@ -35,7 +36,7 @@ class TouchProjectionController(
     )
 
     private val activeTouches = HashMap<Long, TouchState>()
-    private val activeSlots = BooleanArray(10) { false }
+    private val activeSlots = BooleanArray(MAX_TOUCH_SLOTS) { false }
 
     private val _indicatorPos = MutableStateFlow<Pair<Float, Float>?>(null)
 
@@ -99,7 +100,7 @@ class TouchProjectionController(
 
         // Allocate slot
         var slot = -1
-        for (i in 0..9) {
+        for (i in 0 until MAX_TOUCH_SLOTS) {
             if (!activeSlots[i]) {
                 slot = i
                 break

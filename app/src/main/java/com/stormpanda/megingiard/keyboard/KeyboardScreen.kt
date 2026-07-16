@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
@@ -487,11 +488,13 @@ fun KeyboardScreen(
 
     // Start injectors via ViewModel (waits for overlay to close).
     LaunchedEffect(Unit) {
+        AppLog.d(TAG, "KeyboardScreen composed: starting injectors")
         viewModel.startInjectors(context)
     }
 
     DisposableEffect(Unit) {
         onDispose {
+            AppLog.d(TAG, "KeyboardScreen disposed: stopping and resetting injectors")
             viewModel.stopAndReset()
         }
     }

@@ -55,6 +55,12 @@ internal data class KeyBounds(
 private val KEY_CORNER = 5.dp
 private val KEY_PADDING_V = 3.dp
 
+private val KC_TRACKPOINT_SIZE = 16.dp
+private val KC_BORDER_THICKNESS = 2.dp
+private val KC_ICON_SIZE = 18.dp
+private val KC_SUPER_PADDING_TOP = 2.dp
+private val KC_SUPER_PADDING_END = 5.dp
+
 @Composable
 internal fun KeyCap(
     keyDef: KeyDef,
@@ -119,8 +125,8 @@ internal fun KeyCap(
             Box(
                 modifier =
                     Modifier
-                        .size(16.dp)
-                        .border(2.dp, colors.accent, CircleShape)
+                        .size(KC_TRACKPOINT_SIZE)
+                        .border(KC_BORDER_THICKNESS, colors.accent, CircleShape)
                         .clip(CircleShape)
                         .background(colors.keyBackground),
             )
@@ -132,7 +138,7 @@ internal fun KeyCap(
                         imageVector = Icons.Rounded.ArrowUpward,
                         contentDescription = stringResource(R.string.cd_kb_shift),
                         tint = contentColor,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(KC_ICON_SIZE),
                     )
                 }
 
@@ -141,7 +147,7 @@ internal fun KeyCap(
                         imageVector = Icons.AutoMirrored.Rounded.Backspace,
                         contentDescription = stringResource(R.string.cd_kb_backspace),
                         tint = contentColor,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(KC_ICON_SIZE),
                     )
                 }
 
@@ -150,7 +156,7 @@ internal fun KeyCap(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
                         contentDescription = stringResource(R.string.cd_kb_enter),
                         tint = contentColor,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(KC_ICON_SIZE),
                     )
                 }
 
@@ -159,7 +165,7 @@ internal fun KeyCap(
                         imageVector = Icons.Rounded.Language,
                         contentDescription = stringResource(R.string.cd_kb_layout),
                         tint = contentColor,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(KC_ICON_SIZE),
                     )
                 }
 
@@ -200,7 +206,7 @@ internal fun KeyCap(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .padding(top = 2.dp, end = 5.dp),
+                            .padding(top = KC_SUPER_PADDING_TOP, end = KC_SUPER_PADDING_END),
                     contentAlignment = Alignment.TopEnd,
                 ) {
                     Text(

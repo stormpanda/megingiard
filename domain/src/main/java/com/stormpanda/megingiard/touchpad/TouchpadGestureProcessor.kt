@@ -23,6 +23,10 @@ private const val TP_CLICK_DURATION_MS = 40L
 private const val TP_DOUBLE_TAP_TIMEOUT_MS = 500L
 private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 10f
+private const val TP_SCROLL_SPEED_MIN = 0.1f
+private const val TP_SCROLL_SPEED_MAX = 10.0f
+private const val TP_SCROLL_THRESHOLD_BASE_PX = 12f
+private const val MAX_TOUCH_SLOTS = 10
 
 /**
  * Gesture processor for the virtual touchpad, supporting two input modes:
@@ -57,7 +61,7 @@ class TouchpadGestureProcessor(
 
     private val scrollSpeed: Float =
         if (scrollSpeed.isFinite() && scrollSpeed > 0f) {
-            scrollSpeed.coerceIn(0.1f, 10.0f)
+            scrollSpeed.coerceIn(TP_SCROLL_SPEED_MIN, TP_SCROLL_SPEED_MAX)
         } else {
             1.0f
         }
@@ -69,7 +73,7 @@ class TouchpadGestureProcessor(
     val touchPos: StateFlow<Pair<Float, Float>?> = _touchPos.asStateFlow()
 
     private val pointerToSlotMap = HashMap<Long, Int>()
-    private val activeSlots = BooleanArray(10) { false }
+    private val activeSlots = BooleanArray(MAX_TOUCH_SLOTS) { false }
 
     // ── Mouse mode state ────────────────────────────────────────────────────
     private val pressTimes = HashMap<Long, Long>()
@@ -136,7 +140,7 @@ class TouchpadGestureProcessor(
             }
         } else {
             var slot = -1
-            for (i in 0..9) {
+            for (i in 0 until MAX_TOUCH_SLOTS) {
                 if (!activeSlots[i]) {
                     slot = i
                     break
@@ -192,7 +196,7 @@ class TouchpadGestureProcessor(
             if (twoFingerScrollEnabled && downPositions.size == 2) {
                 if (pointerId == primaryPointer) {
                     scrollAccumY += deltaY
-                    val scrollThreshold = 12f / scrollSpeed // Sensitivity threshold in pixels
+                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / scrollSpeed // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
                         val directionMultiplier = if (naturalScrollEnabled) 1 else -1
