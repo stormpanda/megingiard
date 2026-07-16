@@ -193,7 +193,7 @@ class TouchpadGestureProcessor(
                     val scrollThreshold = 12f / scrollSpeed // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
-                        val directionMultiplier = if (naturalScrollEnabled) -1 else 1
+                        val directionMultiplier = if (naturalScrollEnabled) 1 else -1
                         MouseInjector.scrollWheel(units * directionMultiplier)
                         scrollAccumY -= units * scrollThreshold
                     }
