@@ -165,3 +165,62 @@ internal val KEY_TO_SECTION: Map<String, String> by lazy {
 internal val KEY_BY_NAME: Map<String, Preferences.Key<*>> by lazy {
     SECTION_MAP.values.flatten().associateBy { it.name }
 }
+
+internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_AUTO_SWITCH_PROFILES,
+        KEY_EXCLUDE_FROM_RECENTS,
+        KEY_OVERLAY_AT_BOTTOM,
+        KEY_OVERLAY_FADE_OUT,
+        KEY_REMEMBER_VIEWPORT,
+        KEY_REMEMBER_LOCK,
+        KEY_REMEMBER_PROJECTION,
+        KEY_KB_TRACKPOINT_ENABLED,
+        KEY_KB_REPEAT_ENABLED,
+        KEY_KB_FULLSCREEN,
+        KEY_TOUCHPAD_USE_MOUSE,
+        KEY_TOUCHPAD_TAP_TO_CLICK,
+        KEY_TOUCHPAD_TWO_FINGER_TAP,
+        KEY_TOUCHPAD_THREE_FINGER_TAP,
+        KEY_TOUCHPAD_TAP_DRAG,
+        KEY_TOUCHPAD_TWO_FINGER_SCROLL,
+        KEY_TOUCHPAD_MIRRORING_ENABLED,
+        KEY_SKIP_TOUCH_RECORD_DIALOG,
+        KEY_SKIP_GAMEPAD_RECORD_DIALOG,
+        KEY_GAMEPAD_SWAP_FACE_BUTTONS,
+        KEY_PRIVD_SHOW_ADB_PROMPT,
+        KEY_MACROPAD_AMBIENT_PREVIEW,
+        KEY_MACROPAD_AMBIENT_APPLY_THEME,
+        KEY_SAVED_LOCKED,
+        KEY_SAVED_PROJECTION,
+        KEY_SHOW_WELCOME_TUTORIAL,
+        KEY_SHOW_MACRO_EDITOR_TUTORIAL,
+        KEY_SHOW_QUICK_MENU_TUTORIAL,
+    )
+
+internal val INT_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_ACCENT_COLOR,
+        KEY_TOUCHPAD_MIRROR_DIM,
+    )
+
+internal val FLOAT_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_PRIVD_DEADZONE_LEFT,
+        KEY_PRIVD_DEADZONE_RIGHT,
+        KEY_MACROPAD_AMBIENT_DIM,
+    )
+
+internal val STRING_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_STEAMGRIDDB_API_TOKEN,
+        KEY_THEME_MODE,
+        KEY_MACROPAD_PROFILES,
+        KEY_MACROPAD_ACTIVE_PROFILE_ID,
+        KEY_KB_LAYOUT,
+        KEY_KB_MOUSE_BTN_POS,
+        KEY_APP_LANGUAGE,
+        KEY_LOG_LEVEL,
+        KEY_MACROPAD_RECENT_COLORS,
+        KEY_INTERNAL_BACKUPS,
+    )
