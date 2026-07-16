@@ -242,4 +242,75 @@ class MirrorCutoutDomainTest {
         // Dest height = (1000 * 1080) / (1000 * 1920) = 1080 / 1920 = 0.5625f
         assertEquals(0.5625f, defaultCutout.destHeight, 0.001f)
     }
+
+    @Test
+    fun `TouchProjectionController multi touch allocates distinct slots`() {
+        val cutout =
+            ScreenCutout(
+                id = "cutout-1",
+                name = "Part 1",
+                srcX = 0.1f,
+                srcY = 0.2f,
+                srcWidth = 0.4f,
+                srcHeight = 0.4f,
+                destX = 0.2f,
+                destY = 0.2f,
+                destWidth = 0.5f,
+                destHeight = 0.5f,
+                opacity = 1f,
+                touchProjectionEnabled = true,
+            )
+        val layout =
+            PadLayout(
+                id = "test-layout-proj",
+                name = "Test Layout Proj",
+                mirrorCutouts = listOf(cutout),
+            )
+        val profile =
+            PadProfile(
+                id = "test-profile-proj",
+                name = "Test Profile Proj",
+                layouts = listOf(layout),
+                activeLayoutId = "test-layout-proj",
+            )
+        MacroPadState.loadFrom(listOf(profile), "test-profile-proj")
+
+        // Sync ScreenCaptureManager cutouts
+        ScreenCaptureManager.setSurfaceSize(1000f, 1000f)
+
+        val controller = TouchProjectionController(edgeZonePx = 20f, overlayAtBottom = false)
+
+        // Press first pointer in cutout-1
+        val handled1 =
+            controller.onPress(
+                pointerId = 1L,
+                x = 450f,
+                y = 450f,
+                boxW = 1000f,
+                boxH = 1000f,
+                isConsumed = false,
+                pointerCount = 1,
+            )
+        assertTrue(handled1)
+        assertEquals(Pair(450f, 450f), controller.indicatorPos.value)
+
+        // Press second pointer in cutout-1
+        val handled2 =
+            controller.onPress(
+                pointerId = 2L,
+                x = 500f,
+                y = 500f,
+                boxW = 1000f,
+                boxH = 1000f,
+                isConsumed = false,
+                pointerCount = 2,
+            )
+        assertTrue(handled2)
+        assertEquals(Pair(450f, 450f), controller.indicatorPos.value)
+
+        // Release first pointer
+        controller.onRelease(1L, 450f, 450f, 1000f, 1000f)
+        // Release second pointer
+        controller.onRelease(2L, 500f, 500f, 1000f, 1000f)
+    }
 }

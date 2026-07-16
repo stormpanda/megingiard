@@ -91,6 +91,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+    val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
     val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
@@ -129,6 +130,34 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                         AppStateManager.closeQuickMenu()
                     } else {
                         AppStateManager.setFullscreenKeyboardActive(true)
+                    }
+                },
+            )
+        }
+
+    val tpBarWidthPx = with(density) { 72.dp.toPx() }
+    val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
+    val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
+
+    val tpSwipe =
+        remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, tpBarWidthPx, tpBarEndPaddingPx, tpBarZoneWidthPx) {
+            SwipeGestureProcessor(
+                edgeZonePx = edgeZonePx,
+                swipeThresholdPx = swipeThresholdPx,
+                overlayAtBottom = overlayAtBottom,
+                customZoneCheck = { x, width ->
+                    val tpBarCenter = width - tpBarEndPaddingPx - (tpBarWidthPx / 2f)
+                    val tpBarMinX = tpBarCenter - (tpBarZoneWidthPx / 2f)
+                    val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
+                    x >= tpBarMinX && x <= tpBarMaxX
+                },
+                onEdgeSwipe = {
+                    if (AppStateManager.isAnyModalActive.value) {
+                        AppStateManager.closeActiveModal()
+                    } else if (AppStateManager.isQuickMenuOpen.value) {
+                        AppStateManager.closeQuickMenu()
+                    } else {
+                        AppStateManager.setFullscreenMouseActive(true)
                     }
                 },
             )
@@ -274,8 +303,9 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                     kbBarMaxX,
                     previewConfig == null,
                     isFullscreenKeyboardActive,
+                    isFullscreenMouseActive,
                 ) {
-                    if (previewConfig != null || isFullscreenKeyboardActive) return@pointerInput
+                    if (previewConfig != null || isFullscreenKeyboardActive || isFullscreenMouseActive) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -296,13 +326,20 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                                         pointerX = x,
                                         containerWidth = size.width.toFloat(),
                                     )
+                                    tpSwipe.onPress(
+                                        pointerY = y,
+                                        containerHeight = size.height.toFloat(),
+                                        pointerX = x,
+                                        containerWidth = size.width.toFloat(),
+                                    )
                                     // No Press consumption
                                 }
 
                                 PointerEventType.Move -> {
                                     qmSwipe.onMove(y)
                                     kbSwipe.onMove(y)
-                                    if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
+                                    tpSwipe.onMove(y)
+                                    if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered || tpSwipe.isSwipeTriggered) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }
@@ -311,9 +348,11 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                                     val allPointersLifted = !event.changes.any { it.pressed }
                                     val qmTriggered = qmSwipe.isSwipeTriggered
                                     val kbTriggered = kbSwipe.isSwipeTriggered
+                                    val tpTriggered = tpSwipe.isSwipeTriggered
                                     qmSwipe.onRelease(allPointersLifted)
                                     kbSwipe.onRelease(allPointersLifted)
-                                    if (qmTriggered || kbTriggered) {
+                                    tpSwipe.onRelease(allPointersLifted)
+                                    if (qmTriggered || kbTriggered || tpTriggered) {
                                         event.changes.forEach { it.consume() }
                                     }
                                 }

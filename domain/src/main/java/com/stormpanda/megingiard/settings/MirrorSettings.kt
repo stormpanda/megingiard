@@ -31,10 +31,6 @@ object MirrorSettings {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var scope: CoroutineScope
 
-    // Mirror touch projection — pinch-to-zoom while projecting
-    private val _pinchWhileProjecting = MutableStateFlow(false)
-    val pinchWhileProjecting: StateFlow<Boolean> = _pinchWhileProjecting.asStateFlow()
-
     // Mirror session state persistence — whether each aspect is remembered
     private val _rememberViewport = MutableStateFlow(false)
     val rememberViewport: StateFlow<Boolean> = _rememberViewport.asStateFlow()
@@ -54,17 +50,9 @@ object MirrorSettings {
     }
 
     internal fun loadFrom(prefs: Preferences) {
-        _pinchWhileProjecting.value = prefs[KEY_PINCH_WHILE_PROJECTING] ?: false
-
         _rememberViewport.value = prefs[KEY_REMEMBER_VIEWPORT] ?: false
         _rememberLock.value = prefs[KEY_REMEMBER_LOCK] ?: false
         _rememberProjection.value = prefs[KEY_REMEMBER_PROJECTION] ?: false
-    }
-
-    fun setPinchWhileProjecting(value: Boolean) {
-        AppLog.d(TAG, "setPinchWhileProjecting($value)")
-        _pinchWhileProjecting.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_PINCH_WHILE_PROJECTING] = value } }
     }
 
     fun setRememberViewport(value: Boolean) {

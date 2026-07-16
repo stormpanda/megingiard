@@ -93,9 +93,6 @@
     <string name="settings_two_finger_tap">Two-finger tap</string>
     <string name="settings_two_finger_tap_desc">Two-finger tap = right click</string>
 
-    <!-- Mirror touch projection -->
-    <string name="settings_pinch_while_projecting">Pinch-to-zoom while projecting</string>
-    <string name="settings_pinch_while_projecting_desc">Allow two-finger zoom and pan gestures while Touch Projection is active. Two-finger touches are not forwarded to the primary display.</string>
 
     <!-- Mirror session state persistence -->
     <string name="settings_remember_viewport">Remember viewport</string>
@@ -1022,5 +1019,59 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_error_generic_title">Error</string>
     <string name="steamgriddb_error_generic_message">An unexpected error occurred. Please try again.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
+
+    <!-- Touchpad settings -->
+    <string name="settings_touchpad_title">Touchpad Settings</string>
+    <string name="settings_section_relative_mouse">Relative Mouse Mode</string>
+    <string name="settings_section_absolute_touch">Absolute Touch Mode</string>
+    <string name="cd_touchpad_collapse">Collapse Touchpad</string>
+    <string name="cd_touchpad_settings">Touchpad Settings</string>
+    <string name="settings_touchpad_use_mouse">Input Mode</string>
+    <string name="settings_touchpad_use_mouse_desc">Toggle between relative mouse mode and absolute touchscreen mode</string>
+    <string name="settings_touchpad_tap_to_click">Tap to Click</string>
+    <string name="settings_touchpad_tap_to_click_desc">Single tap acts as a left mouse click</string>
+    <string name="settings_touchpad_two_finger_tap">Two-Finger Tap</string>
+    <string name="settings_touchpad_two_finger_tap_desc">Two-finger tap acts as a right mouse click</string>
+    <string name="settings_touchpad_three_finger_tap">Three-Finger Tap</string>
+    <string name="settings_touchpad_three_finger_tap_desc">Three-finger tap acts as a middle mouse click</string>
+    <string name="settings_touchpad_tap_drag">Tap and Drag</string>
+    <string name="settings_touchpad_tap_drag_desc">Double-tap and hold to drag items</string>
+    <string name="settings_touchpad_two_finger_scroll">Two-Finger Scroll</string>
+    <string name="settings_touchpad_two_finger_scroll_desc">Drag two fingers vertically to scroll the screen</string>
+    <string name="settings_touchpad_natural_scroll">Natural Scrolling</string>
+    <string name="settings_touchpad_natural_scroll_desc">Scroll content along with finger movement</string>
+    <string name="settings_touchpad_scroll_speed">Scroll Speed</string>
+    <string name="settings_touchpad_scroll_speed_desc">Adjust scroll sensitivity multiplier</string>
+    <string name="settings_touchpad_mouse_4_5">Enable Mouse 4/5 Buttons</string>
+    <string name="settings_touchpad_mouse_4_5_desc">Show physical back (M4) and forward (M5) buttons in the top corners</string>
+    <string name="settings_touchpad_sensitivity">Pointer Speed</string>
+    <string name="settings_touchpad_sensitivity_desc">Adjust cursor sensitivity multiplier</string>
+    <string name="settings_touchpad_haptics">Haptic Feedback</string>
+    <string name="settings_touchpad_haptics_desc">Vibrate slightly on clicks and gestures</string>
+    <string name="help_touchpad_settings_title">Touchpad Help</string>
+    <string name="help_touchpad_settings_intro">Configure options for the fullscreen virtual touchpad.</string>
+    <string name="help_touchpad_settings_mode_desc">Relative mouse mode moves the cursor using relative finger deltas, while absolute mode projects touch coordinates directly.</string>
+    <string name="help_touchpad_settings_click_desc">Left, right, and middle clicks can be simulated by single, two-, or three-finger short taps.</string>
+    <string name="help_touchpad_settings_scroll_desc">Drag with two fingers vertically to issue mouse scroll wheel events.</string>
+    <string name="settings_touchpad_mirroring">Touchpad Mirroring</string>
+    <string name="settings_touchpad_mirroring_desc">Mirror the top display inside the touchpad area</string>
+    <string name="settings_touchpad_mirror_dim">Mirror Dim Level</string>
+ 
+    <string name="settings_touchpad_m4_label">M4</string>
+    <string name="settings_touchpad_m5_label">M5</string>
+    <string name="cd_touchpad_relative_mouse_mode">Relative Mouse Mode</string>
+    <string name="cd_touchpad_absolute_touch_mode">Absolute Touch Mode</string>
+    <string name="cd_touchpad_toggle_mirroring">Toggle Touchpad Mirroring</string>
+    <string name="help_touchpad_settings_tap_to_click_desc">Single short tap acts as a left mouse button click.</string>
+    <string name="help_touchpad_settings_two_finger_tap_desc">Short tap with two fingers acts as a right mouse button click.</string>
+    <string name="help_touchpad_settings_three_finger_tap_desc">Short tap with three fingers acts as a middle mouse button click.</string>
+    <string name="help_touchpad_settings_tap_drag_desc">Double-tap and hold to initiate click-and-hold dragging.</string>
+    <string name="help_touchpad_settings_mouse_4_5_desc">Shows M4 (Back) and M5 (Forward) buttons in the corners of the relative mouse area.</string>
+    <string name="help_touchpad_settings_mirroring_desc">Enables absolute touch projection with a real-time video mirror of the primary display.</string>
+    <string name="help_touchpad_settings_mirror_dim_desc">Adjusts the brightness overlay of the mirrored screen inside the touchpad.</string>
+    <string name="help_touchpad_settings_sensitivity_desc">Adjusts the cursor movement speed multiplier in relative mouse mode.</string>
+    <string name="help_touchpad_settings_natural_scroll_desc">Enables natural scrolling direction: dragging fingers down pulls screen content down.</string>
+    <string name="help_touchpad_settings_scroll_speed_desc">Adjusts the sensitivity/speed of two-finger scrolling.</string>
+    <string name="help_touchpad_settings_haptics_desc">Enables subtle physical haptic feedback ticks when clicking visual buttons or performing click gestures.</string>
 
 </resources>

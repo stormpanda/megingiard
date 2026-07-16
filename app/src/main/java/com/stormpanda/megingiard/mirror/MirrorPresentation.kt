@@ -66,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -102,8 +103,10 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
+import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
@@ -134,6 +137,8 @@ private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
 private const val UNCROPPED_THRESHOLD = 0.999f
 private const val MP_KB_SLIDE_ANIM_DURATION_MS = 300
+
+val LocalMirrorPresentation = staticCompositionLocalOf<MirrorPresentation?> { null }
 
 class MirrorPresentation(
     context: Context,
@@ -273,14 +278,15 @@ class MirrorPresentation(
                     val interval = 1000L / fps
                     if (now - lastUpdateTime >= interval) {
                         mcc.updateAccumulator(tv)
+                        mcc.invalidate()
                         lastUpdateTime = now
                     }
                 }
             }
 
         scope.launch {
-            ScreenCaptureManager.cutouts.collect { cutouts ->
-                mcc.cutouts = cutouts
+            ScreenCaptureManager.cutouts.collect { activeCutouts ->
+                mcc.cutouts = activeCutouts
             }
         }
 
@@ -375,6 +381,7 @@ class MirrorPresentation(
                         LocalOnBackPressedDispatcherOwner provides backDispatcherOwner,
                         LocalAppColors provides appColors,
                         LocalAppDimens provides AppDimens(),
+                        LocalMirrorPresentation provides this@MirrorPresentation,
                     ) {
                         MaterialTheme(
                             colorScheme = colorSchemeFor(appColors, themeMode),
@@ -395,6 +402,7 @@ class MirrorPresentation(
                             val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
                             val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
                             val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
+                            val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
@@ -406,6 +414,10 @@ class MirrorPresentation(
                             val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
                             val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
                             val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
+                            val tpBarWidthPx = with(density) { 72.dp.toPx() }
+                            val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
+                            val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
 
                             val projectionController =
                                 remember(edgeZonePx, overlayAtBottom) {
@@ -452,13 +464,14 @@ class MirrorPresentation(
                                             isFullscreenMouseActive,
                                             isFullscreenKeyboardActive,
                                             isKeyboardSettingsOpen,
+                                            isTouchpadSettingsOpen,
                                             overlayAtBottom,
                                             quickMenuBarZoneWidthPx,
                                             kbBarMinX,
                                             kbBarMaxX,
                                         ) {
                                             if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                            if (isFullscreenKeyboardActive) return@pointerInput
+                                            if (isFullscreenKeyboardActive || isFullscreenMouseActive) return@pointerInput
                                             val qmSwipe =
                                                 SwipeGestureProcessor(
                                                     edgeZonePx = edgeZonePx,
@@ -483,6 +496,27 @@ class MirrorPresentation(
                                                         }
                                                     },
                                                 )
+                                            val tpSwipe =
+                                                SwipeGestureProcessor(
+                                                    edgeZonePx = edgeZonePx,
+                                                    swipeThresholdPx = swipeThresholdPx,
+                                                    overlayAtBottom = overlayAtBottom,
+                                                    customZoneCheck = { x, width ->
+                                                        val tpBarCenter = width - tpBarEndPaddingPx - (tpBarWidthPx / 2f)
+                                                        val tpBarMinX = tpBarCenter - (tpBarZoneWidthPx / 2f)
+                                                        val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
+                                                        x >= tpBarMinX && x <= tpBarMaxX
+                                                    },
+                                                    onEdgeSwipe = {
+                                                        if (AppStateManager.isAnyModalActive.value) {
+                                                            AppStateManager.closeActiveModal()
+                                                        } else if (AppStateManager.isQuickMenuOpen.value) {
+                                                            AppStateManager.closeQuickMenu()
+                                                        } else {
+                                                            AppStateManager.setFullscreenMouseActive(true)
+                                                        }
+                                                    },
+                                                )
                                             awaitPointerEventScope {
                                                 while (true) {
                                                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -503,12 +537,21 @@ class MirrorPresentation(
                                                                 pointerX = x,
                                                                 containerWidth = size.width.toFloat(),
                                                             )
+                                                            tpSwipe.onPress(
+                                                                pointerY = y,
+                                                                containerHeight = size.height.toFloat(),
+                                                                pointerX = x,
+                                                                containerWidth = size.width.toFloat(),
+                                                            )
                                                         }
 
                                                         PointerEventType.Move -> {
                                                             qmSwipe.onMove(y)
                                                             kbSwipe.onMove(y)
-                                                            if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered) {
+                                                            tpSwipe.onMove(y)
+                                                            if (qmSwipe.isSwipeTriggered || kbSwipe.isSwipeTriggered ||
+                                                                tpSwipe.isSwipeTriggered
+                                                            ) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
@@ -517,9 +560,11 @@ class MirrorPresentation(
                                                             val allPointersUp = !event.changes.any { it.pressed }
                                                             val qmTriggered = qmSwipe.isSwipeTriggered
                                                             val kbTriggered = kbSwipe.isSwipeTriggered
+                                                            val tpTriggered = tpSwipe.isSwipeTriggered
                                                             qmSwipe.onRelease(allPointersUp)
                                                             kbSwipe.onRelease(allPointersUp)
-                                                            if (qmTriggered || kbTriggered) {
+                                                            tpSwipe.onRelease(allPointersUp)
+                                                            if (qmTriggered || kbTriggered || tpTriggered) {
                                                                 event.changes.forEach { it.consume() }
                                                             }
                                                         }
@@ -540,69 +585,71 @@ class MirrorPresentation(
                                                     if (gestureBoxSize == IntSize.Zero) continue
                                                     val scW = gestureBoxSize.width.toFloat()
                                                     val scH = gestureBoxSize.height.toFloat()
-                                                    when (event.type) {
-                                                        PointerEventType.Press -> {
-                                                            val change = event.changes.firstOrNull() ?: continue
-                                                            val y = change.position.y
-                                                            val nearEdge =
-                                                                if (overlayAtBottom) {
-                                                                    y >= scH - edgeZonePx
-                                                                } else {
-                                                                    y <= edgeZonePx
-                                                                }
-                                                            swipeStartY = if (nearEdge) y else Float.NaN
-                                                            if (!nearEdge) {
-                                                                projectionController.onPress(
-                                                                    pointerId = change.id.value,
-                                                                    x = change.position.x,
-                                                                    y = y,
-                                                                    boxW = scW,
-                                                                    boxH = scH,
-                                                                    isConsumed = change.isConsumed,
-                                                                    pointerCount = event.changes.size,
-                                                                )
-                                                            }
-                                                        }
-
-                                                        PointerEventType.Move -> {
-                                                            val change = event.changes.firstOrNull() ?: continue
-                                                            val y = change.position.y
-                                                            if (!swipeStartY.isNaN()) {
-                                                                val delta =
-                                                                    if (overlayAtBottom) {
-                                                                        swipeStartY - y
-                                                                    } else {
-                                                                        y - swipeStartY
+                                                    for (change in event.changes) {
+                                                        val y = change.position.y
+                                                        when (event.type) {
+                                                            PointerEventType.Press -> {
+                                                                if (!change.previousPressed) {
+                                                                    val nearEdge =
+                                                                        if (overlayAtBottom) {
+                                                                            y >= scH - edgeZonePx
+                                                                        } else {
+                                                                            y <= edgeZonePx
+                                                                        }
+                                                                    if (event.changes.size == 1) {
+                                                                        swipeStartY = if (nearEdge) y else Float.NaN
                                                                     }
-                                                                if (delta >= swipeThresholdPx) {
-                                                                    swipeStartY = Float.NaN
+                                                                    if (!nearEdge) {
+                                                                        projectionController.onPress(
+                                                                            pointerId = change.id.value,
+                                                                            x = change.position.x,
+                                                                            y = y,
+                                                                            boxW = scW,
+                                                                            boxH = scH,
+                                                                            isConsumed = change.isConsumed,
+                                                                            pointerCount = event.changes.size,
+                                                                        )
+                                                                    }
                                                                 }
-                                                            } else {
-                                                                projectionController.onMove(
-                                                                    pointerId = change.id.value,
-                                                                    x = change.position.x,
-                                                                    y = y,
-                                                                    boxW = scW,
-                                                                    boxH = scH,
-                                                                    isConsumed = change.isConsumed,
-                                                                )
                                                             }
-                                                        }
 
-                                                        PointerEventType.Release -> {
-                                                            val change = event.changes.firstOrNull()
-                                                            swipeStartY = Float.NaN
-                                                            projectionController.onRelease(
-                                                                pointerId = change?.id?.value ?: -1L,
-                                                                x = change?.position?.x,
-                                                                y = change?.position?.y,
-                                                                boxW = scW,
-                                                                boxH = scH,
-                                                            )
-                                                        }
+                                                            PointerEventType.Move -> {
+                                                                if (event.changes.size == 1 && !swipeStartY.isNaN()) {
+                                                                    val delta =
+                                                                        if (overlayAtBottom) {
+                                                                            swipeStartY - y
+                                                                        } else {
+                                                                            y - swipeStartY
+                                                                        }
+                                                                    if (delta >= swipeThresholdPx) {
+                                                                        swipeStartY = Float.NaN
+                                                                    }
+                                                                } else {
+                                                                    projectionController.onMove(
+                                                                        pointerId = change.id.value,
+                                                                        x = change.position.x,
+                                                                        y = y,
+                                                                        boxW = scW,
+                                                                        boxH = scH,
+                                                                        isConsumed = change.isConsumed,
+                                                                    )
+                                                                }
+                                                            }
 
-                                                        else -> {
-                                                            Unit
+                                                            PointerEventType.Release -> {
+                                                                if (!change.pressed) {
+                                                                    if (event.changes.size == 1) {
+                                                                        swipeStartY = Float.NaN
+                                                                    }
+                                                                    projectionController.onRelease(
+                                                                        pointerId = change.id.value,
+                                                                        x = change.position.x,
+                                                                        y = y,
+                                                                        boxW = scW,
+                                                                        boxH = scH,
+                                                                    )
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -634,7 +681,20 @@ class MirrorPresentation(
                                 // content when triggered from BackgroundMacroPadOverlay buttons.
                                 // Dismissed via edge-swipe → BackgroundMacroPadOverlay's
                                 // SwipeGestureProcessor → AppStateManager.closeActiveModal().
-                                if (capturing && isFullscreenMouseActive) {
+                                AnimatedVisibility(
+                                    visible = capturing && isFullscreenMouseActive,
+                                    enter =
+                                        slideInVertically(
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
+                                            initialOffsetY = { if (overlayAtBottom) it else -it },
+                                        ) + fadeIn(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
+                                    exit =
+                                        slideOutVertically(
+                                            animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS),
+                                            targetOffsetY = { it },
+                                        ) + fadeOut(animationSpec = tween(MP_KB_SLIDE_ANIM_DURATION_MS)),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
                                     FullscreenMouseOverlay()
                                 }
 
@@ -666,7 +726,7 @@ class MirrorPresentation(
                                 // overlays (keyboard / mouse). Suppressed inside
                                 // BackgroundMacroPadOverlay (showQuickMenuBar = false) to ensure
                                 // only one QuickMenuBar instance exists at a time.
-                                if (capturing && !isFullscreenKeyboardActive) {
+                                if (capturing && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                                     QuickMenuBar()
                                 }
 
@@ -693,6 +753,17 @@ class MirrorPresentation(
                                         onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
                                     )
                                 }
+
+                                AnimatedVisibility(
+                                    visible = isTouchpadSettingsOpen,
+                                    enter = slideInVertically { it } + fadeIn(),
+                                    exit = slideOutVertically { it } + fadeOut(),
+                                    modifier = Modifier.fillMaxSize(),
+                                ) {
+                                    TouchpadSettingsOverlay(
+                                        onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -709,6 +780,24 @@ class MirrorPresentation(
         setContentView(container)
 
         bindStateFlows(container)
+    }
+
+    fun acquireMasterTextureView(): TextureView? {
+        val tv = masterTextureView ?: return null
+        AppLog.d(TAG, "acquireMasterTextureView: detaching master TextureView")
+        val parent = tv.parent as? ViewGroup
+        parent?.removeView(tv)
+        return tv
+    }
+
+    fun releaseMasterTextureView() {
+        val tv = masterTextureView ?: return
+        AppLog.d(TAG, "releaseMasterTextureView: reattaching master TextureView to mcc")
+        val parent = tv.parent as? ViewGroup
+        if (parent != multiCutoutContainer) {
+            parent?.removeView(tv)
+            multiCutoutContainer?.addView(tv)
+        }
     }
 
     private fun bindStateFlows(container: FrameLayout) {

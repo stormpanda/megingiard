@@ -6,6 +6,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,8 +20,13 @@ private const val TP_MOUSE_SENSITIVITY = 2f
 private const val TP_TAP_TIMEOUT_MS = 200L
 private const val TP_TAP_SLOP_PX = 20f
 private const val TP_CLICK_DURATION_MS = 40L
+private const val TP_DOUBLE_TAP_TIMEOUT_MS = 500L
 private const val TP_SENSITIVITY_MIN = 0.1f
 private const val TP_SENSITIVITY_MAX = 10f
+private const val TP_SCROLL_SPEED_MIN = 0.1f
+private const val TP_SCROLL_SPEED_MAX = 10.0f
+private const val TP_SCROLL_THRESHOLD_BASE_PX = 12f
+private const val MAX_TOUCH_SLOTS = 10
 
 /**
  * Gesture processor for the virtual touchpad, supporting two input modes:
@@ -40,11 +46,22 @@ class TouchpadGestureProcessor(
     private val useMouse: Boolean,
     private val scope: CoroutineScope,
     sensitivity: Float = 1.0f,
+    private val twoFingerScrollEnabled: Boolean = true,
+    private val naturalScrollEnabled: Boolean = true,
+    scrollSpeed: Float = 1.0f,
+    private val onHapticFeedback: () -> Unit = {},
 ) {
     // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
     private val sensitivity: Float =
         if (sensitivity.isFinite() && sensitivity > 0f) {
             sensitivity.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
+        } else {
+            1.0f
+        }
+
+    private val scrollSpeed: Float =
+        if (scrollSpeed.isFinite() && scrollSpeed > 0f) {
+            scrollSpeed.coerceIn(TP_SCROLL_SPEED_MIN, TP_SCROLL_SPEED_MAX)
         } else {
             1.0f
         }
@@ -55,12 +72,19 @@ class TouchpadGestureProcessor(
     /** Current finger position (touch mode only), null when not touching. */
     val touchPos: StateFlow<Pair<Float, Float>?> = _touchPos.asStateFlow()
 
+    private val pointerToSlotMap = HashMap<Long, Int>()
+    private val activeSlots = BooleanArray(MAX_TOUCH_SLOTS) { false }
+
     // ── Mouse mode state ────────────────────────────────────────────────────
     private val pressTimes = HashMap<Long, Long>()
     private val downPositions = HashMap<Long, Pair<Float, Float>>()
     private val movedTooFar = HashSet<Long>()
     private val releasedAsTap = ArrayList<Long>()
     private var primaryPointer: Long? = null
+    private var scrollAccumY = 0f
+    private var lastTapReleaseTime = 0L
+    private var isDragging = false
+    private var pendingClickJob: Job? = null
 
     /**
      * Handle a Press event.
@@ -71,6 +95,7 @@ class TouchpadGestureProcessor(
      * @param surfaceW     width of the touch surface in pixels
      * @param surfaceH     height of the touch surface in pixels
      * @param overlayOpen  true if the quick menu overlay is currently visible
+     * @param tapDrag      true if double-tap-to-drag is enabled
      */
     fun onPress(
         pointerId: Long,
@@ -79,6 +104,7 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
         overlayOpen: Boolean,
+        tapDrag: Boolean,
     ) {
         if (overlayOpen) {
             AppStateManager.closeQuickMenu()
@@ -89,11 +115,47 @@ class TouchpadGestureProcessor(
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
             if (primaryPointer == null) primaryPointer = pointerId
+            if (downPositions.size != 2) {
+                scrollAccumY = 0f
+            }
+            if (tapDrag && downPositions.size == 1) {
+                val now = System.currentTimeMillis()
+                AppLog.d(TAG, "onPress: tapDrag=true, delta=${now - lastTapReleaseTime}ms, limit=$TP_DOUBLE_TAP_TIMEOUT_MS")
+                if (now - lastTapReleaseTime < TP_DOUBLE_TAP_TIMEOUT_MS) {
+                    isDragging = true
+                    lastTapReleaseTime = 0L
+                    AppLog.d(TAG, "onPress: starting drag lock")
+                    onHapticFeedback()
+                    val job = pendingClickJob
+                    if (job != null && job.isActive) {
+                        AppLog.d(TAG, "onPress: cancelling pending click job to inherit down state")
+                        job.cancel()
+                        pendingClickJob = null
+                    } else {
+                        scope.launch {
+                            MouseInjector.leftDown()
+                        }
+                    }
+                }
+            }
         } else {
-            val nx = (x / surfaceW).coerceIn(0f, 1f)
-            val ny = (y / surfaceH).coerceIn(0f, 1f)
-            _touchPos.value = Pair(x, y)
-            TouchInjector.injectTouch(TouchAction.DOWN, nx, ny)
+            var slot = -1
+            for (i in 0 until MAX_TOUCH_SLOTS) {
+                if (!activeSlots[i]) {
+                    slot = i
+                    break
+                }
+            }
+            if (slot != -1) {
+                activeSlots[slot] = true
+                pointerToSlotMap[pointerId] = slot
+                val nx = (x / surfaceW).coerceIn(0f, 1f)
+                val ny = (y / surfaceH).coerceIn(0f, 1f)
+                if (pointerToSlotMap.size == 1) {
+                    _touchPos.value = Pair(x, y)
+                }
+                TouchInjector.injectTouch(slot, TouchAction.DOWN, nx, ny)
+            }
         }
     }
 
@@ -131,17 +193,32 @@ class TouchpadGestureProcessor(
                     movedTooFar.add(pointerId)
                 }
             }
-            // Only primary pointer drives cursor
-            if (pointerId == primaryPointer) {
+            if (twoFingerScrollEnabled && downPositions.size == 2) {
+                if (pointerId == primaryPointer) {
+                    scrollAccumY += deltaY
+                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / scrollSpeed // Sensitivity threshold in pixels
+                    val units = (scrollAccumY / scrollThreshold).toInt()
+                    if (units != 0) {
+                        val directionMultiplier = if (naturalScrollEnabled) 1 else -1
+                        MouseInjector.scrollWheel(units * directionMultiplier)
+                        scrollAccumY -= units * scrollThreshold
+                    }
+                }
+            } else if (pointerId == primaryPointer) {
                 val dx = (deltaX * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
                 val dy = (deltaY * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
             }
         } else {
-            val nx = (x / surfaceW).coerceIn(0f, 1f)
-            val ny = (y / surfaceH).coerceIn(0f, 1f)
-            _touchPos.value = Pair(x, y)
-            TouchInjector.injectTouch(TouchAction.MOVE, nx, ny)
+            val slot = pointerToSlotMap[pointerId]
+            if (slot != null) {
+                val nx = (x / surfaceW).coerceIn(0f, 1f)
+                val ny = (y / surfaceH).coerceIn(0f, 1f)
+                if (pointerToSlotMap.keys.firstOrNull() == pointerId) {
+                    _touchPos.value = Pair(x, y)
+                }
+                TouchInjector.injectTouch(slot, TouchAction.MOVE, nx, ny)
+            }
         }
     }
 
@@ -156,6 +233,7 @@ class TouchpadGestureProcessor(
      * @param allPointersUp true if no pointers remain pressed
      * @param tapToClick    whether tap-to-click is enabled
      * @param twoFingerTap  whether two-finger-tap right-click is enabled
+     * @param threeFingerTap whether three-finger-tap middle-click is enabled
      */
     fun onRelease(
         pointerId: Long,
@@ -166,6 +244,7 @@ class TouchpadGestureProcessor(
         allPointersUp: Boolean,
         tapToClick: Boolean,
         twoFingerTap: Boolean,
+        threeFingerTap: Boolean,
     ) {
         if (useMouse) {
             val pressTime = pressTimes.remove(pointerId)
@@ -175,10 +254,28 @@ class TouchpadGestureProcessor(
                 pressTime != null &&
                     !disqualified &&
                     (System.currentTimeMillis() - pressTime) < TP_TAP_TIMEOUT_MS
+            AppLog.d(TAG, "onRelease: pressTime=$pressTime, disqualified=$disqualified, isTap=$isTap")
             if (pointerId == primaryPointer) {
                 primaryPointer = null // caller should set new primary if needed
             }
             if (isTap) releasedAsTap.add(pointerId)
+            if (downPositions.size != 2) {
+                scrollAccumY = 0f
+            }
+
+            if (isDragging) {
+                isDragging = false
+                releasedAsTap.clear()
+                pressTimes.clear()
+                downPositions.clear()
+                movedTooFar.clear()
+                primaryPointer = null
+                AppLog.d(TAG, "onRelease: ending drag lock")
+                scope.launch {
+                    MouseInjector.leftUp()
+                }
+                return
+            }
 
             // When all fingers are up, evaluate taps
             if (allPointersUp) {
@@ -190,27 +287,48 @@ class TouchpadGestureProcessor(
                 primaryPointer = null
                 when {
                     tapCount == 1 && tapToClick -> {
-                        scope.launch {
-                            MouseInjector.leftDown()
-                            delay(TP_CLICK_DURATION_MS)
-                            MouseInjector.leftUp()
-                        }
+                        lastTapReleaseTime = System.currentTimeMillis()
+                        onHapticFeedback()
+                        pendingClickJob =
+                            scope.launch {
+                                try {
+                                    MouseInjector.leftDown()
+                                    delay(TP_CLICK_DURATION_MS)
+                                    MouseInjector.leftUp()
+                                } finally {
+                                    pendingClickJob = null
+                                }
+                            }
                     }
 
-                    tapCount >= 2 && twoFingerTap -> {
+                    tapCount == 2 && twoFingerTap -> {
+                        onHapticFeedback()
                         scope.launch {
                             MouseInjector.rightDown()
                             delay(TP_CLICK_DURATION_MS)
                             MouseInjector.rightUp()
                         }
                     }
+
+                    tapCount >= 3 && threeFingerTap -> {
+                        onHapticFeedback()
+                        scope.launch {
+                            MouseInjector.middleDown()
+                            delay(TP_CLICK_DURATION_MS)
+                            MouseInjector.middleUp()
+                        }
+                    }
                 }
             }
         } else {
-            val nx = (x / surfaceW).coerceIn(0f, 1f)
-            val ny = (y / surfaceH).coerceIn(0f, 1f)
-            _touchPos.value = null
-            TouchInjector.injectTouch(TouchAction.UP, nx, ny)
+            val slot = pointerToSlotMap.remove(pointerId)
+            if (slot != null) {
+                activeSlots[slot] = false
+                val nx = (x / surfaceW).coerceIn(0f, 1f)
+                val ny = (y / surfaceH).coerceIn(0f, 1f)
+                _touchPos.value = null
+                TouchInjector.injectTouch(slot, TouchAction.UP, nx, ny)
+            }
         }
     }
 

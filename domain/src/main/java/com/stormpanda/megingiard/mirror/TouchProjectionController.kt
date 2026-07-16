@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "TouchProjectionCtrl"
+private const val MAX_TOUCH_SLOTS = 10
 
 /**
  * Gesture state machine for mirror touch projection.
@@ -27,12 +28,15 @@ class TouchProjectionController(
     private val edgeZonePx: Float,
     private val overlayAtBottom: Boolean,
 ) {
-    private var gestureInEdgeZone = false
-    private var gestureStarted = false
-    private var activePointerId = -1L
-    private var activeCutoutId: String? = null
-    private var lastInjectedNx = 0f
-    private var lastInjectedNy = 0f
+    private data class TouchState(
+        val slot: Int,
+        val cutoutId: String,
+        var lastNx: Float,
+        var lastNy: Float,
+    )
+
+    private val activeTouches = HashMap<Long, TouchState>()
+    private val activeSlots = BooleanArray(MAX_TOUCH_SLOTS) { false }
 
     private val _indicatorPos = MutableStateFlow<Pair<Float, Float>?>(null)
 
@@ -51,25 +55,12 @@ class TouchProjectionController(
         isConsumed: Boolean,
         pointerCount: Int,
     ): Boolean {
-        // If a second finger lands while we have an active injection gesture,
-        // gracefully cancel (pinch takeover).
-        if (gestureStarted && pointerCount > 1) {
-            _indicatorPos.value = null
-            TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
-            gestureStarted = false
-            activePointerId = -1L
-            activeCutoutId = null
-            return false
-        }
-
-        gestureStarted = false
         val nearEdge =
             if (overlayAtBottom) {
                 y >= boxH - edgeZonePx
             } else {
                 y <= edgeZonePx
             }
-        gestureInEdgeZone = nearEdge
         if (nearEdge) return false
         if (isConsumed) return false
 
@@ -107,13 +98,30 @@ class TouchProjectionController(
 
         if (matchedProjected == null) return false
 
-        _indicatorPos.value = Pair(x, y)
-        lastInjectedNx = matchedProjected.first
-        lastInjectedNy = matchedProjected.second
-        TouchInjector.injectTouch(TouchAction.DOWN, lastInjectedNx, lastInjectedNy)
-        activePointerId = pointerId
-        activeCutoutId = matchedCutoutId
-        gestureStarted = true
+        // Allocate slot
+        var slot = -1
+        for (i in 0 until MAX_TOUCH_SLOTS) {
+            if (!activeSlots[i]) {
+                slot = i
+                break
+            }
+        }
+        if (slot == -1) return false
+
+        activeSlots[slot] = true
+        activeTouches[pointerId] =
+            TouchState(
+                slot = slot,
+                cutoutId = matchedCutoutId!!,
+                lastNx = matchedProjected.first,
+                lastNy = matchedProjected.second,
+            )
+
+        if (activeTouches.size == 1) {
+            _indicatorPos.value = Pair(x, y)
+        }
+
+        TouchInjector.injectTouch(slot, TouchAction.DOWN, matchedProjected.first, matchedProjected.second)
         return true
     }
 
@@ -128,32 +136,26 @@ class TouchProjectionController(
         boxH: Float,
         isConsumed: Boolean,
     ): Boolean {
-        if (gestureInEdgeZone || !gestureStarted) return false
-        if (pointerId != activePointerId) return false
+        val touch = activeTouches[pointerId] ?: return false
 
         if (isConsumed) {
-            _indicatorPos.value = null
-            TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
-            gestureStarted = false
-            activePointerId = -1L
-            activeCutoutId = null
+            activeTouches.remove(pointerId)
+            activeSlots[touch.slot] = false
+            if (activeTouches.isEmpty()) {
+                _indicatorPos.value = null
+            }
+            TouchInjector.injectTouch(touch.slot, TouchAction.UP, touch.lastNx, touch.lastNy)
             return false
         }
 
-        val cutoutId = activeCutoutId
-        val cutout =
-            if (cutoutId != null) {
-                ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
-            } else {
-                null
+        val cutout = ScreenCaptureManager.cutouts.value.firstOrNull { it.id == touch.cutoutId }
+        if (cutout == null) {
+            activeTouches.remove(pointerId)
+            activeSlots[touch.slot] = false
+            if (activeTouches.isEmpty()) {
+                _indicatorPos.value = null
             }
-
-        if (cutoutId == null || cutout == null) {
-            _indicatorPos.value = null
-            TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
-            gestureStarted = false
-            activePointerId = -1L
-            activeCutoutId = null
+            TouchInjector.injectTouch(touch.slot, TouchAction.UP, touch.lastNx, touch.lastNy)
             return false
         }
 
@@ -179,7 +181,6 @@ class TouchProjectionController(
 
         if (coords == null) {
             // Finger panned outside destination bounds — send clamped UP
-            _indicatorPos.value = null
             val clampedCoords =
                 projectCutoutCoordinates(
                     touchX = x,
@@ -193,19 +194,23 @@ class TouchProjectionController(
                     srcWidth = cutout.srcWidth,
                     srcHeight = cutout.srcHeight,
                     clampToEdge = true,
-                ) ?: Pair(lastInjectedNx, lastInjectedNy)
+                ) ?: Pair(touch.lastNx, touch.lastNy)
 
-            TouchInjector.injectTouch(TouchAction.UP, clampedCoords.first, clampedCoords.second)
-            gestureStarted = false
-            activePointerId = -1L
-            activeCutoutId = null
+            activeTouches.remove(pointerId)
+            activeSlots[touch.slot] = false
+            if (activeTouches.isEmpty()) {
+                _indicatorPos.value = null
+            }
+            TouchInjector.injectTouch(touch.slot, TouchAction.UP, clampedCoords.first, clampedCoords.second)
             return true
         }
 
-        lastInjectedNx = coords.first
-        lastInjectedNy = coords.second
-        _indicatorPos.value = Pair(x, y)
-        TouchInjector.injectTouch(TouchAction.MOVE, lastInjectedNx, lastInjectedNy)
+        touch.lastNx = coords.first
+        touch.lastNy = coords.second
+        if (activeTouches.keys.firstOrNull() == pointerId) {
+            _indicatorPos.value = Pair(x, y)
+        }
+        TouchInjector.injectTouch(touch.slot, TouchAction.MOVE, touch.lastNx, touch.lastNy)
         return true
     }
 
@@ -219,56 +224,49 @@ class TouchProjectionController(
         boxW: Float,
         boxH: Float,
     ): Boolean {
-        _indicatorPos.value = null
-        if (!gestureInEdgeZone && gestureStarted) {
-            val cutoutId = activeCutoutId
-            val cutout =
-                if (cutoutId != null) {
-                    ScreenCaptureManager.cutouts.value.firstOrNull { it.id == cutoutId }
-                } else {
-                    null
-                }
-
-            if (cutout != null && x != null && y != null) {
-                val destLeft = cutout.destX * boxW
-                val destTop = cutout.destY * boxH
-                val destWidth = cutout.destWidth * boxW
-                val destHeight = cutout.destHeight * boxH
-
-                val coords =
-                    projectCutoutCoordinates(
-                        touchX = x,
-                        touchY = y,
-                        destLeft = destLeft,
-                        destTop = destTop,
-                        destWidth = destWidth,
-                        destHeight = destHeight,
-                        srcX = cutout.srcX,
-                        srcY = cutout.srcY,
-                        srcWidth = cutout.srcWidth,
-                        srcHeight = cutout.srcHeight,
-                        clampToEdge = true,
-                    )
-                val nx = coords?.first ?: lastInjectedNx
-                val ny = coords?.second ?: lastInjectedNy
-                TouchInjector.injectTouch(TouchAction.UP, nx, ny)
-            } else {
-                TouchInjector.injectTouch(TouchAction.UP, lastInjectedNx, lastInjectedNy)
-            }
+        val touch = activeTouches.remove(pointerId) ?: return false
+        activeSlots[touch.slot] = false
+        if (activeTouches.isEmpty()) {
+            _indicatorPos.value = null
         }
-        gestureInEdgeZone = false
-        gestureStarted = false
-        activePointerId = -1L
-        activeCutoutId = null
-        return !gestureInEdgeZone
+
+        val cutout = ScreenCaptureManager.cutouts.value.firstOrNull { it.id == touch.cutoutId }
+        if (cutout != null && x != null && y != null) {
+            val destLeft = cutout.destX * boxW
+            val destTop = cutout.destY * boxH
+            val destWidth = cutout.destWidth * boxW
+            val destHeight = cutout.destHeight * boxH
+
+            val coords =
+                projectCutoutCoordinates(
+                    touchX = x,
+                    touchY = y,
+                    destLeft = destLeft,
+                    destTop = destTop,
+                    destWidth = destWidth,
+                    destHeight = destHeight,
+                    srcX = cutout.srcX,
+                    srcY = cutout.srcY,
+                    srcWidth = cutout.srcWidth,
+                    srcHeight = cutout.srcHeight,
+                    clampToEdge = true,
+                )
+            val nx = coords?.first ?: touch.lastNx
+            val ny = coords?.second ?: touch.lastNy
+            TouchInjector.injectTouch(touch.slot, TouchAction.UP, nx, ny)
+        } else {
+            TouchInjector.injectTouch(touch.slot, TouchAction.UP, touch.lastNx, touch.lastNy)
+        }
+        return true
     }
 
     /** Reset all tracking state. */
     fun reset() {
-        gestureInEdgeZone = false
-        gestureStarted = false
-        activePointerId = -1L
-        activeCutoutId = null
+        for ((_, touch) in activeTouches) {
+            TouchInjector.injectTouch(touch.slot, TouchAction.UP, touch.lastNx, touch.lastNy)
+        }
+        activeTouches.clear()
+        activeSlots.fill(false)
         _indicatorPos.value = null
     }
 }

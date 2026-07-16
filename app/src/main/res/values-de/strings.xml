@@ -97,9 +97,6 @@
     <string name="settings_two_finger_tap">Zwei-Finger-Tippen</string>
     <string name="settings_two_finger_tap_desc">Zwei-Finger-Tippen = Rechtsklick</string>
 
-    <!-- Mirror touch projection -->
-    <string name="settings_pinch_while_projecting">Pinch-to-Zoom während Projektion</string>
-    <string name="settings_pinch_while_projecting_desc">Zwei-Finger-Zoomen und Schwenken während die Touch-Projektion aktiv ist. Zwei-Finger-Gesten werden nicht an das primäre Display weitergeleitet.</string>
 
     <!-- Mirror session state persistence -->
     <string name="settings_remember_viewport">Ansichtsausschnitt merken</string>
@@ -1029,5 +1026,59 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="steamgriddb_error_generic_title">Fehler</string>
     <string name="steamgriddb_error_generic_message">Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es noch einmal.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
+
+    <!-- Touchpad settings -->
+    <string name="settings_touchpad_title">Touchpad-Einstellungen</string>
+    <string name="settings_section_relative_mouse">Relative-Maus-Modus</string>
+    <string name="settings_section_absolute_touch">Absolut-Touch-Modus</string>
+    <string name="cd_touchpad_collapse">Touchpad einklappen</string>
+    <string name="cd_touchpad_settings">Touchpad-Einstellungen</string>
+    <string name="settings_touchpad_use_mouse">Eingabemodus</string>
+    <string name="settings_touchpad_use_mouse_desc">Wechseln zwischen relativem Mausmodus und absolutem Touchscreen-Modus</string>
+    <string name="settings_touchpad_tap_to_click">Tippen zum Klicken</string>
+    <string name="settings_touchpad_tap_to_click_desc">Einfaches Tippen als Linksklick ausführen</string>
+    <string name="settings_touchpad_two_finger_tap">Zwei-Finger-Tippen</string>
+    <string name="settings_touchpad_two_finger_tap_desc">Zwei-Finger-Tippen als Rechtsklick ausführen</string>
+    <string name="settings_touchpad_three_finger_tap">Drei-Finger-Tippen</string>
+    <string name="settings_touchpad_three_finger_tap_desc">Drei-Finger-Tippen als Mittelklick ausführen</string>
+    <string name="settings_touchpad_tap_drag">Tippen und Ziehen</string>
+    <string name="settings_touchpad_tap_drag_desc">Doppeltippen und Halten zum Ziehen von Elementen</string>
+    <string name="settings_touchpad_two_finger_scroll">Zwei-Finger-Scrollen</string>
+    <string name="settings_touchpad_two_finger_scroll_desc">Zwei Finger vertikal ziehen, um den Bildschirm zu scrollen</string>
+    <string name="settings_touchpad_natural_scroll">Natürliches Scrollen</string>
+    <string name="settings_touchpad_natural_scroll_desc">Inhalte bewegen sich in Richtung der Fingerbewegung</string>
+    <string name="settings_touchpad_scroll_speed">Scrollgeschwindigkeit</string>
+    <string name="settings_touchpad_scroll_speed_desc">Scrollrad-Empfindlichkeit anpassen</string>
+    <string name="settings_touchpad_mouse_4_5">Maustasten 4/5 aktivieren</string>
+    <string name="settings_touchpad_mouse_4_5_desc">Zeige physische Zurück- (M4) und Vorwärts-Tasten (M5) in den oberen Ecken</string>
+    <string name="settings_touchpad_sensitivity">Zeigergeschwindigkeit</string>
+    <string name="settings_touchpad_sensitivity_desc">Multiplikator für Cursor-Empfindlichkeit anpassen</string>
+    <string name="settings_touchpad_haptics">Haptisches Feedback</string>
+    <string name="settings_touchpad_haptics_desc">Leicht vibrieren bei Klicks und Gesten</string>
+    <string name="help_touchpad_settings_title">Touchpad-Hilfe</string>
+    <string name="help_touchpad_settings_intro">Optionen für das virtuelle Vollbild-Touchpad konfigurieren.</string>
+    <string name="help_touchpad_settings_mode_desc">Der relative Mausmodus bewegt den Cursor basierend auf Finger-Deltas, während der absolute Modus Touch-Koordinaten direkt projiziert.</string>
+    <string name="help_touchpad_settings_click_desc">Links-, Rechts- und Mittelklicks können durch kurzes Tippen mit einem, zwei oder drei Fingern simuliert werden.</string>
+    <string name="settings_touchpad_mirroring">Touchpad-Spiegelung</string>
+    <string name="settings_touchpad_mirroring_desc">Den oberen Bildschirm im Touchpad-Bereich spiegeln</string>
+    <string name="settings_touchpad_mirror_dim">Spiegelung-Dimmstufe</string>
+
+    <string name="settings_touchpad_m4_label">M4</string>
+    <string name="settings_touchpad_m5_label">M5</string>
+    <string name="cd_touchpad_relative_mouse_mode">Relativer Mausmodus</string>
+    <string name="cd_touchpad_absolute_touch_mode">Absoluter Touchmodus</string>
+    <string name="cd_touchpad_toggle_mirroring">Touchpad-Spiegelung umschalten</string>
+    <string name="help_touchpad_settings_scroll_desc">Ziehe mit zwei Fingern vertikal, um Scrollrad-Ereignisse zu senden.</string>
+    <string name="help_touchpad_settings_tap_to_click_desc">Ein kurzes Tippen mit einem Finger führt einen Linksklick aus.</string>
+    <string name="help_touchpad_settings_two_finger_tap_desc">Ein kurzes Tippen mit zwei Fingern führt einen Rechtsklick aus.</string>
+    <string name="help_touchpad_settings_three_finger_tap_desc">Ein kurzes Tippen mit drei Fingern führt einen Mittelklick aus.</string>
+    <string name="help_touchpad_settings_tap_drag_desc">Doppeltippen und Halten, um Elemente zu ziehen.</string>
+    <string name="help_touchpad_settings_mouse_4_5_desc">Zeigt M4 (Zurück) und M5 (Vorwärts) Knöpfe in den Ecken des relativen Mausbereichs.</string>
+    <string name="help_touchpad_settings_mirroring_desc">Aktiviert die absolute Touch-Projektion mit einer Echtzeit-Spiegelung des primären Bildschirms.</string>
+    <string name="help_touchpad_settings_mirror_dim_desc">Passt die Helligkeit des gespiegelten Bildschirms im Touchpad an.</string>
+    <string name="help_touchpad_settings_sensitivity_desc">Passt den Cursor-Bewegungs-Multiplikator im relativen Mausmodus an.</string>
+    <string name="help_touchpad_settings_natural_scroll_desc">Aktiviert die natürliche Scrollrichtung: Das Ziehen von Fingern nach unten zieht den Bildschirminhalt nach unten.</string>
+    <string name="help_touchpad_settings_scroll_speed_desc">Passt die Empfindlichkeit/Geschwindigkeit des Zwei-Finger-Scrollens an.</string>
+    <string name="help_touchpad_settings_haptics_desc">Aktiviert subtile physische Klick-Vibrationen beim Drücken von Knöpfen oder Ausführen von Klick-Gesten.</string>
 
 </resources>
