@@ -750,23 +750,7 @@ fun KeyboardScreen(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.TouchApp,
-                            contentDescription = null,
-                            tint = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                            modifier = Modifier.size(32.dp),
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.touchpad_hint_mouse),
-                            color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
+                    // Clean, empty active area
                 }
             }
         } else {
