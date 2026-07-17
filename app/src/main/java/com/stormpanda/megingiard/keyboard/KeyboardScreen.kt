@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.keyboard
 
+import android.os.Vibrator
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -69,6 +72,10 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
+import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.triggerHaptic
+import com.stormpanda.megingiard.settings.TouchpadSettings
+import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QUICK_MENU_BAR_INSET
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
@@ -99,6 +106,12 @@ private val KB_ICON_SIZE_MEDIUM = 24.dp
 private val KB_SWIPE_THRESHOLD_DP = 12.dp
 private val KB_SWIPE_STEP_DP = 10.dp
 private val KB_LONG_PRESS_SWIPE_THRESHOLD_DP = 24.dp
+
+private val KB_TOUCHPAD_CORNER_RADIUS = 12.dp
+private val KB_TOUCHPAD_BORDER_WIDTH = 1.dp
+private val KB_TOUCHPAD_PADDING = 8.dp
+private const val KB_TOUCHPAD_BEZEL_ALPHA_DARK = 0.45f
+private const val KB_TOUCHPAD_BEZEL_ALPHA_LIGHT = 0.12f
 
 internal class PopupState(
     val keyDef: KeyDef,
@@ -474,6 +487,24 @@ fun KeyboardScreen(
     val accentColor = colors.accent
     val controller = viewModel.controller
 
+    val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
+    val tapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
+    val twoFingerTap by TouchpadSettings.touchpadTwoFingerTap.collectAsState()
+    val threeFingerTap by TouchpadSettings.touchpadThreeFingerTap.collectAsState()
+    val tapDrag by TouchpadSettings.touchpadTapDrag.collectAsState()
+    val twoFingerScroll by TouchpadSettings.touchpadTwoFingerScroll.collectAsState()
+    val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
+    val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
+    val touchpadSensitivity by TouchpadSettings.touchpadSensitivity.collectAsState()
+    val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
+    val vibrator = remember { context.getSystemService(Vibrator::class.java) }
+
+    val currentOnHapticFeedback by rememberUpdatedState {
+        if (touchpadHapticsEnabled && vibrator != null) {
+            triggerHaptic(vibrator, HapticStrength.LIGHT)
+        }
+    }
+
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsState()
 
@@ -553,8 +584,151 @@ fun KeyboardScreen(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Bottom,
     ) {
-        // Transparent Top Spacer to let Zelda wallpaper/ambient background shine through
-        Spacer(modifier = Modifier.weight(1f))
+        if (kbTouchpadEnabled) {
+            val tapToClickState = rememberUpdatedState(tapToClick)
+            val twoFingerTapState = rememberUpdatedState(twoFingerTap)
+            val threeFingerTapState = rememberUpdatedState(threeFingerTap)
+            val tapDragState = rememberUpdatedState(tapDrag)
+            val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
+
+            val globalSensitivity by AppStateManager.fullscreenMouseSensitivity.collectAsState()
+            val kbFinalSensitivity = touchpadSensitivity * globalSensitivity
+
+            val processor =
+                remember(
+                    kbFinalSensitivity,
+                    twoFingerScrollState.value,
+                    touchpadNaturalScroll,
+                    touchpadScrollSpeed,
+                ) {
+                    TouchpadGestureProcessor(
+                        useMouse = true,
+                        scope = coroutineScope,
+                        sensitivity = kbFinalSensitivity,
+                        twoFingerScrollEnabled = twoFingerScrollState.value,
+                        naturalScrollEnabled = touchpadNaturalScroll,
+                        scrollSpeed = touchpadScrollSpeed,
+                        onHapticFeedback = { currentOnHapticFeedback() },
+                    )
+                }
+
+            var touchpadCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+            val pointersInsideTouchpad = remember { HashSet<Long>() }
+            var hasActivePointers by remember { mutableStateOf(false) }
+
+            val insetBezelBrush =
+                remember {
+                    Brush.linearGradient(
+                        colors =
+                            listOf(
+                                Color.Black.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_DARK),
+                                Color.White.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_LIGHT),
+                            ),
+                        start = Offset(0f, 0f),
+                        end = Offset.Infinite,
+                    )
+                }
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(colors.keyboardBackground),
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(KB_TOUCHPAD_PADDING)
+                            .clip(RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS))
+                            .background(colors.appBackground)
+                            .border(
+                                width = KB_TOUCHPAD_BORDER_WIDTH,
+                                brush = insetBezelBrush,
+                                shape = RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS),
+                            ).onGloballyPositioned { touchpadCoords = it }
+                            .pointerInput(processor) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Main)
+                                        val coords = touchpadCoords ?: continue
+                                        val sw = coords.size.width.toFloat()
+                                        val sh = coords.size.height.toFloat()
+                                        for (change in event.changes) {
+                                            val id = change.id.value
+                                            val localPos = change.position
+                                            val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+
+                                            if (change.isConsumed) continue
+
+                                            val clampedX = localPos.x.coerceIn(0f, sw)
+                                            val clampedY = localPos.y.coerceIn(0f, sh)
+
+                                            when (event.type) {
+                                                PointerEventType.Press -> {
+                                                    if (!change.previousPressed && isInside) {
+                                                        pointersInsideTouchpad.add(id)
+                                                        processor.onPress(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            overlayOpen = false,
+                                                            tapDrag = tapDragState.value,
+                                                        )
+                                                    }
+                                                }
+
+                                                PointerEventType.Move -> {
+                                                    if (pointersInsideTouchpad.contains(id)) {
+                                                        val delta = change.positionChange()
+                                                        processor.onMove(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            deltaX = delta.x,
+                                                            deltaY = delta.y,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            overlayOpen = false,
+                                                        )
+                                                    }
+                                                }
+
+                                                PointerEventType.Release -> {
+                                                    if (!change.pressed && pointersInsideTouchpad.contains(id)) {
+                                                        pointersInsideTouchpad.remove(id)
+                                                        val allUp = event.changes.none { it.pressed }
+                                                        processor.onRelease(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                            allPointersUp = allUp,
+                                                            tapToClick = tapToClickState.value,
+                                                            twoFingerTap = twoFingerTapState.value,
+                                                            threeFingerTap = threeFingerTapState.value,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            change.consume()
+                                        }
+                                        hasActivePointers = pointersInsideTouchpad.isNotEmpty()
+                                    }
+                                }
+                            },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Clean, empty active area
+                }
+            }
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
+        }
 
         // Gboard Container (top toolbar, grid, bottom toolbar)
         Column(

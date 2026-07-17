@@ -55,6 +55,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <linux/input.h>
+#include <linux/uinput.h>
 #include <pthread.h>
 #include <poll.h>
 #include <sys/wait.h>
@@ -77,6 +78,7 @@ static volatile sig_atomic_t g_should_exit = 0;
  * reader thread can access it without passing it as a parameter.
  */
 static int g_gamepad_fd = -1;
+static int g_mouse_fd = -1;
 
 /* ---------------------------------------------------------------------------
  * Per-install shared secret — loaded from STATE_FILE at daemon startup and
@@ -189,6 +191,50 @@ static void stop_reader_thread(void) {
 static void signal_handler(int sig) {
     (void)sig;
     g_should_exit = 1;
+}
+
+/*
+ * Initializes a virtual relative mouse device via /dev/uinput.
+ * Returns O_RDWR fd on success, -1 on failure.
+ */
+static int init_virtual_mouse(void) {
+    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (fd < 0) {
+        return -1;
+    }
+    /* Register EV_KEY for mouse buttons */
+    ioctl(fd, UI_SET_EVBIT, EV_KEY);
+    ioctl(fd, UI_SET_KEYBIT, BTN_LEFT);
+    ioctl(fd, UI_SET_KEYBIT, BTN_RIGHT);
+    ioctl(fd, UI_SET_KEYBIT, BTN_MIDDLE);
+    ioctl(fd, UI_SET_KEYBIT, BTN_SIDE);    /* mouse button 4 */
+    ioctl(fd, UI_SET_KEYBIT, BTN_EXTRA);   /* mouse button 5 */
+
+    /* Register EV_REL for relative movement */
+    ioctl(fd, UI_SET_EVBIT, EV_REL);
+    ioctl(fd, UI_SET_RELBIT, REL_X);
+    ioctl(fd, UI_SET_RELBIT, REL_Y);
+    ioctl(fd, UI_SET_RELBIT, REL_WHEEL);
+
+    ioctl(fd, UI_SET_EVBIT, EV_SYN);
+
+    /* Create the virtual device */
+    struct uinput_setup usetup;
+    memset(&usetup, 0, sizeof(usetup));
+    usetup.id.bustype = BUS_USB;
+    usetup.id.vendor  = 0x1234;
+    usetup.id.product = 0x9002;
+    strncpy(usetup.name, "Megingiard Virtual Mouse", UINPUT_MAX_NAME_SIZE - 1);
+
+    if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) {
+        close(fd);
+        return -1;
+    }
+    if (ioctl(fd, UI_DEV_CREATE) < 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
 }
 
 /*
@@ -931,6 +977,50 @@ static int serve_client(int client_fd) {
             continue;
         }
 
+        if (line[0] == 'M' && line[1] == 'B') {
+            /* MB <side> <D|U>  — mouse button press/release */
+            char side, du;
+            if (sscanf(line, "MB %c %c", &side, &du) == 2) {
+                __u16 btn;
+                if      (side == 'L') btn = BTN_LEFT;
+                else if (side == 'R') btn = BTN_RIGHT;
+                else if (side == 'M') btn = BTN_MIDDLE;
+                else if (side == '4') btn = BTN_SIDE;
+                else if (side == '5') btn = BTN_EXTRA;
+                else continue;
+
+                __s32 val = (du == 'D') ? 1 : 0;
+                if (g_mouse_fd >= 0) {
+                    write_event(g_mouse_fd, EV_KEY, btn, val);
+                    write_event(g_mouse_fd, EV_SYN, SYN_REPORT, 0);
+                }
+            }
+            continue;
+        }
+        if (line[0] == 'M' && line[1] == 'M') {
+            /* MM <dx> <dy>  — relative pointer movement */
+            int dx, dy;
+            if (sscanf(line, "MM %d %d", &dx, &dy) == 2) {
+                if (g_mouse_fd >= 0) {
+                    if (dx != 0) write_event(g_mouse_fd, EV_REL, REL_X, dx);
+                    if (dy != 0) write_event(g_mouse_fd, EV_REL, REL_Y, dy);
+                    if (dx != 0 || dy != 0) write_event(g_mouse_fd, EV_SYN, SYN_REPORT, 0);
+                }
+            }
+            continue;
+        }
+        if (line[0] == 'M' && line[1] == 'W') {
+            /* MW <delta>  — scroll wheel */
+            int delta;
+            if (sscanf(line, "MW %d", &delta) == 1) {
+                if (g_mouse_fd >= 0) {
+                    write_event(g_mouse_fd, EV_REL, REL_WHEEL, delta);
+                    write_event(g_mouse_fd, EV_SYN, SYN_REPORT, 0);
+                }
+            }
+            continue;
+        }
+
         if (line[0] == 'G') {
             /* GD/GU <btn> */
             if (sscanf(line, "%4s %d", action, &a) != 2) continue;
@@ -1022,10 +1112,19 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    g_mouse_fd = init_virtual_mouse();
+    if (g_mouse_fd < 0) {
+        fprintf(stderr, "privd: init_virtual_mouse failed\n");
+        (void)write(STDOUT_FILENO, "E\n", 2);
+        close(g_gamepad_fd);
+        return 1;
+    }
+
     int srv_fd = bind_listening_socket();
     if (srv_fd < 0) {
         fprintf(stderr, "privd: bind_listening_socket failed errno=%d\n", errno);
         (void)write(STDOUT_FILENO, "E\n", 2);
+        close(g_mouse_fd);
         close(g_gamepad_fd);
         return 1;
     }
@@ -1066,6 +1165,10 @@ int main(int argc, char *argv[]) {
     }
 
     close(srv_fd);
+    if (g_mouse_fd >= 0) {
+        ioctl(g_mouse_fd, UI_DEV_DESTROY);
+        close(g_mouse_fd);
+    }
     close(g_gamepad_fd);
     return 0;
 }

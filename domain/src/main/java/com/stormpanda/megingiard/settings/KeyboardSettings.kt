@@ -48,6 +48,9 @@ object KeyboardSettings {
     private val _kbMouseBtnPos = MutableStateFlow(KbMouseBtnPos.LEFT)
     val kbMouseBtnPos: StateFlow<KbMouseBtnPos> = _kbMouseBtnPos.asStateFlow()
 
+    private val _kbTouchpadEnabled = MutableStateFlow(true)
+    val kbTouchpadEnabled: StateFlow<Boolean> = _kbTouchpadEnabled.asStateFlow()
+
     internal fun init(
         dataStore: DataStore<Preferences>,
         scope: CoroutineScope,
@@ -62,6 +65,7 @@ object KeyboardSettings {
         _kbRepeatEnabled.value = prefs[KEY_KB_REPEAT_ENABLED] ?: true
         _kbFullscreen.value = prefs[KEY_KB_FULLSCREEN] ?: false
         _kbMouseBtnPos.value = KbMouseBtnPos.entries.firstOrNull { it.name == prefs[KEY_KB_MOUSE_BTN_POS] } ?: KbMouseBtnPos.LEFT
+        _kbTouchpadEnabled.value = prefs[KEY_KB_TOUCHPAD_ENABLED] ?: true
     }
 
     fun setKbLayout(value: KbLayout) {
@@ -92,5 +96,11 @@ object KeyboardSettings {
         AppLog.d(TAG, "setKbMouseBtnPos($value)")
         _kbMouseBtnPos.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_MOUSE_BTN_POS] = value.name } }
+    }
+
+    fun setKbTouchpadEnabled(value: Boolean) {
+        AppLog.d(TAG, "setKbTouchpadEnabled($value)")
+        _kbTouchpadEnabled.value = value
+        scope.launch { dataStore.edit { prefs -> prefs[KEY_KB_TOUCHPAD_ENABLED] = value } }
     }
 }

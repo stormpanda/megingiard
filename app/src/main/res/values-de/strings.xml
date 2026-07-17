@@ -88,6 +88,9 @@
     <string name="settings_kb_repeat_desc">Taste gedrückt halten für Wiederholung</string>
     <string name="settings_kb_fullscreen">Vollbild-Tastatur</string>
     <string name="settings_kb_fullscreen_desc">Kein Abstand unten — Tastatur füllt den gesamten Bildschirm</string>
+    <string name="settings_kb_touchpad">Tastatur-Touchpad</string>
+    <string name="settings_kb_touchpad_desc">Touchpad über der Tastatur anzeigen</string>
+
 
     <!-- Input method (touchpad + keyboard trackpoint) -->
     <string name="settings_input_method">Mausmodus</string>
@@ -943,6 +946,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_keyboard_settings_title">Tastatur-Einstellungen — Hilfe</string>
     <string name="help_keyboard_settings_intro">Konfigurieren Sie Layouts und Tasten für die virtuelle Tastatur im Gboard-Stil.</string>
     <string name="help_keyboard_settings_layout_desc">Wählen Sie Ihre bevorzugte Buchstabenanordnung (QWERTY, QWERTZ oder AZERTY). Beachten Sie, dass diese Einstellung nur das Buchstaben-Layout (ABC-Modus) beeinflusst. Die Layout-Ebenen für Zahlen und Symbole sind bei allen regionalen Formaten identisch.</string>
+    <string name="help_keyboard_settings_touchpad_desc">Zeigt ein kleines relatives Touchpad im Bereich über dem Tastaturlayout an, wenn die Tastatur geöffnet ist. Gesten wie Tippen zum Klicken, Zwei-Finger-Tippen (Rechtsklick) und Zwei-Finger-Scrollen werden unterstützt. Zeigergeschwindigkeit und Bildlaufgeschwindigkeit werden aus den Touchpad-Einstellungen übernommen.</string>
+
 
     <!-- Quick Menu help -->
     <string name="help_quickmenu_title">Schnellmenü — Hilfe</string>
