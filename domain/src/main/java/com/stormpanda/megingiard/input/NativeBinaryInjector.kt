@@ -10,6 +10,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import android.os.Process as AndroidProcess
 
 private const val NBI_FLUSH_POLL_INTERVAL_MS = 1L
 
@@ -85,7 +86,10 @@ abstract class NativeBinaryInjector<T>(
             queue.clear()
             running = true
             writerThread =
-                Thread(::writerLoop, workerThreadName).also {
+                Thread({
+                    AndroidProcess.setThreadPriority(AndroidProcess.THREAD_PRIORITY_FOREGROUND)
+                    writerLoop()
+                }, workerThreadName).also {
                     it.isDaemon = true
                     it.start()
                 }
