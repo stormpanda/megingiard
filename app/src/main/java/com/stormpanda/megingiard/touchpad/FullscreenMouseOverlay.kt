@@ -224,6 +224,7 @@ fun FullscreenMouseOverlay() {
                                 val outer = outerCoords
                                 for (change in event.changes) {
                                     val id = change.id.value
+                                    val wasTracked = pointersInsideTouchpad.contains(id)
 
                                     // 1. Maintain active pointer tracking state unconditionally (even if consumed by overlay buttons)
                                     if (inner != null && outer != null) {
@@ -240,8 +241,7 @@ fun FullscreenMouseOverlay() {
                                             }
 
                                             PointerEventType.Move -> {
-                                                val wasInside = pointersInsideTouchpad.contains(id)
-                                                if (wasInside && !isInside && !touchpadUseMouse) {
+                                                if (wasTracked && !isInside && !touchpadUseMouse) {
                                                     pointersInsideTouchpad.remove(id)
                                                 }
                                             }
@@ -266,7 +266,7 @@ fun FullscreenMouseOverlay() {
 
                                         when (event.type) {
                                             PointerEventType.Press -> {
-                                                if (!change.previousPressed) {
+                                                if (!change.previousPressed && (localPos.x in 0f..sw && localPos.y in 0f..sh)) {
                                                     processor.onPress(
                                                         id,
                                                         clampedX,
@@ -280,38 +280,39 @@ fun FullscreenMouseOverlay() {
                                             }
 
                                             PointerEventType.Move -> {
-                                                val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-                                                val wasInside = pointersInsideTouchpad.contains(id)
-                                                if (wasInside && !isInside && !touchpadUseMouse) {
-                                                    val allUp = event.changes.none { it.pressed }
-                                                    processor.onRelease(
-                                                        id,
-                                                        clampedX,
-                                                        clampedY,
-                                                        sw,
-                                                        sh,
-                                                        allPointersUp = allUp,
-                                                        tapToClick = tapToClickState.value,
-                                                        twoFingerTap = twoFingerTapState.value,
-                                                        threeFingerTap = threeFingerTapState.value,
-                                                    )
-                                                } else {
-                                                    val delta = change.positionChange()
-                                                    processor.onMove(
-                                                        id,
-                                                        clampedX,
-                                                        clampedY,
-                                                        delta.x,
-                                                        delta.y,
-                                                        sw,
-                                                        sh,
-                                                        overlayOpen = false,
-                                                    )
+                                                if (wasTracked) {
+                                                    val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+                                                    if (!isInside && !touchpadUseMouse) {
+                                                        val allUp = event.changes.none { it.pressed }
+                                                        processor.onRelease(
+                                                            id,
+                                                            clampedX,
+                                                            clampedY,
+                                                            sw,
+                                                            sh,
+                                                            allPointersUp = allUp,
+                                                            tapToClick = tapToClickState.value,
+                                                            twoFingerTap = twoFingerTapState.value,
+                                                            threeFingerTap = threeFingerTapState.value,
+                                                        )
+                                                    } else {
+                                                        val delta = change.positionChange()
+                                                        processor.onMove(
+                                                            id,
+                                                            clampedX,
+                                                            clampedY,
+                                                            delta.x,
+                                                            delta.y,
+                                                            sw,
+                                                            sh,
+                                                            overlayOpen = false,
+                                                        )
+                                                    }
                                                 }
                                             }
 
                                             PointerEventType.Release -> {
-                                                if (!change.pressed) {
+                                                if (!change.pressed && wasTracked) {
                                                     val allUp = event.changes.none { it.pressed }
                                                     processor.onRelease(
                                                         id,
