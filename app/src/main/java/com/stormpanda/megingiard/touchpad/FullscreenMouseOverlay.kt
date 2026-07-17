@@ -261,56 +261,8 @@ fun FullscreenMouseOverlay() {
                                         val sw = inner.size.width.toFloat()
                                         val sh = inner.size.height.toFloat()
                                         val localPos = inner.localPositionOf(outer, change.position)
-                                        val clampedX: Float
-                                        val clampedY: Float
-                                        if (!touchpadUseMouse) {
-                                            val localOuterZero = inner.localPositionOf(outer, Offset.Zero)
-                                            val marginLeft = -localOuterZero.x
-                                            val marginTop = -localOuterZero.y
-                                            val outerW = outer.size.width.toFloat()
-                                            val outerH = outer.size.height.toFloat()
-                                            val marginRight = maxOf(1f, outerW - sw - marginLeft)
-                                            val marginBottom = maxOf(1f, outerH - sh - marginTop)
-
-                                            val nx =
-                                                when {
-                                                    localPos.x < 0f -> {
-                                                        val fraction = ((localPos.x + marginLeft) / maxOf(1f, marginLeft)).coerceIn(0f, 1f)
-                                                        fraction * 0.05f
-                                                    }
-
-                                                    localPos.x > sw -> {
-                                                        val fraction = ((localPos.x - sw) / marginRight).coerceIn(0f, 1f)
-                                                        0.95f + fraction * 0.05f
-                                                    }
-
-                                                    else -> {
-                                                        0.05f + (localPos.x / sw) * 0.90f
-                                                    }
-                                                }
-
-                                            val ny =
-                                                when {
-                                                    localPos.y < 0f -> {
-                                                        val fraction = ((localPos.y + marginTop) / maxOf(1f, marginTop)).coerceIn(0f, 1f)
-                                                        fraction * 0.05f
-                                                    }
-
-                                                    localPos.y > sh -> {
-                                                        val fraction = ((localPos.y - sh) / marginBottom).coerceIn(0f, 1f)
-                                                        0.95f + fraction * 0.05f
-                                                    }
-
-                                                    else -> {
-                                                        0.05f + (localPos.y / sh) * 0.90f
-                                                    }
-                                                }
-                                            clampedX = nx * sw
-                                            clampedY = ny * sh
-                                        } else {
-                                            clampedX = localPos.x.coerceIn(0f, sw)
-                                            clampedY = localPos.y.coerceIn(0f, sh)
-                                        }
+                                        val clampedX = localPos.x.coerceIn(0f, sw)
+                                        val clampedY = localPos.y.coerceIn(0f, sh)
 
                                         when (event.type) {
                                             PointerEventType.Press -> {
