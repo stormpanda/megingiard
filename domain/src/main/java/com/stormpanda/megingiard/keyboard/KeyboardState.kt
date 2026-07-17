@@ -154,6 +154,19 @@ object KeyboardState {
                 }
             }
         }
+        val toolbarMods =
+            listOf(
+                Triple("ctrl", LinuxKeycodes.KEY_LEFTCTRL, "ctrl"),
+                Triple("alt", LinuxKeycodes.KEY_LEFTALT, "alt"),
+                Triple("altgr", LinuxKeycodes.KEY_RIGHTALT, "ralt"),
+            )
+        for ((id, code, modKey) in toolbarMods) {
+            val flow = _modifiers[id] ?: _modifiers[modKey] ?: continue
+            if (flow.value == ModifierState.STICKY) {
+                flow.value = ModifierState.INACTIVE
+                keycodes += code
+            }
+        }
         if (keycodes.isNotEmpty()) AppLog.d(TAG, "releaseStickyModifiers: $keycodes")
         return keycodes
     }
@@ -174,6 +187,19 @@ object KeyboardState {
         if (capsState != ModifierState.INACTIVE) {
             if (LinuxKeycodes.KEY_LEFTSHIFT !in keycodes) {
                 keycodes += LinuxKeycodes.KEY_LEFTSHIFT
+            }
+        }
+        val toolbarMods =
+            listOf(
+                "ctrl" to LinuxKeycodes.KEY_LEFTCTRL,
+                "alt" to LinuxKeycodes.KEY_LEFTALT,
+                "altgr" to LinuxKeycodes.KEY_RIGHTALT,
+                "ralt" to LinuxKeycodes.KEY_RIGHTALT,
+            )
+        for ((id, code) in toolbarMods) {
+            val state = _modifiers[id]?.value ?: ModifierState.INACTIVE
+            if (state != ModifierState.INACTIVE && code !in keycodes) {
+                keycodes += code
             }
         }
         return keycodes

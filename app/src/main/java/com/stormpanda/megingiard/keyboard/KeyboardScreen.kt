@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -751,48 +752,80 @@ fun KeyboardScreen(
                         .height(KB_TOOLBAR_HEIGHT)
                         .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
             ) {
-                ToolbarIcon(
-                    imageVector = Icons.Rounded.SelectAll,
-                    contentDescription = stringResource(R.string.cd_kb_select_all),
-                    onClick = {
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_A)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                    },
-                )
-                ToolbarIcon(
-                    imageVector = Icons.Rounded.ContentCut,
-                    contentDescription = stringResource(R.string.cd_kb_cut),
-                    onClick = {
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                    },
-                )
-                ToolbarIcon(
-                    imageVector = Icons.Rounded.ContentCopy,
-                    contentDescription = stringResource(R.string.cd_kb_copy),
-                    onClick = {
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                    },
-                )
-                ToolbarIcon(
-                    imageVector = Icons.Rounded.ContentPaste,
-                    contentDescription = stringResource(R.string.cd_kb_paste),
-                    onClick = {
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                        KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-                        KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                    },
-                )
+                // Modifier buttons on the left
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ModifierButton(
+                        id = "ctrl",
+                        label = "CTRL",
+                        keycode = LinuxKeycodes.KEY_LEFTCTRL,
+                        accentColor = accentColor,
+                    )
+                    ModifierButton(
+                        id = "alt",
+                        label = "ALT",
+                        keycode = LinuxKeycodes.KEY_LEFTALT,
+                        accentColor = accentColor,
+                    )
+                    ModifierButton(
+                        id = "altgr",
+                        label = "ALT GR",
+                        keycode = LinuxKeycodes.KEY_RIGHTALT,
+                        accentColor = accentColor,
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Action icons on the right
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ToolbarIcon(
+                        imageVector = Icons.Rounded.SelectAll,
+                        contentDescription = stringResource(R.string.cd_kb_select_all),
+                        onClick = {
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                        },
+                    )
+                    ToolbarIcon(
+                        imageVector = Icons.Rounded.ContentCut,
+                        contentDescription = stringResource(R.string.cd_kb_cut),
+                        onClick = {
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                        },
+                    )
+                    ToolbarIcon(
+                        imageVector = Icons.Rounded.ContentCopy,
+                        contentDescription = stringResource(R.string.cd_kb_copy),
+                        onClick = {
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                        },
+                    )
+                    ToolbarIcon(
+                        imageVector = Icons.Rounded.ContentPaste,
+                        contentDescription = stringResource(R.string.cd_kb_paste),
+                        onClick = {
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                        },
+                    )
+                }
             }
 
             // 2. Keyboard Grid (isolated touch interception)
@@ -1433,6 +1466,72 @@ fun KeyboardScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ModifierButton(
+    id: String,
+    label: String,
+    keycode: Int,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val state by KeyboardState.stateFor(id).collectAsState()
+    val isActive = state != ModifierState.INACTIVE
+
+    val bg = if (isActive) accentColor.copy(alpha = 0.7f) else Color.Transparent
+    val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
+    val borderColor = if (isActive) Color.Transparent else Color.White.copy(alpha = 0.8f)
+
+    val scope = rememberCoroutineScope()
+
+    Box(
+        modifier =
+            modifier
+                .height(28.dp)
+                .width(54.dp)
+                .border(
+                    width = 1.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(4.dp),
+                ).clip(RoundedCornerShape(4.dp))
+                .background(bg)
+                .pointerInput(id, keycode) {
+                    detectTapGestures(
+                        onPress = {
+                            KeyboardState.onModifierTouchDown(id)
+                            val job =
+                                scope.launch {
+                                    delay(300L)
+                                    val code = KeyboardState.onModifierLongPress(id, keycode)
+                                    if (code != null) {
+                                        KeyInjector.keyDown(code)
+                                    }
+                                }
+                            try {
+                                awaitRelease()
+                            } finally {
+                                job.cancel()
+                                val upCodes = KeyboardState.onModifierTouchUp(id, keycode)
+                                upCodes.forEach { KeyInjector.keyUp(it) }
+                            }
+                        },
+                    )
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = contentColor,
+            textAlign = TextAlign.Center,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                ),
+        )
     }
 }
 
