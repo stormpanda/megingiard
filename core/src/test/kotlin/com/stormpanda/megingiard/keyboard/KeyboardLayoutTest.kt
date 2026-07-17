@@ -19,17 +19,45 @@ import org.junit.Test
  * - All non-trackpoint keys have linuxKeycode in 0..255.
  */
 class KeyboardLayoutTest {
-    private val layouts =
+    private val defaultLayouts =
         mapOf(
             "QWERTZ" to qwertzLayout(),
             "QWERTY" to qwertyLayout(),
             "AZERTY" to azertyLayout(),
         )
 
+    private val layouts =
+        mapOf(
+            "QWERTZ" to qwertzLayout(),
+            "QWERTY" to qwertyLayout(),
+            "AZERTY" to azertyLayout(),
+            "QWERTZ_FULL" to qwertzLayout(KeyboardMode.FULL),
+            "QWERTY_FULL" to qwertyLayout(KeyboardMode.FULL),
+            "AZERTY_FULL" to azertyLayout(KeyboardMode.FULL),
+        )
+
     @Test
-    fun `every layout has four rows`() {
-        for ((name, layout) in layouts) {
+    fun `every default layout has four rows`() {
+        for ((name, layout) in defaultLayouts) {
             assertEquals("$name row count", 4, layout.size)
+        }
+    }
+
+    @Test
+    fun `every full layout has six rows and correct row weights`() {
+        val fullLayouts =
+            mapOf(
+                "QWERTZ" to qwertzLayout(KeyboardMode.FULL),
+                "QWERTY" to qwertyLayout(KeyboardMode.FULL),
+                "AZERTY" to azertyLayout(KeyboardMode.FULL),
+            )
+        for ((name, layout) in fullLayouts) {
+            assertEquals("$name full row count", 6, layout.size)
+            for (rowIndex in layout.indices) {
+                val row = layout[rowIndex]
+                val totalWeight = row.sumOf { it.widthWeight.toDouble() }
+                assertEquals("$name full layout row $rowIndex total weight", 15.0, totalWeight, 0.01)
+            }
         }
     }
 

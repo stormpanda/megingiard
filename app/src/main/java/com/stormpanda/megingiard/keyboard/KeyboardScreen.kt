@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Settings
@@ -508,6 +509,8 @@ fun KeyboardScreen(
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsState()
+    val dynamicContainerHeight = if (keyboardMode == KeyboardMode.FULL) 314.dp else 262.dp
+    val dynamicGridHeight = if (keyboardMode == KeyboardMode.FULL) 220.dp else 168.dp
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -736,7 +739,7 @@ fun KeyboardScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(KB_CONTAINER_HEIGHT)
+                    .height(dynamicContainerHeight)
                     .background(colors.keyboardBackground)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -833,7 +836,7 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(KB_GRID_HEIGHT)
+                        .height(dynamicGridHeight)
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                         .onGloballyPositioned { boxCoordsState.value = it }
                         .pointerInput(layoutState) {
@@ -1434,6 +1437,44 @@ fun KeyboardScreen(
                         imageVector = Icons.Rounded.KeyboardArrowDown,
                         contentDescription = stringResource(R.string.cd_kb_collapse),
                         tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+                    )
+                }
+
+                // Dynamic Layout switcher button (Gboard vs Full Keyboard Mode)
+                val interactionSourceToggle = remember { MutableInteractionSource() }
+                val isTogglePressed by interactionSourceToggle.collectIsPressedAsState()
+                val isFullModeActive = keyboardMode == KeyboardMode.FULL
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .width(KB_GLOBE_BUTTON_WIDTH)
+                            .offset(y = (-3).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isFullModeActive) {
+                                    accentColor.copy(alpha = 0.25f)
+                                } else if (isTogglePressed) {
+                                    colors.keyPressed
+                                } else {
+                                    Color.Transparent
+                                },
+                            ).clickable(
+                                interactionSource = interactionSourceToggle,
+                                indication = null,
+                                onClick = {
+                                    val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
+                                    viewModel.setKeyboardMode(nextMode)
+                                    KeyboardState.reset()
+                                },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Keyboard,
+                        contentDescription = stringResource(R.string.cd_kb_layout),
+                        tint = if (isFullModeActive) accentColor else colors.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
                     )
                 }
