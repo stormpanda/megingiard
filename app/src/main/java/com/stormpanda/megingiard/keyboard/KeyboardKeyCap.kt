@@ -83,7 +83,7 @@ internal fun KeyCap(
     val isSpecialKey =
         keyDef.id == "lshift" || keyDef.id == "rshift" ||
             keyDef.id == "bksp" || keyDef.id.startsWith("mode_switch") ||
-            keyDef.id == "globe" || keyDef.id == "comma" || keyDef.id == "dot" ||
+            keyDef.id == "globe" ||
             keyDef.id == "ctrl" || keyDef.id == "rctrl" || keyDef.id == "meta" ||
             keyDef.id == "alt" || keyDef.id == "altgr" || keyDef.id == "caps" ||
             keyDef.id == "esc" || keyDef.id.startsWith("f") || keyDef.id == "print" ||

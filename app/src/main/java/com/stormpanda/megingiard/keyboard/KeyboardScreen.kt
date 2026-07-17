@@ -509,7 +509,7 @@ fun KeyboardScreen(
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsState()
-    val dynamicContainerHeight = if (keyboardMode == KeyboardMode.FULL) 314.dp else 262.dp
+    val dynamicContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
     val dynamicGridHeight = if (keyboardMode == KeyboardMode.FULL) 220.dp else 168.dp
 
     // Modifier states for dynamic label rendering
@@ -747,87 +747,89 @@ fun KeyboardScreen(
                         onClick = {}, // Consumes clicks to prevent propagation to background views (like MacroPad)
                     ),
         ) {
-            // 1. Top Toolbar
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(KB_TOOLBAR_HEIGHT)
-                        .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Modifier buttons on the left
+            // 1. Top Toolbar (hidden in FULL layout mode)
+            if (keyboardMode != KeyboardMode.FULL) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(KB_TOOLBAR_HEIGHT)
+                            .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ModifierButton(
-                        id = "ctrl",
-                        label = "CTRL",
-                        keycode = LinuxKeycodes.KEY_LEFTCTRL,
-                        accentColor = accentColor,
-                    )
-                    ModifierButton(
-                        id = "alt",
-                        label = "ALT",
-                        keycode = LinuxKeycodes.KEY_LEFTALT,
-                        accentColor = accentColor,
-                    )
-                    ModifierButton(
-                        id = "altgr",
-                        label = "ALT GR",
-                        keycode = LinuxKeycodes.KEY_RIGHTALT,
-                        accentColor = accentColor,
-                    )
-                }
+                    // Modifier buttons on the left
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ModifierButton(
+                            id = "ctrl",
+                            label = "CTRL",
+                            keycode = LinuxKeycodes.KEY_LEFTCTRL,
+                            accentColor = accentColor,
+                        )
+                        ModifierButton(
+                            id = "alt",
+                            label = "ALT",
+                            keycode = LinuxKeycodes.KEY_LEFTALT,
+                            accentColor = accentColor,
+                        )
+                        ModifierButton(
+                            id = "altgr",
+                            label = "ALT GR",
+                            keycode = LinuxKeycodes.KEY_RIGHTALT,
+                            accentColor = accentColor,
+                        )
+                    }
 
-                Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f))
 
-                // Action icons on the right
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.SelectAll,
-                        contentDescription = stringResource(R.string.cd_kb_select_all),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.ContentCut,
-                        contentDescription = stringResource(R.string.cd_kb_cut),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.ContentCopy,
-                        contentDescription = stringResource(R.string.cd_kb_copy),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.ContentPaste,
-                        contentDescription = stringResource(R.string.cd_kb_paste),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
+                    // Action icons on the right
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.SelectAll,
+                            contentDescription = stringResource(R.string.cd_kb_select_all),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.ContentCut,
+                            contentDescription = stringResource(R.string.cd_kb_cut),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.ContentCopy,
+                            contentDescription = stringResource(R.string.cd_kb_copy),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.ContentPaste,
+                            contentDescription = stringResource(R.string.cd_kb_paste),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                    }
                 }
             }
 
