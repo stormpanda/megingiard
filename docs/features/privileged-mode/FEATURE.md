@@ -77,6 +77,7 @@ every device since Android 11 (API 30).
 | **Gamepad recording** (physical pad → macro) | Macro recording from the real controller while the target game still receives the same input. | Falls back to the on-screen virtual controller recording overlay.                                                                                              |
 | **Privileged mirror** (FR-M9)                | No MediaProjection consent dialog when direct SurfaceControl output starts successfully.      | Falls back to `MediaProjection` + `VirtualDisplay` with the system consent dialog. DRM content keeps working.                                                  |
 | **Relative mouse** (Touchpad / Keyboard)     | Low-latency, scheduler-boosted mouse events. Shell UID execution prevents cursor lag under CPU contention. | Falls back to spawning a local virtual mouse binary (`mouseinjector_arm64`) as an app subprocess. |
+| **Virtual keyboard** (Keyboard)             | Low-latency, scheduler-boosted keystrokes. Shell UID execution prevents typing lag under CPU contention.   | Falls back to spawning a local virtual keyboard binary (`keyinjector_arm64`) as an app subprocess. |
 
 > _New entries get added here whenever a feature opts in. Examples that
 > may join the list later: writing to `/dev/input/event*` for special
@@ -299,6 +300,8 @@ the existing protocol.
 | App → D   | `GU <btn>\n`                   | Gamepad button UP                                        |
 | App → D   | `HD <axis> <val>\n`            | D-Pad hat (axis 0=X 1=Y, val −1/0/+1)                    |
 | App → D   | `JS <axis> <val>\n`            | Analog stick (axis ABS_X=0…ABS_RZ=5, int16)              |
+| App → D   | `KD <keycode>\n`               | Virtual keyboard key DOWN (Linux `KEY_*` range 1..255)   |
+| App → D   | `KU <keycode>\n`               | Virtual keyboard key UP                                  |
 | App → D   | `MM <dx> <dy>\n`               | Move relative mouse pointer                               |
 | App → D   | `MB <side> <D/U>\n`            | Press/release virtual mouse button (L, R, M, 4, 5)        |
 | App → D   | `MW <delta>\n`                 | Scroll virtual mouse wheel                                |

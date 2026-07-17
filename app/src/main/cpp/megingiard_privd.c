@@ -79,6 +79,7 @@ static volatile sig_atomic_t g_should_exit = 0;
  */
 static int g_gamepad_fd = -1;
 static int g_mouse_fd = -1;
+static int g_keyboard_fd = -1;
 
 /* ---------------------------------------------------------------------------
  * Per-install shared secret — loaded from STATE_FILE at daemon startup and
@@ -225,6 +226,49 @@ static int init_virtual_mouse(void) {
     usetup.id.vendor  = 0x1234;
     usetup.id.product = 0x9002;
     strncpy(usetup.name, "Megingiard Virtual Mouse", UINPUT_MAX_NAME_SIZE - 1);
+
+    if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) {
+        close(fd);
+        return -1;
+    }
+    if (ioctl(fd, UI_DEV_CREATE) < 0) {
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+
+/*
+ * Initializes a virtual keyboard device via /dev/uinput.
+ * Returns O_RDWR fd on success, -1 on failure.
+ */
+static int init_virtual_keyboard(void) {
+    int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (fd < 0) {
+        return -1;
+    }
+    /* Register EV_KEY capability */
+    if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) {
+        close(fd);
+        return -1;
+    }
+    if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) {
+        close(fd);
+        return -1;
+    }
+
+    /* Register standard keyboard keycodes (1–255: KEY_* range). */
+    for (int i = 1; i <= 255; i++) {
+        ioctl(fd, UI_SET_KEYBIT, i);
+    }
+
+    /* Create the virtual device */
+    struct uinput_setup usetup;
+    memset(&usetup, 0, sizeof(usetup));
+    usetup.id.bustype = BUS_VIRTUAL;
+    usetup.id.vendor  = 0x1234;
+    usetup.id.product = 0x5678;
+    strncpy(usetup.name, "Megingiard Virtual Keyboard", UINPUT_MAX_NAME_SIZE - 1);
 
     if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) {
         close(fd);
@@ -1020,6 +1064,19 @@ static int serve_client(int client_fd) {
             }
             continue;
         }
+        if (line[0] == 'K') {
+            /* KD / KU <keycode> — keyboard key press/release */
+            char act[4];
+            int code;
+            if (sscanf(line, "%3s %d", act, &code) == 2) {
+                if (code >= 1 && code <= 255 && g_keyboard_fd >= 0) {
+                    __s32 val = (strcmp(act, "KD") == 0) ? 1 : 0;
+                    write_event(g_keyboard_fd, EV_KEY, (__u16)code, val);
+                    write_event(g_keyboard_fd, EV_SYN, SYN_REPORT, 0);
+                }
+            }
+            continue;
+        }
 
         if (line[0] == 'G') {
             /* GD/GU <btn> */
@@ -1120,10 +1177,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    g_keyboard_fd = init_virtual_keyboard();
+    if (g_keyboard_fd < 0) {
+        fprintf(stderr, "privd: init_virtual_keyboard failed\n");
+        (void)write(STDOUT_FILENO, "E\n", 2);
+        close(g_mouse_fd);
+        close(g_gamepad_fd);
+        return 1;
+    }
+
     int srv_fd = bind_listening_socket();
     if (srv_fd < 0) {
         fprintf(stderr, "privd: bind_listening_socket failed errno=%d\n", errno);
         (void)write(STDOUT_FILENO, "E\n", 2);
+        close(g_keyboard_fd);
         close(g_mouse_fd);
         close(g_gamepad_fd);
         return 1;
@@ -1165,6 +1232,10 @@ int main(int argc, char *argv[]) {
     }
 
     close(srv_fd);
+    if (g_keyboard_fd >= 0) {
+        ioctl(g_keyboard_fd, UI_DEV_DESTROY);
+        close(g_keyboard_fd);
+    }
     if (g_mouse_fd >= 0) {
         ioctl(g_mouse_fd, UI_DEV_DESTROY);
         close(g_mouse_fd);
