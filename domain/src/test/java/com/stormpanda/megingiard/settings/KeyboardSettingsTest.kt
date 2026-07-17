@@ -17,6 +17,8 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 
+private const val TAG = "KeyboardSettingsTest"
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class KeyboardSettingsTest {
     private val testDispatcher = StandardTestDispatcher()

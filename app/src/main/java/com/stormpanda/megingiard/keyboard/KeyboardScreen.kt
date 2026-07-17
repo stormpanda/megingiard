@@ -107,6 +107,12 @@ private val KB_SWIPE_THRESHOLD_DP = 12.dp
 private val KB_SWIPE_STEP_DP = 10.dp
 private val KB_LONG_PRESS_SWIPE_THRESHOLD_DP = 24.dp
 
+private val KB_TOUCHPAD_CORNER_RADIUS = 12.dp
+private val KB_TOUCHPAD_BORDER_WIDTH = 1.dp
+private val KB_TOUCHPAD_PADDING = 8.dp
+private const val KB_TOUCHPAD_BEZEL_ALPHA_DARK = 0.45f
+private const val KB_TOUCHPAD_BEZEL_ALPHA_LIGHT = 0.12f
+
 internal class PopupState(
     val keyDef: KeyDef,
     val options: List<String>,
@@ -615,8 +621,8 @@ fun KeyboardScreen(
                     Brush.linearGradient(
                         colors =
                             listOf(
-                                Color.Black.copy(alpha = 0.45f),
-                                Color.White.copy(alpha = 0.12f),
+                                Color.Black.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_DARK),
+                                Color.White.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_LIGHT),
                             ),
                         start = Offset(0f, 0f),
                         end = Offset.Infinite,
@@ -634,13 +640,13 @@ fun KeyboardScreen(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .padding(8.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .padding(KB_TOUCHPAD_PADDING)
+                            .clip(RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS))
                             .background(colors.appBackground)
                             .border(
-                                width = 1.dp,
+                                width = KB_TOUCHPAD_BORDER_WIDTH,
                                 brush = insetBezelBrush,
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS),
                             ).onGloballyPositioned { touchpadCoords = it }
                             .pointerInput(processor) {
                                 awaitPointerEventScope {
@@ -652,28 +658,7 @@ fun KeyboardScreen(
                                         for (change in event.changes) {
                                             val id = change.id.value
                                             val localPos = change.position
-
                                             val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-                                            when (event.type) {
-                                                PointerEventType.Press -> {
-                                                    if (!change.previousPressed && isInside) {
-                                                        pointersInsideTouchpad.add(id)
-                                                    }
-                                                }
-
-                                                PointerEventType.Move -> {
-                                                    val wasInside = pointersInsideTouchpad.contains(id)
-                                                    if (wasInside && !isInside) {
-                                                        pointersInsideTouchpad.remove(id)
-                                                    }
-                                                }
-
-                                                PointerEventType.Release -> {
-                                                    if (!change.pressed) {
-                                                        pointersInsideTouchpad.remove(id)
-                                                    }
-                                                }
-                                            }
 
                                             if (change.isConsumed) continue
 
@@ -682,7 +667,8 @@ fun KeyboardScreen(
 
                                             when (event.type) {
                                                 PointerEventType.Press -> {
-                                                    if (!change.previousPressed) {
+                                                    if (!change.previousPressed && isInside) {
+                                                        pointersInsideTouchpad.add(id)
                                                         processor.onPress(
                                                             pointerId = id,
                                                             x = clampedX,
@@ -696,21 +682,7 @@ fun KeyboardScreen(
                                                 }
 
                                                 PointerEventType.Move -> {
-                                                    val wasInside = pointersInsideTouchpad.contains(id)
-                                                    if (wasInside && !isInside) {
-                                                        val allUp = event.changes.none { it.pressed }
-                                                        processor.onRelease(
-                                                            pointerId = id,
-                                                            x = clampedX,
-                                                            y = clampedY,
-                                                            surfaceW = sw,
-                                                            surfaceH = sh,
-                                                            allPointersUp = allUp,
-                                                            tapToClick = tapToClickState.value,
-                                                            twoFingerTap = twoFingerTapState.value,
-                                                            threeFingerTap = threeFingerTapState.value,
-                                                        )
-                                                    } else {
+                                                    if (pointersInsideTouchpad.contains(id)) {
                                                         val delta = change.positionChange()
                                                         processor.onMove(
                                                             pointerId = id,
@@ -726,7 +698,8 @@ fun KeyboardScreen(
                                                 }
 
                                                 PointerEventType.Release -> {
-                                                    if (!change.pressed) {
+                                                    if (!change.pressed && pointersInsideTouchpad.contains(id)) {
+                                                        pointersInsideTouchpad.remove(id)
                                                         val allUp = event.changes.none { it.pressed }
                                                         processor.onRelease(
                                                             pointerId = id,

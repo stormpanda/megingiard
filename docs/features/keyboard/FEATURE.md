@@ -96,6 +96,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - When enabled in Settings, the keyboard screen MUST show a relative touchpad in the area above the Gboard-style layout.
 - The touchpad MUST support relative cursor movement and gesture clicks/taps (tap-to-click, two-finger-tap, three-finger-tap, tap-drag, and two-finger scrolling) by reusing `TouchpadGestureProcessor` and piping mouse events to `MouseInjector`.
 - The touchpad MUST not feature physical click buttons.
+- Sensitivity (pointer speed) and scroll speed settings MUST be inherited from the general Touchpad Settings configurations.
 
 ---
 
