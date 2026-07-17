@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.input
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.privd.PrivdClient
 
 private const val TAG = "TouchInjector"
 private const val TOUCH_SLOT_MIN = 0
@@ -12,8 +13,8 @@ private const val TOUCH_STOP_FLUSH_TIMEOUT_MS = 100L
  * Shared touch injection facade used by both Touchpad and Mirror Touch Projection.
  *
  * Converts normalised logical-display coordinates to the physical portrait space of
- * the AYN Thor's primary touchscreen (`fts_ts`, `/dev/input/event6`) and pipes the
- * command to [ShellInputInjector].
+ * the AYN Thor's primary touchscreen (`fts_ts`, `/dev/input/event6`) and routes them
+ * to the running daemon if connected, otherwise falling back to [ShellInputInjector].
  *
  * Display 0 runs at ROTATION_270 (sensor mounted inverted relative to the logical
  * landscape orientation). The sensor's portrait X/Y map as:
@@ -31,6 +32,8 @@ object TouchInjector {
 
     private val activeClients = mutableSetOf<String>()
 
+    @Volatile private var usePrivd: Boolean = false
+
     /**
      * Starts the native touch injector for a specific client [token].
      * Coordinates start/stop across multiple active clients. Safe to call if already running.
@@ -43,9 +46,15 @@ object TouchInjector {
         val wasEmpty = activeClients.isEmpty()
         activeClients.add(token)
         AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
-        if (wasEmpty || !ShellInputInjector.isRunning) {
-            if (!ShellInputInjector.isRunning) {
-                ShellInputInjector.start(context)
+        if (wasEmpty) {
+            usePrivd = PrivdClient.isConnected
+            AppLog.i(TAG, "start() — backend=${if (usePrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
+        }
+        if (!usePrivd) {
+            if (wasEmpty || !ShellInputInjector.isRunning) {
+                if (!ShellInputInjector.isRunning) {
+                    ShellInputInjector.start(context)
+                }
             }
         }
     }
@@ -63,6 +72,10 @@ object TouchInjector {
         activeClients.remove(token)
         AppLog.i(TAG, "stop() client='$token' activeClients=$activeClients")
         if (activeClients.isEmpty()) {
+            if (usePrivd) {
+                releaseAllSlots()
+                return
+            }
             if (!ShellInputInjector.isRunning) {
                 ShellInputInjector.stop()
                 return
@@ -86,7 +99,7 @@ object TouchInjector {
     }
 
     val isRunning: Boolean
-        get() = ShellInputInjector.isRunning
+        get() = if (usePrivd) PrivdClient.isConnected else ShellInputInjector.isRunning
 
     /**
      * Injects a touch event using normalised coordinates.
@@ -103,11 +116,7 @@ object TouchInjector {
         normalizedX: Float,
         normalizedY: Float,
     ) {
-        val cx = normalizedX.coerceIn(-0.5f, 1.5f)
-        val cy = normalizedY.coerceIn(-0.5f, 1.5f)
-        val px = ((1f - cy) * PHYS_W).toInt()
-        val py = (cx * PHYS_H).toInt()
-        ShellInputInjector.injectTouch(action, px, py)
+        injectTouch(0, action, normalizedX, normalizedY)
     }
 
     /**
@@ -131,12 +140,26 @@ object TouchInjector {
         val cy = normalizedY.coerceIn(-0.5f, 1.5f)
         val px = ((1f - cy) * PHYS_W).toInt()
         val py = (cx * PHYS_H).toInt()
-        ShellInputInjector.injectTouch(slot, action, px, py)
+
+        if (usePrivd) {
+            if (action == TouchAction.UP) {
+                PrivdClient.send("U $slot\n")
+            } else {
+                val char = if (action == TouchAction.DOWN) "D" else "M"
+                PrivdClient.send("$char $slot $px $py\n")
+            }
+        } else {
+            ShellInputInjector.injectTouch(slot, action, px, py)
+        }
     }
 
     fun releaseAllSlots() {
         for (slot in TOUCH_SLOT_MIN..TOUCH_SLOT_MAX) {
-            ShellInputInjector.injectTouch(slot, TouchAction.UP, 0, 0)
+            if (usePrivd) {
+                PrivdClient.send("U $slot\n")
+            } else {
+                ShellInputInjector.injectTouch(slot, TouchAction.UP, 0, 0)
+            }
         }
     }
 }

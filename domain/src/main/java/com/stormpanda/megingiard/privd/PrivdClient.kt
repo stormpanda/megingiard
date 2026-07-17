@@ -330,6 +330,22 @@ object PrivdClient {
                     }
                     line = "MM $dx $dy\n"
                 }
+            } else if (line.startsWith("M ")) {
+                try {
+                    val parts = line.trim().split(' ')
+                    if (parts.size == 4) {
+                        val slot = parts[1].toInt()
+                        while (true) {
+                            val next = queue.peek() ?: break
+                            if (!next.startsWith("M ")) break
+                            val nextParts = next.trim().split(' ')
+                            if (nextParts.size != 4 || nextParts[1].toInt() != slot) break
+                            queue.poll()
+                            line = next
+                        }
+                    }
+                } catch (_: Exception) {
+                }
             }
             val w = writer ?: break
             try {

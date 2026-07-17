@@ -80,6 +80,7 @@ static volatile sig_atomic_t g_should_exit = 0;
 static int g_gamepad_fd = -1;
 static int g_mouse_fd = -1;
 static int g_keyboard_fd = -1;
+static int g_touch_fd = -1;
 
 /* ---------------------------------------------------------------------------
  * Per-install shared secret — loaded from STATE_FILE at daemon startup and
@@ -1021,6 +1022,46 @@ static int serve_client(int client_fd) {
             continue;
         }
 
+        if ((line[0] == 'D' || line[0] == 'M' || line[0] == 'U') && line[1] == ' ') {
+            /* Touch injection commands: D/M <slot> <x> <y>, U <slot> */
+            char action_char = line[0];
+            int slot = -1;
+            int tx = 0, ty = 0;
+            static int active_slots_mask = 0;
+
+            if (action_char == 'U') {
+                if (sscanf(line, "U %d", &slot) == 1) {
+                    if (slot >= 0 && slot <= 9 && g_touch_fd >= 0) {
+                        write_event(g_touch_fd, EV_ABS, ABS_MT_SLOT, slot);
+                        write_event(g_touch_fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
+                        active_slots_mask &= ~(1 << slot);
+                        write_event(g_touch_fd, EV_KEY, BTN_TOUCH, active_slots_mask != 0 ? 1 : 0);
+                        write_event(g_touch_fd, EV_SYN, SYN_REPORT, 0);
+                    }
+                }
+            } else {
+                if (sscanf(line, "%*c %d %d %d", &slot, &tx, &ty) == 3) {
+                    if (slot >= 0 && slot <= 9 && g_touch_fd >= 0) {
+                        if (action_char == 'D') {
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_SLOT, slot);
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_TRACKING_ID, slot + 1);
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_X, tx);
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_Y, ty);
+                            active_slots_mask |= (1 << slot);
+                            write_event(g_touch_fd, EV_KEY, BTN_TOUCH, 1);
+                            write_event(g_touch_fd, EV_SYN, SYN_REPORT, 0);
+                        } else if (action_char == 'M') {
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_SLOT, slot);
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_X, tx);
+                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_Y, ty);
+                            write_event(g_touch_fd, EV_SYN, SYN_REPORT, 0);
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+
         if (line[0] == 'M' && line[1] == 'B') {
             /* MB <side> <D|U>  — mouse button press/release */
             char side, du;
@@ -1186,10 +1227,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    g_touch_fd = open("/dev/input/event6", O_WRONLY);
+    if (g_touch_fd < 0) {
+        fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection disabled) errno=%d\n", errno);
+    }
+
     int srv_fd = bind_listening_socket();
     if (srv_fd < 0) {
         fprintf(stderr, "privd: bind_listening_socket failed errno=%d\n", errno);
         (void)write(STDOUT_FILENO, "E\n", 2);
+        if (g_touch_fd >= 0) close(g_touch_fd);
         close(g_keyboard_fd);
         close(g_mouse_fd);
         close(g_gamepad_fd);
@@ -1232,6 +1279,9 @@ int main(int argc, char *argv[]) {
     }
 
     close(srv_fd);
+    if (g_touch_fd >= 0) {
+        close(g_touch_fd);
+    }
     if (g_keyboard_fd >= 0) {
         ioctl(g_keyboard_fd, UI_DEV_DESTROY);
         close(g_keyboard_fd);
