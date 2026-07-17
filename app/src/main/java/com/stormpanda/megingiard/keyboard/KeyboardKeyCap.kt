@@ -12,8 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.KeyboardReturn
-import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.material.icons.rounded.KeyboardCapslock
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private val SPECIAL_KEY_IDS =
@@ -168,19 +167,21 @@ internal fun KeyCap(
             // Render specific keys with Icons
             when (keyDef.id) {
                 "lshift", "rshift" -> {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowUpward,
-                        contentDescription = stringResource(R.string.cd_kb_shift),
+                    MaterialSymbol(
+                        name = "shift",
+                        size = KC_ICON_SIZE,
                         tint = contentColor,
+                        filled = isModifierActive,
                         modifier = Modifier.size(KC_ICON_SIZE),
                     )
                 }
 
                 "caps" -> {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardCapslock,
-                        contentDescription = null,
+                    MaterialSymbol(
+                        name = "shift_lock",
+                        size = KC_ICON_SIZE,
                         tint = contentColor,
+                        filled = isModifierActive,
                         modifier = Modifier.size(KC_ICON_SIZE),
                     )
                 }
