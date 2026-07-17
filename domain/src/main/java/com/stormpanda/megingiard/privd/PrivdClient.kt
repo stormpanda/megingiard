@@ -294,12 +294,43 @@ object PrivdClient {
 
     private fun writerLoop() {
         while (running) {
-            val line =
+            var line =
                 try {
                     queue.take()
                 } catch (_: InterruptedException) {
                     break
                 }
+            if (line.startsWith("MM ")) {
+                var dx = 0
+                var dy = 0
+                var parsedOk = false
+                try {
+                    val parts = line.trim().split(' ')
+                    if (parts.size == 3) {
+                        dx = parts[1].toInt()
+                        dy = parts[2].toInt()
+                        parsedOk = true
+                    }
+                } catch (_: Exception) {
+                }
+
+                if (parsedOk) {
+                    while (true) {
+                        val next = queue.peek() ?: break
+                        if (!next.startsWith("MM ")) break
+                        queue.poll()
+                        try {
+                            val parts = next.trim().split(' ')
+                            if (parts.size == 3) {
+                                dx += parts[1].toInt()
+                                dy += parts[2].toInt()
+                            }
+                        } catch (_: Exception) {
+                        }
+                    }
+                    line = "MM $dx $dy\n"
+                }
+            }
             val w = writer ?: break
             try {
                 w.write(line)
