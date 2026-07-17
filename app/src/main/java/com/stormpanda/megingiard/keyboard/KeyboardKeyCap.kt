@@ -33,6 +33,40 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
+private val SPECIAL_KEY_IDS =
+    setOf(
+        "lshift",
+        "rshift",
+        "bksp",
+        "globe",
+        "ctrl",
+        "rctrl",
+        "meta",
+        "alt",
+        "altgr",
+        "caps",
+        "esc",
+        "print",
+        "del",
+        "tab",
+        "up",
+        "down",
+        "left",
+        "right",
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+        "f8",
+        "f9",
+        "f10",
+        "f11",
+        "f12",
+    )
+
 // ---------------------------------------------------------------------------
 // Key bounds — root-space hit testing rectangle
 // ---------------------------------------------------------------------------
@@ -81,14 +115,8 @@ internal fun KeyCap(
 
     // Gboard style classification
     val isSpecialKey =
-        keyDef.id == "lshift" || keyDef.id == "rshift" ||
-            keyDef.id == "bksp" || keyDef.id.startsWith("mode_switch") ||
-            keyDef.id == "globe" ||
-            keyDef.id == "ctrl" || keyDef.id == "rctrl" || keyDef.id == "meta" ||
-            keyDef.id == "alt" || keyDef.id == "altgr" || keyDef.id == "caps" ||
-            keyDef.id == "esc" || keyDef.id.startsWith("f") || keyDef.id == "print" ||
-            keyDef.id == "del" || keyDef.id == "tab" || keyDef.id == "up" ||
-            keyDef.id == "down" || keyDef.id == "left" || keyDef.id == "right"
+        keyDef.id in SPECIAL_KEY_IDS ||
+            keyDef.id.startsWith("mode_switch")
     val isEnterKey = keyDef.id == "enter"
 
     val bg =
