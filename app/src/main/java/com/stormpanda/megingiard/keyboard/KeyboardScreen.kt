@@ -736,7 +736,12 @@ fun KeyboardScreen(
                 Modifier
                     .fillMaxWidth()
                     .height(KB_CONTAINER_HEIGHT)
-                    .background(colors.keyboardBackground),
+                    .background(colors.keyboardBackground)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // Consumes clicks to prevent propagation to background views (like MacroPad)
+                    ),
         ) {
             // 1. Top Toolbar
             Row(
