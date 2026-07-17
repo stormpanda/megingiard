@@ -20,14 +20,18 @@ object KeyInjector {
     fun start(context: Context) {
         usePrivd = PrivdClient.isConnected
         AppLog.i(TAG, "start() — backend=${if (usePrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
-        if (!usePrivd) {
+        if (usePrivd) {
+            PrivdClient.send("KB_START\n")
+        } else {
             ShellKeyInjector.start(context)
         }
     }
 
     fun stop() {
         AppLog.i(TAG, "stop() — backend=${if (usePrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
-        if (!usePrivd) {
+        if (usePrivd) {
+            PrivdClient.send("KB_STOP\n")
+        } else {
             ShellKeyInjector.stop()
         }
     }

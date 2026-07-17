@@ -923,6 +923,26 @@ static int serve_client(int client_fd) {
             stop_mirror_child();
             return 1;
         }
+        if (strcmp(line, "KB_START") == 0) {
+            if (g_keyboard_fd < 0) {
+                g_keyboard_fd = init_virtual_keyboard();
+                if (g_keyboard_fd < 0) {
+                    fprintf(stderr, "privd: failed to create virtual keyboard errno=%d\n", errno);
+                } else {
+                    fprintf(stderr, "privd: virtual keyboard registered\n");
+                }
+            }
+            continue;
+        }
+        if (strcmp(line, "KB_STOP") == 0) {
+            if (g_keyboard_fd >= 0) {
+                ioctl(g_keyboard_fd, UI_DEV_DESTROY);
+                close(g_keyboard_fd);
+                g_keyboard_fd = -1;
+                fprintf(stderr, "privd: virtual keyboard de-registered\n");
+            }
+            continue;
+        }
         if (strcmp(line, "SUB GAMEPAD") == 0) {
             if (!g_reader_active) {
                 /* Drain any events that accumulated in the kernel buffer while the
@@ -1149,6 +1169,12 @@ static int serve_client(int client_fd) {
         /* Unknown commands are silently ignored — forward-compat for future
          * feature prefixes. */
     }
+    if (g_keyboard_fd >= 0) {
+        ioctl(g_keyboard_fd, UI_DEV_DESTROY);
+        close(g_keyboard_fd);
+        g_keyboard_fd = -1;
+        fprintf(stderr, "privd: virtual keyboard de-registered (cleanup)\n");
+    }
     stop_reader_thread();
     stop_mirror_child();
     return 0;
@@ -1218,15 +1244,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    g_keyboard_fd = init_virtual_keyboard();
-    if (g_keyboard_fd < 0) {
-        fprintf(stderr, "privd: init_virtual_keyboard failed\n");
-        (void)write(STDOUT_FILENO, "E\n", 2);
-        close(g_mouse_fd);
-        close(g_gamepad_fd);
-        return 1;
-    }
-
     g_touch_fd = open("/dev/input/event6", O_WRONLY);
     if (g_touch_fd < 0) {
         fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection disabled) errno=%d\n", errno);
@@ -1237,7 +1254,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "privd: bind_listening_socket failed errno=%d\n", errno);
         (void)write(STDOUT_FILENO, "E\n", 2);
         if (g_touch_fd >= 0) close(g_touch_fd);
-        close(g_keyboard_fd);
         close(g_mouse_fd);
         close(g_gamepad_fd);
         return 1;

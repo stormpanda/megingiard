@@ -304,6 +304,8 @@ the existing protocol.
 | App → D   | `U <slot>\n`                   | Multi-touch finger UP                                    |
 | App → D   | `HD <axis> <val>\n`            | D-Pad hat (axis 0=X 1=Y, val −1/0/+1)                    |
 | App → D   | `JS <axis> <val>\n`            | Analog stick (axis ABS_X=0…ABS_RZ=5, int16)              |
+| App → D   | `KB_START\n`                   | Dynamically create virtual uinput keyboard device         |
+| App → D   | `KB_STOP\n`                    | Destroy virtual uinput keyboard device                   |
 | App → D   | `KD <keycode>\n`               | Virtual keyboard key DOWN (Linux `KEY_*` range 1..255)   |
 | App → D   | `KU <keycode>\n`               | Virtual keyboard key UP                                  |
 | App → D   | `MM <dx> <dy>\n`               | Move relative mouse pointer                               |
