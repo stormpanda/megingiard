@@ -146,6 +146,7 @@ object KeyboardState {
         for (row in layout) {
             for (key in row) {
                 if (key.type == KeyType.MODIFIER) {
+                    if (key.id == "caps") continue
                     val flow = _modifiers[key.id] ?: continue
                     if (flow.value == ModifierState.STICKY) {
                         flow.value = ModifierState.INACTIVE
@@ -176,6 +177,7 @@ object KeyboardState {
         for (row in layout) {
             for (key in row) {
                 if (key.type == KeyType.MODIFIER) {
+                    if (key.id == "caps") continue
                     val state = _modifiers[key.id]?.value ?: ModifierState.INACTIVE
                     if (state != ModifierState.INACTIVE && key.linuxKeycode != 0) {
                         keycodes += key.linuxKeycode

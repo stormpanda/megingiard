@@ -111,6 +111,7 @@ internal fun KeyCap(
     val isModifierActive =
         modifierState != ModifierState.INACTIVE ||
             ((keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
+    val isBgActive = isModifierActive && keyDef.id != "caps"
 
     // Gboard style classification
     val isSpecialKey =
@@ -124,7 +125,7 @@ internal fun KeyCap(
 
             isPressed -> if (isSpecialKey) colors.keyPressed.copy(alpha = 0.8f) else colors.keyPressed
 
-            isModifierActive -> accentColor.copy(alpha = 0.7f)
+            isBgActive -> accentColor.copy(alpha = 0.7f)
 
             isSpecialKey -> colors.keyBackground.copy(alpha = 0.5f)
 

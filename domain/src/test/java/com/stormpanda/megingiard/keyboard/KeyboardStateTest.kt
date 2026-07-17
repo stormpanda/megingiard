@@ -91,4 +91,32 @@ class KeyboardStateTest {
         assertTrue(LinuxKeycodes.KEY_LEFTCTRL in released)
         assertTrue(LinuxKeycodes.KEY_LEFTALT in released)
     }
+
+    @Test
+    fun testCapsLockStickyNotReleased() {
+        // Set caps to sticky
+        KeyboardState.onModifierTouchDown("caps")
+        KeyboardState.onModifierTouchUp("caps", LinuxKeycodes.KEY_CAPSLOCK)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("caps").value)
+
+        // Make a layout that contains caps key
+        val capsKey = KeyDef("caps", "Caps", LinuxKeycodes.KEY_CAPSLOCK, type = KeyType.MODIFIER)
+        val layout = listOf(listOf(capsKey))
+
+        // Releasing sticky modifiers should NOT release caps lock
+        val released = KeyboardState.releaseStickyModifiers(layout)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("caps").value)
+        assertTrue(LinuxKeycodes.KEY_CAPSLOCK !in released)
+
+        // Verify active keycode contains KEY_LEFTSHIFT but NOT KEY_CAPSLOCK
+        val active = KeyboardState.activeModifierKeycodes(layout)
+        assertTrue(LinuxKeycodes.KEY_LEFTSHIFT in active)
+        assertTrue(LinuxKeycodes.KEY_CAPSLOCK !in active)
+
+        // Second press of caps should turn it off
+        KeyboardState.onModifierTouchDown("caps")
+        val secondRelease = KeyboardState.onModifierTouchUp("caps", LinuxKeycodes.KEY_CAPSLOCK)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("caps").value)
+        assertEquals(listOf(LinuxKeycodes.KEY_CAPSLOCK), secondRelease)
+    }
 }
