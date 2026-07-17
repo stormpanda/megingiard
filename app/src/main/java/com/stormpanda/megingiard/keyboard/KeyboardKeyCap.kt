@@ -104,13 +104,14 @@ internal fun KeyCap(
     isShiftActive: Boolean,
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
+    isFullLayout: Boolean = false,
     modifier: Modifier = Modifier,
     onBoundsUpdate: (LayoutCoordinates) -> Unit,
 ) {
     val colors = LocalAppColors.current
     val isModifierActive =
         modifierState != ModifierState.INACTIVE ||
-            ((keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
+            (!isFullLayout && (keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
     val isBgActive = isModifierActive && keyDef.id != "caps"
 
     // Gboard style classification

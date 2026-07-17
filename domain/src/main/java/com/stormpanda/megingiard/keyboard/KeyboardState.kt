@@ -214,7 +214,8 @@ object KeyboardState {
     ): List<Int> {
         val keycodes = activeModifierKeycodes(layout)
         val isLetter = key.label.length == 1 && key.label[0].isLetter()
-        if (!isLetter) {
+        val isFullLayout = layout.size == 6
+        if (!isFullLayout && !isLetter) {
             val lshiftHeld = _modifiers["lshift"]?.value == ModifierState.HELD
             val rshiftHeld = _modifiers["rshift"]?.value == ModifierState.HELD
             if (!lshiftHeld && !rshiftHeld) {

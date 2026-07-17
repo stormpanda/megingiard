@@ -1200,6 +1200,7 @@ fun KeyboardScreen(
                                             isShiftActive = isShiftActive,
                                             isCapsActive = isCapsActive,
                                             isAltGrActive = isAltGrActive,
+                                            isFullLayout = true,
                                             modifier = Modifier.weight(1f),
                                             onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                         )
@@ -1232,6 +1233,7 @@ fun KeyboardScreen(
                                                     isShiftActive = isShiftActive,
                                                     isCapsActive = isCapsActive,
                                                     isAltGrActive = isAltGrActive,
+                                                    isFullLayout = true,
                                                     modifier = Modifier.weight(key.widthWeight),
                                                     onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                                 )
@@ -1259,6 +1261,7 @@ fun KeyboardScreen(
                                         isShiftActive = isShiftActive,
                                         isCapsActive = isCapsActive,
                                         isAltGrActive = isAltGrActive,
+                                        isFullLayout = true,
                                         modifier = Modifier.weight(key.widthWeight),
                                         onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                     )
