@@ -561,7 +561,7 @@ private fun fullLayoutQwertz(): List<List<KeyDef>> =
             KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 2.0f),
         ),
         listOf(
-            KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 2.0f, type = KeyType.MODIFIER),
+            KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.6f, type = KeyType.MODIFIER),
             KeyDef("102nd", "<", KEY_102ND, shiftLabel = ">"),
             KeyDef("y", "y", KEY_Y),
             KeyDef("x", "x", KEY_X),
@@ -573,8 +573,8 @@ private fun fullLayoutQwertz(): List<List<KeyDef>> =
             KeyDef("comma", ",", KEY_COMMA, shiftLabel = ";"),
             KeyDef("dot", ".", KEY_DOT, shiftLabel = ":"),
             KeyDef("minus", "-", KEY_SLASH, shiftLabel = "_"),
-            KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.0f, type = KeyType.MODIFIER),
-            KeyDef("up", "▲", KEY_UP, widthWeight = 1.0f),
+            KeyDef("up", "▲", KEY_UP, widthWeight = 1.2f),
+            KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.2f, type = KeyType.MODIFIER),
         ),
         listOf(
             KeyDef("ctrl", "Ctrl", KEY_LEFTCTRL, widthWeight = 1.2f, type = KeyType.MODIFIER),
@@ -656,7 +656,7 @@ private fun fullLayoutQwerty(): List<List<KeyDef>> =
             KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 2.2f),
         ),
         listOf(
-            KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 2.0f, type = KeyType.MODIFIER),
+            KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.6f, type = KeyType.MODIFIER),
             KeyDef("102nd", "<", KEY_102ND, shiftLabel = ">"),
             KeyDef("z", "z", KEY_Z),
             KeyDef("x", "x", KEY_X),
@@ -668,8 +668,8 @@ private fun fullLayoutQwerty(): List<List<KeyDef>> =
             KeyDef("comma", ",", KEY_COMMA, shiftLabel = "<"),
             KeyDef("dot", ".", KEY_DOT, shiftLabel = ">"),
             KeyDef("slash", "/", KEY_SLASH, shiftLabel = "?"),
-            KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.0f, type = KeyType.MODIFIER),
-            KeyDef("up", "▲", KEY_UP, widthWeight = 1.0f),
+            KeyDef("up", "▲", KEY_UP, widthWeight = 1.2f),
+            KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.2f, type = KeyType.MODIFIER),
         ),
         listOf(
             KeyDef("ctrl", "Ctrl", KEY_LEFTCTRL, widthWeight = 1.2f, type = KeyType.MODIFIER),
@@ -751,7 +751,7 @@ private fun fullLayoutAzerty(): List<List<KeyDef>> =
             KeyDef("enter", "Enter", KEY_ENTER, widthWeight = 2.0f),
         ),
         listOf(
-            KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 2.0f, type = KeyType.MODIFIER),
+            KeyDef("lshift", "Shift", KEY_LEFTSHIFT, widthWeight = 1.6f, type = KeyType.MODIFIER),
             KeyDef("102nd", "<", KEY_102ND, shiftLabel = ">"),
             KeyDef("w", "w", KEY_W),
             KeyDef("x", "x", KEY_X),
@@ -763,8 +763,8 @@ private fun fullLayoutAzerty(): List<List<KeyDef>> =
             KeyDef("semicolon", ";", KEY_DOT, shiftLabel = "."),
             KeyDef("colon", ":", KEY_SLASH, shiftLabel = "/"),
             KeyDef("excl", "!", KEY_SLASH, shiftLabel = "§"),
-            KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.0f, type = KeyType.MODIFIER),
-            KeyDef("up", "▲", KEY_UP, widthWeight = 1.0f),
+            KeyDef("up", "▲", KEY_UP, widthWeight = 1.2f),
+            KeyDef("rshift", "Shift", KEY_RIGHTSHIFT, widthWeight = 1.2f, type = KeyType.MODIFIER),
         ),
         listOf(
             KeyDef("ctrl", "Ctrl", KEY_LEFTCTRL, widthWeight = 1.2f, type = KeyType.MODIFIER),
