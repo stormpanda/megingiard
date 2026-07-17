@@ -213,6 +213,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
 
         // Init settings first so the persisted log level is active before anything
@@ -347,6 +348,9 @@ class MainActivity : ComponentActivity() {
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
+                AppStateManager.isGlobalSettingsOpen,
+                AppStateManager.isKeyboardSettingsOpen,
+                AppStateManager.isTouchpadSettingsOpen,
             ) { values ->
                 val fullscreenKeyboard = values[0] as Boolean
                 val onValidScreen = values[1] as Boolean
@@ -354,6 +358,9 @@ class MainActivity : ComponentActivity() {
                 val filePickerOpen = values[3] as Boolean
                 val editorActive = values[4] as Boolean
                 val ambientSettingsActive = values[5] as Boolean
+                val globalSettingsOpen = values[6] as Boolean
+                val keyboardSettingsOpen = values[7] as Boolean
+                val touchpadSettingsOpen = values[8] as Boolean
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = onValidScreen,
@@ -362,6 +369,9 @@ class MainActivity : ComponentActivity() {
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
+                        isGlobalSettingsOpen = globalSettingsOpen,
+                        isKeyboardSettingsOpen = keyboardSettingsOpen,
+                        isTouchpadSettingsOpen = touchpadSettingsOpen,
                     ),
                 )
             }.distinctUntilChanged()

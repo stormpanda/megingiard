@@ -110,4 +110,40 @@ class MacroPadFocusPolicyTest {
             ),
         )
     }
+
+    @Test
+    fun `global settings restore app focus`() {
+        assertFalse(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isGlobalSettingsOpen = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `keyboard settings restore app focus`() {
+        assertFalse(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isKeyboardSettingsOpen = true,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `touchpad settings restore app focus`() {
+        assertFalse(
+            shouldKeepPrimaryGameFocus(
+                MacroPadFocusPolicyState(
+                    isMacroPadSurfaceActive = true,
+                    isTouchpadSettingsOpen = true,
+                ),
+            ),
+        )
+    }
 }

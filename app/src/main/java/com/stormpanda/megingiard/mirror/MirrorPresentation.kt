@@ -808,7 +808,18 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
-            ) { fullscreenKeyboard, quickMenuOpen, filePickerOpen, editorActive, ambientSettingsActive ->
+                AppStateManager.isGlobalSettingsOpen,
+                AppStateManager.isKeyboardSettingsOpen,
+                AppStateManager.isTouchpadSettingsOpen,
+            ) { values ->
+                val fullscreenKeyboard = values[0] as Boolean
+                val quickMenuOpen = values[1] as Boolean
+                val filePickerOpen = values[2] as Boolean
+                val editorActive = values[3] as Boolean
+                val ambientSettingsActive = values[4] as Boolean
+                val globalSettingsOpen = values[5] as Boolean
+                val keyboardSettingsOpen = values[6] as Boolean
+                val touchpadSettingsOpen = values[7] as Boolean
                 shouldKeepPrimaryGameFocus(
                     MacroPadFocusPolicyState(
                         isMacroPadSurfaceActive = true,
@@ -817,6 +828,9 @@ class MirrorPresentation(
                         isFilePickerOpen = filePickerOpen,
                         isEditorActive = editorActive,
                         isBackgroundSettingsActive = ambientSettingsActive,
+                        isGlobalSettingsOpen = globalSettingsOpen,
+                        isKeyboardSettingsOpen = keyboardSettingsOpen,
+                        isTouchpadSettingsOpen = touchpadSettingsOpen,
                     ),
                 )
             }.distinctUntilChanged()
@@ -979,11 +993,11 @@ class MirrorPresentation(
 
     private fun setPresentationFocusMode(keepPrimaryFocus: Boolean) {
         if (keepPrimaryFocus) {
-            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (ambient presentation surface)")
-            window?.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE and FLAG_ALT_FOCUSABLE_IM added (ambient presentation surface)")
+            window?.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
         } else {
-            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive presentation overlay)")
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE and FLAG_ALT_FOCUSABLE_IM cleared (interactive presentation overlay)")
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
         }
     }
 
