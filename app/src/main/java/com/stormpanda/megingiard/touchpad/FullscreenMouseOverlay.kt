@@ -153,7 +153,7 @@ fun FullscreenMouseOverlay() {
             AppLog.i(TAG, "dispose: stopping both injectors")
             MouseInjector.stop()
             TouchInjector.stop("FullscreenTouchpad")
-            if (AppStateManager.wasMirroringStartedByTouchpad.value) {
+            if (AppStateManager.wasMirroringStartedByTouchpad.value && !isFullscreenMouseActive) {
                 AppStateManager.requestMirrorStop()
                 AppStateManager.setWasMirroringStartedByTouchpad(false)
             }
