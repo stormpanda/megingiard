@@ -1647,7 +1647,7 @@ private fun KeyboardModeToggleButton(
                 ) {
                     Text(
                         text = "Ergo",
-                        color = colors.onSurface.copy(alpha = 0.8f),
+                        color = colors.onSurface.copy(alpha = 0.5f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -1655,7 +1655,7 @@ private fun KeyboardModeToggleButton(
                     MaterialSymbol(
                         name = "keyboard_onscreen",
                         size = 18.dp,
-                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        tint = Color.White,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -1674,13 +1674,13 @@ private fun KeyboardModeToggleButton(
                     MaterialSymbol(
                         name = "keyboard",
                         size = 18.dp,
-                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        tint = Color.White,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Full",
-                        color = colors.onSurface.copy(alpha = 0.8f),
+                        color = colors.onSurface.copy(alpha = 0.5f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )

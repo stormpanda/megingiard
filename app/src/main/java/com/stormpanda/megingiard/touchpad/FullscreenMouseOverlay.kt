@@ -455,7 +455,7 @@ fun FullscreenMouseOverlay() {
                     .height(TP_TOOLBAR_HEIGHT)
                     .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.Center,
         ) {
             ModeToggleButton(
                 useMouse = touchpadUseMouse,
@@ -727,7 +727,7 @@ private fun ModeToggleButton(
                 ) {
                     Text(
                         text = "Mouse",
-                        color = colors.onSurface.copy(alpha = 0.8f),
+                        color = colors.onSurface.copy(alpha = 0.5f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -735,7 +735,7 @@ private fun ModeToggleButton(
                     Icon(
                         imageVector = Icons.Rounded.Mouse,
                         contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
-                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
                 }
@@ -754,13 +754,13 @@ private fun ModeToggleButton(
                     Icon(
                         imageVector = Icons.Rounded.TouchApp,
                         contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
-                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "touch",
-                        color = colors.onSurface.copy(alpha = 0.8f),
+                        text = "Touch",
+                        color = colors.onSurface.copy(alpha = 0.5f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
