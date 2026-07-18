@@ -61,7 +61,9 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -681,8 +683,9 @@ private fun ModeToggleButton(
     val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
     val shape = RoundedCornerShape(18.dp)
 
+    val thumbWidth = 83.dp
     val thumbOffset by animateDpAsState(
-        targetValue = if (useMouse) 0.dp else 32.dp,
+        targetValue = if (useMouse) 0.dp else thumbWidth,
         animationSpec = tween(durationMillis = 200),
         label = "ThumbOffset",
     )
@@ -690,7 +693,7 @@ private fun ModeToggleButton(
     Box(
         modifier =
             modifier
-                .width(68.dp)
+                .width(170.dp)
                 .height(36.dp)
                 .clip(shape)
                 .background(containerBg)
@@ -701,7 +704,8 @@ private fun ModeToggleButton(
             modifier =
                 Modifier
                     .offset(x = thumbOffset)
-                    .size(32.dp)
+                    .width(thumbWidth)
+                    .fillMaxHeight()
                     .clip(RoundedCornerShape(16.dp))
                     .background(thumbBg),
         )
@@ -711,26 +715,56 @@ private fun ModeToggleButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier.size(32.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Mouse,
-                    contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
-                    tint = colors.onSurface.copy(alpha = 0.8f),
-                    modifier = Modifier.size(18.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "Mouse",
+                        color = colors.onSurface.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Rounded.Mouse,
+                        contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
+                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
             Box(
-                modifier = Modifier.size(32.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.TouchApp,
-                    contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
-                    tint = colors.onSurface.copy(alpha = 0.8f),
-                    modifier = Modifier.size(18.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.TouchApp,
+                        contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
+                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "touch",
+                        color = colors.onSurface.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }

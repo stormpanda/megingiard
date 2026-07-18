@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.keyboard
 
 import android.os.Vibrator
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -75,6 +76,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
@@ -1446,43 +1448,19 @@ fun KeyboardScreen(
                     )
                 }
 
-                // Dynamic Layout switcher button (Gboard vs Full Keyboard Mode)
-                val interactionSourceToggle = remember { MutableInteractionSource() }
-                val isTogglePressed by interactionSourceToggle.collectIsPressedAsState()
                 val isFullModeActive = keyboardMode == KeyboardMode.FULL
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .width(KB_GLOBE_BUTTON_WIDTH)
-                            .offset(y = (-3).dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (isFullModeActive) {
-                                    accentColor.copy(alpha = 0.25f)
-                                } else if (isTogglePressed) {
-                                    colors.keyPressed
-                                } else {
-                                    Color.Transparent
-                                },
-                            ).clickable(
-                                interactionSource = interactionSourceToggle,
-                                indication = null,
-                                onClick = {
-                                    val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
-                                    viewModel.setKeyboardMode(nextMode)
-                                    KeyboardState.reset()
-                                },
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Keyboard,
-                        contentDescription = stringResource(R.string.cd_kb_layout),
-                        tint = if (isFullModeActive) accentColor else colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-                    )
-                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                KeyboardModeToggleButton(
+                    isFullModeActive = isFullModeActive,
+                    onToggle = {
+                        val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
+                        viewModel.setKeyboardMode(nextMode)
+                        KeyboardState.reset()
+                    },
+                    accentColor = accentColor,
+                )
 
                 Spacer(modifier = Modifier.weight(1f))
 
@@ -1610,5 +1588,104 @@ private fun ToolbarIcon(
             tint = colors.onSurface.copy(alpha = 0.8f),
             modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
         )
+    }
+}
+
+@Composable
+private fun KeyboardModeToggleButton(
+    isFullModeActive: Boolean,
+    onToggle: () -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val containerBg = colors.keyBackground.copy(alpha = 0.5f)
+    val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
+    val shape = RoundedCornerShape(18.dp)
+
+    val thumbWidth = 83.dp
+    val thumbOffset by animateDpAsState(
+        targetValue = if (isFullModeActive) thumbWidth else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "KeyboardModeThumbOffset",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .width(170.dp)
+                .height(36.dp)
+                .clip(shape)
+                .background(containerBg)
+                .clickable(onClick = onToggle)
+                .padding(2.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .offset(x = thumbOffset)
+                    .width(thumbWidth)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(thumbBg),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "Ergo",
+                        color = colors.onSurface.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    MaterialSymbol(
+                        name = "keyboard_onscreen",
+                        size = 18.dp,
+                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    MaterialSymbol(
+                        name = "keyboard",
+                        size = 18.dp,
+                        tint = colors.onSurface.copy(alpha = 0.8f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Full",
+                        color = colors.onSurface.copy(alpha = 0.8f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
     }
 }

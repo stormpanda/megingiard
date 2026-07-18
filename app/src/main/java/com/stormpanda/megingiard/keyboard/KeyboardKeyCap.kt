@@ -188,6 +188,15 @@ internal fun KeyCap(
                     )
                 }
 
+                "tab" -> {
+                    MaterialSymbol(
+                        name = "keyboard_tab",
+                        size = KC_ICON_SIZE,
+                        tint = contentColor,
+                        modifier = Modifier.size(KC_ICON_SIZE),
+                    )
+                }
+
                 "bksp" -> {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Backspace,
