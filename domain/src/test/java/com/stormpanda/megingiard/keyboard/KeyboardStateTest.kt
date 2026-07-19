@@ -119,4 +119,32 @@ class KeyboardStateTest {
         assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("caps").value)
         assertEquals(listOf(LinuxKeycodes.KEY_CAPSLOCK), secondRelease)
     }
+
+    @Test
+    fun testLongPressOnFullLayoutDoesNotActivateCapsLock() {
+        // Touch down
+        KeyboardState.onModifierTouchDown("lshift")
+
+        // Long press trigger with isFullLayout = true
+        val downCode = KeyboardState.onModifierLongPress("lshift", LinuxKeycodes.KEY_LEFTSHIFT, isFullLayout = true)
+        assertEquals(LinuxKeycodes.KEY_LEFTSHIFT, downCode)
+        assertEquals(ModifierState.HELD, KeyboardState.stateFor("lshift").value)
+
+        // Verify caps lock is still INACTIVE
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("caps").value)
+    }
+
+    @Test
+    fun testLongPressOnLettersLayoutActivatesCapsLock() {
+        // Touch down
+        KeyboardState.onModifierTouchDown("lshift")
+
+        // Long press trigger with isFullLayout = false (default)
+        val downCode = KeyboardState.onModifierLongPress("lshift", LinuxKeycodes.KEY_LEFTSHIFT, isFullLayout = false)
+        assertEquals(LinuxKeycodes.KEY_LEFTSHIFT, downCode)
+        assertEquals(ModifierState.HELD, KeyboardState.stateFor("lshift").value)
+
+        // Verify caps lock is HELD
+        assertEquals(ModifierState.HELD, KeyboardState.stateFor("caps").value)
+    }
 }

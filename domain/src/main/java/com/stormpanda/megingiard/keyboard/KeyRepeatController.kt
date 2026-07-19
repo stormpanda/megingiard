@@ -97,7 +97,7 @@ class KeyRepeatController(
                 pointerKeyMap[pointerId] = id
                 modifierBeingHeld = keyDef
                 KeyboardState.onModifierTouchDown(id)
-                startModifierHold(keyDef)
+                startModifierHold(keyDef, layout.size == 6)
             }
 
             KeyType.TRACKPOINT -> {
@@ -298,13 +298,16 @@ class KeyRepeatController(
             }
     }
 
-    private fun startModifierHold(keyDef: KeyDef) {
+    private fun startModifierHold(
+        keyDef: KeyDef,
+        isFullLayout: Boolean,
+    ) {
         modifierHoldJob?.cancel()
         modifierHoldJob =
             scope.launch {
                 delay(KB_MODIFIER_HOLD_MS)
                 if (modifierBeingHeld == keyDef) {
-                    val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode)
+                    val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode, isFullLayout)
                     if (keycode != null) KeyInjector.keyDown(keycode)
                 }
             }

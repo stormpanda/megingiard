@@ -122,12 +122,13 @@ object KeyboardState {
     fun onModifierLongPress(
         id: String,
         keycode: Int,
+        isFullLayout: Boolean = false,
     ): Int? {
         val flow = getOrCreate(id)
         if (flow.value == ModifierState.INACTIVE) {
             AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (long-press)")
             flow.value = ModifierState.HELD
-            if (id == "lshift" || id == "rshift") {
+            if (!isFullLayout && (id == "lshift" || id == "rshift")) {
                 getOrCreate("caps").value = ModifierState.HELD
             }
             return if (keycode != 0) keycode else null
@@ -228,7 +229,30 @@ object KeyboardState {
     /** Resets all modifier states to [ModifierState.INACTIVE]. Called on screen exit. */
     fun reset() {
         AppLog.d(TAG, "reset modifier states")
+        val activeCodes = mutableListOf<Int>()
+        _modifiers.forEach { (id, flow) ->
+            if (flow.value != ModifierState.INACTIVE) {
+                val code =
+                    when (id) {
+                        "lshift" -> LinuxKeycodes.KEY_LEFTSHIFT
+                        "rshift" -> LinuxKeycodes.KEY_RIGHTSHIFT
+                        "caps" -> LinuxKeycodes.KEY_LEFTSHIFT
+                        "ctrl" -> LinuxKeycodes.KEY_LEFTCTRL
+                        "alt" -> LinuxKeycodes.KEY_LEFTALT
+                        "altgr", "ralt" -> LinuxKeycodes.KEY_RIGHTALT
+                        "meta" -> LinuxKeycodes.KEY_LEFTMETA
+                        else -> 0
+                    }
+                if (code != 0 && code !in activeCodes) {
+                    activeCodes.add(code)
+                }
+            }
+        }
         _modifiers.values.forEach { it.value = ModifierState.INACTIVE }
         touchDownTimes.clear()
+        if (activeCodes.isNotEmpty()) {
+            AppLog.i(TAG, "reset: releasing active modifiers in OS: $activeCodes")
+            activeCodes.forEach { KeyInjector.keyUp(it) }
+        }
     }
 }
