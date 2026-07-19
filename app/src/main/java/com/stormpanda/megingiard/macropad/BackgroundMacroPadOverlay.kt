@@ -64,7 +64,7 @@ import kotlin.math.sqrt
 private const val AM_SCREEN_PADDING_DP = 0
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 private val AM_SWIPE_EDGE_ZONE = 40.dp
-private val AM_SWIPE_THRESHOLD = 25.dp
+private val AM_SWIPE_THRESHOLD = 50.dp
 private val AM_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val AM_PERCENT_DIVISOR = 100f
 
@@ -349,8 +349,9 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                     previewConfig == null,
                     isFullscreenKeyboardActive,
                     isFullscreenMouseActive,
+                    showQuickMenuBar,
                 ) {
-                    if (previewConfig != null) return@pointerInput
+                    if (previewConfig != null || !showQuickMenuBar) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)

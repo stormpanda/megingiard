@@ -86,7 +86,7 @@ import kotlin.math.roundToInt
 
 private const val TAG = "MainAppScreen"
 private val MAS_SWIPE_EDGE_ZONE = 40.dp
-private val MAS_SWIPE_THRESHOLD = 25.dp
+private val MAS_SWIPE_THRESHOLD = 50.dp
 private val MAS_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f

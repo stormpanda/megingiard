@@ -136,7 +136,7 @@ import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 private val MP_EDGE_ZONE = 40.dp
-private val MP_SWIPE_THRESHOLD = 25.dp
+private val MP_SWIPE_THRESHOLD = 50.dp
 private val MP_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
