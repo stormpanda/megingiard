@@ -289,21 +289,23 @@ internal fun KeyCap(
             }
 
             // Draw Gboard-style Superscript numeric/symbol labels on top-right of letters keys
-            val superLabel = getSuperscriptDisplayLabel(keyDef)
-            if (superLabel != null && !isShiftActive && !isCapsActive && !isAltGrActive) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(top = KC_SUPER_PADDING_TOP, end = KC_SUPER_PADDING_END),
-                    contentAlignment = Alignment.TopEnd,
-                ) {
-                    Text(
-                        text = superLabel,
-                        color = contentColor.copy(alpha = 0.5f),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Light,
-                    )
+            if (!isFullLayout) {
+                val superLabel = getSuperscriptDisplayLabel(keyDef)
+                if (superLabel != null && !isShiftActive && !isCapsActive && !isAltGrActive) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(top = KC_SUPER_PADDING_TOP, end = KC_SUPER_PADDING_END),
+                        contentAlignment = Alignment.TopEnd,
+                    ) {
+                        Text(
+                            text = superLabel,
+                            color = contentColor.copy(alpha = 0.5f),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Light,
+                        )
+                    }
                 }
             }
         }
