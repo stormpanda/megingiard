@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.KeyboardReturn
-import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -30,7 +29,42 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.ui.LocalAppColors
+
+private val SPECIAL_KEY_IDS =
+    setOf(
+        "lshift",
+        "rshift",
+        "bksp",
+        "globe",
+        "ctrl",
+        "rctrl",
+        "meta",
+        "alt",
+        "altgr",
+        "caps",
+        "esc",
+        "print",
+        "del",
+        "tab",
+        "up",
+        "down",
+        "left",
+        "right",
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+        "f8",
+        "f9",
+        "f10",
+        "f11",
+        "f12",
+    )
 
 // ---------------------------------------------------------------------------
 // Key bounds — root-space hit testing rectangle
@@ -70,19 +104,20 @@ internal fun KeyCap(
     isShiftActive: Boolean,
     isCapsActive: Boolean,
     isAltGrActive: Boolean,
+    isFullLayout: Boolean = false,
     modifier: Modifier = Modifier,
     onBoundsUpdate: (LayoutCoordinates) -> Unit,
 ) {
     val colors = LocalAppColors.current
     val isModifierActive =
         modifierState != ModifierState.INACTIVE ||
-            ((keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
+            (!isFullLayout && (keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
+    val isBgActive = isModifierActive && keyDef.id != "caps"
 
     // Gboard style classification
     val isSpecialKey =
-        keyDef.id == "lshift" || keyDef.id == "rshift" ||
-            keyDef.id == "bksp" || keyDef.id.startsWith("mode_switch") ||
-            keyDef.id == "globe" || keyDef.id == "comma" || keyDef.id == "dot"
+        keyDef.id in SPECIAL_KEY_IDS ||
+            keyDef.id.startsWith("mode_switch")
     val isEnterKey = keyDef.id == "enter"
 
     val bg =
@@ -91,7 +126,7 @@ internal fun KeyCap(
 
             isPressed -> if (isSpecialKey) colors.keyPressed.copy(alpha = 0.8f) else colors.keyPressed
 
-            isModifierActive -> accentColor.copy(alpha = 0.7f)
+            isBgActive -> accentColor.copy(alpha = 0.7f)
 
             isSpecialKey -> colors.keyBackground.copy(alpha = 0.5f)
 
@@ -134,9 +169,29 @@ internal fun KeyCap(
             // Render specific keys with Icons
             when (keyDef.id) {
                 "lshift", "rshift" -> {
-                    Icon(
-                        imageVector = Icons.Rounded.ArrowUpward,
-                        contentDescription = stringResource(R.string.cd_kb_shift),
+                    MaterialSymbol(
+                        name = "shift",
+                        size = KC_ICON_SIZE,
+                        tint = contentColor,
+                        filled = isModifierActive,
+                        modifier = Modifier.size(KC_ICON_SIZE),
+                    )
+                }
+
+                "caps" -> {
+                    MaterialSymbol(
+                        name = "shift_lock",
+                        size = KC_ICON_SIZE,
+                        tint = contentColor,
+                        filled = isModifierActive,
+                        modifier = Modifier.size(KC_ICON_SIZE),
+                    )
+                }
+
+                "tab" -> {
+                    MaterialSymbol(
+                        name = "keyboard_tab",
+                        size = KC_ICON_SIZE,
                         tint = contentColor,
                         modifier = Modifier.size(KC_ICON_SIZE),
                     )

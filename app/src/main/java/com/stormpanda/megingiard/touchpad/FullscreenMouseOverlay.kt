@@ -61,7 +61,9 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
@@ -346,7 +348,7 @@ fun FullscreenMouseOverlay() {
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(
-                            top = TP_TOOLBAR_HEIGHT + 4.dp,
+                            top = 8.dp,
                             bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
                             start = 8.dp,
                             end = 8.dp,
@@ -445,63 +447,22 @@ fun FullscreenMouseOverlay() {
             }
         }
 
-        Row(
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(TP_TOOLBAR_HEIGHT)
-                    .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End,
-        ) {
-            ModeToggleButton(
-                useMouse = touchpadUseMouse,
-                onToggle = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
-            )
-        }
-
         // 4. Bottom Toolbar (Collapse and settings button)
-        Row(
+        Box(
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .height(TP_BOTTOM_BAR_HEIGHT)
                     .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
-            val interactionSource = remember { MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxHeight()
-                        .width(TP_GLOBE_BUTTON_WIDTH)
-                        .offset(y = (-3).dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isPressed) colors.keyPressed else Color.Transparent)
-                        .clickable(
-                            enabled = !hasActivePointers,
-                            interactionSource = interactionSource,
-                            indication = null,
-                            onClick = { AppStateManager.setFullscreenMouseActive(false) },
-                        ),
-                contentAlignment = Alignment.Center,
+            // Left-aligned: Collapse button
+            Row(
+                modifier = Modifier.fillMaxHeight().align(Alignment.CenterStart),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.cd_touchpad_collapse),
-                    tint = colors.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (!touchpadUseMouse) {
-                val interactionSourcePlay = remember { MutableInteractionSource() }
-                val isPlayPressed by interactionSourcePlay.collectIsPressedAsState()
+                val interactionSource = remember { MutableInteractionSource() }
+                val isPressed by interactionSource.collectIsPressedAsState()
                 Box(
                     modifier =
                         Modifier
@@ -509,48 +470,94 @@ fun FullscreenMouseOverlay() {
                             .width(TP_GLOBE_BUTTON_WIDTH)
                             .offset(y = (-3).dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isPlayPressed) colors.keyPressed else Color.Transparent)
+                            .background(if (isPressed) colors.keyPressed else Color.Transparent)
                             .clickable(
-                                interactionSource = interactionSourcePlay,
+                                enabled = !hasActivePointers,
+                                interactionSource = interactionSource,
                                 indication = null,
-                                onClick = {
-                                    TouchpadSettings.setTouchpadMirroringEnabled(!touchpadMirroringEnabled)
-                                },
+                                onClick = { AppStateManager.setFullscreenMouseActive(false) },
                             ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = if (touchpadMirroringEnabled) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                        contentDescription = stringResource(R.string.cd_touchpad_toggle_mirroring),
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.cd_touchpad_collapse),
                         tint = colors.onSurface.copy(alpha = 0.7f),
                         modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
                     )
                 }
             }
 
-            val interactionSourceSettings = remember { MutableInteractionSource() }
-            val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
+            // Center-aligned: ModeToggleButton
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxHeight()
-                        .width(TP_GLOBE_BUTTON_WIDTH)
-                        .offset(y = (-3).dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
-                        .clickable(
-                            interactionSource = interactionSourceSettings,
-                            indication = null,
-                            onClick = { AppStateManager.setTouchpadSettingsOpen(true) },
-                        ),
+                modifier = Modifier.fillMaxHeight().align(Alignment.Center),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Settings,
-                    contentDescription = stringResource(R.string.cd_touchpad_settings),
-                    tint = colors.onSurface.copy(alpha = 0.7f),
-                    modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
+                ModeToggleButton(
+                    useMouse = touchpadUseMouse,
+                    onToggle = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
                 )
+            }
+
+            // Right-aligned: Play/Pause (conditional) + Settings buttons
+            Row(
+                modifier = Modifier.fillMaxHeight().align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (!touchpadUseMouse) {
+                    val interactionSourcePlay = remember { MutableInteractionSource() }
+                    val isPlayPressed by interactionSourcePlay.collectIsPressedAsState()
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxHeight()
+                                .width(TP_GLOBE_BUTTON_WIDTH)
+                                .offset(y = (-3).dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isPlayPressed) colors.keyPressed else Color.Transparent)
+                                .clickable(
+                                    interactionSource = interactionSourcePlay,
+                                    indication = null,
+                                    onClick = {
+                                        TouchpadSettings.setTouchpadMirroringEnabled(!touchpadMirroringEnabled)
+                                    },
+                                ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = if (touchpadMirroringEnabled) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = stringResource(R.string.cd_touchpad_toggle_mirroring),
+                            tint = colors.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
+                        )
+                    }
+                }
+
+                val interactionSourceSettings = remember { MutableInteractionSource() }
+                val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .width(TP_GLOBE_BUTTON_WIDTH)
+                            .offset(y = (-3).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
+                            .clickable(
+                                interactionSource = interactionSourceSettings,
+                                indication = null,
+                                onClick = { AppStateManager.setTouchpadSettingsOpen(true) },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Settings,
+                        contentDescription = stringResource(R.string.cd_touchpad_settings),
+                        tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
+                    )
+                }
             }
         }
     }
@@ -681,8 +688,9 @@ private fun ModeToggleButton(
     val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
     val shape = RoundedCornerShape(18.dp)
 
+    val thumbWidth = 83.dp
     val thumbOffset by animateDpAsState(
-        targetValue = if (useMouse) 0.dp else 32.dp,
+        targetValue = if (useMouse) 0.dp else thumbWidth,
         animationSpec = tween(durationMillis = 200),
         label = "ThumbOffset",
     )
@@ -690,7 +698,7 @@ private fun ModeToggleButton(
     Box(
         modifier =
             modifier
-                .width(68.dp)
+                .width(170.dp)
                 .height(36.dp)
                 .clip(shape)
                 .background(containerBg)
@@ -701,7 +709,8 @@ private fun ModeToggleButton(
             modifier =
                 Modifier
                     .offset(x = thumbOffset)
-                    .size(32.dp)
+                    .width(thumbWidth)
+                    .fillMaxHeight()
                     .clip(RoundedCornerShape(16.dp))
                     .background(thumbBg),
         )
@@ -711,26 +720,56 @@ private fun ModeToggleButton(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier.size(32.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Mouse,
-                    contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
-                    tint = colors.onSurface.copy(alpha = 0.8f),
-                    modifier = Modifier.size(18.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "Mouse",
+                        color = colors.onSurface.copy(alpha = 0.25f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.Rounded.Mouse,
+                        contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
             Box(
-                modifier = Modifier.size(32.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.TouchApp,
-                    contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
-                    tint = colors.onSurface.copy(alpha = 0.8f),
-                    modifier = Modifier.size(18.dp),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.TouchApp,
+                        contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Touch",
+                        color = colors.onSurface.copy(alpha = 0.25f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }

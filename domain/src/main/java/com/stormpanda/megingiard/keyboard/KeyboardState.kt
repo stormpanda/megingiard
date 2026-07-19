@@ -146,6 +146,7 @@ object KeyboardState {
         for (row in layout) {
             for (key in row) {
                 if (key.type == KeyType.MODIFIER) {
+                    if (key.id == "caps") continue
                     val flow = _modifiers[key.id] ?: continue
                     if (flow.value == ModifierState.STICKY) {
                         flow.value = ModifierState.INACTIVE
@@ -176,6 +177,7 @@ object KeyboardState {
         for (row in layout) {
             for (key in row) {
                 if (key.type == KeyType.MODIFIER) {
+                    if (key.id == "caps") continue
                     val state = _modifiers[key.id]?.value ?: ModifierState.INACTIVE
                     if (state != ModifierState.INACTIVE && key.linuxKeycode != 0) {
                         keycodes += key.linuxKeycode
@@ -212,7 +214,8 @@ object KeyboardState {
     ): List<Int> {
         val keycodes = activeModifierKeycodes(layout)
         val isLetter = key.label.length == 1 && key.label[0].isLetter()
-        if (!isLetter) {
+        val isFullLayout = layout.size == 6
+        if (!isFullLayout && !isLetter) {
             val lshiftHeld = _modifiers["lshift"]?.value == ModifierState.HELD
             val rshiftHeld = _modifiers["rshift"]?.value == ModifierState.HELD
             if (!lshiftHeld && !rshiftHeld) {

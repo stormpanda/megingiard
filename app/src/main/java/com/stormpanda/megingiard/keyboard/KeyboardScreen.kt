@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.keyboard
 
 import android.os.Vibrator
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Settings
@@ -74,6 +76,7 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
@@ -508,6 +511,8 @@ fun KeyboardScreen(
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsState()
+    val dynamicContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
+    val dynamicGridHeight = if (keyboardMode == KeyboardMode.FULL) 220.dp else 168.dp
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -736,7 +741,7 @@ fun KeyboardScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(KB_CONTAINER_HEIGHT)
+                    .height(dynamicContainerHeight)
                     .background(colors.keyboardBackground)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -744,87 +749,89 @@ fun KeyboardScreen(
                         onClick = {}, // Consumes clicks to prevent propagation to background views (like MacroPad)
                     ),
         ) {
-            // 1. Top Toolbar
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(KB_TOOLBAR_HEIGHT)
-                        .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Modifier buttons on the left
+            // 1. Top Toolbar (hidden in FULL layout mode)
+            if (keyboardMode != KeyboardMode.FULL) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(KB_TOOLBAR_HEIGHT)
+                            .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    ModifierButton(
-                        id = "ctrl",
-                        label = "CTRL",
-                        keycode = LinuxKeycodes.KEY_LEFTCTRL,
-                        accentColor = accentColor,
-                    )
-                    ModifierButton(
-                        id = "alt",
-                        label = "ALT",
-                        keycode = LinuxKeycodes.KEY_LEFTALT,
-                        accentColor = accentColor,
-                    )
-                    ModifierButton(
-                        id = "altgr",
-                        label = "ALT GR",
-                        keycode = LinuxKeycodes.KEY_RIGHTALT,
-                        accentColor = accentColor,
-                    )
-                }
+                    // Modifier buttons on the left
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ModifierButton(
+                            id = "ctrl",
+                            label = "CTRL",
+                            keycode = LinuxKeycodes.KEY_LEFTCTRL,
+                            accentColor = accentColor,
+                        )
+                        ModifierButton(
+                            id = "alt",
+                            label = "ALT",
+                            keycode = LinuxKeycodes.KEY_LEFTALT,
+                            accentColor = accentColor,
+                        )
+                        ModifierButton(
+                            id = "altgr",
+                            label = "ALT GR",
+                            keycode = LinuxKeycodes.KEY_RIGHTALT,
+                            accentColor = accentColor,
+                        )
+                    }
 
-                Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.weight(1f))
 
-                // Action icons on the right
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.SelectAll,
-                        contentDescription = stringResource(R.string.cd_kb_select_all),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.ContentCut,
-                        contentDescription = stringResource(R.string.cd_kb_cut),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.ContentCopy,
-                        contentDescription = stringResource(R.string.cd_kb_copy),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
-                    ToolbarIcon(
-                        imageVector = Icons.Rounded.ContentPaste,
-                        contentDescription = stringResource(R.string.cd_kb_paste),
-                        onClick = {
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                        },
-                    )
+                    // Action icons on the right
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.SelectAll,
+                            contentDescription = stringResource(R.string.cd_kb_select_all),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.ContentCut,
+                            contentDescription = stringResource(R.string.cd_kb_cut),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.ContentCopy,
+                            contentDescription = stringResource(R.string.cd_kb_copy),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                        ToolbarIcon(
+                            imageVector = Icons.Rounded.ContentPaste,
+                            contentDescription = stringResource(R.string.cd_kb_paste),
+                            onClick = {
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                            },
+                        )
+                    }
                 }
             }
 
@@ -833,7 +840,7 @@ fun KeyboardScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(KB_GRID_HEIGHT)
+                        .height(dynamicGridHeight)
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                         .onGloballyPositioned { boxCoordsState.value = it }
                         .pointerInput(layoutState) {
@@ -1195,6 +1202,7 @@ fun KeyboardScreen(
                                             isShiftActive = isShiftActive,
                                             isCapsActive = isCapsActive,
                                             isAltGrActive = isAltGrActive,
+                                            isFullLayout = true,
                                             modifier = Modifier.weight(1f),
                                             onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                         )
@@ -1227,6 +1235,7 @@ fun KeyboardScreen(
                                                     isShiftActive = isShiftActive,
                                                     isCapsActive = isCapsActive,
                                                     isAltGrActive = isAltGrActive,
+                                                    isFullLayout = true,
                                                     modifier = Modifier.weight(key.widthWeight),
                                                     onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                                 )
@@ -1254,6 +1263,7 @@ fun KeyboardScreen(
                                         isShiftActive = isShiftActive,
                                         isCapsActive = isCapsActive,
                                         isAltGrActive = isAltGrActive,
+                                        isFullLayout = true,
                                         modifier = Modifier.weight(key.widthWeight),
                                         onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                     )
@@ -1438,6 +1448,20 @@ fun KeyboardScreen(
                     )
                 }
 
+                val isFullModeActive = keyboardMode == KeyboardMode.FULL
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                KeyboardModeToggleButton(
+                    isFullModeActive = isFullModeActive,
+                    onToggle = {
+                        val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
+                        viewModel.setKeyboardMode(nextMode)
+                        KeyboardState.reset()
+                    },
+                    accentColor = accentColor,
+                )
+
                 Spacer(modifier = Modifier.weight(1f))
 
                 val interactionSourceSettings = remember { MutableInteractionSource() }
@@ -1564,5 +1588,104 @@ private fun ToolbarIcon(
             tint = colors.onSurface.copy(alpha = 0.8f),
             modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
         )
+    }
+}
+
+@Composable
+private fun KeyboardModeToggleButton(
+    isFullModeActive: Boolean,
+    onToggle: () -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val containerBg = colors.keyBackground.copy(alpha = 0.5f)
+    val thumbBg = colors.keyPressed.copy(alpha = 0.6f)
+    val shape = RoundedCornerShape(18.dp)
+
+    val thumbWidth = 83.dp
+    val thumbOffset by animateDpAsState(
+        targetValue = if (isFullModeActive) thumbWidth else 0.dp,
+        animationSpec = tween(durationMillis = 200),
+        label = "KeyboardModeThumbOffset",
+    )
+
+    Box(
+        modifier =
+            modifier
+                .width(170.dp)
+                .height(36.dp)
+                .clip(shape)
+                .background(containerBg)
+                .clickable(onClick = onToggle)
+                .padding(2.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .offset(x = thumbOffset)
+                    .width(thumbWidth)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(thumbBg),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = "Ergo",
+                        color = colors.onSurface.copy(alpha = 0.25f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    MaterialSymbol(
+                        name = "keyboard_onscreen",
+                        size = 18.dp,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    MaterialSymbol(
+                        name = "keyboard",
+                        size = 18.dp,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Full",
+                        color = colors.onSurface.copy(alpha = 0.25f),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
     }
 }
