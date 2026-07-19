@@ -107,6 +107,10 @@ fun MainAppScreen() {
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
     val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
     val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
+    val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
+    val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
+    val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
     var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
@@ -206,14 +210,9 @@ fun MainAppScreen() {
                         isValidScreen,
                         kbBarMinX,
                         kbBarMaxX,
-                        isEditorActive,
-                        isGlobalSettingsOpen,
-                        isKeyboardSettingsOpen,
-                        isTouchpadSettingsOpen,
-                        isBackgroundSettingsActive,
-                        isFullscreenKeyboardActive,
-                        isFullscreenMouseActive,
+                        isGesturesEnabled,
                     ) {
+                        if (!isGesturesEnabled) return@pointerInput
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
@@ -303,10 +302,7 @@ fun MainAppScreen() {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val isMenuOpen =
-                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive ||
-                                        isTouchpadSettingsOpen
-                                if (!isValidScreen || isMenuOpen) {
+                                if (!isValidScreen) {
                                     continue
                                 }
                                 val firstChange = event.changes.firstOrNull()

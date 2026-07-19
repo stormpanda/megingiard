@@ -405,6 +405,12 @@ class MirrorPresentation(
                             val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
                             val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
                             val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
+                            val isEditorActive by AppStateManager.isEditorActive.collectAsState()
+                            val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
+                            val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
+                            val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
+                            val isGesturesEnabled =
+                                !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
@@ -464,15 +470,13 @@ class MirrorPresentation(
                                         // KeyboardScreen is the hit-test target.
                                         // Only active while a fullscreen overlay is shown.
                                         .pointerInput(
-                                            isFullscreenMouseActive,
-                                            isFullscreenKeyboardActive,
-                                            isKeyboardSettingsOpen,
-                                            isTouchpadSettingsOpen,
                                             overlayAtBottom,
                                             quickMenuBarZoneWidthPx,
                                             kbBarMinX,
                                             kbBarMaxX,
+                                            isGesturesEnabled,
                                         ) {
+                                            if (!isGesturesEnabled) return@pointerInput
                                             val qmSwipe =
                                                 SwipeGestureProcessor(
                                                     edgeZonePx = edgeZonePx,

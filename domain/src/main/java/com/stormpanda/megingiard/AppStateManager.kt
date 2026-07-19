@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -298,21 +299,67 @@ object AppStateManager {
     val isEditorActive: StateFlow<Boolean> = _isEditorActive.asStateFlow()
 
     /**
+     * The app-wide active UI mode representing the screens, settings panels, or overlays currently active.
+     */
+    val uiMode: StateFlow<UiMode> =
+        combine(
+            _isGlobalSettingsOpen,
+            _isKeyboardSettingsOpen,
+            _isTouchpadSettingsOpen,
+            _isBackgroundSettingsActive,
+            _isEditorActive,
+            _isQuickMenuOpen,
+            _isViewportEditActive,
+            _isFullscreenKeyboardActive,
+            _isFullscreenMouseActive,
+        ) { array: Array<Boolean> ->
+            val globalSettings = array[0]
+            val keyboardSettings = array[1]
+            val touchpadSettings = array[2]
+            val backgroundSettings = array[3]
+            val editor = array[4]
+            val quickMenu = array[5]
+            val viewportEdit = array[6]
+            val fullscreenKeyboard = array[7]
+            val fullscreenMouse = array[8]
+
+            when {
+                globalSettings -> UiMode.GLOBAL_SETTINGS
+                keyboardSettings -> UiMode.KEYBOARD_SETTINGS
+                touchpadSettings -> UiMode.TOUCHPAD_SETTINGS
+                backgroundSettings -> UiMode.BACKGROUND_SETTINGS
+                editor -> UiMode.LAYOUT_EDITOR
+                quickMenu -> UiMode.QUICK_MENU
+                viewportEdit -> UiMode.VIEWPORT_EDIT
+                fullscreenKeyboard -> UiMode.FULLSCREEN_KEYBOARD
+                fullscreenMouse -> UiMode.FULLSCREEN_MOUSE
+                else -> UiMode.MACROPAD_USE
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, UiMode.MACROPAD_USE)
+
+    /**
      * True whenever any fullscreen modal overlay is showing.
      * Used by [handleEdgeSwipe] to determine if an edge swipe should close the active modal.
      */
     val isAnyModalActive: StateFlow<Boolean> =
-        combine(
-            _isFullscreenKeyboardActive,
-            _isFullscreenMouseActive,
-            _isViewportEditActive,
-            _isBackgroundSettingsActive,
-            MacroPadState.isPeekActive,
-            _isGlobalSettingsOpen,
-            _isKeyboardSettingsOpen,
-            _isTouchpadSettingsOpen,
-        ) { array: Array<Boolean> -> array.any { it } }
-            .stateIn(scope, SharingStarted.Eagerly, false)
+        combine(uiMode, MacroPadState.isPeekActive) { mode, peek ->
+            peek || mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
+                mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
+                mode == UiMode.FULLSCREEN_KEYBOARD || mode == UiMode.FULLSCREEN_MOUSE ||
+                mode == UiMode.VIEWPORT_EDIT
+        }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    /**
+     * True whenever any settings menu, Quick Menu, or editor modal is active/open.
+     * Used by swipe gesture processors to disable edge gesture handling when menus are open.
+     */
+    val isAnyMenuOpen: StateFlow<Boolean> =
+        uiMode
+            .map { mode ->
+                mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
+                    mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
+                    mode == UiMode.LAYOUT_EDITOR || mode == UiMode.QUICK_MENU
+            }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(
         active: Boolean,

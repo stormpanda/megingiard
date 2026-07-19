@@ -1,0 +1,14 @@
+package com.stormpanda.megingiard
+
+enum class UiMode {
+    MACROPAD_USE,
+    FULLSCREEN_KEYBOARD,
+    FULLSCREEN_MOUSE,
+    VIEWPORT_EDIT,
+    LAYOUT_EDITOR,
+    BACKGROUND_SETTINGS,
+    KEYBOARD_SETTINGS,
+    TOUCHPAD_SETTINGS,
+    GLOBAL_SETTINGS,
+    QUICK_MENU,
+}
