@@ -533,31 +533,3 @@ internal fun InTreeConfirmDialog(
         }
     }
 }
-
-// ── Filename builders ───────────────────────────────────────────────────────
-private val FILENAME_UNSAFE = Regex("[^A-Za-z0-9]")
-
-internal fun buildExportFilename(metadata: ExportMetadata): String {
-    val parts = mutableListOf("megingiard", LocalDate.now().toString())
-    metadata.author?.takeIf { it.isNotBlank() }?.let { raw ->
-        parts.add(raw.trim().take(20).replace(FILENAME_UNSAFE, "_"))
-    }
-    metadata.description?.takeIf { it.isNotBlank() }?.let { raw ->
-        parts.add(raw.trim().take(30).replace(FILENAME_UNSAFE, "_"))
-    }
-    return parts.joinToString("_") + ".mgrd"
-}
-
-internal fun buildProfileExportFilename(
-    metadata: ExportMetadata,
-    profileName: String,
-): String {
-    val parts = mutableListOf("megingiard_profile", LocalDate.now().toString())
-    profileName.trim().takeIf { it.isNotBlank() }?.let { raw ->
-        parts.add(raw.take(30).replace(FILENAME_UNSAFE, "_"))
-    }
-    metadata.author?.takeIf { it.isNotBlank() }?.let { raw ->
-        parts.add(raw.trim().take(20).replace(FILENAME_UNSAFE, "_"))
-    }
-    return parts.joinToString("_") + ".mgrd"
-}

@@ -21,9 +21,9 @@ the same device or share individual profiles with other Megingiard users.
   controls the destination folder.
 - The user MAY optionally provide author, description, and comma-separated tags before exporting
   (community metadata).
-- The suggested default filename MUST include the current date and, if provided, the author
+- The suggested default filename MUST include the application version name (prefixed with "v"), the current date, and, if provided, the author
   (up to 20 chars) and description (up to 30 chars) to help users identify files.
-  Format: `megingiard_<date>[_<author>][_<description>].mgrd`.
+  Format: `megingiard_v<versionName>_<date>[_<author>][_<description>].mgrd`.
 - The export MUST embed an SHA-256 checksum to detect file corruption or unintended modification.
   This is a data-integrity check, distinct from the application / daemon hardening layers
   summarized in [SECURITY_CONCEPT.md](../../../SECURITY_CONCEPT.md).
@@ -71,7 +71,7 @@ the same device or share individual profiles with other Megingiard users.
   a profile-share export, so importing it cannot overwrite another user's app preferences.
 - The user MAY optionally provide author, description, and comma-separated tags before exporting.
 - The suggested filename format is:
-  `megingiard_profile_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`.
+  `megingiard_profile_v<versionName>_<date>[_<profileName up to 30 chars>][_<author up to 20 chars>].mgrd`.
 
 ### FR-CF7: Per-Profile Share Import
 

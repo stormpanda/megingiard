@@ -58,6 +58,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.config.buildExportFilename
+import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.privd.DeadzoneDialog
