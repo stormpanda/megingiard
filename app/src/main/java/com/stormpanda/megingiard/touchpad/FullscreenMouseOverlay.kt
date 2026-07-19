@@ -89,6 +89,14 @@ private val TP_BOTTOM_BAR_HEIGHT = 50.dp
 private val TP_GLOBE_BUTTON_WIDTH = 72.dp
 private val TP_ICON_SIZE_MEDIUM = 24.dp
 
+// Mouse 4 & 5 buttons layout dimensions
+private val TP_MOUSE_4_5_MARGIN_HORIZONTAL = 4.dp
+
+// Top margin is 6.dp to account for the -2.dp unpressed button offset,
+// resulting in a visual top margin of 4.dp (matching the horizontal one).
+private val TP_MOUSE_4_5_MARGIN_TOP = 6.dp
+private val TP_MOUSE_4_5_SIZE = 56.dp
+
 @Composable
 fun FullscreenMouseOverlay() {
     val context = LocalContext.current
@@ -428,8 +436,10 @@ fun FullscreenMouseOverlay() {
                                 modifier =
                                     Modifier
                                         .align(Alignment.TopStart)
-                                        .padding(start = 4.dp, top = 2.dp)
-                                        .size(56.dp),
+                                        .padding(
+                                            start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                            top = TP_MOUSE_4_5_MARGIN_TOP,
+                                        ).size(TP_MOUSE_4_5_SIZE),
                             )
                             TouchpadMouseButton(
                                 onDown = { MouseInjector.mouse5Down() },
@@ -438,8 +448,10 @@ fun FullscreenMouseOverlay() {
                                 modifier =
                                     Modifier
                                         .align(Alignment.TopEnd)
-                                        .padding(end = 4.dp, top = 2.dp)
-                                        .size(56.dp),
+                                        .padding(
+                                            end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                            top = TP_MOUSE_4_5_MARGIN_TOP,
+                                        ).size(TP_MOUSE_4_5_SIZE),
                             )
                         }
                     }
