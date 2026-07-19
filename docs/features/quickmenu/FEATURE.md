@@ -25,22 +25,26 @@ the universal "go back" mechanism throughout the app.
 ### FR-PM1: Quick Menu Bar — Always-Visible Affordance
 
 - A slim rounded bar tab MUST be rendered at the configured screen edge
-  (`SettingsManager.overlayAtBottom` controls top vs. bottom placement). By default, it is always visible. If `SettingsManager.overlayFadeOut` is enabled, the bar tab automatically fades out after 3 seconds of inactivity.
+  (`SettingsManager.overlayAtBottom` controls top vs. bottom placement). By default, it is always visible. If `SettingsManager.overlayFadeOut` is enabled, the bar tab automatically fades out after 3 seconds of inactivity. It also fades out temporarily when a swipe gesture is active.
 - The bar tab occupies `QUICK_MENU_BAR_INSET` (≈ 13 dp) of vertical space at the edge. Screens that render
   content edge-to-edge SHOULD inset by this amount to avoid overlap.
 - The bar tab is **purely visual** — it does not capture touch events. The edge-swipe gesture is
   detected by `SwipeGestureProcessor` in the host screen's `pointerInput` modifier.
 
-### FR-PM2: Edge-Swipe Gesture Routing
+### FR-PM2: Edge-Swipe Gesture Routing & Visual Redesign
 
-- A swipe originating within the configured edge zone MUST call `AppStateManager.handleEdgeSwipe()`,
-  which dispatches as follows:
-  - **Any modal is active** → closes the active modal (`closeActiveModal()`).
+- A swipe originating within the configured edge zone MUST call `AppStateManager.handleEdgeSwipe()` or close active overlays, following these behaviors:
+  - **Visual Indicator:** As the user drags, a beautiful circular bubble containing a fitting icon slides onto the screen (Keyboard icon for left zone, Menu icon for center, Touchpad icon for right) following the finger with rubber-banding resistance.
+  - **Haptic Feedback:** A light haptic tick is triggered when the drag distance crosses the threshold (`QuickMenuBarLayout.SWIPE_THRESHOLD = 50 dp`).
+  - **Release-Based Trigger:** The action is triggered ONLY when the user lifts their finger (release) if the threshold was crossed.
+  - **Cancellation:** If the user drags their finger back below the threshold and releases, the gesture is cancelled, and the icon slides back out of the screen.
+- Swipe routing dispatches on release as follows:
+  - **Any modal is active** (e.g. fullscreen keyboard/mouse overlay) → closes the active modal (`closeActiveModal()`).
   - **Quick Menu is open** → closes the Quick Menu (`closeQuickMenu()`).
-  - **Nothing is open** → opens the Quick Menu (`openQuickMenu()`).
-- The edge zone width (`AM_SWIPE_EDGE_ZONE = 40 dp`) and the minimum swipe distance threshold
-  (`AM_SWIPE_THRESHOLD = 25 dp`) are consistent across all screens that host the bar
-  (`MainAppScreen`, `BackgroundMacroPadOverlay`, `FullscreenMouseOverlay`, `MirrorPresentation`).
+  - **Nothing is open** → opens the Quick Menu (`openQuickMenu()`) or toggles the keyboard/mouse overlays if initiated in their respective zones.
+- The edge zone width (`QuickMenuBarLayout.SWIPE_EDGE_ZONE = 40 dp`) and the minimum swipe distance threshold
+  (`QuickMenuBarLayout.SWIPE_THRESHOLD = 50 dp`) are consistent across all screens that host the bar
+  (`MainAppScreen`, `BackgroundMacroPadOverlay`, `MirrorPresentation`).
 - To give the visual Quick Menu Bar absolute touch precedence over underlying buttons, keys, or touchpad overlay zones, the active swipe gesture is horizontally constrained to a **"quick menu bar zone"** of `120 dp` width centered at the screen edge. Within this 120 dp zone, the parent swipe gesture detectors consume all pointer events in Compose's `PointerEventPass.Initial` pass, preventing them from being delivered to underlying child composables. Outside the horizontal bounds of this 120 dp zone, edge touches remain clickable and holdable for any buttons or keys placed near the sides.
 - Tapping the scrim (the darkened area outside the Quick Menu cards) MUST dismiss the Quick Menu.
 
@@ -129,20 +133,21 @@ Both cards share the same surface style:
 - Shadow elevation: 8 dp
 - Horizontal margin: 8 dp from screen edges; vertical margin: 6 dp
 
-### Swipe Gesture Detection
+### Swipe Gesture Detection & Visuals
 
 The edge-swipe gesture is **not** captured by `QuickMenuBar`. It is handled by `SwipeGestureProcessor`
 inside the `pointerInput` modifier of whichever screen is currently active. Each screen that hosts
-the bar creates its own `SwipeGestureProcessor` instance with the edge-zone and threshold parameters
+the bar creates its own `SwipeGestureProcessor` instances (for Keyboard, Menu, and Touchpad zones) with the edge-zone and threshold parameters
 derived from `SettingsManager.overlayAtBottom` as well as a horizontal **"quick menu bar zone"** width of `120 dp`
 (converted to pixels).
+
+During gesture execution, the processor reports drag progress, which is updated on `AppStateManager.activeSwipe`. The visual `QuickMenuBar` observes this state to render a sliding circular capsule pill with the zone's corresponding icon (e.g. Keyboard, Menu, Mouse) with rubber-banding resistance past the threshold, and triggers a light haptic tick exactly once as it crosses the threshold. When the user releases the finger, `SwipeGestureProcessor` evaluates whether the threshold was met, triggering the edge-swipe action, and dismissing the visual pill.
 
 To prevent touch conflicts with underlying MacroPad buttons or keyboard keys, if a touch is initiated
 within the horizontal quick menu bar zone centered at the screen edge, the parent gesture detector consumes the
 touch events during Compose's `Initial` pass. Interactive child overlay composables (such as `PadSurface`
 and `FullscreenMouseOverlay`) check and skip already consumed event changes, giving absolute touch
-precedence to the Quick Menu Bar navigation. When the processor fires, it calls `AppStateManager.handleEdgeSwipe()`,
-which routes to open, close, or modal-dismiss as appropriate.
+precedence to the Quick Menu Bar navigation.
 
 ### State Ownership
 
@@ -152,6 +157,7 @@ which routes to open, close, or modal-dismiss as appropriate.
 | `AppStateManager.isEditorActive` | `AppStateManager` | "Edit Layout" button |
 | `AppStateManager.isBackgroundSettingsActive` | `AppStateManager` | Cogwheel settings button in layout editor toolbar |
 | `AppStateManager.isViewportEditActive` | `AppStateManager` | "Screen Mirroring" action button in Quick Menu |
+| `AppStateManager.activeSwipe` | `AppStateManager` | Gesture drag progress updates and release/cancel resets |
 | `ScreenCaptureManager.isFrozen` | `ScreenCaptureManager` | "Freeze/Unfreeze" button |
 | `ScreenCaptureManager.isTouchProjectionActive` | `ScreenCaptureManager` | Cutout layout settings |
 | `ScreenCaptureManager.screenshotRequested` | `ScreenCaptureManager` | "Screenshot" button |
@@ -169,10 +175,11 @@ handler reads `isAnyModalActive` to decide whether to close the active modal ins
 
 | File | Responsibility |
 | --- | --- |
-| [QuickMenuBar.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab; `QUICK_MENU_BAR_INSET` constant for screen edge inset |
+| [QuickMenuBar.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab; `QUICK_MENU_BAR_INSET` constant for screen edge inset; renders visual sliding gesture pills |
 | [QuickMenu.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt) | Full-screen Quick Menu overlay: state coordinator and overlays orchestrator |
 | [QuickMenuComponents.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
 | [QuickMenuDialogs.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
 | [QuickMenuMirrorCard.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
-| [AppStateManager.kt](../../../domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers |
-| [SwipeGestureProcessor.kt](../../../domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); calls `AppStateManager.handleEdgeSwipe()` |
+| [AppStateManager.kt](../../../domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
+| [SwipeGestureProcessor.kt](../../../domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
+| [SwipeGestureProgress.kt](../../../core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |

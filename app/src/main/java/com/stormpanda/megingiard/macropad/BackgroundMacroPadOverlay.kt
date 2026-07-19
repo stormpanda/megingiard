@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +34,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.SwipeGestureProcessor
+import com.stormpanda.megingiard.SwipeGestureProgress
+import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -43,6 +46,7 @@ import com.stormpanda.megingiard.macropad.TrackpointMode
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuBar
+import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -59,9 +63,6 @@ import kotlin.math.sqrt
 
 private const val AM_SCREEN_PADDING_DP = 0
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
-private val AM_SWIPE_EDGE_ZONE = 40.dp
-private val AM_SWIPE_THRESHOLD = 25.dp
-private val AM_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val AM_PERCENT_DIVISOR = 100f
 
 /** Mirrors MacroPadViewModel.INJECTOR_RESTART_DEBOUNCE_MS — absorbs rapid modal transitions. */
@@ -94,13 +95,13 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val density = LocalDensity.current
-    val edgeZonePx = with(density) { AM_SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { AM_SWIPE_THRESHOLD.toPx() }
-    val quickMenuBarZoneWidthPx = with(density) { AM_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+    val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
+    val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
-    val kbBarWidthPx = with(density) { 72.dp.toPx() }
-    val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
-    val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+    val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+    val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
     val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
     val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
     val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
@@ -112,7 +113,21 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 swipeThresholdPx = swipeThresholdPx,
                 overlayAtBottom = overlayAtBottom,
                 quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+                onSwipeProgress = { delta, isPast ->
+                    AppStateManager.updateActiveSwipe(
+                        SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
+                    )
+                },
+                onSwipeCancel = {
+                    AppStateManager.updateActiveSwipe(null)
+                },
+                onHapticTick = {
+                    triggerHapticFeedback(context, HapticStrength.LIGHT)
+                },
+                onEdgeSwipe = {
+                    AppStateManager.updateActiveSwipe(null)
+                    AppStateManager.handleEdgeSwipe()
+                },
             )
         }
 
@@ -123,7 +138,19 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 swipeThresholdPx = swipeThresholdPx,
                 overlayAtBottom = overlayAtBottom,
                 customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                onSwipeProgress = { delta, isPast ->
+                    AppStateManager.updateActiveSwipe(
+                        SwipeGestureProgress(SwipeGestureType.KEYBOARD, delta, swipeThresholdPx, isPast),
+                    )
+                },
+                onSwipeCancel = {
+                    AppStateManager.updateActiveSwipe(null)
+                },
+                onHapticTick = {
+                    triggerHapticFeedback(context, HapticStrength.LIGHT)
+                },
                 onEdgeSwipe = {
+                    AppStateManager.updateActiveSwipe(null)
                     if (AppStateManager.isAnyModalActive.value) {
                         AppStateManager.closeActiveModal()
                     } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -135,9 +162,9 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
             )
         }
 
-    val tpBarWidthPx = with(density) { 72.dp.toPx() }
-    val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
-    val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+    val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+    val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
 
     val tpSwipe =
         remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, tpBarWidthPx, tpBarEndPaddingPx, tpBarZoneWidthPx) {
@@ -151,7 +178,19 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                     val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
                     x >= tpBarMinX && x <= tpBarMaxX
                 },
+                onSwipeProgress = { delta, isPast ->
+                    AppStateManager.updateActiveSwipe(
+                        SwipeGestureProgress(SwipeGestureType.TOUCHPAD, delta, swipeThresholdPx, isPast),
+                    )
+                },
+                onSwipeCancel = {
+                    AppStateManager.updateActiveSwipe(null)
+                },
+                onHapticTick = {
+                    triggerHapticFeedback(context, HapticStrength.LIGHT)
+                },
                 onEdgeSwipe = {
+                    AppStateManager.updateActiveSwipe(null)
                     if (AppStateManager.isAnyModalActive.value) {
                         AppStateManager.closeActiveModal()
                     } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -304,8 +343,9 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                     previewConfig == null,
                     isFullscreenKeyboardActive,
                     isFullscreenMouseActive,
+                    showQuickMenuBar,
                 ) {
-                    if (previewConfig != null || isFullscreenKeyboardActive || isFullscreenMouseActive) return@pointerInput
+                    if (previewConfig != null || !showQuickMenuBar) return@pointerInput
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)

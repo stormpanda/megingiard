@@ -5,14 +5,9 @@ private const val TAG = "SwipeGestureProcessor"
 /**
  * Reusable edge-zone swipe detector for revealing the quick menu overlay.
  *
- * The same swipe logic is used in [MainAppScreen] and [MirrorScreen].
- * This processor is Compose-free: it accepts raw coordinates and dimensions
- * and calls back into [AppStateManager] when a swipe is detected.
- *
- * Create one instance per pointer-input scope; it tracks only the current
- * gesture and does not survive scope restarts (which is intentional — the
- * Compose `pointerInput` key list already causes a restart whenever
- * `overlayAtBottom` changes).
+ * This processor is Compose-free: it accepts raw coordinates and dimensions.
+ * It tracks the gesture drag delta, handles release-based triggers, and notifies
+ * the caller about progress, cancellation, and haptic ticks.
  */
 class SwipeGestureProcessor(
     private val edgeZonePx: Float,
@@ -22,9 +17,13 @@ class SwipeGestureProcessor(
     private val onTouchingChanged: (Boolean) -> Unit = { AppStateManager.setTouching(it) },
     private val onEdgeSwipe: () -> Unit = { AppStateManager.handleEdgeSwipe() },
     private val customZoneCheck: ((pointerX: Float, containerWidth: Float) -> Boolean)? = null,
+    private val onSwipeProgress: ((delta: Float, isPastThreshold: Boolean) -> Unit)? = null,
+    private val onSwipeCancel: (() -> Unit)? = null,
+    private val onHapticTick: (() -> Unit)? = null,
 ) {
     private var swipeStartY = Float.NaN
-    private var swipeTriggered = false
+    private var swipeLastDelta = 0f
+    private var hapticTriggered = false
 
     /** Call on every Press event with the first pointer's Y and the container height. */
     fun onPress(
@@ -52,23 +51,30 @@ class SwipeGestureProcessor(
                 }
             ) && inZoneX
         swipeStartY = if (nearEdge) pointerY else Float.NaN
-        swipeTriggered = false
+        swipeLastDelta = 0f
+        hapticTriggered = false
     }
 
     /** Call on every Move event with the first pointer's Y. */
     fun onMove(pointerY: Float) {
-        if (!swipeStartY.isNaN() && !swipeTriggered) {
+        if (!swipeStartY.isNaN()) {
             val delta =
                 if (overlayAtBottom) {
                     swipeStartY - pointerY
                 } else {
                     pointerY - swipeStartY
                 }
-            if (delta >= swipeThresholdPx) {
-                AppLog.d(TAG, "edge swipe detected (delta=${delta.toInt()}px, bottom=$overlayAtBottom)")
-                onEdgeSwipe()
-                swipeTriggered = true
+            swipeLastDelta = delta.coerceAtLeast(0f)
+            val isPast = swipeLastDelta >= swipeThresholdPx
+
+            if (isPast && !hapticTriggered) {
+                onHapticTick?.invoke()
+                hapticTriggered = true
+            } else if (!isPast && hapticTriggered) {
+                hapticTriggered = false
             }
+
+            onSwipeProgress?.invoke(swipeLastDelta, isPast)
         }
     }
 
@@ -76,14 +82,23 @@ class SwipeGestureProcessor(
     fun onRelease(allPointersUp: Boolean) {
         if (allPointersUp) {
             onTouchingChanged(false)
+            if (!swipeStartY.isNaN()) {
+                if (swipeLastDelta >= swipeThresholdPx) {
+                    AppLog.d(TAG, "edge swipe released past threshold (delta=${swipeLastDelta.toInt()}px, bottom=$overlayAtBottom)")
+                    onEdgeSwipe()
+                } else {
+                    onSwipeCancel?.invoke()
+                }
+            }
         }
         swipeStartY = Float.NaN
-        swipeTriggered = false
+        swipeLastDelta = 0f
+        hapticTriggered = false
     }
 
     /** Whether the current touch started in the edge zone. */
     val isNearEdge: Boolean get() = !swipeStartY.isNaN()
 
-    /** Whether the edge-swipe gesture has been triggered during the current touch sequence. */
-    val isSwipeTriggered: Boolean get() = swipeTriggered
+    /** Whether the edge-swipe gesture has been triggered or crossed the threshold. */
+    val isSwipeTriggered: Boolean get() = swipeLastDelta >= swipeThresholdPx
 }

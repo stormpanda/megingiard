@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard
 
+import android.content.Context
+import android.os.Vibrator
 import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -61,8 +63,10 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
+import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -74,6 +78,7 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
+import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import kotlinx.coroutines.Dispatchers
@@ -81,9 +86,6 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 private const val TAG = "MainAppScreen"
-private val MAS_SWIPE_EDGE_ZONE = 40.dp
-private val MAS_SWIPE_THRESHOLD = 25.dp
-private val MAS_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private val MAS_ARROW_SIZE = 56.dp
 private const val MAS_ARROW_BOUNCE_PX = 24f
 private const val MAS_ARROW_BOUNCE_MS = 800
@@ -130,23 +132,22 @@ fun MainAppScreen() {
     }
 
     val density = LocalDensity.current
-    val edgeZonePx = with(density) { MAS_SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { MAS_SWIPE_THRESHOLD.toPx() }
-    val quickMenuBarZoneWidthPx = with(density) { MAS_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+    val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
+    val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
+    val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
-    val kbBarWidthPx = with(density) { 72.dp.toPx() }
-    val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
-    val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+    val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+    val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
     val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
     val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
     val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
 
-    val tpBarWidthPx = with(density) { 72.dp.toPx() }
-    val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
-    val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
+    val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+    val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+    val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
 
     val context = LocalContext.current
-
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -219,7 +220,21 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                                onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+                                onSwipeProgress = { delta, isPast ->
+                                    AppStateManager.updateActiveSwipe(
+                                        SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
+                                    )
+                                },
+                                onSwipeCancel = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                },
+                                onHapticTick = {
+                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
+                                },
+                                onEdgeSwipe = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                    AppStateManager.handleEdgeSwipe()
+                                },
                             )
                         val kbSwipe =
                             SwipeGestureProcessor(
@@ -227,7 +242,19 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                                onSwipeProgress = { delta, isPast ->
+                                    AppStateManager.updateActiveSwipe(
+                                        SwipeGestureProgress(SwipeGestureType.KEYBOARD, delta, swipeThresholdPx, isPast),
+                                    )
+                                },
+                                onSwipeCancel = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                },
+                                onHapticTick = {
+                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
+                                },
                                 onEdgeSwipe = {
+                                    AppStateManager.updateActiveSwipe(null)
                                     if (AppStateManager.isAnyModalActive.value) {
                                         AppStateManager.closeActiveModal()
                                     } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -251,7 +278,19 @@ fun MainAppScreen() {
                                     val tpBarMaxX = tpBarCenter + (tpBarZoneWidth / 2f)
                                     x >= tpBarMinX && x <= tpBarMaxX
                                 },
+                                onSwipeProgress = { delta, isPast ->
+                                    AppStateManager.updateActiveSwipe(
+                                        SwipeGestureProgress(SwipeGestureType.TOUCHPAD, delta, swipeThresholdPx, isPast),
+                                    )
+                                },
+                                onSwipeCancel = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                },
+                                onHapticTick = {
+                                    triggerHapticFeedback(context, HapticStrength.LIGHT)
+                                },
                                 onEdgeSwipe = {
+                                    AppStateManager.updateActiveSwipe(null)
                                     if (AppStateManager.isAnyModalActive.value) {
                                         AppStateManager.closeActiveModal()
                                     } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -265,8 +304,8 @@ fun MainAppScreen() {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val isMenuOpen =
-                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive || isFullscreenKeyboardActive ||
-                                        isTouchpadSettingsOpen || isFullscreenMouseActive
+                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive ||
+                                        isTouchpadSettingsOpen
                                 if (!isValidScreen || isMenuOpen) {
                                     continue
                                 }
