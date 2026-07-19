@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard
 
+import android.content.Context
+import android.os.Vibrator
 import android.view.Display
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -61,8 +63,10 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
+import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -147,6 +151,8 @@ fun MainAppScreen() {
 
     val context = LocalContext.current
 
+    @Suppress("DEPRECATION")
+    val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -219,7 +225,21 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                                onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+                                onSwipeProgress = { delta, isPast ->
+                                    AppStateManager.updateActiveSwipe(
+                                        SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
+                                    )
+                                },
+                                onSwipeCancel = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                },
+                                onHapticTick = {
+                                    vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                },
+                                onEdgeSwipe = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                    AppStateManager.handleEdgeSwipe()
+                                },
                             )
                         val kbSwipe =
                             SwipeGestureProcessor(
@@ -227,7 +247,19 @@ fun MainAppScreen() {
                                 swipeThresholdPx = swipeThresholdPx,
                                 overlayAtBottom = overlayAtBottom,
                                 customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                                onSwipeProgress = { delta, isPast ->
+                                    AppStateManager.updateActiveSwipe(
+                                        SwipeGestureProgress(SwipeGestureType.KEYBOARD, delta, swipeThresholdPx, isPast),
+                                    )
+                                },
+                                onSwipeCancel = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                },
+                                onHapticTick = {
+                                    vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                },
                                 onEdgeSwipe = {
+                                    AppStateManager.updateActiveSwipe(null)
                                     if (AppStateManager.isAnyModalActive.value) {
                                         AppStateManager.closeActiveModal()
                                     } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -251,7 +283,19 @@ fun MainAppScreen() {
                                     val tpBarMaxX = tpBarCenter + (tpBarZoneWidth / 2f)
                                     x >= tpBarMinX && x <= tpBarMaxX
                                 },
+                                onSwipeProgress = { delta, isPast ->
+                                    AppStateManager.updateActiveSwipe(
+                                        SwipeGestureProgress(SwipeGestureType.TOUCHPAD, delta, swipeThresholdPx, isPast),
+                                    )
+                                },
+                                onSwipeCancel = {
+                                    AppStateManager.updateActiveSwipe(null)
+                                },
+                                onHapticTick = {
+                                    vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                },
                                 onEdgeSwipe = {
+                                    AppStateManager.updateActiveSwipe(null)
                                     if (AppStateManager.isAnyModalActive.value) {
                                         AppStateManager.closeActiveModal()
                                     } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -265,8 +309,8 @@ fun MainAppScreen() {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Initial)
                                 val isMenuOpen =
-                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive || isFullscreenKeyboardActive ||
-                                        isTouchpadSettingsOpen || isFullscreenMouseActive
+                                    isEditorActive || isGlobalSettingsOpen || isBackgroundSettingsActive ||
+                                        isTouchpadSettingsOpen
                                 if (!isValidScreen || isMenuOpen) {
                                     continue
                                 }

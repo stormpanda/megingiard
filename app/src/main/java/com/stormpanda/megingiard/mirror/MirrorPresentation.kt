@@ -25,6 +25,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Vibrator
 import android.view.Display
 import android.view.Gravity
 import android.view.Surface
@@ -94,12 +95,16 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.MacroPadFocusPolicyState
 import com.stormpanda.megingiard.SwipeGestureProcessor
+import com.stormpanda.megingiard.SwipeGestureProgress
+import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
+import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -418,6 +423,10 @@ class MirrorPresentation(
                             val tpBarWidthPx = with(density) { 72.dp.toPx() }
                             val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
                             val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
+                            val context = LocalContext.current
+
+                            @Suppress("DEPRECATION")
+                            val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
 
                             val projectionController =
                                 remember(edgeZonePx, overlayAtBottom) {
@@ -470,15 +479,27 @@ class MirrorPresentation(
                                             kbBarMinX,
                                             kbBarMaxX,
                                         ) {
-                                            if (!isFullscreenMouseActive && !isFullscreenKeyboardActive) return@pointerInput
-                                            if (isFullscreenKeyboardActive || isFullscreenMouseActive) return@pointerInput
                                             val qmSwipe =
                                                 SwipeGestureProcessor(
                                                     edgeZonePx = edgeZonePx,
                                                     swipeThresholdPx = swipeThresholdPx,
                                                     overlayAtBottom = overlayAtBottom,
                                                     quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
-                                                    onEdgeSwipe = { AppStateManager.handleEdgeSwipe() },
+                                                    onSwipeProgress = { delta, isPast ->
+                                                        AppStateManager.updateActiveSwipe(
+                                                            SwipeGestureProgress(SwipeGestureType.MENU, delta, swipeThresholdPx, isPast),
+                                                        )
+                                                    },
+                                                    onSwipeCancel = {
+                                                        AppStateManager.updateActiveSwipe(null)
+                                                    },
+                                                    onHapticTick = {
+                                                        vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                                    },
+                                                    onEdgeSwipe = {
+                                                        AppStateManager.updateActiveSwipe(null)
+                                                        AppStateManager.handleEdgeSwipe()
+                                                    },
                                                 )
                                             val kbSwipe =
                                                 SwipeGestureProcessor(
@@ -486,7 +507,24 @@ class MirrorPresentation(
                                                     swipeThresholdPx = swipeThresholdPx,
                                                     overlayAtBottom = overlayAtBottom,
                                                     customZoneCheck = { x, _ -> x >= kbBarMinX && x <= kbBarMaxX },
+                                                    onSwipeProgress = { delta, isPast ->
+                                                        AppStateManager.updateActiveSwipe(
+                                                            SwipeGestureProgress(
+                                                                SwipeGestureType.KEYBOARD,
+                                                                delta,
+                                                                swipeThresholdPx,
+                                                                isPast,
+                                                            ),
+                                                        )
+                                                    },
+                                                    onSwipeCancel = {
+                                                        AppStateManager.updateActiveSwipe(null)
+                                                    },
+                                                    onHapticTick = {
+                                                        vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                                    },
                                                     onEdgeSwipe = {
+                                                        AppStateManager.updateActiveSwipe(null)
                                                         if (AppStateManager.isAnyModalActive.value) {
                                                             AppStateManager.closeActiveModal()
                                                         } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -507,7 +545,24 @@ class MirrorPresentation(
                                                         val tpBarMaxX = tpBarCenter + (tpBarZoneWidthPx / 2f)
                                                         x >= tpBarMinX && x <= tpBarMaxX
                                                     },
+                                                    onSwipeProgress = { delta, isPast ->
+                                                        AppStateManager.updateActiveSwipe(
+                                                            SwipeGestureProgress(
+                                                                SwipeGestureType.TOUCHPAD,
+                                                                delta,
+                                                                swipeThresholdPx,
+                                                                isPast,
+                                                            ),
+                                                        )
+                                                    },
+                                                    onSwipeCancel = {
+                                                        AppStateManager.updateActiveSwipe(null)
+                                                    },
+                                                    onHapticTick = {
+                                                        vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                                    },
                                                     onEdgeSwipe = {
+                                                        AppStateManager.updateActiveSwipe(null)
                                                         if (AppStateManager.isAnyModalActive.value) {
                                                             AppStateManager.closeActiveModal()
                                                         } else if (AppStateManager.isQuickMenuOpen.value) {
@@ -569,9 +624,7 @@ class MirrorPresentation(
                                                             }
                                                         }
 
-                                                        else -> {
-                                                            Unit
-                                                        }
+                                                        else -> {}
                                                     }
                                                 }
                                             }

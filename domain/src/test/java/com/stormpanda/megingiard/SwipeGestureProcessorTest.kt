@@ -8,8 +8,8 @@ import org.junit.Test
 /**
  * Unit tests for [SwipeGestureProcessor] — the edge-swipe gesture state machine.
  *
- * The callbacks (`onTouchingChanged`, `onEdgeSwipe`) are injected here so the tests
- * run on the JVM without touching [AppStateManager] or Android framework APIs.
+ * The callbacks are injected here so the tests run on the JVM without touching
+ * [AppStateManager] or Android framework APIs.
  */
 class SwipeGestureProcessorTest {
     private val EDGE_ZONE_PX = 60f
@@ -22,24 +22,36 @@ class SwipeGestureProcessorTest {
     private fun topProcessor(
         onTouchingChanged: (Boolean) -> Unit = {},
         onEdgeSwipe: () -> Unit = {},
+        onSwipeProgress: (Float, Boolean) -> Unit = { _, _ -> },
+        onSwipeCancel: () -> Unit = {},
+        onHapticTick: () -> Unit = {},
     ) = SwipeGestureProcessor(
         edgeZonePx = EDGE_ZONE_PX,
         swipeThresholdPx = THRESHOLD_PX,
         overlayAtBottom = false,
         onTouchingChanged = onTouchingChanged,
         onEdgeSwipe = onEdgeSwipe,
+        onSwipeProgress = onSwipeProgress,
+        onSwipeCancel = onSwipeCancel,
+        onHapticTick = onHapticTick,
     )
 
     /** Creates a bottom-edge processor (quick menu bar at bottom). */
     private fun bottomProcessor(
         onTouchingChanged: (Boolean) -> Unit = {},
         onEdgeSwipe: () -> Unit = {},
+        onSwipeProgress: (Float, Boolean) -> Unit = { _, _ -> },
+        onSwipeCancel: () -> Unit = {},
+        onHapticTick: () -> Unit = {},
     ) = SwipeGestureProcessor(
         edgeZonePx = EDGE_ZONE_PX,
         swipeThresholdPx = THRESHOLD_PX,
         overlayAtBottom = true,
         onTouchingChanged = onTouchingChanged,
         onEdgeSwipe = onEdgeSwipe,
+        onSwipeProgress = onSwipeProgress,
+        onSwipeCancel = onSwipeCancel,
+        onHapticTick = onHapticTick,
     )
 
     // ── onPress — touching callback ───────────────────────────────────────────
@@ -73,12 +85,14 @@ class SwipeGestureProcessorTest {
     // ── top-edge swipe detection ──────────────────────────────────────────────
 
     @Test
-    fun `top edge swipe triggers onEdgeSwipe when moving down past threshold`() {
+    fun `top edge swipe triggers onEdgeSwipe only upon release past threshold`() {
         var swipeCount = 0
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
         p.onPress(pointerY = 40f, containerHeight = CONTAINER_H) // within top edge zone
         p.onMove(pointerY = 40f + THRESHOLD_PX) // exactly at threshold
-        assertEquals(1, swipeCount)
+        assertEquals(0, swipeCount) // should NOT trigger on move
+        p.onRelease(allPointersUp = true)
+        assertEquals(1, swipeCount) // triggers on release
     }
 
     @Test
@@ -87,6 +101,7 @@ class SwipeGestureProcessorTest {
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
         p.onPress(40f, CONTAINER_H)
         p.onMove(40f + THRESHOLD_PX - 1f) // 1px short
+        p.onRelease(allPointersUp = true)
         assertEquals(0, swipeCount)
     }
 
@@ -96,19 +111,22 @@ class SwipeGestureProcessorTest {
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
         p.onPress(pointerY = EDGE_ZONE_PX + 1f, containerHeight = CONTAINER_H) // outside zone
         p.onMove(pointerY = EDGE_ZONE_PX + 1f + THRESHOLD_PX + 10f)
+        p.onRelease(allPointersUp = true)
         assertEquals(0, swipeCount)
     }
 
     // ── bottom-edge swipe detection ───────────────────────────────────────────
 
     @Test
-    fun `bottom edge swipe triggers onEdgeSwipe when moving up past threshold`() {
+    fun `bottom edge swipe triggers onEdgeSwipe only upon release past threshold`() {
         var swipeCount = 0
         val p = bottomProcessor(onEdgeSwipe = { swipeCount++ })
         val startY = CONTAINER_H - EDGE_ZONE_PX + 5f // inside bottom edge zone
         p.onPress(startY, CONTAINER_H)
         p.onMove(startY - THRESHOLD_PX) // moved up enough
-        assertEquals(1, swipeCount)
+        assertEquals(0, swipeCount) // should NOT trigger on move
+        p.onRelease(allPointersUp = true)
+        assertEquals(1, swipeCount) // triggers on release
     }
 
     @Test
@@ -118,6 +136,7 @@ class SwipeGestureProcessorTest {
         val startY = CONTAINER_H - 10f
         p.onPress(startY, CONTAINER_H)
         p.onMove(startY - (THRESHOLD_PX - 1f))
+        p.onRelease(allPointersUp = true)
         assertEquals(0, swipeCount)
     }
 
@@ -128,9 +147,10 @@ class SwipeGestureProcessorTest {
         var swipeCount = 0
         val p = topProcessor(onEdgeSwipe = { swipeCount++ })
         p.onPress(10f, CONTAINER_H)
-        p.onMove(10f + THRESHOLD_PX) // fires
-        p.onMove(10f + THRESHOLD_PX + 20f) // should NOT fire again
+        p.onMove(10f + THRESHOLD_PX)
+        p.onMove(10f + THRESHOLD_PX + 20f)
         p.onMove(10f + THRESHOLD_PX + 40f)
+        p.onRelease(allPointersUp = true)
         assertEquals(1, swipeCount)
     }
 
@@ -146,7 +166,60 @@ class SwipeGestureProcessorTest {
         // Second gesture
         p.onPress(10f, CONTAINER_H)
         p.onMove(10f + THRESHOLD_PX)
+        p.onRelease(allPointersUp = true)
         assertEquals(2, swipeCount)
+    }
+
+    // ── progress, cancel, and haptics ─────────────────────────────────────────
+
+    @Test
+    fun `reports progress on move`() {
+        var progressDelta = 0f
+        var progressPast = false
+        val p =
+            topProcessor(onSwipeProgress = { delta, past ->
+                progressDelta = delta
+                progressPast = past
+            })
+        p.onPress(10f, CONTAINER_H)
+        p.onMove(10f + 50f)
+        assertEquals(50f, progressDelta)
+        assertFalse(progressPast)
+
+        p.onMove(10f + THRESHOLD_PX + 10f)
+        assertEquals(THRESHOLD_PX + 10f, progressDelta)
+        assertTrue(progressPast)
+    }
+
+    @Test
+    fun `triggers haptic tick exactly once when crossing threshold`() {
+        var hapticCount = 0
+        val p = topProcessor(onHapticTick = { hapticCount++ })
+        p.onPress(10f, CONTAINER_H)
+        p.onMove(10f + 50f)
+        assertEquals(0, hapticCount)
+
+        p.onMove(10f + THRESHOLD_PX) // crosses threshold
+        assertEquals(1, hapticCount)
+
+        p.onMove(10f + THRESHOLD_PX + 10f) // stays past threshold
+        assertEquals(1, hapticCount) // no extra ticks
+
+        p.onMove(10f + 50f) // goes back below threshold
+        assertEquals(1, hapticCount)
+
+        p.onMove(10f + THRESHOLD_PX) // crosses again
+        assertEquals(2, hapticCount)
+    }
+
+    @Test
+    fun `triggers cancel when released below threshold`() {
+        var cancelled = false
+        val p = topProcessor(onSwipeCancel = { cancelled = true })
+        p.onPress(10f, CONTAINER_H)
+        p.onMove(10f + 50f)
+        p.onRelease(allPointersUp = true)
+        assertTrue(cancelled)
     }
 
     // ── isNearEdge ────────────────────────────────────────────────────────────

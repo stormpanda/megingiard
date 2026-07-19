@@ -2,34 +2,50 @@ package com.stormpanda.megingiard.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.SwipeGestureProgress
+import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.delay
 
@@ -82,6 +98,44 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
         }
     }
 
+    val activeSwipe by AppStateManager.activeSwipe.collectAsState()
+    val swipeAlpha by animateFloatAsState(
+        targetValue = if (activeSwipe != null) 0f else 1f,
+        label = "swipeAlpha",
+    )
+
+    val density = LocalDensity.current
+    val targetOffsetDp =
+        remember(activeSwipe) {
+            val currentActive = activeSwipe
+            if (currentActive != null) {
+                val delta = with(density) { currentActive.deltaPx.toDp() }
+                val threshold = with(density) { currentActive.thresholdPx.toDp() }
+                val visualDelta = delta * 1.8f
+                val visualThreshold = threshold * 1.8f
+                val visual =
+                    if (visualDelta < visualThreshold) {
+                        visualDelta
+                    } else {
+                        visualThreshold + (visualDelta - visualThreshold) * 0.3f
+                    }
+                visual.coerceAtMost(80.dp)
+            } else {
+                0.dp
+            }
+        }
+    val animatedOffsetDp by animateDpAsState(
+        targetValue = targetOffsetDp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "animatedOffsetDp",
+    )
+
+    var lastSwipeType by remember { mutableStateOf<SwipeGestureType?>(null) }
+    val currentActiveSwipe = activeSwipe
+    if (currentActiveSwipe != null) {
+        lastSwipeType = currentActiveSwipe.type
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         // Bar tab (Center)
         QuickMenuBarTab(
@@ -91,7 +145,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                 Modifier
                     .align(
                         if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
-                    ).graphicsLayer(alpha = alpha.value),
+                    ).graphicsLayer(alpha = alpha.value * swipeAlpha),
         )
 
         // Keyboard Bar tab (Left/Start)
@@ -104,7 +158,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                         .align(
                             if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
                         ).padding(start = 24.dp)
-                        .graphicsLayer(alpha = alpha.value),
+                        .graphicsLayer(alpha = alpha.value * swipeAlpha),
             )
         }
 
@@ -118,8 +172,73 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                         .align(
                             if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
                         ).padding(end = 24.dp)
-                        .graphicsLayer(alpha = alpha.value),
+                        .graphicsLayer(alpha = alpha.value * swipeAlpha),
             )
+        }
+
+        // Sliding gesture pill
+        val swipeType = lastSwipeType
+        if (animatedOffsetDp > 0.dp && swipeType != null) {
+            val isPastThreshold = activeSwipe?.isPastThreshold ?: false
+            val initialOffscreenOffset = 48.dp + 10.dp
+            val yOffset =
+                if (overlayAtBottom) {
+                    initialOffscreenOffset - animatedOffsetDp
+                } else {
+                    -initialOffscreenOffset + animatedOffsetDp
+                }
+
+            Box(
+                modifier =
+                    Modifier
+                        .align(
+                            if (overlayAtBottom) {
+                                when (swipeType) {
+                                    SwipeGestureType.KEYBOARD -> Alignment.BottomStart
+                                    SwipeGestureType.MENU -> Alignment.BottomCenter
+                                    SwipeGestureType.TOUCHPAD -> Alignment.BottomEnd
+                                    else -> Alignment.BottomCenter
+                                }
+                            } else {
+                                when (swipeType) {
+                                    SwipeGestureType.KEYBOARD -> Alignment.TopStart
+                                    SwipeGestureType.MENU -> Alignment.TopCenter
+                                    SwipeGestureType.TOUCHPAD -> Alignment.TopEnd
+                                    else -> Alignment.TopCenter
+                                }
+                            },
+                        ).offset(y = yOffset)
+                        .padding(
+                            start = if (swipeType == SwipeGestureType.KEYBOARD) 36.dp else 0.dp,
+                            end = if (swipeType == SwipeGestureType.TOUCHPAD) 36.dp else 0.dp,
+                        ).shadow(
+                            elevation = 6.dp,
+                            shape = RoundedCornerShape(50),
+                            clip = false,
+                        ).size(48.dp)
+                        .background(
+                            color = if (isPastThreshold) colors.accent else colors.controlOverlay,
+                            shape = RoundedCornerShape(50),
+                        ).border(
+                            width = 1.dp,
+                            color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
+                            shape = RoundedCornerShape(50),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector =
+                        when (swipeType) {
+                            SwipeGestureType.KEYBOARD -> Icons.Rounded.Keyboard
+                            SwipeGestureType.MENU -> Icons.Rounded.Menu
+                            SwipeGestureType.TOUCHPAD -> Icons.Rounded.Mouse
+                            else -> Icons.Rounded.Menu
+                        },
+                    contentDescription = null,
+                    tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
 
         // Quick Menu overlay — rendered as a sibling so it covers MacroPadScreen

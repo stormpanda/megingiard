@@ -169,6 +169,18 @@ object AppStateManager {
         _isQuickMenuOpen.value = false
     }
 
+    private val _activeSwipe = MutableStateFlow<SwipeGestureProgress?>(null)
+    val activeSwipe: StateFlow<SwipeGestureProgress?> = _activeSwipe.asStateFlow()
+
+    fun updateActiveSwipe(progress: SwipeGestureProgress?) {
+        if (progress == null && _activeSwipe.value != null) {
+            AppLog.d(TAG, "swipe gesture completed or cancelled")
+        } else if (progress != null && _activeSwipe.value == null) {
+            AppLog.d(TAG, "swipe gesture started: type=${progress.type}")
+        }
+        _activeSwipe.value = progress
+    }
+
     // ── Modal overlay states ──────────────────────────────────────────────────
 
     private val _isFullscreenKeyboardActive = MutableStateFlow(false)
