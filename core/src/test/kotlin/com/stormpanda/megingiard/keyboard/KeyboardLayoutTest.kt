@@ -187,6 +187,11 @@ class KeyboardLayoutTest {
         val fKey = KeyDef("f", "f", 33)
         assertTrue(getPopupOptions(fKey, isUpper = false).isEmpty())
 
+        // Keys with shiftLabel (like 1 with shiftLabel !) return the shiftLabel in options
+        val oneKey = KeyDef("1", "1", 2, shiftLabel = "!")
+        val oneOptions = getPopupOptions(oneKey, isUpper = false)
+        assertEquals(listOf("!"), oneOptions)
+
         // Multi-option keys popup lists
         val jKey = KeyDef("j", "j", 36, superscript = "(")
         val jOptions = getPopupOptions(jKey, isUpper = false)

@@ -1099,7 +1099,16 @@ fun KeyboardScreen(
                                                             )
                                                         } else {
                                                             val charToInject = popup.options[index]
-                                                            injectPopupChar(charToInject, kbLayout)
+                                                            if (popup.keyDef.shiftLabel != null &&
+                                                                popup.keyDef.shiftLabel == charToInject
+                                                            ) {
+                                                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTSHIFT)
+                                                                KeyInjector.keyDown(popup.keyDef.linuxKeycode)
+                                                                KeyInjector.keyUp(popup.keyDef.linuxKeycode)
+                                                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTSHIFT)
+                                                            } else {
+                                                                injectPopupChar(charToInject, kbLayout)
+                                                            }
                                                             controller.onKeyUp(
                                                                 pid,
                                                                 layoutState.grid,

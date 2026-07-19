@@ -123,6 +123,9 @@ fun getPopupOptions(
     keyDef: KeyDef,
     isUpper: Boolean,
 ): List<String> {
+    if (keyDef.shiftLabel != null) {
+        return listOf(keyDef.shiftLabel)
+    }
     val id = keyDef.id
     when (id) {
         "j" -> return listOf("(", "[", "{", "<")

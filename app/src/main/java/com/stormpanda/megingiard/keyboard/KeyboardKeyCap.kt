@@ -2,7 +2,9 @@ package com.stormpanda.megingiard.keyboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -226,31 +228,63 @@ internal fun KeyCap(
 
                 else -> {
                     val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
-                    val useShiftLabel = isShiftActive || isCapsActive
-                    val displayLabel =
-                        when {
-                            isAltGrActive && keyDef.altGrLabel != null -> {
-                                keyDef.altGrLabel!!
-                            }
+                    val shiftLabel = keyDef.shiftLabel
+                    if (shiftLabel != null && !isLetter) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            val useShiftLabel = isShiftActive || isCapsActive
+                            val shiftColor = if (useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
+                            val normalColor = if (!useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
+                            val shiftWeight = if (useShiftLabel) FontWeight.Bold else FontWeight.Normal
+                            val normalWeight = if (!useShiftLabel) FontWeight.Bold else FontWeight.Normal
 
-                            useShiftLabel -> {
-                                val s = keyDef.shiftLabel ?: keyDef.label
-                                if (isLetter) s.uppercase() else s
-                            }
-
-                            else -> {
-                                keyDef.label
-                            }
+                            Text(
+                                text = shiftLabel,
+                                color = shiftColor,
+                                fontSize = 10.sp,
+                                fontWeight = shiftWeight,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                            )
+                            Text(
+                                text = keyDef.label,
+                                color = normalColor,
+                                fontSize = 11.sp,
+                                fontWeight = normalWeight,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                            )
                         }
+                    } else {
+                        val useShiftLabel = isShiftActive || isCapsActive
+                        val displayLabel =
+                            when {
+                                isAltGrActive && keyDef.altGrLabel != null -> {
+                                    keyDef.altGrLabel!!
+                                }
 
-                    Text(
-                        text = displayLabel,
-                        color = contentColor,
-                        fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
-                        fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                    )
+                                useShiftLabel -> {
+                                    val s = keyDef.shiftLabel ?: keyDef.label
+                                    if (isLetter) s.uppercase() else s
+                                }
+
+                                else -> {
+                                    keyDef.label
+                                }
+                            }
+
+                        Text(
+                            text = displayLabel,
+                            color = contentColor,
+                            fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
+                            fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
 

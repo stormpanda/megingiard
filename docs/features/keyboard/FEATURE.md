@@ -61,8 +61,9 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - When **Key Repeat** is enabled in Settings, holding the backspace key (`"bksp"`) MUST trigger the initial key injection after **500 ms**, followed by repeated injections every **30 ms**.
 - Holding a top-row character key (which displays a superscript number) instead triggers a popup options bubble showing its numeric alternative after **400 ms** (no letter variants or umlauts are displayed).
+- In Compact Full Keyboard Mode, holding a special character key (such as numbers or punctuation keys with a defined shift option) triggers a popup options bubble showing its shifted alternative after **400 ms**.
 - Standard character keys do not support repeated key inputs upon press/hold; instead, their single key injection is deferred to finger release to prevent conflicts with the long-press overlay.
-- Dragging horizontally on the popup overlay selects the alternative number. Releasing the finger injects the selected number and dismisses the popup.
+- Dragging horizontally on the popup overlay selects the alternative number/symbol. Releasing the finger injects the selected option and dismisses the popup.
 - When Key Repeat is **disabled** for control keys, a key-up event MUST be sent immediately at the moment of the initial key-down to prevent the system-level repeat from firing.
 
 ### FR-K5: No Special Permissions Required
@@ -107,6 +108,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
   - The keyboard container height MUST increase from `262 dp` to `314 dp`.
   - The keyboard grid height MUST increase from `168 dp` to `220 dp`.
 - The layout MUST align columns precisely by using uniform row width weights of `15.0f` per row.
+- Special character keys in Compact Full Keyboard Mode MUST show both their unshifted and shifted symbols simultaneously, stacked vertically on the key cap. The currently active symbol (determined by the state of the Shift/CapsLock modifiers) is highlighted, and the inactive symbol is dimmed.
 
 ---
 
