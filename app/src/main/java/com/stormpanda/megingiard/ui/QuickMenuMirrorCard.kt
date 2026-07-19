@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -52,6 +54,20 @@ internal fun MirrorControlCard(
     onToggleViewportEdit: () -> Unit,
     onTakeScreenshot: () -> Unit,
 ) {
+    val menuBezelBrush =
+        remember {
+            Brush.linearGradient(
+                colorStops =
+                    arrayOf(
+                        0.0f to Color.White.copy(alpha = 0.25f),
+                        0.25f to Color.White.copy(alpha = 0.05f),
+                        0.5f to Color.Transparent,
+                        1.0f to Color.Black.copy(alpha = 0.4f),
+                    ),
+                start = Offset(0f, 0f),
+                end = Offset.Infinite,
+            )
+        }
     Row(
         modifier =
             modifier
@@ -60,7 +76,7 @@ internal fun MirrorControlCard(
                 .shadow(PM_ELEVATION, RoundedCornerShape(PM_PANEL_CORNER))
                 .clip(RoundedCornerShape(PM_PANEL_CORNER))
                 .background(colors.controlOverlay)
-                .border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_PANEL_CORNER))
+                .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = RoundedCornerShape(PM_PANEL_CORNER))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
