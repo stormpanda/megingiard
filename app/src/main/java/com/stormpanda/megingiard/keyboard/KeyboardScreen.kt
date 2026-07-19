@@ -733,13 +733,22 @@ fun KeyboardScreen(
                                                         if (keyDef != null && isCharKey) {
                                                             val bounds = keyBounds[keyId]
                                                             if (bounds != null) {
+                                                                val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
+                                                                val useShiftLabel = isShiftActive || isCapsActive
                                                                 val label =
-                                                                    if (isShiftActive ||
-                                                                        isCapsActive
-                                                                    ) {
-                                                                        keyDef.label.uppercase()
-                                                                    } else {
-                                                                        keyDef.label.lowercase()
+                                                                    when {
+                                                                        isAltGrActive && keyDef.altGrLabel != null -> {
+                                                                            keyDef.altGrLabel!!
+                                                                        }
+
+                                                                        useShiftLabel -> {
+                                                                            val s = keyDef.shiftLabel ?: keyDef.label
+                                                                            if (isLetter) s.uppercase() else s
+                                                                        }
+
+                                                                        else -> {
+                                                                            keyDef.label
+                                                                        }
                                                                     }
                                                                 activePopupState =
                                                                     PopupState(keyDef, listOf(label), 0, bounds, isLongPress = false)

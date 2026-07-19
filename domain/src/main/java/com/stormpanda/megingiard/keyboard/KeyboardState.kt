@@ -48,8 +48,21 @@ object KeyboardState {
     private val touchDownTimes: MutableMap<String, Long> = mutableMapOf()
 
     /** Called when a modifier key touch begins. Records the current time. */
-    fun onModifierTouchDown(id: String) {
+    fun onModifierTouchDown(
+        id: String,
+        keycode: Int = 0,
+        isFullLayout: Boolean = false,
+    ): Int? {
         touchDownTimes[id] = System.currentTimeMillis()
+        if (isFullLayout) {
+            val flow = getOrCreate(id)
+            if (flow.value == ModifierState.INACTIVE) {
+                AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (immediate full layout touch down)")
+                flow.value = ModifierState.HELD
+                return if (keycode != 0) keycode else null
+            }
+        }
+        return null
     }
 
     /**
@@ -69,6 +82,7 @@ object KeyboardState {
     fun onModifierTouchUp(
         id: String,
         keycode: Int,
+        isFullLayout: Boolean = false,
     ): List<Int> {
         val flow = getOrCreate(id)
         val downTime = touchDownTimes.remove(id) ?: System.currentTimeMillis()
@@ -79,16 +93,22 @@ object KeyboardState {
 
         return when (flow.value) {
             ModifierState.HELD -> {
-                AppLog.d(TAG, "modifier '$id' HELD → INACTIVE (keycode=$keycode)")
-                flow.value = ModifierState.INACTIVE
-                if (keycode != 0) listOf(keycode) else emptyList()
+                if (isFullLayout && duration < MODIFIER_HOLD_THRESHOLD_MS) {
+                    AppLog.d(TAG, "modifier '$id' HELD → STICKY (short touch on full layout)")
+                    flow.value = ModifierState.STICKY
+                    if (keycode != 0) listOf(keycode) else emptyList()
+                } else {
+                    AppLog.d(TAG, "modifier '$id' HELD → INACTIVE (keycode=$keycode)")
+                    flow.value = ModifierState.INACTIVE
+                    if (keycode != 0) listOf(keycode) else emptyList()
+                }
             }
 
             ModifierState.STICKY -> {
                 // second tap on an already-sticky modifier cycles back to INACTIVE
                 AppLog.d(TAG, "modifier '$id' STICKY → INACTIVE (second tap)")
                 flow.value = ModifierState.INACTIVE
-                if (id == "lshift" || id == "rshift") {
+                if (!isFullLayout && (id == "lshift" || id == "rshift")) {
                     if (wasCapsActive) {
                         capsFlow.value = ModifierState.INACTIVE
                     }
@@ -97,7 +117,7 @@ object KeyboardState {
             }
 
             ModifierState.INACTIVE -> {
-                if (id == "lshift" || id == "rshift") {
+                if (!isFullLayout && (id == "lshift" || id == "rshift")) {
                     if (wasCapsActive) {
                         capsFlow.value = ModifierState.INACTIVE
                         return if (keycode != 0) listOf(keycode) else emptyList()
