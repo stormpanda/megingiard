@@ -348,7 +348,7 @@ fun FullscreenMouseOverlay() {
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(
-                            top = TP_TOOLBAR_HEIGHT + 4.dp,
+                            top = 8.dp,
                             bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
                             start = 8.dp,
                             end = 8.dp,
@@ -447,22 +447,6 @@ fun FullscreenMouseOverlay() {
             }
         }
 
-        Row(
-            modifier =
-                Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(TP_TOOLBAR_HEIGHT)
-                    .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            ModeToggleButton(
-                useMouse = touchpadUseMouse,
-                onToggle = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
-            )
-        }
-
         // 4. Bottom Toolbar (Collapse and settings button)
         Row(
             modifier =
@@ -498,6 +482,13 @@ fun FullscreenMouseOverlay() {
                     modifier = Modifier.size(TP_ICON_SIZE_MEDIUM),
                 )
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            ModeToggleButton(
+                useMouse = touchpadUseMouse,
+                onToggle = { TouchpadSettings.setTouchpadUseMouse(!touchpadUseMouse) },
+            )
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -727,7 +718,7 @@ private fun ModeToggleButton(
                 ) {
                     Text(
                         text = "Mouse",
-                        color = colors.onSurface.copy(alpha = 0.5f),
+                        color = colors.onSurface.copy(alpha = 0.25f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -760,7 +751,7 @@ private fun ModeToggleButton(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Touch",
-                        color = colors.onSurface.copy(alpha = 0.5f),
+                        color = colors.onSurface.copy(alpha = 0.25f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )

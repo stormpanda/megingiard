@@ -1647,7 +1647,7 @@ private fun KeyboardModeToggleButton(
                 ) {
                     Text(
                         text = "Ergo",
-                        color = colors.onSurface.copy(alpha = 0.5f),
+                        color = colors.onSurface.copy(alpha = 0.25f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -1680,7 +1680,7 @@ private fun KeyboardModeToggleButton(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Full",
-                        color = colors.onSurface.copy(alpha = 0.5f),
+                        color = colors.onSurface.copy(alpha = 0.25f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
