@@ -91,7 +91,7 @@ private val SLIDER_VALUE_WIDTH = 80.dp
 private val TOOLBAR_EXPANDED_WIDTH = 360.dp
 private const val SLIDER_VALUE_MIN = 0f
 private const val SLIDER_VALUE_MAX = 100f
-private val TOOLBAR_SAFE_MARGIN = 0.dp
+private val TOOLBAR_SAFE_MARGIN = 32.dp
 private const val TOUCH_AREA_RATIO = 0.25f
 private val CLE_HELP_BTN_SIZE = 32.dp
 private val CLE_HELP_ICON_SIZE = 20.dp
@@ -99,7 +99,7 @@ private val CLE_HELP_BTN_CORNER = 4.dp
 private val CLE_SPACER_WIDTH = 32.dp
 
 @Composable
-fun CutoutLayoutEditor(overlayAtBottom: Boolean) {
+fun CutoutLayoutEditor() {
     val colors = LocalAppColors.current
     val activeLayout by MacroPadState.activeLayout.collectAsState()
     val layout = activeLayout ?: return
@@ -617,13 +617,9 @@ fun CutoutLayoutEditor(overlayAtBottom: Boolean) {
         val marginPx = with(density) { TOOLBAR_SAFE_MARGIN.toPx() }
 
         if (toolbarOffset == null && toolbarSize != IntSize.Zero) {
-            val initialY =
-                if (overlayAtBottom) {
-                    marginPx
-                } else {
-                    containerH - toolbarSize.height.toFloat() - marginPx
-                }
-            toolbarOffset = IntOffset(0, initialY.roundToInt())
+            val initialX = (containerW - toolbarSize.width) / 2f - marginPx
+            val initialY = containerH - toolbarSize.height.toFloat() - marginPx
+            toolbarOffset = IntOffset(initialX.roundToInt(), initialY.roundToInt())
         }
 
         val currentOffset = toolbarOffset ?: IntOffset.Zero

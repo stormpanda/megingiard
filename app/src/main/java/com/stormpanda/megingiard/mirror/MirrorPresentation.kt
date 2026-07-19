@@ -724,7 +724,7 @@ class MirrorPresentation(
                                             Modifier
                                                 .fillMaxSize(),
                                     ) {
-                                        CutoutLayoutEditor(overlayAtBottom = overlayAtBottom)
+                                        CutoutLayoutEditor()
                                     }
                                 }
 
