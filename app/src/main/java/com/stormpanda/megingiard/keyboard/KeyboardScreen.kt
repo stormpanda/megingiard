@@ -1108,6 +1108,7 @@ fun KeyboardScreen(
                                             isShiftActive = isShiftActive,
                                             isCapsActive = isCapsActive,
                                             isAltGrActive = isAltGrActive,
+                                            isFullLayout = activeState.mode == KeyboardMode.FULL,
                                             modifier = Modifier.weight(key.widthWeight),
                                             onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                         )

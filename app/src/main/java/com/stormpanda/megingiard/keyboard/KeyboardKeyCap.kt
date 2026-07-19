@@ -114,7 +114,7 @@ internal fun KeyCap(
     val isModifierActive =
         modifierState != ModifierState.INACTIVE ||
             (!isFullLayout && (keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
-    val isBgActive = isModifierActive && keyDef.id != "caps"
+    val isBgActive = isModifierActive && (keyDef.id != "caps" || isFullLayout)
 
     // Gboard style classification
     val isSpecialKey =
