@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Keyboard
@@ -61,9 +62,19 @@ private val QM_BAR_TOP_PADDING = 6.dp
 private val QM_BAR_IDLE_WIDTH = 72.dp
 private val QM_BAR_IDLE_HEIGHT = 4.dp
 private val QM_BAR_SHADOW_ELEVATION = 3.dp
+private val QM_BAR_INSET_EXTRA = 3.dp
 
 /** Vertical space this bar occupies at the screen edge. Screens can inset by this amount. */
-val QUICK_MENU_BAR_INSET: Dp = QM_BAR_TOP_PADDING + QM_BAR_IDLE_HEIGHT + 3.dp
+val QUICK_MENU_BAR_INSET: Dp = QM_BAR_TOP_PADDING + QM_BAR_IDLE_HEIGHT + QM_BAR_INSET_EXTRA
+
+private const val GESTURE_VISUAL_MULTIPLIER = 1.8f
+private const val GESTURE_RESISTANCE_FACTOR = 0.3f
+private val GESTURE_MAX_OFFSET = 80.dp
+
+private val PILL_OFFSCREEN_PADDING = 10.dp
+private val PILL_SHADOW_ELEVATION = 6.dp
+private val PILL_BORDER_WIDTH = 1.dp
+private val PILL_ICON_SIZE = 24.dp
 
 /**
  * Always-visible Quick Menu Bar anchored to the screen edge defined by [SettingsManager.overlayAtBottom].
@@ -105,36 +116,41 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     )
 
     val density = LocalDensity.current
-    val targetOffsetDp =
-        remember(activeSwipe) {
-            val currentActive = activeSwipe
-            if (currentActive != null) {
-                val delta = with(density) { currentActive.deltaPx.toDp() }
-                val threshold = with(density) { currentActive.thresholdPx.toDp() }
-                val visualDelta = delta * 1.8f
-                val visualThreshold = threshold * 1.8f
-                val visual =
-                    if (visualDelta < visualThreshold) {
-                        visualDelta
-                    } else {
-                        visualThreshold + (visualDelta - visualThreshold) * 0.3f
-                    }
-                visual.coerceAtMost(80.dp)
-            } else {
-                0.dp
-            }
-        }
-    val animatedOffsetDp by animateDpAsState(
-        targetValue = targetOffsetDp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "animatedOffsetDp",
-    )
 
-    var lastSwipeType by remember { mutableStateOf<SwipeGestureType?>(null) }
-    val currentActiveSwipe = activeSwipe
-    if (currentActiveSwipe != null) {
-        lastSwipeType = currentActiveSwipe.type
+    fun getTargetOffset(type: SwipeGestureType): Dp {
+        val currentActive = activeSwipe
+        return if (currentActive != null && currentActive.type == type) {
+            val delta = with(density) { currentActive.deltaPx.toDp() }
+            val threshold = with(density) { currentActive.thresholdPx.toDp() }
+            val visualDelta = delta * GESTURE_VISUAL_MULTIPLIER
+            val visualThreshold = threshold * GESTURE_VISUAL_MULTIPLIER
+            val visual =
+                if (visualDelta < visualThreshold) {
+                    visualDelta
+                } else {
+                    visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
+                }
+            visual.coerceAtMost(GESTURE_MAX_OFFSET)
+        } else {
+            0.dp
+        }
     }
+
+    val kbAnimatedOffsetDp by animateDpAsState(
+        targetValue = getTargetOffset(SwipeGestureType.KEYBOARD),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "kbAnimatedOffset",
+    )
+    val menuAnimatedOffsetDp by animateDpAsState(
+        targetValue = getTargetOffset(SwipeGestureType.MENU),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "menuAnimatedOffset",
+    )
+    val tpAnimatedOffsetDp by animateDpAsState(
+        targetValue = getTargetOffset(SwipeGestureType.TOUCHPAD),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "tpAnimatedOffset",
+    )
 
     Box(modifier = modifier.fillMaxSize()) {
         // Bar tab (Center)
@@ -157,7 +173,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                     Modifier
                         .align(
                             if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
-                        ).padding(start = 24.dp)
+                        ).padding(start = QuickMenuBarLayout.TAB_PADDING)
                         .graphicsLayer(alpha = alpha.value * swipeAlpha),
             )
         }
@@ -171,72 +187,106 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
                     Modifier
                         .align(
                             if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
-                        ).padding(end = 24.dp)
+                        ).padding(end = QuickMenuBarLayout.TAB_PADDING)
                         .graphicsLayer(alpha = alpha.value * swipeAlpha),
             )
         }
 
-        // Sliding gesture pill
-        val swipeType = lastSwipeType
-        if (animatedOffsetDp > 0.dp && swipeType != null) {
-            val isPastThreshold = activeSwipe?.isPastThreshold ?: false
-            val initialOffscreenOffset = 48.dp + 10.dp
+        // ─── Sliding gesture pills ───────────────────────────────────────────────
+        // Keyboard Sliding Pill
+        if (kbAnimatedOffsetDp > 0.dp) {
+            val isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.KEYBOARD && it.isPastThreshold } ?: false
+            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
+            val yOffset = if (overlayAtBottom) initialOffscreenOffset - kbAnimatedOffsetDp else -initialOffscreenOffset + kbAnimatedOffsetDp
+
+            Box(
+                modifier =
+                    Modifier
+                        .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
+                        .offset(y = yOffset)
+                        .padding(start = QuickMenuBarLayout.SLIDING_PILL_PADDING)
+                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                        .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
+                        .border(
+                            width = PILL_BORDER_WIDTH,
+                            color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
+                            shape = CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Keyboard,
+                    contentDescription = null,
+                    tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
+                    modifier = Modifier.size(PILL_ICON_SIZE),
+                )
+            }
+        }
+
+        // Menu Sliding Pill
+        if (menuAnimatedOffsetDp > 0.dp) {
+            val isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.MENU && it.isPastThreshold } ?: false
+            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
             val yOffset =
                 if (overlayAtBottom) {
-                    initialOffscreenOffset - animatedOffsetDp
+                    initialOffscreenOffset - menuAnimatedOffsetDp
                 } else {
-                    -initialOffscreenOffset + animatedOffsetDp
+                    -initialOffscreenOffset +
+                        menuAnimatedOffsetDp
                 }
 
             Box(
                 modifier =
                     Modifier
-                        .align(
-                            if (overlayAtBottom) {
-                                when (swipeType) {
-                                    SwipeGestureType.KEYBOARD -> Alignment.BottomStart
-                                    SwipeGestureType.MENU -> Alignment.BottomCenter
-                                    SwipeGestureType.TOUCHPAD -> Alignment.BottomEnd
-                                    else -> Alignment.BottomCenter
-                                }
-                            } else {
-                                when (swipeType) {
-                                    SwipeGestureType.KEYBOARD -> Alignment.TopStart
-                                    SwipeGestureType.MENU -> Alignment.TopCenter
-                                    SwipeGestureType.TOUCHPAD -> Alignment.TopEnd
-                                    else -> Alignment.TopCenter
-                                }
-                            },
-                        ).offset(y = yOffset)
-                        .padding(
-                            start = if (swipeType == SwipeGestureType.KEYBOARD) 36.dp else 0.dp,
-                            end = if (swipeType == SwipeGestureType.TOUCHPAD) 36.dp else 0.dp,
-                        ).shadow(
-                            elevation = 6.dp,
-                            shape = RoundedCornerShape(50),
-                            clip = false,
-                        ).size(48.dp)
-                        .background(
-                            color = if (isPastThreshold) colors.accent else colors.controlOverlay,
-                            shape = RoundedCornerShape(50),
-                        ).border(
-                            width = 1.dp,
+                        .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
+                        .offset(y = yOffset)
+                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                        .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
+                        .border(
+                            width = PILL_BORDER_WIDTH,
                             color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
-                            shape = RoundedCornerShape(50),
+                            shape = CircleShape,
                         ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector =
-                        when (swipeType) {
-                            SwipeGestureType.KEYBOARD -> Icons.Rounded.Keyboard
-                            SwipeGestureType.MENU -> Icons.Rounded.Menu
-                            SwipeGestureType.TOUCHPAD -> Icons.Rounded.Mouse
-                            else -> Icons.Rounded.Menu
-                        },
+                    imageVector = Icons.Rounded.Menu,
                     contentDescription = null,
                     tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(PILL_ICON_SIZE),
+                )
+            }
+        }
+
+        // Touchpad Sliding Pill
+        if (tpAnimatedOffsetDp > 0.dp) {
+            val isPastThreshold = activeSwipe?.let { it.type == SwipeGestureType.TOUCHPAD && it.isPastThreshold } ?: false
+            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
+            val yOffset = if (overlayAtBottom) initialOffscreenOffset - tpAnimatedOffsetDp else -initialOffscreenOffset + tpAnimatedOffsetDp
+
+            Box(
+                modifier =
+                    Modifier
+                        .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
+                        .offset(y = yOffset)
+                        .padding(end = QuickMenuBarLayout.SLIDING_PILL_PADDING)
+                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                        .background(color = if (isPastThreshold) colors.accent else colors.controlOverlay, shape = CircleShape)
+                        .border(
+                            width = PILL_BORDER_WIDTH,
+                            color = if (isPastThreshold) colors.accent else colors.controlOverlayBorder,
+                            shape = CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Mouse,
+                    contentDescription = null,
+                    tint = if (isPastThreshold) colors.onAccent else colors.onSurface,
+                    modifier = Modifier.size(PILL_ICON_SIZE),
                 )
             }
         }
@@ -266,9 +316,9 @@ private fun QuickMenuBarTab(
                     },
                 ).shadow(
                     elevation = QM_BAR_SHADOW_ELEVATION,
-                    shape = RoundedCornerShape(50),
+                    shape = CircleShape,
                     clip = false,
                 ).size(width = QM_BAR_IDLE_WIDTH, height = QM_BAR_IDLE_HEIGHT)
-                .background(colors.quickMenuBarIdleColor, RoundedCornerShape(50)),
+                .background(colors.quickMenuBarIdleColor, CircleShape),
     )
 }

@@ -25,7 +25,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Vibrator
 import android.view.Display
 import android.view.Gravity
 import android.view.Surface
@@ -104,7 +103,7 @@ import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
-import com.stormpanda.megingiard.macropad.triggerHaptic
+import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -116,6 +115,7 @@ import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.QuickMenuBar
+import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
@@ -135,9 +135,6 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.Color as ComposeColor
 
-private val MP_EDGE_ZONE = 40.dp
-private val MP_SWIPE_THRESHOLD = 50.dp
-private val MP_SWIPE_QM_BAR_ZONE_WIDTH = 120.dp
 private const val TAG = "MirrorPresentation"
 private const val TOUCH_TOLERANCE = 0.005f
 private const val UNCROPPED_THRESHOLD = 0.999f
@@ -409,24 +406,21 @@ class MirrorPresentation(
                             val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
                             val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
                             val density = LocalDensity.current
-                            val edgeZonePx = with(density) { MP_EDGE_ZONE.toPx() }
-                            val swipeThresholdPx = with(density) { MP_SWIPE_THRESHOLD.toPx() }
-                            val quickMenuBarZoneWidthPx = with(density) { MP_SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+                            val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
+                            val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
+                            val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
 
-                            val kbBarWidthPx = with(density) { 72.dp.toPx() }
-                            val kbBarStartPaddingPx = with(density) { 24.dp.toPx() }
-                            val kbBarZoneWidthPx = with(density) { 120.dp.toPx() }
+                            val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+                            val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+                            val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
                             val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
                             val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
                             val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
 
-                            val tpBarWidthPx = with(density) { 72.dp.toPx() }
-                            val tpBarEndPaddingPx = with(density) { 24.dp.toPx() }
-                            val tpBarZoneWidthPx = with(density) { 120.dp.toPx() }
+                            val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+                            val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+                            val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
                             val context = LocalContext.current
-
-                            @Suppress("DEPRECATION")
-                            val vibrator = remember { context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator }
 
                             val projectionController =
                                 remember(edgeZonePx, overlayAtBottom) {
@@ -494,7 +488,7 @@ class MirrorPresentation(
                                                         AppStateManager.updateActiveSwipe(null)
                                                     },
                                                     onHapticTick = {
-                                                        vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                                        triggerHapticFeedback(context, HapticStrength.LIGHT)
                                                     },
                                                     onEdgeSwipe = {
                                                         AppStateManager.updateActiveSwipe(null)
@@ -521,7 +515,7 @@ class MirrorPresentation(
                                                         AppStateManager.updateActiveSwipe(null)
                                                     },
                                                     onHapticTick = {
-                                                        vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                                        triggerHapticFeedback(context, HapticStrength.LIGHT)
                                                     },
                                                     onEdgeSwipe = {
                                                         AppStateManager.updateActiveSwipe(null)
@@ -559,7 +553,7 @@ class MirrorPresentation(
                                                         AppStateManager.updateActiveSwipe(null)
                                                     },
                                                     onHapticTick = {
-                                                        vibrator?.let { triggerHaptic(it, HapticStrength.LIGHT) }
+                                                        triggerHapticFeedback(context, HapticStrength.LIGHT)
                                                     },
                                                     onEdgeSwipe = {
                                                         AppStateManager.updateActiveSwipe(null)

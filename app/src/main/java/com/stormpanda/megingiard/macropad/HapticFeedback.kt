@@ -1,7 +1,10 @@
 package com.stormpanda.megingiard.macropad
 
+import android.content.Context
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.os.VibratorManager
 
 private const val TAG = "HapticFeedback"
 
@@ -87,4 +90,23 @@ fun triggerHaptic(
             }
         }
     vibrator.vibrate(VibrationEffect.createOneShot(durationMs, amplitude))
+}
+
+/**
+ * Context-aware haptic trigger helper that automatically manages VibratorManager (API 31+)
+ * vs Vibrator (legacy) and handles system service resolution internally.
+ */
+fun triggerHapticFeedback(
+    context: Context,
+    strength: HapticStrength = HapticStrength.LIGHT,
+) {
+    val vibrator =
+        if (Build.VERSION.SDK_INT >= 31) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vibratorManager?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
+    vibrator?.let { triggerHaptic(it, strength) }
 }
