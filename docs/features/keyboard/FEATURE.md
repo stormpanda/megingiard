@@ -18,7 +18,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K1: Virtual Keyboard Layout
 
-- The secondary display MUST show a **Gboard-style virtual keyboard** anchored to the bottom.
+- The secondary display MUST show a **virtual keyboard (inspired by Gboard)** anchored to the bottom.
 - The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings or the keyboard's globe key.
 - The keyboard MUST feature a **4-row key layout** consisting of letter rows and a bottom spacebar bar, alongside two horizontal toolbars (top toolbar above the keys, and bottom toolbar below the keys).
 - The keyboard MUST support dynamic layout sub-modes:
@@ -95,7 +95,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K10: Keyboard-Top Touchpad
 
-- When enabled in Settings, the keyboard screen MUST show a relative touchpad in the area above the Gboard-style layout.
+- When enabled in Settings, the keyboard screen MUST show a relative touchpad in the area above the keyboard layout.
 - The touchpad MUST support relative cursor movement and gesture clicks/taps (tap-to-click, two-finger-tap, three-finger-tap, tap-drag, and two-finger scrolling) by reusing `TouchpadGestureProcessor` and piping mouse events to `MouseInjector`.
 - The touchpad MUST not feature physical click buttons.
 - Sensitivity (pointer speed) and scroll speed settings MUST be inherited from the general Touchpad Settings configurations.

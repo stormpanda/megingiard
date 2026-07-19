@@ -542,7 +542,7 @@ fun KeyboardScreen(
             Spacer(modifier = Modifier.weight(1f))
         }
 
-        // Gboard Container (top toolbar, grid, bottom toolbar)
+        // Keyboard Container (top toolbar, grid, bottom toolbar)
         Column(
             modifier =
                 Modifier

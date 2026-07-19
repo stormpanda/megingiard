@@ -116,7 +116,7 @@ internal fun KeyCap(
             (!isFullLayout && (keyDef.id == "lshift" || keyDef.id == "rshift") && isCapsActive)
     val isBgActive = isModifierActive && (keyDef.id != "caps" || isFullLayout)
 
-    // Gboard style classification
+    // Ergo style classification
     val isSpecialKey =
         keyDef.id in SPECIAL_KEY_IDS ||
             keyDef.id.startsWith("mode_switch")
@@ -168,145 +168,280 @@ internal fun KeyCap(
                         .background(colors.keyBackground),
             )
         } else {
-            // Render specific keys with Icons
-            when (keyDef.id) {
-                "lshift", "rshift" -> {
-                    MaterialSymbol(
-                        name = "shift",
-                        size = KC_ICON_SIZE,
-                        tint = contentColor,
-                        filled = isModifierActive,
-                        modifier = Modifier.size(KC_ICON_SIZE),
+            if (isFullLayout) {
+                PhysicalKeyContent(
+                    keyDef = keyDef,
+                    isPressed = isPressed,
+                    isModifierActive = isModifierActive,
+                    isShiftActive = isShiftActive,
+                    isCapsActive = isCapsActive,
+                    isAltGrActive = isAltGrActive,
+                    contentColor = contentColor,
+                )
+            } else {
+                ErgoKeyContent(
+                    keyDef = keyDef,
+                    isPressed = isPressed,
+                    isModifierActive = isModifierActive,
+                    isShiftActive = isShiftActive,
+                    isCapsActive = isCapsActive,
+                    isAltGrActive = isAltGrActive,
+                    contentColor = contentColor,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhysicalKeyContent(
+    keyDef: KeyDef,
+    isPressed: Boolean,
+    isModifierActive: Boolean,
+    isShiftActive: Boolean,
+    isCapsActive: Boolean,
+    isAltGrActive: Boolean,
+    contentColor: Color,
+) {
+    when (keyDef.id) {
+        "lshift", "rshift" -> {
+            MaterialSymbol(
+                name = "shift",
+                size = KC_ICON_SIZE,
+                tint = contentColor,
+                filled = isModifierActive,
+                modifier = Modifier.size(KC_ICON_SIZE),
+            )
+        }
+
+        "caps" -> {
+            MaterialSymbol(
+                name = "shift_lock",
+                size = KC_ICON_SIZE,
+                tint = contentColor,
+                filled = isModifierActive,
+                modifier = Modifier.size(KC_ICON_SIZE),
+            )
+        }
+
+        "tab" -> {
+            MaterialSymbol(
+                name = "keyboard_tab",
+                size = KC_ICON_SIZE,
+                tint = contentColor,
+                modifier = Modifier.size(KC_ICON_SIZE),
+            )
+        }
+
+        "bksp" -> {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.Backspace,
+                contentDescription = stringResource(R.string.cd_kb_backspace),
+                tint = contentColor,
+                modifier = Modifier.size(KC_ICON_SIZE),
+            )
+        }
+
+        "enter" -> {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
+                contentDescription = stringResource(R.string.cd_kb_enter),
+                tint = contentColor,
+                modifier = Modifier.size(KC_ICON_SIZE),
+            )
+        }
+
+        "globe" -> {
+            Icon(
+                imageVector = Icons.Rounded.Language,
+                contentDescription = stringResource(R.string.cd_kb_layout),
+                tint = contentColor,
+                modifier = Modifier.size(KC_ICON_SIZE),
+            )
+        }
+
+        else -> {
+            val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
+            val shiftLabel = keyDef.shiftLabel
+            if (shiftLabel != null && !isLetter) {
+                // Stacked Primary/Shift labels
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    val useShiftLabel = isShiftActive || isCapsActive
+                    val shiftColor = if (useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
+                    val normalColor = if (!useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
+                    val shiftWeight = if (useShiftLabel) FontWeight.Bold else FontWeight.Normal
+                    val normalWeight = if (!useShiftLabel) FontWeight.Bold else FontWeight.Normal
+
+                    Text(
+                        text = shiftLabel,
+                        color = shiftColor,
+                        fontSize = 10.sp,
+                        fontWeight = shiftWeight,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = keyDef.label,
+                        color = normalColor,
+                        fontSize = 11.sp,
+                        fontWeight = normalWeight,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
                     )
                 }
-
-                "caps" -> {
-                    MaterialSymbol(
-                        name = "shift_lock",
-                        size = KC_ICON_SIZE,
-                        tint = contentColor,
-                        filled = isModifierActive,
-                        modifier = Modifier.size(KC_ICON_SIZE),
-                    )
-                }
-
-                "tab" -> {
-                    MaterialSymbol(
-                        name = "keyboard_tab",
-                        size = KC_ICON_SIZE,
-                        tint = contentColor,
-                        modifier = Modifier.size(KC_ICON_SIZE),
-                    )
-                }
-
-                "bksp" -> {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.Backspace,
-                        contentDescription = stringResource(R.string.cd_kb_backspace),
-                        tint = contentColor,
-                        modifier = Modifier.size(KC_ICON_SIZE),
-                    )
-                }
-
-                "enter" -> {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
-                        contentDescription = stringResource(R.string.cd_kb_enter),
-                        tint = contentColor,
-                        modifier = Modifier.size(KC_ICON_SIZE),
-                    )
-                }
-
-                "globe" -> {
-                    Icon(
-                        imageVector = Icons.Rounded.Language,
-                        contentDescription = stringResource(R.string.cd_kb_layout),
-                        tint = contentColor,
-                        modifier = Modifier.size(KC_ICON_SIZE),
-                    )
-                }
-
-                else -> {
-                    val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
-                    val shiftLabel = keyDef.shiftLabel
-                    if (shiftLabel != null && !isLetter) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            val useShiftLabel = isShiftActive || isCapsActive
-                            val shiftColor = if (useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
-                            val normalColor = if (!useShiftLabel) contentColor else contentColor.copy(alpha = 0.5f)
-                            val shiftWeight = if (useShiftLabel) FontWeight.Bold else FontWeight.Normal
-                            val normalWeight = if (!useShiftLabel) FontWeight.Bold else FontWeight.Normal
-
-                            Text(
-                                text = shiftLabel,
-                                color = shiftColor,
-                                fontSize = 10.sp,
-                                fontWeight = shiftWeight,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                            )
-                            Text(
-                                text = keyDef.label,
-                                color = normalColor,
-                                fontSize = 11.sp,
-                                fontWeight = normalWeight,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                            )
+            } else {
+                val useShiftLabel = isShiftActive || isCapsActive
+                val displayLabel =
+                    when {
+                        isAltGrActive && keyDef.altGrLabel != null -> {
+                            keyDef.altGrLabel!!
                         }
-                    } else {
-                        val useShiftLabel = isShiftActive || isCapsActive
-                        val displayLabel =
-                            when {
-                                isAltGrActive && keyDef.altGrLabel != null -> {
-                                    keyDef.altGrLabel!!
-                                }
 
-                                useShiftLabel -> {
-                                    val s = keyDef.shiftLabel ?: keyDef.label
-                                    if (isLetter) s.uppercase() else s
-                                }
+                        useShiftLabel -> {
+                            val s = keyDef.shiftLabel ?: keyDef.label
+                            if (isLetter) s.uppercase() else s
+                        }
 
-                                else -> {
-                                    keyDef.label
-                                }
-                            }
-
-                        Text(
-                            text = displayLabel,
-                            color = contentColor,
-                            fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
-                            fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                        )
+                        else -> {
+                            keyDef.label
+                        }
                     }
-                }
+
+                Text(
+                    text = displayLabel,
+                    color = contentColor,
+                    fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
+                    fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErgoKeyContent(
+    keyDef: KeyDef,
+    isPressed: Boolean,
+    isModifierActive: Boolean,
+    isShiftActive: Boolean,
+    isCapsActive: Boolean,
+    isAltGrActive: Boolean,
+    contentColor: Color,
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        // Center label or Icon
+        when (keyDef.id) {
+            "lshift", "rshift" -> {
+                MaterialSymbol(
+                    name = "shift",
+                    size = KC_ICON_SIZE,
+                    tint = contentColor,
+                    filled = isModifierActive,
+                    modifier = Modifier.size(KC_ICON_SIZE),
+                )
             }
 
-            // Draw Gboard-style Superscript numeric/symbol labels on top-right of letters keys
-            if (!isFullLayout) {
-                val superLabel = getSuperscriptDisplayLabel(keyDef)
-                if (superLabel != null && !isShiftActive && !isCapsActive && !isAltGrActive) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(top = KC_SUPER_PADDING_TOP, end = KC_SUPER_PADDING_END),
-                        contentAlignment = Alignment.TopEnd,
-                    ) {
-                        Text(
-                            text = superLabel,
-                            color = contentColor.copy(alpha = 0.5f),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Light,
-                        )
+            "caps" -> {
+                MaterialSymbol(
+                    name = "shift_lock",
+                    size = KC_ICON_SIZE,
+                    tint = contentColor,
+                    filled = isModifierActive,
+                    modifier = Modifier.size(KC_ICON_SIZE),
+                )
+            }
+
+            "tab" -> {
+                MaterialSymbol(
+                    name = "keyboard_tab",
+                    size = KC_ICON_SIZE,
+                    tint = contentColor,
+                    modifier = Modifier.size(KC_ICON_SIZE),
+                )
+            }
+
+            "bksp" -> {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.Backspace,
+                    contentDescription = stringResource(R.string.cd_kb_backspace),
+                    tint = contentColor,
+                    modifier = Modifier.size(KC_ICON_SIZE),
+                )
+            }
+
+            "enter" -> {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.KeyboardReturn,
+                    contentDescription = stringResource(R.string.cd_kb_enter),
+                    tint = contentColor,
+                    modifier = Modifier.size(KC_ICON_SIZE),
+                )
+            }
+
+            "globe" -> {
+                Icon(
+                    imageVector = Icons.Rounded.Language,
+                    contentDescription = stringResource(R.string.cd_kb_layout),
+                    tint = contentColor,
+                    modifier = Modifier.size(KC_ICON_SIZE),
+                )
+            }
+
+            else -> {
+                val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
+                val useShiftLabel = isShiftActive || isCapsActive
+                val displayLabel =
+                    when {
+                        isAltGrActive && keyDef.altGrLabel != null -> {
+                            keyDef.altGrLabel!!
+                        }
+
+                        useShiftLabel -> {
+                            val s = keyDef.shiftLabel ?: keyDef.label
+                            if (isLetter) s.uppercase() else s
+                        }
+
+                        else -> {
+                            keyDef.label
+                        }
                     }
-                }
+
+                Text(
+                    text = displayLabel,
+                    color = contentColor,
+                    fontSize = if (keyDef.widthWeight >= 1.5f) 11.sp else 14.sp,
+                    fontWeight = if (isPressed || isModifierActive) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                )
+            }
+        }
+
+        // Draw superscript numeric/symbol labels on top-right of letters keys
+        val superLabel = getSuperscriptDisplayLabel(keyDef)
+        if (superLabel != null && !isShiftActive && !isCapsActive && !isAltGrActive) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(top = KC_SUPER_PADDING_TOP, end = KC_SUPER_PADDING_END),
+                contentAlignment = Alignment.TopEnd,
+            ) {
+                Text(
+                    text = superLabel,
+                    color = contentColor.copy(alpha = 0.5f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Light,
+                )
             }
         }
     }

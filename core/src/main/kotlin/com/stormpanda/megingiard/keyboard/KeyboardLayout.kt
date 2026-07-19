@@ -230,7 +230,7 @@ fun azertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> 
     }
 
 // ---------------------------------------------------------------------------
-// Gboard visual rows
+// Ergo layout visual rows
 // ---------------------------------------------------------------------------
 
 private fun qwertzLettersRow1(): List<KeyDef> =
