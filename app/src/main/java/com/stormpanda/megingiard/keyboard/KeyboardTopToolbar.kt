@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.keyboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.PressGestureScope
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -21,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -150,52 +152,31 @@ private fun ModifierButton(
 
     val scope = rememberCoroutineScope()
 
-    Box(
-        modifier =
-            modifier
-                .height(28.dp)
-                .width(54.dp)
-                .border(
-                    width = 1.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(4.dp),
-                ).clip(RoundedCornerShape(4.dp))
-                .background(bg)
-                .pointerInput(id, keycode) {
-                    detectTapGestures(
-                        onPress = {
-                            KeyboardState.onModifierTouchDown(id)
-                            val job =
-                                scope.launch {
-                                    delay(300L)
-                                    val code = KeyboardState.onModifierLongPress(id, keycode)
-                                    if (code != null) {
-                                        KeyInjector.keyDown(code)
-                                    }
-                                }
-                            try {
-                                awaitRelease()
-                            } finally {
-                                job.cancel()
-                                val upCodes = KeyboardState.onModifierTouchUp(id, keycode)
-                                upCodes.forEach { KeyInjector.keyUp(it) }
-                            }
-                        },
-                    )
-                },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = contentColor,
-            textAlign = TextAlign.Center,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                ),
-        )
-    }
+    BaseToolbarButton(
+        label = label,
+        bg = bg,
+        contentColor = contentColor,
+        borderColor = borderColor,
+        modifier = modifier,
+        onPress = { _ ->
+            KeyboardState.onModifierTouchDown(id)
+            val job =
+                scope.launch {
+                    delay(300L)
+                    val code = KeyboardState.onModifierLongPress(id, keycode)
+                    if (code != null) {
+                        KeyInjector.keyDown(code)
+                    }
+                }
+            try {
+                awaitRelease()
+            } finally {
+                job.cancel()
+                val upCodes = KeyboardState.onModifierTouchUp(id, keycode)
+                upCodes.forEach { KeyInjector.keyUp(it) }
+            }
+        },
+    )
 }
 
 @Composable
@@ -237,13 +218,40 @@ private fun ToolbarKeyButton(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
+    var isPressed by remember { mutableStateOf(false) }
 
     val bg = if (isPressed) colors.keyPressed else Color.Transparent
     val contentColor = if (isPressed) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
     val borderColor = if (isPressed) Color.Transparent else Color.White.copy(alpha = 0.8f)
 
+    BaseToolbarButton(
+        label = label,
+        bg = bg,
+        contentColor = contentColor,
+        borderColor = borderColor,
+        modifier = modifier,
+        onPress = { _ ->
+            isPressed = true
+            KeyInjector.keyDown(keycode)
+            try {
+                awaitRelease()
+            } finally {
+                isPressed = false
+                KeyInjector.keyUp(keycode)
+            }
+        },
+    )
+}
+
+@Composable
+private fun BaseToolbarButton(
+    label: String,
+    bg: Color,
+    contentColor: Color,
+    borderColor: Color,
+    onPress: suspend PressGestureScope.(Offset) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier =
             modifier
@@ -255,17 +263,8 @@ private fun ToolbarKeyButton(
                     shape = RoundedCornerShape(4.dp),
                 ).clip(RoundedCornerShape(4.dp))
                 .background(bg)
-                .pointerInput(keycode) {
-                    detectTapGestures(
-                        onPress = {
-                            KeyInjector.keyDown(keycode)
-                            try {
-                                awaitRelease()
-                            } finally {
-                                KeyInjector.keyUp(keycode)
-                            }
-                        },
-                    )
+                .pointerInput(onPress) {
+                    detectTapGestures(onPress = onPress)
                 },
         contentAlignment = Alignment.Center,
     ) {
