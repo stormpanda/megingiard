@@ -90,7 +90,7 @@ class KeyboardGestureProcessor(
                     keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
                     keyId != "enter"
 
-            if (isFullLayout && hoveredKeyDef.type == KeyType.NORMAL && isCharKey) {
+            if (hoveredKeyDef.type == KeyType.NORMAL && isCharKey) {
                 val bounds = keyBounds[keyId]
                 if (bounds != null) {
                     val isLetter = hoveredKeyDef.label.length == 1 && hoveredKeyDef.label[0].isLetter()
@@ -120,7 +120,9 @@ class KeyboardGestureProcessor(
                             pointerId = pointerId,
                         )
                 }
-            } else if (!isFullLayout && hoveredKeyDef.type == KeyType.NORMAL) {
+            }
+
+            if (!isFullLayout && hoveredKeyDef.type == KeyType.NORMAL && isCharKey) {
                 val job =
                     scope.launch {
                         try {

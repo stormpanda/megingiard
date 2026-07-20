@@ -76,6 +76,12 @@ class KeyboardGestureProcessorTest {
             // Press on 'q'
             processor.onPress(1L, 25f, 25f, grid, isFullLayout = false)
 
+            // Right after press, the immediate preview popup should be shown
+            assertNotNull(processor.activePopupState.value)
+            val initialPopup = processor.activePopupState.value!!
+            assertEquals("q", initialPopup.keyDef.id)
+            assertFalse(initialPopup.isLongPress)
+
             // Advance virtual time by 500ms to trigger long-press timer delay
             testScheduler.advanceTimeBy(500L)
             testScheduler.runCurrent()
