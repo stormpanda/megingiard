@@ -119,7 +119,7 @@ internal class KeyboardGestureState(
                     }
                 val currentPopup = activePopupState.value
                 if (currentPopup == null || currentPopup.keyDef.id != keyId) {
-                    activePopupState.value = PopupState(hoveredKeyDef, listOf(label), 0, bounds, isLongPress = false)
+                    activePopupState.value = PopupState(hoveredKeyDef, listOf(label), 0, bounds, isLongPress = false, pid)
                 }
             }
             controller.onKeyMove(

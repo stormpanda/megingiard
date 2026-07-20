@@ -45,6 +45,7 @@ internal class PopupState(
     val initialSelectedIndex: Int,
     val keyBounds: KeyBounds,
     val isLongPress: Boolean,
+    val pointerId: Long,
 ) {
     var selectedIndex by mutableStateOf(initialSelectedIndex)
 }
