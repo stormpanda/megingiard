@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.touchpad
 
 import android.os.Vibrator
 import android.view.TextureView
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -41,6 +42,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -351,108 +353,135 @@ fun FullscreenMouseOverlay() {
                     },
         ) {
             // 2. Inner Touchpad Box
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(
-                            top = 8.dp,
-                            bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
-                            start = 8.dp,
-                            end = 8.dp,
-                        ).then(
-                            if (!touchpadUseMouse) {
-                                Modifier.aspectRatio(16f / 9f)
-                            } else {
-                                Modifier.fillMaxSize()
-                            },
-                        ).onGloballyPositioned { innerCoords = it }
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
-                        .border(
-                            width = 1.dp,
-                            brush = insetBezelBrush,
-                            shape = RoundedCornerShape(12.dp),
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isMirroringActive) {
-                    val presentation = LocalMirrorPresentation.current
-                    if (presentation != null) {
-                        AndroidView(
-                            factory = { ctx ->
-                                presentation.acquireMasterTextureView() ?: TextureView(ctx)
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                            onRelease = {
-                                presentation.releaseMasterTextureView()
-                            },
-                        )
-                    }
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
-                    )
-                }
-
-                // Render Left / Right physical buttons at the bottom of the touchpad area if in mouse mode
-                if (touchpadUseMouse) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.BottomCenter,
-                    ) {
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            TouchpadMouseButton(
-                                onDown = { MouseInjector.leftDown() },
-                                onUp = { MouseInjector.leftUp() },
-                                modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                            )
-                            TouchpadMouseButton(
-                                onDown = { MouseInjector.middleDown() },
-                                onUp = { MouseInjector.middleUp() },
-                                modifier = Modifier.weight(0.4f).fillMaxHeight(),
-                            )
-                            TouchpadMouseButton(
-                                onDown = { MouseInjector.rightDown() },
-                                onUp = { MouseInjector.rightUp() },
-                                modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                            )
-                        }
-
-                        if (touchpadMouse45Enabled) {
-                            TouchpadMouseButton(
-                                onDown = { MouseInjector.mouse4Down() },
-                                onUp = { MouseInjector.mouse4Up() },
-                                text = stringResource(R.string.settings_touchpad_m4_label),
+            Crossfade(
+                targetState = touchpadUseMouse,
+                modifier = Modifier.fillMaxSize(),
+                animationSpec = tween(300),
+                label = "Touchpad Switch",
+            ) { useMouse ->
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    key(useMouse) {
+                        if (useMouse) {
+                            Box(
                                 modifier =
                                     Modifier
-                                        .align(Alignment.TopStart)
                                         .padding(
-                                            start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
-                                            top = TP_MOUSE_4_5_MARGIN_TOP,
-                                        ).size(TP_MOUSE_4_5_SIZE),
-                            )
-                            TouchpadMouseButton(
-                                onDown = { MouseInjector.mouse5Down() },
-                                onUp = { MouseInjector.mouse5Up() },
-                                text = stringResource(R.string.settings_touchpad_m5_label),
+                                            top = 8.dp,
+                                            bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
+                                            start = 8.dp,
+                                            end = 8.dp,
+                                        ).fillMaxSize()
+                                        .onGloballyPositioned { innerCoords = it }
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(colors.appBackground)
+                                        .border(
+                                            width = 1.dp,
+                                            brush = insetBezelBrush,
+                                            shape = RoundedCornerShape(12.dp),
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.BottomCenter,
+                                ) {
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(56.dp)
+                                                .padding(start = 4.dp, end = 4.dp, bottom = 2.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        TouchpadMouseButton(
+                                            onDown = { MouseInjector.leftDown() },
+                                            onUp = { MouseInjector.leftUp() },
+                                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                        )
+                                        TouchpadMouseButton(
+                                            onDown = { MouseInjector.middleDown() },
+                                            onUp = { MouseInjector.middleUp() },
+                                            modifier = Modifier.weight(0.4f).fillMaxHeight(),
+                                        )
+                                        TouchpadMouseButton(
+                                            onDown = { MouseInjector.rightDown() },
+                                            onUp = { MouseInjector.rightUp() },
+                                            modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                                        )
+                                    }
+
+                                    if (touchpadMouse45Enabled) {
+                                        TouchpadMouseButton(
+                                            onDown = { MouseInjector.mouse4Down() },
+                                            onUp = { MouseInjector.mouse4Up() },
+                                            text = stringResource(R.string.settings_touchpad_m4_label),
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .padding(
+                                                        start = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                                        top = TP_MOUSE_4_5_MARGIN_TOP,
+                                                    ).size(TP_MOUSE_4_5_SIZE),
+                                        )
+                                        TouchpadMouseButton(
+                                            onDown = { MouseInjector.mouse5Down() },
+                                            onUp = { MouseInjector.mouse5Up() },
+                                            text = stringResource(R.string.settings_touchpad_m5_label),
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(
+                                                        end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
+                                                        top = TP_MOUSE_4_5_MARGIN_TOP,
+                                                    ).size(TP_MOUSE_4_5_SIZE),
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Box(
                                 modifier =
                                     Modifier
-                                        .align(Alignment.TopEnd)
                                         .padding(
-                                            end = TP_MOUSE_4_5_MARGIN_HORIZONTAL,
-                                            top = TP_MOUSE_4_5_MARGIN_TOP,
-                                        ).size(TP_MOUSE_4_5_SIZE),
-                            )
+                                            top = 8.dp,
+                                            bottom = TP_BOTTOM_BAR_HEIGHT + 4.dp,
+                                            start = 8.dp,
+                                            end = 8.dp,
+                                        ).aspectRatio(16f / 9f)
+                                        .onGloballyPositioned { innerCoords = it }
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isMirroringActive) Color.Transparent else colors.appBackground)
+                                        .border(
+                                            width = 1.dp,
+                                            brush = insetBezelBrush,
+                                            shape = RoundedCornerShape(12.dp),
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (isMirroringActive) {
+                                    val presentation = LocalMirrorPresentation.current
+                                    if (presentation != null) {
+                                        AndroidView(
+                                            factory = { ctx ->
+                                                presentation.acquireMasterTextureView() ?: TextureView(ctx)
+                                            },
+                                            modifier = Modifier.fillMaxSize(),
+                                            onRelease = {
+                                                presentation.releaseMasterTextureView()
+                                            },
+                                        )
+                                    }
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Black.copy(alpha = touchpadMirrorDim / 100f)),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
