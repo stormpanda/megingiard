@@ -73,7 +73,7 @@ class KeyRepeatController(
                 pointerKeyMap[pointerId] = id
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = keyDef
-                val isCharKey = id != "bksp" && id != "enter" && id != "del" && id != "up" && id != "down" && id != "left" && id != "right"
+                val isCharKey = keyDef.isCharacterKey
                 if (!isCharKey && keyDef.linuxKeycode != 0) {
                     KeyboardState
                         .activeModifierKeycodesFor(keyDef, layout)
@@ -96,8 +96,7 @@ class KeyRepeatController(
             KeyType.MODIFIER -> {
                 pointerKeyMap[pointerId] = id
                 modifierBeingHeld = keyDef
-                val targetCode = if (id == "caps") LinuxKeycodes.KEY_LEFTSHIFT else keyDef.linuxKeycode
-                val code = KeyboardState.onModifierTouchDown(id, targetCode, layout.size == 6)
+                val code = KeyboardState.onModifierTouchDown(id, keyDef.injectedKeycode, layout.size == 6)
                 if (code != null) KeyInjector.keyDown(code)
                 startModifierHold(keyDef, layout.size == 6)
             }
@@ -218,10 +217,7 @@ class KeyRepeatController(
                 heldKey = null
                 repeatJob?.cancel()
                 if (!skipInjection) {
-                    val isCharKey =
-                        releasedId != "bksp" && releasedId != "enter" && releasedId != "del" && releasedId != "up" && releasedId != "down" &&
-                            releasedId != "left" &&
-                            releasedId != "right"
+                    val isCharKey = keyDef.isCharacterKey
                     if (isCharKey && keyDef.linuxKeycode != 0) {
                         val activeMods = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
                         activeMods.forEach { KeyInjector.keyDown(it) }
@@ -256,9 +252,8 @@ class KeyRepeatController(
             KeyType.MODIFIER -> {
                 modifierBeingHeld = null
                 modifierHoldJob?.cancel()
-                val targetCode = if (releasedId == "caps") LinuxKeycodes.KEY_LEFTSHIFT else keyDef.linuxKeycode
                 KeyboardState
-                    .onModifierTouchUp(releasedId, targetCode, layout.size == 6)
+                    .onModifierTouchUp(releasedId, keyDef.injectedKeycode, layout.size == 6)
                     .forEach { KeyInjector.keyUp(it) }
             }
 

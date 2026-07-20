@@ -106,6 +106,15 @@ data class KeyDef(
     val popupOptions: List<String> = emptyList(),
 )
 
+val KeyDef.isControlKey: Boolean
+    get() = id == "bksp" || id == "enter" || id == "del" || id == "up" || id == "down" || id == "left" || id == "right"
+
+val KeyDef.isCharacterKey: Boolean
+    get() = type == KeyType.NORMAL && !isControlKey
+
+val KeyDef.injectedKeycode: Int
+    get() = if (id == "caps") LinuxKeycodes.KEY_LEFTSHIFT else linuxKeycode
+
 enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
 
 enum class KeyboardMode { LETTERS, SYMBOLS_1, SYMBOLS_2, NUMERIC, FULL }
