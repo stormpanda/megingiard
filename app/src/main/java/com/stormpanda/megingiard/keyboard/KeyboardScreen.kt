@@ -103,6 +103,7 @@ private val KB_BOTTOM_BAR_HEIGHT = 50.dp
 private val KB_CELL_WIDTH = 48.dp
 private val KB_POPUP_HEIGHT = 64.dp
 private val KB_POPUP_CELL_SIZE = 44.dp
+private val KB_POPUP_OFFSET_Y = 24.dp
 private val KB_GLOBE_BUTTON_WIDTH = 72.dp
 private val KB_CLOSE_BUTTON_SIZE = 44.dp
 private val KB_ICON_SIZE_MEDIUM = 24.dp
@@ -1265,7 +1266,7 @@ fun KeyboardScreen(
                         (keyCenterXDp - popupWidth / 2)
                             .coerceAtLeast(4.dp)
                             .coerceAtMost(maxPopupLeft)
-                    val popupTop = keyTopDp - popupHeight - 8.dp
+                    val popupTop = keyTopDp - popupHeight - KB_POPUP_OFFSET_Y
 
                     Box(
                         modifier =
