@@ -30,6 +30,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_ESC
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_LEFTALT
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_LEFTCTRL
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_TAB
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -55,22 +59,24 @@ internal fun KeyboardTopToolbar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            ToolbarKeyButton(
+                label = "ESC",
+                keycode = KEY_ESC,
+            )
+            ToolbarKeyButton(
+                label = "TAB",
+                keycode = KEY_TAB,
+            )
             ModifierButton(
                 id = "ctrl",
                 label = "CTRL",
-                keycode = LinuxKeycodes.KEY_LEFTCTRL,
+                keycode = KEY_LEFTCTRL,
                 accentColor = accentColor,
             )
             ModifierButton(
                 id = "alt",
                 label = "ALT",
-                keycode = LinuxKeycodes.KEY_LEFTALT,
-                accentColor = accentColor,
-            )
-            ModifierButton(
-                id = "altgr",
-                label = "ALT GR",
-                keycode = LinuxKeycodes.KEY_RIGHTALT,
+                keycode = KEY_LEFTALT,
                 accentColor = accentColor,
             )
         }
@@ -220,6 +226,58 @@ private fun ToolbarIcon(
             contentDescription = contentDescription,
             tint = colors.onSurface.copy(alpha = 0.8f),
             modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+        )
+    }
+}
+
+@Composable
+private fun ToolbarKeyButton(
+    label: String,
+    keycode: Int,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val bg = if (isPressed) colors.keyPressed else Color.Transparent
+    val contentColor = if (isPressed) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
+    val borderColor = if (isPressed) Color.Transparent else Color.White.copy(alpha = 0.8f)
+
+    Box(
+        modifier =
+            modifier
+                .height(28.dp)
+                .width(54.dp)
+                .border(
+                    width = 1.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(4.dp),
+                ).clip(RoundedCornerShape(4.dp))
+                .background(bg)
+                .pointerInput(keycode) {
+                    detectTapGestures(
+                        onPress = {
+                            KeyInjector.keyDown(keycode)
+                            try {
+                                awaitRelease()
+                            } finally {
+                                KeyInjector.keyUp(keycode)
+                            }
+                        },
+                    )
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = contentColor,
+            textAlign = TextAlign.Center,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                ),
         )
     }
 }

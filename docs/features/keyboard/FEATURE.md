@@ -30,7 +30,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K2: Modifier Keys
 
-- **Ctrl**, **Alt**, and **AltGr** modifier keys MUST be displayed on the left side of the top toolbar as rounded text buttons surrounded by a thin white border, while **Shift** is placed within the standard letter grid.
+- On the ergo keyboard top toolbar, **Esc**, **Tab**, **Ctrl**, and **Alt** buttons MUST be displayed on the left side as rounded text buttons surrounded by a thin white border (AltGr is only displayed on the compact full keyboard layout), while **Shift** is placed within the standard letter grid.
 - **Ctrl**, **Alt**, **AltGr**, **Shift**, and **Meta** MUST support a **three-state lifecycle**:
   - **INACTIVE:** default; modifier is not applied.
   - **STICKY:** activated by a short tap; the modifier is applied to the **next non-modifier key injection only**, then resets to INACTIVE.
