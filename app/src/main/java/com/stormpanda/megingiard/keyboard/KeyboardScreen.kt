@@ -1198,51 +1198,83 @@ fun KeyboardScreen(
                                         }
                                     }
                                 }
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .aspectRatio(16f / 9f)
-                                            .align(Alignment.Center)
-                                            .alpha(trackpointAlpha)
-                                            .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                                            .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
-                                    contentAlignment = Alignment.Center,
+                            } else {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.SpaceEvenly,
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.cd_keyboard_trackpoint),
-                                        color = colors.onAccent.copy(alpha = 0.25f),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                    if (trackpointVisible) {
-                                        if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
-                                            MouseButtonColumn(
-                                                accentColor = accentColor,
-                                                onLmbDown = { MouseInjector.leftDown() },
-                                                onLmbUp = { MouseInjector.leftUp() },
-                                                onRmbDown = { MouseInjector.rightDown() },
-                                                onRmbUp = { MouseInjector.rightUp() },
-                                                modifier =
-                                                    Modifier
-                                                        .align(Alignment.CenterStart)
-                                                        .padding(start = 8.dp),
-                                            )
+                                    activeState.grid.forEach { row ->
+                                        Row(
+                                            modifier =
+                                                Modifier
+                                                    .weight(1f)
+                                                    .fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                                        ) {
+                                            row.forEach { key ->
+                                                val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                                KeyCap(
+                                                    keyDef = key,
+                                                    isPressed = key.id in pressedKeys,
+                                                    modifierState = modState,
+                                                    accentColor = accentColor,
+                                                    isShiftActive = isShiftActive,
+                                                    isCapsActive = isCapsActive,
+                                                    isAltGrActive = isAltGrActive,
+                                                    isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                    modifier = Modifier.weight(key.widthWeight),
+                                                    onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
+                                                )
+                                            }
                                         }
-                                        if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
-                                            MouseButtonColumn(
-                                                accentColor = accentColor,
-                                                onLmbDown = { MouseInjector.leftDown() },
-                                                onLmbUp = { MouseInjector.leftUp() },
-                                                onRmbDown = { MouseInjector.rightDown() },
-                                                onRmbUp = { MouseInjector.rightUp() },
-                                                mirrored = true,
-                                                modifier =
-                                                    Modifier
-                                                        .align(Alignment.CenterEnd)
-                                                        .padding(end = 8.dp),
-                                            )
-                                        }
+                                    }
+                                }
+                            }
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(16f / 9f)
+                                        .align(Alignment.Center)
+                                        .alpha(trackpointAlpha)
+                                        .background(colors.keyBackground, RoundedCornerShape(8.dp))
+                                        .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.cd_keyboard_trackpoint),
+                                    color = colors.onAccent.copy(alpha = 0.25f),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    textAlign = TextAlign.Center,
+                                )
+                                if (trackpointVisible) {
+                                    if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                                        MouseButtonColumn(
+                                            accentColor = accentColor,
+                                            onLmbDown = { MouseInjector.leftDown() },
+                                            onLmbUp = { MouseInjector.leftUp() },
+                                            onRmbDown = { MouseInjector.rightDown() },
+                                            onRmbUp = { MouseInjector.rightUp() },
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.CenterStart)
+                                                    .padding(start = 8.dp),
+                                        )
+                                    }
+                                    if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                                        MouseButtonColumn(
+                                            accentColor = accentColor,
+                                            onLmbDown = { MouseInjector.leftDown() },
+                                            onLmbUp = { MouseInjector.leftUp() },
+                                            onRmbDown = { MouseInjector.rightDown() },
+                                            onRmbUp = { MouseInjector.rightUp() },
+                                            mirrored = true,
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.CenterEnd)
+                                                    .padding(end = 8.dp),
+                                        )
                                     }
                                 }
                             }
