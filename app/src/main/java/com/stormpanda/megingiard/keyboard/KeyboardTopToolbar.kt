@@ -1,0 +1,225 @@
+package com.stormpanda.megingiard.keyboard
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@Composable
+internal fun KeyboardTopToolbar(
+    activeState: KeyboardLayoutState,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    if (activeState.mode == KeyboardMode.FULL) return
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(KB_TOOLBAR_HEIGHT)
+                .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Modifier buttons on the left
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ModifierButton(
+                id = "ctrl",
+                label = "CTRL",
+                keycode = LinuxKeycodes.KEY_LEFTCTRL,
+                accentColor = accentColor,
+            )
+            ModifierButton(
+                id = "alt",
+                label = "ALT",
+                keycode = LinuxKeycodes.KEY_LEFTALT,
+                accentColor = accentColor,
+            )
+            ModifierButton(
+                id = "altgr",
+                label = "ALT GR",
+                keycode = LinuxKeycodes.KEY_RIGHTALT,
+                accentColor = accentColor,
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Action icons on the right
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ToolbarIcon(
+                imageVector = Icons.Rounded.SelectAll,
+                contentDescription = stringResource(R.string.cd_kb_select_all),
+                onClick = {
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                },
+            )
+            ToolbarIcon(
+                imageVector = Icons.Rounded.ContentCut,
+                contentDescription = stringResource(R.string.cd_kb_cut),
+                onClick = {
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                },
+            )
+            ToolbarIcon(
+                imageVector = Icons.Rounded.ContentCopy,
+                contentDescription = stringResource(R.string.cd_kb_copy),
+                onClick = {
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                },
+            )
+            ToolbarIcon(
+                imageVector = Icons.Rounded.ContentPaste,
+                contentDescription = stringResource(R.string.cd_kb_paste),
+                onClick = {
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                    KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModifierButton(
+    id: String,
+    label: String,
+    keycode: Int,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val state by KeyboardState.stateFor(id).collectAsState()
+    val isActive = state != ModifierState.INACTIVE
+
+    val bg = if (isActive) accentColor.copy(alpha = 0.7f) else Color.Transparent
+    val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
+    val borderColor = if (isActive) Color.Transparent else Color.White.copy(alpha = 0.8f)
+
+    val scope = rememberCoroutineScope()
+
+    Box(
+        modifier =
+            modifier
+                .height(28.dp)
+                .width(54.dp)
+                .border(
+                    width = 1.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(4.dp),
+                ).clip(RoundedCornerShape(4.dp))
+                .background(bg)
+                .pointerInput(id, keycode) {
+                    detectTapGestures(
+                        onPress = {
+                            KeyboardState.onModifierTouchDown(id)
+                            val job =
+                                scope.launch {
+                                    delay(300L)
+                                    val code = KeyboardState.onModifierLongPress(id, keycode)
+                                    if (code != null) {
+                                        KeyInjector.keyDown(code)
+                                    }
+                                }
+                            try {
+                                awaitRelease()
+                            } finally {
+                                job.cancel()
+                                val upCodes = KeyboardState.onModifierTouchUp(id, keycode)
+                                upCodes.forEach { KeyInjector.keyUp(it) }
+                            }
+                        },
+                    )
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = contentColor,
+            textAlign = TextAlign.Center,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                ),
+        )
+    }
+}
+
+@Composable
+private fun ToolbarIcon(
+    imageVector: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit = {},
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    Box(
+        modifier =
+            Modifier
+                .size(KB_CLOSE_BUTTON_SIZE)
+                .offset(y = 2.dp)
+                .clip(CircleShape)
+                .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            tint = colors.onSurface.copy(alpha = 0.8f),
+            modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+        )
+    }
+}
