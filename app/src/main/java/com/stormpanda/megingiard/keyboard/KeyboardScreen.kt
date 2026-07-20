@@ -730,7 +730,12 @@ fun KeyboardScreen(
                         onClick = {}, // Consumes clicks to prevent propagation to background views (like MacroPad)
                     ),
         ) {
-            Crossfade(targetState = layoutState, animationSpec = tween(300), label = "Layout Switch") { activeState ->
+            Crossfade(
+                targetState = layoutState,
+                modifier = Modifier.fillMaxSize(),
+                animationSpec = tween(300),
+                label = "Layout Switch",
+            ) { activeState ->
                 key(activeState.mode) {
                     Column(
                         modifier = Modifier.fillMaxWidth().fillMaxHeight(),
