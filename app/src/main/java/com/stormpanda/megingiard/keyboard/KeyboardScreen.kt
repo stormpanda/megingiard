@@ -6,6 +6,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -443,7 +445,13 @@ fun KeyboardScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(animatedContainerHeight),
+                    .height(animatedContainerHeight)
+                    .background(colors.keyboardBackground)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // Consumes clicks to prevent propagation to background views (like MacroPad)
+                    ),
         ) {
             Crossfade(
                 targetState = layoutState,
@@ -479,7 +487,6 @@ fun KeyboardScreen(
                                 kbRepeatEnabled = kbRepeatEnabled,
                                 kbLayout = kbLayout,
                                 onCloseQuickMenu = { viewModel.closeQuickMenu() },
-                                modifier = Modifier.fillMaxSize(),
                             )
 
                             TrackpointOverlay(

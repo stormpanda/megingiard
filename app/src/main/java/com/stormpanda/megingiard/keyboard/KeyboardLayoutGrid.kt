@@ -297,7 +297,7 @@ internal fun KeyboardLayoutGrid(
                 Row(
                     modifier =
                         Modifier
-                            .weight(3f)
+                            .weight(5f)
                             .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                 ) {
