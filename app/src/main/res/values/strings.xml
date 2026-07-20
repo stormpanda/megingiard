@@ -20,6 +20,7 @@
 
     <!-- Settings screen -->
     <string name="settings_close">Close</string>
+    <string name="settings_support_app">Support this App</string>
     <string name="cd_open_settings">Open settings</string>
     <string name="cd_open_global_settings">Open global settings</string>
     <string name="cd_drag_reorder">Drag to reorder</string>

@@ -25,6 +25,7 @@
 
     <!-- Settings screen -->
     <string name="settings_close">Schließen</string>
+    <string name="settings_support_app">App unterstützen</string>
     <string name="cd_open_settings">Einstellungen öffnen</string>
     <string name="cd_open_global_settings">Globale Einstellungen öffnen</string>
     <string name="cd_drag_reorder">Zum Sortieren ziehen</string>

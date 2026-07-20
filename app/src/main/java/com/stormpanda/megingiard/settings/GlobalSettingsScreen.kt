@@ -6,7 +6,9 @@ import android.net.Uri
 import android.provider.Settings
 import android.view.Display
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -85,6 +88,8 @@ private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 
 private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
 private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
+
+private val GS_KOFI_BUTTON_HEIGHT = 32.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,6 +186,29 @@ fun GlobalSettingsScreen(
                         }
                     },
                     actions = {
+                        Image(
+                            painter = painterResource(R.drawable.support_me_on_kofi_dark),
+                            contentDescription = stringResource(R.string.settings_support_app),
+                            modifier =
+                                Modifier
+                                    .height(GS_KOFI_BUTTON_HEIGHT)
+                                    .clickable {
+                                        val url = "https://ko-fi.com/stormpanda"
+                                        try {
+                                            val intent =
+                                                Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                }
+                                            val options = ActivityOptions.makeBasic()
+                                            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                            context.startActivity(intent, options.toBundle())
+                                            AppLog.d(TAG, "Launched Ko-fi link: $url")
+                                        } catch (e: Exception) {
+                                            AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
+                                        }
+                                    },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         HelpIconButton(onClick = { showSettingsHelp = true })
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
