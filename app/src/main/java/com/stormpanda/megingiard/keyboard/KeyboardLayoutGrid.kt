@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.keyboard
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -11,13 +12,11 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 internal fun KeyboardLayoutGrid(
     activeState: KeyboardLayoutState,
-    gestureState: KeyboardGestureState,
+    gestureProcessor: KeyboardGestureProcessor,
     controller: KeyRepeatController,
     pressedKeys: Set<String>,
     accentColor: Color,
@@ -32,10 +31,9 @@ internal fun KeyboardLayoutGrid(
     onCycleKbLayout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val coroutineScope = rememberCoroutineScope()
     val isQuickMenuOpenState = rememberUpdatedState(isQuickMenuOpen)
-
     val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
+    val boxCoords = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
     Box(
         modifier =
@@ -43,7 +41,7 @@ internal fun KeyboardLayoutGrid(
                 .fillMaxWidth()
                 .height(gridHeight)
                 .padding(horizontal = 4.dp, vertical = 2.dp)
-                .onGloballyPositioned { gestureState.boxCoords.value = it }
+                .onGloballyPositioned { boxCoords.value = it }
                 .pointerInput(activeState) {
                     try {
                         awaitPointerEventScope {
@@ -88,16 +86,13 @@ internal fun KeyboardLayoutGrid(
                                     if (change.isConsumed) continue
 
                                     val keyId =
-                                        gestureState.keyBounds.entries
+                                        gestureProcessor.keyBounds.entries
                                             .filter { (id, _) -> findKeyInLayout(activeState.grid, id) != null }
                                             .firstOrNull { (_, r) -> r.contains(change.position.x, change.position.y) }
                                             ?.key
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
-                                            val startPos = change.position
-                                            gestureState.pressPositions[pid] = startPos
-
                                             if (keyId != null && keyId.startsWith("mode_switch")) {
                                                 if (keyId != "mode_switch_2") {
                                                     val targetMode =
@@ -116,94 +111,14 @@ internal fun KeyboardLayoutGrid(
                                                 KeyboardState.reset()
                                                 change.consume()
                                             } else {
-                                                val hoveredKeyDef =
-                                                    if (keyId != null) {
-                                                        findKeyDef(activeState.grid, keyId)
-                                                    } else {
-                                                        null
-                                                    }
-                                                if (hoveredKeyDef != null) {
-                                                    val isCharKey =
-                                                        hoveredKeyDef.type == KeyType.NORMAL &&
-                                                            keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
-                                                            keyId != "enter"
-                                                    if (activeState.mode == KeyboardMode.FULL &&
-                                                        hoveredKeyDef.type == KeyType.NORMAL &&
-                                                        isCharKey
-                                                    ) {
-                                                        val bounds = gestureState.keyBounds[keyId]
-                                                        if (bounds != null) {
-                                                            val isLetter =
-                                                                hoveredKeyDef.label.length == 1 &&
-                                                                    hoveredKeyDef.label[0].isLetter()
-                                                            val useShiftLabel = isShiftActive || isCapsActive
-                                                            val label =
-                                                                when {
-                                                                    isAltGrActive && hoveredKeyDef.altGrLabel != null -> {
-                                                                        hoveredKeyDef.altGrLabel!!
-                                                                    }
-
-                                                                    useShiftLabel -> {
-                                                                        val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
-                                                                        if (isLetter) s.uppercase() else s
-                                                                    }
-
-                                                                    else -> {
-                                                                        hoveredKeyDef.label
-                                                                    }
-                                                                }
-                                                            gestureState.activePopupState.value =
-                                                                PopupState(
-                                                                    hoveredKeyDef,
-                                                                    listOf(label),
-                                                                    0,
-                                                                    bounds,
-                                                                    isLongPress = false,
-                                                                    pid,
-                                                                )
-                                                        }
-                                                    } else if (activeState.mode != KeyboardMode.FULL &&
-                                                        hoveredKeyDef.type == KeyType.NORMAL
-                                                    ) {
-                                                        val job =
-                                                            coroutineScope.launch {
-                                                                try {
-                                                                    delay(400L)
-                                                                    val bounds = gestureState.keyBounds[keyId]
-                                                                    val options =
-                                                                        getPopupOptions(
-                                                                            hoveredKeyDef,
-                                                                            isUpper = isShiftActive || isCapsActive,
-                                                                        )
-                                                                    if (bounds != null && options.isNotEmpty()) {
-                                                                        gestureState.activePopupState.value =
-                                                                            PopupState(
-                                                                                hoveredKeyDef,
-                                                                                options,
-                                                                                0,
-                                                                                bounds,
-                                                                                isLongPress = true,
-                                                                                pid,
-                                                                            )
-                                                                        gestureState.virtualAnchorX = 0f
-                                                                    }
-                                                                } catch (_: Exception) {
-                                                                }
-                                                            }
-                                                        gestureState.longPressJobs[pid] = job
-                                                    }
-                                                }
-
-                                                if (keyId == "space" || keyId == "space_num") {
-                                                    gestureState.spaceDragPointerId = pid
-                                                    gestureState.spaceDragStartX = change.position.x
-                                                    gestureState.isSpaceDragging = false
-                                                    gestureState.accumulatedSpaceDeltaX = 0f
-                                                }
-
-                                                if (controller.onKeyDown(pid, keyId, activeState.grid, kbRepeatEnabled)) {
-                                                    change.consume()
-                                                }
+                                                gestureProcessor.onPress(
+                                                    pointerId = pid,
+                                                    x = change.position.x,
+                                                    y = change.position.y,
+                                                    grid = activeState.grid,
+                                                    isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                )
+                                                change.consume()
                                             }
                                         }
 
@@ -211,99 +126,30 @@ internal fun KeyboardLayoutGrid(
                                             val delta = change.positionChange()
                                             if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
                                                 change.consume()
-                                            } else if (activeState.mode == KeyboardMode.FULL) {
-                                                gestureState.handleFullLayoutMove(pid, keyId, change, delta, activeState)
                                             } else {
-                                                gestureState.handleStandardLayoutMove(pid, keyId, change, delta, activeState)
+                                                gestureProcessor.onMove(
+                                                    pointerId = pid,
+                                                    x = change.position.x,
+                                                    y = change.position.y,
+                                                    dx = delta.x,
+                                                    dy = delta.y,
+                                                    grid = activeState.grid,
+                                                    isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                )
+                                                change.consume()
                                             }
                                         }
 
                                         PointerEventType.Release -> {
-                                            gestureState.longPressJobs[pid]?.cancel()
-                                            gestureState.longPressJobs.remove(pid)
-                                            gestureState.pressPositions.remove(pid)
-                                            gestureState.virtualAnchorX = 0f
-
-                                            val wasDragging = gestureState.isSpaceDragging && pid == gestureState.spaceDragPointerId
-                                            if (pid == gestureState.spaceDragPointerId) {
-                                                gestureState.spaceDragPointerId = null
-                                                gestureState.isSpaceDragging = false
-                                            }
-
-                                            if (wasDragging) {
-                                                controller.onKeyUp(
-                                                    pid,
-                                                    activeState.grid,
-                                                    kbRepeatEnabled,
-                                                    skipInjection = true,
-                                                )
-                                                change.consume()
-                                            } else {
-                                                val popup = gestureState.activePopupState.value
-                                                if (popup != null && pid == popup.pointerId) {
-                                                    val index = popup.selectedIndex
-                                                    if (index == 0) {
-                                                        controller.onKeyUp(
-                                                            pid,
-                                                            activeState.grid,
-                                                            kbRepeatEnabled,
-                                                            skipInjection = false,
-                                                        )
-                                                    } else {
-                                                        val charToInject = popup.options[index]
-                                                        if (popup.keyDef.shiftLabel != null &&
-                                                            popup.keyDef.shiftLabel == charToInject
-                                                        ) {
-                                                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTSHIFT)
-                                                            KeyInjector.keyDown(popup.keyDef.linuxKeycode)
-                                                            KeyInjector.keyUp(popup.keyDef.linuxKeycode)
-                                                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTSHIFT)
-                                                        } else {
-                                                            injectPopupChar(charToInject, kbLayout)
-                                                        }
-                                                        controller.onKeyUp(
-                                                            pid,
-                                                            activeState.grid,
-                                                            kbRepeatEnabled,
-                                                            skipInjection = true,
-                                                        )
-                                                    }
-                                                    gestureState.activePopupState.value = null
-                                                    gestureState.virtualAnchorX = 0f
-                                                    change.consume()
-                                                } else {
-                                                    if (!change.pressed && change.previousPressed) {
-                                                        controller.onKeyUp(
-                                                            pid,
-                                                            activeState.grid,
-                                                            kbRepeatEnabled,
-                                                            skipInjection = false,
-                                                        )
-                                                        change.consume()
-                                                    }
-                                                }
-                                                if (gestureState.pressPositions.isEmpty()) {
-                                                    gestureState.activePopupState.value = null
-                                                }
-                                            }
+                                            gestureProcessor.onRelease(pid, activeState.grid)
+                                            change.consume()
                                         }
                                     }
                                 }
                             }
                         }
                     } finally {
-                        val activePids = gestureState.pressPositions.keys.toList()
-                        for (p in activePids) {
-                            controller.onKeyUp(p, activeState.grid, kbRepeatEnabled, skipInjection = true)
-                        }
-                        gestureState.longPressJobs.values.forEach { it.cancel() }
-                        gestureState.longPressJobs.clear()
-                        gestureState.pressPositions.clear()
-                        gestureState.activePopupState.value = null
-                        gestureState.virtualAnchorX = 0f
-                        gestureState.spaceDragPointerId = null
-                        gestureState.isSpaceDragging = false
-                        gestureState.accumulatedSpaceDeltaX = 0f
+                        gestureProcessor.onCancel(activeState.grid)
                     }
                 },
     ) {
@@ -376,7 +222,17 @@ internal fun KeyboardLayoutGrid(
                                 isAltGrActive = isAltGrActive,
                                 isFullLayout = false,
                                 modifier = Modifier.weight(1f),
-                                onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
+                                onBoundsUpdate = { coords ->
+                                    val box = boxCoords.value
+                                    if (box != null && coords.isAttached) {
+                                        val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                                        val left = localTopLeft.x
+                                        val top = localTopLeft.y
+                                        val right = left + coords.size.width
+                                        val bottom = top + coords.size.height
+                                        gestureProcessor.updateBounds(key.id, left, top, right, bottom)
+                                    }
+                                },
                             )
                         }
                     }
@@ -406,7 +262,17 @@ internal fun KeyboardLayoutGrid(
                                         isAltGrActive = isAltGrActive,
                                         isFullLayout = false,
                                         modifier = Modifier.weight(key.widthWeight),
-                                        onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
+                                        onBoundsUpdate = { coords ->
+                                            val box = boxCoords.value
+                                            if (box != null && coords.isAttached) {
+                                                val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                                                val left = localTopLeft.x
+                                                val top = localTopLeft.y
+                                                val right = left + coords.size.width
+                                                val bottom = top + coords.size.height
+                                                gestureProcessor.updateBounds(key.id, left, top, right, bottom)
+                                            }
+                                        },
                                     )
                                 }
                             }
@@ -431,7 +297,17 @@ internal fun KeyboardLayoutGrid(
                             isAltGrActive = isAltGrActive,
                             isFullLayout = false,
                             modifier = Modifier.weight(key.widthWeight),
-                            onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
+                            onBoundsUpdate = { coords ->
+                                val box = boxCoords.value
+                                if (box != null && coords.isAttached) {
+                                    val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                                    val left = localTopLeft.x
+                                    val top = localTopLeft.y
+                                    val right = left + coords.size.width
+                                    val bottom = top + coords.size.height
+                                    gestureProcessor.updateBounds(key.id, left, top, right, bottom)
+                                }
+                            },
                         )
                     }
                 }
@@ -459,7 +335,17 @@ internal fun KeyboardLayoutGrid(
                                 isAltGrActive = isAltGrActive,
                                 isFullLayout = activeState.mode == KeyboardMode.FULL,
                                 modifier = Modifier.weight(key.widthWeight),
-                                onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
+                                onBoundsUpdate = { coords ->
+                                    val box = boxCoords.value
+                                    if (box != null && coords.isAttached) {
+                                        val localTopLeft = box.localPositionOf(coords, Offset.Zero)
+                                        val left = localTopLeft.x
+                                        val top = localTopLeft.y
+                                        val right = left + coords.size.width
+                                        val bottom = top + coords.size.height
+                                        gestureProcessor.updateBounds(key.id, left, top, right, bottom)
+                                    }
+                                },
                             )
                         }
                     }

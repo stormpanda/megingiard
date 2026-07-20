@@ -69,22 +69,6 @@ private val SPECIAL_KEY_IDS =
     )
 
 // ---------------------------------------------------------------------------
-// Key bounds — root-space hit testing rectangle
-// ---------------------------------------------------------------------------
-
-internal data class KeyBounds(
-    val left: Float,
-    val top: Float,
-    val right: Float,
-    val bottom: Float,
-) {
-    fun contains(
-        x: Float,
-        y: Float,
-    ) = x in left..right && y in top..bottom
-}
-
-// ---------------------------------------------------------------------------
 // Key cap composable
 // ---------------------------------------------------------------------------
 
