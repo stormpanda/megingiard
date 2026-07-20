@@ -801,64 +801,84 @@ fun KeyboardScreen(
                                                 if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
                                                     change.consume()
                                                 } else if (currentKeyboardMode == KeyboardMode.FULL) {
-                                                    val hoveredKeyDef =
-                                                        if (keyId !=
+                                                    val initialKeyId = controller.getKeyIdForPointer(pid)
+                                                    val initialKeyDef =
+                                                        if (initialKeyId !=
                                                             null
                                                         ) {
-                                                            findKeyInLayout(layoutState.grid, keyId)
+                                                            findKeyInLayout(layoutState.grid, initialKeyId)
                                                         } else {
                                                             null
                                                         }
-                                                    val isCharKey =
-                                                        keyId != null && keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
-                                                            keyId != "enter"
-                                                    if (hoveredKeyDef != null && isCharKey) {
-                                                        val bounds = keyBounds[keyId]
-                                                        if (bounds != null) {
-                                                            val isLetter =
-                                                                hoveredKeyDef.label.length == 1 && hoveredKeyDef.label[0].isLetter()
-                                                            val useShiftLabel = currentShiftActive || currentCapsActive
-                                                            val label =
-                                                                when {
-                                                                    currentAltGrActive && hoveredKeyDef.altGrLabel != null -> {
-                                                                        hoveredKeyDef.altGrLabel!!
-                                                                    }
-
-                                                                    useShiftLabel -> {
-                                                                        val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
-                                                                        if (isLetter) s.uppercase() else s
-                                                                    }
-
-                                                                    else -> {
-                                                                        hoveredKeyDef.label
-                                                                    }
-                                                                }
-                                                            val currentPopup = activePopupState
-                                                            if (currentPopup == null || currentPopup.keyDef.id != keyId) {
-                                                                activePopupState =
-                                                                    PopupState(hoveredKeyDef, listOf(label), 0, bounds, isLongPress = false)
-                                                            }
-                                                        }
-                                                        controller.onKeyMove(
-                                                            pid,
-                                                            keyId,
-                                                            delta.x,
-                                                            delta.y,
-                                                            layoutState.grid,
-                                                            kbRepeatEnabled,
-                                                        )
+                                                    if (initialKeyDef?.type == KeyType.MODIFIER) {
+                                                        change.consume()
                                                     } else {
-                                                        activePopupState = null
-                                                        controller.onKeyMove(
-                                                            pid,
-                                                            keyId,
-                                                            delta.x,
-                                                            delta.y,
-                                                            layoutState.grid,
-                                                            kbRepeatEnabled,
-                                                        )
+                                                        val hoveredKeyDef =
+                                                            if (keyId !=
+                                                                null
+                                                            ) {
+                                                                findKeyInLayout(layoutState.grid, keyId)
+                                                            } else {
+                                                                null
+                                                            }
+                                                        val isCharKey =
+                                                            hoveredKeyDef != null && hoveredKeyDef.type == KeyType.NORMAL &&
+                                                                keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
+                                                                keyId != "enter"
+                                                        if (hoveredKeyDef != null && isCharKey) {
+                                                            val bounds = keyBounds[keyId]
+                                                            if (bounds != null) {
+                                                                val isLetter =
+                                                                    hoveredKeyDef.label.length == 1 && hoveredKeyDef.label[0].isLetter()
+                                                                val useShiftLabel = currentShiftActive || currentCapsActive
+                                                                val label =
+                                                                    when {
+                                                                        currentAltGrActive && hoveredKeyDef.altGrLabel != null -> {
+                                                                            hoveredKeyDef.altGrLabel!!
+                                                                        }
+
+                                                                        useShiftLabel -> {
+                                                                            val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
+                                                                            if (isLetter) s.uppercase() else s
+                                                                        }
+
+                                                                        else -> {
+                                                                            hoveredKeyDef.label
+                                                                        }
+                                                                    }
+                                                                val currentPopup = activePopupState
+                                                                if (currentPopup == null || currentPopup.keyDef.id != keyId) {
+                                                                    activePopupState =
+                                                                        PopupState(
+                                                                            hoveredKeyDef,
+                                                                            listOf(label),
+                                                                            0,
+                                                                            bounds,
+                                                                            isLongPress = false,
+                                                                        )
+                                                                }
+                                                            }
+                                                            controller.onKeyMove(
+                                                                pid,
+                                                                keyId,
+                                                                delta.x,
+                                                                delta.y,
+                                                                layoutState.grid,
+                                                                kbRepeatEnabled,
+                                                            )
+                                                        } else {
+                                                            activePopupState = null
+                                                            controller.onKeyMove(
+                                                                pid,
+                                                                keyId,
+                                                                delta.x,
+                                                                delta.y,
+                                                                layoutState.grid,
+                                                                kbRepeatEnabled,
+                                                            )
+                                                        }
+                                                        change.consume()
                                                     }
-                                                    change.consume()
                                                 } else {
                                                     val popup = activePopupState
                                                     if (popup != null) {

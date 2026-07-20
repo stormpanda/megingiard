@@ -96,7 +96,8 @@ class KeyRepeatController(
             KeyType.MODIFIER -> {
                 pointerKeyMap[pointerId] = id
                 modifierBeingHeld = keyDef
-                val code = KeyboardState.onModifierTouchDown(id, keyDef.linuxKeycode, layout.size == 6)
+                val targetCode = if (id == "caps") LinuxKeycodes.KEY_LEFTSHIFT else keyDef.linuxKeycode
+                val code = KeyboardState.onModifierTouchDown(id, targetCode, layout.size == 6)
                 if (code != null) KeyInjector.keyDown(code)
                 startModifierHold(keyDef, layout.size == 6)
             }
@@ -252,8 +253,9 @@ class KeyRepeatController(
             KeyType.MODIFIER -> {
                 modifierBeingHeld = null
                 modifierHoldJob?.cancel()
+                val targetCode = if (releasedId == "caps") LinuxKeycodes.KEY_LEFTSHIFT else keyDef.linuxKeycode
                 KeyboardState
-                    .onModifierTouchUp(releasedId, keyDef.linuxKeycode, layout.size == 6)
+                    .onModifierTouchUp(releasedId, targetCode, layout.size == 6)
                     .forEach { KeyInjector.keyUp(it) }
             }
 
