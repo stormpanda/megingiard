@@ -161,4 +161,23 @@ class KeyboardStateTest {
         // Verify caps lock is HELD
         assertEquals(ModifierState.HELD, KeyboardState.stateFor("caps").value)
     }
+
+    @Test
+    fun testFullLayoutSecondTouchDownReturnsKeycode() {
+        // First tap to STICKY
+        val down1 = KeyboardState.onModifierTouchDown("caps", LinuxKeycodes.KEY_CAPSLOCK, isFullLayout = true)
+        assertEquals(LinuxKeycodes.KEY_CAPSLOCK, down1)
+        val up1 = KeyboardState.onModifierTouchUp("caps", LinuxKeycodes.KEY_CAPSLOCK, isFullLayout = true)
+        assertEquals(ModifierState.STICKY, KeyboardState.stateFor("caps").value)
+        assertEquals(listOf(LinuxKeycodes.KEY_CAPSLOCK), up1)
+
+        // Second tap touch down: even though state is STICKY, it should still return keycode so the OS receives KEY_DOWN
+        val down2 = KeyboardState.onModifierTouchDown("caps", LinuxKeycodes.KEY_CAPSLOCK, isFullLayout = true)
+        assertEquals(LinuxKeycodes.KEY_CAPSLOCK, down2)
+
+        // Second tap touch up: transitions to INACTIVE and returns keycode
+        val up2 = KeyboardState.onModifierTouchUp("caps", LinuxKeycodes.KEY_CAPSLOCK, isFullLayout = true)
+        assertEquals(ModifierState.INACTIVE, KeyboardState.stateFor("caps").value)
+        assertEquals(listOf(LinuxKeycodes.KEY_CAPSLOCK), up2)
+    }
 }

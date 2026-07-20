@@ -59,8 +59,8 @@ object KeyboardState {
             if (flow.value == ModifierState.INACTIVE) {
                 AppLog.d(TAG, "modifier '$id' INACTIVE → HELD (immediate full layout touch down)")
                 flow.value = ModifierState.HELD
-                return if (keycode != 0) keycode else null
             }
+            return if (keycode != 0) keycode else null
         }
         return null
     }
@@ -207,7 +207,7 @@ object KeyboardState {
             }
         }
         val capsState = _modifiers["caps"]?.value ?: ModifierState.INACTIVE
-        if (capsState != ModifierState.INACTIVE) {
+        if (capsState != ModifierState.INACTIVE && layout.size != 6) {
             if (LinuxKeycodes.KEY_LEFTSHIFT !in keycodes) {
                 keycodes += LinuxKeycodes.KEY_LEFTSHIFT
             }
