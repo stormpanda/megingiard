@@ -732,7 +732,7 @@ fun KeyboardScreen(
         ) {
             Crossfade(
                 targetState = layoutState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 animationSpec = tween(300),
                 label = "Layout Switch",
             ) { activeState ->
@@ -1338,83 +1338,83 @@ fun KeyboardScreen(
                                 }
                             }
                         }
-
-                        // 3. Bottom Toolbar
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(KB_BOTTOM_BAR_HEIGHT)
-                                    .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            val interactionSource = remember { MutableInteractionSource() }
-                            val isPressed by interactionSource.collectIsPressedAsState()
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxHeight()
-                                        .width(KB_GLOBE_BUTTON_WIDTH)
-                                        .offset(y = (-3).dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isPressed) colors.keyPressed else Color.Transparent)
-                                        .clickable(
-                                            interactionSource = interactionSource,
-                                            indication = null,
-                                            onClick = { AppStateManager.setFullscreenKeyboardActive(false) },
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.cd_kb_collapse),
-                                    tint = colors.onSurface.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-                                )
-                            }
-
-                            val isFullModeActive = keyboardMode == KeyboardMode.FULL
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            KeyboardModeToggleButton(
-                                isFullModeActive = isFullModeActive,
-                                onToggle = {
-                                    val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
-                                    viewModel.setKeyboardMode(nextMode)
-                                    KeyboardState.reset()
-                                },
-                                accentColor = accentColor,
-                            )
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            val interactionSourceSettings = remember { MutableInteractionSource() }
-                            val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxHeight()
-                                        .width(KB_GLOBE_BUTTON_WIDTH)
-                                        .offset(y = (-3).dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
-                                        .clickable(
-                                            interactionSource = interactionSourceSettings,
-                                            indication = null,
-                                            onClick = { AppStateManager.setKeyboardSettingsOpen(true) },
-                                        ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Settings,
-                                    contentDescription = stringResource(R.string.cd_kb_settings),
-                                    tint = colors.onSurface.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-                                )
-                            }
-                        }
                     }
+                }
+            }
+
+            // 3. Bottom Toolbar
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(KB_BOTTOM_BAR_HEIGHT)
+                        .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val interactionSource = remember { MutableInteractionSource() }
+                val isPressed by interactionSource.collectIsPressedAsState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .width(KB_GLOBE_BUTTON_WIDTH)
+                            .offset(y = (-3).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                            .clickable(
+                                interactionSource = interactionSource,
+                                indication = null,
+                                onClick = { AppStateManager.setFullscreenKeyboardActive(false) },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.cd_kb_collapse),
+                        tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+                    )
+                }
+
+                val isFullModeActive = keyboardMode == KeyboardMode.FULL
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                KeyboardModeToggleButton(
+                    isFullModeActive = isFullModeActive,
+                    onToggle = {
+                        val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
+                        viewModel.setKeyboardMode(nextMode)
+                        KeyboardState.reset()
+                    },
+                    accentColor = accentColor,
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                val interactionSourceSettings = remember { MutableInteractionSource() }
+                val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .width(KB_GLOBE_BUTTON_WIDTH)
+                            .offset(y = (-3).dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
+                            .clickable(
+                                interactionSource = interactionSourceSettings,
+                                indication = null,
+                                onClick = { AppStateManager.setKeyboardSettingsOpen(true) },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Settings,
+                        contentDescription = stringResource(R.string.cd_kb_settings),
+                        tint = colors.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+                    )
                 }
             }
         }
