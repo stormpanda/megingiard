@@ -104,9 +104,10 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - The virtual keyboard MUST support a toggleable **Compact Full Keyboard Mode** displaying all standard physical keys (including F1-F12, Esc, Tab, Meta, and dedicated Arrow keys) in a single 6-row grid.
 - The mode MUST be toggled via a dedicated keyboard layout toggle button in the bottom toolbar.
-- The virtual keyboard height MUST adapt dynamically when in Compact Full Keyboard Mode:
-  - The keyboard container height MUST increase from `262 dp` to `314 dp`.
-  - The keyboard grid height MUST increase from `168 dp` to `220 dp`.
+- The virtual keyboard height MUST adapt smoothly when transitioning:
+  - The keyboard container height MUST animate smoothly from `262 dp` to `270 dp` (or vice versa) using a transition animation.
+  - The keyboard grid height MUST adapt from `168 dp` to `220 dp`.
+- The transition between different layout modes (standard, ergo, compact full) MUST use a visual crossfade animation with isolated layout subtrees, preventing any scrambling or button recycling visual artifacts.
 - The layout MUST align columns precisely by using uniform row width weights of `15.0f` per row.
 - Special character keys in Compact Full Keyboard Mode MUST show both their unshifted and shifted symbols simultaneously, stacked vertically on the key cap. The currently active symbol (determined by the state of the Shift/CapsLock modifiers) is highlighted, and the inactive symbol is dimmed.
 - Holding a character key in Compact Full Keyboard Mode MUST NOT trigger any secondary options popup; only its standard character preview popup is displayed.

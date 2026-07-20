@@ -314,8 +314,12 @@ fun KeyboardScreen(
 
     // Sub-mode and layout tracking
     val keyboardMode by viewModel.keyboardMode.collectAsState()
-    val dynamicContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
-    val dynamicGridHeight = if (keyboardMode == KeyboardMode.FULL) 220.dp else 168.dp
+    val targetContainerHeight = if (keyboardMode == KeyboardMode.FULL) 270.dp else 262.dp
+    val animatedContainerHeight by animateDpAsState(
+        targetValue = targetContainerHeight,
+        animationSpec = tween(300),
+        label = "containerHeight",
+    )
 
     // Modifier states for dynamic label rendering
     val lshiftState by KeyboardState.stateFor("lshift").collectAsState()
@@ -405,14 +409,15 @@ fun KeyboardScreen(
         keyId: String?,
         change: PointerInputChange,
         delta: Offset,
+        activeState: KeyboardLayoutState,
     ) {
         val initialKeyId = controller.getKeyIdForPointer(pid)
-        val initialKeyDef = if (initialKeyId != null) findKeyInLayout(layoutState.grid, initialKeyId) else null
+        val initialKeyDef = if (initialKeyId != null) findKeyInLayout(activeState.grid, initialKeyId) else null
         if (initialKeyDef?.type == KeyType.MODIFIER) {
             change.consume()
             return
         }
-        val hoveredKeyDef = if (keyId != null) findKeyInLayout(layoutState.grid, keyId) else null
+        val hoveredKeyDef = if (keyId != null) findKeyInLayout(activeState.grid, keyId) else null
         val isCharKey =
             hoveredKeyDef != null && hoveredKeyDef.type == KeyType.NORMAL &&
                 keyId != "bksp" && keyId != "space" && keyId != "space_num" && keyId != "enter"
@@ -446,7 +451,7 @@ fun KeyboardScreen(
                 keyId,
                 delta.x,
                 delta.y,
-                layoutState.grid,
+                activeState.grid,
                 kbRepeatEnabled,
             )
         } else {
@@ -456,7 +461,7 @@ fun KeyboardScreen(
                 keyId,
                 delta.x,
                 delta.y,
-                layoutState.grid,
+                activeState.grid,
                 kbRepeatEnabled,
             )
         }
@@ -468,6 +473,7 @@ fun KeyboardScreen(
         keyId: String?,
         change: PointerInputChange,
         delta: Offset,
+        activeState: KeyboardLayoutState,
     ) {
         val popup = activePopupState
         if (popup != null) {
@@ -546,7 +552,7 @@ fun KeyboardScreen(
                         keyId,
                         delta.x,
                         delta.y,
-                        layoutState.grid,
+                        activeState.grid,
                         kbRepeatEnabled,
                     )
                 ) {
@@ -705,7 +711,6 @@ fun KeyboardScreen(
                             },
                     contentAlignment = Alignment.Center,
                 ) {
-                    // Clean, empty active area
                 }
             }
         } else {
@@ -717,7 +722,7 @@ fun KeyboardScreen(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(dynamicContainerHeight)
+                    .height(animatedContainerHeight)
                     .background(colors.keyboardBackground)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -725,385 +730,453 @@ fun KeyboardScreen(
                         onClick = {}, // Consumes clicks to prevent propagation to background views (like MacroPad)
                     ),
         ) {
-            // 1. Top Toolbar (hidden in FULL layout mode)
-            if (keyboardMode != KeyboardMode.FULL) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(KB_TOOLBAR_HEIGHT)
-                            .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Modifier buttons on the left
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+            Crossfade(targetState = layoutState, animationSpec = tween(300), label = "Layout Switch") { activeState ->
+                key(activeState.mode) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(),
                     ) {
-                        ModifierButton(
-                            id = "ctrl",
-                            label = "CTRL",
-                            keycode = LinuxKeycodes.KEY_LEFTCTRL,
-                            accentColor = accentColor,
-                        )
-                        ModifierButton(
-                            id = "alt",
-                            label = "ALT",
-                            keycode = LinuxKeycodes.KEY_LEFTALT,
-                            accentColor = accentColor,
-                        )
-                        ModifierButton(
-                            id = "altgr",
-                            label = "ALT GR",
-                            keycode = LinuxKeycodes.KEY_RIGHTALT,
-                            accentColor = accentColor,
-                        )
-                    }
+                        // 1. Top Toolbar (hidden in FULL layout mode)
+                        if (activeState.mode != KeyboardMode.FULL) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(KB_TOOLBAR_HEIGHT)
+                                        .padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Modifier buttons on the left
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    ModifierButton(
+                                        id = "ctrl",
+                                        label = "CTRL",
+                                        keycode = LinuxKeycodes.KEY_LEFTCTRL,
+                                        accentColor = accentColor,
+                                    )
+                                    ModifierButton(
+                                        id = "alt",
+                                        label = "ALT",
+                                        keycode = LinuxKeycodes.KEY_LEFTALT,
+                                        accentColor = accentColor,
+                                    )
+                                    ModifierButton(
+                                        id = "altgr",
+                                        label = "ALT GR",
+                                        keycode = LinuxKeycodes.KEY_RIGHTALT,
+                                        accentColor = accentColor,
+                                    )
+                                }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                                Spacer(modifier = Modifier.weight(1f))
 
-                    // Action icons on the right
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ToolbarIcon(
-                            imageVector = Icons.Rounded.SelectAll,
-                            contentDescription = stringResource(R.string.cd_kb_select_all),
-                            onClick = {
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_A)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                            },
-                        )
-                        ToolbarIcon(
-                            imageVector = Icons.Rounded.ContentCut,
-                            contentDescription = stringResource(R.string.cd_kb_cut),
-                            onClick = {
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                            },
-                        )
-                        ToolbarIcon(
-                            imageVector = Icons.Rounded.ContentCopy,
-                            contentDescription = stringResource(R.string.cd_kb_copy),
-                            onClick = {
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                            },
-                        )
-                        ToolbarIcon(
-                            imageVector = Icons.Rounded.ContentPaste,
-                            contentDescription = stringResource(R.string.cd_kb_paste),
-                            onClick = {
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                                KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                            },
-                        )
-                    }
-                }
-            }
-
-            // 2. Keyboard Grid (isolated touch interception)
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(dynamicGridHeight)
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                        .onGloballyPositioned { boxCoordsState.value = it }
-                        .pointerInput(layoutState) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Main)
-                                    if (isQuickMenuOpenState.value) {
-                                        if (event.type == PointerEventType.Press) {
-                                            if (event.changes.none { it.isConsumed }) {
-                                                viewModel.closeQuickMenu()
-                                            }
-                                        }
-                                        event.changes.forEach { it.consume() }
-                                        continue
-                                    }
-
-                                    val boxCoords = boxCoordsState.value ?: continue
-                                    for (change in event.changes) {
-                                        val pid = change.id.value
-
-                                        if (controller.isTrackpointPointer(pid)) {
-                                            when {
-                                                change.pressed && event.type == PointerEventType.Move -> {
-                                                    val delta = change.positionChange()
-                                                    controller.onKeyMove(pid, null, delta.x, delta.y, layoutState.grid, kbRepeatEnabled)
-                                                    change.consume()
-                                                }
-
-                                                !change.pressed && change.previousPressed -> {
-                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled)
-                                                    change.consume()
-                                                }
-                                            }
-                                            continue
-                                        }
-
-                                        if (change.isConsumed) continue
-
-                                        val keyId =
-                                            keyBounds.entries
-                                                .filter { (id, _) -> findKeyInLayout(layoutState.grid, id) != null }
-                                                .firstOrNull { (_, r) -> r.contains(change.position.x, change.position.y) }
-                                                ?.key
-
-                                        when (event.type) {
-                                            PointerEventType.Press -> {
-                                                if (!change.previousPressed) {
-                                                    pressPositions[pid] = change.position
-                                                    if (keyId == "space" || keyId == "space_num") {
-                                                        spaceDragStartX = change.position.x
-                                                        isSpaceDragging = false
-                                                        accumulatedSpaceDeltaX = 0f
-                                                        spaceDragPointerId = pid
-                                                    }
-                                                    if (keyId != null && keyId.startsWith("mode_switch")) {
-                                                        if (keyId != "mode_switch_2") {
-                                                            val targetMode =
-                                                                when (keyId) {
-                                                                    "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
-                                                                    "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                                    "mode_switch_1234" -> KeyboardMode.NUMERIC
-                                                                    else -> KeyboardMode.LETTERS
-                                                                }
-                                                            viewModel.setKeyboardMode(targetMode)
-                                                            KeyboardState.reset()
-                                                        }
-                                                        change.consume()
-                                                    } else if (keyId == "globe") {
-                                                        viewModel.cycleKbLayout()
-                                                        KeyboardState.reset()
-                                                        change.consume()
-                                                    } else {
-                                                        val keyDef =
-                                                            if (keyId !=
-                                                                null
-                                                            ) {
-                                                                findKeyInLayout(layoutState.grid, keyId)
-                                                            } else {
-                                                                null
-                                                            }
-                                                        val isCharKey =
-                                                            keyId != null && keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
-                                                                keyId != "enter"
-                                                        if (keyDef != null && isCharKey) {
-                                                            val bounds = keyBounds[keyId]
-                                                            if (bounds != null) {
-                                                                val isLetter = keyDef.label.length == 1 && keyDef.label[0].isLetter()
-                                                                val useShiftLabel = currentShiftActive || currentCapsActive
-                                                                val label =
-                                                                    when {
-                                                                        currentAltGrActive && keyDef.altGrLabel != null -> {
-                                                                            keyDef.altGrLabel!!
-                                                                        }
-
-                                                                        useShiftLabel -> {
-                                                                            val s = keyDef.shiftLabel ?: keyDef.label
-                                                                            if (isLetter) s.uppercase() else s
-                                                                        }
-
-                                                                        else -> {
-                                                                            keyDef.label
-                                                                        }
-                                                                    }
-                                                                activePopupState =
-                                                                    PopupState(keyDef, listOf(label), 0, bounds, isLongPress = false)
-                                                                val extraOpts =
-                                                                    if (currentKeyboardMode == KeyboardMode.FULL) {
-                                                                        emptyList()
-                                                                    } else {
-                                                                        getPopupOptions(keyDef, currentShiftActive || currentCapsActive)
-                                                                    }
-                                                                if (extraOpts.isNotEmpty()) {
-                                                                    pressPositions[pid] = change.position
-                                                                    longPressJobs[pid]?.cancel()
-                                                                    longPressJobs[pid] =
-                                                                        coroutineScope.launch {
-                                                                            delay(400L)
-                                                                            val fullOpts = listOf(label) + extraOpts
-                                                                            val defaultIndex =
-                                                                                fullOpts
-                                                                                    .indexOfFirst {
-                                                                                        it ==
-                                                                                            keyDef.superscript
-                                                                                    }.coerceAtLeast(1)
-                                                                            activePopupState =
-                                                                                PopupState(
-                                                                                    keyDef,
-                                                                                    fullOpts,
-                                                                                    defaultIndex,
-                                                                                    bounds,
-                                                                                    isLongPress = true,
-                                                                                )
-                                                                        }
-                                                                }
-                                                            }
-                                                        }
-                                                        if (controller.onKeyDown(pid, keyId, layoutState.grid, kbRepeatEnabled)) {
-                                                            change.consume()
-                                                        }
-                                                    }
-                                                }
-                                            }
-
-                                            PointerEventType.Move -> {
-                                                val delta = change.positionChange()
-                                                if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
-                                                    change.consume()
-                                                } else if (currentKeyboardMode == KeyboardMode.FULL) {
-                                                    handleFullLayoutMove(pid, keyId, change, delta)
-                                                } else {
-                                                    handleStandardLayoutMove(pid, keyId, change, delta)
-                                                }
-                                            }
-
-                                            PointerEventType.Release -> {
-                                                longPressJobs[pid]?.cancel()
-                                                longPressJobs.remove(pid)
-                                                pressPositions.remove(pid)
-                                                virtualAnchorX = 0f
-
-                                                val wasDragging = isSpaceDragging && pid == spaceDragPointerId
-                                                if (pid == spaceDragPointerId) {
-                                                    spaceDragPointerId = null
-                                                    isSpaceDragging = false
-                                                }
-
-                                                if (wasDragging) {
-                                                    controller.onKeyUp(pid, layoutState.grid, kbRepeatEnabled, skipInjection = true)
-                                                    change.consume()
-                                                } else {
-                                                    val popup = activePopupState
-                                                    val releasedId = controller.getKeyIdForPointer(pid)
-                                                    if (popup != null && releasedId == popup.keyDef.id) {
-                                                        val index = popup.selectedIndex
-                                                        if (index == 0) {
-                                                            controller.onKeyUp(
-                                                                pid,
-                                                                layoutState.grid,
-                                                                kbRepeatEnabled,
-                                                                skipInjection = false,
-                                                            )
-                                                        } else {
-                                                            val charToInject = popup.options[index]
-                                                            if (popup.keyDef.shiftLabel != null &&
-                                                                popup.keyDef.shiftLabel == charToInject
-                                                            ) {
-                                                                KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTSHIFT)
-                                                                KeyInjector.keyDown(popup.keyDef.linuxKeycode)
-                                                                KeyInjector.keyUp(popup.keyDef.linuxKeycode)
-                                                                KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTSHIFT)
-                                                            } else {
-                                                                injectPopupChar(charToInject, kbLayout)
-                                                            }
-                                                            controller.onKeyUp(
-                                                                pid,
-                                                                layoutState.grid,
-                                                                kbRepeatEnabled,
-                                                                skipInjection = true,
-                                                            )
-                                                        }
-                                                        activePopupState = null
-                                                        virtualAnchorX = 0f
-                                                        change.consume()
-                                                    } else {
-                                                        if (!change.pressed && change.previousPressed) {
-                                                            controller.onKeyUp(
-                                                                pid,
-                                                                layoutState.grid,
-                                                                kbRepeatEnabled,
-                                                                skipInjection = false,
-                                                            )
-                                                            change.consume()
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                // Action icons on the right
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    ToolbarIcon(
+                                        imageVector = Icons.Rounded.SelectAll,
+                                        contentDescription = stringResource(R.string.cd_kb_select_all),
+                                        onClick = {
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                                        },
+                                    )
+                                    ToolbarIcon(
+                                        imageVector = Icons.Rounded.ContentCut,
+                                        contentDescription = stringResource(R.string.cd_kb_cut),
+                                        onClick = {
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                                        },
+                                    )
+                                    ToolbarIcon(
+                                        imageVector = Icons.Rounded.ContentCopy,
+                                        contentDescription = stringResource(R.string.cd_kb_copy),
+                                        onClick = {
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                                        },
+                                    )
+                                    ToolbarIcon(
+                                        imageVector = Icons.Rounded.ContentPaste,
+                                        contentDescription = stringResource(R.string.cd_kb_paste),
+                                        onClick = {
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+                                            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+                                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+                                        },
+                                    )
                                 }
                             }
-                        },
-            ) {
-                // Crossfade layout switch
-                Crossfade(targetState = layoutState, label = "Layout Switch") { activeState ->
-                    key(activeState.mode) {
-                        val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
-                        if (isNumericLayout) {
-                            val ops =
-                                listOf(
-                                    findKeyInLayout(activeState.grid, "plus") ?: KeyDef("plus", "+", 0),
-                                    findKeyInLayout(activeState.grid, "minus") ?: KeyDef("minus", "-", 0),
-                                    findKeyInLayout(activeState.grid, "asterisk") ?: KeyDef("asterisk", "*", 0),
-                                    findKeyInLayout(activeState.grid, "slash") ?: KeyDef("slash", "/", 0),
-                                )
-                            val gridRows =
-                                listOf(
-                                    listOf(
-                                        findKeyInLayout(activeState.grid, "num_1") ?: KeyDef("num_1", "1", 0),
-                                        findKeyInLayout(activeState.grid, "num_2") ?: KeyDef("num_2", "2", 0),
-                                        findKeyInLayout(activeState.grid, "num_3") ?: KeyDef("num_3", "3", 0),
-                                        findKeyInLayout(activeState.grid, "percent") ?: KeyDef("percent", "%", 0),
-                                    ),
-                                    listOf(
-                                        findKeyInLayout(activeState.grid, "num_4") ?: KeyDef("num_4", "4", 0),
-                                        findKeyInLayout(activeState.grid, "num_5") ?: KeyDef("num_5", "5", 0),
-                                        findKeyInLayout(activeState.grid, "num_6") ?: KeyDef("num_6", "6", 0),
-                                        findKeyInLayout(activeState.grid, "space_num") ?: KeyDef("space_num", "␣", 0),
-                                    ),
-                                    listOf(
-                                        findKeyInLayout(activeState.grid, "num_7") ?: KeyDef("num_7", "7", 0),
-                                        findKeyInLayout(activeState.grid, "num_8") ?: KeyDef("num_8", "8", 0),
-                                        findKeyInLayout(activeState.grid, "num_9") ?: KeyDef("num_9", "9", 0),
-                                        findKeyInLayout(activeState.grid, "bksp") ?: KeyDef("bksp", "⌫", 0),
-                                    ),
-                                )
-                            val bottomRow =
-                                listOf(
-                                    findKeyInLayout(activeState.grid, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
-                                    findKeyInLayout(activeState.grid, "comma") ?: KeyDef("comma", ",", 0),
-                                    findKeyInLayout(activeState.grid, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
-                                    findKeyInLayout(activeState.grid, "num_0") ?: KeyDef("num_0", "0", 0),
-                                    findKeyInLayout(activeState.grid, "equal") ?: KeyDef("equal", "=", 0),
-                                    findKeyInLayout(activeState.grid, "dot") ?: KeyDef("dot", ".", 0),
-                                    findKeyInLayout(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
-                                )
+                        }
 
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
-                            ) {
-                                // Top part: Left Operators + Middle/Right Grid
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .weight(3f)
-                                            .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                        // 2. Keyboard Grid (isolated touch interception)
+                        val gridHeight = if (activeState.mode == KeyboardMode.FULL) 220.dp else 168.dp
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(gridHeight)
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .onGloballyPositioned { boxCoordsState.value = it }
+                                    .pointerInput(activeState) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                                if (isQuickMenuOpenState.value) {
+                                                    if (event.type == PointerEventType.Press) {
+                                                        if (event.changes.none { it.isConsumed }) {
+                                                            viewModel.closeQuickMenu()
+                                                        }
+                                                    }
+                                                    event.changes.forEach { it.consume() }
+                                                    continue
+                                                }
+
+                                                val boxCoords = boxCoordsState.value ?: continue
+                                                for (change in event.changes) {
+                                                    val pid = change.id.value
+
+                                                    if (controller.isTrackpointPointer(pid)) {
+                                                        when {
+                                                            change.pressed && event.type == PointerEventType.Move -> {
+                                                                val delta = change.positionChange()
+                                                                controller.onKeyMove(
+                                                                    pid,
+                                                                    null,
+                                                                    delta.x,
+                                                                    delta.y,
+                                                                    activeState.grid,
+                                                                    kbRepeatEnabled,
+                                                                )
+                                                                change.consume()
+                                                            }
+
+                                                            !change.pressed && change.previousPressed -> {
+                                                                controller.onKeyUp(pid, activeState.grid, kbRepeatEnabled)
+                                                                change.consume()
+                                                            }
+                                                        }
+                                                        continue
+                                                    }
+
+                                                    if (change.isConsumed) continue
+
+                                                    val keyId =
+                                                        keyBounds.entries
+                                                            .filter { (id, _) -> findKeyInLayout(activeState.grid, id) != null }
+                                                            .firstOrNull { (_, r) -> r.contains(change.position.x, change.position.y) }
+                                                            ?.key
+
+                                                    when (event.type) {
+                                                        PointerEventType.Press -> {
+                                                            val startPos = change.position
+                                                            pressPositions[pid] = startPos
+                                                            val hoveredKeyDef =
+                                                                if (keyId !=
+                                                                    null
+                                                                ) {
+                                                                    findKeyInLayout(activeState.grid, keyId)
+                                                                } else {
+                                                                    null
+                                                                }
+                                                            if (hoveredKeyDef != null) {
+                                                                val isCharKey =
+                                                                    hoveredKeyDef.type == KeyType.NORMAL &&
+                                                                        keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
+                                                                        keyId != "enter"
+                                                                if (activeState.mode == KeyboardMode.FULL &&
+                                                                    hoveredKeyDef.type == KeyType.NORMAL &&
+                                                                    isCharKey
+                                                                ) {
+                                                                    val bounds = keyBounds[keyId]
+                                                                    if (bounds != null) {
+                                                                        val isLetter =
+                                                                            hoveredKeyDef.label.length == 1 &&
+                                                                                hoveredKeyDef.label[0].isLetter()
+                                                                        val useShiftLabel = currentShiftActive || currentCapsActive
+                                                                        val label =
+                                                                            when {
+                                                                                currentAltGrActive && hoveredKeyDef.altGrLabel != null -> {
+                                                                                    hoveredKeyDef.altGrLabel!!
+                                                                                }
+
+                                                                                useShiftLabel -> {
+                                                                                    val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
+                                                                                    if (isLetter) s.uppercase() else s
+                                                                                }
+
+                                                                                else -> {
+                                                                                    hoveredKeyDef.label
+                                                                                }
+                                                                            }
+                                                                        activePopupState =
+                                                                            PopupState(
+                                                                                hoveredKeyDef,
+                                                                                listOf(label),
+                                                                                0,
+                                                                                bounds,
+                                                                                isLongPress = false,
+                                                                            )
+                                                                    }
+                                                                } else if (activeState.mode != KeyboardMode.FULL &&
+                                                                    hoveredKeyDef.type == KeyType.NORMAL
+                                                                ) {
+                                                                    val job =
+                                                                        coroutineScope.launch {
+                                                                            delay(400L)
+                                                                            val bounds = keyBounds[keyId]
+                                                                            val options =
+                                                                                getPopupOptions(
+                                                                                    hoveredKeyDef,
+                                                                                    isUpper = currentShiftActive || currentCapsActive,
+                                                                                )
+                                                                            if (bounds != null && options.isNotEmpty()) {
+                                                                                activePopupState =
+                                                                                    PopupState(
+                                                                                        hoveredKeyDef,
+                                                                                        options,
+                                                                                        0,
+                                                                                        bounds,
+                                                                                        isLongPress = true,
+                                                                                    )
+                                                                                virtualAnchorX = 0f
+                                                                            }
+                                                                        }
+                                                                    longPressJobs[pid] = job
+                                                                }
+                                                            }
+
+                                                            if (keyId == "space" || keyId == "space_num") {
+                                                                spaceDragPointerId = pid
+                                                                spaceDragStartX = change.position.x
+                                                                isSpaceDragging = false
+                                                                accumulatedSpaceDeltaX = 0f
+                                                            }
+
+                                                            if (controller.onKeyDown(pid, keyId, activeState.grid, kbRepeatEnabled)) {
+                                                                change.consume()
+                                                            }
+                                                        }
+
+                                                        PointerEventType.Move -> {
+                                                            val delta = change.positionChange()
+                                                            if (keyId != null && (keyId.startsWith("mode_switch") || keyId == "globe")) {
+                                                                change.consume()
+                                                            } else if (activeState.mode == KeyboardMode.FULL) {
+                                                                handleFullLayoutMove(pid, keyId, change, delta, activeState)
+                                                            } else {
+                                                                handleStandardLayoutMove(pid, keyId, change, delta, activeState)
+                                                            }
+                                                        }
+
+                                                        PointerEventType.Release -> {
+                                                            longPressJobs[pid]?.cancel()
+                                                            longPressJobs.remove(pid)
+                                                            pressPositions.remove(pid)
+                                                            virtualAnchorX = 0f
+
+                                                            val wasDragging = isSpaceDragging && pid == spaceDragPointerId
+                                                            if (pid == spaceDragPointerId) {
+                                                                spaceDragPointerId = null
+                                                                isSpaceDragging = false
+                                                            }
+
+                                                            if (wasDragging) {
+                                                                controller.onKeyUp(
+                                                                    pid,
+                                                                    activeState.grid,
+                                                                    kbRepeatEnabled,
+                                                                    skipInjection = true,
+                                                                )
+                                                                change.consume()
+                                                            } else {
+                                                                val popup = activePopupState
+                                                                val releasedId = controller.getKeyIdForPointer(pid)
+                                                                if (popup != null && releasedId == popup.keyDef.id) {
+                                                                    val index = popup.selectedIndex
+                                                                    if (index == 0) {
+                                                                        controller.onKeyUp(
+                                                                            pid,
+                                                                            activeState.grid,
+                                                                            kbRepeatEnabled,
+                                                                            skipInjection = false,
+                                                                        )
+                                                                    } else {
+                                                                        val charToInject = popup.options[index]
+                                                                        if (popup.keyDef.shiftLabel != null &&
+                                                                            popup.keyDef.shiftLabel == charToInject
+                                                                        ) {
+                                                                            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTSHIFT)
+                                                                            KeyInjector.keyDown(popup.keyDef.linuxKeycode)
+                                                                            KeyInjector.keyUp(popup.keyDef.linuxKeycode)
+                                                                            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTSHIFT)
+                                                                        } else {
+                                                                            injectPopupChar(charToInject, kbLayout)
+                                                                        }
+                                                                        controller.onKeyUp(
+                                                                            pid,
+                                                                            activeState.grid,
+                                                                            kbRepeatEnabled,
+                                                                            skipInjection = true,
+                                                                        )
+                                                                    }
+                                                                    activePopupState = null
+                                                                    virtualAnchorX = 0f
+                                                                    change.consume()
+                                                                } else {
+                                                                    if (!change.pressed && change.previousPressed) {
+                                                                        controller.onKeyUp(
+                                                                            pid,
+                                                                            activeState.grid,
+                                                                            kbRepeatEnabled,
+                                                                            skipInjection = false,
+                                                                        )
+                                                                        change.consume()
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                        ) {
+                            val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
+                            if (isNumericLayout) {
+                                val ops =
+                                    listOf(
+                                        findKeyInLayout(activeState.grid, "plus") ?: KeyDef("plus", "+", 0),
+                                        findKeyInLayout(activeState.grid, "minus") ?: KeyDef("minus", "-", 0),
+                                        findKeyInLayout(activeState.grid, "asterisk") ?: KeyDef("asterisk", "*", 0),
+                                        findKeyInLayout(activeState.grid, "slash") ?: KeyDef("slash", "/", 0),
+                                    )
+                                val gridRows =
+                                    listOf(
+                                        listOf(
+                                            findKeyInLayout(activeState.grid, "num_1") ?: KeyDef("num_1", "1", 0),
+                                            findKeyInLayout(activeState.grid, "num_2") ?: KeyDef("num_2", "2", 0),
+                                            findKeyInLayout(activeState.grid, "num_3") ?: KeyDef("num_3", "3", 0),
+                                            findKeyInLayout(activeState.grid, "percent") ?: KeyDef("percent", "%", 0),
+                                        ),
+                                        listOf(
+                                            findKeyInLayout(activeState.grid, "num_4") ?: KeyDef("num_4", "4", 0),
+                                            findKeyInLayout(activeState.grid, "num_5") ?: KeyDef("num_5", "5", 0),
+                                            findKeyInLayout(activeState.grid, "num_6") ?: KeyDef("num_6", "6", 0),
+                                            findKeyInLayout(activeState.grid, "space_num") ?: KeyDef("space_num", "␣", 0),
+                                        ),
+                                        listOf(
+                                            findKeyInLayout(activeState.grid, "num_7") ?: KeyDef("num_7", "7", 0),
+                                            findKeyInLayout(activeState.grid, "num_8") ?: KeyDef("num_8", "8", 0),
+                                            findKeyInLayout(activeState.grid, "num_9") ?: KeyDef("num_9", "9", 0),
+                                            findKeyInLayout(activeState.grid, "bksp") ?: KeyDef("bksp", "⌫", 0),
+                                        ),
+                                    )
+                                val bottomRow =
+                                    listOf(
+                                        findKeyInLayout(activeState.grid, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
+                                        findKeyInLayout(activeState.grid, "comma") ?: KeyDef("comma", ",", 0),
+                                        findKeyInLayout(activeState.grid, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
+                                        findKeyInLayout(activeState.grid, "num_0") ?: KeyDef("num_0", "0", 0),
+                                        findKeyInLayout(activeState.grid, "equal") ?: KeyDef("equal", "=", 0),
+                                        findKeyInLayout(activeState.grid, "dot") ?: KeyDef("dot", ".", 0),
+                                        findKeyInLayout(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
+                                    )
+
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
                                 ) {
-                                    // Left Operators Column (spans height of rows 1-3)
-                                    Column(
+                                    // Top part: Left Operators + Middle/Right Grid
+                                    Row(
                                         modifier =
                                             Modifier
-                                                .weight(1.3f)
-                                                .fillMaxHeight(),
-                                        verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
+                                                .weight(3f)
+                                                .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
                                     ) {
-                                        ops.forEach { key ->
+                                        // Left Operators Column (spans height of rows 1-3)
+                                        Column(
+                                            modifier =
+                                                Modifier
+                                                    .weight(1.3f)
+                                                    .fillMaxHeight(),
+                                            verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
+                                        ) {
+                                            ops.forEach { key ->
+                                                val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                                KeyCap(
+                                                    keyDef = key,
+                                                    isPressed = key.id in pressedKeys,
+                                                    modifierState = modState,
+                                                    accentColor = accentColor,
+                                                    isShiftActive = isShiftActive,
+                                                    isCapsActive = isCapsActive,
+                                                    isAltGrActive = isAltGrActive,
+                                                    isFullLayout = true,
+                                                    modifier = Modifier.weight(1f),
+                                                    onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
+                                                )
+                                            }
+                                        }
+
+                                        // Middle + Right Grid (occupies the rest of the width)
+                                        Column(
+                                            modifier =
+                                                Modifier
+                                                    .weight(7.3f)
+                                                    .fillMaxHeight(),
+                                            verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
+                                        ) {
+                                            gridRows.forEach { row ->
+                                                Row(
+                                                    modifier =
+                                                        Modifier
+                                                            .weight(1f)
+                                                            .fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                                                ) {
+                                                    row.forEach { key ->
+                                                        val modState by KeyboardState.stateFor(key.id).collectAsState()
+                                                        KeyCap(
+                                                            keyDef = key,
+                                                            isPressed = key.id in pressedKeys,
+                                                            modifierState = modState,
+                                                            accentColor = accentColor,
+                                                            isShiftActive = isShiftActive,
+                                                            isCapsActive = isCapsActive,
+                                                            isAltGrActive = isAltGrActive,
+                                                            isFullLayout = true,
+                                                            modifier = Modifier.weight(key.widthWeight),
+                                                            onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Bottom Row (weight 1f)
+                                    Row(
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
+                                    ) {
+                                        bottomRow.forEach { key ->
                                             val modState by KeyboardState.stateFor(key.id).collectAsState()
                                             KeyCap(
                                                 keyDef = key,
@@ -1114,292 +1187,197 @@ fun KeyboardScreen(
                                                 isCapsActive = isCapsActive,
                                                 isAltGrActive = isAltGrActive,
                                                 isFullLayout = true,
-                                                modifier = Modifier.weight(1f),
-                                                onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
-                                            )
-                                        }
-                                    }
-
-                                    // Middle + Right Grid (occupies the rest of the width)
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .weight(7.3f)
-                                                .fillMaxHeight(),
-                                        verticalArrangement = Arrangement.spacedBy(KEY_PADDING_V),
-                                    ) {
-                                        gridRows.forEach { row ->
-                                            Row(
-                                                modifier =
-                                                    Modifier
-                                                        .weight(1f)
-                                                        .fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
-                                            ) {
-                                                row.forEach { key ->
-                                                    val modState by KeyboardState.stateFor(key.id).collectAsState()
-                                                    KeyCap(
-                                                        keyDef = key,
-                                                        isPressed = key.id in pressedKeys,
-                                                        modifierState = modState,
-                                                        accentColor = accentColor,
-                                                        isShiftActive = isShiftActive,
-                                                        isCapsActive = isCapsActive,
-                                                        isAltGrActive = isAltGrActive,
-                                                        isFullLayout = true,
-                                                        modifier = Modifier.weight(key.widthWeight),
-                                                        onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Bottom Row (weight 1f)
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
-                                ) {
-                                    bottomRow.forEach { key ->
-                                        val modState by KeyboardState.stateFor(key.id).collectAsState()
-                                        KeyCap(
-                                            keyDef = key,
-                                            isPressed = key.id in pressedKeys,
-                                            modifierState = modState,
-                                            accentColor = accentColor,
-                                            isShiftActive = isShiftActive,
-                                            isCapsActive = isCapsActive,
-                                            isAltGrActive = isAltGrActive,
-                                            isFullLayout = true,
-                                            modifier = Modifier.weight(key.widthWeight),
-                                            onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.SpaceEvenly,
-                            ) {
-                                activeState.grid.forEach { row ->
-                                    Row(
-                                        modifier =
-                                            Modifier
-                                                .weight(1f)
-                                                .fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(KEY_PADDING_H),
-                                    ) {
-                                        row.forEach { key ->
-                                            val modState by KeyboardState.stateFor(key.id).collectAsState()
-                                            KeyCap(
-                                                keyDef = key,
-                                                isPressed = key.id in pressedKeys,
-                                                modifierState = modState,
-                                                accentColor = accentColor,
-                                                isShiftActive = isShiftActive,
-                                                isCapsActive = isCapsActive,
-                                                isAltGrActive = isAltGrActive,
-                                                isFullLayout = activeState.mode == KeyboardMode.FULL,
                                                 modifier = Modifier.weight(key.widthWeight),
                                                 onBoundsUpdate = { coords -> updateBounds(key.id, coords) },
                                             )
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-
-                // Trackpoint overlay: mouse buttons own their pointerInput; outer Box handles trackpoint moves.
-                if (trackpointAlpha > 0f) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f)
-                                .align(Alignment.Center)
-                                .alpha(trackpointAlpha)
-                                .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                                .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.cd_keyboard_trackpoint),
-                            color = colors.onAccent.copy(alpha = 0.25f),
-                            style = MaterialTheme.typography.labelMedium,
-                            textAlign = TextAlign.Center,
-                        )
-                        if (trackpointVisible) {
-                            if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
-                                MouseButtonColumn(
-                                    accentColor = accentColor,
-                                    onLmbDown = { MouseInjector.leftDown() },
-                                    onLmbUp = { MouseInjector.leftUp() },
-                                    onRmbDown = { MouseInjector.rightDown() },
-                                    onRmbUp = { MouseInjector.rightUp() },
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.CenterStart)
-                                            .padding(start = 8.dp),
-                                )
-                            }
-                            if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
-                                MouseButtonColumn(
-                                    accentColor = accentColor,
-                                    onLmbDown = { MouseInjector.leftDown() },
-                                    onLmbUp = { MouseInjector.leftUp() },
-                                    onRmbDown = { MouseInjector.rightDown() },
-                                    onRmbUp = { MouseInjector.rightUp() },
-                                    mirrored = true,
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.CenterEnd)
-                                            .padding(end = 8.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 4. Long press popup overlay layer
-                val popup = activePopupState
-                if (popup != null) {
-                    val keyCenterX = popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
-                    val keyTop = popup.keyBounds.top
-
-                    val keyCenterXDp = with(density) { keyCenterX.toDp() }
-                    val keyTopDp = with(density) { keyTop.toDp() }
-
-                    val cellWidth = KB_CELL_WIDTH
-                    val popupWidth = cellWidth * popup.options.size + 16.dp
-                    val popupHeight = KB_POPUP_HEIGHT
-
-                    val screenWidthDp = with(density) { (boxCoordsState.value?.size?.width ?: 1240).toDp() }
-                    val maxPopupLeft = screenWidthDp - popupWidth - 4.dp
-                    val popupLeft =
-                        (keyCenterXDp - popupWidth / 2)
-                            .coerceAtLeast(4.dp)
-                            .coerceAtMost(maxPopupLeft)
-                    val popupTop = keyTopDp - popupHeight - KB_POPUP_OFFSET_Y
-
-                    Box(
-                        modifier =
-                            Modifier
-                                .offset(x = popupLeft, y = popupTop)
-                                .width(popupWidth)
-                                .height(popupHeight)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(colors.surfaceVariant)
-                                .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                                .padding(8.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            popup.options.forEachIndexed { index, opt ->
-                                val isSelected = index == popup.selectedIndex
                                 Box(
                                     modifier =
                                         Modifier
-                                            .size(KB_POPUP_CELL_SIZE)
-                                            .clip(CircleShape)
-                                            .background(if (isSelected) accentColor else Color.Transparent),
+                                            .fillMaxWidth()
+                                            .aspectRatio(16f / 9f)
+                                            .align(Alignment.Center)
+                                            .alpha(trackpointAlpha)
+                                            .background(colors.keyBackground, RoundedCornerShape(8.dp))
+                                            .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = opt,
-                                        color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
-                                        fontSize = 18.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        text = stringResource(R.string.cd_keyboard_trackpoint),
+                                        color = colors.onAccent.copy(alpha = 0.25f),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        textAlign = TextAlign.Center,
                                     )
+                                    if (trackpointVisible) {
+                                        if (kbMouseBtnPos == KbMouseBtnPos.LEFT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                                            MouseButtonColumn(
+                                                accentColor = accentColor,
+                                                onLmbDown = { MouseInjector.leftDown() },
+                                                onLmbUp = { MouseInjector.leftUp() },
+                                                onRmbDown = { MouseInjector.rightDown() },
+                                                onRmbUp = { MouseInjector.rightUp() },
+                                                modifier =
+                                                    Modifier
+                                                        .align(Alignment.CenterStart)
+                                                        .padding(start = 8.dp),
+                                            )
+                                        }
+                                        if (kbMouseBtnPos == KbMouseBtnPos.RIGHT || kbMouseBtnPos == KbMouseBtnPos.BOTH) {
+                                            MouseButtonColumn(
+                                                accentColor = accentColor,
+                                                onLmbDown = { MouseInjector.leftDown() },
+                                                onLmbUp = { MouseInjector.leftUp() },
+                                                onRmbDown = { MouseInjector.rightDown() },
+                                                onRmbUp = { MouseInjector.rightUp() },
+                                                mirrored = true,
+                                                modifier =
+                                                    Modifier
+                                                        .align(Alignment.CenterEnd)
+                                                        .padding(end = 8.dp),
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 4. Long press popup overlay layer
+                            val popup = activePopupState
+                            if (popup != null) {
+                                val keyCenterX = popup.keyBounds.left + (popup.keyBounds.right - popup.keyBounds.left) / 2
+                                val keyTop = popup.keyBounds.top
+
+                                val keyCenterXDp = with(density) { keyCenterX.toDp() }
+                                val keyTopDp = with(density) { keyTop.toDp() }
+
+                                val cellWidth = KB_CELL_WIDTH
+                                val popupWidth = cellWidth * popup.options.size + 16.dp
+                                val popupHeight = KB_POPUP_HEIGHT
+
+                                val screenWidthDp = with(density) { (boxCoordsState.value?.size?.width ?: 1240).toDp() }
+                                val maxPopupLeft = screenWidthDp - popupWidth - 4.dp
+                                val popupLeft =
+                                    (keyCenterXDp - popupWidth / 2)
+                                        .coerceAtLeast(4.dp)
+                                        .coerceAtMost(maxPopupLeft)
+                                val popupTop = keyTopDp - popupHeight - KB_POPUP_OFFSET_Y
+
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .offset(x = popupLeft, y = popupTop)
+                                            .width(popupWidth)
+                                            .height(popupHeight)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(colors.surfaceVariant)
+                                            .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                            .padding(8.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        popup.options.forEachIndexed { index, opt ->
+                                            val isSelected = index == popup.selectedIndex
+                                            Box(
+                                                modifier =
+                                                    Modifier
+                                                        .size(KB_POPUP_CELL_SIZE)
+                                                        .clip(CircleShape)
+                                                        .background(if (isSelected) accentColor else Color.Transparent),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Text(
+                                                    text = opt,
+                                                    color = if (isSelected) colors.onAccent else colors.onSurfaceSecondary,
+                                                    fontSize = 18.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
+
+                        // 3. Bottom Toolbar
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(KB_BOTTOM_BAR_HEIGHT)
+                                    .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val interactionSource = remember { MutableInteractionSource() }
+                            val isPressed by interactionSource.collectIsPressedAsState()
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxHeight()
+                                        .width(KB_GLOBE_BUTTON_WIDTH)
+                                        .offset(y = (-3).dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isPressed) colors.keyPressed else Color.Transparent)
+                                        .clickable(
+                                            interactionSource = interactionSource,
+                                            indication = null,
+                                            onClick = { AppStateManager.setFullscreenKeyboardActive(false) },
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                                    contentDescription = stringResource(R.string.cd_kb_collapse),
+                                    tint = colors.onSurface.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+                                )
+                            }
+
+                            val isFullModeActive = keyboardMode == KeyboardMode.FULL
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            KeyboardModeToggleButton(
+                                isFullModeActive = isFullModeActive,
+                                onToggle = {
+                                    val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
+                                    viewModel.setKeyboardMode(nextMode)
+                                    KeyboardState.reset()
+                                },
+                                accentColor = accentColor,
+                            )
+
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            val interactionSourceSettings = remember { MutableInteractionSource() }
+                            val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .fillMaxHeight()
+                                        .width(KB_GLOBE_BUTTON_WIDTH)
+                                        .offset(y = (-3).dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
+                                        .clickable(
+                                            interactionSource = interactionSourceSettings,
+                                            indication = null,
+                                            onClick = { AppStateManager.setKeyboardSettingsOpen(true) },
+                                        ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Settings,
+                                    contentDescription = stringResource(R.string.cd_kb_settings),
+                                    tint = colors.onSurface.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
+                                )
+                            }
+                        }
                     }
-                }
-            }
-
-            // 3. Bottom Toolbar
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(KB_BOTTOM_BAR_HEIGHT)
-                        .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val interactionSource = remember { MutableInteractionSource() }
-                val isPressed by interactionSource.collectIsPressedAsState()
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .width(KB_GLOBE_BUTTON_WIDTH)
-                            .offset(y = (-3).dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isPressed) colors.keyPressed else Color.Transparent)
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                                onClick = { AppStateManager.setFullscreenKeyboardActive(false) },
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.cd_kb_collapse),
-                        tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-                    )
-                }
-
-                val isFullModeActive = keyboardMode == KeyboardMode.FULL
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                KeyboardModeToggleButton(
-                    isFullModeActive = isFullModeActive,
-                    onToggle = {
-                        val nextMode = if (isFullModeActive) KeyboardMode.LETTERS else KeyboardMode.FULL
-                        viewModel.setKeyboardMode(nextMode)
-                        KeyboardState.reset()
-                    },
-                    accentColor = accentColor,
-                )
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                val interactionSourceSettings = remember { MutableInteractionSource() }
-                val isSettingsPressed by interactionSourceSettings.collectIsPressedAsState()
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .width(KB_GLOBE_BUTTON_WIDTH)
-                            .offset(y = (-3).dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSettingsPressed) colors.keyPressed else Color.Transparent)
-                            .clickable(
-                                interactionSource = interactionSourceSettings,
-                                indication = null,
-                                onClick = { AppStateManager.setKeyboardSettingsOpen(true) },
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = stringResource(R.string.cd_kb_settings),
-                        tint = colors.onSurface.copy(alpha = 0.7f),
-                        modifier = Modifier.size(KB_ICON_SIZE_MEDIUM),
-                    )
                 }
             }
         }
