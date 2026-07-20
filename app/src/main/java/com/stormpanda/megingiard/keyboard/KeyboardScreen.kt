@@ -152,19 +152,18 @@ fun KeyboardScreen(
                 val kbFinalSensitivity = touchpadSensitivity * globalSensitivity
 
                 val processor =
-                    remember(
-                        kbFinalSensitivity,
-                        twoFingerScrollState.value,
-                        touchpadNaturalScroll,
-                        touchpadScrollSpeed,
-                    ) {
+                    remember {
                         TouchpadGestureProcessor(
-                            useMouse = true,
+                            useMouse = { true },
                             scope = coroutineScope,
-                            sensitivity = kbFinalSensitivity,
-                            twoFingerScrollEnabled = twoFingerScrollState.value,
-                            naturalScrollEnabled = touchpadNaturalScroll,
-                            scrollSpeed = touchpadScrollSpeed,
+                            sensitivity = { kbFinalSensitivity },
+                            twoFingerScrollEnabled = { twoFingerScrollState.value },
+                            naturalScrollEnabled = { touchpadNaturalScroll },
+                            scrollSpeed = { touchpadScrollSpeed },
+                            tapToClick = { tapToClickState.value },
+                            twoFingerTap = { twoFingerTapState.value },
+                            threeFingerTap = { threeFingerTapState.value },
+                            tapDrag = { tapDragState.value },
                             onHapticFeedback = { currentOnHapticFeedback() },
                         )
                     }
@@ -205,76 +204,75 @@ fun KeyboardScreen(
                                     shape = RoundedCornerShape(KB_TOUCHPAD_CORNER_RADIUS),
                                 ).onGloballyPositioned { touchpadCoords = it }
                                 .pointerInput(processor) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val event = awaitPointerEvent(PointerEventPass.Main)
-                                            val coords = touchpadCoords ?: continue
-                                            val sw = coords.size.width.toFloat()
-                                            val sh = coords.size.height.toFloat()
-                                            for (change in event.changes) {
-                                                val id = change.id.value
-                                                val localPos = change.position
-                                                val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
+                                    try {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                                val coords = touchpadCoords ?: continue
+                                                val sw = coords.size.width.toFloat()
+                                                val sh = coords.size.height.toFloat()
+                                                for (change in event.changes) {
+                                                    val id = change.id.value
+                                                    val localPos = change.position
+                                                    val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
 
-                                                if (change.isConsumed) continue
+                                                    if (change.isConsumed) continue
 
-                                                val clampedX = localPos.x.coerceIn(0f, sw)
-                                                val clampedY = localPos.y.coerceIn(0f, sh)
+                                                    val clampedX = localPos.x.coerceIn(0f, sw)
+                                                    val clampedY = localPos.y.coerceIn(0f, sh)
 
-                                                when (event.type) {
-                                                    PointerEventType.Press -> {
-                                                        if (!change.previousPressed && isInside) {
-                                                            pointersInsideTouchpad.add(id)
-                                                            processor.onPress(
-                                                                pointerId = id,
-                                                                x = clampedX,
-                                                                y = clampedY,
-                                                                surfaceW = sw,
-                                                                surfaceH = sh,
-                                                                overlayOpen = false,
-                                                                tapDrag = tapDragState.value,
-                                                            )
+                                                    when (event.type) {
+                                                        PointerEventType.Press -> {
+                                                            if (!change.previousPressed && isInside) {
+                                                                pointersInsideTouchpad.add(id)
+                                                                processor.onPress(
+                                                                    pointerId = id,
+                                                                    x = clampedX,
+                                                                    y = clampedY,
+                                                                    surfaceW = sw,
+                                                                    surfaceH = sh,
+                                                                    overlayOpen = false,
+                                                                )
+                                                            }
+                                                        }
+
+                                                        PointerEventType.Move -> {
+                                                            if (pointersInsideTouchpad.contains(id)) {
+                                                                val delta = change.positionChange()
+                                                                processor.onMove(
+                                                                    pointerId = id,
+                                                                    x = clampedX,
+                                                                    y = clampedY,
+                                                                    deltaX = delta.x,
+                                                                    deltaY = delta.y,
+                                                                    surfaceW = sw,
+                                                                    surfaceH = sh,
+                                                                )
+                                                            }
+                                                        }
+
+                                                        PointerEventType.Release -> {
+                                                            if (!change.pressed && pointersInsideTouchpad.contains(id)) {
+                                                                pointersInsideTouchpad.remove(id)
+                                                                processor.onRelease(
+                                                                    pointerId = id,
+                                                                    x = clampedX,
+                                                                    y = clampedY,
+                                                                    surfaceW = sw,
+                                                                    surfaceH = sh,
+                                                                )
+                                                            }
                                                         }
                                                     }
-
-                                                    PointerEventType.Move -> {
-                                                        if (pointersInsideTouchpad.contains(id)) {
-                                                            val delta = change.positionChange()
-                                                            processor.onMove(
-                                                                pointerId = id,
-                                                                x = clampedX,
-                                                                y = clampedY,
-                                                                deltaX = delta.x,
-                                                                deltaY = delta.y,
-                                                                surfaceW = sw,
-                                                                surfaceH = sh,
-                                                                overlayOpen = false,
-                                                            )
-                                                        }
-                                                    }
-
-                                                    PointerEventType.Release -> {
-                                                        if (!change.pressed && pointersInsideTouchpad.contains(id)) {
-                                                            pointersInsideTouchpad.remove(id)
-                                                            val allUp = event.changes.none { it.pressed }
-                                                            processor.onRelease(
-                                                                pointerId = id,
-                                                                x = clampedX,
-                                                                y = clampedY,
-                                                                surfaceW = sw,
-                                                                surfaceH = sh,
-                                                                allPointersUp = allUp,
-                                                                tapToClick = tapToClickState.value,
-                                                                twoFingerTap = twoFingerTapState.value,
-                                                                threeFingerTap = threeFingerTapState.value,
-                                                            )
-                                                        }
-                                                    }
+                                                    change.consume()
                                                 }
-                                                change.consume()
+                                                hasActivePointers = pointersInsideTouchpad.isNotEmpty()
                                             }
-                                            hasActivePointers = pointersInsideTouchpad.isNotEmpty()
                                         }
+                                    } finally {
+                                        pointersInsideTouchpad.clear()
+                                        hasActivePointers = false
+                                        processor.onCancel()
                                     }
                                 },
                         contentAlignment = Alignment.Center,

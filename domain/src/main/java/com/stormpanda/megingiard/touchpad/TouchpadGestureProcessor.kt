@@ -43,28 +43,35 @@ private const val MAX_TOUCH_SLOTS = 10
  * scope and dispatches raw pointer events through the `on*` methods.
  */
 class TouchpadGestureProcessor(
-    private val useMouse: Boolean,
+    private val useMouse: () -> Boolean,
     private val scope: CoroutineScope,
-    sensitivity: Float = 1.0f,
-    private val twoFingerScrollEnabled: Boolean = true,
-    private val naturalScrollEnabled: Boolean = true,
-    scrollSpeed: Float = 1.0f,
+    private val sensitivity: () -> Float = { 1.0f },
+    private val twoFingerScrollEnabled: () -> Boolean = { true },
+    private val naturalScrollEnabled: () -> Boolean = { true },
+    private val scrollSpeed: () -> Float = { 1.0f },
+    private val tapToClick: () -> Boolean = { true },
+    private val twoFingerTap: () -> Boolean = { true },
+    private val threeFingerTap: () -> Boolean = { true },
+    private val tapDrag: () -> Boolean = { true },
     private val onHapticFeedback: () -> Unit = {},
 ) {
-    // Clamp sensitivity to a safe range to prevent inverted, NaN, or extreme cursor movement.
-    private val sensitivity: Float =
-        if (sensitivity.isFinite() && sensitivity > 0f) {
-            sensitivity.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
+    private fun getSensitivity(): Float {
+        val s = sensitivity()
+        return if (s.isFinite() && s > 0f) {
+            s.coerceIn(TP_SENSITIVITY_MIN, TP_SENSITIVITY_MAX)
         } else {
             1.0f
         }
+    }
 
-    private val scrollSpeed: Float =
-        if (scrollSpeed.isFinite() && scrollSpeed > 0f) {
-            scrollSpeed.coerceIn(TP_SCROLL_SPEED_MIN, TP_SCROLL_SPEED_MAX)
+    private fun getScrollSpeed(): Float {
+        val s = scrollSpeed()
+        return if (s.isFinite() && s > 0f) {
+            s.coerceIn(TP_SCROLL_SPEED_MIN, TP_SCROLL_SPEED_MAX)
         } else {
             1.0f
         }
+    }
 
     // ── Touch mode state ────────────────────────────────────────────────────
     private val _touchPos = MutableStateFlow<Pair<Float, Float>?>(null)
@@ -95,7 +102,6 @@ class TouchpadGestureProcessor(
      * @param surfaceW     width of the touch surface in pixels
      * @param surfaceH     height of the touch surface in pixels
      * @param overlayOpen  true if the quick menu overlay is currently visible
-     * @param tapDrag      true if double-tap-to-drag is enabled
      */
     fun onPress(
         pointerId: Long,
@@ -104,21 +110,20 @@ class TouchpadGestureProcessor(
         surfaceW: Float,
         surfaceH: Float,
         overlayOpen: Boolean,
-        tapDrag: Boolean,
     ) {
         if (overlayOpen) {
             AppStateManager.closeQuickMenu()
             return
         }
 
-        if (useMouse) {
+        if (useMouse()) {
             pressTimes[pointerId] = System.currentTimeMillis()
             downPositions[pointerId] = Pair(x, y)
             if (primaryPointer == null) primaryPointer = pointerId
             if (downPositions.size != 2) {
                 scrollAccumY = 0f
             }
-            if (tapDrag && downPositions.size == 1) {
+            if (tapDrag() && downPositions.size == 1) {
                 val now = System.currentTimeMillis()
                 AppLog.d(TAG, "onPress: tapDrag=true, delta=${now - lastTapReleaseTime}ms, limit=$TP_DOUBLE_TAP_TIMEOUT_MS")
                 if (now - lastTapReleaseTime < TP_DOUBLE_TAP_TIMEOUT_MS) {
@@ -169,7 +174,6 @@ class TouchpadGestureProcessor(
      * @param deltaY     position change Y since last event
      * @param surfaceW   width of the touch surface in pixels
      * @param surfaceH   height of the touch surface in pixels
-     * @param overlayOpen  true if the quick menu overlay is currently visible
      */
     fun onMove(
         pointerId: Long,
@@ -179,11 +183,8 @@ class TouchpadGestureProcessor(
         deltaY: Float,
         surfaceW: Float,
         surfaceH: Float,
-        overlayOpen: Boolean,
     ) {
-        if (overlayOpen) return
-
-        if (useMouse) {
+        if (useMouse()) {
             // Disqualify as tap if slop exceeded
             val initPos = downPositions[pointerId]
             if (initPos != null && pointerId !in movedTooFar) {
@@ -193,20 +194,20 @@ class TouchpadGestureProcessor(
                     movedTooFar.add(pointerId)
                 }
             }
-            if (twoFingerScrollEnabled && downPositions.size == 2) {
+            if (twoFingerScrollEnabled() && downPositions.size == 2) {
                 if (pointerId == primaryPointer) {
                     scrollAccumY += deltaY
-                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / scrollSpeed // Sensitivity threshold in pixels
+                    val scrollThreshold = TP_SCROLL_THRESHOLD_BASE_PX / getScrollSpeed() // Sensitivity threshold in pixels
                     val units = (scrollAccumY / scrollThreshold).toInt()
                     if (units != 0) {
-                        val directionMultiplier = if (naturalScrollEnabled) 1 else -1
+                        val directionMultiplier = if (naturalScrollEnabled()) 1 else -1
                         MouseInjector.scrollWheel(units * directionMultiplier)
                         scrollAccumY -= units * scrollThreshold
                     }
                 }
             } else if (pointerId == primaryPointer) {
-                val dx = (deltaX * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
-                val dy = (deltaY * TP_MOUSE_SENSITIVITY * sensitivity).roundToInt()
+                val dx = (deltaX * TP_MOUSE_SENSITIVITY * getSensitivity()).roundToInt()
+                val dy = (deltaY * TP_MOUSE_SENSITIVITY * getSensitivity()).roundToInt()
                 if (dx != 0 || dy != 0) MouseInjector.moveMouse(dx, dy)
             }
         } else {
@@ -230,10 +231,6 @@ class TouchpadGestureProcessor(
      * @param y             final pointer Y
      * @param surfaceW      width of the touch surface
      * @param surfaceH      height of the touch surface
-     * @param allPointersUp true if no pointers remain pressed
-     * @param tapToClick    whether tap-to-click is enabled
-     * @param twoFingerTap  whether two-finger-tap right-click is enabled
-     * @param threeFingerTap whether three-finger-tap middle-click is enabled
      */
     fun onRelease(
         pointerId: Long,
@@ -241,12 +238,8 @@ class TouchpadGestureProcessor(
         y: Float,
         surfaceW: Float,
         surfaceH: Float,
-        allPointersUp: Boolean,
-        tapToClick: Boolean,
-        twoFingerTap: Boolean,
-        threeFingerTap: Boolean,
     ) {
-        if (useMouse) {
+        if (useMouse()) {
             val pressTime = pressTimes.remove(pointerId)
             downPositions.remove(pointerId)
             val disqualified = movedTooFar.remove(pointerId)
@@ -278,6 +271,7 @@ class TouchpadGestureProcessor(
             }
 
             // When all fingers are up, evaluate taps
+            val allPointersUp = downPositions.isEmpty()
             if (allPointersUp) {
                 val tapCount = releasedAsTap.size
                 releasedAsTap.clear()
@@ -286,7 +280,7 @@ class TouchpadGestureProcessor(
                 movedTooFar.clear()
                 primaryPointer = null
                 when {
-                    tapCount == 1 && tapToClick -> {
+                    tapCount == 1 && tapToClick() -> {
                         lastTapReleaseTime = System.currentTimeMillis()
                         onHapticFeedback()
                         pendingClickJob =
@@ -301,7 +295,7 @@ class TouchpadGestureProcessor(
                             }
                     }
 
-                    tapCount == 2 && twoFingerTap -> {
+                    tapCount == 2 && twoFingerTap() -> {
                         onHapticFeedback()
                         scope.launch {
                             MouseInjector.rightDown()
@@ -310,7 +304,7 @@ class TouchpadGestureProcessor(
                         }
                     }
 
-                    tapCount >= 3 && threeFingerTap -> {
+                    tapCount >= 3 && threeFingerTap() -> {
                         onHapticFeedback()
                         scope.launch {
                             MouseInjector.middleDown()
@@ -328,6 +322,39 @@ class TouchpadGestureProcessor(
                 val ny = (y / surfaceH).coerceIn(0f, 1f)
                 _touchPos.value = null
                 TouchInjector.injectTouch(slot, TouchAction.UP, nx, ny)
+            }
+        }
+    }
+
+    /**
+     * Resets the processor state when the gesture stream is cancelled or leaves composition.
+     */
+    fun onCancel() {
+        if (useMouse()) {
+            val wasDragging = isDragging
+            isDragging = false
+            releasedAsTap.clear()
+            pressTimes.clear()
+            downPositions.clear()
+            movedTooFar.clear()
+            primaryPointer = null
+            scrollAccumY = 0f
+            pendingClickJob?.cancel()
+            pendingClickJob = null
+            if (wasDragging) {
+                scope.launch {
+                    MouseInjector.leftUp()
+                }
+            }
+        } else {
+            val slotsToRelease = pointerToSlotMap.entries.toList()
+            pointerToSlotMap.clear()
+            activeSlots.fill(false)
+            _touchPos.value = null
+            scope.launch {
+                for ((_, slot) in slotsToRelease) {
+                    TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
+                }
             }
         }
     }
