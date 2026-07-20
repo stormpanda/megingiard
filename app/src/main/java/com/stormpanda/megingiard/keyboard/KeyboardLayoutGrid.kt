@@ -93,32 +93,34 @@ internal fun KeyboardLayoutGrid(
 
                                     when (event.type) {
                                         PointerEventType.Press -> {
-                                            if (keyId != null && keyId.startsWith("mode_switch")) {
-                                                if (keyId != "mode_switch_2") {
-                                                    val targetMode =
-                                                        when (keyId) {
-                                                            "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
-                                                            "mode_switch_abc" -> KeyboardMode.LETTERS
-                                                            "mode_switch_1234" -> KeyboardMode.NUMERIC
-                                                            else -> KeyboardMode.LETTERS
-                                                        }
-                                                    onModeChange(targetMode)
+                                            if (change.pressed && !change.previousPressed) {
+                                                if (keyId != null && keyId.startsWith("mode_switch")) {
+                                                    if (keyId != "mode_switch_2") {
+                                                        val targetMode =
+                                                            when (keyId) {
+                                                                "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
+                                                                "mode_switch_abc" -> KeyboardMode.LETTERS
+                                                                "mode_switch_1234" -> KeyboardMode.NUMERIC
+                                                                else -> KeyboardMode.LETTERS
+                                                            }
+                                                        onModeChange(targetMode)
+                                                        KeyboardState.reset()
+                                                    }
+                                                    change.consume()
+                                                } else if (keyId == "globe") {
+                                                    onCycleKbLayout()
                                                     KeyboardState.reset()
+                                                    change.consume()
+                                                } else {
+                                                    gestureProcessor.onPress(
+                                                        pointerId = pid,
+                                                        x = change.position.x,
+                                                        y = change.position.y,
+                                                        grid = activeState.grid,
+                                                        isFullLayout = activeState.mode == KeyboardMode.FULL,
+                                                    )
+                                                    change.consume()
                                                 }
-                                                change.consume()
-                                            } else if (keyId == "globe") {
-                                                onCycleKbLayout()
-                                                KeyboardState.reset()
-                                                change.consume()
-                                            } else {
-                                                gestureProcessor.onPress(
-                                                    pointerId = pid,
-                                                    x = change.position.x,
-                                                    y = change.position.y,
-                                                    grid = activeState.grid,
-                                                    isFullLayout = activeState.mode == KeyboardMode.FULL,
-                                                )
-                                                change.consume()
                                             }
                                         }
 
@@ -141,8 +143,10 @@ internal fun KeyboardLayoutGrid(
                                         }
 
                                         PointerEventType.Release -> {
-                                            gestureProcessor.onRelease(pid, activeState.grid)
-                                            change.consume()
+                                            if (!change.pressed && change.previousPressed) {
+                                                gestureProcessor.onRelease(pid, activeState.grid)
+                                                change.consume()
+                                            }
                                         }
                                     }
                                 }
