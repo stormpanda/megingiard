@@ -189,6 +189,7 @@ After implementing any change that affects a feature’s behaviour, interface, o
    [`docs/features/FEATURE_TEMPLATE.md`](docs/features/FEATURE_TEMPLATE.md) as the starting
    point, then **add a row to the Documentation Map table in §2**.
 6. **In-App Help & Tutorials** — if the change adds, removes, or modifies how the user interacts with the app (e.g. adding new buttons, modes, settings, or gesture flows), you MUST review and update the corresponding in-app help menus, `HelpModal` files, onboarding popups, and localized strings (`strings.xml`, `values-de/strings.xml`). Ensure that **every settings preference option visible in the UI has a corresponding explanation entry in the HelpModal** to avoid undocumented features.
+7. **Walkthrough & Future Improvements** — every implementation walkthrough (e.g., `walkthrough.md` or session summary) MUST contain a dedicated section highlighting potential code, design, or architectural improvements recognized during implementation, even if not directly related to the current task. This logs future refactoring candidates and preserves codebase health.
 
 This rule applies to all changes, including bug fixes, refactors, and dependency updates that
 affect runtime behaviour or user-facing interactions.
