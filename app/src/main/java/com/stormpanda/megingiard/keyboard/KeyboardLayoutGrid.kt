@@ -28,6 +28,8 @@ internal fun KeyboardLayoutGrid(
     kbRepeatEnabled: Boolean,
     kbLayout: KbLayout,
     onCloseQuickMenu: () -> Unit,
+    onModeChange: (KeyboardMode) -> Unit,
+    onCycleKbLayout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -94,88 +96,108 @@ internal fun KeyboardLayoutGrid(
                                     PointerEventType.Press -> {
                                         val startPos = change.position
                                         gestureState.pressPositions[pid] = startPos
-                                        val hoveredKeyDef =
-                                            if (keyId != null) {
-                                                findKeyInLayout(activeState.grid, keyId)
-                                            } else {
-                                                null
-                                            }
-                                        if (hoveredKeyDef != null) {
-                                            val isCharKey =
-                                                hoveredKeyDef.type == KeyType.NORMAL &&
-                                                    keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
-                                                    keyId != "enter"
-                                            if (activeState.mode == KeyboardMode.FULL &&
-                                                hoveredKeyDef.type == KeyType.NORMAL &&
-                                                isCharKey
-                                            ) {
-                                                val bounds = gestureState.keyBounds[keyId]
-                                                if (bounds != null) {
-                                                    val isLetter =
-                                                        hoveredKeyDef.label.length == 1 &&
-                                                            hoveredKeyDef.label[0].isLetter()
-                                                    val useShiftLabel = isShiftActive || isCapsActive
-                                                    val label =
-                                                        when {
-                                                            isAltGrActive && hoveredKeyDef.altGrLabel != null -> {
-                                                                hoveredKeyDef.altGrLabel!!
-                                                            }
 
-                                                            useShiftLabel -> {
-                                                                val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
-                                                                if (isLetter) s.uppercase() else s
-                                                            }
-
-                                                            else -> {
-                                                                hoveredKeyDef.label
-                                                            }
-                                                        }
-                                                    gestureState.activePopupState.value =
-                                                        PopupState(
-                                                            hoveredKeyDef,
-                                                            listOf(label),
-                                                            0,
-                                                            bounds,
-                                                            isLongPress = false,
-                                                        )
-                                                }
-                                            } else if (activeState.mode != KeyboardMode.FULL &&
-                                                hoveredKeyDef.type == KeyType.NORMAL
-                                            ) {
-                                                val job =
-                                                    coroutineScope.launch {
-                                                        delay(400L)
-                                                        val bounds = gestureState.keyBounds[keyId]
-                                                        val options =
-                                                            getPopupOptions(
-                                                                hoveredKeyDef,
-                                                                isUpper = isShiftActive || isCapsActive,
-                                                            )
-                                                        if (bounds != null && options.isNotEmpty()) {
-                                                            gestureState.activePopupState.value =
-                                                                PopupState(
-                                                                    hoveredKeyDef,
-                                                                    options,
-                                                                    0,
-                                                                    bounds,
-                                                                    isLongPress = true,
-                                                                )
-                                                            gestureState.virtualAnchorX = 0f
-                                                        }
+                                        if (keyId != null && keyId.startsWith("mode_switch")) {
+                                            if (keyId != "mode_switch_2") {
+                                                val targetMode =
+                                                    when (keyId) {
+                                                        "mode_switch", "mode_switch_1" -> KeyboardMode.SYMBOLS_1
+                                                        "mode_switch_abc" -> KeyboardMode.LETTERS
+                                                        "mode_switch_1234" -> KeyboardMode.NUMERIC
+                                                        else -> KeyboardMode.LETTERS
                                                     }
-                                                gestureState.longPressJobs[pid] = job
+                                                onModeChange(targetMode)
+                                                KeyboardState.reset()
                                             }
-                                        }
-
-                                        if (keyId == "space" || keyId == "space_num") {
-                                            gestureState.spaceDragPointerId = pid
-                                            gestureState.spaceDragStartX = change.position.x
-                                            gestureState.isSpaceDragging = false
-                                            gestureState.accumulatedSpaceDeltaX = 0f
-                                        }
-
-                                        if (controller.onKeyDown(pid, keyId, activeState.grid, kbRepeatEnabled)) {
                                             change.consume()
+                                        } else if (keyId == "globe") {
+                                            onCycleKbLayout()
+                                            KeyboardState.reset()
+                                            change.consume()
+                                        } else {
+                                            val hoveredKeyDef =
+                                                if (keyId != null) {
+                                                    findKeyDef(activeState.grid, keyId)
+                                                } else {
+                                                    null
+                                                }
+                                            if (hoveredKeyDef != null) {
+                                                val isCharKey =
+                                                    hoveredKeyDef.type == KeyType.NORMAL &&
+                                                        keyId != "bksp" && keyId != "space" && keyId != "space_num" &&
+                                                        keyId != "enter"
+                                                if (activeState.mode == KeyboardMode.FULL &&
+                                                    hoveredKeyDef.type == KeyType.NORMAL &&
+                                                    isCharKey
+                                                ) {
+                                                    val bounds = gestureState.keyBounds[keyId]
+                                                    if (bounds != null) {
+                                                        val isLetter =
+                                                            hoveredKeyDef.label.length == 1 &&
+                                                                hoveredKeyDef.label[0].isLetter()
+                                                        val useShiftLabel = isShiftActive || isCapsActive
+                                                        val label =
+                                                            when {
+                                                                isAltGrActive && hoveredKeyDef.altGrLabel != null -> {
+                                                                    hoveredKeyDef.altGrLabel!!
+                                                                }
+
+                                                                useShiftLabel -> {
+                                                                    val s = hoveredKeyDef.shiftLabel ?: hoveredKeyDef.label
+                                                                    if (isLetter) s.uppercase() else s
+                                                                }
+
+                                                                else -> {
+                                                                    hoveredKeyDef.label
+                                                                }
+                                                            }
+                                                        gestureState.activePopupState.value =
+                                                            PopupState(
+                                                                hoveredKeyDef,
+                                                                listOf(label),
+                                                                0,
+                                                                bounds,
+                                                                isLongPress = false,
+                                                            )
+                                                    }
+                                                } else if (activeState.mode != KeyboardMode.FULL &&
+                                                    hoveredKeyDef.type == KeyType.NORMAL
+                                                ) {
+                                                    val job =
+                                                        coroutineScope.launch {
+                                                            delay(400L)
+                                                            val bounds = gestureState.keyBounds[keyId]
+                                                            val options =
+                                                                getPopupOptions(
+                                                                    hoveredKeyDef,
+                                                                    isUpper = isShiftActive || isCapsActive,
+                                                                )
+                                                            if (bounds != null && options.isNotEmpty()) {
+                                                                gestureState.activePopupState.value =
+                                                                    PopupState(
+                                                                        hoveredKeyDef,
+                                                                        options,
+                                                                        0,
+                                                                        bounds,
+                                                                        isLongPress = true,
+                                                                    )
+                                                                gestureState.virtualAnchorX = 0f
+                                                            }
+                                                        }
+                                                    gestureState.longPressJobs[pid] = job
+                                                }
+                                            }
+
+                                            if (keyId == "space" || keyId == "space_num") {
+                                                gestureState.spaceDragPointerId = pid
+                                                gestureState.spaceDragStartX = change.position.x
+                                                gestureState.isSpaceDragging = false
+                                                gestureState.accumulatedSpaceDeltaX = 0f
+                                            }
+
+                                            if (controller.onKeyDown(pid, keyId, activeState.grid, kbRepeatEnabled)) {
+                                                change.consume()
+                                            }
                                         }
                                     }
 
@@ -263,45 +285,58 @@ internal fun KeyboardLayoutGrid(
                     }
                 },
     ) {
-        if (activeState.mode == KeyboardMode.FULL) {
+        val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
+        if (isNumericLayout) {
             val ops =
                 listOf(
-                    findKeyInLayout(activeState.grid, "esc") ?: KeyDef("esc", "Esc", 0),
-                    findKeyInLayout(activeState.grid, "tab") ?: KeyDef("tab", "Tab", 0),
-                    findKeyInLayout(activeState.grid, "lshift") ?: KeyDef("lshift", "Shift", 0),
+                    findKeyDef(activeState.grid, "plus") ?: KeyDef("plus", "+", 0),
+                    findKeyDef(activeState.grid, "minus") ?: KeyDef("minus", "-", 0),
+                    findKeyDef(activeState.grid, "asterisk") ?: KeyDef("asterisk", "*", 0),
+                    findKeyDef(activeState.grid, "slash") ?: KeyDef("slash", "/", 0),
                 )
             val gridRows =
-                activeState.grid
-                    .map { row ->
-                        row.filter { key ->
-                            key.id != "esc" && key.id != "tab" && key.id != "lshift" &&
-                                key.id != "ctrl" && key.id != "alt" && key.id != "altgr" &&
-                                key.id != "bksp" && key.id != "space" && key.id != "enter"
-                        }
-                    }.filter { it.isNotEmpty() }
+                listOf(
+                    listOf(
+                        findKeyDef(activeState.grid, "num_1") ?: KeyDef("num_1", "1", 0),
+                        findKeyDef(activeState.grid, "num_2") ?: KeyDef("num_2", "2", 0),
+                        findKeyDef(activeState.grid, "num_3") ?: KeyDef("num_3", "3", 0),
+                        findKeyDef(activeState.grid, "percent") ?: KeyDef("percent", "%", 0),
+                    ),
+                    listOf(
+                        findKeyDef(activeState.grid, "num_4") ?: KeyDef("num_4", "4", 0),
+                        findKeyDef(activeState.grid, "num_5") ?: KeyDef("num_5", "5", 0),
+                        findKeyDef(activeState.grid, "num_6") ?: KeyDef("num_6", "6", 0),
+                        findKeyDef(activeState.grid, "space_num") ?: KeyDef("space_num", "␣", 0),
+                    ),
+                    listOf(
+                        findKeyDef(activeState.grid, "num_7") ?: KeyDef("num_7", "7", 0),
+                        findKeyDef(activeState.grid, "num_8") ?: KeyDef("num_8", "8", 0),
+                        findKeyDef(activeState.grid, "num_9") ?: KeyDef("num_9", "9", 0),
+                        findKeyDef(activeState.grid, "bksp") ?: KeyDef("bksp", "⌫", 0),
+                    ),
+                )
             val bottomRow =
                 listOf(
-                    findKeyInLayout(activeState.grid, "ctrl") ?: KeyDef("ctrl", "Ctrl", 0),
-                    findKeyInLayout(activeState.grid, "alt") ?: KeyDef("alt", "Alt", 0),
-                    findKeyInLayout(activeState.grid, "space") ?: KeyDef("space", "Space", 0),
-                    findKeyInLayout(activeState.grid, "altgr") ?: KeyDef("altgr", "AltGr", 0),
-                    findKeyInLayout(activeState.grid, "bksp") ?: KeyDef("bksp", "Bksp", 0),
-                    findKeyInLayout(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
+                    findKeyDef(activeState.grid, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
+                    findKeyDef(activeState.grid, "comma") ?: KeyDef("comma", ",", 0),
+                    findKeyDef(activeState.grid, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
+                    findKeyDef(activeState.grid, "num_0") ?: KeyDef("num_0", "0", 0),
+                    findKeyDef(activeState.grid, "equal") ?: KeyDef("equal", "=", 0),
+                    findKeyDef(activeState.grid, "dot") ?: KeyDef("dot", ".", 0),
+                    findKeyDef(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
                 )
 
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
             ) {
-                // Top part: Left Operators + Middle/Right Grid
                 Row(
                     modifier =
                         Modifier
-                            .weight(5f)
+                            .weight(3f)
                             .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                 ) {
-                    // Left Operators Column (spans height of rows 1-3)
                     Column(
                         modifier =
                             Modifier
@@ -317,14 +352,13 @@ internal fun KeyboardLayoutGrid(
                                 isShiftActive = isShiftActive,
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
-                                isFullLayout = true,
+                                isFullLayout = false,
                                 modifier = Modifier.weight(1f),
                                 onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
                             )
                         }
                     }
 
-                    // Middle + Right Grid (occupies the rest of the width)
                     Column(
                         modifier =
                             Modifier
@@ -348,7 +382,7 @@ internal fun KeyboardLayoutGrid(
                                         isShiftActive = isShiftActive,
                                         isCapsActive = isCapsActive,
                                         isAltGrActive = isAltGrActive,
-                                        isFullLayout = true,
+                                        isFullLayout = false,
                                         modifier = Modifier.weight(key.widthWeight),
                                         onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
                                     )
@@ -358,7 +392,6 @@ internal fun KeyboardLayoutGrid(
                     }
                 }
 
-                // Bottom Row (weight 1f)
                 Row(
                     modifier =
                         Modifier
@@ -374,7 +407,7 @@ internal fun KeyboardLayoutGrid(
                             isShiftActive = isShiftActive,
                             isCapsActive = isCapsActive,
                             isAltGrActive = isAltGrActive,
-                            isFullLayout = true,
+                            isFullLayout = false,
                             modifier = Modifier.weight(key.widthWeight),
                             onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
                         )
@@ -382,113 +415,11 @@ internal fun KeyboardLayoutGrid(
                 }
             }
         } else {
-            val isNumericLayout = activeState.mode == KeyboardMode.NUMERIC
-            if (isNumericLayout) {
-                val ops =
-                    listOf(
-                        findKeyInLayout(activeState.grid, "plus") ?: KeyDef("plus", "+", 0),
-                        findKeyInLayout(activeState.grid, "minus") ?: KeyDef("minus", "-", 0),
-                        findKeyInLayout(activeState.grid, "asterisk") ?: KeyDef("asterisk", "*", 0),
-                        findKeyInLayout(activeState.grid, "slash") ?: KeyDef("slash", "/", 0),
-                    )
-                val gridRows =
-                    listOf(
-                        listOf(
-                            findKeyInLayout(activeState.grid, "num_1") ?: KeyDef("num_1", "1", 0),
-                            findKeyInLayout(activeState.grid, "num_2") ?: KeyDef("num_2", "2", 0),
-                            findKeyInLayout(activeState.grid, "num_3") ?: KeyDef("num_3", "3", 0),
-                            findKeyInLayout(activeState.grid, "percent") ?: KeyDef("percent", "%", 0),
-                        ),
-                        listOf(
-                            findKeyInLayout(activeState.grid, "num_4") ?: KeyDef("num_4", "4", 0),
-                            findKeyInLayout(activeState.grid, "num_5") ?: KeyDef("num_5", "5", 0),
-                            findKeyInLayout(activeState.grid, "num_6") ?: KeyDef("num_6", "6", 0),
-                            findKeyInLayout(activeState.grid, "space_num") ?: KeyDef("space_num", "␣", 0),
-                        ),
-                        listOf(
-                            findKeyInLayout(activeState.grid, "num_7") ?: KeyDef("num_7", "7", 0),
-                            findKeyInLayout(activeState.grid, "num_8") ?: KeyDef("num_8", "8", 0),
-                            findKeyInLayout(activeState.grid, "num_9") ?: KeyDef("num_9", "9", 0),
-                            findKeyInLayout(activeState.grid, "bksp") ?: KeyDef("bksp", "⌫", 0),
-                        ),
-                    )
-                val bottomRow =
-                    listOf(
-                        findKeyInLayout(activeState.grid, "mode_switch_abc") ?: KeyDef("mode_switch_abc", "ABC", 0),
-                        findKeyInLayout(activeState.grid, "comma") ?: KeyDef("comma", ",", 0),
-                        findKeyInLayout(activeState.grid, "mode_switch") ?: KeyDef("mode_switch", "!?#", 0),
-                        findKeyInLayout(activeState.grid, "num_0") ?: KeyDef("num_0", "0", 0),
-                        findKeyInLayout(activeState.grid, "equal") ?: KeyDef("equal", "=", 0),
-                        findKeyInLayout(activeState.grid, "dot") ?: KeyDef("dot", ".", 0),
-                        findKeyInLayout(activeState.grid, "enter") ?: KeyDef("enter", "Enter", 0),
-                    )
-
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
-                ) {
-                    Row(
-                        modifier =
-                            Modifier
-                                .weight(3f)
-                                .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
-                    ) {
-                        Column(
-                            modifier =
-                                Modifier
-                                    .weight(1.3f)
-                                    .fillMaxHeight(),
-                            verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
-                        ) {
-                            ops.forEach { key ->
-                                KeyboardKey(
-                                    keyDef = key,
-                                    isPressed = key.id in pressedKeys,
-                                    accentColor = accentColor,
-                                    isShiftActive = isShiftActive,
-                                    isCapsActive = isCapsActive,
-                                    isAltGrActive = isAltGrActive,
-                                    isFullLayout = false,
-                                    modifier = Modifier.weight(1f),
-                                    onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
-                                )
-                            }
-                        }
-
-                        Column(
-                            modifier =
-                                Modifier
-                                    .weight(7.3f)
-                                    .fillMaxHeight(),
-                            verticalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_V),
-                        ) {
-                            gridRows.forEach { row ->
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
-                                ) {
-                                    row.forEach { key ->
-                                        KeyboardKey(
-                                            keyDef = key,
-                                            isPressed = key.id in pressedKeys,
-                                            accentColor = accentColor,
-                                            isShiftActive = isShiftActive,
-                                            isCapsActive = isCapsActive,
-                                            isAltGrActive = isAltGrActive,
-                                            isFullLayout = false,
-                                            modifier = Modifier.weight(key.widthWeight),
-                                            onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                activeState.grid.forEach { row ->
                     Row(
                         modifier =
                             Modifier
@@ -496,7 +427,7 @@ internal fun KeyboardLayoutGrid(
                                 .fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
                     ) {
-                        bottomRow.forEach { key ->
+                        row.forEach { key ->
                             KeyboardKey(
                                 keyDef = key,
                                 isPressed = key.id in pressedKeys,
@@ -504,39 +435,10 @@ internal fun KeyboardLayoutGrid(
                                 isShiftActive = isShiftActive,
                                 isCapsActive = isCapsActive,
                                 isAltGrActive = isAltGrActive,
-                                isFullLayout = false,
+                                isFullLayout = activeState.mode == KeyboardMode.FULL,
                                 modifier = Modifier.weight(key.widthWeight),
                                 onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
                             )
-                        }
-                    }
-                }
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.SpaceEvenly,
-                ) {
-                    activeState.grid.forEach { row ->
-                        Row(
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(KB_KEY_PADDING_H),
-                        ) {
-                            row.forEach { key ->
-                                KeyboardKey(
-                                    keyDef = key,
-                                    isPressed = key.id in pressedKeys,
-                                    accentColor = accentColor,
-                                    isShiftActive = isShiftActive,
-                                    isCapsActive = isCapsActive,
-                                    isAltGrActive = isAltGrActive,
-                                    isFullLayout = false,
-                                    modifier = Modifier.weight(key.widthWeight),
-                                    onBoundsUpdate = { coords -> gestureState.updateBounds(key.id, coords, activeState) },
-                                )
-                            }
                         }
                     }
                 }
@@ -570,4 +472,16 @@ private fun KeyboardKey(
         modifier = modifier,
         onBoundsUpdate = onBoundsUpdate,
     )
+}
+
+private fun findKeyDef(
+    grid: List<List<KeyDef>>,
+    id: String,
+): KeyDef? {
+    for (row in grid) {
+        for (key in row) {
+            if (key.id == id) return key
+        }
+    }
+    return null
 }

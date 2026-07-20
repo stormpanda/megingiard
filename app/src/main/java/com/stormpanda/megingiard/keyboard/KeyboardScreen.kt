@@ -487,6 +487,14 @@ fun KeyboardScreen(
                                 kbRepeatEnabled = kbRepeatEnabled,
                                 kbLayout = kbLayout,
                                 onCloseQuickMenu = { viewModel.closeQuickMenu() },
+                                onModeChange = { nextMode ->
+                                    viewModel.setKeyboardMode(nextMode)
+                                    KeyboardState.reset()
+                                },
+                                onCycleKbLayout = {
+                                    viewModel.cycleKbLayout()
+                                    KeyboardState.reset()
+                                },
                             )
 
                             TrackpointOverlay(
