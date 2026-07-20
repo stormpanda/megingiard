@@ -73,7 +73,7 @@ class KeyRepeatController(
                 pointerKeyMap[pointerId] = id
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = keyDef
-                val isCharKey = id != "bksp" && id != "enter"
+                val isCharKey = id != "bksp" && id != "enter" && id != "del" && id != "up" && id != "down" && id != "left" && id != "right"
                 if (!isCharKey && keyDef.linuxKeycode != 0) {
                     KeyboardState
                         .activeModifierKeycodesFor(keyDef, layout)
@@ -218,7 +218,10 @@ class KeyRepeatController(
                 heldKey = null
                 repeatJob?.cancel()
                 if (!skipInjection) {
-                    val isCharKey = releasedId != "bksp" && releasedId != "enter"
+                    val isCharKey =
+                        releasedId != "bksp" && releasedId != "enter" && releasedId != "del" && releasedId != "up" && releasedId != "down" &&
+                            releasedId != "left" &&
+                            releasedId != "right"
                     if (isCharKey && keyDef.linuxKeycode != 0) {
                         val activeMods = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
                         activeMods.forEach { KeyInjector.keyDown(it) }
