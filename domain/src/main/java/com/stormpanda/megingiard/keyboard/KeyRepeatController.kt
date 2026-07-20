@@ -73,7 +73,7 @@ class KeyRepeatController(
                 pointerKeyMap[pointerId] = id
                 _pressedKeys.value = _pressedKeys.value + id
                 heldKey = keyDef
-                val isCharKey = id != "bksp" && id != "enter"
+                val isCharKey = keyDef.isCharacterKey
                 if (!isCharKey && keyDef.linuxKeycode != 0) {
                     KeyboardState
                         .activeModifierKeycodesFor(keyDef, layout)
@@ -96,8 +96,9 @@ class KeyRepeatController(
             KeyType.MODIFIER -> {
                 pointerKeyMap[pointerId] = id
                 modifierBeingHeld = keyDef
-                KeyboardState.onModifierTouchDown(id)
-                startModifierHold(keyDef)
+                val code = KeyboardState.onModifierTouchDown(id, keyDef.injectedKeycode, layout.size == 6)
+                if (code != null) KeyInjector.keyDown(code)
+                startModifierHold(keyDef, layout.size == 6)
             }
 
             KeyType.TRACKPOINT -> {
@@ -216,7 +217,7 @@ class KeyRepeatController(
                 heldKey = null
                 repeatJob?.cancel()
                 if (!skipInjection) {
-                    val isCharKey = releasedId != "bksp" && releasedId != "enter"
+                    val isCharKey = keyDef.isCharacterKey
                     if (isCharKey && keyDef.linuxKeycode != 0) {
                         val activeMods = KeyboardState.activeModifierKeycodesFor(keyDef, layout)
                         activeMods.forEach { KeyInjector.keyDown(it) }
@@ -224,6 +225,7 @@ class KeyRepeatController(
                         KeyInjector.keyDown(keyDef.linuxKeycode)
                         KeyInjector.keyUp(keyDef.linuxKeycode)
                         keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
+                        activeMods.forEach { KeyInjector.keyUp(it) }
                         KeyboardState
                             .releaseStickyModifiers(layout)
                             .forEach { KeyInjector.keyUp(it) }
@@ -231,6 +233,9 @@ class KeyRepeatController(
                         if (keyDef.linuxKeycode != 0 && repeatEnabled) {
                             KeyInjector.keyUp(keyDef.linuxKeycode)
                             keyDef.autoModifiers.forEach { KeyInjector.keyUp(it) }
+                            KeyboardState
+                                .activeModifierKeycodesFor(keyDef, layout)
+                                .forEach { KeyInjector.keyUp(it) }
                             KeyboardState
                                 .releaseStickyModifiers(layout)
                                 .forEach { KeyInjector.keyUp(it) }
@@ -248,7 +253,7 @@ class KeyRepeatController(
                 modifierBeingHeld = null
                 modifierHoldJob?.cancel()
                 KeyboardState
-                    .onModifierTouchUp(releasedId, keyDef.linuxKeycode)
+                    .onModifierTouchUp(releasedId, keyDef.injectedKeycode, layout.size == 6)
                     .forEach { KeyInjector.keyUp(it) }
             }
 
@@ -298,13 +303,16 @@ class KeyRepeatController(
             }
     }
 
-    private fun startModifierHold(keyDef: KeyDef) {
+    private fun startModifierHold(
+        keyDef: KeyDef,
+        isFullLayout: Boolean,
+    ) {
         modifierHoldJob?.cancel()
         modifierHoldJob =
             scope.launch {
                 delay(KB_MODIFIER_HOLD_MS)
                 if (modifierBeingHeld == keyDef) {
-                    val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode)
+                    val keycode = KeyboardState.onModifierLongPress(keyDef.id, keyDef.linuxKeycode, isFullLayout)
                     if (keycode != null) KeyInjector.keyDown(keycode)
                 }
             }

@@ -103,7 +103,17 @@ data class KeyDef(
     val altGrLabel: String? = null,
     val superscript: String? = null,
     val autoModifiers: List<Int> = emptyList(),
+    val popupOptions: List<String> = emptyList(),
 )
+
+val KeyDef.isControlKey: Boolean
+    get() = id == "bksp" || id == "enter" || id == "del" || id == "up" || id == "down" || id == "left" || id == "right"
+
+val KeyDef.isCharacterKey: Boolean
+    get() = type == KeyType.NORMAL && !isControlKey
+
+val KeyDef.injectedKeycode: Int
+    get() = if (id == "caps") LinuxKeycodes.KEY_LEFTSHIFT else linuxKeycode
 
 enum class KeyType { NORMAL, MODIFIER, TRACKPOINT }
 
@@ -123,33 +133,22 @@ fun getPopupOptions(
     keyDef: KeyDef,
     isUpper: Boolean,
 ): List<String> {
-    val id = keyDef.id
-    when (id) {
-        "j" -> return listOf("(", "[", "{", "<")
-        "k" -> return listOf(")", "]", "}", ">")
-        "l" -> return listOf("/", "\\")
-        "s" -> return listOf("#", "$", "%")
-        "lparen" -> return listOf("[", "{", "<")
-        "rparen" -> return listOf("]", "}", ">")
-        "slash" -> return listOf("\\")
-        "hash" -> return listOf("$", "%")
+    if (keyDef.shiftLabel != null) {
+        return listOf(keyDef.shiftLabel)
+    }
+    if (keyDef.popupOptions.isNotEmpty()) {
+        return keyDef.popupOptions
     }
     val superscript = keyDef.superscript ?: return emptyList()
     return listOf(superscript)
 }
 
-fun getSuperscriptDisplayLabel(keyDef: KeyDef): String? =
-    when (keyDef.id) {
-        "j" -> "( [ { <"
-        "k" -> ") ] } >"
-        "l" -> "/ \\"
-        "s" -> "# $ %"
-        "lparen" -> "[ { <"
-        "rparen" -> "] } >"
-        "slash" -> "\\"
-        "hash" -> "$ %"
-        else -> keyDef.superscript
+fun getSuperscriptDisplayLabel(keyDef: KeyDef): String? {
+    if (keyDef.popupOptions.isNotEmpty()) {
+        return keyDef.popupOptions.joinToString(" ")
     }
+    return keyDef.superscript
+}
 
 // ---------------------------------------------------------------------------
 // Layout factories
@@ -240,7 +239,7 @@ fun azertyLayout(mode: KeyboardMode = KeyboardMode.LETTERS): List<List<KeyDef>> 
     }
 
 // ---------------------------------------------------------------------------
-// Gboard visual rows
+// Ergo layout visual rows
 // ---------------------------------------------------------------------------
 
 private fun qwertzLettersRow1(): List<KeyDef> =
@@ -288,14 +287,14 @@ private fun azertyLettersRow1(): List<KeyDef> =
 private fun homeRowQwertz(): List<KeyDef> =
     listOf(
         KeyDef("a", "a", KEY_A, superscript = "@"),
-        KeyDef("s", "s", KEY_S, superscript = "#"),
+        KeyDef("s", "s", KEY_S, superscript = "#", popupOptions = listOf("#", "$", "%")),
         KeyDef("d", "d", KEY_D, superscript = "_"),
         KeyDef("f", "f", KEY_F, superscript = "&"),
         KeyDef("g", "g", KEY_G, superscript = "-"),
         KeyDef("h", "h", KEY_H, superscript = "+"),
-        KeyDef("j", "j", KEY_J, superscript = "("),
-        KeyDef("k", "k", KEY_K, superscript = ")"),
-        KeyDef("l", "l", KEY_L, superscript = "/"),
+        KeyDef("j", "j", KEY_J, superscript = "(", popupOptions = listOf("(", "[", "{", "<")),
+        KeyDef("k", "k", KEY_K, superscript = ")", popupOptions = listOf(")", "]", "}", ">")),
+        KeyDef("l", "l", KEY_L, superscript = "/", popupOptions = listOf("/", "\\")),
     )
 
 private fun homeRowQwerty(): List<KeyDef> = homeRowQwertz()
@@ -303,14 +302,14 @@ private fun homeRowQwerty(): List<KeyDef> = homeRowQwertz()
 private fun homeRowAzerty(): List<KeyDef> =
     listOf(
         KeyDef("q", "q", KEY_Q, superscript = "@"),
-        KeyDef("s", "s", KEY_S, superscript = "#"),
+        KeyDef("s", "s", KEY_S, superscript = "#", popupOptions = listOf("#", "$", "%")),
         KeyDef("d", "d", KEY_D, superscript = "_"),
         KeyDef("f", "f", KEY_F, superscript = "&"),
         KeyDef("g", "g", KEY_G, superscript = "-"),
         KeyDef("h", "h", KEY_H, superscript = "+"),
-        KeyDef("j", "j", KEY_J, superscript = "("),
-        KeyDef("k", "k", KEY_K, superscript = ")"),
-        KeyDef("l", "l", KEY_L, superscript = "/"),
+        KeyDef("j", "j", KEY_J, superscript = "(", popupOptions = listOf("(", "[", "{", "<")),
+        KeyDef("k", "k", KEY_K, superscript = ")", popupOptions = listOf(")", "]", "}", ">")),
+        KeyDef("l", "l", KEY_L, superscript = "/", popupOptions = listOf("/", "\\")),
         KeyDef("m", "m", KEY_M),
     )
 
@@ -378,13 +377,13 @@ private fun symbols1Layout(): List<List<KeyDef>> =
         ),
         listOf(
             KeyDef("at", "@", KEY_2, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("hash", "#", KEY_3, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("hash", "#", KEY_3, autoModifiers = listOf(KEY_LEFTSHIFT), popupOptions = listOf("$", "%")),
             KeyDef("underscore", "_", KEY_MINUS, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("ampersand", "&", KEY_7, autoModifiers = listOf(KEY_LEFTSHIFT)),
             KeyDef("hyphen", "-", KEY_MINUS),
             KeyDef("plus", "+", KEY_EQUAL, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("lparen", "(", KEY_9, autoModifiers = listOf(KEY_LEFTSHIFT)),
-            KeyDef("rparen", ")", KEY_0, autoModifiers = listOf(KEY_LEFTSHIFT)),
+            KeyDef("lparen", "(", KEY_9, autoModifiers = listOf(KEY_LEFTSHIFT), popupOptions = listOf("[", "{", "<")),
+            KeyDef("rparen", ")", KEY_0, autoModifiers = listOf(KEY_LEFTSHIFT), popupOptions = listOf("]", "}", ">")),
             KeyDef("slash", "/", KEY_SLASH),
         ),
         listOf(

@@ -18,7 +18,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K1: Virtual Keyboard Layout
 
-- The secondary display MUST show a **Gboard-style virtual keyboard** anchored to the bottom.
+- The secondary display MUST show a **virtual keyboard (inspired by Gboard)** anchored to the bottom.
 - The layout MUST support **QWERTZ**, **QWERTY**, and **AZERTY** regional variants, selectable via Settings or the keyboard's globe key.
 - The keyboard MUST feature a **4-row key layout** consisting of letter rows and a bottom spacebar bar, alongside two horizontal toolbars (top toolbar above the keys, and bottom toolbar below the keys).
 - The keyboard MUST support dynamic layout sub-modes:
@@ -30,7 +30,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K2: Modifier Keys
 
-- **Ctrl**, **Alt**, and **AltGr** modifier keys MUST be displayed on the left side of the top toolbar as rounded text buttons surrounded by a thin white border, while **Shift** is placed within the standard letter grid.
+- On the ergo keyboard top toolbar, **Esc**, **Tab**, **Ctrl**, and **Alt** buttons MUST be displayed on the left side as rounded text buttons surrounded by a thin white border (AltGr is only displayed on the compact full keyboard layout), while **Shift** is placed within the standard letter grid.
 - **Ctrl**, **Alt**, **AltGr**, **Shift**, and **Meta** MUST support a **three-state lifecycle**:
   - **INACTIVE:** default; modifier is not applied.
   - **STICKY:** activated by a short tap; the modifier is applied to the **next non-modifier key injection only**, then resets to INACTIVE.
@@ -62,7 +62,8 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 - When **Key Repeat** is enabled in Settings, holding the backspace key (`"bksp"`) MUST trigger the initial key injection after **500 ms**, followed by repeated injections every **30 ms**.
 - Holding a top-row character key (which displays a superscript number) instead triggers a popup options bubble showing its numeric alternative after **400 ms** (no letter variants or umlauts are displayed).
 - Standard character keys do not support repeated key inputs upon press/hold; instead, their single key injection is deferred to finger release to prevent conflicts with the long-press overlay.
-- Dragging horizontally on the popup overlay selects the alternative number. Releasing the finger injects the selected number and dismisses the popup.
+- Dragging horizontally on the popup overlay selects the alternative number/symbol. Releasing the finger injects the selected option and dismisses the popup.
+- On the compact full keyboard layout, long-pressing keys does not show secondary popup options; instead only the preview popup shows, and moving the finger performs slide-to-correct.
 - When Key Repeat is **disabled** for control keys, a key-up event MUST be sent immediately at the moment of the initial key-down to prevent the system-level repeat from firing.
 
 ### FR-K5: No Special Permissions Required
@@ -94,7 +95,7 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 ### FR-K10: Keyboard-Top Touchpad
 
-- When enabled in Settings, the keyboard screen MUST show a relative touchpad in the area above the Gboard-style layout.
+- When enabled in Settings, the keyboard screen MUST show a relative touchpad in the area above the keyboard layout.
 - The touchpad MUST support relative cursor movement and gesture clicks/taps (tap-to-click, two-finger-tap, three-finger-tap, tap-drag, and two-finger scrolling) by reusing `TouchpadGestureProcessor` and piping mouse events to `MouseInjector`.
 - The touchpad MUST not feature physical click buttons.
 - Sensitivity (pointer speed) and scroll speed settings MUST be inherited from the general Touchpad Settings configurations.
@@ -103,10 +104,14 @@ The Virtual Keyboard feature turns the secondary display into a full hardware ke
 
 - The virtual keyboard MUST support a toggleable **Compact Full Keyboard Mode** displaying all standard physical keys (including F1-F12, Esc, Tab, Meta, and dedicated Arrow keys) in a single 6-row grid.
 - The mode MUST be toggled via a dedicated keyboard layout toggle button in the bottom toolbar.
-- The virtual keyboard height MUST adapt dynamically when in Compact Full Keyboard Mode:
-  - The keyboard container height MUST increase from `262 dp` to `314 dp`.
-  - The keyboard grid height MUST increase from `168 dp` to `220 dp`.
+- The virtual keyboard height MUST adapt smoothly when transitioning:
+  - The keyboard container height MUST animate smoothly from `262 dp` to `270 dp` (or vice versa) using a transition animation.
+  - The keyboard grid height MUST adapt from `168 dp` to `220 dp`.
+- The transition between different layout modes (standard, ergo, compact full) MUST use a visual crossfade animation with isolated layout subtrees, preventing any scrambling or button recycling visual artifacts.
 - The layout MUST align columns precisely by using uniform row width weights of `15.0f` per row.
+- Special character keys in Compact Full Keyboard Mode MUST show both their unshifted and shifted symbols simultaneously, stacked vertically on the key cap. The currently active symbol (determined by the state of the Shift/CapsLock modifiers) is highlighted, and the inactive symbol is dimmed.
+- Holding a character key in Compact Full Keyboard Mode MUST NOT trigger any secondary options popup; only its standard character preview popup is displayed.
+- Moving the finger while holding down a character key in Compact Full Keyboard Mode MUST perform slide-to-correct: it dynamically updates the hovered key and its corresponding preview popup. The final character is injected upon finger release.
 
 ---
 
