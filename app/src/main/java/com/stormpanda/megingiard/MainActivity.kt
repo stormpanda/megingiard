@@ -599,6 +599,19 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
+                AppStateManager.shutOffRequested.collect { requested ->
+                    if (!requested) return@collect
+                    AppLog.i(TAG, "shutOffRequested → performing graceful shutdown")
+                    AppStateManager.consumeShutOffRequest()
+                    if (ScreenCaptureManager.isCapturing.value) {
+                        stopMirrorService()
+                    }
+                    PrivdClient.disconnect()
+                    finishAndRemoveTask()
+                }
+            }
+
+            LaunchedEffect(Unit) {
                 ScreenCaptureManager.screenshotRequested.collect { requested ->
                     if (!requested) return@collect
                     if (!ScreenCaptureManager.isCapturing.value) {

@@ -65,6 +65,8 @@ the universal "go back" mechanism throughout the app.
   opening the full-screen `MacroPadEditor`.
 - **Global Settings** — opens `GlobalSettingsScreen` as a full-screen in-tree `AnimatedVisibility`
   overlay within the Quick Menu itself (no new Activity or Composable at a higher level).
+- **Shut Off** — icon button (`ShutOffIconButton`) rendered with an on/off power icon (`Icons.Rounded.PowerSettingsNew`) to the left of the Help icon button. Triggers `AppStateManager.requestShutOff()`, stopping any active mirror capture service, disconnecting the privileged daemon, and gracefully finishing the app activity task (`finishAndRemoveTask()`).
+- **Help** — icon button (`HelpIconButton`) rendered to the right of the Shut Off button; opens `QuickMenuHelpModal` which provides an in-app guide explaining all controls in the Quick Menu.
 
 ### FR-PM5: Mirror Controls Card (Top Card)
 
@@ -115,7 +117,9 @@ MainAppScreen (or BackgroundMacroPadOverlay)
                     ├── Layout chips row
                     ├── Divider
                     ├── "Edit Layout" ActionButton (QuickMenuActionChip)
-                    └── "Global Settings" ActionButton (QuickMenuActionChip)
+                    ├── "Global Settings" ActionButton (QuickMenuActionChip)
+                    ├── ShutOffIconButton
+                    └── HelpIconButton
 ```
 
 ### Visibility & Animation

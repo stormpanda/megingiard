@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
@@ -243,7 +244,15 @@ fun QuickMenu(
                         onClick = { AppStateManager.setGlobalSettingsOpen(true) },
                         modifier = Modifier.weight(1f),
                     )
-                    HelpIconButton(onClick = { showQuickMenuHelp = true })
+                    ShutOffIconButton(onClick = {
+                        AppStateManager.requestShutOff()
+                        onDismiss()
+                    })
+                    QuickMenuIconButton(
+                        icon = Icons.AutoMirrored.Rounded.HelpOutline,
+                        contentDescription = stringResource(R.string.help_open_cd),
+                        onClick = { showQuickMenuHelp = true },
+                    )
                 }
             }
         }
@@ -307,6 +316,11 @@ private fun QuickMenuHelpModal(
             icon = Icons.Rounded.Settings,
             label = stringResource(R.string.quick_menu_global_settings),
             description = stringResource(R.string.help_quickmenu_settings_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.PowerSettingsNew,
+            label = stringResource(R.string.help_quickmenu_shut_off_label),
+            description = stringResource(R.string.help_quickmenu_shut_off_desc),
         )
         HelpEntry(
             icon = Icons.AutoMirrored.Rounded.HelpOutline,

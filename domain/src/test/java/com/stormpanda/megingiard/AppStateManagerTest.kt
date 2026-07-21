@@ -171,4 +171,16 @@ class AppStateManagerTest {
             AppStateManager.setFullscreenKeyboardActive(false)
             KeyboardSettings.setKbLayout(KbLayout.QWERTZ)
         }
+
+    @Test
+    fun `requestShutOff sets flag and consumeShutOffRequest resets it`() =
+        runTest {
+            assertFalse(AppStateManager.shutOffRequested.value)
+
+            AppStateManager.requestShutOff()
+            assertTrue(AppStateManager.shutOffRequested.value)
+
+            AppStateManager.consumeShutOffRequest()
+            assertFalse(AppStateManager.shutOffRequested.value)
+        }
 }
