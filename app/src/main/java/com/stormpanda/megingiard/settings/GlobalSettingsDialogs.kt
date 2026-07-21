@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import java.time.LocalDate
 
 private const val TAG = "GlobalSettingsDialogs"
@@ -103,6 +105,7 @@ internal fun ExportMetadataDialog(
                 Modifier
                     .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
                     .verticalScroll(rememberScrollState())
                     .clickable(enabled = true, onClick = {})
                     .padding(GSD_DIALOG_PADDING),
@@ -187,6 +190,7 @@ internal fun ImportPreviewDialog(
                 Modifier
                     .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
                     .verticalScroll(rememberScrollState())
                     .clickable(enabled = true, onClick = {})
                     .padding(GSD_DIALOG_PADDING),
@@ -328,6 +332,7 @@ internal fun InTreeMessageDialog(
                 Modifier
                     .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
                     .clickable(enabled = true, onClick = {})
                     .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -389,6 +394,7 @@ internal fun ProfileExportDialog(
                 Modifier
                     .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
                     .verticalScroll(rememberScrollState())
                     .clickable(enabled = true, onClick = {})
                     .padding(GSD_DIALOG_PADDING),
@@ -508,6 +514,7 @@ internal fun InTreeConfirmDialog(
                 Modifier
                     .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
                     .clickable(enabled = true, onClick = {})
                     .padding(GSD_DIALOG_PADDING),
             verticalArrangement = Arrangement.spacedBy(12.dp),

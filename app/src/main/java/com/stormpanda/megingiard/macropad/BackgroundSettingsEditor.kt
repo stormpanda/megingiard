@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Pinch
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -101,6 +102,7 @@ import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -586,6 +588,7 @@ internal fun BackgroundSettingsEditor(
 
         if (showApiTokenMissingDialog) {
             AlertDialog(
+                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
                 onDismissRequest = { showApiTokenMissingDialog = false },
                 title = {
                     Text(
@@ -707,6 +710,7 @@ private fun ImageCropDialog(
                 Modifier
                     .fillMaxWidth(BSE_PREVIEW_MODAL_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS))
                     .clickable(enabled = true, onClick = {})
                     .padding(BSE_SPACING_16),
             horizontalAlignment = Alignment.CenterHorizontally,

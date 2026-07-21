@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,6 +78,7 @@ internal fun InTreeNameInputDialog(
                 Modifier
                     .fillMaxWidth(PM_NAME_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(PM_PANEL_CORNER))
+                    .border(PM_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(PM_PANEL_CORNER))
                     .pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {

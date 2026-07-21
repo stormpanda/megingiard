@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +72,7 @@ import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -683,6 +686,7 @@ internal fun MacroTimelineEditor(
 
     if (deleteStepIndex != null) {
         AlertDialog(
+            modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
             containerColor = colors.surface,
             onDismissRequest = { deleteStepIndex = null },
             title = { Text(stringResource(R.string.macropad_macro_step_delete_title), color = colors.onSurface) },
@@ -708,6 +712,7 @@ internal fun MacroTimelineEditor(
 
     gamepadRecordingError?.let { message ->
         AlertDialog(
+            modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
             containerColor = colors.surface,
             onDismissRequest = { gamepadRecordingError = null },
             title = {

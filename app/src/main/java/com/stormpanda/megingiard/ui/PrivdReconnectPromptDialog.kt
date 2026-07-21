@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.view.Display
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -122,6 +124,7 @@ fun PrivdReconnectPromptDialog(
         }
 
     AlertDialog(
+        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
         containerColor = colors.surface,
         onDismissRequest = {
             AppLog.d(TAG, "Privd reconnect prompt dialog dismissed via request")

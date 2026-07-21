@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -81,6 +83,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -508,6 +511,7 @@ fun MainAppScreen() {
 
         importError?.let { error ->
             AlertDialog(
+                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
                 onDismissRequest = { importError = null },
                 containerColor = colors.surface,
                 title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
@@ -530,6 +534,7 @@ fun MainAppScreen() {
 
         if (showExitDialog) {
             AlertDialog(
+                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
                 onDismissRequest = { showExitDialog = false },
                 title = { Text(stringResource(R.string.exit_dialog_title), color = colors.onSurface) },
                 text = { Text(stringResource(R.string.exit_dialog_message), color = colors.onSurface) },
@@ -666,6 +671,7 @@ private fun IncomingImportDialog(
     val colors = LocalAppColors.current
     val meta = export.metadata
     AlertDialog(
+        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
         onDismissRequest = onDismiss,
         containerColor = colors.surface,
         title = {

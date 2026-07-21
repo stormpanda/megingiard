@@ -112,8 +112,11 @@ fun QuickMenuTutorialDialog(
                     .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
                     .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
                     .background(colors.surface)
-                    .border(QM_DIALOG_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                    .padding(QM_DIALOG_PADDING)
+                    .border(
+                        QM_DIALOG_BORDER_WIDTH,
+                        brush = rememberQuickMenuBezelBrush(),
+                        shape = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS),
+                    ).padding(QM_DIALOG_PADDING)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

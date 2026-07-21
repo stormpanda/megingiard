@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -59,6 +60,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Locale
@@ -343,6 +345,7 @@ private fun MacroListView(
                 ?.flatMap { it.buttons }
                 ?.count { (it.action as? PadAction.Macro)?.macroId == macroId } ?: 0
         AlertDialog(
+            modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
             containerColor = colors.surface,
             onDismissRequest = { deletingMacroId = null },
             title = { Text(stringResource(R.string.macropad_macro_delete_title), color = colors.onSurface) },

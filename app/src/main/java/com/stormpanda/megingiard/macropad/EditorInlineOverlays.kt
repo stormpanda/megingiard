@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,6 +66,7 @@ import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -108,6 +110,7 @@ internal fun InlineDialogOverlay(
                 Modifier
                     .fillMaxWidth(widthFraction)
                     .background(colors.surface, RoundedCornerShape(12.dp))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(12.dp))
                     .clickable(enabled = true, onClick = {})
                     .padding(MPE_PADDING),
         ) {

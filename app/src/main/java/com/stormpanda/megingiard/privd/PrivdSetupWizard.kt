@@ -7,6 +7,7 @@ import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 
 private const val TAG = "PrivdSetupWizard"
@@ -128,6 +130,7 @@ internal fun PrivdSetupWizardDialog(
                 Modifier
                     .fillMaxWidth(SW_DIALOG_WIDTH_FRACTION)
                     .background(colors.surface, RoundedCornerShape(SW_DIALOG_CORNER))
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(SW_DIALOG_CORNER))
                     .verticalScroll(rememberScrollState())
                     .clickable(enabled = true, onClick = {})
                     .padding(SW_DIALOG_PADDING),

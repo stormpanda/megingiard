@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.privd
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -331,6 +333,7 @@ internal fun DeadzoneDialog(
                     .fillMaxWidth(PR_DIALOG_WIDTH_FRACTION)
                     .clip(RoundedCornerShape(PR_DIALOG_CORNER))
                     .background(colors.surface)
+                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(PR_DIALOG_CORNER))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
