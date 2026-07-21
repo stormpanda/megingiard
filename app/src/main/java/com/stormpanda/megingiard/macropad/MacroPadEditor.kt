@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -136,6 +137,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
     var layoutPendingDelete by remember { mutableStateOf<PadLayout?>(null) }
     var showEditLayoutDialog by remember { mutableStateOf(false) }
     var showBackgroundSettingsDialog by remember { mutableStateOf(false) }
+    var showTouchpadSettingsDialog by remember { mutableStateOf(false) }
     var showReorderProfilesOverlay by remember { mutableStateOf(false) }
     var showReorderLayoutsOverlay by remember { mutableStateOf(false) }
     var isCanvasLocked by remember { mutableStateOf(true) }
@@ -150,7 +152,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
             editingButtonActive || buttonPendingDelete != null ||
             showNewLayoutDialog || layoutPendingDelete != null ||
             showNewProfileDialog || showRenameProfileDialog || showDeleteProfileConfirm ||
-            showEditLayoutDialog || showBackgroundSettingsDialog || showReorderProfilesOverlay || showReorderLayoutsOverlay ||
+            showEditLayoutDialog || showBackgroundSettingsDialog || showTouchpadSettingsDialog || showReorderProfilesOverlay ||
+            showReorderLayoutsOverlay ||
             showCopyLayoutProfileDialog || showCopyButtonLayoutDialog
     BackHandler(enabled = anyOverlayVisible) {
         when {
@@ -197,6 +200,10 @@ fun MacroPadEditor(onDone: () -> Unit) {
 
             showBackgroundSettingsDialog -> {
                 showBackgroundSettingsDialog = false
+            }
+
+            showTouchpadSettingsDialog -> {
+                showTouchpadSettingsDialog = false
             }
 
             showReorderProfilesOverlay -> {
@@ -274,6 +281,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     isCanvasLocked = isCanvasLocked,
                     onToggleCanvasLock = { isCanvasLocked = !isCanvasLocked },
                     onManageBackground = { showBackgroundSettingsDialog = true },
+                    onManageTouchpadSettings = { showTouchpadSettingsDialog = true },
                     modifier = Modifier.padding(innerPadding),
                 )
             }
@@ -564,6 +572,31 @@ fun MacroPadEditor(onDone: () -> Unit) {
             )
         }
 
+        // Touchpad settings overlay
+        if (showTouchpadSettingsDialog && activeLayout != null) {
+            val curLayout = activeLayout!!
+            BackgroundTouchpadSettingsEditor(
+                layout = curLayout,
+                accentColor = colors.accent,
+                onConfirm = { updatedConfig, disableProjection ->
+                    val newCutouts =
+                        if (disableProjection) {
+                            curLayout.mirrorCutouts.map { it.copy(touchProjectionEnabled = false) }
+                        } else {
+                            curLayout.mirrorCutouts
+                        }
+                    MacroPadState.updateLayout(
+                        curLayout.copy(
+                            backgroundTouchpad = updatedConfig,
+                            mirrorCutouts = newCutouts,
+                        ),
+                    )
+                    showTouchpadSettingsDialog = false
+                },
+                onDismiss = { showTouchpadSettingsDialog = false },
+            )
+        }
+
         // Render ReorderProfilesOverlay
         AnimatedVisibility(
             visible = showReorderProfilesOverlay,
@@ -761,6 +794,11 @@ private fun MacroPadEditorHelpModal(
             description = stringResource(R.string.help_editor_toolbar_background_desc),
         )
         HelpEntry(
+            icon = Icons.Rounded.Mouse,
+            label = stringResource(R.string.help_editor_toolbar_touchpad_label),
+            description = stringResource(R.string.help_editor_toolbar_touchpad_desc),
+        )
+        HelpEntry(
             icon = Icons.Rounded.Grid4x4,
             label = stringResource(R.string.help_editor_toolbar_grid_label),
             description = stringResource(R.string.help_editor_toolbar_grid_desc),
@@ -819,6 +857,7 @@ private fun EditorBody(
     isCanvasLocked: Boolean,
     onToggleCanvasLock: () -> Unit,
     onManageBackground: () -> Unit,
+    onManageTouchpadSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -980,6 +1019,7 @@ private fun EditorBody(
                         }
                 },
                 onManageBackground = onManageBackground,
+                onManageTouchpadSettings = onManageTouchpadSettings,
                 modifier =
                     Modifier
                         .background(colors.surface)

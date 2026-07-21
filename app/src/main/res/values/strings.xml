@@ -1095,4 +1095,19 @@ Open Settings to create a layout.</string>
     <string name="help_touchpad_settings_scroll_speed_desc">Adjusts the sensitivity/speed of two-finger scrolling.</string>
     <string name="help_touchpad_settings_haptics_desc">Enables subtle physical haptic feedback ticks when clicking visual buttons or performing click gestures.</string>
 
+    <string name="macropad_editor_touchpad_settings">Touchpad Settings</string>
+    <string name="layout_settings_touchpad_title">Background Touchpad</string>
+    <string name="layout_settings_touchpad_enable">Enable Background Touchpad</string>
+    <string name="layout_settings_touchpad_enable_desc">Use open canvas space as a relative mouse touchpad</string>
+    <string name="help_editor_toolbar_touchpad_label">Touchpad Settings</string>
+    <string name="help_editor_toolbar_touchpad_desc">Configure per-layout relative mouse touchpad behavior for empty canvas space.</string>
+    <string name="macropad_touchpad_conflict_projection_title">Disable Touch Projection?</string>
+    <string name="macropad_touchpad_conflict_projection_body">Enabling the Background Touchpad will disable Touch Projection for all cutouts of this layout.</string>
+    <string name="macropad_touchpad_conflict_projection_confirm">Disable Touch Projection &amp; Enable Touchpad</string>
+    <string name="macropad_projection_conflict_touchpad_title">Disable Background Touchpad?</string>
+    <string name="macropad_projection_conflict_touchpad_body">Enabling Touch Projection will disable the Background Touchpad for this layout.</string>
+    <string name="macropad_projection_conflict_touchpad_confirm">Disable Touchpad &amp; Enable Projection</string>
+    <string name="layout_settings_touchpad_incompatible_warning">Incompatible with currently active Touch Projection</string>
+    <string name="layout_settings_projection_incompatible_warning">Incompatible with currently active Background Touchpad</string>
+
 </resources>

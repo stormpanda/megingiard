@@ -198,6 +198,27 @@ Each button supports one of the following actions:
 - In **Use Mode** (`PadSurface`), **Layout Editor** (`PadCanvas`), and **Mirror Presentation** (`MirrorPresentation`), the image is loaded asynchronously and rendered applying the layout's background image crop settings (scale and translations) behind the buttons.
 - **Use as Mask**: The layout settings overlay includes a "Use as mask" toggle (visible only when an image is selected). When enabled (`useBackgroundImageAsMask = true`), the background image is layered *on top* of the screen mirroring cutouts but *below* the MacroPad buttons. This allows the mirrored screen regions to show through any transparent/semi-transparent windows of the background image, serving as a custom overlay frame.
 - When a layout is deleted or its background image is removed/cleared, the associated image file on disk is deleted.
+
+### FR-P9b: Per-Layout Background Touchpad
+
+- Users can configure the open canvas space of any layout to act as a **relative mouse touchpad**, behaving similarly to the Fullscreen Virtual Touchpad.
+- **Decoupled Configuration:** Background touchpad settings are stored **per layout** in `PadLayout.backgroundTouchpad` (`BackgroundTouchpadConfig`) and are independent of global touchpad settings.
+- **Configurable Options:**
+  - **Master Enable Switch:** Toggle background touchpad functionality for open canvas space.
+  - **Pointer Sensitivity:** Pointer speed multiplier (0.1x to 3.0x).
+  - **Gestures:** Toggles for Tap-to-Click, 2-Finger Tap (Right Click), 3-Finger Tap (Middle Click), and Tap-and-Drag.
+  - **Scrolling:** Toggles for Two-Finger Scroll, Natural Scroll Direction, and Scroll Speed multiplier (0.5x to 3.0x).
+  - **Haptics:** Toggle for haptic vibration on taps and gestures.
+- **Dedicated Editor Modal:** Accessible from the **Touchpad Settings** toolbar button in `EditorToolbar` (`BackgroundTouchpadSettingsEditor`).
+- **Editor Toolbar Reordering:** Toolbar buttons are ordered into three rows:
+  - Row 1: `Add Button` | `Change Background`
+  - Row 2: `Unlock Buttons` | `Touchpad Settings`
+  - Row 3: `Change Grid`
+- **Mutual Exclusion with Touch Projection:**
+  - Background Touchpad and Touch Projection (screen cutout touch injection) are mutually exclusive.
+  - Enabling Touch Projection on a layout displays a warning and confirmation dialog offering to turn OFF the Background Touchpad.
+  - Enabling Background Touchpad when Touch Projection is active on any cutout displays a warning and confirmation dialog offering to turn OFF Touch Projection for all cutouts of that layout.
+
 - When a profile is deleted, all background image files for its layouts are deleted.
 - Creating a layout from a template layout (deep copy) automatically duplicates the background image file under the new layout's ID, ensuring that layouts do not share dependencies on the same file.
 
