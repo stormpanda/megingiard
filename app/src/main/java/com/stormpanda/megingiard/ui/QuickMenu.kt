@@ -94,26 +94,30 @@ internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
  * Tapping the scrim calls [onDismiss].
  */
 @Composable
+internal fun rememberQuickMenuBezelBrush(): Brush =
+    remember {
+        Brush.linearGradient(
+            colorStops =
+                arrayOf(
+                    0.0f to Color.White.copy(alpha = 0.25f),
+                    0.25f to Color.White.copy(alpha = 0.05f),
+                    0.5f to Color.Transparent,
+                    0.833f to Color.White.copy(alpha = 0.05f),
+                    1.0f to Color.White.copy(alpha = 0.25f),
+                ),
+            start = Offset(0f, 0f),
+            end = Offset.Infinite,
+        )
+    }
+
+@Composable
 fun QuickMenu(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val menuBezelBrush =
-        remember {
-            Brush.linearGradient(
-                colorStops =
-                    arrayOf(
-                        0.0f to Color.White.copy(alpha = 0.25f),
-                        0.25f to Color.White.copy(alpha = 0.05f),
-                        0.5f to Color.Transparent,
-                        1.0f to Color.Black.copy(alpha = 0.4f),
-                    ),
-                start = Offset(0f, 0f),
-                end = Offset.Infinite,
-            )
-        }
+    val menuBezelBrush = rememberQuickMenuBezelBrush()
     val profiles by MacroPadState.profiles.collectAsState()
     val activeProfile by MacroPadState.activeProfile.collectAsState()
     val activeLayout by MacroPadState.activeLayout.collectAsState()

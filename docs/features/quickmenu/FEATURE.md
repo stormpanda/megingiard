@@ -134,7 +134,7 @@ parameter (bound to `AppStateManager.isQuickMenuOpen` at call sites):
 Both cards share the same surface style:
 
 - Background: `colors.controlOverlay`
-- Border: `colors.controlOverlayBorder`, 1 dp, 16 dp corner radius
+- Border: `PM_BORDER_WIDTH` (1 dp) using `rememberQuickMenuBezelBrush()` linear gradient featuring top-left primary light refraction highlight (25% diagonal span) and bottom-right accent light refraction highlight (16.7% diagonal span, 2/3 length), 16 dp corner radius
 - Shadow elevation: 8 dp
 - Horizontal margin: 8 dp from screen edges; vertical margin: 6 dp
 
