@@ -9,7 +9,7 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. The app provides two themes: **Dark** (default) and **Dark OLED**. The architecture is token-based so new themes can be added without per-screen rewrites, and all themes support user-configurable accent colours.
+Megingiard supports user-selectable colour themes. The app provides three themes: **Dark** (default), **Dark OLED**, and **Norse**. The architecture is token-based so new themes can be added without per-screen rewrites, and themes specify whether their accent colour is user-configurable or fixed.
 
 ### FR-TH1: Manual Theme Selection
 
@@ -19,8 +19,9 @@ Megingiard supports user-selectable colour themes. The app provides two themes: 
 
 ### FR-TH1a: Optional Custom Accent Support
 
-- All themes allow the user to override the accent colour.
-- Whether the accent picker is shown is derived from theme metadata (`supportsCustomAccent`).
+- A theme MAY allow the user to override its accent colour (e.g. Dark, Dark OLED).
+- A theme MAY instead ship with a fixed built-in accent colour (e.g. Norse).
+- Whether the accent picker is shown MUST be derived from theme metadata (`supportsCustomAccent`).
 
 ### FR-TH2: Token-Based Colour Architecture
 
@@ -63,12 +64,12 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `touchpadIndicator`      | Touchpad border / hint dots                                                                                                        |
 | `pickerBackground`       | Color-picker dialog background                                                                                                     |
 | `accentBorder`           | Accent-colour swatch border                                                                                                        |
-| `accent`                 | Primary interactive accent colour (user-overridable)                                                                               |
+| `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
 | `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined)                                                            |
 | `quickMenuBarIdleColor`  | Always-visible pull-tab quick menu bar colour                                                                                      |
 | `controlIndicatorActive` | Active mode indicator dot in the navigation bar                                                                                   |
-| `navQuickMenuBody`       | Navigation bar background (tracks accent)                                                                                         |
-| `buttonBody`             | Mirror control button background (tracks accent)                                                                                  |
+| `navQuickMenuBody`       | Navigation bar background (tracks accent in custom-accent themes)                                                                 |
+| `buttonBody`             | Mirror control button background (tracks accent in custom-accent themes)                                                          |
 | `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
 | `navQuickMenuBorder`     | Border/outline of the navigation bar                                                                                               |
 | `mirrorQuickMenuBorder`  | Border/outline of the mirror control bar                                                                                           |
@@ -85,10 +86,16 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 
 ### Palettes
 
-Two palettes are defined:
+Eight palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
 - `darkOledPalette` — pitch-black (`#000000`) screen, menu, card, picker, and keyboard surfaces with darkened grey surface variants (`0xFF161618`), soft off-white text (`#E3E3E8`) to reduce OLED eye strain, and user-customizable accent color support.
+- `megingiardPalette` — deep Norse forest green background (`#040C08`), solid panel surfaces (`#06140C`), Quick Menu overlay (`#081C12`), soft parchment text (`#E2EBE5`), and Runic Gold accent (`#E5B842`).
+- `mjolnirPalette` — dark metallic slate background (`#101418`), brushed titanium surfaces (`#161E26`), icy white text (`#E2EBF2`), and Electric Lightning Cyan accent (`#00E5FF`).
+- `valhallaPalette` — obsidian twilight background (`#140E0A`), warm mahogany surfaces (`#1E1610`), golden parchment text (`#F4E8D1`), and Glowing Bronze Amber accent (`#FFA726`).
+- `auroraPalette` — cosmos midnight indigo background (`#0A0A14`), dark violet-indigo surfaces (`#121222`), starry lavender text (`#E6E6FA`), and Glowing Aurora Teal accent (`#00F5D4`).
+- `retroPhosphorPalette` — dark dot-matrix olive background (`#141712`), deep dot-matrix green surfaces (`#1C2219`), phosphor mint text (`#C0D890`), and Game Boy Phosphor Mint accent (`#8BAC0F`).
+- `royalAsgardPalette` — pitch black background (`#000000`), charcoal gold-tinted surfaces (`#12110E`), warm ivory text (`#F7F3E9`), and Polished Royal Gold accent (`#FFD700`).
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -98,6 +105,12 @@ A new theme requires only a new `AppColors` instance and a corresponding `ThemeM
 
 - `DARK` → `true`
 - `DARK_OLED` → `true`
+- `MEGINGIARD` → `false`
+- `MJOLNIR` → `false`
+- `VALHALLA` → `false`
+- `AURORA` → `false`
+- `RETRO_PHOSPHOR` → `false`
+- `ROYAL_ASGARD` → `false`
 
 The Global Settings screen uses this metadata to decide whether to render the accent colour picker.
 

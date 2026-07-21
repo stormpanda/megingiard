@@ -180,9 +180,15 @@ Megingiard enforces a strict trust model to ensure no rogue local app can exploi
 - **Verification**: No session lifecycle or modifier transition logs appear in terminal. Only system warnings/errors persist.
 
 ### 4.2 Application Theming
-- **Action**: Swap the active theme in Settings between **Dark** and **Dark OLED**.
+- **Action**: Swap the active theme in Settings between **Dark**, **Dark OLED**, **Megingiard**, **Mjölnir Steel**, **Valhalla Sunset**, **Aurora Borealis**, **Retro Phosphor**, and **Royal Asgard**.
 - **Verification**: All screen backgrounds, headers, buttons, and badges transition instantaneously to the themed colors. **No hardcoded grey or white text must bleed through.**
   - *Dark OLED*: Pitch-black backgrounds (`#000000`) with soft eye-friendly text.
+  - *Megingiard*: Deep forest green background (`#040C08`), solid panel surfaces (`#06140C`), and Runic Gold fixed accent (`#E5B842`).
+  - *Mjölnir Steel*: Dark metallic slate background (`#101418`) with Electric Lightning Cyan fixed accent (`#00E5FF`).
+  - *Valhalla Sunset*: Obsidian twilight background (`#140E0A`) with Glowing Bronze Amber fixed accent (`#FFA726`).
+  - *Aurora Borealis*: Midnight indigo background (`#0A0A14`) with Glowing Aurora Teal fixed accent (`#00F5D4`).
+  - *Retro Phosphor*: Dark dot-matrix olive background (`#141712`) with Game Boy Phosphor Mint fixed accent (`#8BAC0F`).
+  - *Royal Asgard*: Pitch black background (`#000000`) with Polished Royal Gold fixed accent (`#FFD700`).
 
 ### 4.3 Profile Export & Import (`.mgrd`)
 - **Step 1 (Export)**: Open Settings -> **Export Configuration**.

@@ -131,6 +131,12 @@ internal fun ThemeMode.displayNameResId(): Int =
     when (this) {
         ThemeMode.DARK -> R.string.theme_dark
         ThemeMode.DARK_OLED -> R.string.theme_dark_oled
+        ThemeMode.MEGINGIARD -> R.string.theme_megingiard
+        ThemeMode.MJOLNIR -> R.string.theme_mjolnir
+        ThemeMode.VALHALLA -> R.string.theme_valhalla
+        ThemeMode.AURORA -> R.string.theme_aurora
+        ThemeMode.RETRO_PHOSPHOR -> R.string.theme_retro_phosphor
+        ThemeMode.ROYAL_ASGARD -> R.string.theme_royal_asgard
     }
 
 @Composable
