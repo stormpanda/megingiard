@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.appSwitchColors
 import kotlin.math.roundToInt
 
 private const val TAG = "TimelineLoopSettings"
@@ -101,6 +102,7 @@ internal fun MtLoopSection(
             Switch(
                 checked = loopEnabled,
                 onCheckedChange = onLoopEnabledChange,
+                colors = appSwitchColors(),
             )
         }
 
@@ -200,6 +202,7 @@ internal fun MtRandomizationSection(
             Switch(
                 checked = randomizeEnabled,
                 onCheckedChange = onRandomizeEnabledChange,
+                colors = appSwitchColors(),
             )
         }
 

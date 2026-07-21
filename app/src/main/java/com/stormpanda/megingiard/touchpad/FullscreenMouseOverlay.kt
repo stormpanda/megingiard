@@ -724,6 +724,9 @@ private fun ModeToggleButton(
         label = "ThumbOffset",
     )
 
+    val mouseColor = if (useMouse) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = 0.5f)
+    val touchColor = if (!useMouse) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = 0.5f)
+
     Box(
         modifier =
             modifier
@@ -761,7 +764,7 @@ private fun ModeToggleButton(
                 ) {
                     Text(
                         text = "Mouse",
-                        color = colors.onSurface.copy(alpha = 0.25f),
+                        color = mouseColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -769,7 +772,7 @@ private fun ModeToggleButton(
                     Icon(
                         imageVector = Icons.Rounded.Mouse,
                         contentDescription = stringResource(R.string.cd_touchpad_relative_mouse_mode),
-                        tint = Color.White,
+                        tint = mouseColor,
                         modifier = Modifier.size(16.dp),
                     )
                 }
@@ -788,13 +791,13 @@ private fun ModeToggleButton(
                     Icon(
                         imageVector = Icons.Rounded.TouchApp,
                         contentDescription = stringResource(R.string.cd_touchpad_absolute_touch_mode),
-                        tint = Color.White,
+                        tint = touchColor,
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Touch",
-                        color = colors.onSurface.copy(alpha = 0.25f),
+                        color = touchColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )

@@ -18,6 +18,7 @@ import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
+import com.stormpanda.megingiard.ui.appSwitchColors
 
 private const val TAG = "ToolSettingsComponents"
 
@@ -43,6 +44,7 @@ internal fun RememberSettingRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            colors = appSwitchColors(),
         )
     }
 }
@@ -103,6 +105,7 @@ internal fun InputMethodRow(
         Switch(
             checked = useMouse,
             onCheckedChange = onUseMouseChanged,
+            colors = appSwitchColors(),
         )
     }
 }

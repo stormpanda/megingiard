@@ -99,6 +99,7 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -281,6 +282,7 @@ internal fun LayoutSettingsEditor(
                     Switch(
                         checked = invisibleButtons,
                         onCheckedChange = { invisibleButtons = it },
+                        colors = appSwitchColors(),
                     )
                 }
 

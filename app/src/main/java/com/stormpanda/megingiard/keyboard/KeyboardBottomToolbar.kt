@@ -144,6 +144,9 @@ private fun KeyboardModeToggleButton(
         label = "KeyboardModeThumbOffset",
     )
 
+    val ergoColor = if (!isFullModeActive) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = 0.5f)
+    val fullColor = if (isFullModeActive) colors.onSurface else colors.onSurfaceSecondary.copy(alpha = 0.5f)
+
     Box(
         modifier =
             modifier
@@ -181,7 +184,7 @@ private fun KeyboardModeToggleButton(
                 ) {
                     Text(
                         text = "Ergo",
-                        color = colors.onSurface.copy(alpha = 0.25f),
+                        color = ergoColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )
@@ -189,7 +192,7 @@ private fun KeyboardModeToggleButton(
                     MaterialSymbol(
                         name = "keyboard_onscreen",
                         size = 18.dp,
-                        tint = Color.White,
+                        tint = ergoColor,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -208,13 +211,13 @@ private fun KeyboardModeToggleButton(
                     MaterialSymbol(
                         name = "keyboard",
                         size = 18.dp,
-                        tint = Color.White,
+                        tint = fullColor,
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Full",
-                        color = colors.onSurface.copy(alpha = 0.25f),
+                        color = fullColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                     )

@@ -40,6 +40,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
+import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
 private const val TAG = "KbSettingsOverlay"
@@ -119,6 +120,7 @@ fun KeyboardSettingsOverlay(
                         Switch(
                             checked = kbTouchpadEnabled,
                             onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
+                            colors = appSwitchColors(),
                         )
                     }
                 }

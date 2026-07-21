@@ -1,8 +1,11 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -538,6 +541,17 @@ fun colorSchemeFor(
         onError = colors.onError,
         outline = colors.divider.copy(alpha = 0.4f),
         outlineVariant = colors.divider,
+    )
+
+@Composable
+fun appSwitchColors(colors: AppColors = LocalAppColors.current): SwitchColors =
+    SwitchDefaults.colors(
+        checkedThumbColor = colors.onAccent,
+        checkedTrackColor = colors.accent,
+        checkedBorderColor = colors.accent,
+        uncheckedThumbColor = colors.onSurfaceSecondary,
+        uncheckedTrackColor = colors.surfaceVariant,
+        uncheckedBorderColor = colors.divider,
     )
 
 // ─── Typography ───────────────────────────────────────────────────────────────

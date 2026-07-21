@@ -42,6 +42,7 @@ import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
+import com.stormpanda.megingiard.ui.appSwitchColors
 import java.util.Locale
 
 private const val TAG = "GlobalSettingsComponents"
@@ -104,6 +105,7 @@ internal fun OverlayPositionRow(
         Switch(
             checked = overlayAtBottom,
             onCheckedChange = onChanged,
+            colors = appSwitchColors(),
         )
     }
 }
@@ -123,6 +125,7 @@ internal fun OverlayFadeOutRow(
         Switch(
             checked = fadeEnabled,
             onCheckedChange = onChanged,
+            colors = appSwitchColors(),
         )
     }
 }

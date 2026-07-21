@@ -163,7 +163,7 @@ private fun ModifierButton(
 
     val bg = if (isActive) accentColor.copy(alpha = 0.7f) else Color.Transparent
     val contentColor = if (isActive) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
-    val borderColor = if (isActive) Color.Transparent else Color.White.copy(alpha = 0.8f)
+    val borderColor = if (isActive) Color.Transparent else colors.onSurface.copy(alpha = 0.35f)
 
     val scope = rememberCoroutineScope()
 
@@ -237,7 +237,7 @@ private fun ToolbarKeyButton(
 
     val bg = if (isPressed) colors.keyPressed else Color.Transparent
     val contentColor = if (isPressed) colors.onSurface else colors.onSurface.copy(alpha = 0.8f)
-    val borderColor = if (isPressed) Color.Transparent else Color.White.copy(alpha = 0.8f)
+    val borderColor = if (isPressed) Color.Transparent else colors.onSurface.copy(alpha = 0.35f)
 
     BaseToolbarButton(
         label = label,

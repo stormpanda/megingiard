@@ -191,12 +191,12 @@ fun KeyboardScreen(
                 var hasActivePointers by remember { mutableStateOf(false) }
 
                 val insetBezelBrush =
-                    remember {
+                    remember(colors) {
                         Brush.linearGradient(
                             colors =
                                 listOf(
                                     Color.Black.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_DARK),
-                                    Color.White.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_LIGHT),
+                                    colors.onSurface.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_LIGHT),
                                 ),
                             start = Offset(0f, 0f),
                             end = Offset.Infinite,

@@ -59,6 +59,7 @@ import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import java.util.Locale
 import java.util.UUID
@@ -823,6 +824,7 @@ internal fun ButtonEditDialog(
                     Switch(
                         checked = invisible,
                         onCheckedChange = { invisible = it },
+                        colors = appSwitchColors(),
                     )
                 }
             }

@@ -71,6 +71,7 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -549,6 +550,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                                     ScreenCaptureManager.setLocked(true)
                                                 }
                                             },
+                                            colors = appSwitchColors(),
                                         )
                                     }
                                 }
