@@ -153,45 +153,46 @@ private val darkPalette =
     )
 
 private val DARK_OLED_QM_BAR_IDLE = Color.White.copy(alpha = 0.4f)
+private val DARK_OLED_TEXT = Color(0xFFE3E3E8) // Soft off-white to reduce eye strain on pitch-black OLED displays
 
 private val darkOledPalette =
     AppColors(
         appBackground = Color.Black,
         surface = Color.Black,
         surfaceVariant = Color(0xFF161618),
-        onSurface = Color.White,
-        onSurfaceSecondary = Color.White.copy(alpha = 0.6f),
-        divider = Color.White.copy(alpha = 0.10f),
+        onSurface = DARK_OLED_TEXT,
+        onSurfaceSecondary = DARK_OLED_TEXT.copy(alpha = 0.6f),
+        divider = DARK_OLED_TEXT.copy(alpha = 0.10f),
         controlOverlay = Color.Black.copy(alpha = 0.95f),
-        onControlOverlay = Color.White,
-        fingerCircle = Color.White.copy(alpha = 0.45f),
+        onControlOverlay = DARK_OLED_TEXT,
+        fingerCircle = DARK_OLED_TEXT.copy(alpha = 0.45f),
         keyBackground = Color(0xFF161618),
         keyPressed = Color(0xFF323235),
         keyModifierActive = Color(0xFF242426),
         keyboardBackground = Color.Black,
         touchpadBackground = Color.Black,
-        touchpadIndicator = Color.White,
+        touchpadIndicator = DARK_OLED_TEXT,
         pickerBackground = Color.Black,
-        accentBorder = Color.White.copy(alpha = 0.3f),
+        accentBorder = DARK_OLED_TEXT.copy(alpha = 0.3f),
         accent = DEFAULT_DARK_LIGHT_ACCENT,
         onAccent = Color.White,
         quickMenuBarIdleColor = DARK_OLED_QM_BAR_IDLE,
-        controlIndicatorActive = Color.White,
+        controlIndicatorActive = DARK_OLED_TEXT,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
         buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
         controlOverlayBorder = Color.Transparent,
         navQuickMenuBorder = Color.Transparent,
         mirrorQuickMenuBorder = Color.Transparent,
-        buttonIconTint = Color.White,
+        buttonIconTint = DARK_OLED_TEXT,
         error = Color(0xFFCF6679),
         onError = Color.White,
         actionColorGamepad = Color(0xFFFF9800),
         actionColorSystem = Color(0xFF2196F3),
         macroPadSurface = Color.Black,
-        macroPadOnSurface = Color.White,
-        macroPadAccentBorder = Color.White.copy(alpha = 0.3f),
+        macroPadOnSurface = DARK_OLED_TEXT,
+        macroPadAccentBorder = DARK_OLED_TEXT.copy(alpha = 0.3f),
         sectionHeaderColor = DEFAULT_DARK_LIGHT_ACCENT,
-        settingsSeparator = Color.White.copy(alpha = 0.12f),
+        settingsSeparator = DARK_OLED_TEXT.copy(alpha = 0.12f),
     )
 
 private val LIGHT_QM_BAR_IDLE = Color.White.copy(alpha = 0.4f)
