@@ -48,6 +48,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import java.time.LocalDate
 
@@ -92,70 +93,62 @@ internal fun ExportMetadataDialog(
         )
     }
     BackHandler(onBack = onDismiss)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-                .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = GSD_DIALOG_WIDTH_FRACTION,
+        cornerRadius = GSD_DIALOG_CORNER,
+        contentPadding = GSD_DIALOG_PADDING,
+        scrimAlpha = GSD_DIALOG_SCRIM_ALPHA,
+        modifier = Modifier.verticalScroll(rememberScrollState()),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .verticalScroll(rememberScrollState())
-                    .clickable(enabled = true, onClick = {})
-                    .padding(GSD_DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Text(
+            text = stringResource(R.string.config_export_dialog_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = author,
+            onValueChange = { author = it },
+            label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = fieldColors,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
+            maxLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+            colors = fieldColors,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = tags,
+            onValueChange = { tags = it },
+            label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = fieldColors,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(
-                text = stringResource(R.string.config_export_dialog_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            OutlinedTextField(
-                value = author,
-                onValueChange = { author = it },
-                label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = fieldColors,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            )
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
-                maxLines = 3,
-                modifier = Modifier.fillMaxWidth(),
-                colors = fieldColors,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            )
-            OutlinedTextField(
-                value = tags,
-                onValueChange = { tags = it },
-                label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = fieldColors,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.config_export_cancel), color = colors.onSurfaceSecondary)
-                }
-                TextButton(onClick = doConfirm) {
-                    Text(stringResource(R.string.config_export_confirm), color = accentColor)
-                }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.config_export_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(onClick = doConfirm) {
+                Text(stringResource(R.string.config_export_confirm), color = accentColor)
             }
         }
     }
@@ -177,133 +170,121 @@ internal fun ImportPreviewDialog(
             ConfigManager.ImportMode.PROFILE_SHARE -> stringResource(R.string.config_import_warning_profile)
         }
     BackHandler(onBack = onDismiss)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-                .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = GSD_DIALOG_WIDTH_FRACTION,
+        cornerRadius = GSD_DIALOG_CORNER,
+        contentPadding = GSD_DIALOG_PADDING,
+        scrimAlpha = GSD_DIALOG_SCRIM_ALPHA,
+        modifier = Modifier.verticalScroll(rememberScrollState()),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .verticalScroll(rememberScrollState())
-                    .clickable(enabled = true, onClick = {})
-                    .padding(GSD_DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+        Text(
+            text = stringResource(R.string.config_import_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(4.dp))
+        if (!metadata.author.isNullOrBlank()) {
             Text(
-                text = stringResource(R.string.config_import_title),
+                text = stringResource(R.string.config_import_meta_author, metadata.author!!),
                 color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.labelMedium,
             )
-            Spacer(Modifier.height(4.dp))
-            if (!metadata.author.isNullOrBlank()) {
-                Text(
-                    text = stringResource(R.string.config_import_meta_author, metadata.author!!),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
-            val description = metadata.description
-            if (!description.isNullOrBlank()) {
-                Text(
-                    text = description,
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (metadata.tags.isNotEmpty()) {
-                Text(
-                    text = "${stringResource(R.string.config_import_tags_label)}: ${metadata.tags.joinToString(", ")}",
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Spacer(Modifier.height(4.dp))
-            val hasSettingsBullets =
-                importMode == ConfigManager.ImportMode.BACKUP_RESTORE &&
-                    (
-                        "global" in export.settings || "mirror" in export.settings ||
-                            "touchpad" in export.settings || "keyboard" in export.settings ||
-                            "macropad_settings" in export.settings
-                    )
-            val hasSectionBullets = hasSettingsBullets || export.profiles.isNotEmpty()
-            if (hasSectionBullets) {
-                Text(
-                    text = stringResource(R.string.config_import_sections_label),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
-            if (importMode == ConfigManager.ImportMode.BACKUP_RESTORE) {
-                if ("global" in export.settings) {
-                    Text(
-                        "\u2022 ${stringResource(R.string.config_import_section_global)}",
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if ("mirror" in export.settings) {
-                    Text(
-                        "\u2022 ${stringResource(R.string.config_import_section_mirror)}",
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if ("touchpad" in export.settings) {
-                    Text(
-                        "\u2022 ${stringResource(R.string.config_import_section_touchpad)}",
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if ("keyboard" in export.settings) {
-                    Text(
-                        "\u2022 ${stringResource(R.string.config_import_section_keyboard)}",
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if ("macropad_settings" in export.settings) {
-                    Text(
-                        "\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}",
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-            if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
-                Text(
-                    text = "\u2022 ${stringResource(
-                        R.string.config_import_section_macropad,
-                        export.profiles.size,
-                        export.profiles.sumOf { it.macros.size },
-                    )}",
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Spacer(Modifier.height(4.dp))
+        }
+        val description = metadata.description
+        if (!description.isNullOrBlank()) {
             Text(
-                text = warningText,
+                text = description,
                 color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.bodySmall,
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.config_import_cancel), color = colors.onSurfaceSecondary)
-                }
-                TextButton(onClick = onConfirm) {
-                    Text(stringResource(R.string.config_import_confirm), color = accentColor)
-                }
+        }
+        if (metadata.tags.isNotEmpty()) {
+            Text(
+                text = "${stringResource(R.string.config_import_tags_label)}: ${metadata.tags.joinToString(", ")}",
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        val hasSettingsBullets =
+            importMode == ConfigManager.ImportMode.BACKUP_RESTORE &&
+                (
+                    "global" in export.settings || "mirror" in export.settings ||
+                        "touchpad" in export.settings || "keyboard" in export.settings ||
+                        "macropad_settings" in export.settings
+                )
+        val hasSectionBullets = hasSettingsBullets || export.profiles.isNotEmpty()
+        if (hasSectionBullets) {
+            Text(
+                text = stringResource(R.string.config_import_sections_label),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        if (importMode == ConfigManager.ImportMode.BACKUP_RESTORE) {
+            if ("global" in export.settings) {
+                Text(
+                    "\u2022 ${stringResource(R.string.config_import_section_global)}",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if ("mirror" in export.settings) {
+                Text(
+                    "\u2022 ${stringResource(R.string.config_import_section_mirror)}",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if ("touchpad" in export.settings) {
+                Text(
+                    "\u2022 ${stringResource(R.string.config_import_section_touchpad)}",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if ("keyboard" in export.settings) {
+                Text(
+                    "\u2022 ${stringResource(R.string.config_import_section_keyboard)}",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if ("macropad_settings" in export.settings) {
+                Text(
+                    "\u2022 ${stringResource(R.string.config_import_section_macropad_settings)}",
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        if (export.profiles.isNotEmpty() || export.profiles.any { it.macros.isNotEmpty() }) {
+            Text(
+                text = "\u2022 ${stringResource(
+                    R.string.config_import_section_macropad,
+                    export.profiles.size,
+                    export.profiles.sumOf { it.macros.size },
+                )}",
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = warningText,
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelSmall,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.config_import_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.config_import_confirm), color = accentColor)
             }
         }
     }
@@ -319,35 +300,25 @@ internal fun InTreeMessageDialog(
     onDismiss: () -> Unit,
 ) {
     BackHandler(onBack = onDismiss)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-                .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = GSD_DIALOG_WIDTH_FRACTION,
+        cornerRadius = GSD_DIALOG_CORNER,
+        contentPadding = GSD_DIALOG_PADDING,
+        scrimAlpha = GSD_DIALOG_SCRIM_ALPHA,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .clickable(enabled = true, onClick = {})
-                    .padding(GSD_DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
+        if (text.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
-            if (text.isNotBlank()) {
-                Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(buttonText, color = accentColor)
-                }
+            TextButton(onClick = onDismiss) {
+                Text(buttonText, color = accentColor)
             }
         }
     }
@@ -381,108 +352,96 @@ internal fun ProfileExportDialog(
         )
     val focusManager = LocalFocusManager.current
     BackHandler(onBack = onDismiss)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-                .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = GSD_DIALOG_WIDTH_FRACTION,
+        cornerRadius = GSD_DIALOG_CORNER,
+        contentPadding = GSD_DIALOG_PADDING,
+        scrimAlpha = GSD_DIALOG_SCRIM_ALPHA,
+        modifier = Modifier.verticalScroll(rememberScrollState()),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .verticalScroll(rememberScrollState())
-                    .clickable(enabled = true, onClick = {})
-                    .padding(GSD_DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        Text(
+            text = stringResource(R.string.config_profile_export_dialog_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (profiles.size > 1) {
             Text(
-                text = stringResource(R.string.config_profile_export_dialog_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
+                text = stringResource(R.string.config_profile_export_select),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
             )
-            if (profiles.size > 1) {
-                Text(
-                    text = stringResource(R.string.config_profile_export_select),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                AppDropdown(
-                    selected = selectedProfile ?: profiles.first(),
-                    options = profiles,
-                    optionText = { it.name },
-                    onSelected = { selectedProfile = it },
-                    fillMaxWidth = true,
-                )
+            AppDropdown(
+                selected = selectedProfile ?: profiles.first(),
+                options = profiles,
+                optionText = { it.name },
+                onSelected = { selectedProfile = it },
+                fillMaxWidth = true,
+            )
+        }
+        OutlinedTextField(
+            value = author,
+            onValueChange = { author = it },
+            label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = fieldColors,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
+            maxLines = 3,
+            modifier = Modifier.fillMaxWidth(),
+            colors = fieldColors,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+        )
+        OutlinedTextField(
+            value = tags,
+            onValueChange = { tags = it },
+            label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = fieldColors,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.config_export_cancel), color = colors.onSurfaceSecondary)
             }
-            OutlinedTextField(
-                value = author,
-                onValueChange = { author = it },
-                label = { Text(stringResource(R.string.config_export_author), style = MaterialTheme.typography.bodySmall) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = fieldColors,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            )
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text(stringResource(R.string.config_export_description), style = MaterialTheme.typography.bodySmall) },
-                maxLines = 3,
-                modifier = Modifier.fillMaxWidth(),
-                colors = fieldColors,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            )
-            OutlinedTextField(
-                value = tags,
-                onValueChange = { tags = it },
-                label = { Text(stringResource(R.string.config_export_tags), style = MaterialTheme.typography.bodySmall) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = fieldColors,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+            val profile = selectedProfile ?: profiles.firstOrNull()
+            TextButton(
+                onClick = {
+                    if (profile == null) return@TextButton
+                    val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    val metadata =
+                        ConfigManager.defaultMetadata(context).copy(
+                            author = author.trim().ifEmpty { null },
+                            description = description.trim().ifEmpty { null },
+                            tags = parsedTags,
+                        )
+                    onConfirm(metadata, profile)
+                },
+                enabled = profile != null,
             ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.config_export_cancel), color = colors.onSurfaceSecondary)
-                }
-                val profile = selectedProfile ?: profiles.firstOrNull()
-                TextButton(
-                    onClick = {
-                        if (profile == null) return@TextButton
-                        val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        val metadata =
-                            ConfigManager.defaultMetadata(context).copy(
-                                author = author.trim().ifEmpty { null },
-                                description = description.trim().ifEmpty { null },
-                                tags = parsedTags,
-                            )
-                        onConfirm(metadata, profile)
-                    },
-                    enabled = profile != null,
-                ) {
-                    Text(
-                        stringResource(R.string.config_export_confirm),
-                        color =
-                            if (profile !=
-                                null
-                            ) {
-                                accentColor
-                            } else {
-                                colors.onSurfaceSecondary
-                            },
-                    )
-                }
+                Text(
+                    stringResource(R.string.config_export_confirm),
+                    color =
+                        if (profile !=
+                            null
+                        ) {
+                            accentColor
+                        } else {
+                            colors.onSurfaceSecondary
+                        },
+                )
             }
         }
     }
@@ -501,41 +460,31 @@ internal fun InTreeConfirmDialog(
     onDismiss: () -> Unit,
 ) {
     BackHandler(onBack = onDismiss)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-                .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = GSD_DIALOG_WIDTH_FRACTION,
+        cornerRadius = GSD_DIALOG_CORNER,
+        contentPadding = GSD_DIALOG_PADDING,
+        scrimAlpha = GSD_DIALOG_SCRIM_ALPHA,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .clickable(enabled = true, onClick = {})
-                    .padding(GSD_DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
+        if (text.isNotBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(title, color = colors.onSurface, style = MaterialTheme.typography.titleMedium)
-            if (text.isNotBlank()) {
-                Text(text, color = colors.onSurfaceSecondary, style = MaterialTheme.typography.labelMedium)
+            TextButton(onClick = onDismiss) {
+                Text(dismissText, color = colors.onSurfaceSecondary)
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(dismissText, color = colors.onSurfaceSecondary)
-                }
-                TextButton(onClick = onConfirm, enabled = confirmEnabled) {
-                    Text(
-                        text = confirmText,
-                        color = if (confirmEnabled) accentColor else colors.onSurfaceSecondary,
-                    )
-                }
+            TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+                Text(
+                    text = confirmText,
+                    color = if (confirmEnabled) accentColor else colors.onSurfaceSecondary,
+                )
             }
         }
     }

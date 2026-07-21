@@ -58,77 +58,52 @@ internal fun InTreeNameInputDialog(
                 existing.equals(normalizedName, ignoreCase = true)
         }
     val hasError = normalizedName.isEmpty() || isDuplicate
-    val dismissContentDescription = stringResource(R.string.quick_menu_dismiss_dialog)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize(),
-        contentAlignment = Alignment.Center,
+
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = PM_NAME_DIALOG_WIDTH_FRACTION,
+        cornerRadius = PM_PANEL_CORNER,
+        contentPadding = PM_CONTENT_PADDING,
+        scrimAlpha = PM_NAME_DIALOG_SCRIM_ALPHA,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .background(Color.Black.copy(alpha = PM_NAME_DIALOG_SCRIM_ALPHA))
-                    .semantics { contentDescription = dismissContentDescription }
-                    .clickable(onClick = onDismiss),
+        Text(
+            text = title,
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
         )
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(PM_NAME_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(PM_PANEL_CORNER))
-                    .border(PM_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(PM_PANEL_CORNER))
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Final)
-                                event.changes.forEach { change ->
-                                    if (!change.isConsumed) change.consume()
-                                }
-                            }
-                        }
-                    }.padding(PM_CONTENT_PADDING),
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            placeholder = { Text(hint, color = colors.onSurface.copy(alpha = 0.4f)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (!hasError) onConfirm(normalizedName) }),
+            isError = hasError,
+            supportingText = {
+                when {
+                    normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                    isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+                }
+            },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = colors.onSurface,
+                    unfocusedTextColor = colors.onSurface,
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.controlOverlayBorder,
+                ),
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(
-                text = title,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                placeholder = { Text(hint, color = colors.onSurface.copy(alpha = 0.4f)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (!hasError) onConfirm(normalizedName) }),
-                isError = hasError,
-                supportingText = {
-                    when {
-                        normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                        isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                    }
-                },
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = colors.onSurface,
-                        unfocusedTextColor = colors.onSurface,
-                        focusedBorderColor = colors.accent,
-                        unfocusedBorderColor = colors.controlOverlayBorder,
-                    ),
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.settings_close), color = colors.onSurface)
-                }
-                TextButton(onClick = { onConfirm(normalizedName) }, enabled = !hasError) {
-                    Text(stringResource(R.string.config_ok), color = colors.accent)
-                }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_close), color = colors.onSurface)
+            }
+            TextButton(onClick = { onConfirm(normalizedName) }, enabled = !hasError) {
+                Text(stringResource(R.string.config_ok), color = colors.accent)
             }
         }
     }
@@ -140,58 +115,35 @@ internal fun ShutOffConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val dismissContentDescription = stringResource(R.string.quick_menu_dismiss_dialog)
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = PM_NAME_DIALOG_WIDTH_FRACTION,
+        cornerRadius = PM_PANEL_CORNER,
+        contentPadding = PM_CONTENT_PADDING,
+        scrimAlpha = PM_NAME_DIALOG_SCRIM_ALPHA,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .matchParentSize()
-                    .background(Color.Black.copy(alpha = PM_NAME_DIALOG_SCRIM_ALPHA))
-                    .semantics { contentDescription = dismissContentDescription }
-                    .clickable(onClick = onDismiss),
+        Text(
+            text = stringResource(R.string.shut_off_dialog_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
         )
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(PM_NAME_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(PM_PANEL_CORNER))
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Final)
-                                event.changes.forEach { change ->
-                                    if (!change.isConsumed) change.consume()
-                                }
-                            }
-                        }
-                    }.padding(PM_CONTENT_PADDING),
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringResource(R.string.shut_off_dialog_body),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
         ) {
-            Text(
-                text = stringResource(R.string.shut_off_dialog_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = stringResource(R.string.shut_off_dialog_body),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.settings_color_cancel), color = colors.onSurfaceSecondary)
-                }
-                Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onConfirm) {
-                    Text(stringResource(R.string.shut_off_dialog_confirm), color = colors.error)
-                }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_color_cancel), color = colors.onSurfaceSecondary)
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.shut_off_dialog_confirm), color = colors.error)
             }
         }
     }

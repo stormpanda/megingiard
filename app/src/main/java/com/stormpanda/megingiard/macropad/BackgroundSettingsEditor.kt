@@ -93,6 +93,9 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
+import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -696,153 +699,140 @@ private fun ImageCropDialog(
         }
     }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = BSE_PREVIEW_MODAL_BG_ALPHA))
-                .clickable(onClick = onDismiss)
-                .blockPointerEvents(),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = BSE_PREVIEW_MODAL_WIDTH_FRACTION,
+        cornerRadius = BSE_PREVIEW_MODAL_CORNER_RADIUS,
+        contentPadding = BSE_SPACING_16,
+        scrimAlpha = BSE_PREVIEW_MODAL_BG_ALPHA,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(BSE_PREVIEW_MODAL_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS))
-                    .clickable(enabled = true, onClick = {})
-                    .padding(BSE_SPACING_16),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_cancel),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-
+            TextButton(onClick = onDismiss) {
                 Text(
-                    text = stringResource(R.string.layout_settings_crop_image_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
+                    text = stringResource(R.string.macropad_editor_cancel),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
-
-                TextButton(
-                    onClick = {
-                        val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
-                        val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
-                        onConfirmCrop(scale, finalOffsetX, finalOffsetY)
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_done),
-                        color = colors.accent,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
             }
 
-            Spacer(Modifier.height(BSE_SPACING_16))
+            Text(
+                text = stringResource(R.string.layout_settings_crop_image_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center,
+            )
 
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(aspectRatio)
-                        .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                        .clipToBounds()
-                        .background(Color.Black)
-                        .onSizeChanged { containerSize = it }
-                        .pointerInput(bitmap, isInitialized) {
-                            if (!isInitialized) return@pointerInput
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                hasInteracted = true
-                                val imageSize = IntSize(bitmap.width, bitmap.height)
-                                val newScale = (scale * zoom).coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
-                                scale = newScale
-
-                                val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
-                                offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
-                                offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
-                            }
-                        },
-                contentAlignment = Alignment.Center,
+            TextButton(
+                onClick = {
+                    val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
+                    val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
+                    onConfirmCrop(scale, finalOffsetX, finalOffsetY)
+                },
             ) {
-                if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
-                    val imageSize = IntSize(bitmap.width, bitmap.height)
-                    val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, scale)
-                    val clampedX = offsetXState.coerceIn(-maxTx, maxTx)
-                    val clampedY = offsetYState.coerceIn(-maxTy, maxTy)
+                Text(
+                    text = stringResource(R.string.macropad_editor_done),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
 
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val cw = size.width
-                        val ch = size.height
-                        val iw = bitmap.width.toFloat()
-                        val ih = bitmap.height.toFloat()
-                        if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                            val scaleBase = maxOf(cw / iw, ch / ih)
-                            val ws = iw * scaleBase
-                            val hs = ih * scaleBase
+        Spacer(Modifier.height(BSE_SPACING_16))
 
-                            drawImage(
-                                image = bitmap,
-                                dstOffset =
-                                    IntOffset(
-                                        ((cw - ws * scale) / 2f + clampedX).toInt(),
-                                        ((ch - hs * scale) / 2f + clampedY).toInt(),
-                                    ),
-                                dstSize =
-                                    IntSize(
-                                        (ws * scale).toInt(),
-                                        (hs * scale).toInt(),
-                                    ),
-                            )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(aspectRatio)
+                    .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                    .clipToBounds()
+                    .background(Color.Black)
+                    .onSizeChanged { containerSize = it }
+                    .pointerInput(bitmap, isInitialized) {
+                        if (!isInitialized) return@pointerInput
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            hasInteracted = true
+                            val imageSize = IntSize(bitmap.width, bitmap.height)
+                            val newScale = (scale * zoom).coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
+                            scale = newScale
+
+                            val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
+                            offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
+                            offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
                         }
-                    }
-                }
+                    },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
+                val imageSize = IntSize(bitmap.width, bitmap.height)
+                val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, scale)
+                val clampedX = offsetXState.coerceIn(-maxTx, maxTx)
+                val clampedY = offsetYState.coerceIn(-maxTy, maxTy)
 
-                if (!hasInteracted) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(BSE_ICON_SIZE_72)
-                                .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Pinch,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier =
-                                Modifier
-                                    .size(BSE_ICON_SIZE_40)
-                                    .graphicsLayer {
-                                        this.alpha = alpha
-                                    },
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val cw = size.width
+                    val ch = size.height
+                    val iw = bitmap.width.toFloat()
+                    val ih = bitmap.height.toFloat()
+                    if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                        val scaleBase = maxOf(cw / iw, ch / ih)
+                        val ws = iw * scaleBase
+                        val hs = ih * scaleBase
+
+                        drawImage(
+                            image = bitmap,
+                            dstOffset =
+                                IntOffset(
+                                    ((cw - ws * scale) / 2f + clampedX).toInt(),
+                                    ((ch - hs * scale) / 2f + clampedY).toInt(),
+                                ),
+                            dstSize =
+                                IntSize(
+                                    (ws * scale).toInt(),
+                                    (hs * scale).toInt(),
+                                ),
                         )
                     }
                 }
             }
 
-            Text(
-                text = stringResource(R.string.layout_settings_crop_image_instructions),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = BSE_SPACING_12),
-            )
+            if (!hasInteracted) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(BSE_ICON_SIZE_72)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Pinch,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier =
+                            Modifier
+                                .size(BSE_ICON_SIZE_40)
+                                .graphicsLayer {
+                                    this.alpha = alpha
+                                },
+                    )
+                }
+            }
         }
+
+        Text(
+            text = stringResource(R.string.layout_settings_crop_image_instructions),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = BSE_SPACING_12),
+        )
     }
 }
 

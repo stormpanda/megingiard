@@ -55,6 +55,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -117,159 +118,147 @@ internal fun PrivdSetupWizardDialog(
         onDismiss()
     })
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = SW_SCRIM_ALPHA))
-                .clickable(enabled = false, onClick = {}),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = SW_DIALOG_WIDTH_FRACTION,
+        cornerRadius = SW_DIALOG_CORNER,
+        contentPadding = SW_DIALOG_PADDING,
+        scrimAlpha = SW_SCRIM_ALPHA,
+        modifier = Modifier.verticalScroll(rememberScrollState()),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(SW_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(SW_DIALOG_CORNER))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(SW_DIALOG_CORNER))
-                    .verticalScroll(rememberScrollState())
-                    .clickable(enabled = true, onClick = {})
-                    .padding(SW_DIALOG_PADDING),
-            verticalArrangement = Arrangement.spacedBy(SW_GAP),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.privd_wizard_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
+            Text(
+                text = stringResource(R.string.privd_wizard_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = {
+                viewModel.privdResetBootstrapStage()
+                onDismiss()
+            }) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.privd_wizard_close_dialog),
+                    tint = colors.onSurfaceSecondary,
                 )
-                IconButton(onClick = {
+            }
+        }
+
+        when (step) {
+            0 -> {
+                StepEnableWireless(
+                    onOpenSettings = {
+                        val devOptionsEnabled =
+                            Settings.Global.getInt(
+                                context.contentResolver,
+                                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+                                0,
+                            ) != 0
+
+                        val intentsToTry =
+                            if (devOptionsEnabled) {
+                                listOf(
+                                    // 1. Try to open Wireless Debugging directly
+                                    Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                                        component =
+                                            ComponentName(
+                                                "com.android.settings",
+                                                "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
+                                            )
+                                    },
+                                    // 2. Try to open Developer Options directly
+                                    Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+                                    // 3. Fallback to general settings
+                                    Intent(Settings.ACTION_SETTINGS),
+                                )
+                            } else {
+                                listOf(
+                                    // If disabled, go straight to general settings
+                                    Intent(Settings.ACTION_SETTINGS),
+                                )
+                            }
+
+                        val options =
+                            ActivityOptions.makeBasic().apply {
+                                setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                            }
+
+                        for (intent in intentsToTry) {
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try {
+                                context.startActivity(intent, options.toBundle())
+                                break
+                            } catch (e: Exception) {
+                                // Fallback to next intent in the list
+                            }
+                        }
+                    },
+                    onNext = { step = 1 },
+                )
+            }
+
+            1 -> {
+                StepPair(
+                    pairPort = pairPort,
+                    code = pairCode,
+                    busy = pairBusy,
+                    error = pairError,
+                    fieldColors = fieldColors,
+                    focusManager = focusManager,
+                    onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
+                    onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
+                    onSubmit = {
+                        val portInt = pairPort.toIntOrNull() ?: return@StepPair
+                        pairBusy = true
+                        pairError = false
+                        viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
+                            pairBusy = false
+                            if (ok) {
+                                step = 2
+                            } else {
+                                pairError = true
+                            }
+                        }
+                    },
+                    onBack = { step = 0 },
+                )
+            }
+
+            2 -> {
+                StepBootstrap(
+                    stage = stage,
+                    busy = bootstrapBusy,
+                    onStart = {
+                        bootstrapBusy = true
+                        viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
+                            bootstrapBusy = false
+                            if (ok) step = 3
+                        }
+                    },
+                    onBack = { step = 1 },
+                )
+            }
+
+            3 -> {
+                StepDone(onClose = {
                     viewModel.privdResetBootstrapStage()
                     onDismiss()
-                }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.privd_wizard_close_dialog),
-                        tint = colors.onSurfaceSecondary,
-                    )
-                }
+                })
             }
+        }
 
-            when (step) {
-                0 -> {
-                    StepEnableWireless(
-                        onOpenSettings = {
-                            val devOptionsEnabled =
-                                Settings.Global.getInt(
-                                    context.contentResolver,
-                                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-                                    0,
-                                ) != 0
-
-                            val intentsToTry =
-                                if (devOptionsEnabled) {
-                                    listOf(
-                                        // 1. Try to open Wireless Debugging directly
-                                        Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
-                                            component =
-                                                ComponentName(
-                                                    "com.android.settings",
-                                                    "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
-                                                )
-                                        },
-                                        // 2. Try to open Developer Options directly
-                                        Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-                                        // 3. Fallback to general settings
-                                        Intent(Settings.ACTION_SETTINGS),
-                                    )
-                                } else {
-                                    listOf(
-                                        // If disabled, go straight to general settings
-                                        Intent(Settings.ACTION_SETTINGS),
-                                    )
-                                }
-
-                            val options =
-                                ActivityOptions.makeBasic().apply {
-                                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                }
-
-                            for (intent in intentsToTry) {
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                try {
-                                    context.startActivity(intent, options.toBundle())
-                                    break
-                                } catch (e: Exception) {
-                                    // Fallback to next intent in the list
-                                }
-                            }
-                        },
-                        onNext = { step = 1 },
-                    )
-                }
-
-                1 -> {
-                    StepPair(
-                        pairPort = pairPort,
-                        code = pairCode,
-                        busy = pairBusy,
-                        error = pairError,
-                        fieldColors = fieldColors,
-                        focusManager = focusManager,
-                        onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
-                        onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
-                        onSubmit = {
-                            val portInt = pairPort.toIntOrNull() ?: return@StepPair
-                            pairBusy = true
-                            pairError = false
-                            viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
-                                pairBusy = false
-                                if (ok) {
-                                    step = 2
-                                } else {
-                                    pairError = true
-                                }
-                            }
-                        },
-                        onBack = { step = 0 },
-                    )
-                }
-
-                2 -> {
-                    StepBootstrap(
-                        stage = stage,
-                        busy = bootstrapBusy,
-                        onStart = {
-                            bootstrapBusy = true
-                            viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
-                                bootstrapBusy = false
-                                if (ok) step = 3
-                            }
-                        },
-                        onBack = { step = 1 },
-                    )
-                }
-
-                3 -> {
-                    StepDone(onClose = {
-                        viewModel.privdResetBootstrapStage()
-                        onDismiss()
-                    })
-                }
-            }
-
-            // Error footer (shows for any failed bootstrap stage)
-            val errorRes = errorStringResource(lastError)
-            if (errorRes != null && step == 2) {
-                Text(
-                    text = stringResource(errorRes),
-                    color = colors.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+        // Error footer (shows for any failed bootstrap stage)
+        val errorRes = errorStringResource(lastError)
+        if (errorRes != null && step == 2) {
+            Text(
+                text = stringResource(errorRes),
+                color = colors.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }

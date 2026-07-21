@@ -46,7 +46,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.RememberSettingRow
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -316,104 +318,86 @@ internal fun DeadzoneDialog(
     var rightPct by rememberSaveable { mutableIntStateOf((initialDeadzoneRight * 100).roundToInt()) }
     val colors = LocalAppColors.current
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = PR_DIALOG_SCRIM_ALPHA))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { onDismiss() },
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = PR_DIALOG_WIDTH_FRACTION,
+        cornerRadius = PR_DIALOG_CORNER,
+        contentPadding = PR_DIALOG_PADDING,
+        scrimAlpha = PR_DIALOG_SCRIM_ALPHA,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(PR_DIALOG_WIDTH_FRACTION)
-                    .clip(RoundedCornerShape(PR_DIALOG_CORNER))
-                    .background(colors.surface)
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(PR_DIALOG_CORNER))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {}
-                    .padding(PR_DIALOG_PADDING),
-        ) {
-            Text(
-                text = stringResource(R.string.privd_deadzone_dialog_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleLarge,
+        Text(
+            text = stringResource(R.string.privd_deadzone_dialog_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(Modifier.height(PR_DIALOG_PADDING))
+        Text(
+            text = stringResource(R.string.privd_deadzone_dialog_hint),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(PR_DIALOG_PADDING))
+        // ── Left stick ──────────────────────────────────────────────────
+        Text(
+            text = stringResource(R.string.privd_deadzone_left),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = leftPct / 100f,
+                onValueChange = { leftPct = (it * 100).roundToInt() },
+                valueRange = 0f..1f,
+                steps = 99,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.height(PR_DIALOG_PADDING))
             Text(
-                text = stringResource(R.string.privd_deadzone_dialog_hint),
+                text = "$leftPct %",
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
+                modifier =
+                    Modifier
+                        .width(PR_DIALOG_PCT_WIDTH)
+                        .padding(start = PR_DIALOG_SLIDER_GAP),
             )
-            Spacer(Modifier.height(PR_DIALOG_PADDING))
-            // ── Left stick ──────────────────────────────────────────────────
+        }
+        Spacer(Modifier.height(PR_DIALOG_SLIDER_GAP))
+        // ── Right stick ─────────────────────────────────────────────────
+        Text(
+            text = stringResource(R.string.privd_deadzone_right),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Slider(
+                value = rightPct / 100f,
+                onValueChange = { rightPct = (it * 100).roundToInt() },
+                valueRange = 0f..1f,
+                steps = 99,
+                modifier = Modifier.weight(1f),
+            )
             Text(
-                text = stringResource(R.string.privd_deadzone_left),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "$rightPct %",
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                modifier =
+                    Modifier
+                        .width(PR_DIALOG_PCT_WIDTH)
+                        .padding(start = PR_DIALOG_SLIDER_GAP),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = leftPct / 100f,
-                    onValueChange = { leftPct = (it * 100).roundToInt() },
-                    valueRange = 0f..1f,
-                    steps = 99,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "$leftPct %",
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier
-                            .width(PR_DIALOG_PCT_WIDTH)
-                            .padding(start = PR_DIALOG_SLIDER_GAP),
-                )
+        }
+        Spacer(Modifier.height(PR_DIALOG_PADDING))
+        // ── Action buttons ───────────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.privd_deadzone_cancel))
             }
-            Spacer(Modifier.height(PR_DIALOG_SLIDER_GAP))
-            // ── Right stick ─────────────────────────────────────────────────
-            Text(
-                text = stringResource(R.string.privd_deadzone_right),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = rightPct / 100f,
-                    onValueChange = { rightPct = (it * 100).roundToInt() },
-                    valueRange = 0f..1f,
-                    steps = 99,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = "$rightPct %",
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier =
-                        Modifier
-                            .width(PR_DIALOG_PCT_WIDTH)
-                            .padding(start = PR_DIALOG_SLIDER_GAP),
-                )
-            }
-            Spacer(Modifier.height(PR_DIALOG_PADDING))
-            // ── Action buttons ───────────────────────────────────────────────
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.privd_deadzone_cancel))
-                }
-                Spacer(Modifier.width(PR_DIALOG_SLIDER_GAP))
-                Button(onClick = { onConfirm(leftPct / 100f, rightPct / 100f) }) {
-                    Text(stringResource(R.string.privd_deadzone_ok))
-                }
+            Spacer(Modifier.width(PR_DIALOG_SLIDER_GAP))
+            Button(onClick = { onConfirm(leftPct / 100f, rightPct / 100f) }) {
+                Text(stringResource(R.string.privd_deadzone_ok))
             }
         }
     }

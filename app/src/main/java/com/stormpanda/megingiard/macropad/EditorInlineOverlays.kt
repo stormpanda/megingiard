@@ -62,7 +62,9 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
+import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
@@ -95,51 +97,38 @@ internal fun InlineDialogOverlay(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(onClick = onDismiss)
-                .blockPointerEvents()
-                .then(modifier),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        modifier = modifier,
+        widthFraction = widthFraction,
+        cornerRadius = 12.dp,
+        contentPadding = MPE_PADDING,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(widthFraction)
-                    .background(colors.surface, RoundedCornerShape(12.dp))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(12.dp))
-                    .clickable(enabled = true, onClick = {})
-                    .padding(MPE_PADDING),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Text(
+                text = title,
+                color = colors.onSurface,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (titleAccessory != null) {
+                titleAccessory()
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        content()
+        if (buttonsRow != null) {
+            Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = buttonsArrangement,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (titleAccessory != null) {
-                    titleAccessory()
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            content()
-            if (buttonsRow != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = buttonsArrangement,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    buttonsRow()
-                }
+                buttonsRow()
             }
         }
     }
