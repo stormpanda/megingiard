@@ -62,6 +62,7 @@
     <string name="settings_accessibility_status_inactive">Inactive (Tap to enable)</string>
     <string name="settings_accessibility_status_desc">Lets Megingiard for example know which app is currently running so that it can automatically switch the profile.</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
+    <string name="settings_accent_color_custom">Custom</string>
     <string name="settings_accent_suggestions_title">Accent Color Suggestions</string>
     <string name="settings_accent_palette_suggestions">Preset accent colors</string>
     <string name="settings_accent_suggestions_close">Close</string>

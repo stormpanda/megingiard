@@ -27,10 +27,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -45,6 +47,7 @@ import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 import com.stormpanda.megingiard.ui.appSwitchColors
+import com.stormpanda.megingiard.ui.paletteFor
 import java.util.Locale
 
 private const val TAG = "GlobalSettingsComponents"
@@ -177,6 +180,20 @@ internal fun AccentColorRow(
     onPaletteClick: () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val matchingTheme =
+        remember(accentColor) {
+            val accentArgb = accentColor.toArgb()
+            ThemeMode.entries
+                .filter { !it.supportsCustomAccent }
+                .firstOrNull { mode -> paletteFor(mode).accent.toArgb() == accentArgb }
+        }
+    val labelText =
+        if (matchingTheme != null) {
+            stringResource(matchingTheme.displayNameResId())
+        } else {
+            stringResource(R.string.settings_accent_color_custom)
+        }
+
     AppSettingsRow(onClick = onClick, verticalPadding = GS_ACCENT_ROW_V_PADDING) {
         Text(
             text = stringResource(R.string.settings_accent_color),
@@ -184,6 +201,12 @@ internal fun AccentColorRow(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
+        Text(
+            text = labelText,
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
         Box(
             modifier =
                 Modifier
@@ -191,13 +214,6 @@ internal fun AccentColorRow(
                     .clip(CircleShape)
                     .background(accentColor)
                     .border(1.dp, colors.accentBorder, CircleShape),
-        )
-        Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-            contentDescription = null,
-            tint = colors.onSurfaceSecondary,
-            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
         )
         Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
         IconButton(
