@@ -62,6 +62,9 @@
     <string name="settings_accessibility_status_inactive">Inactive (Tap to enable)</string>
     <string name="settings_accessibility_status_desc">Lets Megingiard for example know which app is currently running so that it can automatically switch the profile.</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
+    <string name="settings_accent_suggestions_title">Accent Color Suggestions</string>
+    <string name="settings_accent_palette_suggestions">Preset accent colors</string>
+    <string name="settings_accent_suggestions_close">Close</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>
@@ -932,7 +935,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_accessibility_desc">Required for automatic profile switching. Android permissions require this service to detect which game is active on the primary screen. Tap this row to configure.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English or German depending on your preference.</string>
     <string name="help_settings_gamepad_swap_desc">Enable this if you prefer the Nintendo layout (A on right, B on bottom) over the default Xbox layout (A on bottom, B on right) for gamepad macro actions.</string>
-    <string name="help_settings_accent_desc">Customizes the highlight color for active buttons and tabs. Custom accents apply to Dark and Dark OLED themes; curated thematic styles use fixed iconic accents.</string>
+    <string name="help_settings_accent_desc">Customizes the highlight color for active buttons and tabs. Custom accents apply to Dark and Dark OLED themes; tap the color preview to open the custom color picker wheel or tap the palette icon to choose from preset theme accents.</string>
     <string name="help_settings_theme_desc">Choose from 8 distinct visual themes including Dark, Dark OLED, Megingiard, Mjölnir Steel, Valhalla Sunset, Aurora Borealis, Retro Phosphor, and Royal Asgard.</string>
     <string name="help_settings_restore_desc">Use this to revert all settings to factory defaults if something gets misconfigured. This will delete all your custom profiles, layouts, and macros.</string>
     <string name="help_settings_export_desc">Creates a complete backup of your custom profiles and configurations. Recommended before performing app updates or resetting settings.</string>

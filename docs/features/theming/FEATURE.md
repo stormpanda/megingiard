@@ -156,6 +156,8 @@ MaterialTheme(
 
 - Theme selection uses a picker/dropdown row, not a binary switch.
 - The Accent Color row is only shown when `themeMode.supportsCustomAccent` is `true`.
+- To the right of the accent color chooser row, a palette icon button (`Icons.Rounded.Palette`) opens a color suggestions dialog (`PresetAccentPaletteDialog`).
+- `PresetAccentPaletteDialog` lists all fixed accent colors from thematic styles (`!supportsCustomAccent`) as swatches labeled with their theme names.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
 ### Shared Dropdowns — `ui/AppDropdown.kt`

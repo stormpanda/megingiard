@@ -34,4 +34,16 @@ class ThemeModeTest {
         assertEquals(ThemeMode.RETRO_PHOSPHOR, entries[6])
         assertEquals(ThemeMode.ROYAL_ASGARD, entries[7])
     }
+
+    @Test
+    fun `verify fixed accent theme filtering for preset palette suggestions`() {
+        val fixedThemes = ThemeMode.entries.filter { !it.supportsCustomAccent }
+        assertEquals(6, fixedThemes.size)
+        assertTrue(fixedThemes.contains(ThemeMode.MEGINGIARD))
+        assertTrue(fixedThemes.contains(ThemeMode.MJOLNIR))
+        assertTrue(fixedThemes.contains(ThemeMode.VALHALLA))
+        assertTrue(fixedThemes.contains(ThemeMode.AURORA))
+        assertTrue(fixedThemes.contains(ThemeMode.RETRO_PHOSPHOR))
+        assertTrue(fixedThemes.contains(ThemeMode.ROYAL_ASGARD))
+    }
 }

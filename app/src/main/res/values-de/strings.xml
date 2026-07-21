@@ -67,6 +67,9 @@
     <string name="settings_accessibility_status_inactive">Inaktiv (Tippen zum Aktivieren)</string>
     <string name="settings_accessibility_status_desc">Ermöglicht es Megingiard beispielsweise zu erkennen, welche App gerade läuft, um das Profil automatisch zu wechseln.</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
+    <string name="settings_accent_suggestions_title">Akzentfarben-Vorschläge</string>
+    <string name="settings_accent_palette_suggestions">Vordefinierte Akzentfarben</string>
+    <string name="settings_accent_suggestions_close">Schließen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
     <string name="settings_color_apply">Anwenden</string>
@@ -939,7 +942,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>
     <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch und Deutsch zur Auswahl.</string>
     <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
-    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten für die Designs Dunkel und Dunkel OLED; Themen-Designs nutzen feste Akzentfarben.</string>
+    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten für die Designs Dunkel und Dunkel OLED; tippe auf die Farbvorschau für das Farbrad oder auf das Paletten-Symbol für vordefinierte Akzentfarben aus den Themen-Designs.</string>
     <string name="help_settings_theme_desc">Wähle aus 8 verschiedenen Designs darunter Dunkel, Dunkel OLED, Megingiard, Mjölnir-Stahl, Valhalla-Sonnenuntergang, Nordlicht Aurora, Retro-Phosphor und Königliches Asgard.</string>
     <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Dies löscht alle deine benutzerdefinierten Profile, Layouts und Makros.</string>
     <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>

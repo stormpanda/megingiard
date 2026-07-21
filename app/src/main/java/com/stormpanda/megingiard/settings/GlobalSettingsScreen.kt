@@ -115,6 +115,7 @@ fun GlobalSettingsScreen(
     var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
 
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    var showPresetPaletteDialog by rememberSaveable { mutableStateOf(false) }
     val exportResult by ConfigManager.exportResult.collectAsState()
     val logReportSaveResult by LogReportManager.saveResult.collectAsState()
 
@@ -383,6 +384,7 @@ fun GlobalSettingsScreen(
                             AccentColorRow(
                                 accentColor = accentColor,
                                 onClick = { showColorPicker = true },
+                                onPaletteClick = { showPresetPaletteDialog = true },
                             )
                         }
                         AppDivider()
@@ -515,6 +517,17 @@ fun GlobalSettingsScreen(
                     showColorPicker = false
                 },
                 onDismiss = { showColorPicker = false },
+            )
+        }
+        if (showPresetPaletteDialog) {
+            PresetAccentPaletteDialog(
+                currentAccent = accentColor,
+                colors = colors,
+                onColorSelected = { color ->
+                    viewModel.setAccentColor(color.toArgb())
+                    showPresetPaletteDialog = false
+                },
+                onDismiss = { showPresetPaletteDialog = false },
             )
         }
         if (showRestoreBackupDialog) {

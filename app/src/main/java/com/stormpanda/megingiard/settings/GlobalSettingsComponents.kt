@@ -17,7 +17,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -51,6 +53,8 @@ private const val TAG = "GlobalSettingsComponents"
 private val GS_COLOR_PREVIEW_SIZE = 28.dp
 private val GS_COLOR_ICON_SPACER = 8.dp
 private val GS_ACCENT_ARROW_SIZE = 16.dp
+private val GS_PALETTE_BTN_SIZE = 32.dp
+private val GS_PALETTE_ICON_SIZE = 18.dp
 private val GS_DIVIDER_START_INSET = 56.dp
 private val GS_SECTION_CHIP_SPACING = 8.dp
 private val GS_SECTION_HEADER_PADDING_H = 16.dp
@@ -170,6 +174,7 @@ private val GS_ACCENT_ROW_V_PADDING = 16.dp
 internal fun AccentColorRow(
     accentColor: Color,
     onClick: () -> Unit,
+    onPaletteClick: () -> Unit,
 ) {
     val colors = LocalAppColors.current
     AppSettingsRow(onClick = onClick, verticalPadding = GS_ACCENT_ROW_V_PADDING) {
@@ -194,6 +199,21 @@ internal fun AccentColorRow(
             tint = colors.onSurfaceSecondary,
             modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
         )
+        Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
+        IconButton(
+            onClick = onPaletteClick,
+            modifier =
+                Modifier
+                    .size(GS_PALETTE_BTN_SIZE)
+                    .background(colors.surfaceVariant, CircleShape),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Palette,
+                contentDescription = stringResource(R.string.settings_accent_palette_suggestions),
+                tint = colors.onSurface,
+                modifier = Modifier.size(GS_PALETTE_ICON_SIZE),
+            )
+        }
     }
 }
 
