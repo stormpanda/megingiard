@@ -54,7 +54,7 @@ All help UI is built on five shared composables defined in `app/src/main/java/co
 
 ```
 HelpIconButton            — Reusable ? icon button placed in every top bar
-HelpModal                 — Bottom-sheet host with scrim, handle, title row, scroll area
+HelpModal                 — Bottom-sheet host with scrim, handle, title row, scroll area (uses 8.dp horizontal margin matching QuickMenu and top-left refraction bezel border)
   HelpIntro               — Introductory paragraph at the top of the sheet
   HelpSection             — Category divider with uppercase section title
   HelpEntry               — Single documented UI element (icon + label + description)
