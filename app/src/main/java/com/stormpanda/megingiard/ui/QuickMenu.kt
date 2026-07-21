@@ -124,6 +124,7 @@ fun QuickMenu(
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
+    var showShutOffConfirm by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -244,10 +245,7 @@ fun QuickMenu(
                         onClick = { AppStateManager.setGlobalSettingsOpen(true) },
                         modifier = Modifier.weight(1f),
                     )
-                    ShutOffIconButton(onClick = {
-                        AppStateManager.requestShutOff()
-                        onDismiss()
-                    })
+                    ShutOffIconButton(onClick = { showShutOffConfirm = true })
                     QuickMenuIconButton(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
                         contentDescription = stringResource(R.string.help_open_cd),
@@ -256,6 +254,18 @@ fun QuickMenu(
                 }
             }
         }
+    }
+
+    if (showShutOffConfirm) {
+        ShutOffConfirmDialog(
+            colors = colors,
+            onConfirm = {
+                showShutOffConfirm = false
+                AppStateManager.requestShutOff()
+                onDismiss()
+            },
+            onDismiss = { showShutOffConfirm = false },
+        )
     }
 
     QuickMenuHelpModal(

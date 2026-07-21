@@ -702,6 +702,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="quick_menu_screen_mirroring">Bildschirmspiegelung</string>
     <string name="quick_menu_global_settings">Globale Einstellungen</string>
     <string name="quick_menu_shut_off_cd">Megingiard beenden</string>
+    <string name="shut_off_dialog_title">Megingiard beenden</string>
+    <string name="shut_off_dialog_body">Möchtest du Megingiard wirklich beenden?</string>
+    <string name="shut_off_dialog_confirm">Beenden</string>
     <string name="quick_menu_dismiss_dialog">Dialog schließen</string>
     <string name="quick_menu_profile_name_hint">Profilname</string>
     <string name="quick_menu_layout_name_hint">Layoutname</string>

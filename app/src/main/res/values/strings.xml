@@ -691,6 +691,9 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_screen_mirroring">Screen Mirroring</string>
     <string name="quick_menu_global_settings">Global Settings</string>
     <string name="quick_menu_shut_off_cd">Shut off Megingiard</string>
+    <string name="shut_off_dialog_title">Shut Off Megingiard</string>
+    <string name="shut_off_dialog_body">Are you sure you want to close Megingiard?</string>
+    <string name="shut_off_dialog_confirm">Shut Off</string>
     <string name="quick_menu_dismiss_dialog">Dismiss dialog</string>
     <string name="quick_menu_profile_name_hint">Profile name</string>
     <string name="quick_menu_layout_name_hint">Layout name</string>
