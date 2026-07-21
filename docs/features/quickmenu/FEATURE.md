@@ -159,6 +159,7 @@ precedence to the Quick Menu Bar navigation.
 | State flag | Owner | Triggered by |
 | --- | --- | --- |
 | `AppStateManager.isQuickMenuOpen` | `AppStateManager` | `handleEdgeSwipe()` / scrim tap |
+| `AppStateManager.shutOffRequested` | `AppStateManager` | Shut Off confirm button in Quick Menu |
 | `AppStateManager.isEditorActive` | `AppStateManager` | "Edit Layout" button |
 | `AppStateManager.isBackgroundSettingsActive` | `AppStateManager` | Cogwheel settings button in layout editor toolbar |
 | `AppStateManager.isViewportEditActive` | `AppStateManager` | "Screen Mirroring" action button in Quick Menu |
