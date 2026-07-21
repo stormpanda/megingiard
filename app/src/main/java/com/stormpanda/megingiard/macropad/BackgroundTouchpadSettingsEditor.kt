@@ -72,7 +72,9 @@ internal fun BackgroundTouchpadSettingsEditor(
     var scrollSpeed by remember(layout) { mutableFloatStateOf(layout.backgroundTouchpad.scrollSpeed) }
     var hapticsEnabled by remember(layout) { mutableStateOf(layout.backgroundTouchpad.hapticsEnabled) }
 
-    val hasTouchProjection = remember(layout) { layout.mirrorCutouts.any { it.touchProjectionEnabled } }
+    val initialHasTouchProjection = remember(layout) { layout.mirrorCutouts.any { it.touchProjectionEnabled } }
+    var touchProjectionCleared by remember { mutableStateOf(false) }
+    val hasTouchProjection = initialHasTouchProjection && !touchProjectionCleared
     var showConflictDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -111,7 +113,7 @@ internal fun BackgroundTouchpadSettingsEditor(
                                     scrollSpeed = scrollSpeed,
                                     hapticsEnabled = hapticsEnabled,
                                 )
-                            val disableProjection = enabled && hasTouchProjection
+                            val disableProjection = touchProjectionCleared || (enabled && initialHasTouchProjection)
                             onConfirm(updated, disableProjection)
                         },
                     ) {
@@ -414,6 +416,7 @@ internal fun BackgroundTouchpadSettingsEditor(
                 TextButton(
                     onClick = {
                         enabled = true
+                        touchProjectionCleared = true
                         showConflictDialog = false
                     },
                 ) {
