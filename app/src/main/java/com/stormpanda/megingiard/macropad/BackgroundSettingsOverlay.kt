@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -144,6 +145,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
     var renamingCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     var renameText by remember(renamingCutout) { mutableStateOf(renamingCutout?.name ?: "") }
+    var pendingProjectionCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     val localSmoothingValues = remember(currentLayout.id) { mutableStateMapOf<String, Float>() }
 
     // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
@@ -536,18 +538,30 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                                 color = colors.onSurfaceSecondary,
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
+                                            if (currentLayout.backgroundTouchpad.enabled) {
+                                                Text(
+                                                    text = stringResource(R.string.layout_settings_projection_incompatible_warning),
+                                                    color = colors.error,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    modifier = Modifier.padding(top = 2.dp),
+                                                )
+                                            }
                                         }
                                         Switch(
                                             checked = cutout.touchProjectionEnabled,
                                             onCheckedChange = { isChecked ->
                                                 AppLog.d(TAG, "cutout '${cutout.name}' touchProjectionEnabled → $isChecked")
-                                                val updatedCutouts =
-                                                    currentLayout.mirrorCutouts.map { c ->
-                                                        if (c.id == cutout.id) c.copy(touchProjectionEnabled = isChecked) else c
+                                                if (isChecked && currentLayout.backgroundTouchpad.enabled) {
+                                                    pendingProjectionCutout = cutout
+                                                } else {
+                                                    val updatedCutouts =
+                                                        currentLayout.mirrorCutouts.map { c ->
+                                                            if (c.id == cutout.id) c.copy(touchProjectionEnabled = isChecked) else c
+                                                        }
+                                                    commitLayout { copy(mirrorCutouts = updatedCutouts) }
+                                                    if (isChecked) {
+                                                        ScreenCaptureManager.setLocked(true)
                                                     }
-                                                commitLayout { copy(mirrorCutouts = updatedCutouts) }
-                                                if (isChecked) {
-                                                    ScreenCaptureManager.setLocked(true)
                                                 }
                                             },
                                             colors = appSwitchColors(),
@@ -559,6 +573,54 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                     }
                 }
             }
+        }
+
+        if (pendingProjectionCutout != null) {
+            val targetCutout = pendingProjectionCutout!!
+            AlertDialog(
+                onDismissRequest = { pendingProjectionCutout = null },
+                title = {
+                    Text(
+                        text = stringResource(R.string.macropad_projection_conflict_touchpad_title),
+                        color = colors.onSurface,
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.macropad_projection_conflict_touchpad_body),
+                        color = colors.onSurfaceSecondary,
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val updatedCutouts =
+                                currentLayout.mirrorCutouts.map { c ->
+                                    if (c.id == targetCutout.id) c.copy(touchProjectionEnabled = true) else c
+                                }
+                            commitLayout {
+                                copy(
+                                    mirrorCutouts = updatedCutouts,
+                                    backgroundTouchpad = backgroundTouchpad.copy(enabled = false),
+                                )
+                            }
+                            ScreenCaptureManager.setLocked(true)
+                            pendingProjectionCutout = null
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.macropad_projection_conflict_touchpad_confirm),
+                            color = colors.error,
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingProjectionCutout = null }) {
+                        Text(text = stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
+                    }
+                },
+                containerColor = colors.surface,
+            )
         }
     }
 

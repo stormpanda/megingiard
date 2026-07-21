@@ -324,6 +324,24 @@ data class PadButton(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Background Touchpad configuration — per-layout relative mouse touchpad settings
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Serializable
+data class BackgroundTouchpadConfig(
+    val enabled: Boolean = false,
+    val sensitivity: Float = 1.0f,
+    val tapToClick: Boolean = true,
+    val twoFingerTap: Boolean = true,
+    val threeFingerTap: Boolean = true,
+    val tapDrag: Boolean = true,
+    val twoFingerScroll: Boolean = true,
+    val naturalScroll: Boolean = true,
+    val scrollSpeed: Float = 1.0f,
+    val hapticsEnabled: Boolean = true,
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PadLayout — a single button arrangement within a profile
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -349,6 +367,7 @@ data class PadButton(
  *                                    Defaults to [ButtonColorStyle.ACCENTED].
  * @param buttonColorMirror           Button color style used when screen mirroring is active
  *                                    (ambient overlay). Defaults to [ButtonColorStyle.NEUTRAL].
+ * @param backgroundTouchpad          Per-layout background touchpad settings for relative mouse.
  */
 @Serializable
 data class PadLayout(
@@ -384,6 +403,7 @@ data class PadLayout(
     val bgImageOffsetX: Float = 0f,
     val bgImageOffsetY: Float = 0f,
     val backgroundImageDim: Float = 0f,
+    val backgroundTouchpad: BackgroundTouchpadConfig = BackgroundTouchpadConfig(),
 )
 
 // ─────────────────────────────────────────────────────────────────────────────

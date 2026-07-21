@@ -1102,4 +1102,24 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_touchpad_settings_scroll_speed_desc">Passt die Empfindlichkeit/Geschwindigkeit des Zwei-Finger-Scrollens an.</string>
     <string name="help_touchpad_settings_haptics_desc">Aktiviert subtile physische Klick-Vibrationen beim Drücken von Knöpfen oder Ausführen von Klick-Gesten.</string>
 
+    <string name="macropad_editor_touchpad_settings">Touchpad-Optionen</string>
+    <string name="layout_settings_touchpad_title">Hintergrund-Touchpad</string>
+    <string name="layout_settings_touchpad_enable">Hintergrund-Touchpad aktivieren</string>
+    <string name="layout_settings_touchpad_enable_desc">Freie Fläche als relatives Maus-Touchpad nutzen</string>
+    <string name="help_editor_toolbar_touchpad_label">Touchpad-Einstellungen</string>
+    <string name="help_editor_toolbar_touchpad_desc">Verhalten des relativen Maus-Touchpads für freie Layout-Flächen anpassen.</string>
+    <string name="macropad_touchpad_conflict_projection_title">Touch-Projektion deaktivieren?</string>
+    <string name="macropad_touchpad_conflict_projection_body">Das Aktivieren des Hintergrund-Touchpads deaktiviert die Touch-Projektion für alle Ausschnitte dieses Layouts.</string>
+    <string name="macropad_touchpad_conflict_projection_confirm">Touch-Projektion deaktivieren &amp; Touchpad aktivieren</string>
+    <string name="macropad_projection_conflict_touchpad_title">Hintergrund-Touchpad deaktivieren?</string>
+    <string name="macropad_projection_conflict_touchpad_body">Das Aktivieren der Touch-Projektion deaktiviert das Hintergrund-Touchpad für dieses Layout.</string>
+    <string name="macropad_projection_conflict_touchpad_confirm">Touchpad deaktivieren &amp; Projektion aktivieren</string>
+    <string name="layout_settings_touchpad_incompatible_warning">Nicht kompatibel mit aktiver Touch-Projektion</string>
+    <string name="layout_settings_projection_incompatible_warning">Nicht kompatibel mit aktivem Hintergrund-Touchpad</string>
+    <string name="settings_section_master_touchpad">Hintergrund-Touchpad</string>
+    <string name="settings_section_pointer_speed">Zeigergeschwindigkeit</string>
+    <string name="settings_section_gestures">Gesten &amp; Aktionen</string>
+    <string name="settings_section_scrolling">Scrollen</string>
+    <string name="settings_section_feedback">Haptik</string>
+
 </resources>

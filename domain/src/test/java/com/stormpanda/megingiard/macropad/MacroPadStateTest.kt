@@ -314,6 +314,19 @@ class MacroPadStateTest {
         assertEquals(true, active.enableGamepad)
         assertEquals(true, active.enableMouse)
         assertEquals(true, active.enableTouch)
+
+        // 8. Enable Background Touchpad -> enableMouse force-enabled
+        val layoutWithBgTouchpad =
+            active.layouts.first().copy(
+                buttons = emptyList(),
+                backgroundTouchpad = BackgroundTouchpadConfig(enabled = true),
+            )
+        MacroPadState.updateLayout(layoutWithBgTouchpad)
+        active = MacroPadState.activeProfile.value!!
+        assertEquals(false, active.enableKeyboard)
+        assertEquals(false, active.enableGamepad)
+        assertEquals(true, active.enableMouse)
+        assertEquals(false, active.enableTouch)
     }
 
     @Test

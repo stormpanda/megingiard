@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.GridOff
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
@@ -135,6 +136,7 @@ internal fun EditorToolbar(
     onAddButton: () -> Unit,
     onGridModeChange: () -> Unit,
     onManageBackground: () -> Unit,
+    onManageTouchpadSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val gridIcon =
@@ -146,6 +148,7 @@ internal fun EditorToolbar(
     val gridLabel = stringResource(R.string.macropad_editor_grid_toggle)
     val buttonLabel = stringResource(R.string.macropad_editor_toolbar_button)
     val bgLabel = stringResource(R.string.macropad_editor_change_background)
+    val touchpadLabel = stringResource(R.string.macropad_editor_touchpad_settings)
 
     val lockIcon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen
     val lockLabel = if (isCanvasLocked) stringResource(R.string.macropad_editor_unlock) else stringResource(R.string.macropad_editor_lock)
@@ -154,7 +157,7 @@ internal fun EditorToolbar(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
     ) {
-        // First row: Add and Background buttons
+        // First row: Add Button and Change Background
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
@@ -177,7 +180,7 @@ internal fun EditorToolbar(
                 modifier = Modifier.weight(1f),
             )
         }
-        // Second row: Unlock and Grid buttons
+        // Second row: Unlock Buttons and Touchpad Settings
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
@@ -191,13 +194,27 @@ internal fun EditorToolbar(
                 onClick = onToggleCanvasLock,
                 modifier = Modifier.weight(1f),
             )
-            // Grid toggle ("Change Grid", accent color all the time)
+            // Touchpad Settings button
+            EditorActionChip(
+                label = touchpadLabel,
+                icon = Icons.Rounded.Mouse,
+                accentColor = accentColor,
+                onClick = onManageTouchpadSettings,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        // Third row: Change Grid
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             EditorActionChip(
                 label = gridLabel,
                 icon = gridIcon,
                 accentColor = accentColor,
                 onClick = onGridModeChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
