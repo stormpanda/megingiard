@@ -91,6 +91,7 @@ import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -467,132 +468,120 @@ private fun QuickColorSelectionDialog(
 ) {
     val colors = LocalAppColors.current
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(onClick = onDismiss)
-                .blockPointerEvents(),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = 0.85f,
+        cornerRadius = 12.dp,
+        contentPadding = 16.dp,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth(0.85f)
-                    .background(colors.surface, RoundedCornerShape(12.dp))
-                    .clickable(enabled = true, onClick = {})
-                    .padding(16.dp),
+        Text(
+            text = title,
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // System Styles
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = title,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            // System Styles
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            // Neutral option
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .clickable { onSelected(ColorOption.Neutral) }
+                        .padding(8.dp),
             ) {
-                // Neutral option
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                            .clickable { onSelected(ColorOption.Neutral) }
-                            .padding(8.dp),
+                Box(
+                    modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        preview(ColorOption.Neutral)
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.layout_settings_color_neutral),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
+                    preview(ColorOption.Neutral)
                 }
-
-                // Accent option
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                            .clickable { onSelected(ColorOption.Accent) }
-                            .padding(8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        preview(ColorOption.Accent)
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.layout_settings_color_accent),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.layout_settings_recent_colors),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            Spacer(Modifier.height(8.dp))
-
-            if (recentColors.isEmpty()) {
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.layout_settings_no_recent_colors),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    text = stringResource(R.string.layout_settings_color_neutral),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelSmall,
                 )
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(LSE_RECENT_COLORS_GRID_HEIGHT),
+            }
+
+            // Accent option
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .clickable { onSelected(ColorOption.Accent) }
+                        .padding(8.dp),
+            ) {
+                Box(
+                    modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    items(recentColors) { argb ->
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(LSE_PREVIEW_BUTTON_SIZE)
-                                    .clickable { onSelected(ColorOption.Custom(argb)) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            preview(ColorOption.Custom(argb))
-                        }
+                    preview(ColorOption.Accent)
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.layout_settings_color_accent),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.layout_settings_recent_colors),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        if (recentColors.isEmpty()) {
+            Text(
+                text = stringResource(R.string.layout_settings_no_recent_colors),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            )
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().height(LSE_RECENT_COLORS_GRID_HEIGHT),
+            ) {
+                items(recentColors) { argb ->
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(LSE_PREVIEW_BUTTON_SIZE)
+                                .clickable { onSelected(ColorOption.Custom(argb)) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        preview(ColorOption.Custom(argb))
                     }
                 }
             }
+        }
 
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
             }
         }
     }

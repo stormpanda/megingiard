@@ -38,6 +38,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppModalDialog
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -64,106 +65,96 @@ internal fun RestoreBackupSelectionDialog(
     val scrollState = rememberScrollState()
 
     BackHandler(onBack = onDismiss)
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = GSD_DIALOG_SCRIM_ALPHA))
-                .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center,
+    AppModalDialog(
+        onDismiss = onDismiss,
+        widthFraction = GSD_DIALOG_WIDTH_FRACTION,
+        cornerRadius = GSD_DIALOG_CORNER,
+        contentPadding = GSD_DIALOG_PADDING,
+        scrimAlpha = GSD_DIALOG_SCRIM_ALPHA,
+        modifier = Modifier.padding(vertical = 24.dp),
     ) {
+        Text(
+            text = stringResource(R.string.config_restore_dialog_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Spacer(Modifier.height(12.dp))
+
         Column(
             modifier =
                 Modifier
-                    .padding(vertical = 24.dp)
-                    .fillMaxWidth(GSD_DIALOG_WIDTH_FRACTION)
-                    .background(colors.surface, RoundedCornerShape(GSD_DIALOG_CORNER))
-                    .clickable(enabled = true, onClick = {})
-                    .padding(GSD_DIALOG_PADDING),
+                    .weight(1f, fill = false)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
         ) {
-            Text(
-                text = stringResource(R.string.config_restore_dialog_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
+            // External file option
+            BackupOptionRow(
+                label = stringResource(R.string.config_restore_option_external),
+                subtitle = stringResource(R.string.config_restore_option_external_sub),
+                isSelected = selectedIndex == 0,
+                accentColor = accentColor,
+                colors = colors,
+                onClick = { selectedIndex = 0 },
             )
-            Spacer(Modifier.height(12.dp))
 
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f, fill = false)
-                        .fillMaxWidth()
-                        .verticalScroll(scrollState),
-            ) {
-                // External file option
+            // Internal backups options
+            internalBackups.forEachIndexed { index, backup ->
+                val profilesCount = backup.export.profiles.size
+                val layoutsCount = backup.export.profiles.sumOf { it.layouts.size }
+                val macrosCount = backup.export.profiles.sumOf { it.macros.size }
+
+                val subtitle =
+                    stringResource(
+                        R.string.config_restore_option_internal_sub,
+                        profilesCount,
+                        layoutsCount,
+                        macrosCount,
+                    )
+
+                // Format localized weekday, date, and time of backup creation
+                val formattedTime =
+                    remember(backup.timestampMs) {
+                        val instant = Instant.ofEpochMilli(backup.timestampMs)
+                        val dateTime = instant.atZone(ZoneId.systemDefault())
+                        val formatter = DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                        dateTime.format(formatter)
+                    }
+
                 BackupOptionRow(
-                    label = stringResource(R.string.config_restore_option_external),
-                    subtitle = stringResource(R.string.config_restore_option_external_sub),
-                    isSelected = selectedIndex == 0,
+                    label = formattedTime,
+                    subtitle = subtitle,
+                    isSelected = selectedIndex == index + 1,
                     accentColor = accentColor,
                     colors = colors,
-                    onClick = { selectedIndex = 0 },
+                    onClick = { selectedIndex = index + 1 },
                 )
-
-                // Internal backups options
-                internalBackups.forEachIndexed { index, backup ->
-                    val profilesCount = backup.export.profiles.size
-                    val layoutsCount = backup.export.profiles.sumOf { it.layouts.size }
-                    val macrosCount = backup.export.profiles.sumOf { it.macros.size }
-
-                    val subtitle =
-                        stringResource(
-                            R.string.config_restore_option_internal_sub,
-                            profilesCount,
-                            layoutsCount,
-                            macrosCount,
-                        )
-
-                    // Format localized weekday, date, and time of backup creation
-                    val formattedTime =
-                        remember(backup.timestampMs) {
-                            val instant = Instant.ofEpochMilli(backup.timestampMs)
-                            val dateTime = instant.atZone(ZoneId.systemDefault())
-                            val formatter = DateTimeFormatter.ofPattern("EEEE, yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-                            dateTime.format(formatter)
-                        }
-
-                    BackupOptionRow(
-                        label = formattedTime,
-                        subtitle = subtitle,
-                        isSelected = selectedIndex == index + 1,
-                        accentColor = accentColor,
-                        colors = colors,
-                        onClick = { selectedIndex = index + 1 },
-                    )
-                }
             }
+        }
 
-            Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.config_import_cancel), color = colors.onSurfaceSecondary)
-                }
-                TextButton(onClick = {
-                    AppLog.d(TAG, "Confirm clicked: selectedIndex=$selectedIndex")
-                    if (selectedIndex == 0) {
-                        onConfirm(null)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.config_import_cancel), color = colors.onSurfaceSecondary)
+            }
+            TextButton(onClick = {
+                AppLog.d(TAG, "Confirm clicked: selectedIndex=$selectedIndex")
+                if (selectedIndex == 0) {
+                    onConfirm(null)
+                } else {
+                    val index = selectedIndex - 1
+                    if (index in internalBackups.indices) {
+                        onConfirm(internalBackups[index])
                     } else {
-                        val index = selectedIndex - 1
-                        if (index in internalBackups.indices) {
-                            onConfirm(internalBackups[index])
-                        } else {
-                            AppLog.w(TAG, "Selected index $index is out of bounds for internalBackups (size ${internalBackups.size})")
-                            onDismiss()
-                        }
+                        AppLog.w(TAG, "Selected index $index is out of bounds for internalBackups (size ${internalBackups.size})")
+                        onDismiss()
                     }
-                }) {
-                    Text(stringResource(R.string.config_import_confirm), color = accentColor)
                 }
+            }) {
+                Text(stringResource(R.string.config_import_confirm), color = accentColor)
             }
         }
     }
