@@ -36,6 +36,8 @@ private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
 private const val GETPROP_TIMEOUT_MS = 2_000L
+private const val PORT_READ_RETRY_COUNT = 5
+private const val PORT_READ_RETRY_DELAY_MS = 200L
 private const val SYNC_DATA = "DATA"
 private const val SYNC_DONE = "DONE"
 private const val SYNC_OKAY = "OKAY"
@@ -133,7 +135,7 @@ object PrivdBootstrapper {
         context: Context,
         host: String,
     ): Boolean {
-        val connectPort = readAdbTlsConnectPort()
+        val connectPort = readAdbTlsConnectPortWithRetry()
         if (connectPort <= 0) {
             AppLog.w(TAG, "bootstrapAndConnect: wireless debugging port not available (port=$connectPort) — is Wireless Debugging enabled?")
             PrivdManager.reportBootstrapFailure(PrivdError.ADB_CONNECT_FAILED)
@@ -249,6 +251,21 @@ object PrivdBootstrapper {
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
+
+    private fun readAdbTlsConnectPortWithRetry(): Int {
+        for (i in 0 until PORT_READ_RETRY_COUNT) {
+            val port = readAdbTlsConnectPort()
+            if (port > 0) return port
+            if (i < PORT_READ_RETRY_COUNT - 1) {
+                try {
+                    Thread.sleep(PORT_READ_RETRY_DELAY_MS)
+                } catch (_: InterruptedException) {
+                    break
+                }
+            }
+        }
+        return 0
+    }
 
     /**
      * Reads the ADB Wireless-Debugging TLS connect port from the system property
