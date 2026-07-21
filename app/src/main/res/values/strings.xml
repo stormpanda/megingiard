@@ -1109,5 +1109,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_projection_conflict_touchpad_confirm">Disable Touchpad &amp; Enable Projection</string>
     <string name="layout_settings_touchpad_incompatible_warning">Incompatible with currently active Touch Projection</string>
     <string name="layout_settings_projection_incompatible_warning">Incompatible with currently active Background Touchpad</string>
+    <string name="settings_section_master_touchpad">Background Touchpad</string>
+    <string name="settings_section_pointer_speed">Pointer Speed</string>
+    <string name="settings_section_gestures">Gestures &amp; Actions</string>
+    <string name="settings_section_scrolling">Scrolling</string>
+    <string name="settings_section_feedback">Haptics</string>
 
 </resources>

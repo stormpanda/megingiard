@@ -2,17 +2,13 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -23,10 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,12 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.RememberSettingRow
+import com.stormpanda.megingiard.settings.SettingsSection
+import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
@@ -134,35 +128,16 @@ internal fun BackgroundTouchpadSettingsEditor(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                    .verticalScroll(rememberScrollState()),
         ) {
-            // Master Switch
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.surface)
-                        .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            // Master Switch Section
+            SettingsSection(
+                title = stringResource(R.string.settings_section_master_touchpad),
+                colors = colors,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.layout_settings_touchpad_enable),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        text = stringResource(R.string.layout_settings_touchpad_enable_desc),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Switch(
+                RememberSettingRow(
+                    label = stringResource(R.string.layout_settings_touchpad_enable),
+                    description = stringResource(R.string.layout_settings_touchpad_enable_desc),
                     checked = enabled,
                     onCheckedChange = { targetState ->
                         if (targetState && hasTouchProjection) {
@@ -171,224 +146,121 @@ internal fun BackgroundTouchpadSettingsEditor(
                             enabled = targetState
                         }
                     },
-                    colors =
-                        SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = accentColor,
-                        ),
                 )
-            }
-
-            // Conflict Warning Banner if Touch Projection is active on this layout
-            if (hasTouchProjection) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.error.copy(alpha = 0.15f))
-                            .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = colors.error,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
-                        color = colors.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                if (hasTouchProjection) {
+                    AppDivider()
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(colors.error.copy(alpha = 0.15f))
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Warning,
+                            contentDescription = null,
+                            tint = colors.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
+                            color = colors.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
             if (enabled) {
-                AppDivider()
-
-                // Pointer Speed Slider
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surface)
-                            .padding(16.dp),
+                // Pointer Speed Section
+                SettingsSection(
+                    title = stringResource(R.string.settings_section_pointer_speed),
+                    colors = colors,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_touchpad_sensitivity),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = "${(sensitivity * 10f).roundToInt() / 10f}x",
-                            color = accentColor,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.settings_touchpad_sensitivity_desc),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                    Slider(
+                    SliderSettingRow(
+                        label = stringResource(R.string.settings_touchpad_sensitivity),
                         value = sensitivity,
-                        onValueChange = { sensitivity = (it * 10f).roundToInt() / 10f },
                         valueRange = 0.1f..3.0f,
-                        steps = 28,
-                        colors =
-                            SliderDefaults.colors(
-                                thumbColor = accentColor,
-                                activeTrackColor = accentColor,
-                            ),
+                        formatLabel = { "${(it * 10f).roundToInt() / 10f}x" },
+                        onValueChange = { sensitivity = (it * 10f).roundToInt() / 10f },
                     )
                 }
 
                 // Gestures Section
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surface)
-                            .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                SettingsSection(
+                    title = stringResource(R.string.settings_section_gestures),
+                    colors = colors,
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_section_relative_mouse),
-                        color = accentColor,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    // Tap to Click
-                    SettingSwitchRow(
-                        title = stringResource(R.string.settings_touchpad_tap_to_click),
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_tap_to_click),
                         description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
                         checked = tapToClick,
-                        accentColor = accentColor,
                         onCheckedChange = { tapToClick = it },
                     )
-
-                    // Two Finger Tap
-                    SettingSwitchRow(
-                        title = stringResource(R.string.settings_touchpad_two_finger_tap),
+                    AppDivider()
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_two_finger_tap),
                         description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
                         checked = twoFingerTap,
-                        accentColor = accentColor,
                         onCheckedChange = { twoFingerTap = it },
                     )
-
-                    // Three Finger Tap
-                    SettingSwitchRow(
-                        title = stringResource(R.string.settings_touchpad_three_finger_tap),
+                    AppDivider()
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_three_finger_tap),
                         description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
                         checked = threeFingerTap,
-                        accentColor = accentColor,
                         onCheckedChange = { threeFingerTap = it },
                     )
-
-                    // Tap and Drag
-                    SettingSwitchRow(
-                        title = stringResource(R.string.settings_touchpad_tap_drag),
+                    AppDivider()
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_tap_drag),
                         description = stringResource(R.string.settings_touchpad_tap_drag_desc),
                         checked = tapDrag,
-                        accentColor = accentColor,
                         onCheckedChange = { tapDrag = it },
                     )
                 }
 
                 // Scrolling Section
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surface)
-                            .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                SettingsSection(
+                    title = stringResource(R.string.settings_section_scrolling),
+                    colors = colors,
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_touchpad_two_finger_scroll),
-                        color = accentColor,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-
-                    SettingSwitchRow(
-                        title = stringResource(R.string.settings_touchpad_two_finger_scroll),
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_two_finger_scroll),
                         description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
                         checked = twoFingerScroll,
-                        accentColor = accentColor,
                         onCheckedChange = { twoFingerScroll = it },
                     )
-
                     if (twoFingerScroll) {
-                        SettingSwitchRow(
-                            title = stringResource(R.string.settings_touchpad_natural_scroll),
+                        AppDivider()
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_touchpad_natural_scroll),
                             description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
                             checked = naturalScroll,
-                            accentColor = accentColor,
                             onCheckedChange = { naturalScroll = it },
                         )
-
-                        Spacer(Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_touchpad_scroll_speed),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            Text(
-                                text = "${(scrollSpeed * 10f).roundToInt() / 10f}x",
-                                color = accentColor,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                        Slider(
+                        AppDivider()
+                        SliderSettingRow(
+                            label = stringResource(R.string.settings_touchpad_scroll_speed),
                             value = scrollSpeed,
-                            onValueChange = { scrollSpeed = (it * 10f).roundToInt() / 10f },
                             valueRange = 0.5f..3.0f,
-                            steps = 24,
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = accentColor,
-                                    activeTrackColor = accentColor,
-                                ),
+                            formatLabel = { "${(it * 10f).roundToInt() / 10f}x" },
+                            onValueChange = { scrollSpeed = (it * 10f).roundToInt() / 10f },
                         )
                     }
                 }
 
                 // Haptics Section
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.surface)
-                            .padding(16.dp),
+                SettingsSection(
+                    title = stringResource(R.string.settings_section_feedback),
+                    colors = colors,
                 ) {
-                    SettingSwitchRow(
-                        title = stringResource(R.string.settings_touchpad_haptics),
+                    RememberSettingRow(
+                        label = stringResource(R.string.settings_touchpad_haptics),
                         description = stringResource(R.string.settings_touchpad_haptics_desc),
                         checked = hapticsEnabled,
-                        accentColor = accentColor,
                         onCheckedChange = { hapticsEnabled = it },
                     )
                 }
@@ -432,45 +304,6 @@ internal fun BackgroundTouchpadSettingsEditor(
                 }
             },
             containerColor = colors.surface,
-        )
-    }
-}
-
-@Composable
-private fun SettingSwitchRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    accentColor: Color,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = description,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors =
-                SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = accentColor,
-                ),
         )
     }
 }
