@@ -245,10 +245,14 @@ fun QuickMenu(
                         onClick = { AppStateManager.setGlobalSettingsOpen(true) },
                         modifier = Modifier.weight(1f),
                     )
-                    ShutOffIconButton(onClick = { showShutOffConfirm = true })
+                    ShutOffIconButton(
+                        colors = colors,
+                        onClick = { showShutOffConfirm = true },
+                    )
                     QuickMenuIconButton(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
                         contentDescription = stringResource(R.string.help_open_cd),
+                        colors = colors,
                         onClick = { showQuickMenuHelp = true },
                     )
                 }

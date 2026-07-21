@@ -139,18 +139,20 @@ internal fun QuickMenuActionChip(
 internal fun QuickMenuIconButton(
     icon: ImageVector,
     contentDescription: String,
+    colors: AppColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color? = null,
 ) {
-    val colors = LocalAppColors.current
-    val iconTint = tint ?: colors.onSurfaceSecondary
+    val accent = colors.accent
+    val iconTint = tint ?: accent
     Box(
         modifier =
             modifier
-                .size(36.dp)
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .clickable(onClick = onClick),
+                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .clickable(onClick = onClick)
+                .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -164,16 +166,17 @@ internal fun QuickMenuIconButton(
 
 @Composable
 internal fun ShutOffIconButton(
+    colors: AppColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalAppColors.current
     QuickMenuIconButton(
         icon = Icons.Rounded.PowerSettingsNew,
         contentDescription = stringResource(R.string.quick_menu_shut_off_cd),
+        colors = colors,
         onClick = onClick,
         modifier = modifier,
-        tint = colors.onSurfaceSecondary,
+        tint = colors.accent,
     )
 }
 
