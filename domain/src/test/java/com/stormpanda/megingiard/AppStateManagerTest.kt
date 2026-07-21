@@ -183,4 +183,22 @@ class AppStateManagerTest {
             AppStateManager.consumeShutOffRequest()
             assertFalse(AppStateManager.shutOffRequested.value)
         }
+
+    @Test
+    fun `resetPrivdPromptState clears prompt showing and dismissed flags`() =
+        runTest {
+            AppStateManager.setHasAdbCredentials(true)
+            AppStateManager.setPrivdPromptDismissed(false)
+            AppStateManager.setBackgroundSettingsActive(false)
+            MacroPadSettings.setPrivdShowAdbPromptForTesting(true)
+            PrivdManager.setStateForTesting(PrivdState.FAILED)
+            testScheduler.advanceUntilIdle()
+            assertTrue(AppStateManager.isPrivdPromptActive.value)
+
+            PrivdManager.setStateForTesting(PrivdState.OFF)
+            AppStateManager.resetPrivdPromptState()
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.isPrivdPromptActive.value)
+            assertFalse(AppStateManager.isPrivdPromptDismissed.value)
+        }
 }

@@ -106,6 +106,7 @@ object AppStateManager {
     fun requestShutOff() {
         AppLog.i(TAG, "requestShutOff")
         _shutOffRequested.value = true
+        resetPrivdPromptState()
     }
 
     fun consumeShutOffRequest() {
@@ -228,6 +229,12 @@ object AppStateManager {
     fun setPrivdPromptDismissed(dismissed: Boolean) {
         AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
         _isPrivdPromptDismissed.value = dismissed
+    }
+
+    fun resetPrivdPromptState() {
+        AppLog.d(TAG, "resetPrivdPromptState")
+        _isPrivdPromptShowing.value = false
+        _isPrivdPromptDismissed.value = false
     }
 
     private val _isPrivdPromptShowing = MutableStateFlow(false)

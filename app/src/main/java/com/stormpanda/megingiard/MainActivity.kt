@@ -276,6 +276,7 @@ class MainActivity : ComponentActivity() {
             File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
                 File(noBackupFilesDir, "privd_adb_cert.bin").exists()
         AppStateManager.setHasAdbCredentials(hasCreds)
+        AppStateManager.resetPrivdPromptState()
 
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
