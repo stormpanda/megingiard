@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -182,6 +183,9 @@ internal fun HelpModal(
                         },
                     ),
         ) {
+            val menuBezelBrush = rememberQuickMenuBezelBrush()
+            val sheetShape = RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER)
+
             // Sheet — slides in from the bottom, absorbs clicks so scrim isn't fired
             Column(
                 modifier =
@@ -193,8 +197,10 @@ internal fun HelpModal(
                             enter = slideInVertically { it },
                             exit = slideOutVertically { it },
                         ).offset { IntOffset(0, offsetY.value.roundToInt()) }
-                        .clip(RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER))
+                        .padding(horizontal = PM_PANEL_H_PADDING)
+                        .clip(sheetShape)
                         .background(colors.surface)
+                        .border(PM_BORDER_WIDTH, brush = menuBezelBrush, shape = sheetShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
