@@ -9,7 +9,7 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. The app currently provides three themes: **Dark** (default), **Light**, and **Cyberpunk**. The architecture is token-based so new themes can be added without per-screen rewrites, and each theme can decide whether its accent colour is user-configurable or fixed.
+Megingiard supports user-selectable colour themes. The app currently provides four themes: **Dark** (default), **Dark OLED**, **Light**, and **Cyberpunk**. The architecture is token-based so new themes can be added without per-screen rewrites, and each theme can decide whether its accent colour is user-configurable or fixed.
 
 ### FR-TH1: Manual Theme Selection
 
@@ -87,9 +87,10 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 
 ### Palettes
 
-Three palettes are defined:
+Four palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
+- `darkOledPalette` — pitch-black (`#000000`) screen, menu, card, picker, and keyboard surfaces with darkened grey surface variants (`0xFF161618`) and user-customizable accent color support.
 - `lightPalette` — white/light-grey surfaces with near-black text.
 - `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab quick menu bar uses `CP_QM_BAR_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_QM_BAR_IDLE` and `LIGHT_QM_BAR_IDLE` constants in the other themes.
 
@@ -100,6 +101,7 @@ A new theme requires only a new `AppColors` instance and a corresponding `ThemeM
 `ThemeMode` carries a `supportsCustomAccent: Boolean` flag:
 
 - `DARK` → `true`
+- `DARK_OLED` → `true`
 - `LIGHT` → `true`
 - `CYBERPUNK` → `false`
 

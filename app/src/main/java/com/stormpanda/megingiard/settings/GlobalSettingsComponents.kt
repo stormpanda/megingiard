@@ -130,6 +130,7 @@ internal fun OverlayFadeOutRow(
 internal fun ThemeMode.displayNameResId(): Int =
     when (this) {
         ThemeMode.DARK -> R.string.theme_dark
+        ThemeMode.DARK_OLED -> R.string.theme_dark_oled
         ThemeMode.LIGHT -> R.string.theme_light
         ThemeMode.CYBERPUNK -> R.string.theme_cyberpunk
     }

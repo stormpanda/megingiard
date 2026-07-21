@@ -33,6 +33,7 @@
     <string name="settings_accent_color">Accent color</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_dark_oled">Dark OLED</string>
     <string name="theme_light">Light</string>
     <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Place controls at bottom</string>
@@ -928,7 +929,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English or German depending on your preference.</string>
     <string name="help_settings_gamepad_swap_desc">Enable this if you prefer the Nintendo layout (A on right, B on bottom) over the default Xbox layout (A on bottom, B on right) for gamepad macro actions.</string>
     <string name="help_settings_accent_desc">Customizes the highlight color for active buttons and tabs. Note that custom accents do not apply to the Cyberpunk theme, which uses fixed neon styling.</string>
-    <string name="help_settings_theme_desc">Select Dark or Light theme to customize the app with your chosen accent color, or select Cyberpunk for a styled neon design.</string>
+    <string name="help_settings_theme_desc">Select Dark, Dark OLED, or Light theme to customize the app with your chosen accent color, or select Cyberpunk for a styled neon design.</string>
     <string name="help_settings_restore_desc">Use this to revert all settings to factory defaults if something gets misconfigured. This will delete all your custom profiles, layouts, and macros.</string>
     <string name="help_settings_export_desc">Creates a complete backup of your custom profiles and configurations. Recommended before performing app updates or resetting settings.</string>
     <string name="help_settings_import_desc">Restores your profiles and configurations from a previously saved .mgrd file or daily automatic backup. Overwrites current configurations upon confirmation.</string>
