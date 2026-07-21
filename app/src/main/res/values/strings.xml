@@ -690,6 +690,10 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_ambient_settings">Screen Mirroring Settings</string>
     <string name="quick_menu_screen_mirroring">Screen Mirroring</string>
     <string name="quick_menu_global_settings">Global Settings</string>
+    <string name="quick_menu_shut_off_cd">Shut off Megingiard</string>
+    <string name="shut_off_dialog_title">Shut Off Megingiard</string>
+    <string name="shut_off_dialog_body">Are you sure you want to close Megingiard?</string>
+    <string name="shut_off_dialog_confirm">Shut Off</string>
     <string name="quick_menu_dismiss_dialog">Dismiss dialog</string>
     <string name="quick_menu_profile_name_hint">Profile name</string>
     <string name="quick_menu_layout_name_hint">Layout name</string>
@@ -959,6 +963,8 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
     <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
     <string name="help_quickmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
+    <string name="help_quickmenu_shut_off_label">Shut Off App</string>
+    <string name="help_quickmenu_shut_off_desc">Gracefully closes Megingiard, stopping screen mirroring and background services.</string>
     <string name="help_quickmenu_help_label">Help (this screen)</string>
     <string name="help_quickmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
 

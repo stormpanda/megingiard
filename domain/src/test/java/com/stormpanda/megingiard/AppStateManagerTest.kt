@@ -171,4 +171,34 @@ class AppStateManagerTest {
             AppStateManager.setFullscreenKeyboardActive(false)
             KeyboardSettings.setKbLayout(KbLayout.QWERTZ)
         }
+
+    @Test
+    fun `requestShutOff sets flag and consumeShutOffRequest resets it`() =
+        runTest {
+            assertFalse(AppStateManager.shutOffRequested.value)
+
+            AppStateManager.requestShutOff()
+            assertTrue(AppStateManager.shutOffRequested.value)
+
+            AppStateManager.consumeShutOffRequest()
+            assertFalse(AppStateManager.shutOffRequested.value)
+        }
+
+    @Test
+    fun `resetPrivdPromptState clears prompt showing and dismissed flags`() =
+        runTest {
+            AppStateManager.setHasAdbCredentials(true)
+            AppStateManager.setPrivdPromptDismissed(false)
+            AppStateManager.setBackgroundSettingsActive(false)
+            MacroPadSettings.setPrivdShowAdbPromptForTesting(true)
+            PrivdManager.setStateForTesting(PrivdState.FAILED)
+            testScheduler.advanceUntilIdle()
+            assertTrue(AppStateManager.isPrivdPromptActive.value)
+
+            PrivdManager.setStateForTesting(PrivdState.OFF)
+            AppStateManager.resetPrivdPromptState()
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.isPrivdPromptActive.value)
+            assertFalse(AppStateManager.isPrivdPromptDismissed.value)
+        }
 }

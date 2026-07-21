@@ -701,6 +701,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="quick_menu_ambient_settings">Bildschirmspiegelungs-Einstellungen</string>
     <string name="quick_menu_screen_mirroring">Bildschirmspiegelung</string>
     <string name="quick_menu_global_settings">Globale Einstellungen</string>
+    <string name="quick_menu_shut_off_cd">Megingiard beenden</string>
+    <string name="shut_off_dialog_title">Megingiard beenden</string>
+    <string name="shut_off_dialog_body">Möchtest du Megingiard wirklich beenden?</string>
+    <string name="shut_off_dialog_confirm">Beenden</string>
     <string name="quick_menu_dismiss_dialog">Dialog schließen</string>
     <string name="quick_menu_profile_name_hint">Profilname</string>
     <string name="quick_menu_layout_name_hint">Layoutname</string>
@@ -966,6 +970,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Schaltflächen-Layout im aktuellen Profil zu wechseln. Nur als aktiviert markierte Layouts erscheinen hier.</string>
     <string name="help_quickmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>
     <string name="help_quickmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Privilegierter-Modus-Einrichtung.</string>
+    <string name="help_quickmenu_shut_off_label">App beenden</string>
+    <string name="help_quickmenu_shut_off_desc">Beendet Megingiard ordnungsgemäß und stoppt Bildschirmspiegelung sowie Hintergrunddienste.</string>
     <string name="help_quickmenu_help_label">Hilfe (diese Ansicht)</string>
     <string name="help_quickmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>
 

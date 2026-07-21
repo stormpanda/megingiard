@@ -79,6 +79,10 @@ object AppStateManager {
     private val _mirrorStopRequested = MutableStateFlow(false)
     val mirrorStopRequested: StateFlow<Boolean> = _mirrorStopRequested.asStateFlow()
 
+    /** Set to true when user requests app shut off; MainActivity handles graceful shutdown and resets. */
+    private val _shutOffRequested = MutableStateFlow(false)
+    val shutOffRequested: StateFlow<Boolean> = _shutOffRequested.asStateFlow()
+
     fun requestMirrorStart() {
         AppLog.i(TAG, "requestMirrorStart")
         _mirrorStartRequested.value = true
@@ -97,6 +101,17 @@ object AppStateManager {
     fun consumeMirrorStopRequest() {
         AppLog.d(TAG, "consumeMirrorStopRequest")
         _mirrorStopRequested.value = false
+    }
+
+    fun requestShutOff() {
+        AppLog.i(TAG, "requestShutOff")
+        _shutOffRequested.value = true
+        resetPrivdPromptState()
+    }
+
+    fun consumeShutOffRequest() {
+        AppLog.d(TAG, "consumeShutOffRequest")
+        _shutOffRequested.value = false
     }
 
     fun setActivityResumed(resumed: Boolean) {
@@ -214,6 +229,12 @@ object AppStateManager {
     fun setPrivdPromptDismissed(dismissed: Boolean) {
         AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
         _isPrivdPromptDismissed.value = dismissed
+    }
+
+    fun resetPrivdPromptState() {
+        AppLog.d(TAG, "resetPrivdPromptState")
+        _isPrivdPromptShowing.value = false
+        _isPrivdPromptDismissed.value = false
     }
 
     private val _isPrivdPromptShowing = MutableStateFlow(false)

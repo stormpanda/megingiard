@@ -276,6 +276,7 @@ class MainActivity : ComponentActivity() {
             File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
                 File(noBackupFilesDir, "privd_adb_cert.bin").exists()
         AppStateManager.setHasAdbCredentials(hasCreds)
+        AppStateManager.resetPrivdPromptState()
 
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
@@ -595,6 +596,19 @@ class MainActivity : ComponentActivity() {
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
                     if (isCapturing) stopMirrorService()
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                AppStateManager.shutOffRequested.collect { requested ->
+                    if (!requested) return@collect
+                    AppLog.i(TAG, "shutOffRequested → performing graceful shutdown")
+                    AppStateManager.consumeShutOffRequest()
+                    if (ScreenCaptureManager.isCapturing.value) {
+                        stopMirrorService()
+                    }
+                    PrivdClient.disconnect()
+                    finishAndRemoveTask()
                 }
             }
 
