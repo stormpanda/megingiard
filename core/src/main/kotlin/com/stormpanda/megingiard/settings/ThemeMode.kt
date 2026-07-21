@@ -5,6 +5,4 @@ enum class ThemeMode(
 ) {
     DARK(supportsCustomAccent = true),
     DARK_OLED(supportsCustomAccent = true),
-    LIGHT(supportsCustomAccent = true),
-    CYBERPUNK(supportsCustomAccent = false),
 }

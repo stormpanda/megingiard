@@ -180,10 +180,9 @@ Megingiard enforces a strict trust model to ensure no rogue local app can exploi
 - **Verification**: No session lifecycle or modifier transition logs appear in terminal. Only system warnings/errors persist.
 
 ### 4.2 Application Theming
-- **Action**: Swap the active theme in Settings between **Dark**, **Light**, and **Cyberpunk**.
+- **Action**: Swap the active theme in Settings between **Dark** and **Dark OLED**.
 - **Verification**: All screen backgrounds, headers, buttons, and badges transition instantaneously to the themed colors. **No hardcoded grey or white text must bleed through.**
-  - *Cyberpunk Accent*: Electric Cyan/Neon Pink.
-  - *Dark Accent*: Harmonious HSL Slate/Emerald.
+  - *Dark OLED*: Pitch-black backgrounds (`#000000`) with soft eye-friendly text.
 
 ### 4.3 Profile Export & Import (`.mgrd`)
 - **Step 1 (Export)**: Open Settings -> **Export Configuration**.

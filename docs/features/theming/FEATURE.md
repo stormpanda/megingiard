@@ -9,27 +9,25 @@
 
 ### Overview
 
-Megingiard supports user-selectable colour themes. The app currently provides four themes: **Dark** (default), **Dark OLED**, **Light**, and **Cyberpunk**. The architecture is token-based so new themes can be added without per-screen rewrites, and each theme can decide whether its accent colour is user-configurable or fixed.
+Megingiard supports user-selectable colour themes. The app provides two themes: **Dark** (default) and **Dark OLED**. The architecture is token-based so new themes can be added without per-screen rewrites, and all themes support user-configurable accent colours.
 
 ### FR-TH1: Manual Theme Selection
 
 - The user MUST be able to switch between all available themes from the Global Settings screen.
 - The selected theme MUST be persisted across app restarts via DataStore.
 - The default theme is **Dark**.
-- The theme selector MUST support more than two options; a binary toggle is insufficient.
 
 ### FR-TH1a: Optional Custom Accent Support
 
-- A theme MAY allow the user to override its accent colour.
-- A theme MAY instead ship with a fixed built-in accent colour.
-- Whether the accent picker is shown MUST be derived from theme metadata, not from hardcoded `if (theme == X)` UI exceptions.
+- All themes allow the user to override the accent colour.
+- Whether the accent picker is shown is derived from theme metadata (`supportsCustomAccent`).
 
 ### FR-TH2: Token-Based Colour Architecture
 
 - All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
   - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
-  - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour (e.g. white in Dark/Light, dark red in Cyberpunk).
+  - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour.
   - Standard dialog scrim overlays (`Color.Black.copy(alpha = 0.5f)` behind modal panels).
   - Material 3 component internal styling (`SwitchDefaults.colors`, `CheckboxDefaults.colors`) where tokens do not apply.
   - Explicit slider track colours (`Color.LightGray` / `Color.DarkGray` in `MediaScreen`).
@@ -65,12 +63,12 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `touchpadIndicator`      | Touchpad border / hint dots                                                                                                        |
 | `pickerBackground`       | Color-picker dialog background                                                                                                     |
 | `accentBorder`           | Accent-colour swatch border                                                                                                        |
-| `accent`                 | Primary interactive accent colour (user-overridable or fixed per theme)                                                            |
+| `accent`                 | Primary interactive accent colour (user-overridable)                                                                               |
 | `onAccent`               | Text / icons on accent / highlighted button backgrounds (theme-defined)                                                            |
 | `quickMenuBarIdleColor`  | Always-visible pull-tab quick menu bar colour                                                                                      |
 | `controlIndicatorActive` | Active mode indicator dot in the navigation bar                                                                                   |
-| `navQuickMenuBody`       | Navigation bar background (tracks accent in Dark/Light)                                                                           |
-| `buttonBody`             | Mirror control button background (tracks accent in Dark/Light)                                                                     |
+| `navQuickMenuBody`       | Navigation bar background (tracks accent)                                                                                         |
+| `buttonBody`             | Mirror control button background (tracks accent)                                                                                  |
 | `controlOverlayBorder`   | Border/outline of the carousel control overlay container                                                                           |
 | `navQuickMenuBorder`     | Border/outline of the navigation bar                                                                                               |
 | `mirrorQuickMenuBorder`  | Border/outline of the mirror control bar                                                                                           |
@@ -87,12 +85,10 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 
 ### Palettes
 
-Four palettes are defined:
+Two palettes are defined:
 
 - `darkPalette` — dark-grey/black surfaces with white text (default).
-- `darkOledPalette` — pitch-black (`#000000`) screen, menu, card, picker, and keyboard surfaces with darkened grey surface variants (`0xFF161618`) and user-customizable accent color support.
-- `lightPalette` — white/light-grey surfaces with near-black text.
-- `cyberpunkPalette` — dark blood-red surfaces, high-contrast off-white readable text (`CP_TEXT`), cyan accent (`CP_ACCENT`), dark-red decorative accents (`CP_TEXT_DECORATIVE`/`CP_DARK_RED`), with cyan borders on interactive controls and an off-white section-header tint (`CP_SECTION_HEADER`) inspired by Cyberpunk 2077 UI contrast rules. The pull-tab quick menu bar uses `CP_QM_BAR_IDLE` (`Color.White.copy(alpha = 0.4f)`), consistent with the per-palette `DARK_QM_BAR_IDLE` and `LIGHT_QM_BAR_IDLE` constants in the other themes.
+- `darkOledPalette` — pitch-black (`#000000`) screen, menu, card, picker, and keyboard surfaces with darkened grey surface variants (`0xFF161618`), soft off-white text (`#E3E3E8`) to reduce OLED eye strain, and user-customizable accent color support.
 
 A new theme requires only a new `AppColors` instance and a corresponding `ThemeMode` entry — no per-screen changes.
 
@@ -102,8 +98,6 @@ A new theme requires only a new `AppColors` instance and a corresponding `ThemeM
 
 - `DARK` → `true`
 - `DARK_OLED` → `true`
-- `LIGHT` → `true`
-- `CYBERPUNK` → `false`
 
 The Global Settings screen uses this metadata to decide whether to render the accent colour picker.
 

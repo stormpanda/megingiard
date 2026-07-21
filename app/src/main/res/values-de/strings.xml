@@ -39,8 +39,6 @@
     <string name="settings_theme">Design</string>
     <string name="theme_dark">Dunkel</string>
     <string name="theme_dark_oled">Dunkel OLED</string>
-    <string name="theme_light">Hell</string>
-    <string name="theme_cyberpunk">Cyberpunk</string>
     <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
     <string name="settings_overlay_fade_out">Steuerleiste ausblenden</string>
     <string name="settings_overlay_fade_out_desc">Die Schnellmenüleiste nach einigen Sekunden Inaktivität ausblenden</string>
@@ -935,8 +933,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>
     <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch und Deutsch zur Auswahl.</string>
     <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
-    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten nicht für das Cyberpunk-Design, das ein festes Neon-Farbschema nutzt.</string>
-    <string name="help_settings_theme_desc">Wähle das dunkle, dunkel OLED- oder helle Design, um die App mit deiner gewählten Akzentfarbe zu nutzen, oder wähle Cyberpunk für ein festes Neon-Design.</string>
+    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten, Regler und Tabs in allen App-Menüs an.</string>
+    <string name="help_settings_theme_desc">Wähle das dunkle oder dunkel OLED-Design, um die App mit deiner gewählten Akzentfarbe zu nutzen.</string>
     <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Dies löscht alle deine benutzerdefinierten Profile, Layouts und Makros.</string>
     <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>
     <string name="help_settings_import_desc">Stellt Profile und Einstellungen aus einer .mgrd-Datei oder einem automatischen täglichen Backup wieder her. Überschreibt aktuelle Profile.</string>

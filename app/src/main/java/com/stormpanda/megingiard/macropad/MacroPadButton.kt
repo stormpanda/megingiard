@@ -76,7 +76,7 @@ private const val MP_BTN_GRADIENT_SCALE = MP_BTN_GRADIENT_OUTER / MP_BTN_NORMAL_
 
 // Neutral (theme-independent) ambient button style — intentionally NOT derived from AppColors;
 // these are muted, always-dim values designed to look unobtrusive on any background color and
-// are identical across all palettes (Dark / Light / Cyberpunk).
+// are identical across all palettes (Dark / Dark OLED).
 internal val MP_AMBIENT_NEUTRAL_BG = Color.White
 internal val MP_AMBIENT_NEUTRAL_BORDER = Color(0x99AAAAAA)
 internal val MP_AMBIENT_NEUTRAL_TEXT = Color(0xFFDDDDDD).copy(alpha = 0.9f)
