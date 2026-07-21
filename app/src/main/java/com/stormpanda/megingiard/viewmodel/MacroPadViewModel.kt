@@ -102,7 +102,7 @@ class MacroPadViewModel(
                                 it.action is PadAction.TrackpointMove &&
                                     (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
                             )
-                    } == true
+                    } == true || activeL?.backgroundTouchpad?.enabled == true
 
                 val blockingModal = editor || ambient || prompt || vp
                 val startKeyboard = kb || (hasKeyboard && !blockingModal)
@@ -147,7 +147,7 @@ class MacroPadViewModel(
                                         it.action is PadAction.TrackpointMove &&
                                             (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
                                     )
-                            } == true
+                            } == true || activeL?.backgroundTouchpad?.enabled == true
                         val hasTouch =
                             activeL?.buttons?.any {
                                 (

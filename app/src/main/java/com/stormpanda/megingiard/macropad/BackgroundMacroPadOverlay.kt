@@ -237,7 +237,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                             it.action is PadAction.TrackpointMove &&
                                 (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
                         )
-                } == true
+                } == true || activeL?.backgroundTouchpad?.enabled == true
 
             val blockingModal = editor || ambient || vp
             val startKeyboard = kb || (hasKeyboard && !blockingModal)
@@ -280,7 +280,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                                     it.action is PadAction.TrackpointMove &&
                                         (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
                                 )
-                        } == true
+                        } == true || activeL?.backgroundTouchpad?.enabled == true
                     val hasTouch =
                         activeL?.buttons?.any {
                             (

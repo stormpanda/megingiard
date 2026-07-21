@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +54,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroExecutor
+import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import kotlinx.coroutines.Dispatchers
@@ -285,6 +288,30 @@ internal fun PadSurface(
     // Track running macro IDs to drive the pulse animation
     val runningMacroIds by MacroExecutor.runningMacroIds.collectAsState()
 
+    val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val bgTouchpadActive = layout.backgroundTouchpad.enabled && !isTouchProjectionActive
+    val coroutineScope = rememberCoroutineScope()
+    val bgTouchpadProcessor =
+        remember(layout, bgTouchpadActive) {
+            TouchpadGestureProcessor(
+                useMouse = { true },
+                scope = coroutineScope,
+                sensitivity = { layout.backgroundTouchpad.sensitivity },
+                twoFingerScrollEnabled = { layout.backgroundTouchpad.twoFingerScroll },
+                naturalScrollEnabled = { layout.backgroundTouchpad.naturalScroll },
+                scrollSpeed = { layout.backgroundTouchpad.scrollSpeed },
+                tapToClick = { layout.backgroundTouchpad.tapToClick },
+                twoFingerTap = { layout.backgroundTouchpad.twoFingerTap },
+                threeFingerTap = { layout.backgroundTouchpad.threeFingerTap },
+                tapDrag = { layout.backgroundTouchpad.tapDrag },
+                onHapticFeedback = {
+                    if (layout.backgroundTouchpad.hapticsEnabled) {
+                        triggerHaptic(vibrator, HapticStrength.MEDIUM, 0, 0)
+                    }
+                },
+            )
+        }
+
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize(),
@@ -296,7 +323,7 @@ internal fun PadSurface(
                     .clip(RoundedCornerShape(MP_CORNER_RADIUS))
                     .background(if (transparentBackground) Color.Transparent else colors.macroPadSurface)
                     .onSizeChanged { canvasSizeState.value = it }
-                    .pointerInput(profile, layout, canvasSizeState.value) {
+                    .pointerInput(profile, layout, canvasSizeState.value, bgTouchpadActive) {
                         try {
                             awaitPointerEventScope {
                                 while (true) {
@@ -319,6 +346,9 @@ internal fun PadSurface(
                                         if (!change.pressed && change.previousPressed) {
                                             if (engine.isPointerTracked(id)) {
                                                 engine.onRelease(id, layout.buttons, profile)
+                                                change.consume()
+                                            } else if (bgTouchpadActive) {
+                                                bgTouchpadProcessor.onRelease(id, change.position.x, change.position.y, w, h)
                                                 change.consume()
                                             }
                                             return@forEach
@@ -361,6 +391,16 @@ internal fun PadSurface(
                                                             }
                                                         }
                                                         change.consume()
+                                                    } else if (bgTouchpadActive) {
+                                                        bgTouchpadProcessor.onPress(
+                                                            id,
+                                                            change.position.x,
+                                                            change.position.y,
+                                                            w,
+                                                            h,
+                                                            overlayOpen = viewModel.isQuickMenuOpen.value,
+                                                        )
+                                                        change.consume()
                                                     }
                                                 }
                                             }
@@ -378,6 +418,18 @@ internal fun PadSurface(
                                                         profile,
                                                     )
                                                     change.consume()
+                                                } else if (bgTouchpadActive) {
+                                                    val delta = change.positionChange()
+                                                    bgTouchpadProcessor.onMove(
+                                                        id,
+                                                        change.position.x,
+                                                        change.position.y,
+                                                        delta.x,
+                                                        delta.y,
+                                                        w,
+                                                        h,
+                                                    )
+                                                    change.consume()
                                                 }
                                             }
 
@@ -390,6 +442,9 @@ internal fun PadSurface(
                             }
                         } finally {
                             engine.releaseAll(layout.buttons)
+                            if (bgTouchpadActive) {
+                                bgTouchpadProcessor.onCancel()
+                            }
                         }
                     },
         ) {
