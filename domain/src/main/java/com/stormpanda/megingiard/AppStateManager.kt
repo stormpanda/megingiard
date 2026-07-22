@@ -322,7 +322,7 @@ object AppStateManager {
     /**
      * The app-wide active UI mode representing the screens, settings panels, or overlays currently active.
      */
-    val uiMode: StateFlow<UiMode> =
+    private val uiMode: StateFlow<UiMode> =
         combine(
             _isGlobalSettingsOpen,
             _isKeyboardSettingsOpen,
