@@ -210,9 +210,9 @@ deployed daemon binary can be picked up without a full app restart.
 
 To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` exposes a reactive background checker `checkPrivilegedModeStatus(context)`. The settings card triggers this check via a `LaunchedEffect(state)` on entering the Global Settings screen and whenever the connection state changes.
 
-It performs the following checks:
-1. **Credentials Presence:** Verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
-2. **Wireless Debugging Activity:** Reads the system property `service.adb.tls.port` via a fast `getprop` command to see if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
+`GlobalSettingsViewModel` delegates these checks to domain singletons:
+1. **Credentials Presence:** `PrivdBootstrapper.hasCredentials(context)` verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
+2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive()` reads the system property `service.adb.tls.port` via `readAdbTlsConnectPort()` to check if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
 
 The results are presented to the user as clear, localized guidance messages in the settings card:
 - **Running:** "Privileged Mode is active and running."

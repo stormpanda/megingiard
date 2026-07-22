@@ -267,12 +267,22 @@ object PrivdBootstrapper {
     }
 
     /**
+     * Returns true if saved ADB key and certificate credentials exist on disk.
+     */
+    fun hasCredentials(context: Context): Boolean = PrivdAdbConnectionManager.hasCredentials(context)
+
+    /**
+     * Returns true if the device's ADB Wireless-Debugging service is enabled and returning a port.
+     */
+    fun isWirelessDebuggingActive(): Boolean = readAdbTlsConnectPort() > 0
+
+    /**
      * Reads the ADB Wireless-Debugging TLS connect port from the system property
      * `service.adb.tls.port`. Returns 0 if the property is absent (Wireless Debugging
      * not enabled), if the `getprop` invocation hangs beyond [GETPROP_TIMEOUT_MS],
      * or if the output cannot be parsed.
      */
-    private fun readAdbTlsConnectPort(): Int {
+    fun readAdbTlsConnectPort(): Int {
         var proc: Process? = null
         return try {
             proc =

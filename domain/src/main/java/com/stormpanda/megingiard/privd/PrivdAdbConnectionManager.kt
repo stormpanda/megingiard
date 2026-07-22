@@ -65,6 +65,12 @@ internal class PrivdAdbConnectionManager private constructor(
     companion object {
         @Volatile private var instance: PrivdAdbConnectionManager? = null
 
+        fun hasCredentials(context: Context): Boolean {
+            val keyFile = File(context.applicationContext.noBackupFilesDir, KEY_FILE)
+            val certFile = File(context.applicationContext.noBackupFilesDir, CERT_FILE)
+            return keyFile.exists() && certFile.exists()
+        }
+
         @Synchronized
         fun getInstance(context: Context): PrivdAdbConnectionManager {
             instance?.let { return it }
