@@ -70,11 +70,6 @@ private val MP_CORNER_RADIUS = 0.dp
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
 internal val MP_SCREEN_PADDING = 0.dp
 
-// Sensitivity of trackpoint drag: px input → mouse delta
-private const val MP_TRACKPOINT_SENSITIVITY = 3f
-
-// Sensitivity of scroll wheel drag: px per scroll unit sent
-private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val MP_DISABLED_FEEDBACK_HIDE_MS = 1800L
 private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
 

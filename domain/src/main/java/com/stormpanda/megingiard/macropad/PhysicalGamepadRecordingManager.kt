@@ -25,12 +25,6 @@ private const val EV_ABS = 3
 private const val ABS_HAT0X = 16
 private const val ABS_HAT0Y = 17
 
-/** Normalised dead zone radius. Stick movements below this magnitude do not start a gesture. */
-// Dead zones are now per-stick, read from MacroPadSettings.deadzoneLeft / deadzoneRight.
-// The constant is kept as a documentation anchor but is no longer used directly.
-@Suppress("unused")
-private const val JOYSTICK_DEAD_ZONE_DEFAULT = 0.15f
-
 /**
  * Records buttons, D-Pad taps, and analog stick gestures from the physical gamepad
  * via the `megingiard_privd`

@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 
 private const val TAG = "MacroPadButton"
@@ -100,7 +99,6 @@ internal fun PadButton(
     }
 
     val density = LocalDensity.current
-    val colors = LocalAppColors.current
 
     val resolvedBgColorOption = btn.buttonBgColor ?: layout.buttonBgColor
     val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor

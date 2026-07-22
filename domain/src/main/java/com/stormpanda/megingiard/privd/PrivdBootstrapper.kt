@@ -25,7 +25,6 @@ private const val DAEMON_PROCESS_NAME = "megingiard_privd"
 private const val MIRROR_DEX_ASSET_NAME = "megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_PATH = "/data/local/tmp/megingiard_mirror.dex"
 private const val MIRROR_DEX_REMOTE_MODE_RAW = 33188 // 0100644 = regular + rw-r--r--
-private const val SPAWN_OK_MARKER = "MGRD_SPAWN_OK"
 
 // Marker echoed by the daemon's --provision mode on success (exits 0, then shell echoes this).
 private const val PROVISION_OK_MARKER = "MGRD_PROVISION_OK"

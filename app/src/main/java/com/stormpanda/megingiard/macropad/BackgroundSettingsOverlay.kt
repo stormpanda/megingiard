@@ -83,9 +83,6 @@ private const val TAG = "BackgroundSettingsOverlay"
 // ── Slider bounds ───────────────────────────────────────────────────────────
 private const val ASO_DIM_MAX = 0.9f
 private const val ASO_PERCENT_DIVISOR = 100f
-private val ASO_SWATCH_SIZE = 24.dp
-private val ASO_DROPDOWN_H_PADDING = 12.dp
-private val ASO_DROPDOWN_V_PADDING = 6.dp
 private val ASO_PREVIEW_ICON_SIZE = 36.dp
 private val ASO_PREVIEW_BAR_CORNER = 16.dp
 private val ASO_PREVIEW_BAR_H_PADDING = 16.dp

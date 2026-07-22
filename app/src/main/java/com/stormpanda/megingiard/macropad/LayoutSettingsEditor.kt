@@ -111,15 +111,6 @@ private const val TAG = "LayoutSettingsEditor"
 
 private val LSE_THUMBNAIL_SIZE = 40.dp
 private val LSE_THUMBNAIL_ROUNDING = 6.dp
-private const val LSE_THUMBNAIL_DIM_ALPHA = 0.7f
-private val LSE_MAGNIFIER_ICON_SIZE = 18.dp
-private const val LSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.85f
-private val LSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
-private const val LSE_PREVIEW_MODAL_BG_ALPHA = 0.6f
-private val LSE_PREVIEW_IMAGE_ROUNDING = 8.dp
-private val LSE_SPACING_16 = 16.dp
-private const val LSE_CROP_MIN_SCALE = 1f
-private const val LSE_CROP_MAX_SCALE = 5f
 private val LSE_PREVIEW_BUTTON_SIZE = 60.dp
 private val LSE_RECENT_COLORS_GRID_HEIGHT = 128.dp
 
