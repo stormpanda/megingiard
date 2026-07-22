@@ -53,8 +53,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AmbientPreviewConfig
-import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -127,7 +125,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
-            AppStateManager.setAmbientPreviewConfig(null)
+            AmbientPreviewManager.setConfig(null)
             AppLog.i(TAG, "BackgroundSettingsOverlay dismissed → injector restart handled by MacroPadViewModel watcher")
         }
     }
@@ -146,9 +144,9 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var pendingProjectionCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     val localSmoothingValues = remember(currentLayout.id) { mutableStateMapOf<String, Float>() }
 
-    // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
+    // Preview mode: driven by AmbientPreviewManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
-    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isInPreview = previewConfig != null
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
@@ -171,7 +169,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                     AmbientPreviewType.EDGE_BLENDING -> copy(mirrorEdgeBlendWidth = config.originalValue)
                 }
             }
-            AppStateManager.setAmbientPreviewConfig(null)
+            AmbientPreviewManager.setConfig(null)
         } else {
             onDone()
         }
@@ -256,7 +254,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(ambientDim = dimAlpha) }
                             },
                             onPreviewClick = {
-                                AppStateManager.setAmbientPreviewConfig(
+                                AmbientPreviewManager.setConfig(
                                     AmbientPreviewConfig(
                                         type = AmbientPreviewType.DIM,
                                         label = labelDim,
@@ -292,7 +290,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
                             },
                             onPreviewClick = {
-                                AppStateManager.setAmbientPreviewConfig(
+                                AmbientPreviewManager.setConfig(
                                     AmbientPreviewConfig(
                                         type = AmbientPreviewType.EDGE_BLENDING,
                                         label = labelEdgeBlending,

@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -90,7 +89,7 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val dimAlpha = layout?.ambientDim ?: 0f
     val isPeekActive by MacroPadState.isPeekActive.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
@@ -510,11 +509,11 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                                 AmbientPreviewType.EDGE_BLENDING -> pl.copy(mirrorEdgeBlendWidth = pc.originalValue)
                             }
                         MacroPadState.updateLayout(restored)
-                        AppStateManager.setAmbientPreviewConfig(null)
+                        AmbientPreviewManager.setConfig(null)
                     },
                     onConfirm = {
                         AppLog.d(TAG, "ambient preview ${pc.type} confirmed")
-                        AppStateManager.setAmbientPreviewConfig(null)
+                        AmbientPreviewManager.setConfig(null)
                     },
                 )
             }

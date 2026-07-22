@@ -99,6 +99,7 @@ import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
+import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
@@ -895,7 +896,7 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
-                AppStateManager.isAmbientPreviewActive,
+                AmbientPreviewManager.isActive,
                 AppStateManager.isUserLeaving,
                 TouchRecordingManager.recordingRequested,
             ) { values ->
