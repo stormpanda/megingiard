@@ -204,4 +204,298 @@ class ConfigExportImportStructureTest {
                 Dispatchers.resetMain()
             }
         }
+
+    // ── 1. Full Backup (Without Backgrounds) ──────────────────────────────────
+
+    @Test
+    fun testFullBackupWithoutBackgroundsRoundTrip() =
+        runBlocking {
+            val testDispatcher = StandardTestDispatcher()
+            Dispatchers.setMain(testDispatcher)
+            try {
+                val tempFile = File.createTempFile("datastore_full_nobg", ".preferences_pb")
+                tempFile.deleteOnExit()
+                val testDataStore =
+                    PreferenceDataStoreFactory.create(
+                        produceFile = { tempFile },
+                    )
+
+                val smStore = SettingsManager::class.java.getDeclaredField("dataStore")
+                smStore.isAccessible = true
+                smStore.set(SettingsManager, testDataStore)
+
+                val smInit = SettingsManager::class.java.getDeclaredField("initialized")
+                smInit.isAccessible = true
+                smInit.set(SettingsManager, true)
+
+                // Set initial settings
+                val initialSettings =
+                    mapOf(
+                        "global" to
+                            mapOf(
+                                "accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169),
+                                "overlay_at_bottom" to kotlinx.serialization.json.JsonPrimitive(true),
+                            ),
+                    )
+                SettingsManager.importGroupedSettingsAwait(initialSettings)
+
+                // Build full export snapshot without backgrounds
+                val export = ConfigManager.buildExport(metadata = testMetadata, includeBackgrounds = false)
+
+                // Serialize to plain JSON string & parse back
+                val jsonStr =
+                    kotlinx.serialization.json
+                        .Json { encodeDefaults = true }
+                        .encodeToString(MegingiardExport.serializer(), export)
+                val parsed = ConfigManager.parseAndVerify(jsonStr)
+
+                // Structural assertions
+                assertEquals(export.schemaVersion, parsed.schemaVersion)
+                assertEquals(export.checksum, parsed.checksum)
+                assertEquals(export.metadata.appVersionName, parsed.metadata.appVersionName)
+                assertTrue(parsed.settings.containsKey("global"))
+
+                // Re-hydrate settings into DataStore
+                SettingsManager.importGroupedSettingsAwait(parsed.settings)
+                val restoredPrefs = testDataStore.data.first()
+                assertEquals(-16743169, restoredPrefs[KEY_ACCENT_COLOR])
+                assertEquals(true, restoredPrefs[KEY_OVERLAY_AT_BOTTOM])
+            } finally {
+                Dispatchers.resetMain()
+            }
+        }
+
+    // ── 2. Full Backup (With Backgrounds ZIP Container) ─────────────────────────
+
+    @Test
+    fun testFullBackupWithBackgroundsRoundTrip() {
+        val mockImageBytes = "fake_webp_image_bytes_full_backup".toByteArray(Charsets.UTF_8)
+        val layoutId = "layout-full-bg-1"
+
+        val bgLayout =
+            com.stormpanda.megingiard.macropad.PadLayout(
+                id = layoutId,
+                name = "LayoutWithBg",
+                backgroundImagePath = "backgrounds/bg_$layoutId",
+            )
+        val bgProfile =
+            PadProfile(
+                id = "profile-full-bg",
+                name = "FullBackupProfile",
+                layouts = listOf(bgLayout),
+            )
+
+        val settingsMap = mapOf("global" to mapOf("accent_color" to kotlinx.serialization.json.JsonPrimitive(-16743169)))
+
+        val imageHash =
+            com.stormpanda.megingiard.security.HmacUtil
+                .sha256Hex(mockImageBytes)
+                .lowercase()
+        val imageHashes = mapOf("bg_$layoutId" to imageHash)
+
+        // Compute valid checksum
+        val checksumMethod =
+            ConfigManager::class.java.getDeclaredMethod(
+                "computeChecksum",
+                Map::class.java,
+                List::class.java,
+                Map::class.java,
+            )
+        checksumMethod.isAccessible = true
+        val validChecksum =
+            checksumMethod.invoke(
+                ConfigManager,
+                settingsMap,
+                listOf(bgProfile),
+                imageHashes,
+            ) as String
+
+        val export =
+            MegingiardExport(
+                schemaVersion = SCHEMA_VERSION,
+                metadata = testMetadata,
+                checksum = validChecksum,
+                settings = settingsMap,
+                profiles = listOf(bgProfile),
+            )
+
+        val jsonStr =
+            kotlinx.serialization.json
+                .Json { encodeDefaults = true }
+                .encodeToString(MegingiardExport.serializer(), export)
+
+        // Package into ZIP container stream
+        val baos = java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(baos).use { zos ->
+            zos.putNextEntry(java.util.zip.ZipEntry("config.json"))
+            zos.write(jsonStr.toByteArray(Charsets.UTF_8))
+            zos.closeEntry()
+
+            zos.putNextEntry(java.util.zip.ZipEntry("backgrounds/bg_$layoutId"))
+            zos.write(mockImageBytes)
+            zos.closeEntry()
+        }
+
+        val zipBytes = baos.toByteArray()
+        assertTrue(zipBytes.size > 4)
+        assertEquals(0x50.toByte(), zipBytes[0]) // 'P'
+        assertEquals(0x4B.toByte(), zipBytes[1]) // 'K'
+
+        // Parse ZIP container back
+        var extractedJson: String? = null
+        val extractedImages = mutableMapOf<String, ByteArray>()
+        java.util.zip.ZipInputStream(java.io.ByteArrayInputStream(zipBytes)).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                if (entry.name == "config.json") {
+                    extractedJson = zis.readBytes().toString(Charsets.UTF_8)
+                } else if (entry.name.startsWith("backgrounds/")) {
+                    extractedImages[entry.name] = zis.readBytes()
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
+
+        assertTrue(extractedJson != null)
+        assertTrue(extractedImages.containsKey("backgrounds/bg_$layoutId"))
+        assertTrue(extractedImages["backgrounds/bg_$layoutId"]!!.contentEquals(mockImageBytes))
+
+        // Verify parsed config & checksum
+        val parsed = ConfigManager.parseAndVerify(extractedJson!!, extractedImages)
+        assertEquals(validChecksum, parsed.checksum)
+        assertEquals(1, parsed.profiles.size)
+        assertEquals("FullBackupProfile", parsed.profiles[0].name)
+    }
+
+    // ── 3. Profile Share (Without Backgrounds) ────────────────────────────────
+
+    @Test
+    fun testProfileShareWithoutBackgroundsRoundTrip() =
+        runBlocking {
+            val export =
+                ConfigManager.buildProfileExport(
+                    metadata = testMetadata,
+                    profile = testProfile,
+                    includeBackgrounds = false,
+                )
+
+            // Settings MUST be empty for profile-share exports
+            assertTrue(export.settings.isEmpty())
+            assertEquals(1, export.profiles.size)
+            assertEquals(testProfile.name, export.profiles[0].name)
+
+            // Serialize to plain JSON string & parse back
+            val jsonStr =
+                kotlinx.serialization.json
+                    .Json { encodeDefaults = true }
+                    .encodeToString(MegingiardExport.serializer(), export)
+            val parsed = ConfigManager.parseAndVerify(jsonStr)
+
+            // Assert settings map remains empty and profile is intact
+            assertTrue(parsed.settings.isEmpty())
+            assertEquals(export.checksum, parsed.checksum)
+            assertEquals(testProfile.id, parsed.profiles[0].id)
+            assertEquals(testProfile.name, parsed.profiles[0].name)
+        }
+
+    // ── 4. Profile Share (With Backgrounds ZIP Container) ─────────────────────
+
+    @Test
+    fun testProfileShareWithBackgroundsRoundTrip() {
+        val mockImageBytes = "fake_webp_image_bytes_profile_share".toByteArray(Charsets.UTF_8)
+        val layoutId = "layout-profile-share-bg"
+
+        val bgLayout =
+            com.stormpanda.megingiard.macropad.PadLayout(
+                id = layoutId,
+                name = "SharedLayoutWithBg",
+                backgroundImagePath = "backgrounds/bg_$layoutId",
+            )
+        val bgProfile =
+            PadProfile(
+                id = "profile-share-bg",
+                name = "SharedProfileWithBg",
+                layouts = listOf(bgLayout),
+            )
+
+        val imageHash =
+            com.stormpanda.megingiard.security.HmacUtil
+                .sha256Hex(mockImageBytes)
+                .lowercase()
+        val imageHashes = mapOf("bg_$layoutId" to imageHash)
+
+        val checksumMethod =
+            ConfigManager::class.java.getDeclaredMethod(
+                "computeChecksum",
+                Map::class.java,
+                List::class.java,
+                Map::class.java,
+            )
+        checksumMethod.isAccessible = true
+        val validChecksum =
+            checksumMethod.invoke(
+                ConfigManager,
+                emptyMap<String, Map<String, Any>>(),
+                listOf(bgProfile),
+                imageHashes,
+            ) as String
+
+        val export =
+            MegingiardExport(
+                schemaVersion = SCHEMA_VERSION,
+                metadata = testMetadata,
+                checksum = validChecksum,
+                settings = emptyMap(),
+                profiles = listOf(bgProfile),
+            )
+
+        val jsonStr =
+            kotlinx.serialization.json
+                .Json { encodeDefaults = true }
+                .encodeToString(MegingiardExport.serializer(), export)
+
+        // Package into ZIP container stream
+        val baos = java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(baos).use { zos ->
+            zos.putNextEntry(java.util.zip.ZipEntry("config.json"))
+            zos.write(jsonStr.toByteArray(Charsets.UTF_8))
+            zos.closeEntry()
+
+            zos.putNextEntry(java.util.zip.ZipEntry("backgrounds/bg_$layoutId"))
+            zos.write(mockImageBytes)
+            zos.closeEntry()
+        }
+
+        val zipBytes = baos.toByteArray()
+        assertTrue(zipBytes.size > 4)
+        assertEquals(0x50.toByte(), zipBytes[0])
+
+        // Parse ZIP container back
+        var extractedJson: String? = null
+        val extractedImages = mutableMapOf<String, ByteArray>()
+        java.util.zip.ZipInputStream(java.io.ByteArrayInputStream(zipBytes)).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                if (entry.name == "config.json") {
+                    extractedJson = zis.readBytes().toString(Charsets.UTF_8)
+                } else if (entry.name.startsWith("backgrounds/")) {
+                    extractedImages[entry.name] = zis.readBytes()
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
+
+        assertTrue(extractedJson != null)
+        assertTrue(extractedImages.containsKey("backgrounds/bg_$layoutId"))
+        assertTrue(extractedImages["backgrounds/bg_$layoutId"]!!.contentEquals(mockImageBytes))
+
+        // Verify parsed profile-share config & checksum
+        val parsed = ConfigManager.parseAndVerify(extractedJson!!, extractedImages)
+        assertTrue(parsed.settings.isEmpty())
+        assertEquals(validChecksum, parsed.checksum)
+        assertEquals(1, parsed.profiles.size)
+        assertEquals("SharedProfileWithBg", parsed.profiles[0].name)
+    }
 }
