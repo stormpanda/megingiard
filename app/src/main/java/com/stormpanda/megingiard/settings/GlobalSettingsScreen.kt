@@ -572,11 +572,12 @@ fun GlobalSettingsScreen(
                 defaultMetadata = ConfigManager.defaultMetadata(context),
                 colors = colors,
                 accentColor = effectiveAccent,
-                onConfirm = { metadata ->
+                onConfirm = { metadata, includeBackgrounds ->
                     showExportMetadataDialog = false
                     ConfigManager.requestExport(
                         metadata = metadata,
                         filename = buildExportFilename(metadata),
+                        includeBackgrounds = includeBackgrounds,
                     )
                 },
                 onDismiss = { showExportMetadataDialog = false },
@@ -586,12 +587,13 @@ fun GlobalSettingsScreen(
             ProfileExportDialog(
                 colors = colors,
                 accentColor = effectiveAccent,
-                onConfirm = { metadata, profile ->
+                onConfirm = { metadata, profile, includeBackgrounds ->
                     showProfileExportDialog = false
                     ConfigManager.requestProfileExport(
                         metadata = metadata,
                         profile = profile,
                         filename = buildProfileExportFilename(metadata, profile.name),
+                        includeBackgrounds = includeBackgrounds,
                     )
                 },
                 onDismiss = { showProfileExportDialog = false },
@@ -609,8 +611,8 @@ fun GlobalSettingsScreen(
                     coroutineScope.launch {
                         runCatching {
                             when (mode) {
-                                ConfigManager.ImportMode.BACKUP_RESTORE -> ConfigManager.applyImport(export)
-                                ConfigManager.ImportMode.PROFILE_SHARE -> ConfigManager.applyProfileImport(export)
+                                ConfigManager.ImportMode.BACKUP_RESTORE -> ConfigManager.applyImport(context, export)
+                                ConfigManager.ImportMode.PROFILE_SHARE -> ConfigManager.applyProfileImport(context, export)
                             }
                         }.onSuccess {
                             when (mode) {

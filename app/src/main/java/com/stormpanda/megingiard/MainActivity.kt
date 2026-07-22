@@ -129,10 +129,24 @@ class MainActivity : ComponentActivity() {
                 runCatching {
                     val export =
                         when (kind) {
-                            is ConfigManager.ExportKind.Backup -> ConfigManager.buildExport(kind.metadata)
-                            is ConfigManager.ExportKind.ProfileShare -> ConfigManager.buildProfileExport(kind.metadata, kind.profile)
+                            is ConfigManager.ExportKind.Backup -> {
+                                ConfigManager.buildExport(
+                                    kind.metadata,
+                                    this@MainActivity,
+                                    kind.includeBackgrounds,
+                                )
+                            }
+
+                            is ConfigManager.ExportKind.ProfileShare -> {
+                                ConfigManager.buildProfileExport(
+                                    kind.metadata,
+                                    kind.profile,
+                                    this@MainActivity,
+                                    kind.includeBackgrounds,
+                                )
+                            }
                         }
-                    ConfigManager.writeToUri(this@MainActivity, uri, export)
+                    ConfigManager.writeToUri(this@MainActivity, uri, export, kind.includeBackgrounds)
                 }.onSuccess {
                     AppLog.i(TAG, "Export written to $uri")
                     ConfigManager.setExportResult(ConfigManager.ExportResult.Success)

@@ -167,7 +167,7 @@ fun MainAppScreen() {
         val uri = pendingImportUri ?: return@LaunchedEffect
         AppLog.d(TAG, "Parsing SAF import URI")
         ConfigManager
-            .parseImportUri(context, uri)
+            .parseImportUri(context, uri, isInApp = false)
             .onSuccess { export ->
                 AppLog.i(TAG, "SAF import parsed: ${export.profiles.size} profile(s)")
                 ConfigManager.setParsedImport(export)
@@ -182,7 +182,7 @@ fun MainAppScreen() {
         val uri = pendingInAppUri ?: return@LaunchedEffect
         AppLog.d(TAG, "Parsing in-app import URI")
         ConfigManager
-            .parseImportUri(context, uri)
+            .parseImportUri(context, uri, isInApp = true)
             .onSuccess { export ->
                 AppLog.i(TAG, "In-app import parsed: ${export.profiles.size} profile(s)")
                 ConfigManager.setInAppParsedImport(export)
@@ -469,7 +469,7 @@ fun MainAppScreen() {
                 export = export,
                 onConfirm = {
                     coroutineScope.launch {
-                        ConfigManager.applyImport(export)
+                        ConfigManager.applyImport(context, export)
                         ConfigManager.clearPendingImport()
                     }
                 },

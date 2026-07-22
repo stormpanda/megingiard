@@ -23,6 +23,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -78,12 +80,13 @@ internal fun ExportMetadataDialog(
     defaultMetadata: ExportMetadata,
     colors: AppColors,
     accentColor: Color,
-    onConfirm: (ExportMetadata) -> Unit,
+    onConfirm: (ExportMetadata, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var tags by rememberSaveable { mutableStateOf("") }
+    var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
     val fieldColors =
         OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -103,6 +106,7 @@ internal fun ExportMetadataDialog(
                 description = description.trim().ifEmpty { null },
                 tags = parsedTags,
             ),
+            includeBackgrounds,
         )
     }
     BackHandler(onBack = onDismiss)
@@ -152,6 +156,31 @@ internal fun ExportMetadataDialog(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { includeBackgrounds = !includeBackgrounds },
+        ) {
+            Checkbox(
+                checked = includeBackgrounds,
+                onCheckedChange = { includeBackgrounds = it },
+                colors =
+                    CheckboxDefaults.colors(
+                        checkedColor = accentColor,
+                        uncheckedColor = colors.onSurfaceSecondary,
+                        checkmarkColor = colors.surface,
+                    ),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.config_export_include_backgrounds),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -283,6 +312,16 @@ internal fun ImportPreviewDialog(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        val imageCount =
+            ConfigManager.getPendingInAppImageCount().takeIf { it > 0 }
+                ?: export.profiles.sumOf { p -> p.layouts.count { !it.backgroundImagePath.isNullOrEmpty() } }
+        if (imageCount > 0) {
+            Text(
+                text = "\u2022 ${stringResource(R.string.config_import_section_background_images, imageCount)}",
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Spacer(Modifier.height(4.dp))
         Text(
             text = warningText,
@@ -341,7 +380,7 @@ internal fun InTreeMessageDialog(
 internal fun ProfileExportDialog(
     colors: AppColors,
     accentColor: Color,
-    onConfirm: (ExportMetadata, PadProfile) -> Unit,
+    onConfirm: (ExportMetadata, PadProfile, Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val profiles by MacroPadState.profiles.collectAsState()
@@ -352,6 +391,7 @@ internal fun ProfileExportDialog(
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var tags by rememberSaveable { mutableStateOf("") }
+    var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
     val context = LocalContext.current
     val fieldColors =
         OutlinedTextFieldDefaults.colors(
@@ -422,6 +462,32 @@ internal fun ProfileExportDialog(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { includeBackgrounds = !includeBackgrounds },
+        ) {
+            Checkbox(
+                checked = includeBackgrounds,
+                onCheckedChange = { includeBackgrounds = it },
+                colors =
+                    CheckboxDefaults.colors(
+                        checkedColor = accentColor,
+                        uncheckedColor = colors.onSurfaceSecondary,
+                        checkmarkColor = colors.surface,
+                    ),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.config_export_include_backgrounds),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
@@ -440,7 +506,7 @@ internal fun ProfileExportDialog(
                             description = description.trim().ifEmpty { null },
                             tags = parsedTags,
                         )
-                    onConfirm(metadata, profile)
+                    onConfirm(metadata, profile, includeBackgrounds)
                 },
                 enabled = profile != null,
             ) {
