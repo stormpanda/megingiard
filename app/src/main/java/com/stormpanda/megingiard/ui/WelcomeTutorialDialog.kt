@@ -32,9 +32,7 @@ fun WelcomeTutorialDialog(onDismiss: () -> Unit) {
         AppLog.d(TAG, "Welcome tutorial dialog shown")
     }
 
-    AlertDialog(
-        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-        containerColor = colors.surface,
+    AppAlertDialog(
         onDismissRequest = {
             AppLog.d(TAG, "Welcome tutorial dialog dismissed via request")
             onDismiss()

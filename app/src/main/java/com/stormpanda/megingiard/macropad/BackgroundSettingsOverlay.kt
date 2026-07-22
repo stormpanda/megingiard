@@ -62,6 +62,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
@@ -577,7 +578,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
         if (pendingProjectionCutout != null) {
             val targetCutout = pendingProjectionCutout!!
-            AlertDialog(
+            AppAlertDialog(
                 onDismissRequest = { pendingProjectionCutout = null },
                 title = {
                     Text(
@@ -619,7 +620,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                         Text(text = stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                     }
                 },
-                containerColor = colors.surface,
             )
         }
     }

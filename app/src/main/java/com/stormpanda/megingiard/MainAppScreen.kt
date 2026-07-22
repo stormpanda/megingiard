@@ -667,10 +667,8 @@ private fun IncomingImportDialog(
 ) {
     val colors = LocalAppColors.current
     val meta = export.metadata
-    AlertDialog(
-        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
+    AppAlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
         title = {
             Text(
                 stringResource(R.string.config_import_title),

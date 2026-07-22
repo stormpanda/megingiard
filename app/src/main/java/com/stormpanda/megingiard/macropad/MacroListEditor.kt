@@ -52,6 +52,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -344,9 +345,7 @@ private fun MacroListView(
                 ?.layouts
                 ?.flatMap { it.buttons }
                 ?.count { (it.action as? PadAction.Macro)?.macroId == macroId } ?: 0
-        AlertDialog(
-            modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-            containerColor = colors.surface,
+        AppAlertDialog(
             onDismissRequest = { deletingMacroId = null },
             title = { Text(stringResource(R.string.macropad_macro_delete_title), color = colors.onSurface) },
             text = {

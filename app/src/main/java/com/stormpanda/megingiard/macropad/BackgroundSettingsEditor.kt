@@ -93,6 +93,7 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
@@ -590,8 +591,7 @@ internal fun BackgroundSettingsEditor(
         }
 
         if (showApiTokenMissingDialog) {
-            AlertDialog(
-                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
+            AppAlertDialog(
                 onDismissRequest = { showApiTokenMissingDialog = false },
                 title = {
                     Text(
@@ -630,8 +630,6 @@ internal fun BackgroundSettingsEditor(
                         )
                     }
                 },
-                containerColor = colors.surface,
-                shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS),
             )
         }
     }

@@ -39,6 +39,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.settings.SettingsSection
 import com.stormpanda.megingiard.settings.SliderSettingRow
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
@@ -270,7 +271,7 @@ internal fun BackgroundTouchpadSettingsEditor(
 
     // Confirmation dialog when enabling Background Touchpad while Touch Projection is active
     if (showConflictDialog) {
-        AlertDialog(
+        AppAlertDialog(
             onDismissRequest = { showConflictDialog = false },
             title = {
                 Text(
@@ -303,7 +304,6 @@ internal fun BackgroundTouchpadSettingsEditor(
                     Text(text = stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                 }
             },
-            containerColor = colors.surface,
         )
     }
 }
