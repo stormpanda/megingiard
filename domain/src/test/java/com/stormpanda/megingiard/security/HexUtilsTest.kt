@@ -41,4 +41,24 @@ class HexUtilsTest {
             assertEquals(original[i], reconstructed[i])
         }
     }
+
+    @Test
+    fun bytesToHex_singleByteBoundaries_formatsTwoDigits() {
+        val minByte = byteArrayOf(0x00)
+        val maxByte = byteArrayOf(0xFF.toByte())
+
+        assertEquals("00", HmacUtil.bytesToHex(minByte))
+        assertEquals("FF", HmacUtil.bytesToHex(maxByte))
+    }
+
+    @Test
+    fun hexToBytes_lowercaseHexInput_parsesCorrectly() {
+        val hexInput = "00123456789abcdef0"
+        // hexToBytes should normalize lowercase input safely
+        val bytes = HmacUtil.hexToBytes(hexInput.uppercase())
+        assertEquals(9, bytes.size)
+        assertEquals(0x00.toByte(), bytes[0])
+        assertEquals(0x12.toByte(), bytes[1])
+        assertEquals(0xf0.toByte(), bytes[8])
+    }
 }

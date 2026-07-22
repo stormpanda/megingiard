@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.input
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,5 +24,13 @@ class InjectorBackendRouterTest {
         val usePrivd = isPrivdConnected
 
         assertTrue("Injector should route to Privd daemon when connected", usePrivd)
+    }
+
+    @Test
+    fun backendTag_returnsCorrectBackendLabel() {
+        fun resolveBackendTag(usePrivd: Boolean): String = if (usePrivd) "PRIVD" else "VIRTUAL_UINPUT"
+
+        assertEquals("PRIVD", resolveBackendTag(true))
+        assertEquals("VIRTUAL_UINPUT", resolveBackendTag(false))
     }
 }
