@@ -11,14 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -73,16 +73,8 @@ fun AppModalDialog(
                     .shadow(APP_DIALOG_ELEVATION, RoundedCornerShape(cornerRadius))
                     .background(colors.surface, RoundedCornerShape(cornerRadius))
                     .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(cornerRadius))
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val event = awaitPointerEvent(PointerEventPass.Final)
-                                event.changes.forEach { change ->
-                                    if (!change.isConsumed) change.consume()
-                                }
-                            }
-                        }
-                    }.clickable(
+                    .blockPointerEvents()
+                    .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {}, // absorb clicks to prevent scrim dismiss
@@ -90,4 +82,43 @@ fun AppModalDialog(
             content = content,
         )
     }
+}
+
+/**
+ * Centralized wrapper around Material 3 [AlertDialog] that automatically applies the
+ * app's dual-corner bezel light refraction border ([rememberQuickMenuBezelBrush]) and
+ * theme colors.
+ *
+ * @param onDismissRequest Called when the user tries to dismiss the dialog.
+ * @param confirmButton The primary action button.
+ * @param modifier Optional [Modifier] for the dialog window.
+ * @param dismissButton Optional secondary action button.
+ * @param icon Optional icon displayed above the title.
+ * @param title Optional title text composable.
+ * @param text Optional body text composable.
+ */
+@Composable
+fun AppAlertDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissButton: (@Composable () -> Unit)? = null,
+    icon: (@Composable () -> Unit)? = null,
+    title: (@Composable () -> Unit)? = null,
+    text: (@Composable () -> Unit)? = null,
+) {
+    val colors = LocalAppColors.current
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = confirmButton,
+        modifier = modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
+        dismissButton = dismissButton,
+        icon = icon,
+        title = title,
+        text = text,
+        containerColor = colors.surface,
+        iconContentColor = colors.onSurface,
+        titleContentColor = colors.onSurface,
+        textContentColor = colors.onSurfaceSecondary,
+    )
 }

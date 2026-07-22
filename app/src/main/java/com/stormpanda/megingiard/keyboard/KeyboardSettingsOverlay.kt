@@ -40,6 +40,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
+import com.stormpanda.megingiard.ui.SettingsOverlayScaffold
 import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
@@ -63,75 +64,39 @@ fun KeyboardSettingsOverlay(
         }
     }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
+    SettingsOverlayScaffold(
+        title = stringResource(R.string.settings_keyboard_title),
+        onBack = onBack,
+        onHelpClick = { showHelp = true },
     ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.settings_keyboard_title),
-                            color = colors.onSurface,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = stringResource(R.string.settings_back),
-                                tint = colors.onSurface,
-                            )
-                        }
-                    },
-                    actions = {
-                        HelpIconButton(onClick = { showHelp = true })
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
-                )
-            },
-        ) { paddingValues ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_general),
-                    colors = colors,
-                ) {
-                    LayoutDropdownRow(
-                        currentLayout = currentLayout,
-                        onLayoutSelected = { viewModel.setKbLayout(it) },
-                    )
+        SettingsSection(
+            title = stringResource(R.string.settings_section_general),
+            colors = colors,
+        ) {
+            LayoutDropdownRow(
+                currentLayout = currentLayout,
+                onLayoutSelected = { viewModel.setKbLayout(it) },
+            )
 
-                    AppSettingsRow {
-                        SettingLabelColumn(
-                            label = stringResource(R.string.settings_kb_touchpad),
-                            subtitle = stringResource(R.string.settings_kb_touchpad_desc),
-                            modifier = Modifier.weight(1f),
-                        )
-                        Switch(
-                            checked = kbTouchpadEnabled,
-                            onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
-                            colors = appSwitchColors(),
-                        )
-                    }
-                }
+            AppSettingsRow {
+                SettingLabelColumn(
+                    label = stringResource(R.string.settings_kb_touchpad),
+                    subtitle = stringResource(R.string.settings_kb_touchpad_desc),
+                    modifier = Modifier.weight(1f),
+                )
+                Switch(
+                    checked = kbTouchpadEnabled,
+                    onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
+                    colors = appSwitchColors(),
+                )
             }
         }
-
-        KeyboardSettingsHelpModal(
-            visible = showHelp,
-            onDismiss = { showHelp = false },
-        )
     }
+
+    KeyboardSettingsHelpModal(
+        visible = showHelp,
+        onDismiss = { showHelp = false },
+    )
 }
 
 @Composable

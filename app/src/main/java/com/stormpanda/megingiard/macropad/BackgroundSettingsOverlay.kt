@@ -712,30 +712,26 @@ private fun AsoSliderRow(
     onValueChangeFinished: (() -> Unit)? = null,
     onPreviewClick: () -> Unit,
 ) {
-    val colors = LocalAppColors.current
-    AppSettingsRow {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
-            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-        }
-        Slider(
-            modifier = Modifier.weight(2f),
-            value = value,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = valueRange,
-        )
-        IconButton(
-            onClick = onPreviewClick,
-            modifier = Modifier.size(ASO_PREVIEW_ICON_SIZE),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Visibility,
-                contentDescription = stringResource(R.string.ambient_preview),
-                tint = accentColor.copy(alpha = 0.7f),
-            )
-        }
-    }
+    com.stormpanda.megingiard.settings.SliderSettingRow(
+        label = label,
+        value = value,
+        valueRange = valueRange,
+        formatLabel = formatLabel,
+        onValueChange = onValueChange,
+        onValueChangeFinished = onValueChangeFinished,
+        trailingContent = {
+            IconButton(
+                onClick = onPreviewClick,
+                modifier = Modifier.size(ASO_PREVIEW_ICON_SIZE),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Visibility,
+                    contentDescription = stringResource(R.string.ambient_preview),
+                    tint = accentColor.copy(alpha = 0.7f),
+                )
+            }
+        },
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

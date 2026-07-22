@@ -76,6 +76,7 @@ import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
@@ -510,10 +511,8 @@ fun MainAppScreen() {
         }
 
         importError?.let { error ->
-            AlertDialog(
-                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
+            AppAlertDialog(
                 onDismissRequest = { importError = null },
-                containerColor = colors.surface,
                 title = { Text(stringResource(R.string.config_error_title), color = colors.onSurface) },
                 text = {
                     Text(
@@ -533,8 +532,7 @@ fun MainAppScreen() {
         }
 
         if (showExitDialog) {
-            AlertDialog(
-                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
+            AppAlertDialog(
                 onDismissRequest = { showExitDialog = false },
                 title = { Text(stringResource(R.string.exit_dialog_title), color = colors.onSurface) },
                 text = { Text(stringResource(R.string.exit_dialog_message), color = colors.onSurface) },
@@ -548,7 +546,6 @@ fun MainAppScreen() {
                         Text(stringResource(R.string.exit_dialog_cancel), color = colors.accent)
                     }
                 },
-                containerColor = colors.surface,
             )
         }
     }
