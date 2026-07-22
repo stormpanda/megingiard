@@ -44,15 +44,16 @@ At runtime, `BinaryIntegrity.verify()` fails closed if an asset is missing from 
 
 ### Runtime Verification
 
-Native helpers follow a pre-exec verification sequence:
+Native helpers follow a pre-exec verification sequence in `NativeBinaryInjector`:
 
 1. Read the asset fully into memory.
 2. Verify the in-memory bytes against `NativeBinaryHashes.EXPECTED`.
-3. Write the asset to app-private storage.
-4. Re-read the written file and verify SHA-256 again.
-5. Only then set the executable bit and mark the file non-writable.
-
-Privileged Mode bootstrap verifies `megingiard_privd_arm64` and `megingiard_mirror.dex` before pushing either file over ADB `sync:`. A daemon verification failure aborts bootstrap; a mirror DEX verification failure leaves the normal MediaProjection fallback path available.
+3. If an existing binary file is present in `filesDir`, mark it writable and delete it to clear stale file permission locks or read-only flags from prior runs or app data restores.
+4. Write the asset bytes to app-private storage.
+5. Re-read the written file and verify SHA-256 again (TOCTOU check).
+6. Set the executable bit (`setExecutable(true, false)`) and verify the operation succeeded; abort deployment and log rich file statistics (`exists`, `length`, `canRead`, `canWrite`, `canExecute`) if `setExecutable` returns `false`.
+7. Mark the binary file read-only (`setWritable(false, false)`).
+8. On process launch failure or readiness handshake timeout, log full file permission statistics and capture the process `exitValue` and native `stderr` output.
 
 ### Privd Authentication Key
 

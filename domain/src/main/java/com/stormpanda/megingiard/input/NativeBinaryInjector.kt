@@ -73,7 +73,21 @@ abstract class NativeBinaryInjector<T>(
             process = p
             writer = BufferedWriter(OutputStreamWriter(p.outputStream))
             if (!waitForReady(p)) {
-                AppLog.w(tag, "Binary did not signal ready — tearing down")
+                val exitValue = if (!p.isAlive) p.exitValue().toString() else "ALIVE"
+                val stderr =
+                    try {
+                        p.errorStream
+                            .bufferedReader()
+                            .readText()
+                            .trim()
+                    } catch (_: Exception) {
+                        ""
+                    }
+                AppLog.w(
+                    tag,
+                    "Binary '$assetName' did not signal ready — tearing down. " +
+                        "ExitValue=$exitValue${if (stderr.isNotEmpty()) ", stderr='$stderr'" else ""}",
+                )
                 try {
                     writer?.close()
                 } catch (_: Exception) {
@@ -94,7 +108,12 @@ abstract class NativeBinaryInjector<T>(
                     it.start()
                 }
         } catch (e: Exception) {
-            AppLog.e(tag, "Failed to start injector: $e")
+            AppLog.e(
+                tag,
+                "Failed to start injector binary '$assetName' at [${binary.absolutePath}]: $e " +
+                    "[fileStats: exists=${binary.exists()}, length=${binary.length()}B, " +
+                    "read=${binary.canRead()}, write=${binary.canWrite()}, exec=${binary.canExecute()}]",
+            )
         }
     }
 
@@ -231,9 +250,14 @@ abstract class NativeBinaryInjector<T>(
                 AppLog.e(tag, "Refusing to deploy $assetName — integrity check failed")
                 return null
             }
-            // Ensure the destination is writable (it may be read-only from a
-            // previous deploy — see setWritable call at the end of this method).
-            if (dest.exists()) dest.setWritable(true, false)
+            // Ensure the destination is writable and delete existing binary if present
+            // to clear any stale file permission locks or read-only flags from prior deploys.
+            if (dest.exists()) {
+                dest.setWritable(true, false)
+                if (!dest.delete()) {
+                    AppLog.w(tag, "Could not delete existing binary file before redeployment: ${dest.absolutePath}")
+                }
+            }
             dest.outputStream().use { output -> output.write(bytes) }
             // TOCTOU mitigation: re-read from disk and re-verify SHA-256 before
             // granting the execute bit. This closes the window in which an
@@ -246,13 +270,28 @@ abstract class NativeBinaryInjector<T>(
                 dest.delete()
                 return null
             }
-            dest.setExecutable(true, false)
+            if (!dest.setExecutable(true, false)) {
+                AppLog.e(
+                    tag,
+                    "Failed to set executable flag (+x) on $assetName " +
+                        "[stats: exists=${dest.exists()}, length=${dest.length()}B, " +
+                        "read=${dest.canRead()}, write=${dest.canWrite()}, exec=${dest.canExecute()}]",
+                )
+                return null
+            }
             // Lock the file against writes so neither the app nor a future code
             // path with a path-traversal bug can silently overwrite it.
-            dest.setWritable(false, false)
+            if (!dest.setWritable(false, false)) {
+                AppLog.w(tag, "Could not mark binary $assetName read-only after deployment")
+            }
             dest
         } catch (e: Exception) {
-            AppLog.e(tag, "Failed to deploy binary: $e")
+            AppLog.e(
+                tag,
+                "Failed to deploy binary $assetName: $e " +
+                    "[dest: path=${dest.absolutePath}, exists=${dest.exists()}, " +
+                    "read=${dest.canRead()}, write=${dest.canWrite()}, exec=${dest.canExecute()}]",
+            )
             null
         }
     }
