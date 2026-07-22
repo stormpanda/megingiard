@@ -106,20 +106,26 @@ class MegingiardAccessibilityService : AccessibilityService() {
         }
 
         /**
-         * Scans all visible accessibility text nodes in active windows and returns the aggregated text.
+         * Scans visible accessibility text nodes on the specified display (default: primary screen / Display 0)
+         * and returns the aggregated text.
          */
-        fun scanActiveWindowText(): String {
+        fun scanActiveWindowText(targetDisplayId: Int = Display.DEFAULT_DISPLAY): String {
             val service = instance ?: return ""
             val sb = StringBuilder()
             try {
-                val rootNode = service.rootInActiveWindow
-                if (rootNode != null) {
-                    collectNodeText(rootNode, sb)
-                }
                 for (window in service.windows) {
-                    val windowRoot = window.root
-                    if (windowRoot != null && windowRoot != rootNode) {
-                        collectNodeText(windowRoot, sb)
+                    if (window.displayId == targetDisplayId) {
+                        val windowRoot = window.root
+                        if (windowRoot != null) {
+                            collectNodeText(windowRoot, sb)
+                        }
+                    }
+                }
+                // Fallback: if no windows matched targetDisplayId, check rootInActiveWindow
+                if (sb.isEmpty()) {
+                    val rootNode = service.rootInActiveWindow
+                    if (rootNode != null) {
+                        collectNodeText(rootNode, sb)
                     }
                 }
             } catch (e: Exception) {
