@@ -67,6 +67,7 @@ class KeyRepeatController(
     ): Boolean {
         val id = keyId ?: return false
         val keyDef = findKeyInLayout(layout, id) ?: return false
+        AppLog.d(TAG, "onKeyDown keyId=$id type=${keyDef.type}")
 
         when (keyDef.type) {
             KeyType.NORMAL -> {
@@ -270,6 +271,7 @@ class KeyRepeatController(
 
     /** Clean up all state. Call when the keyboard screen leaves composition. */
     fun dispose() {
+        AppLog.d(TAG, "dispose")
         repeatJob?.cancel()
         modifierHoldJob?.cancel()
         pointerKeyMap.clear()

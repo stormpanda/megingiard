@@ -28,6 +28,12 @@ fun shouldKeepPrimaryGameFocus(state: MacroPadFocusPolicyState): Boolean {
             state.isGlobalSettingsOpen ||
             state.isKeyboardSettingsOpen ||
             state.isTouchpadSettingsOpen
-    return state.isFullscreenKeyboardActive ||
-        (state.isMacroPadSurfaceActive && !hasInteractiveOverlay)
+    val keepFocus =
+        state.isFullscreenKeyboardActive ||
+            (state.isMacroPadSurfaceActive && !hasInteractiveOverlay)
+    AppLog.d(
+        TAG,
+        "shouldKeepPrimaryGameFocus=$keepFocus (macroPadActive=${state.isMacroPadSurfaceActive}, overlayActive=$hasInteractiveOverlay)",
+    )
+    return keepFocus
 }
