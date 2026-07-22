@@ -18,11 +18,12 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 
 | Source file                           | Output asset                                 | Build script                                                                                                                                          |
 | ------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/src/main/cpp/touchinjector.c`    | `app/src/main/assets/touchinjector_arm64`    | `./build_mouseinjector.sh` currently rebuilds the mouse injector only; rebuild touch manually with the command below until a dedicated script exists. |
+| `app/src/main/cpp/touchinjector.c`    | `app/src/main/assets/touchinjector_arm64`    | `./build_touchinjector.sh`                                                                                                                            |
 | `app/src/main/cpp/keyinjector.c`      | `app/src/main/assets/keyinjector_arm64`      | `./build_keyinjector.sh`                                                                                                                              |
 | `app/src/main/cpp/mouseinjector.c`    | `app/src/main/assets/mouseinjector_arm64`    | `./build_mouseinjector.sh`                                                                                                                            |
 | `app/src/main/cpp/gamepadinjector.c`  | `app/src/main/assets/gamepadinjector_arm64`  | `./build_gamepadinjector.sh`                                                                                                                          |
 | `app/src/main/cpp/megingiard_privd.c` | `app/src/main/assets/megingiard_privd_arm64` | `./build_megingiard_privd.sh`                                                                                                                         |
+
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
 
