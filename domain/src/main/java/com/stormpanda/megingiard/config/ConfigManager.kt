@@ -613,9 +613,13 @@ object ConfigManager {
                         } else if (!layout.backgroundImagePath.isNullOrEmpty()) {
                             val bgPath = layout.backgroundImagePath!!
                             val srcFile = File(context.filesDir, bgPath)
+                            val filesDirCanonical = context.filesDir.canonicalPath
+                            val isSafePath =
+                                !bgPath.contains("..") &&
+                                    runCatching { srcFile.canonicalPath.startsWith(filesDirCanonical) }.getOrDefault(false)
                             val srcFileFallback = File(backgroundsDir, "bg_$oldLayoutId")
                             val existingSrc =
-                                if (srcFile.exists()) {
+                                if (isSafePath && srcFile.exists()) {
                                     srcFile
                                 } else if (srcFileFallback.exists()) {
                                     srcFileFallback

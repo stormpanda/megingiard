@@ -11,12 +11,14 @@ import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
@@ -34,7 +36,9 @@ import java.io.File
  * types have the correct shape and carry the expected data. No Android APIs
  * or coroutines are involved.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ConfigExportImportStructureTest {
+    private val testJson = Json { encodeDefaults = true }
     private val testMetadata =
         com.stormpanda.megingiard.config.ExportMetadata(
             exportedAt = "2025-01-01T00:00:00Z",
@@ -139,10 +143,7 @@ class ConfigExportImportStructureTest {
             ) as String
 
         val validExport = export.copy(checksum = validChecksum)
-        val jsonStr =
-            kotlinx.serialization.json
-                .Json { encodeDefaults = true }
-                .encodeToString(MegingiardExport.serializer(), validExport)
+        val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), validExport)
 
         val parsed = ConfigManager.parseAndVerify(jsonStr)
         assertEquals(validExport.schemaVersion, parsed.schemaVersion)
@@ -243,10 +244,7 @@ class ConfigExportImportStructureTest {
                 val export = ConfigManager.buildExport(metadata = testMetadata, includeBackgrounds = false)
 
                 // Serialize to plain JSON string & parse back
-                val jsonStr =
-                    kotlinx.serialization.json
-                        .Json { encodeDefaults = true }
-                        .encodeToString(MegingiardExport.serializer(), export)
+                val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
                 val parsed = ConfigManager.parseAndVerify(jsonStr)
 
                 // Structural assertions
@@ -319,10 +317,7 @@ class ConfigExportImportStructureTest {
                 profiles = listOf(bgProfile),
             )
 
-        val jsonStr =
-            kotlinx.serialization.json
-                .Json { encodeDefaults = true }
-                .encodeToString(MegingiardExport.serializer(), export)
+        val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
 
         // Package into ZIP container stream
         val baos = java.io.ByteArrayOutputStream()
@@ -386,10 +381,7 @@ class ConfigExportImportStructureTest {
             assertEquals(testProfile.name, export.profiles[0].name)
 
             // Serialize to plain JSON string & parse back
-            val jsonStr =
-                kotlinx.serialization.json
-                    .Json { encodeDefaults = true }
-                    .encodeToString(MegingiardExport.serializer(), export)
+            val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
             val parsed = ConfigManager.parseAndVerify(jsonStr)
 
             // Assert settings map remains empty and profile is intact
@@ -450,10 +442,7 @@ class ConfigExportImportStructureTest {
                 profiles = listOf(bgProfile),
             )
 
-        val jsonStr =
-            kotlinx.serialization.json
-                .Json { encodeDefaults = true }
-                .encodeToString(MegingiardExport.serializer(), export)
+        val jsonStr = testJson.encodeToString(MegingiardExport.serializer(), export)
 
         // Package into ZIP container stream
         val baos = java.io.ByteArrayOutputStream()
