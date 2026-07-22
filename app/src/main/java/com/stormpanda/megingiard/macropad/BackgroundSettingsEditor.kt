@@ -233,20 +233,12 @@ internal fun BackgroundSettingsEditor(
                 }
             }
         } else if (currentBgPath != null) {
-            val file = File(context.filesDir, currentBgPath!!)
-            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            withContext(Dispatchers.IO) {
-                try {
-                    if (file.exists()) {
-                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                        previewBitmap = decoded?.asImageBitmap()
-                    } else {
-                        previewBitmap = null
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to decode current background image $currentBgPath", e)
-                    previewBitmap = null
-                }
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, currentBgPath!!)
+                previewBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode current background image $currentBgPath", e)
+                previewBitmap = null
             }
         } else {
             previewBitmap = null
@@ -284,46 +276,17 @@ internal fun BackgroundSettingsEditor(
                                     isSaving = true
                                     scope.launch {
                                         var bgChanged = false
+                                        val pending = pendingImageUri
                                         val finalBgPath =
-                                            withContext(Dispatchers.IO) {
-                                                val pending = pendingImageUri
-                                                if (pending != null) {
-                                                    bgChanged = true
-                                                    val backgroundsDir = File(context.filesDir, "backgrounds")
-                                                    if (!backgroundsDir.exists()) {
-                                                        backgroundsDir.mkdirs()
-                                                    }
-                                                    val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                    val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-                                                    val saved =
-                                                        BitmapUtils.saveScaledWebp(
-                                                            context = context,
-                                                            srcUri = pending,
-                                                            srcFile = null,
-                                                            destFile = destFile,
-                                                            targetW = targetW,
-                                                            targetH = targetH,
-                                                        )
-                                                    if (saved) {
-                                                        "backgrounds/bg_$layoutId"
-                                                    } else {
-                                                        null
-                                                    }
-                                                } else if (currentBgPath == null && initialBackgroundImagePath != null) {
-                                                    bgChanged = true
-                                                    val backgroundsDir = File(context.filesDir, "backgrounds")
-                                                    val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                    if (destFile.exists()) {
-                                                        try {
-                                                            destFile.delete()
-                                                        } catch (e: Exception) {
-                                                            AppLog.e(TAG, "Failed to delete background file", e)
-                                                        }
-                                                    }
-                                                    null
-                                                } else {
-                                                    currentBgPath
-                                                }
+                                            if (pending != null) {
+                                                bgChanged = true
+                                                MacroPadMediaRepository.saveBackgroundImage(context, layoutId, pending)
+                                            } else if (currentBgPath == null && initialBackgroundImagePath != null) {
+                                                bgChanged = true
+                                                MacroPadMediaRepository.deleteBackgroundImage(context, layoutId)
+                                                null
+                                            } else {
+                                                currentBgPath
                                             }
                                         onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim)
                                         isSaving = false

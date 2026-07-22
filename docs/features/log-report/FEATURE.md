@@ -56,8 +56,8 @@ MainActivity (lifecycle-aware collector)
       │  opens SAF CreateDocument("text/plain")
       ▼
 createLogDocumentLauncher callback
-      │  Dispatchers.IO: readLogcatLines() + buildReportHeader()
-      │  contentResolver.openOutputStream() → write
+      │  delegates to LogReportManager.writeReportToUri()
+      │  (Dispatchers.IO: readLogcatLines + buildReportHeader + contentResolver.openOutputStream)
       ▼
 LogReportManager.setSaveResult(Success | Failure)
       │
@@ -74,7 +74,8 @@ GlobalSettingsScreen (collectAsState) → InTreeMessageDialog feedback
 | `saveRequest: SharedFlow<Unit>`               | One-shot signal to `MainActivity` to open the file picker                                  |
 | `requestSaveReport()`                         | Posted by `GlobalSettingsViewModel`; emits to `saveRequest`                                |
 | `saveResult: StateFlow<SaveResult?>`          | Success/Failure for UI feedback; cleared after dismiss                                     |
-| `setSaveResult(result)` / `clearSaveResult()` | Written by `MainActivity` callback                                                         |
+| `setSaveResult(result)` / `clearSaveResult()` | Managed by `LogReportManager` during report generation                                     |
+| `writeReportToUri(context, uri, ...)`         | Coroutine: reads logcat output, formats header, and writes report to `uri` stream on IO    |
 | `buildReportFilename(timestamp)`              | Pure: `megingiard_log_<timestamp>.txt` (colons/spaces → hyphens/underscores)               |
 | `buildReportHeader(...)`                      | Pure: multi-line text block with app version, device, Android version, timestamp           |
 | `readLogcatLines(pid)`                        | Blocking: runs `logcat -d --pid=<pid> -v time -t 3000`; returns output or an error message |

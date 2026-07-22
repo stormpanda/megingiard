@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard.log
 
+import android.content.Context
+import android.net.Uri
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -8,6 +11,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private const val TAG = "LogReportManager"
 
@@ -22,8 +28,6 @@ private const val LOG_REPORT_FORMAT = "time"
  *
  * MainActivity observes [saveRequest] and drives the SAF file picker in
  * response, mirroring the pattern used by [ConfigManager] for config exports.
- * The actual logcat read and file write happen in MainActivity so this
- * singleton stays free of Android Context dependencies.
  */
 object LogReportManager {
     /** Result of the most recent save attempt; cleared by [clearSaveResult]. */
@@ -66,6 +70,45 @@ object LogReportManager {
         AppLog.d(TAG, "requestSaveReport")
         _saveRequest.tryEmit(Unit)
     }
+
+    /**
+     * Reads recent logcat output and writes the complete log report header and body to [uri].
+     */
+    suspend fun writeReportToUri(
+        context: Context,
+        uri: Uri,
+        appVersion: String,
+        deviceModel: String,
+        androidVersion: String,
+        pid: Int,
+    ): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val header =
+                    buildReportHeader(
+                        appVersion = appVersion,
+                        deviceModel = deviceModel,
+                        androidVersion = androidVersion,
+                        timestamp =
+                            LocalDateTime
+                                .now()
+                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                    )
+                val body = readLogcatLines(pid)
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.bufferedWriter().use { writer ->
+                        writer.write(header)
+                        writer.write(body)
+                    }
+                } ?: error("Could not open output stream for $uri")
+            }.onSuccess {
+                AppLog.i(TAG, "Log report written to $uri")
+                setSaveResult(SaveResult.Success)
+            }.onFailure { e ->
+                AppLog.e(TAG, "Log report save failed", e)
+                setSaveResult(SaveResult.Failure(e.message))
+            }
+        }
 
     // ── Pure helpers (usable on any thread, testable on JVM) ─────────────────
 

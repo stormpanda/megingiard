@@ -511,6 +511,17 @@ PadProfile
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
+### MacroPadMediaRepository (`:app`)
+
+`MacroPadMediaRepository` is an `object` singleton in `app/…/macropad/` that encapsulates all filesystem and bitmap storage operations for MacroPad layout backgrounds.
+
+| Method | Description |
+| --- | --- |
+| `loadScaledBitmap(context, relativePath)` | Safely reads and decodes a scaled bitmap for `relativePath` under `context.filesDir` on `Dispatchers.IO`. |
+| `saveBackgroundImage(context, layoutId, srcUri)` | Scales and saves `srcUri` to `backgrounds/bg_[layoutId]` as WebP on `Dispatchers.IO`. |
+| `deleteBackgroundImage(context, layoutId)` | Deletes `backgrounds/bg_[layoutId]` if it exists on `Dispatchers.IO`. |
+| `duplicateBackgroundImage(context, originalLayoutId, newLayoutId)` | Copies background file during layout or profile duplication on `Dispatchers.IO`. |
+
 ### Icon Rendering — Material Symbols Font
 
 Icons are rendered using the **Material Symbols Rounded** variable font bundled at
