@@ -91,6 +91,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -640,22 +641,20 @@ private fun getMaxOffsets(
     imageSize: IntSize,
     scale: Float,
 ): Pair<Float, Float> {
-    if (containerSize.width <= 0 || containerSize.height <= 0 || imageSize.width <= 0 || imageSize.height <= 0) {
-        return 0f to 0f
-    }
-    val cw = containerSize.width.toFloat()
-    val ch = containerSize.height.toFloat()
-    val iw = imageSize.width.toFloat()
-    val ih = imageSize.height.toFloat()
-
-    val scaleBase = maxOf(cw / iw, ch / ih)
-    val wFull = iw * scaleBase * scale
-    val hFull = ih * scaleBase * scale
-
-    val maxTx = ((wFull - cw) / 2f).coerceAtLeast(0f)
-    val maxTy = ((hFull - ch) / 2f).coerceAtLeast(0f)
-
-    return maxTx to maxTy
+    val scaleBase =
+        ViewportMath.calculateAspectFillScale(
+            containerSize.width.toFloat(),
+            containerSize.height.toFloat(),
+            imageSize.width.toFloat(),
+            imageSize.height.toFloat(),
+        )
+    return ViewportMath.getMaxOffsets(
+        containerSize.width.toFloat(),
+        containerSize.height.toFloat(),
+        imageSize.width.toFloat() * scaleBase,
+        imageSize.height.toFloat() * scaleBase,
+        scale,
+    )
 }
 
 @Composable
@@ -780,7 +779,7 @@ private fun ImageCropDialog(
                     val iw = bitmap.width.toFloat()
                     val ih = bitmap.height.toFloat()
                     if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        val scaleBase = maxOf(cw / iw, ch / ih)
+                        val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
                         val ws = iw * scaleBase
                         val hs = ih * scaleBase
 

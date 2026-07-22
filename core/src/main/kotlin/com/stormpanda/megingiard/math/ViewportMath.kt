@@ -1,0 +1,52 @@
+package com.stormpanda.megingiard.math
+
+import kotlin.math.max
+import kotlin.math.min
+
+/**
+ * Pure math helper for aspect ratio, scaling, and offset calculations across viewport displays.
+ */
+object ViewportMath {
+    /**
+     * Calculates the scale factor to fit content entirely within container bounds (letterbox).
+     */
+    fun calculateAspectFitScale(
+        containerW: Float,
+        containerH: Float,
+        contentW: Float,
+        contentH: Float,
+    ): Float {
+        if (contentW <= 0f || contentH <= 0f || containerW <= 0f || containerH <= 0f) return 1f
+        return min(containerW / contentW, containerH / contentH)
+    }
+
+    /**
+     * Calculates the scale factor to fill container bounds completely (crop/zoom).
+     */
+    fun calculateAspectFillScale(
+        containerW: Float,
+        containerH: Float,
+        contentW: Float,
+        contentH: Float,
+    ): Float {
+        if (contentW <= 0f || contentH <= 0f || containerW <= 0f || containerH <= 0f) return 1f
+        return max(containerW / contentW, containerH / contentH)
+    }
+
+    /**
+     * Calculates maximum pan translation offset bounds for content scaled within a container.
+     */
+    fun getMaxOffsets(
+        containerW: Float,
+        containerH: Float,
+        contentW: Float,
+        contentH: Float,
+        scale: Float,
+    ): Pair<Float, Float> {
+        val scaledW = contentW * scale
+        val scaledH = contentH * scale
+        val maxTx = max(0f, (scaledW - containerW) / 2f)
+        val maxTy = max(0f, (scaledH - containerH) / 2f)
+        return Pair(maxTx, maxTy)
+    }
+}

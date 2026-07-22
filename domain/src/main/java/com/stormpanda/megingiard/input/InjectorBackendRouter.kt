@@ -35,4 +35,18 @@ class InjectorBackendRouter(
      * Queries whether the underlying backend injector is active.
      */
     fun isRunning(isFallbackRunning: () -> Boolean): Boolean = if (usePrivd) PrivdClient.isConnected else isFallbackRunning()
+
+    /**
+     * Executes [privdAction] if the privileged backend is active, otherwise [shellAction].
+     */
+    inline fun dispatch(
+        privdAction: () -> Unit,
+        shellAction: () -> Unit,
+    ) {
+        if (isPrivd) {
+            privdAction()
+        } else {
+            shellAction()
+        }
+    }
 }

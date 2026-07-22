@@ -36,19 +36,11 @@ object GamepadInjector {
         get() = router.isRunning { ShellGamepadInjector.isRunning }
 
     fun buttonDown(btnCode: Int) {
-        if (router.isPrivd) {
-            PrivdGamepadInjector.buttonDown(btnCode)
-        } else {
-            ShellGamepadInjector.buttonDown(btnCode)
-        }
+        router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
     }
 
     fun buttonUp(btnCode: Int) {
-        if (router.isPrivd) {
-            PrivdGamepadInjector.buttonUp(btnCode)
-        } else {
-            ShellGamepadInjector.buttonUp(btnCode)
-        }
+        router.dispatch({ PrivdGamepadInjector.buttonUp(btnCode) }, { ShellGamepadInjector.buttonUp(btnCode) })
     }
 
     /** Sends a D-Pad hat event. axis: 0 = X (−1 left / +1 right), 1 = Y (−1 up / +1 down) */
@@ -56,11 +48,7 @@ object GamepadInjector {
         axis: Int,
         value: Int,
     ) {
-        if (router.isPrivd) {
-            PrivdGamepadInjector.hat(axis, value)
-        } else {
-            ShellGamepadInjector.hat(axis, value)
-        }
+        router.dispatch({ PrivdGamepadInjector.hat(axis, value) }, { ShellGamepadInjector.hat(axis, value) })
     }
 
     /**
@@ -73,10 +61,6 @@ object GamepadInjector {
         axisCode: Int,
         value: Int,
     ) {
-        if (router.isPrivd) {
-            PrivdGamepadInjector.joystick(axisCode, value)
-        } else {
-            ShellGamepadInjector.joystick(axisCode, value)
-        }
+        router.dispatch({ PrivdGamepadInjector.joystick(axisCode, value) }, { ShellGamepadInjector.joystick(axisCode, value) })
     }
 }

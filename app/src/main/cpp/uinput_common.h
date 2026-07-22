@@ -40,4 +40,33 @@ static inline int setup_uinput_device(int fd, uint16_t bustype, uint16_t vendor,
     return 0;
 }
 
+/**
+ * Signals readiness to stdout ("R\n"), reads lines from stdin into a buffer,
+ * passes each line to parser(line, fd), and destroys the uinput device on EOF.
+ */
+static inline int run_uinput_injector_loop(int fd, size_t buf_size, int (*parser)(const char*, int)) {
+    if (write(STDOUT_FILENO, "R\n", 2) < 0) {
+        // Ignored
+    }
+    fflush(stdout);
+
+    char *line = (char *)malloc(buf_size);
+    if (!line) {
+        ioctl(fd, UI_DEV_DESTROY);
+        close(fd);
+        return 1;
+    }
+
+    while (fgets(line, (int)buf_size, stdin)) {
+        if (parser) {
+            parser(line, fd);
+        }
+    }
+
+    free(line);
+    ioctl(fd, UI_DEV_DESTROY);
+    close(fd);
+    return 0;
+}
+
 #endif /* UINPUT_COMMON_H */

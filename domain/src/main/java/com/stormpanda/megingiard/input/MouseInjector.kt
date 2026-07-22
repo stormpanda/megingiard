@@ -32,43 +32,43 @@ object MouseInjector {
     val isRunning: Boolean get() = router.isRunning { ShellMouseInjector.isRunning }
 
     fun leftDown() {
-        if (router.isPrivd) PrivdClient.send("MB L D\n") else ShellMouseInjector.buttonDown('L')
+        router.dispatch({ PrivdClient.send("MB L D\n") }, { ShellMouseInjector.buttonDown('L') })
     }
 
     fun leftUp() {
-        if (router.isPrivd) PrivdClient.send("MB L U\n") else ShellMouseInjector.buttonUp('L')
+        router.dispatch({ PrivdClient.send("MB L U\n") }, { ShellMouseInjector.buttonUp('L') })
     }
 
     fun rightDown() {
-        if (router.isPrivd) PrivdClient.send("MB R D\n") else ShellMouseInjector.buttonDown('R')
+        router.dispatch({ PrivdClient.send("MB R D\n") }, { ShellMouseInjector.buttonDown('R') })
     }
 
     fun rightUp() {
-        if (router.isPrivd) PrivdClient.send("MB R U\n") else ShellMouseInjector.buttonUp('R')
+        router.dispatch({ PrivdClient.send("MB R U\n") }, { ShellMouseInjector.buttonUp('R') })
     }
 
     fun middleDown() {
-        if (router.isPrivd) PrivdClient.send("MB M D\n") else ShellMouseInjector.buttonDown('M')
+        router.dispatch({ PrivdClient.send("MB M D\n") }, { ShellMouseInjector.buttonDown('M') })
     }
 
     fun middleUp() {
-        if (router.isPrivd) PrivdClient.send("MB M U\n") else ShellMouseInjector.buttonUp('M')
+        router.dispatch({ PrivdClient.send("MB M U\n") }, { ShellMouseInjector.buttonUp('M') })
     }
 
     fun mouse4Down() {
-        if (router.isPrivd) PrivdClient.send("MB 4 D\n") else ShellMouseInjector.buttonDown('4')
+        router.dispatch({ PrivdClient.send("MB 4 D\n") }, { ShellMouseInjector.buttonDown('4') })
     }
 
     fun mouse4Up() {
-        if (router.isPrivd) PrivdClient.send("MB 4 U\n") else ShellMouseInjector.buttonUp('4')
+        router.dispatch({ PrivdClient.send("MB 4 U\n") }, { ShellMouseInjector.buttonUp('4') })
     }
 
     fun mouse5Down() {
-        if (router.isPrivd) PrivdClient.send("MB 5 D\n") else ShellMouseInjector.buttonDown('5')
+        router.dispatch({ PrivdClient.send("MB 5 D\n") }, { ShellMouseInjector.buttonDown('5') })
     }
 
     fun mouse5Up() {
-        if (router.isPrivd) PrivdClient.send("MB 5 U\n") else ShellMouseInjector.buttonUp('5')
+        router.dispatch({ PrivdClient.send("MB 5 U\n") }, { ShellMouseInjector.buttonUp('5') })
     }
 
     fun moveMouse(
@@ -76,19 +76,11 @@ object MouseInjector {
         dy: Int,
     ) {
         if (dx == 0 && dy == 0) return
-        if (router.isPrivd) {
-            PrivdClient.send("MM $dx $dy\n")
-        } else {
-            ShellMouseInjector.moveMouse(dx, dy)
-        }
+        router.dispatch({ PrivdClient.send("MM $dx $dy\n") }, { ShellMouseInjector.moveMouse(dx, dy) })
     }
 
     fun scrollWheel(delta: Int) {
         if (delta == 0) return
-        if (router.isPrivd) {
-            PrivdClient.send("MW $delta\n")
-        } else {
-            ShellMouseInjector.scrollWheel(delta)
-        }
+        router.dispatch({ PrivdClient.send("MW $delta\n") }, { ShellMouseInjector.scrollWheel(delta) })
     }
 }

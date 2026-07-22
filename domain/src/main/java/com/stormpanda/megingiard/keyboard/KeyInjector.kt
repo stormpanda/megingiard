@@ -37,11 +37,10 @@ object KeyInjector {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for keyDown")
             return
         }
-        if (router.isPrivd) {
-            PrivdClient.send("KD $linuxKeycode\n")
-        } else {
-            ShellKeyInjector.injectKey(KeyAction.DOWN, linuxKeycode)
-        }
+        router.dispatch(
+            privdAction = { PrivdClient.send("KD $linuxKeycode\n") },
+            shellAction = { ShellKeyInjector.injectKey(KeyAction.DOWN, linuxKeycode) },
+        )
     }
 
     fun keyUp(linuxKeycode: Int) {
@@ -49,11 +48,10 @@ object KeyInjector {
             AppLog.w(TAG, "Ignoring out-of-range linuxKeycode: $linuxKeycode for keyUp")
             return
         }
-        if (router.isPrivd) {
-            PrivdClient.send("KU $linuxKeycode\n")
-        } else {
-            ShellKeyInjector.injectKey(KeyAction.UP, linuxKeycode)
-        }
+        router.dispatch(
+            privdAction = { PrivdClient.send("KU $linuxKeycode\n") },
+            shellAction = { ShellKeyInjector.injectKey(KeyAction.UP, linuxKeycode) },
+        )
     }
 
     /** Convenience: sends key down immediately followed by key up. */

@@ -216,39 +216,23 @@ object SettingsManager {
     }
 
     fun setShowWelcomeTutorial(value: Boolean) {
-        AppLog.d(TAG, "setShowWelcomeTutorial($value)")
-        _showWelcomeTutorial.value = value
-        scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_SHOW_WELCOME_TUTORIAL] = value
-                }
-            }
-        }
+        updateSettingPref(KEY_SHOW_WELCOME_TUTORIAL, value, _showWelcomeTutorial, scope, dataStore, TAG, "setShowWelcomeTutorial")
     }
 
     fun setShowMacroEditorTutorial(value: Boolean) {
-        AppLog.d(TAG, "setShowMacroEditorTutorial($value)")
-        _showMacroEditorTutorial.value = value
-        scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = value
-                }
-            }
-        }
+        updateSettingPref(
+            KEY_SHOW_MACRO_EDITOR_TUTORIAL,
+            value,
+            _showMacroEditorTutorial,
+            scope,
+            dataStore,
+            TAG,
+            "setShowMacroEditorTutorial",
+        )
     }
 
     fun setShowQuickMenuTutorial(value: Boolean) {
-        AppLog.d(TAG, "setShowQuickMenuTutorial($value)")
-        _showQuickMenuTutorial.value = value
-        scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] = value
-                }
-            }
-        }
+        updateSettingPref(KEY_SHOW_QUICK_MENU_TUTORIAL, value, _showQuickMenuTutorial, scope, dataStore, TAG, "setShowQuickMenuTutorial")
     }
 
     fun resetAllTutorials() {
@@ -268,37 +252,15 @@ object SettingsManager {
     }
 
     fun setAutoSwitchProfiles(value: Boolean) {
-        AppLog.d(TAG, "setAutoSwitchProfiles($value)")
-        _autoSwitchProfiles.value = value
-        scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_AUTO_SWITCH_PROFILES] = value
-                }
-            }
-        }
+        updateSettingPref(KEY_AUTO_SWITCH_PROFILES, value, _autoSwitchProfiles, scope, dataStore, TAG, "setAutoSwitchProfiles")
     }
 
     fun setExcludeFromRecents(value: Boolean) {
-        AppLog.d(TAG, "setExcludeFromRecents($value)")
-        _excludeFromRecents.value = value
-        scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_EXCLUDE_FROM_RECENTS] = value
-                }
-            }
-        }
+        updateSettingPref(KEY_EXCLUDE_FROM_RECENTS, value, _excludeFromRecents, scope, dataStore, TAG, "setExcludeFromRecents")
     }
 
     fun setAccentColor(argb: Int) {
-        AppLog.d(TAG, "setAccentColor(${argb.toString(16)})")
-        _accentColor.value = argb
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_ACCENT_COLOR] = argb
-            }
-        }
+        updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, dataStore, TAG, "setAccentColor")
     }
 
     fun setThemeMode(value: ThemeMode) {
@@ -308,23 +270,11 @@ object SettingsManager {
     }
 
     fun setOverlayAtBottom(value: Boolean) {
-        AppLog.d(TAG, "setOverlayAtBottom($value)")
-        _overlayAtBottom.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_OVERLAY_AT_BOTTOM] = value
-            }
-        }
+        updateSettingPref(KEY_OVERLAY_AT_BOTTOM, value, _overlayAtBottom, scope, dataStore, TAG, "setOverlayAtBottom")
     }
 
     fun setOverlayFadeOut(value: Boolean) {
-        AppLog.d(TAG, "setOverlayFadeOut($value)")
-        _overlayFadeOut.value = value
-        scope.launch {
-            dataStore.edit { prefs ->
-                prefs[KEY_OVERLAY_FADE_OUT] = value
-            }
-        }
+        updateSettingPref(KEY_OVERLAY_FADE_OUT, value, _overlayFadeOut, scope, dataStore, TAG, "setOverlayFadeOut")
     }
 
     fun setSteamGridDbApiToken(value: String) {

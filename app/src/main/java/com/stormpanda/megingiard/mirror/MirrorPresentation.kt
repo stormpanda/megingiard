@@ -1352,7 +1352,9 @@ class MultiCutoutContainer(
                 val ch = parentH
                 val iw = bg.width.toFloat()
                 val ih = bg.height.toFloat()
-                val scaleBase = maxOf(cw / iw, ch / ih)
+                val scaleBase =
+                    com.stormpanda.megingiard.math.ViewportMath
+                        .calculateAspectFillScale(cw, ch, iw, ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
 
@@ -1544,7 +1546,9 @@ class MultiCutoutContainer(
                 val ch = parentH
                 val iw = mask.width.toFloat()
                 val ih = mask.height.toFloat()
-                val scaleBase = maxOf(cw / iw, ch / ih)
+                val scaleBase =
+                    com.stormpanda.megingiard.math.ViewportMath
+                        .calculateAspectFillScale(cw, ch, iw, ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
 

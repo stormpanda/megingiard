@@ -95,16 +95,5 @@ int main(void) {
         return 1;
     }
 
-    /* Signal readiness */
-    write(STDOUT_FILENO, "R\n", 2);
-    fflush(stdout);
-
-    char line[48];
-    while (fgets(line, sizeof(line), stdin)) {
-        parse_gamepad_command(line, fd);
-    }
-
-    ioctl(fd, UI_DEV_DESTROY);
-    close(fd);
-    return 0;
+    return run_uinput_injector_loop(fd, 48, parse_gamepad_command);
 }
