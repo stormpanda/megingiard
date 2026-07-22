@@ -86,6 +86,70 @@ class ConfigExportImportStructureTest {
     }
 
     @Test
+    fun `ExportKind_Backup carries includeBackgrounds flag`() {
+        val kindWithBg: ConfigManager.ExportKind = ConfigManager.ExportKind.Backup(testMetadata, includeBackgrounds = true)
+        val kindWithoutBg: ConfigManager.ExportKind = ConfigManager.ExportKind.Backup(testMetadata, includeBackgrounds = false)
+        assertTrue((kindWithBg as ConfigManager.ExportKind.Backup).includeBackgrounds)
+        assertTrue(!(kindWithoutBg as ConfigManager.ExportKind.Backup).includeBackgrounds)
+    }
+
+    @Test
+    fun `ExportKind_ProfileShare carries includeBackgrounds flag`() {
+        val kindWithBg: ConfigManager.ExportKind =
+            ConfigManager.ExportKind.ProfileShare(
+                testMetadata,
+                testProfile,
+                includeBackgrounds = true,
+            )
+        val kindWithoutBg: ConfigManager.ExportKind =
+            ConfigManager.ExportKind.ProfileShare(
+                testMetadata,
+                testProfile,
+                includeBackgrounds = false,
+            )
+        assertTrue((kindWithBg as ConfigManager.ExportKind.ProfileShare).includeBackgrounds)
+        assertTrue(!(kindWithoutBg as ConfigManager.ExportKind.ProfileShare).includeBackgrounds)
+    }
+
+    @Test
+    fun testParseAndVerifyPlainJson() {
+        val export =
+            MegingiardExport(
+                schemaVersion = 4,
+                metadata = testMetadata,
+                checksum = "placeholder",
+                settings = emptyMap(),
+                profiles = listOf(testProfile),
+            )
+        // Compute valid checksum
+        val checksumMethod =
+            ConfigManager::class.java.getDeclaredMethod(
+                "computeChecksum",
+                Map::class.java,
+                List::class.java,
+                Map::class.java,
+            )
+        checksumMethod.isAccessible = true
+        val validChecksum =
+            checksumMethod.invoke(
+                ConfigManager,
+                emptyMap<String, Map<String, Any>>(),
+                listOf(testProfile),
+                emptyMap<String, String>(),
+            ) as String
+
+        val validExport = export.copy(checksum = validChecksum)
+        val jsonStr =
+            kotlinx.serialization.json
+                .Json { encodeDefaults = true }
+                .encodeToString(MegingiardExport.serializer(), validExport)
+
+        val parsed = ConfigManager.parseAndVerify(jsonStr)
+        assertEquals(validExport.schemaVersion, parsed.schemaVersion)
+        assertEquals(validExport.checksum, parsed.checksum)
+    }
+
+    @Test
     fun testImportSettingsTypeSafety() =
         runBlocking {
             val testDispatcher = StandardTestDispatcher()

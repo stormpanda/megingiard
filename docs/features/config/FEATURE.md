@@ -164,7 +164,7 @@ IncomingImportDialog  ─── user confirms → ConfigManager.applyImport()
 `.mgrd` files are UTF-8 JSON with the schema defined in `ConfigSchema.kt`:
 
 > [!NOTE]
-> Custom background image binaries (stored locally in `filesDir/backgrounds/`) are **not** bundled or packaged within the `.mgrd` JSON configuration file. Only the relative path string (`backgroundImagePath`) is serialized. When importing a profile on a different device, the background image files will not be present, and the application will safely fall back to displaying a solid black background.
+> Custom background image binaries (stored locally in `filesDir/backgrounds/`) can be optionally bundled within `.mgrd` ZIP container files when exporting (controlled by an "Include background images" checkbox, checked by default, in the export metadata dialogs). When enabled, image files are archived alongside `config.json` and automatically unpacked to `filesDir/backgrounds/bg_<newLayoutId>` with remapped UUIDs on import. Daily internal backups stored locally in DataStore exclude background images to conserve disk space. For plain JSON `.mgrd` files (or when images are excluded), layout `backgroundImagePath` references are safely handled with fallback to a solid black background.
 
 **Schema v4 (current):**
 

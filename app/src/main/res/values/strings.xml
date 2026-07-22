@@ -1114,5 +1114,7 @@ Open Settings to create a layout.</string>
     <string name="settings_section_gestures">Gestures &amp; Actions</string>
     <string name="settings_section_scrolling">Scrolling</string>
     <string name="settings_section_feedback">Haptics</string>
+    <string name="config_export_include_backgrounds">Include background images</string>
+    <string name="config_import_section_background_images">Background images (%1$d)</string>
 
 </resources>
