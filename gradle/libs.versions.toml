@@ -17,6 +17,7 @@ libadbAndroid = "3.1.1"
 sunSecurityAndroid = "1.1"
 conscrypt = "2.5.0"
 robolectric = "4.12.2"
+mlkitTextRecognition = "16.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -47,6 +48,7 @@ libadb-android = { group = "com.github.MuntashirAkon", name = "libadb-android", 
 sun-security-android = { group = "com.github.MuntashirAkon", name = "sun-security-android", version.ref = "sunSecurityAndroid" }
 conscrypt-android = { group = "org.conscrypt", name = "conscrypt-android", version.ref = "conscrypt" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

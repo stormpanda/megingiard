@@ -25,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -39,6 +40,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
@@ -68,6 +71,7 @@ private val SW_DIALOG_PADDING = 20.dp
 private val SW_GAP = 12.dp
 private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
+private val SW_OCR_ICON_SIZE = 18.dp
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -326,7 +330,62 @@ private fun StepPair(
     onSubmit: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     val colors = LocalAppColors.current
+    var ocrScanning by remember { mutableStateOf(false) }
+    var ocrMessage by remember { mutableStateOf<String?>(null) }
+    var ocrSuccess by remember { mutableStateOf(false) }
+
+    fun performOcrScan() {
+        if (ocrScanning || busy) return
+        ocrMessage = null
+        ocrSuccess = false
+        if (!MegingiardAccessibilityService.isEnabled(context)) {
+            ocrMessage = context.getString(R.string.privd_wizard_ocr_accessibility_disabled)
+            return
+        }
+        ocrScanning = true
+
+        // 1. Instant node text check
+        val nodeText = MegingiardAccessibilityService.scanActiveWindowText()
+        val nodeResult = PrivdPairOcrScanner.parsePairingInfoFromText(nodeText)
+        if (nodeResult.isComplete || nodeResult.port != null || nodeResult.code != null) {
+            nodeResult.port?.let { onPairPortChange(it) }
+            nodeResult.code?.let { onCodeChange(it) }
+            if (nodeResult.isComplete) {
+                ocrScanning = false
+                ocrSuccess = true
+                ocrMessage = context.getString(R.string.privd_wizard_ocr_success)
+                return
+            }
+        }
+
+        // 2. Screenshot + ML Kit OCR fallback
+        MegingiardAccessibilityService.captureDisplayScreenshot(Display.DEFAULT_DISPLAY) { bitmap ->
+            if (bitmap == null) {
+                ocrScanning = false
+                ocrMessage = context.getString(R.string.privd_wizard_ocr_not_found)
+                return@captureDisplayScreenshot
+            }
+            PrivdPairOcrScanner.scanBitmap(bitmap) { ocrResult ->
+                bitmap.recycle()
+                ocrScanning = false
+                if (ocrResult.port != null || ocrResult.code != null) {
+                    ocrResult.port?.let { onPairPortChange(it) }
+                    ocrResult.code?.let { onCodeChange(it) }
+                    ocrSuccess = true
+                    ocrMessage = context.getString(R.string.privd_wizard_ocr_success)
+                } else {
+                    ocrMessage = context.getString(R.string.privd_wizard_ocr_not_found)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        performOcrScan()
+    }
+
     Text(
         text = stringResource(R.string.privd_wizard_step2_intro),
         color = colors.onSurface,
@@ -367,6 +426,39 @@ private fun StepPair(
             style = MaterialTheme.typography.bodySmall,
         )
     }
+
+    OutlinedButton(
+        onClick = { performOcrScan() },
+        enabled = !busy && !ocrScanning,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        if (ocrScanning) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(SW_OCR_ICON_SIZE),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.size(SW_GAP))
+            Text(stringResource(R.string.privd_wizard_ocr_scanning))
+        } else {
+            Icon(
+                imageVector = Icons.Rounded.AutoFixHigh,
+                contentDescription = null,
+                modifier = Modifier.size(SW_OCR_ICON_SIZE),
+            )
+            Spacer(modifier = Modifier.size(SW_GAP))
+            Text(stringResource(R.string.privd_wizard_autofill_ocr))
+        }
+    }
+
+    ocrMessage?.let { msg ->
+        Text(
+            text = msg,
+            color = if (ocrSuccess) MaterialTheme.colorScheme.primary else colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+
     Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
         TextButton(onClick = onBack, enabled = !busy) {
             Text(stringResource(R.string.privd_wizard_back))

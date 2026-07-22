@@ -60,6 +60,12 @@ every device since Android 11 (API 30).
 - The modal uses the same wording as the global settings "call to action" texts with the same color coding, and has a Connect button to retry and a Skip button to dismiss. If Wireless Debugging is disabled, it also displays a "Developer Settings" button to open the system developer settings directly on the main display.
 - A toggle in Global Settings allows users to enable/disable showing this prompt dialog on app start (default: true/enabled).
 
+### FR-PV8: OCR & Accessibility Pairing Auto-Fill
+
+- Step 2 (`StepPair`) of the setup wizard MUST provide an **Auto-fill with OCR** button.
+- When activated or when entering Step 2, the app MUST attempt to capture the primary display (Display 0) via `MegingiardAccessibilityService.captureDisplayScreenshot` or inspect active window accessibility text nodes.
+- Using `PrivdPairOcrScanner` (backed by Google ML Kit Text Recognition and regex parsing), the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields.
+
 
 ### FR-PV5: No Always-Connected Requirement
 
