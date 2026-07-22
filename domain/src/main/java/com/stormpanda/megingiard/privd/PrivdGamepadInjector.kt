@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.privd
 
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.GamepadKeycodes
 
 private const val TAG = "PrivdGamepadInjector"
@@ -43,12 +44,20 @@ internal object PrivdGamepadInjector {
     @Volatile internal var isRecordingActive: Boolean = false
 
     fun buttonDown(btnCode: Int) {
-        if (isRecordingActive) return
+        if (isRecordingActive) {
+            AppLog.d(TAG, "buttonDown btnCode=$btnCode suppressed (recording active)")
+            return
+        }
+        AppLog.d(TAG, "buttonDown btnCode=$btnCode")
         PrivdClient.send("GD $btnCode\n")
     }
 
     fun buttonUp(btnCode: Int) {
-        if (isRecordingActive) return
+        if (isRecordingActive) {
+            AppLog.d(TAG, "buttonUp btnCode=$btnCode suppressed (recording active)")
+            return
+        }
+        AppLog.d(TAG, "buttonUp btnCode=$btnCode")
         PrivdClient.send("GU $btnCode\n")
     }
 
@@ -60,6 +69,7 @@ internal object PrivdGamepadInjector {
         if (isRecordingActive) return
         require(axis in 0..1) { "axis must be 0 (X) or 1 (Y)" }
         require(value in -1..1) { "value must be -1, 0, or +1" }
+        AppLog.d(TAG, "hat axis=$axis value=$value")
         PrivdClient.send("HD $axis $value\n")
     }
 

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 
@@ -34,9 +35,7 @@ internal fun TouchRecordStartDialog(
     onCancel: () -> Unit,
 ) {
     val colors = LocalAppColors.current
-    AlertDialog(
-        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-        containerColor = colors.surface,
+    AppAlertDialog(
         onDismissRequest = onCancel,
         title = {
             Text(

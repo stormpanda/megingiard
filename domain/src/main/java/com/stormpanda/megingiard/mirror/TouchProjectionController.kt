@@ -121,6 +121,7 @@ class TouchProjectionController(
             _indicatorPos.value = Pair(x, y)
         }
 
+        AppLog.d(TAG, "onPress slot=$slot cutoutId=$matchedCutoutId")
         TouchInjector.injectTouch(slot, TouchAction.DOWN, matchedProjected.first, matchedProjected.second)
         return true
     }
@@ -262,6 +263,7 @@ class TouchProjectionController(
 
     /** Reset all tracking state. */
     fun reset() {
+        AppLog.d(TAG, "reset activeTouches=${activeTouches.size}")
         for ((_, touch) in activeTouches) {
             TouchInjector.injectTouch(touch.slot, TouchAction.UP, touch.lastNx, touch.lastNy)
         }

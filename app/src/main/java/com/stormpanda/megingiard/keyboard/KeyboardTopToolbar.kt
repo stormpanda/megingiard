@@ -46,12 +46,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_ESC
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_LEFTALT
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_LEFTCTRL
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes.KEY_TAB
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -60,6 +62,7 @@ internal fun KeyboardTopToolbar(
     activeState: KeyboardLayoutState,
     accentColor: Color,
     modifier: Modifier = Modifier,
+    viewModel: KeyboardViewModel = viewModel(),
 ) {
     if (activeState.mode == KeyboardMode.FULL) return
 
@@ -108,42 +111,22 @@ internal fun KeyboardTopToolbar(
             ToolbarIcon(
                 imageVector = Icons.Rounded.SelectAll,
                 contentDescription = stringResource(R.string.cd_kb_select_all),
-                onClick = {
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_A)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_A)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                },
+                onClick = { viewModel.selectAll() },
             )
             ToolbarIcon(
                 imageVector = Icons.Rounded.ContentCut,
                 contentDescription = stringResource(R.string.cd_kb_cut),
-                onClick = {
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_X)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_X)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                },
+                onClick = { viewModel.cut() },
             )
             ToolbarIcon(
                 imageVector = Icons.Rounded.ContentCopy,
                 contentDescription = stringResource(R.string.cd_kb_copy),
-                onClick = {
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_C)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_C)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                },
+                onClick = { viewModel.copy() },
             )
             ToolbarIcon(
                 imageVector = Icons.Rounded.ContentPaste,
                 contentDescription = stringResource(R.string.cd_kb_paste),
-                onClick = {
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
-                    KeyInjector.keyDown(LinuxKeycodes.KEY_V)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_V)
-                    KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
-                },
+                onClick = { viewModel.paste() },
             )
         }
     }

@@ -167,6 +167,22 @@ internal val SECTION_MAP: Map<String, Set<Preferences.Key<*>>> =
         "macropad_settings" to MACROPAD_SETTINGS_KEYS,
     )
 
+/** Preference keys deliberately excluded from .mgrd export/import (internal state, backups, tutorials). */
+internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
+    setOf(
+        KEY_MACROPAD_PROFILES,
+        KEY_MACROPAD_ACTIVE_PROFILE_ID,
+        KEY_KB_TOUCHPAD_ENABLED,
+        KEY_SKIP_TOUCH_RECORD_DIALOG,
+        KEY_SKIP_GAMEPAD_RECORD_DIALOG,
+        KEY_SAVED_LOCKED,
+        KEY_SAVED_PROJECTION,
+        KEY_SHOW_WELCOME_TUTORIAL,
+        KEY_SHOW_MACRO_EDITOR_TUTORIAL,
+        KEY_SHOW_QUICK_MENU_TUTORIAL,
+        KEY_INTERNAL_BACKUPS,
+    )
+
 /** Reverse lookup: DataStore key name → section name. */
 internal val KEY_TO_SECTION: Map<String, String> by lazy {
     SECTION_MAP.flatMap { (section, keys) -> keys.map { it.name to section } }.toMap()

@@ -21,20 +21,6 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
 
-/** Type of value being live-previewed in ambient settings preview mode. */
-enum class AmbientPreviewType { DIM, EDGE_BLENDING }
-
-/**
- * Shared between [BackgroundSettingsOverlay] (primary screen) and [BackgroundMacroPadOverlay]
- * (secondary screen). Non-null while a preview slider is active.
- */
-data class AmbientPreviewConfig(
-    val type: AmbientPreviewType,
-    val label: String,
-    val originalValue: Float,
-    val valueRange: ClosedFloatingPointRange<Float>,
-)
-
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -285,27 +271,6 @@ object AppStateManager {
 
     private var wasViewportEditActiveBeforeSettings = false
 
-    /**
-     * Configuration for the ambient preview slider, shared between [BackgroundSettingsOverlay]
-     * on the primary screen and [BackgroundMacroPadOverlay] on the secondary screen.
-     * Non-null while a preview is active. Does NOT participate in mutual exclusion.
-     */
-    private val _ambientPreviewConfig = MutableStateFlow<AmbientPreviewConfig?>(null)
-    val ambientPreviewConfig: StateFlow<AmbientPreviewConfig?> = _ambientPreviewConfig.asStateFlow()
-
-    /**
-     * Derived from [ambientPreviewConfig]. Kept as a separate StateFlow so callers that
-     * only need the boolean (e.g. [MirrorPresentation] visibility) avoid a generic cast.
-     */
-    private val _isAmbientPreviewActive = MutableStateFlow(false)
-    val isAmbientPreviewActive: StateFlow<Boolean> = _isAmbientPreviewActive.asStateFlow()
-
-    fun setAmbientPreviewConfig(config: AmbientPreviewConfig?) {
-        AppLog.d(TAG, "setAmbientPreviewConfig(${config?.type})")
-        _ambientPreviewConfig.value = config
-        _isAmbientPreviewActive.value = config != null
-    }
-
     private val _fullscreenMouseSensitivity = MutableStateFlow(1.0f)
     val fullscreenMouseSensitivity: StateFlow<Float> = _fullscreenMouseSensitivity.asStateFlow()
 
@@ -322,7 +287,7 @@ object AppStateManager {
     /**
      * The app-wide active UI mode representing the screens, settings panels, or overlays currently active.
      */
-    val uiMode: StateFlow<UiMode> =
+    private val uiMode: StateFlow<UiMode> =
         combine(
             _isGlobalSettingsOpen,
             _isKeyboardSettingsOpen,
@@ -455,8 +420,6 @@ object AppStateManager {
         _isGlobalSettingsOpen.value = false
         _isKeyboardSettingsOpen.value = false
         _isTouchpadSettingsOpen.value = false
-        _isAmbientPreviewActive.value = false
-        _ambientPreviewConfig.value = null
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         wasViewportEditActiveBeforeSettings = false

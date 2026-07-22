@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
@@ -637,8 +638,7 @@ internal fun SteamGridDbScrapeDialog(
                             R.string.steamgriddb_error_generic_title to R.string.steamgriddb_error_generic_message
                         }
                     }
-                AlertDialog(
-                    containerColor = colors.surface,
+                AppAlertDialog(
                     onDismissRequest = {
                         AppLog.d(TAG, "Dismissing error dialog")
                         pendingErrorDialog = null

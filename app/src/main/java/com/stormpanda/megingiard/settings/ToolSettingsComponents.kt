@@ -33,7 +33,7 @@ private val TS_DROPDOWN_V_PADDING = 6.dp
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-internal fun RememberSettingRow(
+internal fun SwitchSettingRow(
     label: String,
     description: String,
     checked: Boolean,
@@ -47,6 +47,16 @@ internal fun RememberSettingRow(
             colors = appSwitchColors(),
         )
     }
+}
+
+@Composable
+internal fun RememberSettingRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    SwitchSettingRow(label = label, description = description, checked = checked, onCheckedChange = onCheckedChange)
 }
 
 @Composable
@@ -100,14 +110,7 @@ internal fun InputMethodRow(
     useMouse: Boolean,
     onUseMouseChanged: (Boolean) -> Unit,
 ) {
-    AppSettingsRow {
-        SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
-        Switch(
-            checked = useMouse,
-            onCheckedChange = onUseMouseChanged,
-            colors = appSwitchColors(),
-        )
-    }
+    SwitchSettingRow(label = label, description = description, checked = useMouse, onCheckedChange = onUseMouseChanged)
 }
 
 @Composable
@@ -118,6 +121,7 @@ internal fun SliderSettingRow(
     formatLabel: (Float) -> String,
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: (() -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
     AppSettingsRow {
         SettingLabelColumn(
@@ -132,6 +136,9 @@ internal fun SliderSettingRow(
             onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
         )
+        if (trailingContent != null) {
+            trailingContent()
+        }
     }
 }
 

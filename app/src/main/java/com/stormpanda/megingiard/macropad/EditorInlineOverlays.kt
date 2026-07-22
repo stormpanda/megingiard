@@ -75,8 +75,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "EditorInlineOverlays"
-private val LO_SPACING_DEFAULT = 12.dp
-private val LO_SPACING_SMALL = 8.dp
 
 @Composable
 internal fun InlineDialogOverlay(

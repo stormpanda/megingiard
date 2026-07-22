@@ -91,8 +91,10 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
@@ -231,20 +233,12 @@ internal fun BackgroundSettingsEditor(
                 }
             }
         } else if (currentBgPath != null) {
-            val file = File(context.filesDir, currentBgPath!!)
-            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            withContext(Dispatchers.IO) {
-                try {
-                    if (file.exists()) {
-                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                        previewBitmap = decoded?.asImageBitmap()
-                    } else {
-                        previewBitmap = null
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to decode current background image $currentBgPath", e)
-                    previewBitmap = null
-                }
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, currentBgPath!!)
+                previewBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode current background image $currentBgPath", e)
+                previewBitmap = null
             }
         } else {
             previewBitmap = null
@@ -282,46 +276,17 @@ internal fun BackgroundSettingsEditor(
                                     isSaving = true
                                     scope.launch {
                                         var bgChanged = false
+                                        val pending = pendingImageUri
                                         val finalBgPath =
-                                            withContext(Dispatchers.IO) {
-                                                val pending = pendingImageUri
-                                                if (pending != null) {
-                                                    bgChanged = true
-                                                    val backgroundsDir = File(context.filesDir, "backgrounds")
-                                                    if (!backgroundsDir.exists()) {
-                                                        backgroundsDir.mkdirs()
-                                                    }
-                                                    val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                    val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-                                                    val saved =
-                                                        BitmapUtils.saveScaledWebp(
-                                                            context = context,
-                                                            srcUri = pending,
-                                                            srcFile = null,
-                                                            destFile = destFile,
-                                                            targetW = targetW,
-                                                            targetH = targetH,
-                                                        )
-                                                    if (saved) {
-                                                        "backgrounds/bg_$layoutId"
-                                                    } else {
-                                                        null
-                                                    }
-                                                } else if (currentBgPath == null && initialBackgroundImagePath != null) {
-                                                    bgChanged = true
-                                                    val backgroundsDir = File(context.filesDir, "backgrounds")
-                                                    val destFile = File(backgroundsDir, "bg_$layoutId")
-                                                    if (destFile.exists()) {
-                                                        try {
-                                                            destFile.delete()
-                                                        } catch (e: Exception) {
-                                                            AppLog.e(TAG, "Failed to delete background file", e)
-                                                        }
-                                                    }
-                                                    null
-                                                } else {
-                                                    currentBgPath
-                                                }
+                                            if (pending != null) {
+                                                bgChanged = true
+                                                MacroPadMediaRepository.saveBackgroundImage(context, layoutId, pending)
+                                            } else if (currentBgPath == null && initialBackgroundImagePath != null) {
+                                                bgChanged = true
+                                                MacroPadMediaRepository.deleteBackgroundImage(context, layoutId)
+                                                null
+                                            } else {
+                                                currentBgPath
                                             }
                                         onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim)
                                         isSaving = false
@@ -590,8 +555,7 @@ internal fun BackgroundSettingsEditor(
         }
 
         if (showApiTokenMissingDialog) {
-            AlertDialog(
-                modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
+            AppAlertDialog(
                 onDismissRequest = { showApiTokenMissingDialog = false },
                 title = {
                     Text(
@@ -630,8 +594,6 @@ internal fun BackgroundSettingsEditor(
                         )
                     }
                 },
-                containerColor = colors.surface,
-                shape = RoundedCornerShape(BSE_PREVIEW_MODAL_CORNER_RADIUS),
             )
         }
     }
@@ -642,22 +604,20 @@ private fun getMaxOffsets(
     imageSize: IntSize,
     scale: Float,
 ): Pair<Float, Float> {
-    if (containerSize.width <= 0 || containerSize.height <= 0 || imageSize.width <= 0 || imageSize.height <= 0) {
-        return 0f to 0f
-    }
-    val cw = containerSize.width.toFloat()
-    val ch = containerSize.height.toFloat()
-    val iw = imageSize.width.toFloat()
-    val ih = imageSize.height.toFloat()
-
-    val scaleBase = maxOf(cw / iw, ch / ih)
-    val wFull = iw * scaleBase * scale
-    val hFull = ih * scaleBase * scale
-
-    val maxTx = ((wFull - cw) / 2f).coerceAtLeast(0f)
-    val maxTy = ((hFull - ch) / 2f).coerceAtLeast(0f)
-
-    return maxTx to maxTy
+    val scaleBase =
+        ViewportMath.calculateAspectFillScale(
+            containerSize.width.toFloat(),
+            containerSize.height.toFloat(),
+            imageSize.width.toFloat(),
+            imageSize.height.toFloat(),
+        )
+    return ViewportMath.getMaxOffsets(
+        containerSize.width.toFloat(),
+        containerSize.height.toFloat(),
+        imageSize.width.toFloat() * scaleBase,
+        imageSize.height.toFloat() * scaleBase,
+        scale,
+    )
 }
 
 @Composable
@@ -782,7 +742,7 @@ private fun ImageCropDialog(
                     val iw = bitmap.width.toFloat()
                     val ih = bitmap.height.toFloat()
                     if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        val scaleBase = maxOf(cw / iw, ch / ih)
+                        val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
                         val ws = iw * scaleBase
                         val hs = ih * scaleBase
 

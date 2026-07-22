@@ -70,11 +70,6 @@ private val MP_CORNER_RADIUS = 0.dp
 // Shared with PadCanvas so the editor canvas is pixel-identical to use mode.
 internal val MP_SCREEN_PADDING = 0.dp
 
-// Sensitivity of trackpoint drag: px input → mouse delta
-private const val MP_TRACKPOINT_SENSITIVITY = 3f
-
-// Sensitivity of scroll wheel drag: px per scroll unit sent
-private const val MP_SCROLL_SENSITIVITY_PX = 12f
 private const val MP_DISABLED_FEEDBACK_HIDE_MS = 1800L
 private const val MP_DISABLED_FEEDBACK_RATE_LIMIT_MS = 650L
 
@@ -200,20 +195,12 @@ internal fun PadSurface(
     LaunchedEffect(layout.backgroundImagePath, layout.backgroundImageVersion) {
         val path = layout.backgroundImagePath
         if (path != null) {
-            val file = File(context.filesDir, path)
-            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            withContext(Dispatchers.IO) {
-                try {
-                    if (file.exists()) {
-                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                        bgBitmap = decoded?.asImageBitmap()
-                    } else {
-                        bgBitmap = null
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to decode background image ${file.absolutePath}", e)
-                    bgBitmap = null
-                }
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                bgBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode background image $path", e)
+                bgBitmap = null
             }
         } else {
             bgBitmap = null

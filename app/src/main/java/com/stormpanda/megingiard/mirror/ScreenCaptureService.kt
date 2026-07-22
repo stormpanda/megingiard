@@ -26,6 +26,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CaptureRequestActivity
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.settings.MirrorSettings
@@ -611,7 +612,7 @@ class ScreenCaptureService : Service() {
         val filePickerOpen = AppStateManager.isFilePickerOpen.value
         val editorActive = AppStateManager.isEditorActive.value
         val ambientActive = AppStateManager.isBackgroundSettingsActive.value
-        val ambientPreviewActive = AppStateManager.isAmbientPreviewActive.value
+        val ambientPreviewActive = AmbientPreviewManager.isActive.value
         val userLeaving = AppStateManager.isUserLeaving.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
 

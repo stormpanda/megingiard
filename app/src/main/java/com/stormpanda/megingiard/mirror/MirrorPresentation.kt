@@ -99,8 +99,10 @@ import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
+import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.HapticStrength
+import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
@@ -894,7 +896,7 @@ class MirrorPresentation(
                 AppStateManager.isFilePickerOpen,
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
-                AppStateManager.isAmbientPreviewActive,
+                AmbientPreviewManager.isActive,
                 AppStateManager.isUserLeaving,
                 TouchRecordingManager.recordingRequested,
             ) { values ->
@@ -966,55 +968,26 @@ class MirrorPresentation(
                 val oy = layout?.bgImageOffsetY ?: 0f
                 val dim = layout?.backgroundImageDim ?: 0f
                 if (path != null) {
-                    val file = File(context.filesDir, path)
-                    val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-                    withContext(Dispatchers.IO) {
-                        try {
-                            if (file.exists()) {
-                                val bitmap = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                                withContext(Dispatchers.Main) {
-                                    if (bitmap != null) {
-                                        multiCutoutContainer?.bgImageScale = scale
-                                        multiCutoutContainer?.bgImageOffsetX = ox
-                                        multiCutoutContainer?.bgImageOffsetY = oy
-                                        multiCutoutContainer?.bgImageDim = dim
-                                        if (useAsMask) {
-                                            container.setBackgroundColor(Color.BLACK)
-                                            container.background = null
-                                            multiCutoutContainer?.useAsMask = true
-                                            multiCutoutContainer?.bgBitmap = bitmap
-                                        } else {
-                                            container.setBackgroundColor(Color.BLACK)
-                                            container.background = null
-                                            multiCutoutContainer?.useAsMask = false
-                                            multiCutoutContainer?.bgBitmap = bitmap
-                                        }
-                                    } else {
-                                        container.setBackgroundColor(Color.BLACK)
-                                        container.background = null
-                                        multiCutoutContainer?.bgImageScale = 1f
-                                        multiCutoutContainer?.bgImageOffsetX = 0f
-                                        multiCutoutContainer?.bgImageOffsetY = 0f
-                                        multiCutoutContainer?.bgImageDim = 0f
-                                        multiCutoutContainer?.useAsMask = false
-                                        multiCutoutContainer?.bgBitmap = null
-                                    }
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
+                    try {
+                        val bitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                        withContext(Dispatchers.Main) {
+                            if (bitmap != null) {
+                                multiCutoutContainer?.bgImageScale = scale
+                                multiCutoutContainer?.bgImageOffsetX = ox
+                                multiCutoutContainer?.bgImageOffsetY = oy
+                                multiCutoutContainer?.bgImageDim = dim
+                                if (useAsMask) {
                                     container.setBackgroundColor(Color.BLACK)
                                     container.background = null
-                                    multiCutoutContainer?.bgImageScale = 1f
-                                    multiCutoutContainer?.bgImageOffsetX = 0f
-                                    multiCutoutContainer?.bgImageOffsetY = 0f
-                                    multiCutoutContainer?.bgImageDim = 0f
+                                    multiCutoutContainer?.useAsMask = true
+                                    multiCutoutContainer?.bgBitmap = bitmap
+                                } else {
+                                    container.setBackgroundColor(Color.BLACK)
+                                    container.background = null
                                     multiCutoutContainer?.useAsMask = false
-                                    multiCutoutContainer?.bgBitmap = null
+                                    multiCutoutContainer?.bgBitmap = bitmap
                                 }
-                            }
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
-                            withContext(Dispatchers.Main) {
+                            } else {
                                 container.setBackgroundColor(Color.BLACK)
                                 container.background = null
                                 multiCutoutContainer?.bgImageScale = 1f
@@ -1024,6 +997,18 @@ class MirrorPresentation(
                                 multiCutoutContainer?.useAsMask = false
                                 multiCutoutContainer?.bgBitmap = null
                             }
+                        }
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
+                        withContext(Dispatchers.Main) {
+                            container.setBackgroundColor(Color.BLACK)
+                            container.background = null
+                            multiCutoutContainer?.bgImageScale = 1f
+                            multiCutoutContainer?.bgImageOffsetX = 0f
+                            multiCutoutContainer?.bgImageOffsetY = 0f
+                            multiCutoutContainer?.bgImageDim = 0f
+                            multiCutoutContainer?.useAsMask = false
+                            multiCutoutContainer?.bgBitmap = null
                         }
                     }
                 } else {
@@ -1352,7 +1337,9 @@ class MultiCutoutContainer(
                 val ch = parentH
                 val iw = bg.width.toFloat()
                 val ih = bg.height.toFloat()
-                val scaleBase = maxOf(cw / iw, ch / ih)
+                val scaleBase =
+                    com.stormpanda.megingiard.math.ViewportMath
+                        .calculateAspectFillScale(cw, ch, iw, ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
 
@@ -1544,7 +1531,9 @@ class MultiCutoutContainer(
                 val ch = parentH
                 val iw = mask.width.toFloat()
                 val ih = mask.height.toFloat()
-                val scaleBase = maxOf(cw / iw, ch / ih)
+                val scaleBase =
+                    com.stormpanda.megingiard.math.ViewportMath
+                        .calculateAspectFillScale(cw, ch, iw, ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
 

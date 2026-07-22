@@ -102,14 +102,30 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 kotlin {
     jvmToolchain(17)
 }
 
-// Ensure the privileged-mirror DEX asset is built before any app packaging task.
+// Register native C unit test execution task
+val nativeCTest = tasks.register<Exec>("nativeCTest") {
+    group = "verification"
+    description = "Compiles and executes native C unit tests."
+    workingDir = rootProject.projectDir
+    commandLine("./run_native_tests.sh")
+}
+
+// Ensure the privileged-mirror DEX asset is built before any app packaging task, and native C tests run before unit tests.
 afterEvaluate {
+    tasks.matching { it.name.contains("UnitTest") || it.name == "test" }.configureEach {
+        dependsOn(nativeCTest)
+    }
     tasks.matching { it.name.startsWith("merge") && it.name.contains("Assets") }.configureEach {
         dependsOn(":mirrorserver:dex")
     }
@@ -170,6 +186,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

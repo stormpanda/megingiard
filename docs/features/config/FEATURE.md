@@ -203,7 +203,7 @@ For **profile-share** exports the `settings` map is always empty (`{}`), so impo
 the file never touches app preferences.
 
 Settings are stored as grouped DataStore key/value maps — no intermediate typed data classes.
-Adding a new setting only requires adding the key to the correct `*_KEYS` set in `SettingsManager`.
+Adding a new setting requires assigning the key to a section in `SECTION_MAP` or explicitly excluding it in `EXCLUDED_KEYS` (in `SettingsKeys.kt`). A unit test guard (`SettingsKeysTest`) enforces that 100% of declared preference keys are categorized, preventing silent omission during export/import.
 
 - **MIME type:** `application/vnd.megingiard.config+json`
 - **Extension:** `.mgrd`
@@ -221,7 +221,9 @@ Adding a new setting only requires adding the key to the correct `*_KEYS` set in
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `config/ConfigSchema.kt`               | `@Serializable` data classes (`MegingiardExport`, `ExportMetadata`) + `SCHEMA_VERSION` + `MGRD_MIME_TYPE`                                                                                                           |
 | `config/ConfigManager.kt`              | Unified export/import manager: `ExportKind` / `ImportMode` discriminators, coordinator StateFlows, export (`buildExport`, `buildProfileExport`), import (`applyImport`, `applyProfileImport`), UUID remap, checksum |
-| `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettings()` — bulk DataStore I/O; section key groups (`GLOBAL_KEYS`, etc.)                                                                                                |
+| `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettings()` — bulk DataStore I/O                                                                                                                                          |
+| `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                     |
+| `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP` and `EXCLUDED_KEYS`                                                                                    |
 | `settings/GlobalSettingsScreen.kt`     | State hoists, navigation scaffold, and sections orchestrator                                                                                                                                                        |
 | `settings/GlobalSettingsComponents.kt` | SectionJumpRow, SettingsSection, ConfigSection, and ConfigActionRow composables                                                                                                                                     |
 | `settings/GlobalSettingsDialogs.kt`    | Extracted five in-tree settings overlay dialogs and filename builders                                                                                                                                               |

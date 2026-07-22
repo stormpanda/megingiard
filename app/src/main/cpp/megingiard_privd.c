@@ -60,6 +60,7 @@
 #include <poll.h>
 #include <sys/wait.h>
 #include <time.h>
+#include "cmd_parsers.h"
 
 #define ABSTRACT_SOCKET_NAME "megingiard.privd"
 #define SCAN_MAX 32
@@ -220,19 +221,7 @@ static int init_virtual_mouse(void) {
 
     ioctl(fd, UI_SET_EVBIT, EV_SYN);
 
-    /* Create the virtual device */
-    struct uinput_setup usetup;
-    memset(&usetup, 0, sizeof(usetup));
-    usetup.id.bustype = BUS_USB;
-    usetup.id.vendor  = 0x1234;
-    usetup.id.product = 0x9002;
-    strncpy(usetup.name, "Megingiard Virtual Mouse", UINPUT_MAX_NAME_SIZE - 1);
-
-    if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) {
-        close(fd);
-        return -1;
-    }
-    if (ioctl(fd, UI_DEV_CREATE) < 0) {
+    if (setup_uinput_device(fd, BUS_USB, 0x1234, 0x9002, "Megingiard Virtual Mouse") < 0) {
         close(fd);
         return -1;
     }
@@ -263,24 +252,13 @@ static int init_virtual_keyboard(void) {
         ioctl(fd, UI_SET_KEYBIT, i);
     }
 
-    /* Create the virtual device */
-    struct uinput_setup usetup;
-    memset(&usetup, 0, sizeof(usetup));
-    usetup.id.bustype = BUS_VIRTUAL;
-    usetup.id.vendor  = 0x1234;
-    usetup.id.product = 0x5678;
-    strncpy(usetup.name, "Megingiard Virtual Keyboard", UINPUT_MAX_NAME_SIZE - 1);
-
-    if (ioctl(fd, UI_DEV_SETUP, &usetup) < 0) {
-        close(fd);
-        return -1;
-    }
-    if (ioctl(fd, UI_DEV_CREATE) < 0) {
+    if (setup_uinput_device(fd, BUS_VIRTUAL, 0x1234, 0x5678, "Megingiard Virtual Keyboard") < 0) {
         close(fd);
         return -1;
     }
     return fd;
 }
+
 
 /*
  * Walks /dev/input/event0..eventN, finds the first node that:
@@ -331,17 +309,7 @@ static int discover_gamepad_fd(void) {
     return -1;
 }
 
-static void write_event(int fd, __u16 type, __u16 code, __s32 value) {
-    struct input_event ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.type  = type;
-    ev.code  = code;
-    ev.value = value;
-    if (write(fd, &ev, sizeof(ev)) != (ssize_t)sizeof(ev)) {
-        /* Non-fatal — log to stderr (only visible during bootstrap). */
-        fprintf(stderr, "privd: write_event failed errno=%d\n", errno);
-    }
-}
+
 
 /*
  * Binds an abstract-namespace Unix socket "@megingiard.privd".
@@ -1042,130 +1010,12 @@ static int serve_client(int client_fd) {
             continue;
         }
 
-        if ((line[0] == 'D' || line[0] == 'M' || line[0] == 'U') && line[1] == ' ') {
-            /* Touch injection commands: D/M <slot> <x> <y>, U <slot> */
-            char action_char = line[0];
-            int slot = -1;
-            int tx = 0, ty = 0;
-            static int active_slots_mask = 0;
+        static int active_slots_mask = 0;
+        if (parse_touch_command(line, g_touch_fd, &active_slots_mask)) continue;
+        if (parse_mouse_command(line, g_mouse_fd)) continue;
+        if (parse_key_command(line, g_keyboard_fd)) continue;
+        if (parse_gamepad_command(line, g_gamepad_fd)) continue;
 
-            if (action_char == 'U') {
-                if (sscanf(line, "U %d", &slot) == 1) {
-                    if (slot >= 0 && slot <= 9 && g_touch_fd >= 0) {
-                        write_event(g_touch_fd, EV_ABS, ABS_MT_SLOT, slot);
-                        write_event(g_touch_fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
-                        active_slots_mask &= ~(1 << slot);
-                        write_event(g_touch_fd, EV_KEY, BTN_TOUCH, active_slots_mask != 0 ? 1 : 0);
-                        write_event(g_touch_fd, EV_SYN, SYN_REPORT, 0);
-                    }
-                }
-            } else {
-                if (sscanf(line, "%*c %d %d %d", &slot, &tx, &ty) == 3) {
-                    if (slot >= 0 && slot <= 9 && g_touch_fd >= 0) {
-                        if (action_char == 'D') {
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_SLOT, slot);
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_TRACKING_ID, slot + 1);
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_X, tx);
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_Y, ty);
-                            active_slots_mask |= (1 << slot);
-                            write_event(g_touch_fd, EV_KEY, BTN_TOUCH, 1);
-                            write_event(g_touch_fd, EV_SYN, SYN_REPORT, 0);
-                        } else if (action_char == 'M') {
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_SLOT, slot);
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_X, tx);
-                            write_event(g_touch_fd, EV_ABS, ABS_MT_POSITION_Y, ty);
-                            write_event(g_touch_fd, EV_SYN, SYN_REPORT, 0);
-                        }
-                    }
-                }
-            }
-            continue;
-        }
-
-        if (line[0] == 'M' && line[1] == 'B') {
-            /* MB <side> <D|U>  — mouse button press/release */
-            char side, du;
-            if (sscanf(line, "MB %c %c", &side, &du) == 2) {
-                __u16 btn;
-                if      (side == 'L') btn = BTN_LEFT;
-                else if (side == 'R') btn = BTN_RIGHT;
-                else if (side == 'M') btn = BTN_MIDDLE;
-                else if (side == '4') btn = BTN_SIDE;
-                else if (side == '5') btn = BTN_EXTRA;
-                else continue;
-
-                __s32 val = (du == 'D') ? 1 : 0;
-                if (g_mouse_fd >= 0) {
-                    write_event(g_mouse_fd, EV_KEY, btn, val);
-                    write_event(g_mouse_fd, EV_SYN, SYN_REPORT, 0);
-                }
-            }
-            continue;
-        }
-        if (line[0] == 'M' && line[1] == 'M') {
-            /* MM <dx> <dy>  — relative pointer movement */
-            int dx, dy;
-            if (sscanf(line, "MM %d %d", &dx, &dy) == 2) {
-                if (g_mouse_fd >= 0) {
-                    if (dx != 0) write_event(g_mouse_fd, EV_REL, REL_X, dx);
-                    if (dy != 0) write_event(g_mouse_fd, EV_REL, REL_Y, dy);
-                    if (dx != 0 || dy != 0) write_event(g_mouse_fd, EV_SYN, SYN_REPORT, 0);
-                }
-            }
-            continue;
-        }
-        if (line[0] == 'M' && line[1] == 'W') {
-            /* MW <delta>  — scroll wheel */
-            int delta;
-            if (sscanf(line, "MW %d", &delta) == 1) {
-                if (g_mouse_fd >= 0) {
-                    write_event(g_mouse_fd, EV_REL, REL_WHEEL, delta);
-                    write_event(g_mouse_fd, EV_SYN, SYN_REPORT, 0);
-                }
-            }
-            continue;
-        }
-        if (line[0] == 'K') {
-            /* KD / KU <keycode> — keyboard key press/release */
-            char act[4];
-            int code;
-            if (sscanf(line, "%3s %d", act, &code) == 2) {
-                if (code >= 1 && code <= 255 && g_keyboard_fd >= 0) {
-                    __s32 val = (strcmp(act, "KD") == 0) ? 1 : 0;
-                    write_event(g_keyboard_fd, EV_KEY, (__u16)code, val);
-                    write_event(g_keyboard_fd, EV_SYN, SYN_REPORT, 0);
-                }
-            }
-            continue;
-        }
-
-        if (line[0] == 'G') {
-            /* GD/GU <btn> */
-            if (sscanf(line, "%4s %d", action, &a) != 2) continue;
-            if (a < BTN_MISC || a > KEY_MAX) continue;
-            if (strcmp(action, "GD") == 0) {
-                write_event(g_gamepad_fd, EV_KEY, (__u16)a, 1);
-                write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
-            } else if (strcmp(action, "GU") == 0) {
-                write_event(g_gamepad_fd, EV_KEY, (__u16)a, 0);
-                write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
-            }
-        } else if (line[0] == 'H') {
-            /* HD <axis> <val>  D-Pad */
-            if (sscanf(line, "%4s %d %d", action, &a, &b) != 3) continue;
-            if (a < 0 || a > 1) continue;
-            if (b < -1 || b > 1) continue;
-            __u16 code = (a == 0) ? ABS_HAT0X : ABS_HAT0Y;
-            write_event(g_gamepad_fd, EV_ABS, code, b);
-            write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
-        } else if (line[0] == 'J') {
-            /* JS <axis_code> <val>  analog stick */
-            if (sscanf(line, "%4s %d %d", action, &a, &b) != 3) continue;
-            if (a != ABS_X && a != ABS_Y && a != ABS_Z && a != ABS_RZ) continue;
-            if (b < -32768 || b > 32767) continue;
-            write_event(g_gamepad_fd, EV_ABS, (__u16)a, b);
-            write_event(g_gamepad_fd, EV_SYN, SYN_REPORT, 0);
-        }
         /* Unknown commands are silently ignored — forward-compat for future
          * feature prefixes. */
     }

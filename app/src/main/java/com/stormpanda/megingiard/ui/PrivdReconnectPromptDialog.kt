@@ -123,9 +123,7 @@ fun PrivdReconnectPromptDialog(
             else -> colors.actionColorSystem
         }
 
-    AlertDialog(
-        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-        containerColor = colors.surface,
+    AppAlertDialog(
         onDismissRequest = {
             AppLog.d(TAG, "Privd reconnect prompt dialog dismissed via request")
             if (state == PrivdState.RUNNING) {

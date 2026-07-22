@@ -160,33 +160,15 @@ class MainActivity : ComponentActivity() {
         ) { uri ->
             AppStateManager.setFilePickerOpen(false)
             if (uri == null) return@registerForActivityResult
-            lifecycleScope.launch(Dispatchers.IO) {
-                runCatching {
-                    val pid = Process.myPid()
-                    val header =
-                        LogReportManager.buildReportHeader(
-                            appVersion = BuildConfig.VERSION_NAME,
-                            deviceModel = Build.MODEL,
-                            androidVersion = Build.VERSION.RELEASE,
-                            timestamp =
-                                LocalDateTime
-                                    .now()
-                                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                        )
-                    val body = LogReportManager.readLogcatLines(pid)
-                    contentResolver.openOutputStream(uri)?.use { stream ->
-                        stream.bufferedWriter().use { writer ->
-                            writer.write(header)
-                            writer.write(body)
-                        }
-                    } ?: error("Could not open output stream for $uri")
-                }.onSuccess {
-                    AppLog.i(TAG, "Log report written to $uri")
-                    LogReportManager.setSaveResult(LogReportManager.SaveResult.Success)
-                }.onFailure { e ->
-                    AppLog.e(TAG, "Log report save failed", e)
-                    LogReportManager.setSaveResult(LogReportManager.SaveResult.Failure(e.message))
-                }
+            lifecycleScope.launch {
+                LogReportManager.writeReportToUri(
+                    context = applicationContext,
+                    uri = uri,
+                    appVersion = BuildConfig.VERSION_NAME,
+                    deviceModel = Build.MODEL,
+                    androidVersion = Build.VERSION.RELEASE,
+                    pid = Process.myPid(),
+                )
             }
         }
 

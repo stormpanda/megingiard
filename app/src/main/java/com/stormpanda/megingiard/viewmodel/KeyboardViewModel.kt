@@ -60,6 +60,42 @@ class KeyboardViewModel(
         KeyboardSettings.setKbTouchpadEnabled(value)
     }
 
+    fun selectAll() {
+        viewModelScope.launch(Dispatchers.IO) {
+            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+            KeyInjector.keyDown(LinuxKeycodes.KEY_A)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_A)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+        }
+    }
+
+    fun cut() {
+        viewModelScope.launch(Dispatchers.IO) {
+            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+            KeyInjector.keyDown(LinuxKeycodes.KEY_X)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_X)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+        }
+    }
+
+    fun copy() {
+        viewModelScope.launch(Dispatchers.IO) {
+            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+            KeyInjector.keyDown(LinuxKeycodes.KEY_C)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_C)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+        }
+    }
+
+    fun paste() {
+        viewModelScope.launch(Dispatchers.IO) {
+            KeyInjector.keyDown(LinuxKeycodes.KEY_LEFTCTRL)
+            KeyInjector.keyDown(LinuxKeycodes.KEY_V)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_V)
+            KeyInjector.keyUp(LinuxKeycodes.KEY_LEFTCTRL)
+        }
+    }
+
     val controller = KeyRepeatController(viewModelScope)
     val gestureProcessor =
         KeyboardGestureProcessor(

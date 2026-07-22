@@ -46,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +70,7 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.io.File
@@ -105,6 +107,7 @@ internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 @Composable
 fun MacroPadEditor(onDone: () -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val profiles by MacroPadState.profiles.collectAsState()
     val activeId by MacroPadState.activeProfileId.collectAsState()
     val colors = LocalAppColors.current
@@ -862,6 +865,7 @@ private fun EditorBody(
 ) {
     val colors = LocalAppColors.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var gridMode by remember { mutableStateOf(GridMode.OFF) }
     val profileRef by rememberUpdatedState(profile)
     val layoutRef by rememberUpdatedState(layout)
@@ -912,14 +916,8 @@ private fun EditorBody(
                             val originalPath = origLayout.backgroundImagePath
                             val newLayoutId = layoutMapping[origLayout.id]
                             if (originalPath != null && newLayoutId != null) {
-                                val srcFile = File(context.filesDir, originalPath)
-                                val destFile = File(context.filesDir, "backgrounds/bg_$newLayoutId")
-                                if (srcFile.exists()) {
-                                    try {
-                                        srcFile.copyTo(destFile, overwrite = true)
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to copy background file during profile duplication", e)
-                                    }
+                                scope.launch {
+                                    MacroPadMediaRepository.duplicateBackgroundImage(context, origLayout.id, newLayoutId)
                                 }
                             }
                         }
@@ -978,15 +976,9 @@ private fun EditorBody(
                     val originalLayout = layout
                     val originalPath = originalLayout?.backgroundImagePath
                     val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
-                    if (originalPath != null && newLayoutId != null) {
-                        val srcFile = File(context.filesDir, originalPath)
-                        val destFile = File(context.filesDir, "backgrounds/bg_$newLayoutId")
-                        if (srcFile.exists()) {
-                            try {
-                                srcFile.copyTo(destFile, overwrite = true)
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Failed to copy background file during duplication", e)
-                            }
+                    if (originalLayout != null && originalPath != null && newLayoutId != null) {
+                        scope.launch {
+                            MacroPadMediaRepository.duplicateBackgroundImage(context, originalLayout.id, newLayoutId)
                         }
                     }
                 },

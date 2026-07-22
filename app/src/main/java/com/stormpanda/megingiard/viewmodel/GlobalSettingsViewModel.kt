@@ -25,11 +25,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.util.concurrent.TimeUnit
 
 private const val TAG = "GlobalSettingsVM"
-private const val GETPROP_TIMEOUT_MS = 2000L
 
 /**
  * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
@@ -176,35 +173,8 @@ class GlobalSettingsViewModel : ViewModel() {
     fun checkPrivilegedModeStatus(context: Context) {
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
-            val keyFile = File(appContext.noBackupFilesDir, "privd_adb_key.bin")
-            val certFile = File(appContext.noBackupFilesDir, "privd_adb_cert.bin")
-            _hasCredentials.value = keyFile.exists() && certFile.exists()
-
-            var proc: Process? = null
-            val port =
-                try {
-                    proc =
-                        ProcessBuilder("getprop", "service.adb.tls.port")
-                            .redirectErrorStream(true)
-                            .start()
-                    val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    if (exited) {
-                        val output =
-                            proc.inputStream.bufferedReader().use { reader ->
-                                reader.readLine()?.trim().orEmpty()
-                            }
-                        output.toIntOrNull() ?: 0
-                    } else {
-                        AppLog.w(TAG, "getprop service.adb.tls.port timed out after $GETPROP_TIMEOUT_MS ms")
-                        0
-                    }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to read service.adb.tls.port: $e")
-                    0
-                } finally {
-                    proc?.destroyForcibly()
-                }
-            _isWirelessDebuggingActive.value = port > 0
+            _hasCredentials.value = PrivdBootstrapper.hasCredentials(appContext)
+            _isWirelessDebuggingActive.value = PrivdBootstrapper.isWirelessDebuggingActive()
             AppLog.d(
                 TAG,
                 "checkPrivilegedModeStatus: hasCredentials=${_hasCredentials.value} isWirelessDebuggingActive=${_isWirelessDebuggingActive.value}",

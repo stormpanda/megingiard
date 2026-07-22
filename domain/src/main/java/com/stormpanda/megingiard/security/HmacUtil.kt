@@ -15,6 +15,15 @@ internal object HmacUtil {
 
     fun bytesToHex(bytes: ByteArray): String = bytes.joinToString("") { b -> "%02X".format(b.toInt() and 0xFF) }
 
+    /** Computes the SHA-256 digest of [bytes] and returns a 64-character uppercase hex string. */
+    fun sha256Hex(bytes: ByteArray): String {
+        val digest =
+            java.security.MessageDigest
+                .getInstance("SHA-256")
+                .digest(bytes)
+        return bytesToHex(digest)
+    }
+
     /**
      * Decodes a hex string (case-insensitive, even number of chars) to a [ByteArray].
      * Each pair of characters maps to one byte; no `0x` prefix expected.

@@ -131,20 +131,12 @@ internal fun PadCanvas(
     LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
         val path = layout?.backgroundImagePath
         if (path != null) {
-            val file = File(context.filesDir, path)
-            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            withContext(Dispatchers.IO) {
-                try {
-                    if (file.exists()) {
-                        val decoded = BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
-                        bgBitmap = decoded?.asImageBitmap()
-                    } else {
-                        bgBitmap = null
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to decode background image ${file.absolutePath}", e)
-                    bgBitmap = null
-                }
+            try {
+                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                bgBitmap = decoded?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to decode background image $path", e)
+                bgBitmap = null
             }
         } else {
             bgBitmap = null
@@ -208,7 +200,9 @@ internal fun PadCanvas(
                     val ox = layout?.bgImageOffsetX ?: 0f
                     val oy = layout?.bgImageOffsetY ?: 0f
 
-                    val scaleBase = maxOf(cw / iw, ch / ih)
+                    val scaleBase =
+                        com.stormpanda.megingiard.math.ViewportMath
+                            .calculateAspectFillScale(cw, ch, iw, ih)
                     val ws = iw * scaleBase
                     val hs = ih * scaleBase
 

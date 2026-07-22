@@ -1,37 +1,15 @@
 /*
  * gamepadinjector.c — Megingiard virtual gamepad via /dev/uinput
- *
- * Creates a virtual gamepad that exposes:
- *   - Face buttons  : BTN_SOUTH (A), BTN_EAST (B), BTN_NORTH (Y), BTN_WEST (X)
- *   - Shoulder      : BTN_TL (L1), BTN_TR (R1), BTN_TL2 (L2), BTN_TR2 (R2)
- *   - Thumbsticks   : BTN_THUMBL (L3), BTN_THUMBR (R3)
- *   - System        : BTN_START, BTN_SELECT, BTN_MODE (Guide)
- *   - D-Pad         : ABS_HAT0X (−1 left / +1 right), ABS_HAT0Y (−1 up / +1 down)
- *   - Left stick    : ABS_X, ABS_Y  (range −32768…+32767)
- *   - Right stick   : ABS_Z, ABS_RZ (range −32768…+32767)
- *
- * Binary protocol (stdin → binary):
- *   GD <code>\n            — button DOWN  (code = Linux BTN_* value)
- *   GU <code>\n            — button UP
- *   HD <axis> <value>\n    — hat/D-Pad, axis 0=X 1=Y, value -1/0/+1
- *   JS <axis> <value>\n    — joystick axis (ABS_X=0,ABS_Y=1,ABS_Z=2,ABS_RZ=5), value -32768…+32767
- *
- * Readiness signal (binary → stdout):
- *   R\n  — emitted once the uinput device is created and ready
- *
- * On stdin EOF the virtual device is destroyed and the process exits.
  */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <linux/uinput.h>
-#include <linux/input.h>
+#include "cmd_parsers.h"
 
 /* Button codes registered on this virtual device. */
-static const __u16 GAMEPAD_BUTTONS[] = {
+static const uint16_t GAMEPAD_BUTTONS[] = {
     BTN_SOUTH,   /* A  / Cross      */
     BTN_EAST,    /* B  / Circle     */
     BTN_NORTH,   /* Y  / Triangle   */
@@ -47,15 +25,6 @@ static const __u16 GAMEPAD_BUTTONS[] = {
     BTN_MODE,    /* Guide / Home button */
 };
 #define GAMEPAD_BUTTON_COUNT (sizeof(GAMEPAD_BUTTONS) / sizeof(GAMEPAD_BUTTONS[0]))
-
-static void write_event(int fd, __u16 type, __u16 code, __s32 value) {
-    struct input_event ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.type  = type;
-    ev.code  = code;
-    ev.value = value;
-    write(fd, &ev, sizeof(ev));
-}
 
 int main(void) {
     int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
@@ -76,14 +45,6 @@ int main(void) {
     ioctl(fd, UI_SET_ABSBIT, ABS_Y);
     ioctl(fd, UI_SET_ABSBIT, ABS_Z);
     ioctl(fd, UI_SET_ABSBIT, ABS_RZ);
-
-    /* Create the virtual device */
-    struct uinput_setup usetup;
-    memset(&usetup, 0, sizeof(usetup));
-    usetup.id.bustype = BUS_USB;
-    usetup.id.vendor  = 0x1234;
-    usetup.id.product = 0x9001;
-    strncpy(usetup.name, "Megingiard Virtual Gamepad", UINPUT_MAX_NAME_SIZE - 1);
 
     /* Configure HAT axes: range −1…+1 */
     struct uinput_abs_setup hat_x;
@@ -129,56 +90,10 @@ int main(void) {
     stick_rz.absinfo.maximum =  32767;
     ioctl(fd, UI_ABS_SETUP, &stick_rz);
 
-    ioctl(fd, UI_DEV_SETUP, &usetup);
-    ioctl(fd, UI_DEV_CREATE);
-
-    /* Signal readiness */
-    write(STDOUT_FILENO, "R\n", 2);
-    fflush(stdout);
-
-    char line[48];
-    while (fgets(line, sizeof(line), stdin)) {
-        char action[4];
-
-        if (line[0] == 'G') {
-            /* GD / GU <btn_code> */
-            int code;
-            if (sscanf(line, "%3s %d", action, &code) != 2) continue;
-            if (code < BTN_MISC || code > KEY_MAX) continue;
-
-            if (strcmp(action, "GD") == 0) {
-                write_event(fd, EV_KEY, (__u16)code, 1);
-                write_event(fd, EV_SYN, SYN_REPORT, 0);
-            } else if (strcmp(action, "GU") == 0) {
-                write_event(fd, EV_KEY, (__u16)code, 0);
-                write_event(fd, EV_SYN, SYN_REPORT, 0);
-            }
-        } else if (line[0] == 'H') {
-            /* HD <axis> <value>   — D-Pad hat event */
-            int axis, value;
-            if (sscanf(line, "%3s %d %d", action, &axis, &value) != 3) continue;
-            if (axis < 0 || axis > 1) continue;
-            if (value < -1 || value > 1) continue;
-
-            __u16 hat_code = (axis == 0) ? ABS_HAT0X : ABS_HAT0Y;
-            write_event(fd, EV_ABS, hat_code, value);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
-        } else if (line[0] == 'J') {
-            /* JS <axis_code> <value>  — analog joystick axis */
-            /* axis_code: ABS_X=0, ABS_Y=1, ABS_Z=2, ABS_RZ=5 */
-            int axis_code, value;
-            if (sscanf(line, "%3s %d %d", action, &axis_code, &value) != 3) continue;
-            /* Accept only the four registered analog stick axes */
-            if (axis_code != ABS_X && axis_code != ABS_Y &&
-                axis_code != ABS_Z && axis_code != ABS_RZ) continue;
-            if (value < -32768 || value > 32767) continue;
-
-            write_event(fd, EV_ABS, (__u16)axis_code, value);
-            write_event(fd, EV_SYN, SYN_REPORT, 0);
-        }
+    if (setup_uinput_device(fd, BUS_USB, 0x1234, 0x9001, "Megingiard Virtual Gamepad") < 0) {
+        perror("setup_uinput_device");
+        return 1;
     }
 
-    ioctl(fd, UI_DEV_DESTROY);
-    close(fd);
-    return 0;
+    return run_uinput_injector_loop(fd, 48, parse_gamepad_command);
 }

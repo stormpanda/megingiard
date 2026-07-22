@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 
@@ -49,9 +50,7 @@ internal fun GamepadRecordStartDialog(
         AppLog.d(TAG, "visible")
         onDispose { AppLog.d(TAG, "disposed") }
     }
-    AlertDialog(
-        modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-        containerColor = colors.surface,
+    AppAlertDialog(
         onDismissRequest = onCancel,
         title = {
             Text(

@@ -62,6 +62,7 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -685,9 +686,7 @@ internal fun MacroTimelineEditor(
     }
 
     if (deleteStepIndex != null) {
-        AlertDialog(
-            modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-            containerColor = colors.surface,
+        AppAlertDialog(
             onDismissRequest = { deleteStepIndex = null },
             title = { Text(stringResource(R.string.macropad_macro_step_delete_title), color = colors.onSurface) },
             text = { Text(stringResource(R.string.macropad_macro_step_delete_confirm), color = colors.onSurfaceSecondary) },
@@ -711,9 +710,7 @@ internal fun MacroTimelineEditor(
     }
 
     gamepadRecordingError?.let { message ->
-        AlertDialog(
-            modifier = Modifier.border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = AlertDialogDefaults.shape),
-            containerColor = colors.surface,
+        AppAlertDialog(
             onDismissRequest = { gamepadRecordingError = null },
             title = {
                 Text(

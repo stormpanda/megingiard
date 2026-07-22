@@ -477,9 +477,10 @@ object ConfigManager {
         profiles: List<PadProfile>,
     ): String {
         val payload = checksumJson.encodeToString(ChecksumPayload(settings, profiles))
-        val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(payload.toByteArray(Charsets.UTF_8))
-        val hex = hashBytes.joinToString("") { "%02x".format(it) }
+        val hex =
+            com.stormpanda.megingiard.security.HmacUtil
+                .sha256Hex(payload.toByteArray(Charsets.UTF_8))
+                .lowercase()
         return "sha256:$hex"
     }
 

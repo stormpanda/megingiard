@@ -38,6 +38,7 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.SettingsOverlayScaffold
 
 private const val TAG = "TouchpadSettingsOverlay"
 
@@ -67,143 +68,107 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
         }
     }
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
+    SettingsOverlayScaffold(
+        title = stringResource(R.string.settings_touchpad_title),
+        onBack = onBack,
+        onHelpClick = { showHelp = true },
     ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.settings_touchpad_title),
-                            color = colors.onSurface,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = stringResource(R.string.settings_back),
-                                tint = colors.onSurface,
-                            )
-                        }
-                    },
-                    actions = {
-                        HelpIconButton(onClick = { showHelp = true })
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.surface),
+        SettingsSection(
+            title = stringResource(R.string.settings_section_relative_mouse),
+            colors = colors,
+        ) {
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_tap_to_click),
+                description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
+                checked = touchpadTapToClick,
+                onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
+            )
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_two_finger_tap),
+                description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
+                checked = touchpadTwoFingerTap,
+                onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
+            )
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_three_finger_tap),
+                description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
+                checked = touchpadThreeFingerTap,
+                onCheckedChange = { TouchpadSettings.setTouchpadThreeFingerTap(it) },
+            )
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_tap_drag),
+                description = stringResource(R.string.settings_touchpad_tap_drag_desc),
+                checked = touchpadTapDrag,
+                onCheckedChange = { TouchpadSettings.setTouchpadTapDrag(it) },
+            )
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_two_finger_scroll),
+                description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
+                checked = touchpadTwoFingerScroll,
+                onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
+            )
+            if (touchpadTwoFingerScroll) {
+                RememberSettingRow(
+                    label = stringResource(R.string.settings_touchpad_natural_scroll),
+                    description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
+                    checked = touchpadNaturalScroll,
+                    onCheckedChange = { TouchpadSettings.setTouchpadNaturalScroll(it) },
                 )
-            },
-        ) { paddingValues ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_relative_mouse),
-                    colors = colors,
-                ) {
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_tap_to_click),
-                        description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-                        checked = touchpadTapToClick,
-                        onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
-                    )
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_two_finger_tap),
-                        description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-                        checked = touchpadTwoFingerTap,
-                        onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
-                    )
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_three_finger_tap),
-                        description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
-                        checked = touchpadThreeFingerTap,
-                        onCheckedChange = { TouchpadSettings.setTouchpadThreeFingerTap(it) },
-                    )
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_tap_drag),
-                        description = stringResource(R.string.settings_touchpad_tap_drag_desc),
-                        checked = touchpadTapDrag,
-                        onCheckedChange = { TouchpadSettings.setTouchpadTapDrag(it) },
-                    )
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_two_finger_scroll),
-                        description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-                        checked = touchpadTwoFingerScroll,
-                        onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
-                    )
-                    if (touchpadTwoFingerScroll) {
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_touchpad_natural_scroll),
-                            description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
-                            checked = touchpadNaturalScroll,
-                            onCheckedChange = { TouchpadSettings.setTouchpadNaturalScroll(it) },
-                        )
-                        SliderSettingRow(
-                            label = stringResource(R.string.settings_touchpad_scroll_speed),
-                            value = touchpadScrollSpeed,
-                            valueRange = 0.5f..3.0f,
-                            formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
-                            onValueChange = { TouchpadSettings.setTouchpadScrollSpeed(it) },
-                        )
-                    }
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_mouse_4_5),
-                        description = stringResource(R.string.settings_touchpad_mouse_4_5_desc),
-                        checked = touchpadMouse45Enabled,
-                        onCheckedChange = { TouchpadSettings.setTouchpadMouse45Enabled(it) },
-                    )
-                    SliderSettingRow(
-                        label = stringResource(R.string.settings_touchpad_sensitivity),
-                        value = touchpadSensitivity,
-                        valueRange = 0.1f..3.0f,
-                        formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
-                        onValueChange = { TouchpadSettings.setTouchpadSensitivity(it) },
-                    )
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_haptics),
-                        description = stringResource(R.string.settings_touchpad_haptics_desc),
-                        checked = touchpadHapticsEnabled,
-                        onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
-                    )
-                }
-
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_absolute_touch),
-                    colors = colors,
-                ) {
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_mirroring),
-                        description = stringResource(R.string.settings_touchpad_mirroring_desc),
-                        checked = touchpadMirroringEnabled,
-                        onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
-                    )
-                    if (touchpadMirroringEnabled) {
-                        SliderSettingRow(
-                            label = stringResource(R.string.settings_touchpad_mirror_dim),
-                            value = touchpadMirrorDim.toFloat(),
-                            valueRange = 0f..90f,
-                            formatLabel = { "${it.toInt()}%" },
-                            onValueChange = { TouchpadSettings.setTouchpadMirrorDim(it.toInt()) },
-                        )
-                    }
-                }
+                SliderSettingRow(
+                    label = stringResource(R.string.settings_touchpad_scroll_speed),
+                    value = touchpadScrollSpeed,
+                    valueRange = 0.5f..3.0f,
+                    formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
+                    onValueChange = { TouchpadSettings.setTouchpadScrollSpeed(it) },
+                )
             }
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_mouse_4_5),
+                description = stringResource(R.string.settings_touchpad_mouse_4_5_desc),
+                checked = touchpadMouse45Enabled,
+                onCheckedChange = { TouchpadSettings.setTouchpadMouse45Enabled(it) },
+            )
+            SliderSettingRow(
+                label = stringResource(R.string.settings_touchpad_sensitivity),
+                value = touchpadSensitivity,
+                valueRange = 0.1f..3.0f,
+                formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
+                onValueChange = { TouchpadSettings.setTouchpadSensitivity(it) },
+            )
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_haptics),
+                description = stringResource(R.string.settings_touchpad_haptics_desc),
+                checked = touchpadHapticsEnabled,
+                onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
+            )
         }
 
-        TouchpadSettingsHelpModal(
-            visible = showHelp,
-            onDismiss = { showHelp = false },
-        )
+        SettingsSection(
+            title = stringResource(R.string.settings_section_absolute_touch),
+            colors = colors,
+        ) {
+            RememberSettingRow(
+                label = stringResource(R.string.settings_touchpad_mirroring),
+                description = stringResource(R.string.settings_touchpad_mirroring_desc),
+                checked = touchpadMirroringEnabled,
+                onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
+            )
+            if (touchpadMirroringEnabled) {
+                SliderSettingRow(
+                    label = stringResource(R.string.settings_touchpad_mirror_dim),
+                    value = touchpadMirrorDim.toFloat(),
+                    valueRange = 0f..90f,
+                    formatLabel = { "${it.toInt()}%" },
+                    onValueChange = { TouchpadSettings.setTouchpadMirrorDim(it.toInt()) },
+                )
+            }
+        }
     }
+
+    TouchpadSettingsHelpModal(
+        visible = showHelp,
+        onDismiss = { showHelp = false },
+    )
 }
 
 @Composable

@@ -53,8 +53,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AmbientPreviewConfig
-import com.stormpanda.megingiard.AmbientPreviewType
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
@@ -62,6 +60,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSettingsRow
@@ -82,9 +81,6 @@ private const val TAG = "BackgroundSettingsOverlay"
 // ── Slider bounds ───────────────────────────────────────────────────────────
 private const val ASO_DIM_MAX = 0.9f
 private const val ASO_PERCENT_DIVISOR = 100f
-private val ASO_SWATCH_SIZE = 24.dp
-private val ASO_DROPDOWN_H_PADDING = 12.dp
-private val ASO_DROPDOWN_V_PADDING = 6.dp
 private val ASO_PREVIEW_ICON_SIZE = 36.dp
 private val ASO_PREVIEW_BAR_CORNER = 16.dp
 private val ASO_PREVIEW_BAR_H_PADDING = 16.dp
@@ -129,7 +125,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         GamepadInjector.stop()
         MouseInjector.stop()
         onDispose {
-            AppStateManager.setAmbientPreviewConfig(null)
+            AmbientPreviewManager.setConfig(null)
             AppLog.i(TAG, "BackgroundSettingsOverlay dismissed → injector restart handled by MacroPadViewModel watcher")
         }
     }
@@ -148,9 +144,9 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var pendingProjectionCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     val localSmoothingValues = remember(currentLayout.id) { mutableStateMapOf<String, Float>() }
 
-    // Preview mode: driven by AppStateManager so the secondary screen (BackgroundMacroPadOverlay)
+    // Preview mode: driven by AmbientPreviewManager so the secondary screen (BackgroundMacroPadOverlay)
     // can also render the preview slider.
-    val previewConfig by AppStateManager.ambientPreviewConfig.collectAsState()
+    val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isInPreview = previewConfig != null
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
@@ -173,7 +169,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                     AmbientPreviewType.EDGE_BLENDING -> copy(mirrorEdgeBlendWidth = config.originalValue)
                 }
             }
-            AppStateManager.setAmbientPreviewConfig(null)
+            AmbientPreviewManager.setConfig(null)
         } else {
             onDone()
         }
@@ -258,7 +254,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(ambientDim = dimAlpha) }
                             },
                             onPreviewClick = {
-                                AppStateManager.setAmbientPreviewConfig(
+                                AmbientPreviewManager.setConfig(
                                     AmbientPreviewConfig(
                                         type = AmbientPreviewType.DIM,
                                         label = labelDim,
@@ -294,7 +290,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                                 commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
                             },
                             onPreviewClick = {
-                                AppStateManager.setAmbientPreviewConfig(
+                                AmbientPreviewManager.setConfig(
                                     AmbientPreviewConfig(
                                         type = AmbientPreviewType.EDGE_BLENDING,
                                         label = labelEdgeBlending,
@@ -577,7 +573,7 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
 
         if (pendingProjectionCutout != null) {
             val targetCutout = pendingProjectionCutout!!
-            AlertDialog(
+            AppAlertDialog(
                 onDismissRequest = { pendingProjectionCutout = null },
                 title = {
                     Text(
@@ -619,7 +615,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                         Text(text = stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
                     }
                 },
-                containerColor = colors.surface,
             )
         }
     }
@@ -712,30 +707,26 @@ private fun AsoSliderRow(
     onValueChangeFinished: (() -> Unit)? = null,
     onPreviewClick: () -> Unit,
 ) {
-    val colors = LocalAppColors.current
-    AppSettingsRow {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.onSurface, style = MaterialTheme.typography.bodyMedium)
-            Text(text = formatLabel(value), color = colors.onSurfaceSecondary, style = MaterialTheme.typography.bodySmall)
-        }
-        Slider(
-            modifier = Modifier.weight(2f),
-            value = value,
-            onValueChange = onValueChange,
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = valueRange,
-        )
-        IconButton(
-            onClick = onPreviewClick,
-            modifier = Modifier.size(ASO_PREVIEW_ICON_SIZE),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Visibility,
-                contentDescription = stringResource(R.string.ambient_preview),
-                tint = accentColor.copy(alpha = 0.7f),
-            )
-        }
-    }
+    com.stormpanda.megingiard.settings.SliderSettingRow(
+        label = label,
+        value = value,
+        valueRange = valueRange,
+        formatLabel = formatLabel,
+        onValueChange = onValueChange,
+        onValueChangeFinished = onValueChangeFinished,
+        trailingContent = {
+            IconButton(
+                onClick = onPreviewClick,
+                modifier = Modifier.size(ASO_PREVIEW_ICON_SIZE),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Visibility,
+                    contentDescription = stringResource(R.string.ambient_preview),
+                    tint = accentColor.copy(alpha = 0.7f),
+                )
+            }
+        },
+    )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
