@@ -492,18 +492,30 @@ private fun StepPair(
             )
         }
         val magicalBrush = rememberMagicalBezelBrush()
-        val glowColor = colors.actionColorSystem.copy(alpha = 0.20f)
+        val glowColor = colors.actionColorSystem
         OutlinedButton(
             onClick = { performOcrScan() },
             enabled = !busy && !ocrScanning,
             border = BorderStroke(1.5.dp, magicalBrush),
             modifier =
                 Modifier.drawBehind {
+                    val dy = 1.5.dp.toPx()
+                    val dx = 4.5.dp.toPx()
+                    val pillRadius = (size.height + 2 * dy) / 2f
+
+                    // Outer feathered glow layer
                     drawRoundRect(
-                        color = glowColor,
-                        cornerRadius = CornerRadius(20.dp.toPx()),
-                        size = Size(size.width + 6.dp.toPx(), size.height + 6.dp.toPx()),
-                        topLeft = Offset(-3.dp.toPx(), -3.dp.toPx()),
+                        color = glowColor.copy(alpha = 0.08f),
+                        cornerRadius = CornerRadius(pillRadius + 2.dp.toPx()),
+                        size = Size(size.width + 2 * (dx + 2.dp.toPx()), size.height + 2 * dy),
+                        topLeft = Offset(-(dx + 2.dp.toPx()), -dy),
+                    )
+                    // Inner core glow layer
+                    drawRoundRect(
+                        color = glowColor.copy(alpha = 0.16f),
+                        cornerRadius = CornerRadius(pillRadius),
+                        size = Size(size.width + 2 * dx, size.height + 2 * dy),
+                        topLeft = Offset(-dx, -dy),
                     )
                 },
         ) {
