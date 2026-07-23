@@ -408,8 +408,8 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
     <string name="privd_wizard_step2_intro">Tap \"Pair device with pairing code\" in the Wireless Debugging settings. Enter the pairing port and 6-digit code shown in that dialog.</string>
-    <string name="privd_wizard_field_pair_port">Pairing port (5 digits)</string>
-    <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
+    <string name="privd_wizard_field_pair_port">Port (5 digits after \":\", without IP address)</string>
+    <string name="privd_wizard_field_code">WiFi pairing code (6 digits)</string>
     <string name="privd_wizard_step2_pair">Pair</string>
     <string name="privd_wizard_step2_error">Pairing failed. Double-check the pairing port and code, then try again.</string>
     <string name="privd_wizard_autofill_ocr">Auto-fill with OCR</string>

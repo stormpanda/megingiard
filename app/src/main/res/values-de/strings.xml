@@ -362,8 +362,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
 
     <string name="privd_wizard_step2_intro">Tippe auf \"Gerät über Kopplungscode koppeln\" in den Drahtloses-Debugging-Einstellungen. Trage den Kopplungsport und den 6-stelligen Code aus dem Dialog ein.</string>
-    <string name="privd_wizard_field_pair_port">Kopplungsport (5 Ziffern)</string>
-    <string name="privd_wizard_field_code">Kopplungscode (6 Ziffern)</string>
+    <string name="privd_wizard_field_pair_port">Port (5 Ziffern nach \":\", ohne IP-Adresse)</string>
+    <string name="privd_wizard_field_code">WLAN-Kopplungscode (6 Ziffern)</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
     <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Kopplungsport und Code und versuche es erneut.</string>
     <string name="privd_wizard_autofill_ocr">Automatisch ausfüllen (OCR)</string>
