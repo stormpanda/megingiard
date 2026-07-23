@@ -428,7 +428,7 @@ private fun StepPair(
             onClick = onSubmit,
             enabled =
                 !busy &&
-                    pairPort.toIntOrNull()?.let { it in 1..65535 } == true &&
+                    pairPort.length == 5 &&
                     code.length == 6,
         ) {
             Text(
