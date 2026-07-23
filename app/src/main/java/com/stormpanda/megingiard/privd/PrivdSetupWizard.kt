@@ -467,7 +467,7 @@ private fun StepPair(
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(top = SW_GAP),
         horizontalArrangement = Arrangement.spacedBy(SW_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
