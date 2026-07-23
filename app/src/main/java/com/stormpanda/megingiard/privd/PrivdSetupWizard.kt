@@ -593,6 +593,7 @@ private fun StepDone(onClose: () -> Unit) {
         text = stringResource(R.string.privd_wizard_step4_done),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(bottom = 16.dp),
     )
     Button(onClick = onClose) {
         Text(stringResource(R.string.privd_wizard_close))
