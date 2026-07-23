@@ -432,7 +432,7 @@ private fun StepPair(
     ocrMessage?.let { msg ->
         Text(
             text = msg,
-            color = if (ocrSuccess) MaterialTheme.colorScheme.primary else colors.onSurfaceSecondary,
+            color = if (ocrSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
         )
     }
