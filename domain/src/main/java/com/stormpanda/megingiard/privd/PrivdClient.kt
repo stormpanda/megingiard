@@ -142,6 +142,7 @@ object PrivdClient {
     @Synchronized
     fun connect(): Boolean {
         if (isConnected) return true
+        cleanupLocked()
         _state.value = PrivdConnectionState.CONNECTING
         val key = hmacKeyBytes
         if (key == null) {

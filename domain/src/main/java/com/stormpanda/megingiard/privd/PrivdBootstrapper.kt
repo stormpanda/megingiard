@@ -160,6 +160,7 @@ object PrivdBootstrapper {
         // Push binary — stop any existing daemon process and remove stale remote binary
         // prior to ADB sync push to avoid ETXTBSY (Text File Busy) and stale read-only permission locks.
         _stage.value = BootstrapStage.PUSHING_BINARY
+        PrivdClient.disconnect()
         stopExistingDaemon(mgr)
         val pushOk =
             runCatching { pushDaemon(context, mgr) }.getOrElse { e ->
@@ -316,8 +317,18 @@ object PrivdBootstrapper {
             mgr.openStream(killCmd)?.use { s ->
                 val input = s.openInputStream()
                 val buf = ByteArray(256)
-                while (input.read(buf) != -1) { }
+                while (true) {
+                    val count =
+                        try {
+                            input.read(buf)
+                        } catch (_: Exception) {
+                            -1
+                        }
+                    if (count <= 0) break
+                }
             }
+        }.onSuccess {
+            AppLog.d(TAG, "stopExistingDaemon completed")
         }.onFailure { e ->
             AppLog.w(TAG, "stopExistingDaemon failed: $e")
         }
