@@ -11,7 +11,20 @@ private const val TAG = "KeyInjector"
  * Public facade for keyboard event injection — strategy router.
  */
 object KeyInjector {
-    private val router = InjectorBackendRouter(TAG)
+    private val router =
+        InjectorBackendRouter(
+            tag = TAG,
+            onPrivdConnected = {
+                AppLog.i(TAG, "Privd reconnected -> re-sending KB_START to daemon")
+                PrivdClient.send("KB_START\n")
+                if (ShellKeyInjector.isRunning) {
+                    ShellKeyInjector.stop()
+                }
+            },
+            onPrivdDisconnected = {
+                AppLog.i(TAG, "Privd disconnected while KeyInjector active")
+            },
+        )
 
     fun start(context: Context) {
         if (router.resolveBackend()) {
@@ -23,6 +36,7 @@ object KeyInjector {
 
     fun stop() {
         AppLog.i(TAG, "stop() — backend=${if (router.isPrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
+        router.markStopped()
         if (router.isPrivd) {
             PrivdClient.send("KB_STOP\n")
         } else {

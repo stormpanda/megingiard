@@ -28,4 +28,21 @@ class InjectorBackendRouterTest {
         assertTrue(fallbackChecked)
         assertTrue(isRunning)
     }
+
+    @Test
+    fun testMarkStoppedResetsActiveState() {
+        val router = InjectorBackendRouter("TestTag")
+        router.resolveBackend()
+        router.markStopped()
+
+        // When stopped, fallback check should still work without error
+        var fallbackChecked = false
+        val isRunning =
+            router.isRunning {
+                fallbackChecked = true
+                false
+            }
+        assertTrue(fallbackChecked)
+        assertFalse(isRunning)
+    }
 }
