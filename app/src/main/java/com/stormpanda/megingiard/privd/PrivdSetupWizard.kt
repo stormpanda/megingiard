@@ -6,6 +6,13 @@ import android.content.Intent
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,7 +56,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -62,6 +74,46 @@ import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
+
+@Composable
+private fun rememberMagicalBezelBrush(accentColor: Color = LocalAppColors.current.actionColorSystem): Brush {
+    val transition = rememberInfiniteTransition(label = "MagicalBezel")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 3500, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "Angle",
+    )
+
+    return remember(angle, accentColor) {
+        val rad = Math.toRadians(angle.toDouble())
+        val cos = kotlin.math.cos(rad).toFloat()
+        val sin = kotlin.math.sin(rad).toFloat()
+
+        val startX = 500f * (1f - cos)
+        val startY = 500f * (1f - sin)
+        val endX = 500f * (1f + cos)
+        val endY = 500f * (1f + sin)
+
+        Brush.linearGradient(
+            colorStops =
+                arrayOf(
+                    0.0f to Color.White.copy(alpha = 0.85f),
+                    0.2f to accentColor.copy(alpha = 0.9f),
+                    0.45f to Color.White.copy(alpha = 0.25f),
+                    0.7f to Color.Transparent,
+                    0.85f to accentColor.copy(alpha = 0.5f),
+                    1.0f to Color.White.copy(alpha = 0.85f),
+                ),
+            start = Offset(startX, startY),
+            end = Offset(endX, endY),
+        )
+    }
+}
 
 private const val TAG = "PrivdSetupWizard"
 private const val SW_SCRIM_ALPHA = 0.5f
@@ -439,15 +491,27 @@ private fun StepPair(
                 },
             )
         }
+        val magicalBrush = rememberMagicalBezelBrush()
+        val glowColor = colors.actionColorSystem.copy(alpha = 0.20f)
         OutlinedButton(
             onClick = { performOcrScan() },
             enabled = !busy && !ocrScanning,
+            border = BorderStroke(1.5.dp, magicalBrush),
+            modifier =
+                Modifier.drawBehind {
+                    drawRoundRect(
+                        color = glowColor,
+                        cornerRadius = CornerRadius(20.dp.toPx()),
+                        size = Size(size.width + 6.dp.toPx(), size.height + 6.dp.toPx()),
+                        topLeft = Offset(-3.dp.toPx(), -3.dp.toPx()),
+                    )
+                },
         ) {
             if (ocrScanning) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(SW_OCR_ICON_SIZE),
                     strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = colors.actionColorSystem,
                 )
                 Spacer(modifier = Modifier.size(SW_GAP))
                 Text(stringResource(R.string.privd_wizard_ocr_scanning))
@@ -455,6 +519,7 @@ private fun StepPair(
                 Icon(
                     imageVector = Icons.Rounded.AutoFixHigh,
                     contentDescription = null,
+                    tint = colors.actionColorSystem,
                     modifier = Modifier.size(SW_OCR_ICON_SIZE),
                 )
                 Spacer(modifier = Modifier.size(SW_GAP))
