@@ -350,7 +350,7 @@ private fun StepPair(
         val nodeResult = PrivdPairOcrScanner.parsePairingInfoFromText(nodeText)
         ocrScanning = false
 
-        if (nodeResult.port != null || nodeResult.code != null) {
+        if (nodeResult.isComplete) {
             nodeResult.port?.let { onPairPortChange(it) }
             nodeResult.code?.let { onCodeChange(it) }
             ocrSuccess = true
