@@ -184,7 +184,6 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.reorderable)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.mlkit.text.recognition)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

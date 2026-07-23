@@ -346,39 +346,17 @@ private fun StepPair(
         }
         ocrScanning = true
 
-        // 1. Instant node text check
-        val nodeText = MegingiardAccessibilityService.scanActiveWindowText()
+        val nodeText = MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)
         val nodeResult = PrivdPairOcrScanner.parsePairingInfoFromText(nodeText)
-        if (nodeResult.isComplete || nodeResult.port != null || nodeResult.code != null) {
+        ocrScanning = false
+
+        if (nodeResult.port != null || nodeResult.code != null) {
             nodeResult.port?.let { onPairPortChange(it) }
             nodeResult.code?.let { onCodeChange(it) }
-            if (nodeResult.isComplete) {
-                ocrScanning = false
-                ocrSuccess = true
-                ocrMessage = context.getString(R.string.privd_wizard_ocr_success)
-                return
-            }
-        }
-
-        // 2. Screenshot + ML Kit OCR fallback
-        MegingiardAccessibilityService.captureDisplayScreenshot(Display.DEFAULT_DISPLAY) { bitmap ->
-            if (bitmap == null) {
-                ocrScanning = false
-                ocrMessage = context.getString(R.string.privd_wizard_ocr_not_found)
-                return@captureDisplayScreenshot
-            }
-            PrivdPairOcrScanner.scanBitmap(bitmap) { ocrResult ->
-                bitmap.recycle()
-                ocrScanning = false
-                if (ocrResult.port != null || ocrResult.code != null) {
-                    ocrResult.port?.let { onPairPortChange(it) }
-                    ocrResult.code?.let { onCodeChange(it) }
-                    ocrSuccess = true
-                    ocrMessage = context.getString(R.string.privd_wizard_ocr_success)
-                } else {
-                    ocrMessage = context.getString(R.string.privd_wizard_ocr_not_found)
-                }
-            }
+            ocrSuccess = true
+            ocrMessage = context.getString(R.string.privd_wizard_ocr_success)
+        } else {
+            ocrMessage = context.getString(R.string.privd_wizard_ocr_not_found)
         }
     }
 
