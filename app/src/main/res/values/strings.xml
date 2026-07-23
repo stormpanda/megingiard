@@ -404,18 +404,18 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_substep_2">2. Tap Build number 7 times until "You are now a developer!" appears</string>
     <string name="privd_wizard_step1_substep_3">3. Go back → System → Developer options</string>
     <string name="privd_wizard_step1_substep_4">4. Enable Wireless debugging and turn it ON</string>
-    <string name="privd_wizard_step1_substep_5">5. Tap "Pair device with pairing code" and keep that dialog open</string>
+    <string name="privd_wizard_step1_substep_5">5. Tap \"Pair device with pairing code\" and keep that dialog open</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
-    <string name="privd_wizard_step2_intro">Tap "Pair device with pairing code" in the Wireless Debugging settings. Enter the pairing port and 6-digit code shown in that dialog. The connect port is detected automatically.</string>
-    <string name="privd_wizard_field_pair_port">Pairing port (from "Pair device" dialog)</string>
+    <string name="privd_wizard_step2_intro">Tap \"Pair device with pairing code\" in the Wireless Debugging settings. Enter the pairing port and 6-digit code shown in that dialog.</string>
+    <string name="privd_wizard_field_pair_port">Pairing port (from \"Pair device\" dialog)</string>
     <string name="privd_wizard_field_code">Pairing code (6 digits)</string>
     <string name="privd_wizard_step2_pair">Pair</string>
     <string name="privd_wizard_step2_error">Pairing failed. Double-check the pairing port and code, then try again.</string>
     <string name="privd_wizard_autofill_ocr">Auto-fill with OCR</string>
     <string name="privd_wizard_ocr_scanning">Scanning screen…</string>
     <string name="privd_wizard_ocr_success">Auto-filled pairing details!</string>
-    <string name="privd_wizard_ocr_not_found">Could not detect pairing details on screen. Ensure the "Pair device" dialog is visible on top screen.</string>
+    <string name="privd_wizard_ocr_not_found">Could not detect pairing details on screen. Ensure the \"Pair device\" dialog is visible on top screen.</string>
     <string name="privd_wizard_ocr_accessibility_disabled">Enable Accessibility Service in Settings to auto-fill via OCR.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
