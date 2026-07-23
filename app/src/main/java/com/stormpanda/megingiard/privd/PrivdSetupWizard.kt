@@ -280,7 +280,6 @@ internal fun PrivdSetupWizardDialog(
                             }
                         }
                     },
-                    onBack = { step = 0 },
                 )
             }
 
@@ -380,7 +379,6 @@ private fun StepPair(
     onPairPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
@@ -472,10 +470,6 @@ private fun StepPair(
         horizontalArrangement = Arrangement.spacedBy(SW_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onBack, enabled = !busy) {
-            Text(stringResource(R.string.privd_wizard_back))
-        }
-        Spacer(modifier = Modifier.weight(1f))
         Button(
             onClick = onSubmit,
             enabled =
@@ -498,26 +492,28 @@ private fun StepPair(
             enabled = !busy && !autoFillScanning,
             border = BorderStroke(1.5.dp, magicalBrush),
             modifier =
-                Modifier.drawBehind {
-                    val dy = 1.5.dp.toPx()
-                    val dx = 4.5.dp.toPx()
-                    val pillRadius = (size.height + 2 * dy) / 2f
+                Modifier
+                    .weight(1f)
+                    .drawBehind {
+                        val dy = 1.5.dp.toPx()
+                        val dx = 4.5.dp.toPx()
+                        val pillRadius = (size.height + 2 * dy) / 2f
 
-                    // Outer feathered glow layer
-                    drawRoundRect(
-                        color = glowColor.copy(alpha = 0.08f),
-                        cornerRadius = CornerRadius(pillRadius + 2.dp.toPx()),
-                        size = Size(size.width + 2 * (dx + 2.dp.toPx()), size.height + 2 * dy),
-                        topLeft = Offset(-(dx + 2.dp.toPx()), -dy),
-                    )
-                    // Inner core glow layer
-                    drawRoundRect(
-                        color = glowColor.copy(alpha = 0.16f),
-                        cornerRadius = CornerRadius(pillRadius),
-                        size = Size(size.width + 2 * dx, size.height + 2 * dy),
-                        topLeft = Offset(-dx, -dy),
-                    )
-                },
+                        // Outer feathered glow layer
+                        drawRoundRect(
+                            color = glowColor.copy(alpha = 0.08f),
+                            cornerRadius = CornerRadius(pillRadius + 2.dp.toPx()),
+                            size = Size(size.width + 2 * (dx + 2.dp.toPx()), size.height + 2 * dy),
+                            topLeft = Offset(-(dx + 2.dp.toPx()), -dy),
+                        )
+                        // Inner core glow layer
+                        drawRoundRect(
+                            color = glowColor.copy(alpha = 0.16f),
+                            cornerRadius = CornerRadius(pillRadius),
+                            size = Size(size.width + 2 * dx, size.height + 2 * dy),
+                            topLeft = Offset(-dx, -dy),
+                        )
+                    },
         ) {
             if (autoFillScanning) {
                 CircularProgressIndicator(
