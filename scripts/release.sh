@@ -3,10 +3,11 @@
 # Megingiard Release Automation Script
 #
 # This script handles the automated stages of the Megingiard release workflow:
-# 1. prepare: Removes '-SNAPSHOT' from versionName, commits, tags, and pushes tag.
+# 1. prepare: Creates a release branch (release/X.Y.Z), sets release versionName, tags, and pushes branch & tag.
 # 2. build: Compiles the release APK, signs it securely, and generates its checksum.
 # 3. publish <changelog-file>: Creates a GitHub release draft attaching the APK and checksum.
-# 4. bump: Increments versionCode, bumps versionName to next minor-SNAPSHOT, commits, and pushes.
+# 4. finish: Merges the release branch back into main (local only, does NOT push main).
+# 5. bump: Increments versionCode and bumps versionName on main / release branch (local only for main).
 #
 # Fail fast on any error
 set -e
@@ -37,14 +38,6 @@ check_clean_git() {
     if [[ -n "$(git status --porcelain)" ]]; then
         log_error "Git workspace is not clean. Please commit or stash changes first."
         exit 1
-    fi
-}
-
-# Verify branch is main
-check_branch() {
-    current_branch=$(git branch --show-current)
-    if [[ "$current_branch" != "main" ]]; then
-        log_info "Warning: You are releasing from branch '$current_branch' (expected 'main')."
     fi
 }
 
@@ -144,39 +137,67 @@ install_release_apk() {
 case "$1" in
     prepare)
         check_clean_git
-        check_branch
 
-        # Extract current version
+        start_branch=$(git branch --show-current)
+        log_info "Initiating release preparation starting from branch '$start_branch'..."
+
+        # Extract current version name from build.gradle.kts
         version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
         current_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
-        
-        if [[ ! "$current_version" =~ "-SNAPSHOT$" ]]; then
-            log_error "Current version name '$current_version' does not end with '-SNAPSHOT'."
+
+        if [[ "$start_branch" == "main" ]]; then
+            # Standard release flow: drop -SNAPSHOT if present
+            release_version="${current_version%-SNAPSHOT}"
+            log_info "Standard release from main: target version $release_version"
+        elif [[ "$start_branch" =~ ^release/ ]]; then
+            # Hotfix release flow from an existing release branch
+            if [[ "$current_version" =~ "-SNAPSHOT$" ]]; then
+                release_version="${current_version%-SNAPSHOT}"
+            else
+                # Increment patch version
+                IFS='.' read -r major minor patch <<< "$current_version"
+                next_patch=$((patch + 1))
+                release_version="${major}.${minor}.${next_patch}"
+            fi
+            log_info "Hotfix release from '$start_branch': target version $release_version"
+        else
+            log_error "Releases can only be initiated from 'main' or a 'release/*' branch (currently on '$start_branch')."
             exit 1
         fi
 
-        release_version="${current_version%-SNAPSHOT}"
-        log_info "Releasing version $release_version (from $current_version)..."
+        release_branch="release/$release_version"
 
-        # Update build.gradle.kts versionName
-        # Use portable Mac/Linux sed compatible with local edits
+        # Check if release branch already exists locally
+        if git show-ref --verify --quiet "refs/heads/$release_branch"; then
+            log_info "Branch '$release_branch' already exists. Switching to it..."
+            git checkout "$release_branch"
+        else
+            log_info "Creating and checking out new release branch '$release_branch'..."
+            git checkout -b "$release_branch"
+        fi
+
+        # Update build.gradle.kts versionName on the release branch
         sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$release_version\"/" "$GRADLE_FILE"
 
-        # Commit release version change
-        git add "$GRADLE_FILE"
-        git commit -m "chore(release): set version name to $release_version for release"
-        log_info "Committed release version bump."
+        # Commit release version change if modified
+        if [[ -n "$(git status --porcelain "$GRADLE_FILE")" ]]; then
+            git add "$GRADLE_FILE"
+            git commit -m "chore(release): set version name to $release_version for release"
+            log_info "Committed release version bump on $release_branch."
+        fi
 
-        # Create tag
-        git tag "$release_version"
-        log_info "Created git tag $release_version."
+        # Tag commit if tag does not already exist
+        if ! git rev-parse "$release_version" >/dev/null 2>&1; then
+            git tag "$release_version"
+            log_info "Created git tag $release_version."
+        fi
 
-        # Push commit and tag
-        log_info "Pushing commit and tag to GitHub..."
-        git push origin "$(git branch --show-current)"
+        # Push branch and tag to remote
+        log_info "Pushing branch '$release_branch' and tag '$release_version' to GitHub..."
+        git push origin "$release_branch"
         git push origin "$release_version"
 
-        log_success "Release version $release_version successfully prepared and tagged."
+        log_success "Release version $release_version successfully prepared and tagged on branch $release_branch."
         ;;
 
     build)
@@ -229,42 +250,103 @@ case "$1" in
         log_success "Release draft Megingiard-v$release_version successfully uploaded with APK and checksum."
         ;;
 
-    bump)
-        # Extract current release version
-        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
-        release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+    finish)
+        check_clean_git
 
-        # Extract current versionCode
+        current_branch=$(git branch --show-current)
+        if [[ ! "$current_branch" =~ ^release/ ]]; then
+            log_error "Command 'finish' must be executed from a release branch (currently on '$current_branch')."
+            exit 1
+        fi
+
+        release_branch="$current_branch"
+        log_info "Merging release branch '$release_branch' into main locally..."
+
+        git checkout main
+
+        # Attempt no-ff merge
+        if ! git merge --no-ff "$release_branch" -m "chore(release): merge $release_branch into main"; then
+            log_info "Merge conflict detected during merge of $release_branch into main."
+            if git status --porcelain | grep -q "app/build.gradle.kts"; then
+                log_info "Resolving app/build.gradle.kts conflict by favoring main's version configuration..."
+                git checkout --ours app/build.gradle.kts
+                git add app/build.gradle.kts
+                git commit -m "chore(release): merge $release_branch into main (resolved build.gradle.kts)"
+            else
+                log_error "Merge conflict could not be automatically resolved. Please resolve conflicts manually."
+                exit 1
+            fi
+        fi
+
+        log_success "Successfully merged $release_branch into main locally."
+        log_info "NOTE: 'main' was NOT pushed to remote. You can push main manually when ready."
+        ;;
+
+    bump)
+        check_clean_git
+
+        current_branch=$(git branch --show-current)
+
+        # Extract current versionName and versionCode from Gradle file
+        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+        current_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+
         code_line=$(grep -E 'versionCode[[:space:]]*=' "$GRADLE_FILE")
         current_code=$(echo "$code_line" | sed -E 's/.*versionCode[[:space:]]*=[[:space:]]*([0-9]*).*/\1/')
 
         next_code=$((current_code + 1))
 
-        # Parse release version to calculate next minor-SNAPSHOT version
-        IFS='.' read -r major minor patch <<< "$release_version"
-        next_minor=$((minor + 1))
-        next_version="${major}.${next_minor}.0-SNAPSHOT"
+        if [[ "$current_branch" == "main" ]]; then
+            if [[ "$current_version" =~ "-SNAPSHOT$" ]]; then
+                # main is already on a SNAPSHOT (e.g. 0.8.0-SNAPSHOT after merging a hotfix)
+                log_info "Main is on $current_version. Incrementing versionCode to $next_code..."
+                sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
+                git add "$GRADLE_FILE"
+                git commit -m "chore(release): set version code to $next_code for development"
+                log_success "Successfully updated versionCode to $next_code on main (not pushed)."
+            else
+                # main is on release version (e.g. 0.7.0 after merging minor release)
+                IFS='.' read -r major minor patch <<< "$current_version"
+                next_minor=$((minor + 1))
+                next_version="${major}.${next_minor}.0-SNAPSHOT"
 
-        log_info "Upgrading version configuration for development..."
-        log_info "Next Version Code: $next_code (was $current_code)"
-        log_info "Next Version Name: $next_version (was $release_version)"
+                log_info "Upgrading main configuration for minor development..."
+                log_info "Next Version Code: $next_code (was $current_code)"
+                log_info "Next Version Name: $next_version (was $current_version)"
 
-        # Update build.gradle.kts
-        sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
-        sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+                sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
+                sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
 
-        # Commit and push
-        git add "$GRADLE_FILE"
-        git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"
-        
-        log_info "Pushing developmental version update to GitHub..."
-        git push origin "$(git branch --show-current)"
+                git add "$GRADLE_FILE"
+                git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"
+                log_success "Successfully bumped development version to $next_version (code: $next_code) on main (not pushed)."
+            fi
+        elif [[ "$current_branch" =~ ^release/ ]]; then
+            # Bumping on a release branch for patch development
+            IFS='.' read -r major minor patch <<< "${current_version%-SNAPSHOT}"
+            next_patch=$((patch + 1))
+            next_version="${major}.${minor}.${next_patch}-SNAPSHOT"
 
-        log_success "Successfully bumped development version to $next_version (code: $next_code)."
+            log_info "Upgrading release branch '$current_branch' for patch development..."
+            log_info "Next Version Code: $next_code (was $current_code)"
+            log_info "Next Version Name: $next_version (was $current_version)"
+
+            sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
+            sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+
+            git add "$GRADLE_FILE"
+            git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"
+
+            log_info "Pushing developmental bump on '$current_branch' to GitHub..."
+            git push origin "$current_branch"
+
+            log_success "Successfully bumped release branch version to $next_version (code: $next_code)."
+        fi
         ;;
 
     *)
-        log_error "Unknown command. Usage: scripts/release.sh {prepare|build|install|build-install|publish|bump}"
+        log_error "Unknown command. Usage: scripts/release.sh {prepare|build|install|build-install|publish|finish|bump}"
         exit 1
         ;;
 esac
+
