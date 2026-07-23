@@ -2,28 +2,68 @@ package com.stormpanda.megingiard.input
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Thread-safe strategy router helper for native input injector facades in `:domain`.
  *
  * Manages backend determination ([PrivdClient.isConnected] vs standard virtual uinput binary),
- * lifecycle logging, and connection status queries across [KeyInjector], [MouseInjector],
- * [GamepadInjector], and [TouchInjector].
+ * lifecycle logging, connection status queries, and automatic backend re-synchronization
+ * upon Privd daemon reconnects across [KeyInjector], [MouseInjector], [GamepadInjector],
+ * and [TouchInjector].
  */
 class InjectorBackendRouter(
     private val tag: String,
+    private val onPrivdConnected: (() -> Unit)? = null,
+    private val onPrivdDisconnected: (() -> Unit)? = null,
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Volatile
     private var usePrivd: Boolean = false
+
+    @Volatile
+    private var active: Boolean = false
+
+    init {
+        scope.launch {
+            PrivdClient.state.collect { state ->
+                val isConnected = (state == PrivdConnectionState.CONNECTED)
+                if (active) {
+                    if (isConnected) {
+                        AppLog.i(tag, "Privd connected while injector active -> sync PRIVD backend")
+                        usePrivd = true
+                        onPrivdConnected?.invoke()
+                    } else if (usePrivd) {
+                        AppLog.i(tag, "Privd disconnected while injector active -> switch to fallback")
+                        usePrivd = false
+                        onPrivdDisconnected?.invoke()
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Determines the active backend strategy upon starting the injector.
      * Returns true if the privileged daemon (`PRIVD`) is connected, false for fallback (`VIRTUAL_UINPUT`).
      */
     fun resolveBackend(): Boolean {
+        active = true
         usePrivd = PrivdClient.isConnected
         AppLog.i(tag, "start() — backend=${if (usePrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
         return usePrivd
+    }
+
+    /**
+     * Marks the injector backend as stopped so background connection changes no longer dispatch commands.
+     */
+    fun markStopped() {
+        active = false
     }
 
     /**

@@ -12,7 +12,15 @@ private const val TAG = "GamepadInjector"
  * Public facade for gamepad button injection — strategy router.
  */
 object GamepadInjector {
-    private val router = InjectorBackendRouter(TAG)
+    private val router =
+        InjectorBackendRouter(
+            tag = TAG,
+            onPrivdConnected = {
+                if (ShellGamepadInjector.isRunning) {
+                    ShellGamepadInjector.stop()
+                }
+            },
+        )
 
     fun start(context: Context) {
         val useMerge = router.resolveBackend()
@@ -27,6 +35,7 @@ object GamepadInjector {
 
     fun stop() {
         AppLog.i(TAG, "stop() — backend=${if (router.isPrivd) "PRIVD_MERGE" else "VIRTUAL_UINPUT"}")
+        router.markStopped()
         if (!router.isPrivd) {
             ShellGamepadInjector.stop()
         }

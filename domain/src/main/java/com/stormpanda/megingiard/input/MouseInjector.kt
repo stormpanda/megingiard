@@ -14,7 +14,15 @@ private const val TAG = "MouseInjector"
  * - Otherwise, falls back to [ShellMouseInjector] (bundled native process uinput helper).
  */
 object MouseInjector {
-    private val router = InjectorBackendRouter(TAG)
+    private val router =
+        InjectorBackendRouter(
+            tag = TAG,
+            onPrivdConnected = {
+                if (ShellMouseInjector.isRunning) {
+                    ShellMouseInjector.stop()
+                }
+            },
+        )
 
     fun start(context: Context) {
         if (!router.resolveBackend()) {
@@ -24,6 +32,7 @@ object MouseInjector {
 
     fun stop() {
         AppLog.i(TAG, "stop() — backend=${if (router.isPrivd) "PRIVD" else "VIRTUAL_UINPUT"}")
+        router.markStopped()
         if (!router.isPrivd) {
             ShellMouseInjector.stop()
         }

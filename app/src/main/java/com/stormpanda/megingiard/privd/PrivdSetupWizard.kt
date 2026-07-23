@@ -6,6 +6,13 @@ import android.content.Intent
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -39,6 +47,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +56,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -55,10 +69,50 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
+
+@Composable
+private fun rememberMagicalBezelBrush(accentColor: Color = LocalAppColors.current.actionColorSystem): Brush {
+    val transition = rememberInfiniteTransition(label = "MagicalBezel")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 3500, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "Angle",
+    )
+
+    return remember(angle, accentColor) {
+        val rad = Math.toRadians(angle.toDouble())
+        val cos = kotlin.math.cos(rad).toFloat()
+        val sin = kotlin.math.sin(rad).toFloat()
+
+        val startX = 500f * (1f - cos)
+        val startY = 500f * (1f - sin)
+        val endX = 500f * (1f + cos)
+        val endY = 500f * (1f + sin)
+
+        Brush.linearGradient(
+            colorStops =
+                arrayOf(
+                    0.0f to Color.White.copy(alpha = 0.85f),
+                    0.2f to accentColor.copy(alpha = 0.9f),
+                    0.45f to Color.White.copy(alpha = 0.25f),
+                    0.7f to Color.Transparent,
+                    0.85f to accentColor.copy(alpha = 0.5f),
+                    1.0f to Color.White.copy(alpha = 0.85f),
+                ),
+            start = Offset(startX, startY),
+            end = Offset(endX, endY),
+        )
+    }
+}
 
 private const val TAG = "PrivdSetupWizard"
 private const val SW_SCRIM_ALPHA = 0.5f
@@ -68,6 +122,7 @@ private val SW_DIALOG_PADDING = 20.dp
 private val SW_GAP = 12.dp
 private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
+private val SW_AUTOFILL_ICON_SIZE = 18.dp
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -224,7 +279,6 @@ internal fun PrivdSetupWizardDialog(
                             }
                         }
                     },
-                    onBack = { step = 0 },
                 )
             }
 
@@ -324,18 +378,52 @@ private fun StepPair(
     onPairPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     val colors = LocalAppColors.current
+    var autoFillScanning by remember { mutableStateOf(false) }
+    var autoFillMessage by remember { mutableStateOf<String?>(null) }
+    var autoFillSuccess by remember { mutableStateOf(false) }
+
+    fun performAutoFillScan() {
+        if (autoFillScanning || busy) return
+        autoFillMessage = null
+        autoFillSuccess = false
+        if (!MegingiardAccessibilityService.isEnabled(context)) {
+            autoFillMessage = context.getString(R.string.privd_wizard_autofill_accessibility_disabled)
+            return
+        }
+        autoFillScanning = true
+
+        val nodeText = MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)
+        val nodeResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(nodeText)
+        autoFillScanning = false
+
+        if (nodeResult.isComplete) {
+            val detectedPort = nodeResult.port ?: ""
+            val detectedCode = nodeResult.code ?: ""
+            onPairPortChange(detectedPort)
+            onCodeChange(detectedCode)
+            autoFillSuccess = true
+            autoFillMessage = context.getString(R.string.privd_wizard_autofill_success)
+            if (detectedPort.length == 5 && detectedCode.length == 6) {
+                onSubmit()
+            }
+        } else {
+            autoFillMessage = context.getString(R.string.privd_wizard_autofill_not_found)
+        }
+    }
+
     Text(
         text = stringResource(R.string.privd_wizard_step2_intro),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(bottom = SW_GAP),
     )
     OutlinedTextField(
-        value = pairPort,
-        onValueChange = onPairPortChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
+        value = code,
+        onValueChange = onCodeChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_code)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
@@ -347,9 +435,9 @@ private fun StepPair(
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
     OutlinedTextField(
-        value = code,
-        onValueChange = onCodeChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_code)) },
+        value = pairPort,
+        onValueChange = onPairPortChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
@@ -367,15 +455,26 @@ private fun StepPair(
             style = MaterialTheme.typography.bodySmall,
         )
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
-        TextButton(onClick = onBack, enabled = !busy) {
-            Text(stringResource(R.string.privd_wizard_back))
-        }
+
+    autoFillMessage?.let { msg ->
+        Text(
+            text = msg,
+            color = if (autoFillSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = SW_GAP),
+        )
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = SW_GAP),
+        horizontalArrangement = Arrangement.spacedBy(SW_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Button(
             onClick = onSubmit,
             enabled =
                 !busy &&
-                    pairPort.toIntOrNull()?.let { it in 1..65535 } == true &&
+                    pairPort.length == 5 &&
                     code.length == 6,
         ) {
             Text(
@@ -385,6 +484,55 @@ private fun StepPair(
                     stringResource(R.string.privd_wizard_step2_pair)
                 },
             )
+        }
+        val magicalBrush = rememberMagicalBezelBrush()
+        val glowColor = colors.actionColorSystem
+        OutlinedButton(
+            onClick = { performAutoFillScan() },
+            enabled = !busy && !autoFillScanning,
+            border = BorderStroke(1.5.dp, magicalBrush),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .drawBehind {
+                        val dy = 1.5.dp.toPx()
+                        val dx = 4.5.dp.toPx()
+                        val pillRadius = (size.height + 2 * dy) / 2f
+
+                        // Outer feathered glow layer
+                        drawRoundRect(
+                            color = glowColor.copy(alpha = 0.08f),
+                            cornerRadius = CornerRadius(pillRadius + 2.dp.toPx()),
+                            size = Size(size.width + 2 * (dx + 2.dp.toPx()), size.height + 2 * dy),
+                            topLeft = Offset(-(dx + 2.dp.toPx()), -dy),
+                        )
+                        // Inner core glow layer
+                        drawRoundRect(
+                            color = glowColor.copy(alpha = 0.16f),
+                            cornerRadius = CornerRadius(pillRadius),
+                            size = Size(size.width + 2 * dx, size.height + 2 * dy),
+                            topLeft = Offset(-dx, -dy),
+                        )
+                    },
+        ) {
+            if (autoFillScanning) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(SW_AUTOFILL_ICON_SIZE),
+                    strokeWidth = 2.dp,
+                    color = colors.actionColorSystem,
+                )
+                Spacer(modifier = Modifier.size(SW_GAP))
+                Text(stringResource(R.string.privd_wizard_autofill_scanning))
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.AutoFixHigh,
+                    contentDescription = null,
+                    tint = colors.actionColorSystem,
+                    modifier = Modifier.size(SW_AUTOFILL_ICON_SIZE),
+                )
+                Spacer(modifier = Modifier.size(SW_GAP))
+                Text(stringResource(R.string.privd_wizard_autofill_read_screen))
+            }
         }
     }
 }
@@ -459,6 +607,12 @@ private fun StepBootstrap(
     onStart: () -> Unit,
     onBack: () -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        if (!busy) {
+            onStart()
+        }
+    }
+
     val colors = LocalAppColors.current
     val ord = stage.ordinal
     // Checklist row ordinals map to BootstrapStage ordinals:
@@ -512,6 +666,7 @@ private fun StepDone(onClose: () -> Unit) {
         text = stringResource(R.string.privd_wizard_step4_done),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(bottom = 16.dp),
     )
     Button(onClick = onClose) {
         Text(stringResource(R.string.privd_wizard_close))

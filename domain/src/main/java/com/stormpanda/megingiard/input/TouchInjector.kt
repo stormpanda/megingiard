@@ -3,6 +3,11 @@ package com.stormpanda.megingiard.input
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 private const val TAG = "TouchInjector"
 private const val TOUCH_SLOT_MIN = 0
@@ -32,7 +37,36 @@ object TouchInjector {
 
     private val activeClients = mutableSetOf<String>()
 
+    @Volatile private var lastContext: Context? = null
+
     @Volatile private var usePrivd: Boolean = false
+
+    init {
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            PrivdClient.state.collect { state ->
+                synchronized(TouchInjector) {
+                    if (activeClients.isNotEmpty()) {
+                        val isConnected = (state == PrivdConnectionState.CONNECTED)
+                        if (isConnected && !usePrivd) {
+                            AppLog.i(TAG, "Privd connected while TouchInjector active -> switching to PRIVD backend")
+                            usePrivd = true
+                            if (ShellInputInjector.isRunning) {
+                                ShellInputInjector.stop()
+                            }
+                        } else if (!isConnected && usePrivd) {
+                            AppLog.i(TAG, "Privd disconnected while TouchInjector active -> switching to fallback")
+                            usePrivd = false
+                            lastContext?.let { ctx ->
+                                if (!ShellInputInjector.isRunning) {
+                                    ShellInputInjector.start(ctx)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Starts the native touch injector for a specific client [token].
@@ -43,6 +77,7 @@ object TouchInjector {
         context: Context,
         token: String,
     ) {
+        lastContext = context.applicationContext
         val wasEmpty = activeClients.isEmpty()
         activeClients.add(token)
         AppLog.i(TAG, "start() client='$token' activeClients=$activeClients")
@@ -72,6 +107,7 @@ object TouchInjector {
         activeClients.remove(token)
         AppLog.i(TAG, "stop() client='$token' activeClients=$activeClients")
         if (activeClients.isEmpty()) {
+            lastContext = null
             if (usePrivd) {
                 releaseAllSlots()
                 return
