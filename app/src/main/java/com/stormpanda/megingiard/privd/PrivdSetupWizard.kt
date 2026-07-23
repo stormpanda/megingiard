@@ -123,7 +123,7 @@ private val SW_DIALOG_PADDING = 20.dp
 private val SW_GAP = 12.dp
 private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
-private val SW_OCR_ICON_SIZE = 18.dp
+private val SW_AUTOFILL_ICON_SIZE = 18.dp
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -384,36 +384,36 @@ private fun StepPair(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    var ocrScanning by remember { mutableStateOf(false) }
-    var ocrMessage by remember { mutableStateOf<String?>(null) }
-    var ocrSuccess by remember { mutableStateOf(false) }
+    var autoFillScanning by remember { mutableStateOf(false) }
+    var autoFillMessage by remember { mutableStateOf<String?>(null) }
+    var autoFillSuccess by remember { mutableStateOf(false) }
 
-    fun performOcrScan() {
-        if (ocrScanning || busy) return
-        ocrMessage = null
-        ocrSuccess = false
+    fun performAutoFillScan() {
+        if (autoFillScanning || busy) return
+        autoFillMessage = null
+        autoFillSuccess = false
         if (!MegingiardAccessibilityService.isEnabled(context)) {
-            ocrMessage = context.getString(R.string.privd_wizard_ocr_accessibility_disabled)
+            autoFillMessage = context.getString(R.string.privd_wizard_autofill_accessibility_disabled)
             return
         }
-        ocrScanning = true
+        autoFillScanning = true
 
         val nodeText = MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)
-        val nodeResult = PrivdPairOcrScanner.parsePairingInfoFromText(nodeText)
-        ocrScanning = false
+        val nodeResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(nodeText)
+        autoFillScanning = false
 
         if (nodeResult.isComplete) {
             nodeResult.port?.let { onPairPortChange(it) }
             nodeResult.code?.let { onCodeChange(it) }
-            ocrSuccess = true
-            ocrMessage = context.getString(R.string.privd_wizard_ocr_success)
+            autoFillSuccess = true
+            autoFillMessage = context.getString(R.string.privd_wizard_autofill_success)
         } else {
-            ocrMessage = context.getString(R.string.privd_wizard_ocr_not_found)
+            autoFillMessage = context.getString(R.string.privd_wizard_autofill_not_found)
         }
     }
 
     LaunchedEffect(Unit) {
-        performOcrScan()
+        performAutoFillScan()
     }
 
     Text(
@@ -458,10 +458,10 @@ private fun StepPair(
         )
     }
 
-    ocrMessage?.let { msg ->
+    autoFillMessage?.let { msg ->
         Text(
             text = msg,
-            color = if (ocrSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
+            color = if (autoFillSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(vertical = SW_GAP),
         )
@@ -494,8 +494,8 @@ private fun StepPair(
         val magicalBrush = rememberMagicalBezelBrush()
         val glowColor = colors.actionColorSystem
         OutlinedButton(
-            onClick = { performOcrScan() },
-            enabled = !busy && !ocrScanning,
+            onClick = { performAutoFillScan() },
+            enabled = !busy && !autoFillScanning,
             border = BorderStroke(1.5.dp, magicalBrush),
             modifier =
                 Modifier.drawBehind {
@@ -519,23 +519,23 @@ private fun StepPair(
                     )
                 },
         ) {
-            if (ocrScanning) {
+            if (autoFillScanning) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(SW_OCR_ICON_SIZE),
+                    modifier = Modifier.size(SW_AUTOFILL_ICON_SIZE),
                     strokeWidth = 2.dp,
                     color = colors.actionColorSystem,
                 )
                 Spacer(modifier = Modifier.size(SW_GAP))
-                Text(stringResource(R.string.privd_wizard_ocr_scanning))
+                Text(stringResource(R.string.privd_wizard_autofill_scanning))
             } else {
                 Icon(
                     imageVector = Icons.Rounded.AutoFixHigh,
                     contentDescription = null,
                     tint = colors.actionColorSystem,
-                    modifier = Modifier.size(SW_OCR_ICON_SIZE),
+                    modifier = Modifier.size(SW_AUTOFILL_ICON_SIZE),
                 )
                 Spacer(modifier = Modifier.size(SW_GAP))
-                Text(stringResource(R.string.privd_wizard_autofill_ocr))
+                Text(stringResource(R.string.privd_wizard_autofill_read_screen))
             }
         }
     }

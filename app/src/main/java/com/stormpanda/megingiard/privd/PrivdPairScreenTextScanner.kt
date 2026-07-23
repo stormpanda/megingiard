@@ -2,7 +2,7 @@ package com.stormpanda.megingiard.privd
 
 import com.stormpanda.megingiard.AppLog
 
-private const val TAG = "PrivdPairOcrScanner"
+private const val TAG = "PrivdPairScreenTextScanner"
 
 /**
  * Extracted ADB Wireless Debugging pairing parameters.
@@ -10,7 +10,7 @@ private const val TAG = "PrivdPairOcrScanner"
  * @property port 5-digit pairing port (e.g. "35283"), or null if not detected.
  * @property code 6-digit pairing code (e.g. "722106"), or null if not detected.
  */
-data class PrivdPairOcrResult(
+data class PrivdPairScreenTextResult(
     val port: String?,
     val code: String?,
 ) {
@@ -20,7 +20,7 @@ data class PrivdPairOcrResult(
 /**
  * Regex parser for Android Wireless Debugging pairing dialogs.
  */
-object PrivdPairOcrScanner {
+object PrivdPairScreenTextScanner {
     private val PAIRING_CODE_REGEX = Regex("""\b(\d{6})\b""")
     private val IP_PORT_REGEX = Regex("""\b(?:\d{1,3}\.){3}\d{1,3}:(\d{4,5})\b""")
     private val EXPLICIT_PORT_REGEX = Regex("""(?i)(?:port|ip address & port|address & port)[:\s]*(\d{4,5})\b""")
@@ -30,10 +30,10 @@ object PrivdPairOcrScanner {
      * Parses raw text (from Accessibility node trees) to extract the
      * 6-digit pairing code and pairing port.
      */
-    fun parsePairingInfoFromText(text: String): PrivdPairOcrResult {
+    fun parsePairingInfoFromText(text: String): PrivdPairScreenTextResult {
         if (text.isBlank()) {
             AppLog.d(TAG, "parsePairingInfoFromText: input text is blank")
-            return PrivdPairOcrResult(port = null, code = null)
+            return PrivdPairScreenTextResult(port = null, code = null)
         }
 
         // 1. Extract 6-digit pairing code
@@ -49,7 +49,7 @@ object PrivdPairOcrScanner {
             pairingPort = EXPLICIT_PORT_REGEX.find(text)?.groupValues?.get(1)
         }
 
-        // Priority C: Standalone 5-digit number (excluding the pairing code if it happens to be 5 digits, though codes are 6)
+        // Priority C: Standalone 5-digit number
         if (pairingPort == null) {
             pairingPort =
                 FIVE_DIGIT_PORT_REGEX
@@ -59,6 +59,6 @@ object PrivdPairOcrScanner {
         }
 
         AppLog.d(TAG, "parsePairingInfoFromText -> code=$pairingCode, port=$pairingPort (textLength=${text.length})")
-        return PrivdPairOcrResult(port = pairingPort, code = pairingCode)
+        return PrivdPairScreenTextResult(port = pairingPort, code = pairingCode)
     }
 }

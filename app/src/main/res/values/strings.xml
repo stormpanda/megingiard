@@ -412,11 +412,11 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_field_code">WiFi pairing code (6 digits)</string>
     <string name="privd_wizard_step2_pair">Pair</string>
     <string name="privd_wizard_step2_error">Pairing failed. Double-check the pairing port and code, then try again.</string>
-    <string name="privd_wizard_autofill_ocr">Auto-fill with OCR</string>
-    <string name="privd_wizard_ocr_scanning">Scanning screen…</string>
-    <string name="privd_wizard_ocr_success">Auto-filled pairing details!</string>
-    <string name="privd_wizard_ocr_not_found">Could not detect pairing details on screen. Ensure the \"Pair device\" dialog is visible on top screen.</string>
-    <string name="privd_wizard_ocr_accessibility_disabled">Enable Accessibility Service in Settings to auto-fill via OCR.</string>
+    <string name="privd_wizard_autofill_read_screen">Auto-fill (read screen)</string>
+    <string name="privd_wizard_autofill_scanning">Scanning screen…</string>
+    <string name="privd_wizard_autofill_success">Auto-filled pairing details!</string>
+    <string name="privd_wizard_autofill_not_found">Could not detect pairing details on screen. Ensure the \"Pair device\" dialog is visible on top screen.</string>
+    <string name="privd_wizard_autofill_accessibility_disabled">Enable Accessibility Service in Settings to auto-fill by reading screen text.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
     <string name="privd_wizard_step3_start">Push and start daemon</string>

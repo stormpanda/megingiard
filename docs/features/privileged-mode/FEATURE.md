@@ -62,9 +62,9 @@ every device since Android 11 (API 30).
 
 ### FR-PV8: Accessibility Pairing Auto-Fill
 
-- Step 2 (`StepPair`) of the setup wizard MUST provide an **Auto-fill (OCR / Accessibility)** button.
+- Step 2 (`StepPair`) of the setup wizard MUST provide an **Auto-fill (read screen)** button.
 - When activated or when entering Step 2, the app MUST inspect visible accessibility text nodes on the primary display (Display 0) via `MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)`.
-- Using `PrivdPairOcrScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
+- Using `PrivdPairScreenTextScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
 
 
 ### FR-PV5: No Always-Connected Requirement
