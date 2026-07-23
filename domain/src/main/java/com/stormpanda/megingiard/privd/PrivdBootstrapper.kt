@@ -157,8 +157,10 @@ object PrivdBootstrapper {
             _stage.value = BootstrapStage.IDLE
             return false
         }
-        // Push binary
+        // Push binary — stop any existing daemon process and remove stale remote binary
+        // prior to ADB sync push to avoid ETXTBSY (Text File Busy) and stale read-only permission locks.
         _stage.value = BootstrapStage.PUSHING_BINARY
+        stopExistingDaemon(mgr)
         val pushOk =
             runCatching { pushDaemon(context, mgr) }.getOrElse { e ->
                 AppLog.w(TAG, "pushDaemon() threw: $e")
@@ -304,6 +306,20 @@ object PrivdBootstrapper {
             AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
             proc?.destroyForcibly()
             0
+        }
+    }
+
+    private fun stopExistingDaemon(mgr: PrivdAdbConnectionManager) {
+        val killCmd = "shell:kill -9 \$(pidof $DAEMON_PROCESS_NAME 2>/dev/null) 2>/dev/null; rm -f $DAEMON_REMOTE_PATH; sleep 1"
+        AppLog.d(TAG, "stopExistingDaemon cmd: $killCmd")
+        runCatching {
+            mgr.openStream(killCmd)?.use { s ->
+                val input = s.openInputStream()
+                val buf = ByteArray(256)
+                while (input.read(buf) != -1) { }
+            }
+        }.onFailure { e ->
+            AppLog.w(TAG, "stopExistingDaemon failed: $e")
         }
     }
 

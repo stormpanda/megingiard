@@ -280,9 +280,9 @@ Malformed messages, missing messages, wrong HMAC values, or timeout expiration f
 
 The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator. The Kotlin app compares the daemon `PROOF` through `HmacUtil.constantTimeEqualsHex()` so both authentication legs avoid early-exit string equality for same-length MAC values.
 
-#### Native Asset Verification During Bootstrap
+#### Native Asset Verification & Pre-Push Cleanup During Bootstrap
 
-`PrivdBootstrapper` verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A daemon verification failure aborts bootstrap; a mirror DEX verification failure is logged and leaves the normal MediaProjection fallback path available.
+`PrivdBootstrapper` kills any running daemon process (`kill -9`) and deletes `/data/local/tmp/megingiard_privd` over ADB shell prior to pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. It verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A daemon verification failure aborts bootstrap; a mirror DEX verification failure is logged and leaves the normal MediaProjection fallback path available.
 
 Detailed native rebuild and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
 
