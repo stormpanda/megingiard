@@ -98,10 +98,14 @@ Your generated changelog MUST follow this template precisely:
 
 ## Constraints
 
-- **Clickable GitHub Links**: Every commit hash and mentioned file MUST be formatted as a clickable URL pointing to GitHub (`https://github.com/stormpanda/megingiard/commit/<hash>` and `https://github.com/stormpanda/megingiard/blob/<end-tag>/<file-path>`). Do not use local file URLs (`file:///`).
+- **Clickable GitHub Commit Links**: Every commit hash and mentioned file MUST be formatted as a clickable URL pointing to GitHub (`https://github.com/stormpanda/megingiard/commit/<hash>` and `https://github.com/stormpanda/megingiard/blob/<end-tag>/<file-path>`). Do not use local file URLs (`file:///`).
+- **Commits on main Only**: You MUST only link commit hashes that exist directly on the `main` branch (such as merge commits or commits present in `main`'s history). Never reference transient commits from topic or unmerged feature branches.
+- **No Raw PR Numbers**: NEVER output raw PR numbers like `(#78)` or `#78`. Always resolve the actual commit hash(es) on `main` associated with the change and format them as clickable commit links (`([`hash-short`](https://github.com/stormpanda/megingiard/commit/hash))`).
+
 - **Keep it Simple and Concise**: Ensure that all explanations are short, non-technical, and focused entirely on the user-facing benefit. 
 - **No Developer Jargon**: Do not include implementation details such as exact screen dimensions/measurements (e.g., `120 dp`), class names (e.g., `SwipeGestureProcessor`), database schema changes, or function arguments in the Features and Bug Fixes sections. Keep descriptions high-level.
 - **Collapsible Docs**: The development documentation updates section at the very end must always be wrapped in a `<details>` / `<summary>` tag block to maintain a clean visual layout.
 - Focus on things that the user/operator of Megingiard is interested in (features and bug fixes first).
 - Development docs must **always** be placed at the very end of the changelog.
 - Do not list irrelevant developer chore commits (like minor tag creation or local script tweaks) under New Features or Bug Fixes. Keep the changelog clean and professional.
+

@@ -33,10 +33,10 @@ log_error() {
     echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
 }
 
-# Verify clean git status
+# Verify clean git status (ignoring untracked files)
 check_clean_git() {
-    if [[ -n "$(git status --porcelain)" ]]; then
-        log_error "Git workspace is not clean. Please commit or stash changes first."
+    if [[ -n "$(git status --porcelain -uno)" ]]; then
+        log_error "Git workspace has uncommitted tracked changes. Please commit or stash changes first."
         exit 1
     fi
 }
@@ -150,16 +150,20 @@ case "$1" in
             release_version="${current_version%-SNAPSHOT}"
             log_info "Standard release from main: target version $release_version"
         elif [[ "$start_branch" =~ ^release/ ]]; then
-            # Hotfix release flow from an existing release branch
-            if [[ "$current_version" =~ "-SNAPSHOT$" ]]; then
+            # Check if current branch name matches current_version (resuming/re-pushing release)
+            branch_version="${start_branch#release/}"
+            if [[ "$current_version" == "$branch_version" ]]; then
+                release_version="$current_version"
+                log_info "Resuming release preparation on '$start_branch': target version $release_version"
+            elif [[ "$current_version" =~ "-SNAPSHOT$" ]]; then
                 release_version="${current_version%-SNAPSHOT}"
+                log_info "Hotfix release from '$start_branch': target version $release_version"
             else
-                # Increment patch version
                 IFS='.' read -r major minor patch <<< "$current_version"
                 next_patch=$((patch + 1))
                 release_version="${major}.${minor}.${next_patch}"
+                log_info "Hotfix release from '$start_branch': target version $release_version"
             fi
-            log_info "Hotfix release from '$start_branch': target version $release_version"
         else
             log_error "Releases can only be initiated from 'main' or a 'release/*' branch (currently on '$start_branch')."
             exit 1
@@ -167,13 +171,15 @@ case "$1" in
 
         release_branch="release/$release_version"
 
-        # Check if release branch already exists locally
-        if git show-ref --verify --quiet "refs/heads/$release_branch"; then
-            log_info "Branch '$release_branch' already exists. Switching to it..."
-            git checkout "$release_branch"
-        else
-            log_info "Creating and checking out new release branch '$release_branch'..."
-            git checkout -b "$release_branch"
+        if [[ "$start_branch" != "$release_branch" ]]; then
+            # Check if release branch already exists locally
+            if git show-ref --verify --quiet "refs/heads/$release_branch"; then
+                log_info "Branch '$release_branch' already exists. Switching to it..."
+                git checkout "$release_branch"
+            else
+                log_info "Creating and checking out new release branch '$release_branch'..."
+                git checkout -b "$release_branch"
+            fi
         fi
 
         # Update build.gradle.kts versionName on the release branch
