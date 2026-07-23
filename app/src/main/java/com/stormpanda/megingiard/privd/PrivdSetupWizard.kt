@@ -368,6 +368,7 @@ private fun StepPair(
         text = stringResource(R.string.privd_wizard_step2_intro),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(bottom = SW_GAP),
     )
     OutlinedTextField(
         value = pairPort,
@@ -405,42 +406,24 @@ private fun StepPair(
         )
     }
 
-    OutlinedButton(
-        onClick = { performOcrScan() },
-        enabled = !busy && !ocrScanning,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        if (ocrScanning) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(SW_OCR_ICON_SIZE),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.size(SW_GAP))
-            Text(stringResource(R.string.privd_wizard_ocr_scanning))
-        } else {
-            Icon(
-                imageVector = Icons.Rounded.AutoFixHigh,
-                contentDescription = null,
-                modifier = Modifier.size(SW_OCR_ICON_SIZE),
-            )
-            Spacer(modifier = Modifier.size(SW_GAP))
-            Text(stringResource(R.string.privd_wizard_autofill_ocr))
-        }
-    }
-
     ocrMessage?.let { msg ->
         Text(
             text = msg,
             color = if (ocrSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(vertical = SW_GAP),
         )
     }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(SW_GAP),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         TextButton(onClick = onBack, enabled = !busy) {
             Text(stringResource(R.string.privd_wizard_back))
         }
+        Spacer(modifier = Modifier.weight(1f))
         Button(
             onClick = onSubmit,
             enabled =
@@ -455,6 +438,28 @@ private fun StepPair(
                     stringResource(R.string.privd_wizard_step2_pair)
                 },
             )
+        }
+        OutlinedButton(
+            onClick = { performOcrScan() },
+            enabled = !busy && !ocrScanning,
+        ) {
+            if (ocrScanning) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(SW_OCR_ICON_SIZE),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(modifier = Modifier.size(SW_GAP))
+                Text(stringResource(R.string.privd_wizard_ocr_scanning))
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.AutoFixHigh,
+                    contentDescription = null,
+                    modifier = Modifier.size(SW_OCR_ICON_SIZE),
+                )
+                Spacer(modifier = Modifier.size(SW_GAP))
+                Text(stringResource(R.string.privd_wizard_autofill_ocr))
+            }
         }
     }
 }
@@ -529,6 +534,12 @@ private fun StepBootstrap(
     onStart: () -> Unit,
     onBack: () -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        if (!busy) {
+            onStart()
+        }
+    }
+
     val colors = LocalAppColors.current
     val ord = stage.ordinal
     // Checklist row ordinals map to BootstrapStage ordinals:
