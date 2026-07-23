@@ -311,13 +311,15 @@ class KeyboardGestureProcessor(
         } else {
             val popup = _activePopupState.value
             if (popup != null && pointerId == popup.pointerId) {
-                val index = popup.selectedIndex
-                if (index == 0) {
-                    controller.onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = false)
-                } else {
-                    val charToInject = popup.options[index]
-                    onInjectPopupSelection(popup.keyDef, charToInject)
+                if (popup.isLongPress) {
+                    val index = popup.selectedIndex.coerceIn(0, popup.options.lastIndex)
+                    val charToInject = popup.options.getOrNull(index)
+                    if (charToInject != null) {
+                        onInjectPopupSelection(popup.keyDef, charToInject)
+                    }
                     controller.onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = true)
+                } else {
+                    controller.onKeyUp(pointerId, grid, kbRepeatEnabled(), skipInjection = false)
                 }
                 _activePopupState.value = null
                 virtualAnchorX = 0f

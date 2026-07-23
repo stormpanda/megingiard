@@ -160,4 +160,73 @@ class KeyboardGestureProcessorTest {
             assertTrue(controller.pressedKeys.value.isEmpty())
             assertNull(processor.activePopupState.value)
         }
+
+    @Test
+    fun `long press on character key and release injects secondary popup option`() =
+        runTest(testDispatcher) {
+            val controller = KeyRepeatController(this)
+            var injectedChar: String? = null
+            var injectedKeyDef: KeyDef? = null
+            val processor =
+                KeyboardGestureProcessor(
+                    controller = controller,
+                    scope = this,
+                    kbRepeatEnabled = { true },
+                    isShiftActive = { false },
+                    isCapsActive = { false },
+                    isAltGrActive = { false },
+                    initialDensity = 1.0f,
+                    onInjectPopupSelection = { keyDef, char ->
+                        injectedKeyDef = keyDef
+                        injectedChar = char
+                    },
+                )
+
+            val qKey = KeyDef("q", "q", LinuxKeycodes.KEY_Q, superscript = "1")
+            val testGrid = listOf(listOf(qKey))
+            processor.updateBounds("q", 0f, 0f, 50f, 50f)
+
+            processor.onPress(1L, 25f, 25f, testGrid, isFullLayout = false)
+            testScheduler.advanceTimeBy(500L)
+            testScheduler.runCurrent()
+
+            val popup = processor.activePopupState.value
+            assertNotNull(popup)
+            assertTrue(popup!!.isLongPress)
+            assertEquals(listOf("1"), popup.options)
+
+            processor.onRelease(1L, testGrid)
+
+            assertEquals("1", injectedChar)
+            assertEquals("q", injectedKeyDef?.id)
+            assertNull(processor.activePopupState.value)
+        }
+
+    @Test
+    fun `short press on character key and release does not inject secondary popup option`() =
+        runTest(testDispatcher) {
+            val controller = KeyRepeatController(this)
+            var injectedChar: String? = null
+            val processor =
+                KeyboardGestureProcessor(
+                    controller = controller,
+                    scope = this,
+                    kbRepeatEnabled = { true },
+                    isShiftActive = { false },
+                    isCapsActive = { false },
+                    isAltGrActive = { false },
+                    initialDensity = 1.0f,
+                    onInjectPopupSelection = { _, char -> injectedChar = char },
+                )
+
+            val qKey = KeyDef("q", "q", LinuxKeycodes.KEY_Q, superscript = "1")
+            val testGrid = listOf(listOf(qKey))
+            processor.updateBounds("q", 0f, 0f, 50f, 50f)
+
+            processor.onPress(1L, 25f, 25f, testGrid, isFullLayout = false)
+            processor.onRelease(1L, testGrid)
+
+            assertNull(injectedChar)
+            assertNull(processor.activePopupState.value)
+        }
 }
