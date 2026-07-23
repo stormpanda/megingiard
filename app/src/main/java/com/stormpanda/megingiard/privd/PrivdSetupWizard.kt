@@ -401,17 +401,18 @@ private fun StepPair(
         autoFillScanning = false
 
         if (nodeResult.isComplete) {
-            nodeResult.port?.let { onPairPortChange(it) }
-            nodeResult.code?.let { onCodeChange(it) }
+            val detectedPort = nodeResult.port ?: ""
+            val detectedCode = nodeResult.code ?: ""
+            onPairPortChange(detectedPort)
+            onCodeChange(detectedCode)
             autoFillSuccess = true
             autoFillMessage = context.getString(R.string.privd_wizard_autofill_success)
+            if (detectedPort.length == 5 && detectedCode.length == 6) {
+                onSubmit()
+            }
         } else {
             autoFillMessage = context.getString(R.string.privd_wizard_autofill_not_found)
         }
-    }
-
-    LaunchedEffect(Unit) {
-        performAutoFillScan()
     }
 
     Text(
