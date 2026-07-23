@@ -82,10 +82,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 val buffer = screenshotResult.hardwareBuffer
                                 val colorSpace = screenshotResult.colorSpace
                                 val bitmap =
-                                    Bitmap
-                                        .wrapHardwareBuffer(buffer, colorSpace)
-                                        ?.copy(Bitmap.Config.ARGB_8888, false)
-                                buffer.close()
+                                    try {
+                                        Bitmap
+                                            .wrapHardwareBuffer(buffer, colorSpace)
+                                            ?.copy(Bitmap.Config.ARGB_8888, false)
+                                    } finally {
+                                        buffer.close()
+                                    }
                                 callback(bitmap)
                             } catch (e: Exception) {
                                 AppLog.w(TAG, "Failed to extract bitmap from ScreenshotResult: $e")
