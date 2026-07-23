@@ -48,6 +48,99 @@ check_branch() {
     fi
 }
 
+# Helper function to build and sign release APK
+build_release_apk() {
+    # Verify local.properties exists and has keystore details
+    if [[ ! -f "$LOCAL_PROPERTIES" ]]; then
+        log_error "local.properties not found at $LOCAL_PROPERTIES"
+        exit 1
+    fi
+
+    if ! grep -q "megingiard.keystore.password" "$LOCAL_PROPERTIES" || \
+       ! grep -q "megingiard.keystore.key.password" "$LOCAL_PROPERTIES" || \
+       ! grep -q "megingiard.keystore.alias" "$LOCAL_PROPERTIES"; then
+        log_error "Keystore credentials missing in local.properties. Ensure megingiard.keystore.password, megingiard.keystore.key.password, and megingiard.keystore.alias are present."
+        exit 1
+    fi
+
+    # Find version name to build
+    version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+    release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+
+    log_info "Building release APK for version $release_version..."
+    ./gradlew :app:assembleRelease
+
+    # Ensure output dir exists, clean old artifacts, and copy the APK
+    rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
+    mkdir -p app/release
+    generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
+    copied_apk="app/release/Megingiard-v${release_version}.apk"
+
+    if [[ ! -f "$generated_apk" ]]; then
+        log_error "Generated APK not found at $generated_apk"
+        exit 1
+    fi
+
+    cp "$generated_apk" "$copied_apk"
+    log_info "Copied APK to $copied_apk"
+
+    # Run checksum script
+    log_info "Generating SHA-256 checksum..."
+    scripts/generate_checksum.sh
+
+    log_success "Release Build $release_version APK successfully created and signed."
+}
+
+# Helper function to install built release APK on connected Thor/Android device
+install_release_apk() {
+    strict_mode="${1:-false}"
+    version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+    release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+    copied_apk="app/release/Megingiard-v${release_version}.apk"
+
+    if [[ ! -f "$copied_apk" ]]; then
+        log_error "Release APK not found at $copied_apk. Please run 'scripts/release.sh build' first."
+        exit 1
+    fi
+
+    ADB="${ADB:-$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")}"
+    DEVICE="${DEVICE:-}"
+    ADB_CMD=("$ADB")
+    if [[ -n "$DEVICE" ]]; then
+        ADB_CMD+=("-s" "$DEVICE")
+    fi
+
+    if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
+        if "${ADB_CMD[@]}" devices 2>/dev/null | grep -v "List of devices" | grep -qE '[[:space:]]device$'; then
+            remote_download_dir="/sdcard/Download"
+            remote_apk_path="${remote_download_dir}/$(basename "$copied_apk")"
+
+            log_info "Thor/Android device detected via ADB."
+            log_info "Copying APK to Thor's Download folder ($remote_apk_path)..."
+            "${ADB_CMD[@]}" push "$copied_apk" "$remote_apk_path"
+
+            log_info "Installing APK on Thor via ADB ($copied_apk)..."
+            "${ADB_CMD[@]}" install -r "$copied_apk"
+
+            log_success "Successfully installed $copied_apk on Thor."
+        else
+            if [[ "$strict_mode" == "true" ]]; then
+                log_error "No connected Thor/Android device found via ADB."
+                exit 1
+            else
+                log_info "No connected Thor/Android device found via ADB. Skipping device install."
+            fi
+        fi
+    else
+        if [[ "$strict_mode" == "true" ]]; then
+            log_error "ADB executable not found at '$ADB'."
+            exit 1
+        else
+            log_info "ADB executable not found at '$ADB'. Skipping device install."
+        fi
+    fi
+}
+
 case "$1" in
     prepare)
         check_clean_git
@@ -87,45 +180,16 @@ case "$1" in
         ;;
 
     build)
-        # Verify local.properties exists and has keystore details
-        if [[ ! -f "$LOCAL_PROPERTIES" ]]; then
-            log_error "local.properties not found at $LOCAL_PROPERTIES"
-            exit 1
-        fi
+        build_release_apk
+        ;;
 
-        if ! grep -q "megingiard.keystore.password" "$LOCAL_PROPERTIES" || \
-           ! grep -q "megingiard.keystore.key.password" "$LOCAL_PROPERTIES" || \
-           ! grep -q "megingiard.keystore.alias" "$LOCAL_PROPERTIES"; then
-            log_error "Keystore credentials missing in local.properties. Ensure megingiard.keystore.password, megingiard.keystore.key.password, and megingiard.keystore.alias are present."
-            exit 1
-        fi
+    install)
+        install_release_apk true
+        ;;
 
-        # Find version name to build
-        version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
-        release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
-
-        log_info "Building release APK for version $release_version..."
-        ./gradlew :app:assembleRelease
-
-        # Ensure output dir exists, clean old artifacts, and copy the APK
-        rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
-        mkdir -p app/release
-        generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
-        copied_apk="app/release/Megingiard-v${release_version}.apk"
-
-        if [[ ! -f "$generated_apk" ]]; then
-            log_error "Generated APK not found at $generated_apk"
-            exit 1
-        fi
-
-        cp "$generated_apk" "$copied_apk"
-        log_info "Copied APK to $copied_apk"
-
-        # Run checksum script
-        log_info "Generating SHA-256 checksum..."
-        scripts/generate_checksum.sh
-
-        log_success "Release Build $release_version APK successfully created and signed."
+    build-install)
+        build_release_apk
+        install_release_apk false
         ;;
 
     publish)
@@ -200,7 +264,7 @@ case "$1" in
         ;;
 
     *)
-        log_error "Unknown command. Usage: scripts/release.sh {prepare|build|publish|bump}"
+        log_error "Unknown command. Usage: scripts/release.sh {prepare|build|install|build-install|publish|bump}"
         exit 1
         ;;
 esac
