@@ -462,7 +462,7 @@ private fun StepPair(
             text = msg,
             color = if (autoFillSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(vertical = SW_GAP),
+            modifier = Modifier.padding(top = SW_GAP),
         )
     }
 
