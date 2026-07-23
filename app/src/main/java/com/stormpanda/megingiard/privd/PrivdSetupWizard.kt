@@ -371,9 +371,9 @@ private fun StepPair(
         modifier = Modifier.padding(bottom = SW_GAP),
     )
     OutlinedTextField(
-        value = pairPort,
-        onValueChange = onPairPortChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
+        value = code,
+        onValueChange = onCodeChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_code)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
@@ -385,9 +385,9 @@ private fun StepPair(
         keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
     )
     OutlinedTextField(
-        value = code,
-        onValueChange = onCodeChange,
-        label = { Text(stringResource(R.string.privd_wizard_field_code)) },
+        value = pairPort,
+        onValueChange = onPairPortChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         enabled = !busy,
