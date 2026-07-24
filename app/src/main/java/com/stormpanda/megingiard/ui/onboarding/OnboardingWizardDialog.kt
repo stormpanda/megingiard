@@ -456,15 +456,15 @@ fun OnboardingStepper(
                                 color =
                                     when {
                                         isCompleted -> colors.accent
-                                        isCurrent -> colors.accent.copy(alpha = 0.8f)
-                                        else -> colors.controlOverlay
+                                        isCurrent -> colors.accent.copy(alpha = 0.85f)
+                                        else -> colors.surfaceVariant
                                     },
                             ).border(
                                 width = 1.dp,
                                 color =
                                     when {
                                         isCompleted || isCurrent -> colors.accent
-                                        else -> colors.controlOverlayBorder
+                                        else -> colors.onSurfaceSecondary.copy(alpha = 0.35f)
                                     },
                                 shape = CircleShape,
                             ),
@@ -495,7 +495,7 @@ fun OnboardingStepper(
                                 .height(2.dp)
                                 .padding(horizontal = 4.dp)
                                 .background(
-                                    color = if (isLineDone) colors.accent else colors.controlOverlayBorder,
+                                    color = if (isLineDone) colors.accent else colors.onSurfaceSecondary.copy(alpha = 0.25f),
                                 ),
                     )
                 }
