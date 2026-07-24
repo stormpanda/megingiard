@@ -288,13 +288,21 @@ fun GlobalSettingsScreen(
                     ) {
                         AppSettingsRow(
                             onClick = {
-                                val intent =
-                                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                val options = ActivityOptions.makeBasic()
-                                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                context.startActivity(intent, options.toBundle())
+                                try {
+                                    val intent =
+                                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                            addFlags(
+                                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                                                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                                            )
+                                        }
+                                    val options = ActivityOptions.makeBasic()
+                                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                    context.startActivity(intent, options.toBundle())
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
+                                }
                             },
                         ) {
                             Column(
