@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.onboarding
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -57,6 +58,9 @@ object OnboardingWizardManager {
             _isWizardActive.value = false
             return
         }
+
+        AppStateManager.closeQuickMenu()
+        AppStateManager.setGlobalSettingsOpen(false)
 
         if (force) {
             completedStepIds.clear()
