@@ -518,89 +518,68 @@ fun OnboardingStepper(
 ) {
     val colors = LocalAppColors.current
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            steps.forEachIndexed { index, step ->
-                val isCompleted = step.isCompleted
-                val isCurrent = index == activeStepIndex
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        steps.forEachIndexed { index, step ->
+            val isCompleted = step.isCompleted
+            val isCurrent = index == activeStepIndex
 
-                Box(
-                    modifier =
-                        Modifier
-                            .size(OW_STEPPER_DOT_SIZE)
-                            .clip(CircleShape)
-                            .background(
-                                color =
-                                    when {
-                                        isCompleted -> colors.accent
-                                        isCurrent -> colors.accent.copy(alpha = 0.85f)
-                                        else -> colors.surfaceVariant
-                                    },
-                            ).border(
-                                width = 1.dp,
-                                color =
-                                    when {
-                                        isCompleted || isCurrent -> colors.accent
-                                        else -> colors.onSurfaceSecondary.copy(alpha = 0.35f)
-                                    },
-                                shape = CircleShape,
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (isCompleted) {
-                        Icon(
-                            imageVector = Icons.Rounded.Check,
-                            contentDescription = null,
-                            tint = colors.onAccent,
-                            modifier = Modifier.size(14.dp),
-                        )
-                    } else {
-                        Text(
-                            text = "${index + 1}",
-                            color = if (isCurrent) colors.onAccent else colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-
-                if (index < steps.size - 1) {
-                    val isLineDone = steps[index].isCompleted
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .height(2.dp)
-                                .padding(horizontal = 4.dp)
-                                .background(
-                                    color = if (isLineDone) colors.accent else colors.onSurfaceSecondary.copy(alpha = 0.25f),
-                                ),
+            Box(
+                modifier =
+                    Modifier
+                        .size(OW_STEPPER_DOT_SIZE)
+                        .clip(CircleShape)
+                        .background(
+                            color =
+                                when {
+                                    isCompleted -> colors.accent
+                                    isCurrent -> colors.accent.copy(alpha = 0.85f)
+                                    else -> colors.surfaceVariant
+                                },
+                        ).border(
+                            width = 1.dp,
+                            color =
+                                when {
+                                    isCompleted || isCurrent -> colors.accent
+                                    else -> colors.onSurfaceSecondary.copy(alpha = 0.35f)
+                                },
+                            shape = CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isCompleted) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = colors.onAccent,
+                        modifier = Modifier.size(14.dp),
+                    )
+                } else {
+                    Text(
+                        text = "${index + 1}",
+                        color = if (isCurrent) colors.onAccent else colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val currentStep = steps.getOrNull(activeStepIndex)
-        val stepTitle =
-            when (currentStep?.id) {
-                OnboardingStepId.WELCOME -> stringResource(R.string.onboarding_step_welcome)
-                OnboardingStepId.QUICK_MENU -> stringResource(R.string.onboarding_step_quick_menu)
-                OnboardingStepId.THEME -> stringResource(R.string.onboarding_step_theme)
-                OnboardingStepId.ACCESSIBILITY -> stringResource(R.string.onboarding_step_accessibility)
-                OnboardingStepId.FINISHED -> stringResource(R.string.onboarding_step_finished)
-                null -> ""
+            if (index < steps.size - 1) {
+                val isLineDone = steps[index].isCompleted
+                Box(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .height(2.dp)
+                            .padding(horizontal = 4.dp)
+                            .background(
+                                color = if (isLineDone) colors.accent else colors.onSurfaceSecondary.copy(alpha = 0.25f),
+                            ),
+                )
             }
-
-        Text(
-            text = stringResource(R.string.onboarding_step_counter, activeStepIndex + 1, steps.size) + ": $stepTitle",
-            color = colors.accent,
-            style = MaterialTheme.typography.labelMedium,
-        )
+        }
     }
 }
 
