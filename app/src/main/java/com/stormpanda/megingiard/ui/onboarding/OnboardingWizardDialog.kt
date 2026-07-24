@@ -216,10 +216,7 @@ fun OnboardingWizardDialog(
     if (isQuickMenuStep) {
         QuickMenuGestureTrialOverlay(
             overlayAtBottom = overlayAtBottom,
-            onDismiss = {
-                OnboardingWizardManager.skipWizard()
-                onDismiss()
-            },
+            onDismiss = {},
             showScrim = true,
             content = wizardCardContent,
         )
@@ -232,10 +229,7 @@ fun OnboardingWizardDialog(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = {
-                            OnboardingWizardManager.skipWizard()
-                            onDismiss()
-                        },
+                        onClick = {}, // Absorb click without dismissing
                     ),
             contentAlignment = Alignment.Center,
         ) {
