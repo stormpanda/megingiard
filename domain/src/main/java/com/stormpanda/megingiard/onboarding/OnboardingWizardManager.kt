@@ -14,7 +14,7 @@ private const val TAG = "OnboardingWizardManager"
 
 /**
  * Singleton state holder managing the multi-step onboarding welcome tour.
- * Evaluates tour versioning, step fulfillment, handles automatic step skipping, and coordinates tour navigation.
+ * Evaluates tour versioning, manages sequential step navigation, and handles wizard completion.
  */
 object OnboardingWizardManager {
     private val _isWizardActive = MutableStateFlow(false)
@@ -25,8 +25,6 @@ object OnboardingWizardManager {
 
     private val _steps = MutableStateFlow<List<OnboardingStepState>>(emptyList())
     val steps: StateFlow<List<OnboardingStepState>> = _steps.asStateFlow()
-
-    private val completedStepIds = mutableSetOf<OnboardingStepId>()
 
     val orderedStepIds =
         listOf(
@@ -53,7 +51,6 @@ object OnboardingWizardManager {
         }
 
         if (force) {
-            completedStepIds.clear()
             SettingsManager.setWelcomeTourCompletedVersion(0)
             SettingsManager.setShowWelcomeTutorial(true)
             SettingsManager.setShowQuickMenuTutorial(true)
@@ -71,50 +68,30 @@ object OnboardingWizardManager {
         AppStateManager.closeQuickMenu()
         AppStateManager.setGlobalSettingsOpen(false)
 
-        AppLog.d(TAG, "Initializing onboarding wizard (force=$force)")
-        reevaluateSteps(context)
-
-        val firstPendingIndex = _steps.value.indexOfFirst { !it.isCompleted }
-        if (firstPendingIndex == -1) {
-            AppLog.d(TAG, "All onboarding steps are already fulfilled/completed. Skipping wizard.")
-            _isWizardActive.value = false
-        } else {
-            AppLog.d(TAG, "Starting wizard at step index: $firstPendingIndex (${orderedStepIds[firstPendingIndex]})")
-            _activeStepIndex.value = firstPendingIndex
-            _isWizardActive.value = true
-            updateCurrentFlags(firstPendingIndex)
-        }
+        AppLog.d(TAG, "Initializing onboarding wizard at step 0 (force=$force)")
+        _activeStepIndex.value = 0
+        updateStepStates(0)
+        _isWizardActive.value = true
     }
 
-    fun nextStep(context: Context) {
+    fun nextStep(context: Context? = null) {
         val currentIndex = _activeStepIndex.value
-        if (currentIndex < 0 || currentIndex >= orderedStepIds.size) return
+        if (currentIndex < 0 || currentIndex >= orderedStepIds.size - 1) return
 
-        val currentId = orderedStepIds[currentIndex]
-        completedStepIds.add(currentId)
-
-        reevaluateSteps(context)
-
-        val nextPendingIndex = _steps.value.indices.firstOrNull { i -> i > currentIndex && !_steps.value[i].isCompleted }
-
-        if (nextPendingIndex != null) {
-            AppLog.d(TAG, "Advancing wizard to step index: $nextPendingIndex (${orderedStepIds[nextPendingIndex]})")
-            _activeStepIndex.value = nextPendingIndex
-            updateCurrentFlags(nextPendingIndex)
-        } else {
-            AppLog.d(TAG, "Reached end of onboarding tour.")
-        }
+        val nextIndex = currentIndex + 1
+        AppLog.d(TAG, "Advancing wizard to step index: $nextIndex (${orderedStepIds[nextIndex]})")
+        _activeStepIndex.value = nextIndex
+        updateStepStates(nextIndex)
     }
 
-    fun prevStep(context: Context) {
+    fun prevStep(context: Context? = null) {
         val currentIndex = _activeStepIndex.value
         if (currentIndex <= 0) return
 
         val prevIndex = currentIndex - 1
         AppLog.d(TAG, "Navigating back in wizard to step index: $prevIndex (${orderedStepIds[prevIndex]})")
         _activeStepIndex.value = prevIndex
-        reevaluateSteps(context)
-        updateCurrentFlags(prevIndex)
+        updateStepStates(prevIndex)
     }
 
     fun skipWizard() {
@@ -124,7 +101,6 @@ object OnboardingWizardManager {
 
     fun finishWizard() {
         AppLog.d(TAG, "Finishing onboarding wizard via explicit Finish button")
-        completedStepIds.addAll(orderedStepIds)
         SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         SettingsManager.setShowWelcomeTutorial(false)
         SettingsManager.setShowQuickMenuTutorial(false)
@@ -132,30 +108,21 @@ object OnboardingWizardManager {
     }
 
     fun resetWizardForTest() {
-        completedStepIds.clear()
         _activeStepIndex.value = 0
         _isWizardActive.value = false
+        updateStepStates(0)
     }
 
-    private fun reevaluateSteps(context: Context) {
+    private fun updateStepStates(activeStepIdx: Int) {
         val updatedList =
             orderedStepIds.mapIndexed { index, id ->
-                val fulfilled = isStepFulfilled(id)
-                val completed = fulfilled || completedStepIds.contains(id)
                 OnboardingStepState(
                     id = id,
-                    isFulfilled = fulfilled,
-                    isCompleted = completed,
-                    isCurrent = index == _activeStepIndex.value,
+                    isFulfilled = false,
+                    isCompleted = index < activeStepIdx,
+                    isCurrent = index == activeStepIdx,
                 )
             }
         _steps.value = updatedList
-    }
-
-    private fun updateCurrentFlags(currentIndex: Int) {
-        _steps.value =
-            _steps.value.mapIndexed { i, state ->
-                state.copy(isCurrent = i == currentIndex)
-            }
     }
 }

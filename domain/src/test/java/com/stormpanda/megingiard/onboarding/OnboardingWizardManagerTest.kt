@@ -43,4 +43,30 @@ class OnboardingWizardManagerTest {
         OnboardingWizardManager.skipWizard()
         assertFalse(OnboardingWizardManager.isWizardActive.value)
     }
+
+    @Test
+    fun `backward navigation resets completion state of future steps`() {
+        // Reset and initialize at step 0
+        OnboardingWizardManager.resetWizardForTest()
+        assertEquals(0, OnboardingWizardManager.activeStepIndex.value)
+
+        // Advance to step 2 (index 2)
+        OnboardingWizardManager.nextStep()
+        OnboardingWizardManager.nextStep()
+        assertEquals(2, OnboardingWizardManager.activeStepIndex.value)
+        assertTrue(OnboardingWizardManager.steps.value[0].isCompleted)
+        assertTrue(OnboardingWizardManager.steps.value[1].isCompleted)
+        assertFalse(OnboardingWizardManager.steps.value[2].isCompleted)
+        assertTrue(OnboardingWizardManager.steps.value[2].isCurrent)
+
+        // Navigate BACK to step 1 (index 1)
+        OnboardingWizardManager.prevStep()
+        assertEquals(1, OnboardingWizardManager.activeStepIndex.value)
+        assertTrue(OnboardingWizardManager.steps.value[0].isCompleted)
+        assertFalse(OnboardingWizardManager.steps.value[1].isCompleted)
+        assertTrue(OnboardingWizardManager.steps.value[1].isCurrent)
+        // Step 2 must be reset to uncompleted (unreached)
+        assertFalse(OnboardingWizardManager.steps.value[2].isCompleted)
+        assertFalse(OnboardingWizardManager.steps.value[3].isCompleted)
+    }
 }
