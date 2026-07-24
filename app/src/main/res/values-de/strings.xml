@@ -45,7 +45,7 @@
     <string name="theme_aurora">Nordlicht Aurora</string>
     <string name="theme_retro_phosphor">Retro-Phosphor</string>
     <string name="theme_royal_asgard">Königliches Asgard</string>
-    <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
+    <string name="settings_overlay_position">Quick-Menü-Leisten unten platzieren</string>
     <string name="settings_overlay_fade_out">Steuerleiste ausblenden</string>
     <string name="settings_overlay_fade_out_desc">Die Schnellmenüleiste nach einigen Sekunden Inaktivität ausblenden</string>
     <string name="mirror_edge_blend_label">Kantenübergänge</string>
@@ -1037,11 +1037,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_btn_back">Zurück</string>
     <string name="onboarding_btn_skip">Überspringen</string>
     <string name="onboarding_btn_finish">Tour abschließen</string>
-    <string name="quick_menu_tutorial_fade_out_hint">Hinweis: Das Ausblenden der Steuerelemente ist während dieser Willkommenstour deaktiviert.</string>
-
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>
-    <string name="quick_menu_tutorial_body">Wische an einer der 3 Leisten am Bildschirmrand, um die Gesten auszuprobieren! Das Ziehen über den Schwellenwert bestätigt die Geste mit einem Häkchen.</string>
+    <string name="quick_menu_tutorial_body">Wische an einer der 3 Quick-Menü-Leisten, um die Gesten auszuprobieren! Das Ziehen einer Leiste über den Schwellenwert bestätigt die Geste mit einem Häkchen, wenn korrekt ausgeführt.</string>
     <string name="quick_menu_label_keyboard">Tastatur</string>
     <string name="quick_menu_label_menu">Menü</string>
     <string name="quick_menu_label_mouse">Maus</string>

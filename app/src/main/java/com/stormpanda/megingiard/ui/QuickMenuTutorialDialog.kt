@@ -138,6 +138,7 @@ fun QuickMenuStepContent(overlayAtBottom: Boolean) {
                 text = stringResource(R.string.settings_overlay_position),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).padding(end = 8.dp),
             )
             Switch(
                 checked = overlayAtBottom,
@@ -150,22 +151,24 @@ fun QuickMenuStepContent(overlayAtBottom: Boolean) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(R.string.settings_overlay_fade_out),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_overlay_fade_out),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.settings_overlay_fade_out_desc),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             Switch(
                 checked = overlayFadeOut,
                 onCheckedChange = { SettingsManager.setOverlayFadeOut(it) },
             )
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = stringResource(R.string.quick_menu_tutorial_fade_out_hint),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
     }
 }
 
