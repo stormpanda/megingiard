@@ -78,6 +78,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureService
 import com.stormpanda.megingiard.mirror.decideMirrorRuntimeAction
 import com.stormpanda.megingiard.mirror.isPrivdMirrorConnecting
 import com.stormpanda.megingiard.mirror.selectMirrorStrategy
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -489,16 +490,14 @@ class MainActivity : ComponentActivity() {
                     ScreenCaptureManager.isCapturing,
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
-                    SettingsManager.showWelcomeTutorial,
-                    SettingsManager.showQuickMenuTutorial,
+                    OnboardingWizardManager.isWizardActive,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
                     val capturing = values[2] as Boolean
                     val currentLayout = values[3] as? PadLayout
                     val onValidScreen = values[4] as Boolean
-                    val showWelcome = values[5] as Boolean
-                    val showQuickMenu = values[6] as Boolean
+                    val wizardActive = values[5] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -507,7 +506,7 @@ class MainActivity : ComponentActivity() {
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
-                        tutorialsActive = showWelcome || showQuickMenu,
+                        tutorialsActive = wizardActive,
                     )
                 }.combine(privdMirrorConnectingFlow) { policy, connecting ->
                     policy.copy(privdMirrorConnecting = connecting)

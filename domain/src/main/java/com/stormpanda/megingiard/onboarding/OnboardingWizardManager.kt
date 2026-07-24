@@ -34,12 +34,7 @@ object OnboardingWizardManager {
             OnboardingStepId.FINISHED,
         )
 
-    fun shouldAutoStartWizard(): Boolean {
-        if (SettingsManager.welcomeTourCompletedVersion.value >= SettingsManager.CURRENT_WELCOME_TOUR_VERSION) {
-            return false
-        }
-        return SettingsManager.showWelcomeTutorial.value || SettingsManager.showQuickMenuTutorial.value
-    }
+    fun shouldAutoStartWizard(): Boolean = SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION
 
     fun isStepFulfilled(id: OnboardingStepId): Boolean = false
 
@@ -54,8 +49,6 @@ object OnboardingWizardManager {
 
         if (force) {
             SettingsManager.setWelcomeTourCompletedVersion(0)
-            SettingsManager.setShowWelcomeTutorial(true)
-            SettingsManager.setShowQuickMenuTutorial(true)
         }
 
         if (!force && !shouldAutoStartWizard()) {
@@ -104,8 +97,6 @@ object OnboardingWizardManager {
     fun finishWizard() {
         AppLog.d(TAG, "Finishing onboarding wizard via explicit Finish button")
         SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
-        SettingsManager.setShowWelcomeTutorial(false)
-        SettingsManager.setShowQuickMenuTutorial(false)
         _isWizardActive.value = false
     }
 

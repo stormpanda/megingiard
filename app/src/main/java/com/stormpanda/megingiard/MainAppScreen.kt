@@ -109,7 +109,6 @@ fun MainAppScreen() {
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
     val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
     val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
@@ -118,27 +117,12 @@ fun MainAppScreen() {
     val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
-    var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
 
     LaunchedEffect(isBackgroundSettingsActive) {
         if (isBackgroundSettingsActive) {
             AppStateManager.setPrivdPromptDismissed(true)
-        }
-    }
-
-    val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
-    var showQuickMenuLocal by remember { mutableStateOf(true) }
-
-    LaunchedEffect(showWelcomeTutorial) {
-        if (showWelcomeTutorial) {
-            showWelcomeLocal = true
-        }
-    }
-    LaunchedEffect(showQuickMenuTutorial) {
-        if (showQuickMenuTutorial) {
-            showQuickMenuLocal = true
         }
     }
 
