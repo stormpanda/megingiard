@@ -1,5 +1,9 @@
 package com.stormpanda.megingiard.ui.onboarding
 
+import android.app.ActivityOptions
+import android.content.Intent
+import android.provider.Settings
+import android.view.Display
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
@@ -24,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -39,8 +44,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,10 +70,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
@@ -74,6 +87,8 @@ import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private val OW_DIALOG_MAX_WIDTH = 480.dp
 private val OW_DIALOG_CORNER_RADIUS = 16.dp
@@ -174,6 +189,10 @@ fun OnboardingWizardDialog(
                             ThemeStepContent()
                         }
 
+                        OnboardingStepId.ACCESSIBILITY -> {
+                            AccessibilityStepContent()
+                        }
+
                         OnboardingStepId.FINISHED -> {
                             FinishedStepContent()
                         }
@@ -202,25 +221,41 @@ fun OnboardingWizardDialog(
                     Spacer(modifier = Modifier.weight(1f))
                 }
 
-                Button(
-                    onClick = {
-                        if (isLastStep) {
-                            OnboardingWizardManager.finishWizard()
-                            onDismiss()
-                        } else {
-                            OnboardingWizardManager.nextStep(context)
-                        }
-                    },
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text =
+                    if (currentStepState.id == OnboardingStepId.ACCESSIBILITY) {
+                        OutlinedButton(
+                            onClick = { OnboardingWizardManager.nextStep(context) },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.onboarding_btn_skip),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
                             if (isLastStep) {
-                                stringResource(R.string.onboarding_btn_finish)
+                                OnboardingWizardManager.finishWizard()
+                                onDismiss()
                             } else {
-                                stringResource(R.string.onboarding_btn_next)
-                            },
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                                OnboardingWizardManager.nextStep(context)
+                            }
+                        },
+                    ) {
+                        Text(
+                            text =
+                                if (isLastStep) {
+                                    stringResource(R.string.onboarding_btn_finish)
+                                } else {
+                                    stringResource(R.string.onboarding_btn_next)
+                                },
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
             }
         }
@@ -501,6 +536,7 @@ fun OnboardingStepper(
                 OnboardingStepId.WELCOME -> stringResource(R.string.onboarding_step_welcome)
                 OnboardingStepId.QUICK_MENU -> stringResource(R.string.onboarding_step_quick_menu)
                 OnboardingStepId.THEME -> stringResource(R.string.onboarding_step_theme)
+                OnboardingStepId.ACCESSIBILITY -> stringResource(R.string.onboarding_step_accessibility)
                 OnboardingStepId.FINISHED -> stringResource(R.string.onboarding_step_finished)
                 null -> ""
             }
@@ -510,5 +546,152 @@ fun OnboardingStepper(
             color = colors.accent,
             style = MaterialTheme.typography.labelMedium,
         )
+    }
+}
+
+private const val TAG = "OnboardingWizardDialog"
+
+@Composable
+fun AccessibilityStepContent(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val colors = LocalAppColors.current
+
+    var isAccessibilityActive by remember {
+        mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
+    }
+    var isCheckingAccessibility by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(isCheckingAccessibility, isAccessibilityActive) {
+        if (isCheckingAccessibility && !isAccessibilityActive) {
+            AppLog.d(TAG, "Starting 1s polling loop for accessibility activation in onboarding")
+            while (isActive && !isAccessibilityActive) {
+                delay(1000L)
+                val active = MegingiardAccessibilityService.isEnabled(context)
+                if (active) {
+                    isAccessibilityActive = true
+                    isCheckingAccessibility = false
+                    AppLog.i(TAG, "Accessibility service activation detected in onboarding")
+                    break
+                }
+            }
+        }
+    }
+
+    val launchAccessibilitySettings = {
+        if (!isAccessibilityActive) {
+            isCheckingAccessibility = true
+        }
+        try {
+            val intent =
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                    )
+                }
+            val options = ActivityOptions.makeBasic()
+            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+            context.startActivity(intent, options.toBundle())
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to open accessibility settings from onboarding: ${e.message}")
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_accessibility_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_accessibility_desc),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = colors.surfaceVariant,
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.settings_accessibility_status),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(10.dp)
+                                    .background(
+                                        if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
+                                        CircleShape,
+                                    ),
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text =
+                            stringResource(
+                                if (isAccessibilityActive) {
+                                    R.string.privd_status_running
+                                } else {
+                                    R.string.privd_status_off
+                                },
+                            ),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                if (!isAccessibilityActive) {
+                    Button(
+                        onClick = { launchAccessibilitySettings() },
+                    ) {
+                        Text(stringResource(R.string.settings_accessibility_setup))
+                    }
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
     }
 }

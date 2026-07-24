@@ -31,6 +31,7 @@ object OnboardingWizardManager {
             OnboardingStepId.WELCOME,
             OnboardingStepId.QUICK_MENU,
             OnboardingStepId.THEME,
+            OnboardingStepId.ACCESSIBILITY,
             OnboardingStepId.FINISHED,
         )
 

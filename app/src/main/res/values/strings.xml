@@ -1019,12 +1019,16 @@ Open Settings to create a layout.</string>
     <string name="onboarding_theme_desc">Select a visual theme for Megingiard. You can change this at any time in Global Settings.</string>
     <string name="onboarding_theme_prev">Previous Theme</string>
     <string name="onboarding_theme_next">Next Theme</string>
+    <string name="onboarding_step_accessibility">Accessibility</string>
+    <string name="onboarding_accessibility_title">Accessibility Service</string>
+    <string name="onboarding_accessibility_desc">Megingiard uses the Accessibility Service for on-screen touch injection, virtual keyboard input, and app switching. You can enable it now or skip to set it up later.</string>
     <string name="onboarding_step_finished">Finished</string>
     <string name="onboarding_finished_title">You\'re All Set!</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
     <string name="onboarding_step_counter">Step %1$d of %2$d</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_back">Back</string>
+    <string name="onboarding_btn_skip">Skip</string>
     <string name="onboarding_btn_finish">Finish Tour</string>
     <string name="quick_menu_tutorial_fade_out_hint">Note: Controls fade-out is suppressed while trying out gestures in this tour.</string>
 
