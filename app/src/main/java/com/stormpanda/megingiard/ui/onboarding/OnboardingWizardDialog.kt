@@ -184,18 +184,7 @@ fun OnboardingWizardDialog(
                         )
                     }
                 } else {
-                    TextButton(
-                        onClick = {
-                            OnboardingWizardManager.skipWizard()
-                            onDismiss()
-                        },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.macro_tutorial_btn_dont_show),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
+                    Spacer(modifier = Modifier.weight(1f))
                 }
 
                 Button(
