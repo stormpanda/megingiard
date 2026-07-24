@@ -1011,7 +1011,10 @@ Open Settings to create a layout.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
-    <string name="quick_menu_tutorial_body">Swipe the quick menu bar indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.\n\nNote: You can configure the bar to fade out automatically in Global Settings (Appearance) if you prefer a cleaner look. This behavior is disabled by default.</string>
+    <string name="quick_menu_tutorial_body">Swipe any of the 3 edge bars to try out the gestures! Pulling a bar past the threshold confirms the gesture with a checkmark once successful.\n\nYou can also adjust the edge bar position below.</string>
+    <string name="quick_menu_label_keyboard">Keyboard</string>
+    <string name="quick_menu_label_menu">Menu</string>
+    <string name="quick_menu_label_mouse">Mouse</string>
 
     <!-- SteamGridDB integration -->
     <string name="settings_steamgriddb_token">SteamGridDB API Token</string>

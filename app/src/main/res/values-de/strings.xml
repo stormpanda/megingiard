@@ -1018,7 +1018,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>
-    <string name="quick_menu_tutorial_body">Streiche über die Schnellmenüleiste am Bildschirmrand, um das Schnellmenü zu öffnen. Du kannst damit Profile, Layouts und Einstellungen schnell wechseln.\n\nHinweis: Du kannst in den globalen Einstellungen (Darstellung) konfigurieren, dass die Leiste automatisch ausgeblendet wird, falls du eine sauberere Ansicht bevorzugst. Diese Funktion ist standardmäßig deaktiviert.</string>
+    <string name="quick_menu_tutorial_body">Wische an einer der 3 Leisten am Bildschirmrand, um die Gesten auszuprobieren! Das Ziehen über den Schwellenwert bestätigt die Geste mit einem Häkchen.\n\nDu kannst die Position der Leisten unten anpassen.</string>
+    <string name="quick_menu_label_keyboard">Tastatur</string>
+    <string name="quick_menu_label_menu">Menü</string>
+    <string name="quick_menu_label_mouse">Maus</string>
 
     <!-- SteamGridDB integration -->
     <string name="settings_steamgriddb_token">SteamGridDB API-Token</string>
