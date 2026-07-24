@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -103,6 +104,12 @@ fun OnboardingWizardDialog(
     val isFirstStep = activeStepIndex == 0
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
+
+    BackHandler(enabled = true) {
+        if (!isFirstStep) {
+            OnboardingWizardManager.prevStep(context)
+        }
+    }
 
     val wizardCardContent: @Composable () -> Unit = {
         Column(
