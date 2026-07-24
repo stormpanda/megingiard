@@ -1021,12 +1021,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_start_welcome_tour_desc">Führe die Schritt-für-Schritt-Einführung und Randgesten-Tour erneut aus</string>
     <string name="onboarding_step_welcome">Willkommen</string>
     <string name="onboarding_step_quick_menu">Rand-Gesten</string>
-    <string name="onboarding_step_accessibility">Barrierefreiheit</string>
-    <string name="onboarding_step_privileged_mode">Privilegierter Modus</string>
+    <string name="onboarding_step_finished">Fertig</string>
+    <string name="onboarding_finished_title">Alles bereit!</string>
+    <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
     <string name="onboarding_step_counter">Schritt %1$d von %2$d</string>
     <string name="onboarding_btn_next">Weiter</string>
     <string name="onboarding_btn_back">Zurück</string>
-    <string name="onboarding_btn_finish">Fertig</string>
+    <string name="onboarding_btn_finish">Tour abschließen</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>

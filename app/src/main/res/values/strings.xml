@@ -1014,12 +1014,13 @@ Open Settings to create a layout.</string>
     <string name="settings_start_welcome_tour_desc">Re-run the step-by-step onboarding guide and edge gesture tour</string>
     <string name="onboarding_step_welcome">Welcome</string>
     <string name="onboarding_step_quick_menu">Edge Gestures</string>
-    <string name="onboarding_step_accessibility">Accessibility</string>
-    <string name="onboarding_step_privileged_mode">Privileged Mode</string>
+    <string name="onboarding_step_finished">Finished</string>
+    <string name="onboarding_finished_title">You\'re All Set!</string>
+    <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
     <string name="onboarding_step_counter">Step %1$d of %2$d</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_back">Back</string>
-    <string name="onboarding_btn_finish">Finish</string>
+    <string name="onboarding_btn_finish">Finish Tour</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>

@@ -5,8 +5,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,8 +32,7 @@ object OnboardingWizardManager {
         listOf(
             OnboardingStepId.WELCOME,
             OnboardingStepId.QUICK_MENU,
-            OnboardingStepId.ACCESSIBILITY,
-            OnboardingStepId.PRIVILEGED_MODE,
+            OnboardingStepId.FINISHED,
         )
 
     fun shouldAutoStartWizard(): Boolean =
@@ -43,18 +40,17 @@ object OnboardingWizardManager {
             SettingsManager.showWelcomeTutorial.value ||
             SettingsManager.showQuickMenuTutorial.value
 
-    fun isStepFulfilled(id: OnboardingStepId): Boolean =
-        when (id) {
-            OnboardingStepId.WELCOME -> false
-            OnboardingStepId.QUICK_MENU -> false
-            OnboardingStepId.ACCESSIBILITY -> false
-            OnboardingStepId.PRIVILEGED_MODE -> PrivdManager.state.value == PrivdState.RUNNING
-        }
+    fun isStepFulfilled(id: OnboardingStepId): Boolean = false
 
     fun startWizard(
         context: Context,
         force: Boolean = false,
     ) {
+        if (_isWizardActive.value && !force) {
+            AppLog.d(TAG, "Wizard is already active. Ignoring non-forced start call.")
+            return
+        }
+
         if (force) {
             completedStepIds.clear()
             SettingsManager.setWelcomeTourCompletedVersion(0)
@@ -96,18 +92,6 @@ object OnboardingWizardManager {
         val currentId = orderedStepIds[currentIndex]
         completedStepIds.add(currentId)
 
-        when (currentId) {
-            OnboardingStepId.WELCOME -> {
-                SettingsManager.setShowWelcomeTutorial(false)
-            }
-
-            OnboardingStepId.QUICK_MENU -> {
-                SettingsManager.setShowQuickMenuTutorial(false)
-            }
-
-            else -> {}
-        }
-
         reevaluateSteps(context)
 
         val nextPendingIndex = _steps.value.indices.firstOrNull { i -> i > currentIndex && !_steps.value[i].isCompleted }
@@ -117,8 +101,7 @@ object OnboardingWizardManager {
             _activeStepIndex.value = nextPendingIndex
             updateCurrentFlags(nextPendingIndex)
         } else {
-            AppLog.d(TAG, "Reached end of onboarding tour. Finishing wizard.")
-            finishWizard()
+            AppLog.d(TAG, "Reached end of onboarding tour.")
         }
     }
 
@@ -134,16 +117,12 @@ object OnboardingWizardManager {
     }
 
     fun skipWizard() {
-        AppLog.d(TAG, "Skipping onboarding wizard")
-        completedStepIds.addAll(orderedStepIds)
-        SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
-        SettingsManager.setShowWelcomeTutorial(false)
-        SettingsManager.setShowQuickMenuTutorial(false)
+        AppLog.d(TAG, "Dismissing onboarding wizard without storing completion")
         _isWizardActive.value = false
     }
 
     fun finishWizard() {
-        AppLog.d(TAG, "Finishing onboarding wizard")
+        AppLog.d(TAG, "Finishing onboarding wizard via explicit Finish button")
         completedStepIds.addAll(orderedStepIds)
         SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         SettingsManager.setShowWelcomeTutorial(false)

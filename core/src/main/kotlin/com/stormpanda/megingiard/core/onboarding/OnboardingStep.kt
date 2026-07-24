@@ -6,8 +6,7 @@ package com.stormpanda.megingiard.core.onboarding
 enum class OnboardingStepId {
     WELCOME,
     QUICK_MENU,
-    ACCESSIBILITY,
-    PRIVILEGED_MODE,
+    FINISHED,
 }
 
 /**

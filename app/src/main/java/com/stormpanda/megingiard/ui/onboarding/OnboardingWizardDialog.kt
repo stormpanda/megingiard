@@ -25,12 +25,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +42,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
@@ -53,18 +55,22 @@ import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 
-private const val TAG = "OnboardingWizardDialog"
-
-private const val OW_SCRIM_ALPHA = 0.6f
-private val OW_DIALOG_MAX_WIDTH = 360.dp
-private val OW_DIALOG_PADDING_HORIZONTAL = 24.dp
+private val OW_DIALOG_MAX_WIDTH = 480.dp
+private val OW_DIALOG_CORNER_RADIUS = 16.dp
+private val OW_DIALOG_BORDER_WIDTH = 2.dp
+private val OW_DIALOG_SHADOW_ELEVATION = 12.dp
+private val OW_DIALOG_PADDING_HORIZONTAL = 20.dp
 private val OW_DIALOG_PADDING_TOP = 20.dp
 private val OW_DIALOG_PADDING_BOTTOM = 16.dp
-private val OW_DIALOG_SHADOW_ELEVATION = 8.dp
-private val OW_DIALOG_CORNER_RADIUS = 28.dp
-private val OW_DIALOG_BORDER_WIDTH = 1.dp
+
 private val OW_STEPPER_DOT_SIZE = 24.dp
 
+private const val OW_SCRIM_ALPHA = 0.55f
+
+/**
+ * Root host dialog for the multi-step onboarding wizard.
+ * Renders header stepper indicator, step-specific content, and footer navigation buttons.
+ */
 @Composable
 fun OnboardingWizardDialog(
     overlayAtBottom: Boolean,
@@ -72,11 +78,8 @@ fun OnboardingWizardDialog(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
-    val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
-    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsState()
     val steps by OnboardingWizardManager.steps.collectAsState()
-
-    if (!isWizardActive || steps.isEmpty()) return
+    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsState()
 
     val currentStepState = steps.getOrNull(activeStepIndex) ?: return
     val totalSteps = steps.size
@@ -138,18 +141,8 @@ fun OnboardingWizardDialog(
                             QuickMenuStepContent(overlayAtBottom = overlayAtBottom)
                         }
 
-                        OnboardingStepId.ACCESSIBILITY -> {
-                            Text(
-                                text = stringResource(R.string.onboarding_step_accessibility),
-                                color = colors.onSurface,
-                            )
-                        }
-
-                        OnboardingStepId.PRIVILEGED_MODE -> {
-                            Text(
-                                text = stringResource(R.string.onboarding_step_privileged_mode),
-                                color = colors.onSurface,
-                            )
+                        OnboardingStepId.FINISHED -> {
+                            FinishedStepContent()
                         }
                     }
                 }
@@ -228,6 +221,40 @@ fun OnboardingWizardDialog(
         ) {
             wizardCardContent()
         }
+    }
+}
+
+@Composable
+fun FinishedStepContent() {
+    val colors = LocalAppColors.current
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Icon(
+            imageVector = Icons.Rounded.CheckCircle,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(56.dp),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.onboarding_finished_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.onboarding_finished_desc),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -311,8 +338,7 @@ fun OnboardingStepper(
             when (currentStep?.id) {
                 OnboardingStepId.WELCOME -> stringResource(R.string.onboarding_step_welcome)
                 OnboardingStepId.QUICK_MENU -> stringResource(R.string.onboarding_step_quick_menu)
-                OnboardingStepId.ACCESSIBILITY -> stringResource(R.string.onboarding_step_accessibility)
-                OnboardingStepId.PRIVILEGED_MODE -> stringResource(R.string.onboarding_step_privileged_mode)
+                OnboardingStepId.FINISHED -> stringResource(R.string.onboarding_step_finished)
                 null -> ""
             }
 

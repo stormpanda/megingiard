@@ -98,21 +98,20 @@ Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp
 
 ### Onboarding Welcome Tour & Wizard
 
-To onboard new users, the app runs a unified 4-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
+To onboard new users, the app runs a 3-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
 
 1. **Multi-Step Onboarding Tour:**
    - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons.
    - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, and a live top/bottom position toggle switch.
-   - **Step 3 (Accessibility):** Guides accessibility setup (auto-skipped if already active).
-   - **Step 4 (Privileged Mode):** Guides privileged daemon setup (auto-skipped if already running).
+   - **Step 3 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish Tour** button.
 
-2. **Tour Versioning & Auto-Start:**
+2. **Tour Versioning & Completion Persistence:**
    - `SettingsManager.welcomeTourCompletedVersion` tracks the integer version of the last completed welcome tour (default `0`, current version `CURRENT_WELCOME_TOUR_VERSION = 1`).
    - The welcome tour automatically launches if `welcomeTourCompletedVersion < CURRENT_WELCOME_TOUR_VERSION`, ensuring that new tour versions are presented even if a user completed an earlier version.
-   - Completing or finishing the tour persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`.
+   - **Strict Persistence Rule:** Only explicitly clicking the **Finish Tour** button on the final step (`FinishedStepContent`) persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`. Dismissing or skipping the dialog does not persist completion state.
 
 3. **Footer Navigation & Settings Re-run Option:**
-   - Provides `Back` (outlined button), `Next` (primary button), and `Finish` (primary button) navigation controls.
+   - Provides `Back` (outlined button), `Next` (primary button), and `Finish Tour` (primary button) navigation controls.
    - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Start Welcome Tour** (first entry in the General settings section).
    - All tutorial flags can also be reset under **Global Settings** -> **Data** -> **Reset tutorials**.
 
