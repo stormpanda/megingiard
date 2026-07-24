@@ -1,11 +1,14 @@
 package com.stormpanda.megingiard.macropad
 
+import android.app.ActivityOptions
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.provider.Settings
+import android.view.Display
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -334,9 +337,28 @@ internal fun InlineProfileSettingsOverlay(
             if (!isAccessibilityActive) {
                 Text(
                     text = stringResource(R.string.profile_settings_accessibility_required),
-                    color = colors.onSurfaceSecondary,
+                    color = colors.actionColorSystem,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier =
+                        Modifier
+                            .padding(vertical = 8.dp)
+                            .clickable {
+                                try {
+                                    val intent =
+                                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                            addFlags(
+                                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                                                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                                            )
+                                        }
+                                    val options = ActivityOptions.makeBasic()
+                                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                    context.startActivity(intent, options.toBundle())
+                                } catch (e: Exception) {
+                                    AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
+                                }
+                            },
                 )
             } else {
                 Row(
