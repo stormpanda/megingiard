@@ -45,12 +45,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
@@ -247,6 +253,19 @@ fun ThemeStepContent() {
 
     var isNextAnimation by remember { mutableStateOf(true) }
 
+    val prevIndex = if (currentIndex > 0) currentIndex - 1 else themes.size - 1
+    val nextIndex = if (currentIndex < themes.size - 1) currentIndex + 1 else 0
+
+    val edgeFadeMask =
+        remember {
+            Brush.horizontalGradient(
+                0.0f to Color.Transparent,
+                0.18f to Color.Black,
+                0.82f to Color.Black,
+                1.0f to Color.Transparent,
+            )
+        }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -266,20 +285,19 @@ fun ThemeStepContent() {
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Animated Theme Selector Carousel Row with Arrow Buttons
+        // Theme Selector Container with Arrow Buttons & Subdued Fading Labels
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
                     .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             IconButton(
                 onClick = {
-                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else themes.size - 1
                     isNextAnimation = false
                     SettingsManager.setThemeMode(themes[prevIndex])
                 },
@@ -292,7 +310,14 @@ fun ThemeStepContent() {
             }
 
             Box(
-                modifier = Modifier.weight(1f),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(brush = edgeFadeMask, blendMode = BlendMode.DstIn)
+                        },
                 contentAlignment = Alignment.Center,
             ) {
                 AnimatedContent(
@@ -307,20 +332,54 @@ fun ThemeStepContent() {
                         }
                     },
                     label = "theme-carousel-animation",
-                ) { theme ->
-                    Text(
-                        text = stringResource(theme.displayNameResId()),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
+                ) { targetTheme ->
+                    val targetIdx = themes.indexOf(targetTheme).coerceAtLeast(0)
+                    val pIdx = if (targetIdx > 0) targetIdx - 1 else themes.size - 1
+                    val nIdx = if (targetIdx < themes.size - 1) targetIdx + 1 else 0
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        // Previous Theme (subdued, left aligned)
+                        Text(
+                            text = stringResource(themes[pIdx].displayNameResId()),
+                            color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start,
+                        )
+
+                        // Current Selected Theme (bold, center aligned)
+                        Text(
+                            text = stringResource(targetTheme.displayNameResId()),
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            textAlign = TextAlign.Center,
+                        )
+
+                        // Next Theme (subdued, right aligned)
+                        Text(
+                            text = stringResource(themes[nIdx].displayNameResId()),
+                            color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.End,
+                        )
+                    }
                 }
             }
 
             IconButton(
                 onClick = {
-                    val nextIndex = if (currentIndex < themes.size - 1) currentIndex + 1 else 0
                     isNextAnimation = true
                     SettingsManager.setThemeMode(themes[nextIndex])
                 },
