@@ -126,7 +126,7 @@ fun OnboardingWizardDialog(
     var isAccessibilityActive by remember {
         mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
     }
-    var isCheckingAccessibility by remember { mutableStateOf(false) }
+    val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -142,26 +142,21 @@ fun OnboardingWizardDialog(
         }
     }
 
-    LaunchedEffect(isCheckingAccessibility, isAccessibilityActive) {
-        if (isCheckingAccessibility && !isAccessibilityActive) {
-            AppLog.d(TAG, "Starting 1s polling loop for accessibility activation in onboarding")
-            while (isActive && !isAccessibilityActive) {
-                delay(1000L)
+    LaunchedEffect(isAccessibilityStep) {
+        if (isAccessibilityStep) {
+            AppLog.d(TAG, "Starting 1s continuous polling loop for accessibility status in onboarding")
+            while (isActive) {
                 val active = MegingiardAccessibilityService.isEnabled(context)
-                if (active) {
-                    isAccessibilityActive = true
-                    isCheckingAccessibility = false
-                    AppLog.i(TAG, "Accessibility service activation detected in onboarding")
-                    break
+                if (active != isAccessibilityActive) {
+                    isAccessibilityActive = active
+                    AppLog.i(TAG, "Accessibility service status change detected in onboarding: active=$active")
                 }
+                delay(1000L)
             }
         }
     }
 
     val launchAccessibilitySettings = {
-        if (!isAccessibilityActive) {
-            isCheckingAccessibility = true
-        }
         try {
             val intent =
                 Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
