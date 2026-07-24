@@ -73,13 +73,14 @@ import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "QuickMenuTutorialDialog"
 
 // ── Animation ────────────────────────────────────────────────────────────────
-private const val QM_BOUNCE_MIN_PX = -12f
-private const val QM_BOUNCE_MAX_PX = 12f
+private const val QM_BOUNCE_MIN_PX = -10f
+private const val QM_BOUNCE_MAX_PX = 10f
 private const val QM_BOUNCE_DURATION_MS = 1000
 
 // ── Appearance ───────────────────────────────────────────────────────────────
@@ -91,8 +92,8 @@ private val QM_DIALOG_CORNER_RADIUS = 28.dp
 private val QM_DIALOG_BORDER_WIDTH = 1.dp
 private val QM_TITLE_BODY_SPACING = 16.dp
 private val QM_BODY_BUTTON_SPACING = 16.dp
-private val QM_ARROW_EDGE_PADDING = 12.dp
-private val QM_ARROW_SIZE = 36.dp
+private val QM_ARROW_EDGE_PADDING = 8.dp
+private val QM_ARROW_SIZE = 32.dp
 
 private const val GESTURE_VISUAL_MULTIPLIER = 1.8f
 private const val GESTURE_RESISTANCE_FACTOR = 0.3f
@@ -101,6 +102,11 @@ private val PILL_OFFSCREEN_PADDING = 10.dp
 private val PILL_SHADOW_ELEVATION = 6.dp
 private val PILL_BORDER_WIDTH = 1.dp
 private val PILL_ICON_SIZE = 24.dp
+
+private data class PostReleasePillState(
+    val type: SwipeGestureType,
+    val offsetDp: Dp,
+)
 
 @Composable
 fun QuickMenuTutorialDialog(
@@ -112,42 +118,44 @@ fun QuickMenuTutorialDialog(
     val density = LocalDensity.current
     val context = LocalContext.current
 
-    var kbSuccess by remember { mutableStateOf(false) }
-    var menuSuccess by remember { mutableStateOf(false) }
-    var mouseSuccess by remember { mutableStateOf(false) }
-
-    val kbBlinkAlpha = remember { Animatable(1f) }
-    val menuBlinkAlpha = remember { Animatable(1f) }
-    val mouseBlinkAlpha = remember { Animatable(1f) }
+    var activePostRelease by remember { mutableStateOf<PostReleasePillState?>(null) }
+    val postReleaseAlpha = remember { Animatable(1f) }
 
     var activeDragType by remember { mutableStateOf<SwipeGestureType?>(null) }
     var currentDragDeltaPx by remember { mutableFloatStateOf(0f) }
 
-    fun triggerSuccessAnimation(type: SwipeGestureType) {
-        triggerHapticFeedback(context, HapticStrength.MEDIUM)
-        coroutineScope.launch {
-            val anim =
-                when (type) {
-                    SwipeGestureType.KEYBOARD -> {
-                        kbSuccess = true
-                        kbBlinkAlpha
-                    }
-
-                    SwipeGestureType.MENU -> {
-                        menuSuccess = true
-                        menuBlinkAlpha
-                    }
-
-                    SwipeGestureType.TOUCHPAD -> {
-                        mouseSuccess = true
-                        mouseBlinkAlpha
-                    }
+    fun onGestureReleased(
+        type: SwipeGestureType,
+        finalDeltaPx: Float,
+    ) {
+        val thresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
+        if (finalDeltaPx >= thresholdPx) {
+            val visualDelta = finalDeltaPx * GESTURE_VISUAL_MULTIPLIER
+            val visualThreshold = thresholdPx * GESTURE_VISUAL_MULTIPLIER
+            val visualPx =
+                if (visualDelta < visualThreshold) {
+                    visualDelta
+                } else {
+                    visualThreshold + (visualDelta - visualThreshold) * GESTURE_RESISTANCE_FACTOR
                 }
-            anim.snapTo(1f)
-            anim.animateTo(0.2f, tween(120))
-            anim.animateTo(1f, tween(120))
-            anim.animateTo(0.2f, tween(120))
-            anim.animateTo(1f, tween(120))
+            val visualDp = with(density) { visualPx.toDp() }.coerceAtMost(GESTURE_MAX_OFFSET)
+
+            triggerHapticFeedback(context, HapticStrength.MEDIUM)
+
+            activePostRelease = PostReleasePillState(type, visualDp)
+            coroutineScope.launch {
+                postReleaseAlpha.snapTo(1f)
+                // Blink twice
+                postReleaseAlpha.animateTo(0.2f, tween(100))
+                postReleaseAlpha.animateTo(1f, tween(100))
+                postReleaseAlpha.animateTo(0.2f, tween(100))
+                postReleaseAlpha.animateTo(1f, tween(100))
+                // Reside there for a moment (1.2 seconds)
+                delay(1200L)
+                // Disappear smoothly (300ms)
+                postReleaseAlpha.animateTo(0f, tween(300))
+                activePostRelease = null
+            }
         }
     }
 
@@ -250,9 +258,7 @@ fun QuickMenuTutorialDialog(
                                 change.consume()
                             }
 
-                            if (accumulated >= swipeThresholdPx) {
-                                triggerSuccessAnimation(type)
-                            }
+                            onGestureReleased(type, accumulated)
                             activeDragType = null
                             currentDragDeltaPx = 0f
                         }
@@ -341,190 +347,153 @@ fun QuickMenuTutorialDialog(
             }
         }
 
-        // ── 3 Arrow Indicators & Labels ──────────────────────────────────────
-        val arrowAlignBase = if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter
+        // ── 3 Static Edge Labels & Bouncing Arrows ───────────────────────────
         val arrowIcon = if (overlayAtBottom) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward
-        val yPad = if (overlayAtBottom) QM_ARROW_EDGE_PADDING else 0.dp
         val topPad = if (overlayAtBottom) 0.dp else QM_ARROW_EDGE_PADDING
+        val botPad = if (overlayAtBottom) QM_ARROW_EDGE_PADDING else 0.dp
 
-        // Keyboard Arrow (Left)
+        // Keyboard Arrow & Static Label (Left)
         Box(
             modifier =
                 Modifier
                     .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
                     .padding(
-                        start = QuickMenuBarLayout.TAB_PADDING,
+                        start = QuickMenuBarLayout.SLIDING_PILL_PADDING,
                         top = topPad,
-                        bottom = yPad,
-                    ).offset(y = bounceOffset.dp),
+                        bottom = botPad,
+                    ).width(QuickMenuBarLayout.SLIDING_PILL_SIZE),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.graphicsLayer(alpha = kbBlinkAlpha.value),
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (!overlayAtBottom) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.quick_menu_label_keyboard),
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (kbSuccess) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colors.actionColorSystem,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
-                }
-                Icon(
-                    imageVector = arrowIcon,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(QM_ARROW_SIZE),
-                )
-                if (overlayAtBottom) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.quick_menu_label_keyboard),
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (kbSuccess) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colors.actionColorSystem,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.quick_menu_label_keyboard),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Icon(
+                        imageVector = arrowIcon,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier =
+                            Modifier
+                                .offset(y = bounceOffset.dp)
+                                .size(QM_ARROW_SIZE),
+                    )
+                } else {
+                    Icon(
+                        imageVector = arrowIcon,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier =
+                            Modifier
+                                .offset(y = bounceOffset.dp)
+                                .size(QM_ARROW_SIZE),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.quick_menu_label_keyboard),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }
 
-        // Menu Arrow (Center)
+        // Menu Arrow & Static Label (Center)
         Box(
             modifier =
                 Modifier
-                    .align(arrowAlignBase)
+                    .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
                     .padding(
                         top = topPad,
-                        bottom = yPad,
-                    ).offset(y = bounceOffset.dp),
+                        bottom = botPad,
+                    ).width(QuickMenuBarLayout.SLIDING_PILL_SIZE),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.graphicsLayer(alpha = menuBlinkAlpha.value),
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (!overlayAtBottom) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.quick_menu_label_menu),
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (menuSuccess) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colors.actionColorSystem,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
-                }
-                Icon(
-                    imageVector = arrowIcon,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(QM_ARROW_SIZE),
-                )
-                if (overlayAtBottom) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.quick_menu_label_menu),
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (menuSuccess) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colors.actionColorSystem,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.quick_menu_label_menu),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Icon(
+                        imageVector = arrowIcon,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier =
+                            Modifier
+                                .offset(y = bounceOffset.dp)
+                                .size(QM_ARROW_SIZE),
+                    )
+                } else {
+                    Icon(
+                        imageVector = arrowIcon,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier =
+                            Modifier
+                                .offset(y = bounceOffset.dp)
+                                .size(QM_ARROW_SIZE),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.quick_menu_label_menu),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }
 
-        // Mouse Arrow (Right)
+        // Mouse Arrow & Static Label (Right)
         Box(
             modifier =
                 Modifier
                     .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
                     .padding(
-                        end = QuickMenuBarLayout.TAB_PADDING,
+                        end = QuickMenuBarLayout.SLIDING_PILL_PADDING,
                         top = topPad,
-                        bottom = yPad,
-                    ).offset(y = bounceOffset.dp),
+                        bottom = botPad,
+                    ).width(QuickMenuBarLayout.SLIDING_PILL_SIZE),
             contentAlignment = Alignment.Center,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.graphicsLayer(alpha = mouseBlinkAlpha.value),
-            ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (!overlayAtBottom) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.quick_menu_label_mouse),
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (mouseSuccess) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colors.actionColorSystem,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
-                }
-                Icon(
-                    imageVector = arrowIcon,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(QM_ARROW_SIZE),
-                )
-                if (overlayAtBottom) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = stringResource(R.string.quick_menu_label_mouse),
-                            color = colors.accent,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                        if (mouseSuccess) {
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Rounded.Check,
-                                contentDescription = null,
-                                tint = colors.actionColorSystem,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
-                    }
+                    Text(
+                        text = stringResource(R.string.quick_menu_label_mouse),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Icon(
+                        imageVector = arrowIcon,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier =
+                            Modifier
+                                .offset(y = bounceOffset.dp)
+                                .size(QM_ARROW_SIZE),
+                    )
+                } else {
+                    Icon(
+                        imageVector = arrowIcon,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier =
+                            Modifier
+                                .offset(y = bounceOffset.dp)
+                                .size(QM_ARROW_SIZE),
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.quick_menu_label_mouse),
+                        color = colors.accent,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
                 }
             }
         }
@@ -533,124 +502,148 @@ fun QuickMenuTutorialDialog(
         val thresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
 
         // Keyboard Pill
-        if (kbAnimatedOffsetDp > 0.dp) {
-            val isPastThreshold = currentDragDeltaPx >= thresholdPx
-            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
-            val yOffset = if (overlayAtBottom) initialOffscreenOffset - kbAnimatedOffsetDp else -initialOffscreenOffset + kbAnimatedOffsetDp
+        val isKbDragging = activeDragType == SwipeGestureType.KEYBOARD
+        val isKbPostRelease = activePostRelease?.type == SwipeGestureType.KEYBOARD
+        if (isKbDragging || isKbPostRelease) {
+            val isPastThreshold = if (isKbDragging) currentDragDeltaPx >= thresholdPx else true
+            val showCheckmark = isKbPostRelease
+            val animatedOffset = if (isKbDragging) kbAnimatedOffsetDp else (activePostRelease?.offsetDp ?: 0.dp)
+            val alphaVal = if (isKbPostRelease) postReleaseAlpha.value else 1f
 
-            Box(
-                modifier =
-                    Modifier
-                        .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
-                        .offset(y = yOffset)
-                        .padding(start = QuickMenuBarLayout.SLIDING_PILL_PADDING)
-                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
-                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                        .background(color = if (isPastThreshold || kbSuccess) colors.accent else colors.controlOverlay, shape = CircleShape)
-                        .border(
-                            width = PILL_BORDER_WIDTH,
-                            color = if (isPastThreshold || kbSuccess) colors.accent else colors.controlOverlayBorder,
-                            shape = CircleShape,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (isPastThreshold || kbSuccess) Icons.Rounded.Check else Icons.Rounded.Keyboard,
-                    contentDescription = null,
-                    tint = if (isPastThreshold || kbSuccess) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(PILL_ICON_SIZE),
-                )
+            if (animatedOffset > 0.dp && alphaVal > 0f) {
+                val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
+                val yOffset = if (overlayAtBottom) initialOffscreenOffset - animatedOffset else -initialOffscreenOffset + animatedOffset
+
+                Box(
+                    modifier =
+                        Modifier
+                            .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
+                            .offset(y = yOffset)
+                            .padding(start = QuickMenuBarLayout.SLIDING_PILL_PADDING)
+                            .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                            .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                            .graphicsLayer(alpha = alphaVal)
+                            .background(
+                                color =
+                                    if (isPastThreshold ||
+                                        showCheckmark
+                                    ) {
+                                        colors.accent
+                                    } else {
+                                        colors.controlOverlay
+                                    },
+                                shape = CircleShape,
+                            ).border(
+                                width = PILL_BORDER_WIDTH,
+                                color = if (isPastThreshold || showCheckmark) colors.accent else colors.controlOverlayBorder,
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (showCheckmark) Icons.Rounded.Check else Icons.Rounded.Keyboard,
+                        contentDescription = null,
+                        tint = if (isPastThreshold || showCheckmark) colors.onAccent else colors.onSurface,
+                        modifier = Modifier.size(PILL_ICON_SIZE),
+                    )
+                }
             }
         }
 
         // Menu Pill
-        if (menuAnimatedOffsetDp > 0.dp) {
-            val isPastThreshold = currentDragDeltaPx >= thresholdPx
-            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
-            val yOffset =
-                if (overlayAtBottom) {
-                    initialOffscreenOffset - menuAnimatedOffsetDp
-                } else {
-                    -initialOffscreenOffset +
-                        menuAnimatedOffsetDp
-                }
+        val isMenuDragging = activeDragType == SwipeGestureType.MENU
+        val isMenuPostRelease = activePostRelease?.type == SwipeGestureType.MENU
+        if (isMenuDragging || isMenuPostRelease) {
+            val isPastThreshold = if (isMenuDragging) currentDragDeltaPx >= thresholdPx else true
+            val showCheckmark = isMenuPostRelease
+            val animatedOffset = if (isMenuDragging) menuAnimatedOffsetDp else (activePostRelease?.offsetDp ?: 0.dp)
+            val alphaVal = if (isMenuPostRelease) postReleaseAlpha.value else 1f
 
-            Box(
-                modifier =
-                    Modifier
-                        .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
-                        .offset(y = yOffset)
-                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
-                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                        .background(
-                            color =
-                                if (isPastThreshold ||
-                                    menuSuccess
-                                ) {
-                                    colors.accent
-                                } else {
-                                    colors.controlOverlay
-                                },
-                            shape = CircleShape,
-                        ).border(
-                            width = PILL_BORDER_WIDTH,
-                            color = if (isPastThreshold || menuSuccess) colors.accent else colors.controlOverlayBorder,
-                            shape = CircleShape,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (isPastThreshold || menuSuccess) Icons.Rounded.Check else Icons.Rounded.Menu,
-                    contentDescription = null,
-                    tint = if (isPastThreshold || menuSuccess) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(PILL_ICON_SIZE),
-                )
+            if (animatedOffset > 0.dp && alphaVal > 0f) {
+                val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
+                val yOffset = if (overlayAtBottom) initialOffscreenOffset - animatedOffset else -initialOffscreenOffset + animatedOffset
+
+                Box(
+                    modifier =
+                        Modifier
+                            .align(if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter)
+                            .offset(y = yOffset)
+                            .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                            .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                            .graphicsLayer(alpha = alphaVal)
+                            .background(
+                                color =
+                                    if (isPastThreshold ||
+                                        showCheckmark
+                                    ) {
+                                        colors.accent
+                                    } else {
+                                        colors.controlOverlay
+                                    },
+                                shape = CircleShape,
+                            ).border(
+                                width = PILL_BORDER_WIDTH,
+                                color = if (isPastThreshold || showCheckmark) colors.accent else colors.controlOverlayBorder,
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (showCheckmark) Icons.Rounded.Check else Icons.Rounded.Menu,
+                        contentDescription = null,
+                        tint = if (isPastThreshold || showCheckmark) colors.onAccent else colors.onSurface,
+                        modifier = Modifier.size(PILL_ICON_SIZE),
+                    )
+                }
             }
         }
 
         // Mouse Pill
-        if (mouseAnimatedOffsetDp > 0.dp) {
-            val isPastThreshold = currentDragDeltaPx >= thresholdPx
-            val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
-            val yOffset =
-                if (overlayAtBottom) {
-                    initialOffscreenOffset - mouseAnimatedOffsetDp
-                } else {
-                    -initialOffscreenOffset +
-                        mouseAnimatedOffsetDp
-                }
+        val isMouseDragging = activeDragType == SwipeGestureType.TOUCHPAD
+        val isMousePostRelease = activePostRelease?.type == SwipeGestureType.TOUCHPAD
+        if (isMouseDragging || isMousePostRelease) {
+            val isPastThreshold = if (isMouseDragging) currentDragDeltaPx >= thresholdPx else true
+            val showCheckmark = isMousePostRelease
+            val animatedOffset = if (isMouseDragging) mouseAnimatedOffsetDp else (activePostRelease?.offsetDp ?: 0.dp)
+            val alphaVal = if (isMousePostRelease) postReleaseAlpha.value else 1f
 
-            Box(
-                modifier =
-                    Modifier
-                        .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
-                        .offset(y = yOffset)
-                        .padding(end = QuickMenuBarLayout.SLIDING_PILL_PADDING)
-                        .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
-                        .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
-                        .background(
-                            color =
-                                if (isPastThreshold ||
-                                    mouseSuccess
-                                ) {
-                                    colors.accent
-                                } else {
-                                    colors.controlOverlay
-                                },
-                            shape = CircleShape,
-                        ).border(
-                            width = PILL_BORDER_WIDTH,
-                            color = if (isPastThreshold || mouseSuccess) colors.accent else colors.controlOverlayBorder,
-                            shape = CircleShape,
-                        ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (isPastThreshold || mouseSuccess) Icons.Rounded.Check else Icons.Rounded.Mouse,
-                    contentDescription = null,
-                    tint = if (isPastThreshold || mouseSuccess) colors.onAccent else colors.onSurface,
-                    modifier = Modifier.size(PILL_ICON_SIZE),
-                )
+            if (animatedOffset > 0.dp && alphaVal > 0f) {
+                val initialOffscreenOffset = QuickMenuBarLayout.SLIDING_PILL_SIZE + PILL_OFFSCREEN_PADDING
+                val yOffset = if (overlayAtBottom) initialOffscreenOffset - animatedOffset else -initialOffscreenOffset + animatedOffset
+
+                Box(
+                    modifier =
+                        Modifier
+                            .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
+                            .offset(y = yOffset)
+                            .padding(end = QuickMenuBarLayout.SLIDING_PILL_PADDING)
+                            .shadow(elevation = PILL_SHADOW_ELEVATION, shape = CircleShape, clip = false)
+                            .size(QuickMenuBarLayout.SLIDING_PILL_SIZE)
+                            .graphicsLayer(alpha = alphaVal)
+                            .background(
+                                color =
+                                    if (isPastThreshold ||
+                                        showCheckmark
+                                    ) {
+                                        colors.accent
+                                    } else {
+                                        colors.controlOverlay
+                                    },
+                                shape = CircleShape,
+                            ).border(
+                                width = PILL_BORDER_WIDTH,
+                                color = if (isPastThreshold || showCheckmark) colors.accent else colors.controlOverlayBorder,
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = if (showCheckmark) Icons.Rounded.Check else Icons.Rounded.Mouse,
+                        contentDescription = null,
+                        tint = if (isPastThreshold || showCheckmark) colors.onAccent else colors.onSurface,
+                        modifier = Modifier.size(PILL_ICON_SIZE),
+                    )
+                }
             }
         }
     }
