@@ -1011,7 +1011,7 @@ Open Settings to create a layout.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
-    <string name="quick_menu_tutorial_body">Swipe any of the 3 edge bars to try out the gestures! Pulling a bar past the threshold confirms the gesture with a checkmark once successful.\n\nYou can also adjust the edge bar position below.</string>
+    <string name="quick_menu_tutorial_body">Swipe any of the 3 edge bars to try out the gestures! Pulling a bar past the threshold confirms the gesture with a checkmark once successful.</string>
     <string name="quick_menu_label_keyboard">Keyboard</string>
     <string name="quick_menu_label_menu">Menu</string>
     <string name="quick_menu_label_mouse">Mouse</string>

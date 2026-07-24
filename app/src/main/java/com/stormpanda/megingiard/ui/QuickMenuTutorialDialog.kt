@@ -41,11 +41,11 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -86,12 +86,14 @@ private const val QM_BOUNCE_DURATION_MS = 1000
 // ── Appearance ───────────────────────────────────────────────────────────────
 private const val QM_SCRIM_ALPHA = 0.6f
 private val QM_DIALOG_MAX_WIDTH = 340.dp
-private val QM_DIALOG_PADDING = 24.dp
+private val QM_DIALOG_PADDING_HORIZONTAL = 24.dp
+private val QM_DIALOG_PADDING_TOP = 20.dp
+private val QM_DIALOG_PADDING_BOTTOM = 16.dp
 private val QM_DIALOG_SHADOW_ELEVATION = 8.dp
 private val QM_DIALOG_CORNER_RADIUS = 28.dp
 private val QM_DIALOG_BORDER_WIDTH = 1.dp
-private val QM_TITLE_BODY_SPACING = 16.dp
-private val QM_BODY_BUTTON_SPACING = 16.dp
+private val QM_TITLE_BODY_SPACING = 12.dp
+private val QM_BODY_BUTTON_SPACING = 12.dp
 private val QM_ARROW_EDGE_PADDING = 8.dp
 private val QM_ARROW_SIZE = 32.dp
 
@@ -273,12 +275,40 @@ fun QuickMenuTutorialDialog(
                 ),
         contentAlignment = Alignment.Center,
     ) {
+        // Always-visible edge bar controls
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart,
+                    ).padding(start = QuickMenuBarLayout.TAB_PADDING),
+        )
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier.align(
+                    if (overlayAtBottom) Alignment.BottomCenter else Alignment.TopCenter,
+                ),
+        )
+        QuickMenuBarTab(
+            overlayAtBottom = overlayAtBottom,
+            colors = colors,
+            modifier =
+                Modifier
+                    .align(
+                        if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd,
+                    ).padding(end = QuickMenuBarLayout.TAB_PADDING),
+        )
+
         // Centered dialog card
         Column(
             modifier =
                 Modifier
                     .widthIn(max = QM_DIALOG_MAX_WIDTH)
-                    .padding(QM_DIALOG_PADDING)
+                    .padding(horizontal = 16.dp)
                     .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
                     .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
                     .background(colors.surface)
@@ -286,8 +316,12 @@ fun QuickMenuTutorialDialog(
                         QM_DIALOG_BORDER_WIDTH,
                         brush = rememberQuickMenuBezelBrush(),
                         shape = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS),
-                    ).padding(QM_DIALOG_PADDING)
-                    .clickable(
+                    ).padding(
+                        start = QM_DIALOG_PADDING_HORIZONTAL,
+                        end = QM_DIALOG_PADDING_HORIZONTAL,
+                        top = QM_DIALOG_PADDING_TOP,
+                        bottom = QM_DIALOG_PADDING_BOTTOM,
+                    ).clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {}, // absorb clicks so dialog itself doesn't dismiss
@@ -310,7 +344,7 @@ fun QuickMenuTutorialDialog(
                     color = colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -332,7 +366,7 @@ fun QuickMenuTutorialDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(
+                Button(
                     onClick = {
                         AppLog.d(TAG, "Quick Menu tutorial dialog confirmed")
                         onDismiss()
@@ -340,7 +374,6 @@ fun QuickMenuTutorialDialog(
                 ) {
                     Text(
                         text = stringResource(R.string.welcome_btn_got_it),
-                        color = colors.accent,
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }
@@ -370,6 +403,8 @@ fun QuickMenuTutorialDialog(
                         text = stringResource(R.string.quick_menu_label_keyboard),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                     Spacer(Modifier.height(2.dp))
                     Icon(
@@ -396,6 +431,8 @@ fun QuickMenuTutorialDialog(
                         text = stringResource(R.string.quick_menu_label_keyboard),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }
@@ -418,6 +455,8 @@ fun QuickMenuTutorialDialog(
                         text = stringResource(R.string.quick_menu_label_menu),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                     Spacer(Modifier.height(2.dp))
                     Icon(
@@ -444,6 +483,8 @@ fun QuickMenuTutorialDialog(
                         text = stringResource(R.string.quick_menu_label_menu),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }
@@ -467,6 +508,8 @@ fun QuickMenuTutorialDialog(
                         text = stringResource(R.string.quick_menu_label_mouse),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                     Spacer(Modifier.height(2.dp))
                     Icon(
@@ -493,6 +536,8 @@ fun QuickMenuTutorialDialog(
                         text = stringResource(R.string.quick_menu_label_mouse),
                         color = colors.accent,
                         style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }

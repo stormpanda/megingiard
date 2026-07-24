@@ -301,7 +301,7 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun QuickMenuBarTab(
+internal fun QuickMenuBarTab(
     overlayAtBottom: Boolean,
     colors: AppColors,
     modifier: Modifier = Modifier,

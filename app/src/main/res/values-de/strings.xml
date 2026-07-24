@@ -1018,7 +1018,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>
-    <string name="quick_menu_tutorial_body">Wische an einer der 3 Leisten am Bildschirmrand, um die Gesten auszuprobieren! Das Ziehen über den Schwellenwert bestätigt die Geste mit einem Häkchen.\n\nDu kannst die Position der Leisten unten anpassen.</string>
+    <string name="quick_menu_tutorial_body">Wische an einer der 3 Leisten am Bildschirmrand, um die Gesten auszuprobieren! Das Ziehen über den Schwellenwert bestätigt die Geste mit einem Häkchen.</string>
     <string name="quick_menu_label_keyboard">Tastatur</string>
     <string name="quick_menu_label_menu">Menü</string>
     <string name="quick_menu_label_mouse">Maus</string>
