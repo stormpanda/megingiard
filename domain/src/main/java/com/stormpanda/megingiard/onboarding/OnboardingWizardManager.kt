@@ -5,6 +5,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,13 +48,20 @@ object OnboardingWizardManager {
             OnboardingStepId.WELCOME -> false
             OnboardingStepId.QUICK_MENU -> false
             OnboardingStepId.ACCESSIBILITY -> false
-            OnboardingStepId.PRIVILEGED_MODE -> false
+            OnboardingStepId.PRIVILEGED_MODE -> PrivdManager.state.value == PrivdState.RUNNING
         }
 
     fun startWizard(
         context: Context,
         force: Boolean = false,
     ) {
+        if (force) {
+            completedStepIds.clear()
+            SettingsManager.setWelcomeTourCompletedVersion(0)
+            SettingsManager.setShowWelcomeTutorial(true)
+            SettingsManager.setShowQuickMenuTutorial(true)
+        }
+
         if (!force && !shouldAutoStartWizard()) {
             AppLog.d(
                 TAG,
@@ -64,13 +73,6 @@ object OnboardingWizardManager {
 
         AppStateManager.closeQuickMenu()
         AppStateManager.setGlobalSettingsOpen(false)
-
-        if (force) {
-            completedStepIds.clear()
-            SettingsManager.setWelcomeTourCompletedVersion(0)
-            SettingsManager.setShowWelcomeTutorial(true)
-            SettingsManager.setShowQuickMenuTutorial(true)
-        }
 
         AppLog.d(TAG, "Initializing onboarding wizard (force=$force)")
         reevaluateSteps(context)
