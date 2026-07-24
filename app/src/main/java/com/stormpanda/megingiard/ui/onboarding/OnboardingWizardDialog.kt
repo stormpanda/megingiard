@@ -6,9 +6,13 @@ import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -23,6 +27,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -518,6 +523,12 @@ fun OnboardingStepper(
 ) {
     val colors = LocalAppColors.current
 
+    val animatedStepProgress by animateFloatAsState(
+        targetValue = activeStepIndex.toFloat(),
+        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+        label = "stepper-progress",
+    )
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -527,57 +538,86 @@ fun OnboardingStepper(
             val isCompleted = step.isCompleted
             val isCurrent = index == activeStepIndex
 
+            val targetBgColor =
+                when {
+                    isCompleted || isCurrent -> colors.accent
+                    else -> colors.surfaceVariant
+                }
+
+            val animatedBgColor by animateColorAsState(
+                targetValue = targetBgColor,
+                animationSpec = tween(durationMillis = 350),
+                label = "stepper-circle-bg-$index",
+            )
+
+            val targetBorderColor =
+                when {
+                    isCompleted || isCurrent -> colors.accent
+                    else -> colors.onSurfaceSecondary.copy(alpha = 0.35f)
+                }
+
+            val animatedBorderColor by animateColorAsState(
+                targetValue = targetBorderColor,
+                animationSpec = tween(durationMillis = 350),
+                label = "stepper-circle-border-$index",
+            )
+
             Box(
                 modifier =
                     Modifier
                         .size(OW_STEPPER_DOT_SIZE)
                         .clip(CircleShape)
-                        .background(
-                            color =
-                                when {
-                                    isCompleted -> colors.accent
-                                    isCurrent -> colors.accent.copy(alpha = 0.85f)
-                                    else -> colors.surfaceVariant
-                                },
-                        ).border(
+                        .background(animatedBgColor)
+                        .border(
                             width = 1.dp,
-                            color =
-                                when {
-                                    isCompleted || isCurrent -> colors.accent
-                                    else -> colors.onSurfaceSecondary.copy(alpha = 0.35f)
-                                },
+                            color = animatedBorderColor,
                             shape = CircleShape,
                         ),
                 contentAlignment = Alignment.Center,
             ) {
-                if (isCompleted) {
-                    Icon(
-                        imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
-                        tint = colors.onAccent,
-                        modifier = Modifier.size(14.dp),
-                    )
-                } else {
-                    Text(
-                        text = "${index + 1}",
-                        color = if (isCurrent) colors.onAccent else colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
+                AnimatedContent(
+                    targetState = isCompleted,
+                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                    label = "stepper-circle-content-$index",
+                ) { completed ->
+                    if (completed) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = colors.onAccent,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    } else {
+                        Text(
+                            text = "${index + 1}",
+                            color = if (isCurrent) colors.onAccent else colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 }
             }
 
             if (index < steps.size - 1) {
-                val isLineDone = steps[index].isCompleted
+                val lineProgress = (animatedStepProgress - index).coerceIn(0f, 1f)
                 Box(
                     modifier =
                         Modifier
                             .weight(1f)
                             .height(2.dp)
                             .padding(horizontal = 4.dp)
-                            .background(
-                                color = if (isLineDone) colors.accent else colors.onSurfaceSecondary.copy(alpha = 0.25f),
-                            ),
-                )
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(color = colors.onSurfaceSecondary.copy(alpha = 0.25f)),
+                ) {
+                    if (lineProgress > 0f) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(lineProgress)
+                                    .background(color = colors.accent),
+                        )
+                    }
+                }
             }
         }
     }
