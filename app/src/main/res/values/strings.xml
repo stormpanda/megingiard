@@ -1009,6 +1009,16 @@ Open Settings to create a layout.</string>
     <string name="macro_tutorial_btn_got_it">Got it</string>
     <string name="macro_tutorial_btn_dont_show">Don\'t show again</string>
 
+    <!-- Onboarding Wizard -->
+    <string name="onboarding_step_welcome">Welcome</string>
+    <string name="onboarding_step_quick_menu">Edge Gestures</string>
+    <string name="onboarding_step_accessibility">Accessibility</string>
+    <string name="onboarding_step_privileged_mode">Privileged Mode</string>
+    <string name="onboarding_step_counter">Step %1$d of %2$d</string>
+    <string name="onboarding_btn_next">Next</string>
+    <string name="onboarding_btn_back">Back</string>
+    <string name="onboarding_btn_finish">Finish</string>
+
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
     <string name="quick_menu_tutorial_body">Swipe any of the 3 edge bars to try out the gestures! Pulling a bar past the threshold confirms the gesture with a checkmark once successful.</string>

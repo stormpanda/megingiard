@@ -71,6 +71,7 @@ import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -84,6 +85,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -477,19 +479,18 @@ fun MainAppScreen() {
             )
         }
 
-        if (showWelcomeTutorial && showWelcomeLocal) {
-            WelcomeTutorialDialog(
-                onDismiss = {
-                    showWelcomeLocal = false
-                    SettingsManager.setShowWelcomeTutorial(false)
-                },
-            )
-        } else if (showQuickMenuTutorial && showQuickMenuLocal) {
-            QuickMenuTutorialDialog(
+        LaunchedEffect(showWelcomeTutorial, showQuickMenuTutorial) {
+            if (showWelcomeTutorial || showQuickMenuTutorial) {
+                OnboardingWizardManager.startWizard(context)
+            }
+        }
+
+        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+        if (isWizardActive) {
+            OnboardingWizardDialog(
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
-                    showQuickMenuLocal = false
-                    SettingsManager.setShowQuickMenuTutorial(false)
+                    OnboardingWizardManager.finishWizard()
                 },
             )
         }

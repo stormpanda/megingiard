@@ -1016,6 +1016,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macro_tutorial_btn_got_it">Verstanden</string>
     <string name="macro_tutorial_btn_dont_show">Nicht mehr anzeigen</string>
 
+    <!-- Onboarding Wizard -->
+    <string name="onboarding_step_welcome">Willkommen</string>
+    <string name="onboarding_step_quick_menu">Rand-Gesten</string>
+    <string name="onboarding_step_accessibility">Barrierefreiheit</string>
+    <string name="onboarding_step_privileged_mode">Privilegierter Modus</string>
+    <string name="onboarding_step_counter">Schritt %1$d von %2$d</string>
+    <string name="onboarding_btn_next">Weiter</string>
+    <string name="onboarding_btn_back">Zurück</string>
+    <string name="onboarding_btn_finish">Fertig</string>
+
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>
     <string name="quick_menu_tutorial_body">Wische an einer der 3 Leisten am Bildschirmrand, um die Gesten auszuprobieren! Das Ziehen über den Schwellenwert bestätigt die Geste mit einem Häkchen.</string>

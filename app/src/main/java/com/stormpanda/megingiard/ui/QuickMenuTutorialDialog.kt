@@ -111,6 +111,41 @@ private data class PostReleasePillState(
 )
 
 @Composable
+fun QuickMenuStepContent(overlayAtBottom: Boolean) {
+    val colors = LocalAppColors.current
+
+    Column {
+        Text(
+            text = stringResource(R.string.quick_menu_tutorial_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(modifier = Modifier.height(QM_TITLE_BODY_SPACING))
+        Text(
+            text = stringResource(R.string.quick_menu_tutorial_body),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_overlay_position),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Switch(
+                checked = overlayAtBottom,
+                onCheckedChange = { SettingsManager.setOverlayAtBottom(it) },
+            )
+        }
+    }
+}
+
+@Composable
 fun QuickMenuTutorialDialog(
     overlayAtBottom: Boolean,
     onDismiss: () -> Unit,

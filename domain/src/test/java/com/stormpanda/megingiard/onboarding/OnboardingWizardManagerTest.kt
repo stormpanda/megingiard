@@ -1,0 +1,39 @@
+package com.stormpanda.megingiard.onboarding
+
+import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class OnboardingWizardManagerTest {
+    @Before
+    fun setUp() {
+        OnboardingWizardManager.resetWizardForTest()
+    }
+
+    @Test
+    fun `orderedStepIds contains all onboarding enum values`() {
+        assertEquals(OnboardingStepId.entries.size, OnboardingWizardManager.orderedStepIds.size)
+        assertTrue(OnboardingWizardManager.orderedStepIds.containsAll(OnboardingStepId.entries))
+    }
+
+    @Test
+    fun `isStepFulfilled returns boolean without crash`() {
+        for (id in OnboardingStepId.entries) {
+            val fulfilled = OnboardingWizardManager.isStepFulfilled(id)
+            assertNotNull(fulfilled)
+        }
+    }
+
+    @Test
+    fun `finishWizard and skipWizard set isWizardActive to false`() {
+        OnboardingWizardManager.finishWizard()
+        assertFalse(OnboardingWizardManager.isWizardActive.value)
+
+        OnboardingWizardManager.skipWizard()
+        assertFalse(OnboardingWizardManager.isWizardActive.value)
+    }
+}

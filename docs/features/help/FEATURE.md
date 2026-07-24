@@ -96,21 +96,25 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 
 Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp`) declared with `remember { mutableStateOf(false) }` (or `rememberSaveable` for screens using `Scaffold`). No global state is used; visibility is entirely local to each screen's composable.
 
-### Onboarding & Welcome Dialogs
+### Onboarding Welcome Tour & Wizard
 
-To onboard new users, the app chains two introductory popups upon the first launch:
+To onboard new users, the app runs a unified 4-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
 
-1. **Welcome Onboarding Dialog:**
-   - A `WelcomeTutorialDialog` is shown on first launch to introduce Megingiard\'s features and highlight the in-app help (?) buttons.
-   - It only contains a single "Got it" button, which dismisses the modal and flags it as completed (writing `showWelcomeTutorial = false` to Settings) so that it is never shown again.
-   
-2. **Quick Menu Swipe Onboarding Dialog:**
-   - Appears immediately after the welcome modal is closed for the first time.
-   - Explains how to swipe the edge-anchored quick menu bar indicator to open the Quick Menu.
-   - Renders a styled modal containing a "Got it" button that marks the tutorial as completed.
-   - Displays an animated bouncing arrow pointing directly at the quick menu bar's edge location (aligned top or bottom center depending on the user's overlay placement setting).
+1. **Multi-Step Onboarding Tour:**
+   - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons.
+   - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, and a live top/bottom position toggle switch.
+   - **Step 3 (Accessibility):** Guides accessibility setup (auto-skipped if already active).
+   - **Step 4 (Privileged Mode):** Guides privileged daemon setup (auto-skipped if already running).
 
-Both tutorial flags can be reset simultaneously under **Global Settings** -> **Data** -> **Reset tutorials** to show these onboarding experiences again.
+2. **Auto-Skipping & Stepper Progress Indicator:**
+   - `OnboardingWizardManager` evaluates step fulfillment conditions dynamically (`isStepFulfilled`).
+   - Steps that are already satisfied by the device or previous setup are **automatically skipped** and displayed as completed (`✓`) in `OnboardingStepper` right from the start.
+   - The wizard opens directly on the first pending step. If all steps are satisfied, the tour completes without showing popups.
+
+3. **Footer Navigation:**
+   - Provides `Back` (outlined), `Next` (primary), and `Finish` (primary) navigation buttons along with a `Don't show again` option on the first step.
+
+All tutorial flags can be reset under **Global Settings** -> **Data** -> **Reset tutorials** to re-run the onboarding tour experience.
 
 ### String resource conventions
 
@@ -136,8 +140,10 @@ help_close_cd  — content description for the Close button
 | File | Responsibility |
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
-| `ui/WelcomeTutorialDialog.kt` | First-boot welcome onboarding dialog |
-| `ui/QuickMenuTutorialDialog.kt` | Swipe menu affordance onboarding dialog |
+| `onboarding/OnboardingWizardManager.kt` | Domain state singleton managing onboarding tour steps and auto-skipping |
+| `ui/onboarding/OnboardingWizardDialog.kt` | Multi-step tour host dialog with `OnboardingStepper` header and step navigation |
+| `ui/WelcomeTutorialDialog.kt` | Step 1 (`WelcomeStepContent`) onboarding content |
+| `ui/QuickMenuTutorialDialog.kt` | Step 2 (`QuickMenuStepContent`) gesture trial onboarding content |
 | `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |

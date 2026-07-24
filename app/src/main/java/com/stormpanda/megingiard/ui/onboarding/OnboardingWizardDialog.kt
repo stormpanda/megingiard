@@ -1,0 +1,317 @@
+package com.stormpanda.megingiard.ui.onboarding
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
+import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.QuickMenuStepContent
+import com.stormpanda.megingiard.ui.WelcomeStepContent
+import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+
+private const val TAG = "OnboardingWizardDialog"
+
+private const val OW_SCRIM_ALPHA = 0.6f
+private val OW_DIALOG_MAX_WIDTH = 360.dp
+private val OW_DIALOG_PADDING_HORIZONTAL = 24.dp
+private val OW_DIALOG_PADDING_TOP = 20.dp
+private val OW_DIALOG_PADDING_BOTTOM = 16.dp
+private val OW_DIALOG_SHADOW_ELEVATION = 8.dp
+private val OW_DIALOG_CORNER_RADIUS = 28.dp
+private val OW_DIALOG_BORDER_WIDTH = 1.dp
+private val OW_STEPPER_DOT_SIZE = 24.dp
+
+@Composable
+fun OnboardingWizardDialog(
+    overlayAtBottom: Boolean,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val colors = LocalAppColors.current
+    val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+    val activeStepIndex by OnboardingWizardManager.activeStepIndex.collectAsState()
+    val steps by OnboardingWizardManager.steps.collectAsState()
+
+    if (!isWizardActive || steps.isEmpty()) return
+
+    val currentStepState = steps.getOrNull(activeStepIndex) ?: return
+    val totalSteps = steps.size
+    val isLastStep = activeStepIndex == totalSteps - 1
+    val isFirstStep = activeStepIndex == 0
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = OW_SCRIM_ALPHA))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {
+                        OnboardingWizardManager.skipWizard()
+                        onDismiss()
+                    },
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .widthIn(max = OW_DIALOG_MAX_WIDTH)
+                    .padding(horizontal = 16.dp)
+                    .shadow(OW_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
+                    .clip(RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
+                    .background(colors.surface)
+                    .border(
+                        OW_DIALOG_BORDER_WIDTH,
+                        brush = rememberQuickMenuBezelBrush(),
+                        shape = RoundedCornerShape(OW_DIALOG_CORNER_RADIUS),
+                    ).padding(
+                        start = OW_DIALOG_PADDING_HORIZONTAL,
+                        end = OW_DIALOG_PADDING_HORIZONTAL,
+                        top = OW_DIALOG_PADDING_TOP,
+                        bottom = OW_DIALOG_PADDING_BOTTOM,
+                    ).clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // absorb clicks
+                    ),
+        ) {
+            // Header Stepper Indicator
+            OnboardingStepper(
+                steps = steps,
+                activeStepIndex = activeStepIndex,
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Step Content Host
+            Box(
+                modifier =
+                    Modifier
+                        .weight(weight = 1f, fill = false)
+                        .verticalScroll(rememberScrollState()),
+            ) {
+                AnimatedContent(
+                    targetState = currentStepState.id,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "onboarding-step-content",
+                ) { stepId ->
+                    when (stepId) {
+                        OnboardingStepId.WELCOME -> {
+                            WelcomeStepContent()
+                        }
+
+                        OnboardingStepId.QUICK_MENU -> {
+                            QuickMenuStepContent(overlayAtBottom = overlayAtBottom)
+                        }
+
+                        OnboardingStepId.ACCESSIBILITY -> {
+                            Text(
+                                text = stringResource(R.string.onboarding_step_accessibility),
+                                color = colors.onSurface,
+                            )
+                        }
+
+                        OnboardingStepId.PRIVILEGED_MODE -> {
+                            Text(
+                                text = stringResource(R.string.onboarding_step_privileged_mode),
+                                color = colors.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Footer Navigation Controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (!isFirstStep) {
+                    OutlinedButton(
+                        onClick = { OnboardingWizardManager.prevStep(context) },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.onboarding_btn_back),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                } else {
+                    TextButton(
+                        onClick = {
+                            OnboardingWizardManager.skipWizard()
+                            onDismiss()
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.macro_tutorial_btn_dont_show),
+                            color = colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        if (isLastStep) {
+                            OnboardingWizardManager.finishWizard()
+                            onDismiss()
+                        } else {
+                            OnboardingWizardManager.nextStep(context)
+                        }
+                    },
+                ) {
+                    Text(
+                        text =
+                            if (isLastStep) {
+                                stringResource(R.string.onboarding_btn_finish)
+                            } else {
+                                stringResource(R.string.onboarding_btn_next)
+                            },
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OnboardingStepper(
+    steps: List<OnboardingStepState>,
+    activeStepIndex: Int,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            steps.forEachIndexed { index, step ->
+                val isCompleted = step.isCompleted
+                val isCurrent = index == activeStepIndex
+
+                Box(
+                    modifier =
+                        Modifier
+                            .size(OW_STEPPER_DOT_SIZE)
+                            .clip(CircleShape)
+                            .background(
+                                color =
+                                    when {
+                                        isCompleted -> colors.accent
+                                        isCurrent -> colors.accent.copy(alpha = 0.8f)
+                                        else -> colors.controlOverlay
+                                    },
+                            ).border(
+                                width = 1.dp,
+                                color =
+                                    when {
+                                        isCompleted || isCurrent -> colors.accent
+                                        else -> colors.controlOverlayBorder
+                                    },
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isCompleted) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = colors.onAccent,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    } else {
+                        Text(
+                            text = "${index + 1}",
+                            color = if (isCurrent) colors.onAccent else colors.onSurfaceSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+
+                if (index < steps.size - 1) {
+                    val isLineDone = steps[index].isCompleted
+                    Box(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(2.dp)
+                                .padding(horizontal = 4.dp)
+                                .background(
+                                    color = if (isLineDone) colors.accent else colors.controlOverlayBorder,
+                                ),
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val currentStep = steps.getOrNull(activeStepIndex)
+        val stepTitle =
+            when (currentStep?.id) {
+                OnboardingStepId.WELCOME -> stringResource(R.string.onboarding_step_welcome)
+                OnboardingStepId.QUICK_MENU -> stringResource(R.string.onboarding_step_quick_menu)
+                OnboardingStepId.ACCESSIBILITY -> stringResource(R.string.onboarding_step_accessibility)
+                OnboardingStepId.PRIVILEGED_MODE -> stringResource(R.string.onboarding_step_privileged_mode)
+                null -> ""
+            }
+
+        Text(
+            text = stringResource(R.string.onboarding_step_counter, activeStepIndex + 1, steps.size) + ": $stepTitle",
+            color = colors.accent,
+            style = MaterialTheme.typography.labelMedium,
+        )
+    }
+}
