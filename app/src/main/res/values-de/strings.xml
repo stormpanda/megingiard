@@ -66,6 +66,7 @@
     <string name="settings_accessibility_status_active">Aktiv</string>
     <string name="settings_accessibility_status_inactive">Inaktiv (Tippen zum Aktivieren)</string>
     <string name="settings_accessibility_status_desc">Ermöglicht es Megingiard beispielsweise zu erkennen, welche App gerade läuft, um das Profil automatisch zu wechseln.</string>
+    <string name="settings_accessibility_setup">Einrichten</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
     <string name="settings_accent_color_custom">Benutzerdefiniert</string>
     <string name="settings_accent_suggestions_title">Akzentfarben-Vorschläge</string>

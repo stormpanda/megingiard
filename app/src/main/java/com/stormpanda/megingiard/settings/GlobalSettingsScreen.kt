@@ -25,7 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -79,6 +80,7 @@ import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "GlobalSettingsScreen"
@@ -136,6 +138,7 @@ fun GlobalSettingsScreen(
 
     var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
     var isAccessibilityActive by remember { mutableStateOf(false) }
+    var isCheckingAccessibility by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer =
@@ -147,6 +150,21 @@ fun GlobalSettingsScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+    LaunchedEffect(isCheckingAccessibility, isAccessibilityActive) {
+        if (isCheckingAccessibility && !isAccessibilityActive) {
+            AppLog.d(TAG, "Starting 1s polling loop for accessibility activation")
+            while (isActive && !isAccessibilityActive) {
+                delay(1000L)
+                val active = viewModel.checkAccessibilityActive(context)
+                if (active) {
+                    isAccessibilityActive = true
+                    isCheckingAccessibility = false
+                    AppLog.i(TAG, "Accessibility service activation detected")
+                    break
+                }
+            }
         }
     }
     LaunchedEffect(showRestoreDefaultsConfirm) {
@@ -286,24 +304,28 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_automation),
                         colors = colors,
                     ) {
+                        val launchAccessibilitySettings = {
+                            if (!isAccessibilityActive) {
+                                isCheckingAccessibility = true
+                            }
+                            try {
+                                val intent =
+                                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                        addFlags(
+                                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                                                Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                                        )
+                                    }
+                                val options = ActivityOptions.makeBasic()
+                                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                context.startActivity(intent, options.toBundle())
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
+                            }
+                        }
                         AppSettingsRow(
-                            onClick = {
-                                try {
-                                    val intent =
-                                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                                            addFlags(
-                                                Intent.FLAG_ACTIVITY_NEW_TASK or
-                                                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                                                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                                            )
-                                        }
-                                    val options = ActivityOptions.makeBasic()
-                                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                    context.startActivity(intent, options.toBundle())
-                                } catch (e: Exception) {
-                                    AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
-                                }
-                            },
+                            onClick = { launchAccessibilitySettings() },
                         ) {
                             Column(
                                 modifier = Modifier.weight(1f),
@@ -345,27 +367,24 @@ fun GlobalSettingsScreen(
                                 )
                             }
                             if (!isAccessibilityActive) {
-                                IconButton(
-                                    onClick = {
-                                        isAccessibilityActive = viewModel.checkAccessibilityActive(context)
-                                        AppLog.d(TAG, "Manual refresh: Accessibility active = $isAccessibilityActive")
-                                    },
-                                    modifier = Modifier.size(24.dp),
+                                Button(
+                                    onClick = { launchAccessibilitySettings() },
+                                    colors =
+                                        ButtonDefaults.buttonColors(
+                                            containerColor = colors.actionColorSystem,
+                                            contentColor = Color.White,
+                                        ),
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Refresh,
-                                        contentDescription = "Refresh status",
-                                        tint = colors.onSurfaceSecondary,
-                                    )
+                                    Text(stringResource(R.string.settings_accessibility_setup))
                                 }
-                                Spacer(Modifier.width(8.dp))
+                            } else {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                                    contentDescription = null,
+                                    tint = effectiveAccent,
+                                    modifier = Modifier.size(16.dp),
+                                )
                             }
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                contentDescription = null,
-                                tint = effectiveAccent,
-                                modifier = Modifier.size(16.dp),
-                            )
                         }
                         AppDivider()
                         RememberSettingRow(
