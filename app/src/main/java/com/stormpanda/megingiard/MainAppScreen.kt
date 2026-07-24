@@ -208,6 +208,8 @@ fun MainAppScreen() {
     } else {
         BackHandler { showExitDialog = true }
 
+        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+
         Box(
             modifier =
                 Modifier
@@ -218,8 +220,9 @@ fun MainAppScreen() {
                         kbBarMinX,
                         kbBarMaxX,
                         isGesturesEnabled,
+                        isWizardActive,
                     ) {
-                        if (!isGesturesEnabled) return@pointerInput
+                        if (!isGesturesEnabled || isWizardActive) return@pointerInput
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
@@ -486,7 +489,6 @@ fun MainAppScreen() {
             }
         }
 
-        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
         if (isWizardActive) {
             OnboardingWizardDialog(
                 overlayAtBottom = overlayAtBottom,

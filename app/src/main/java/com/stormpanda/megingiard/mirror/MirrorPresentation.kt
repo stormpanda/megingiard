@@ -413,8 +413,10 @@ class MirrorPresentation(
                             val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
                             val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
                             val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
+                            val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
                             val isGesturesEnabled =
-                                !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
+                                !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive &&
+                                    !isWizardActive
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }

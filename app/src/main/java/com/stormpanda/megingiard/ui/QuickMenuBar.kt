@@ -48,6 +48,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.SwipeGestureProgress
 import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.macropad.AmbientPreviewManager
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.delay
 
@@ -90,7 +91,8 @@ private val PILL_ICON_SIZE = 24.dp
 fun QuickMenuBar(modifier: Modifier = Modifier) {
     val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
-    if (previewConfig != null || isViewportEditActive) return
+    val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+    if (previewConfig != null || isViewportEditActive || isWizardActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
