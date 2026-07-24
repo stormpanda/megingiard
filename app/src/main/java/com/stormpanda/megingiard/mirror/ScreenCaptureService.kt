@@ -29,6 +29,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.MirrorSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +83,17 @@ class ScreenCaptureService : Service() {
                         mirrorPresentation?.show()
                     }
                     recordingPresentation?.show()
+                }
+            }
+        }
+
+        scope.launch {
+            PrivdClient.state.collect { state ->
+                if (state == PrivdConnectionState.CONNECTED && isPrivilegedMode) {
+                    AppLog.i(TAG, "Privd reconnected while mirror active -> updating direct server surfaces")
+                    directPrivdSession?.release()
+                    directPrivdSession = null
+                    updateDirectServerSurfaces()
                 }
             }
         }

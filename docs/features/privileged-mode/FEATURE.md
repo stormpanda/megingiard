@@ -284,12 +284,16 @@ The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator.
 
 `PrivdBootstrapper` kills any running daemon process (`kill -9`) and deletes `/data/local/tmp/megingiard_privd` over ADB shell prior to pushing fresh binaries to clear `ETXTBSY` file locks from active daemon instances. It verifies the SHA-256 pin of `megingiard_privd_arm64` before pushing it over ADB `sync:`. It also verifies `megingiard_mirror.dex` before pushing the privileged mirror server asset. A daemon verification failure aborts bootstrap; a mirror DEX verification failure is logged and leaves the normal MediaProjection fallback path available.
 
+Upon daemon replacement and reconnection, active subsystems automatically recover:
+- **Screen Mirroring (`ScreenCaptureService`):** Observes `PrivdClient.state` and automatically starts a new `DirectPrivdMirrorSession` on the new daemon, restoring mirror output without user intervention.
+- **Input Injectors (`KeyInjector`, `TouchInjector`, `MouseInjector`, `GamepadInjector`):** `InjectorBackendRouter` automatically re-synchronizes backend routing and re-sends initialization commands (`KB_START` for keyboard) to establish input nodes on the new daemon.
+
 Detailed native rebuild and generated hash behavior are documented in [BUILD_NATIVE.md](../../BUILD_NATIVE.md#native-asset-integrity).
 
 #### Operational Notes
 
 - The HMAC key is provisioned automatically during the Privileged Mode setup wizard. No manual key management is required.
-- Re-running the setup wizard generates a fresh key and re-provisions the daemon.
+- Re-running the setup wizard generates a fresh key, replaces the daemon binary, and re-provisions the daemon.
 - Key rotation and signing-certificate rotation are manual re-bootstrap / redeploy operations today.
 
 ### Wire Protocol

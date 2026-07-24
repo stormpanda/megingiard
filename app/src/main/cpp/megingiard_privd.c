@@ -309,30 +309,7 @@ static int discover_gamepad_fd(void) {
     return -1;
 }
 
-/*
- * Walks /dev/input/event0..eventN, finds the touchscreen node supporting ABS_MT_POSITION_X.
- * Returns open O_WRONLY fd on success, -1 on failure.
- */
-static int discover_touch_fd(void) {
-    char path[64];
-    unsigned long abs_bits[NBITS(ABS_MAX + 1)];
 
-    for (int i = 0; i < SCAN_MAX; i++) {
-        snprintf(path, sizeof(path), "%s%d", INPUT_PATH_PREFIX, i);
-        int fd = open(path, O_WRONLY);
-        if (fd < 0) continue;
-
-        memset(abs_bits, 0, sizeof(abs_bits));
-        if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(abs_bits)), abs_bits) >= 0) {
-            if (test_bit(ABS_MT_POSITION_X, abs_bits)) {
-                fprintf(stderr, "privd: touch node discovered=%s\n", path);
-                return fd;
-            }
-        }
-        close(fd);
-    }
-    return open("/dev/input/event6", O_WRONLY);
-}
 
 /*
  * Binds an abstract-namespace Unix socket "@megingiard.privd".
@@ -1117,14 +1094,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    g_keyboard_fd = init_virtual_keyboard();
-    if (g_keyboard_fd < 0) {
-        fprintf(stderr, "privd: warning: failed to create virtual keyboard errno=%d\n", errno);
-    }
-
-    g_touch_fd = discover_touch_fd();
+    g_touch_fd = open("/dev/input/event6", O_WRONLY);
     if (g_touch_fd < 0) {
-        fprintf(stderr, "privd: warning: failed to open touchscreen node (touch injection disabled)\n");
+        fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection disabled) errno=%d\n", errno);
     }
 
     int srv_fd = bind_listening_socket();
