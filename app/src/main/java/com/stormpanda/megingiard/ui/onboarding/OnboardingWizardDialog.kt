@@ -2,6 +2,9 @@ package com.stormpanda.megingiard.ui.onboarding
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -117,7 +120,9 @@ fun OnboardingWizardDialog(
                 Modifier
                     .widthIn(max = OW_DIALOG_MAX_WIDTH)
                     .padding(horizontal = 16.dp)
-                    .shadow(OW_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
+                    .animateContentSize(
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    ).shadow(OW_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
                     .clip(RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
                     .background(colors.surface)
                     .border(
@@ -220,29 +225,13 @@ fun OnboardingWizardDialog(
         }
     }
 
-    if (isQuickMenuStep) {
-        QuickMenuGestureTrialOverlay(
-            overlayAtBottom = overlayAtBottom,
-            onDismiss = {},
-            showScrim = true,
-            content = wizardCardContent,
-        )
-    } else {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = OW_SCRIM_ALPHA))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // Absorb click without dismissing
-                    ),
-            contentAlignment = Alignment.Center,
-        ) {
-            wizardCardContent()
-        }
-    }
+    QuickMenuGestureTrialOverlay(
+        overlayAtBottom = overlayAtBottom,
+        onDismiss = {},
+        showScrim = true,
+        enabled = isQuickMenuStep,
+        content = wizardCardContent,
+    )
 }
 
 @Composable
