@@ -106,6 +106,7 @@ import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -121,6 +122,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -815,6 +817,16 @@ class MirrorPresentation(
                                 ) {
                                     TouchpadSettingsOverlay(
                                         onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
+                                    )
+                                }
+
+                                val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+                                if (isWizardActive) {
+                                    OnboardingWizardDialog(
+                                        overlayAtBottom = overlayAtBottom,
+                                        onDismiss = {
+                                            OnboardingWizardManager.finishWizard()
+                                        },
                                     )
                                 }
                             }
