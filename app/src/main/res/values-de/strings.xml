@@ -1030,13 +1030,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_accessibility_title">Barrierefreiheitsdienst (empfohlen!)</string>
     <string name="onboarding_accessibility_desc">Megingiard nutzt den Barrierefreiheitsdienst für den automatischen Wechsel von Makro-Profilen beim Starten von Spielen und zur Unterstützung bei der Einrichtung des Privilegierten Modus. Du kannst ihn jetzt aktivieren oder überspringen.</string>
     <string name="onboarding_step_finished">Fertig</string>
-    <string name="onboarding_finished_title">Alles bereit!</string>
+    <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
     <string name="onboarding_step_counter">Schritt %1$d von %2$d</string>
     <string name="onboarding_btn_next">Weiter</string>
     <string name="onboarding_btn_back">Zurück</string>
     <string name="onboarding_btn_skip">Überspringen</string>
-    <string name="onboarding_btn_finish">Tour abschließen</string>
+    <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>
     <string name="quick_menu_tutorial_body">Wische an einer der 3 Quick-Menü-Leisten, um die Gesten auszuprobieren! Das Ziehen einer Leiste über den Schwellenwert bestätigt die Geste mit einem Häkchen, wenn korrekt ausgeführt.</string>

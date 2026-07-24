@@ -1023,13 +1023,13 @@ Open Settings to create a layout.</string>
     <string name="onboarding_accessibility_title">Accessibility Service (recommended!)</string>
     <string name="onboarding_accessibility_desc">Megingiard uses the Accessibility Service for automatic macro profile switching when launching games and assisting during Privileged Mode pairing. You can enable it now or skip to set it up later.</string>
     <string name="onboarding_step_finished">Finished</string>
-    <string name="onboarding_finished_title">You\'re All Set!</string>
+    <string name="onboarding_finished_title">You\'re All Set! Ready to Tinker?</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
     <string name="onboarding_step_counter">Step %1$d of %2$d</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_back">Back</string>
     <string name="onboarding_btn_skip">Skip</string>
-    <string name="onboarding_btn_finish">Finish Tour</string>
+    <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
     <string name="quick_menu_tutorial_body">Swipe any of the 3 quick menu bars to try out the gestures! Pulling a bar past the threshold confirms the gesture with a checkmark if executed correctly.</string>
