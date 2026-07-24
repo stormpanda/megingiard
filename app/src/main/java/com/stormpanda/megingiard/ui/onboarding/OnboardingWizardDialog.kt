@@ -122,6 +122,7 @@ fun OnboardingWizardDialog(
                     .padding(horizontal = 16.dp)
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        alignment = Alignment.Center,
                     ).shadow(OW_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
                     .clip(RoundedCornerShape(OW_DIALOG_CORNER_RADIUS))
                     .background(colors.surface)
