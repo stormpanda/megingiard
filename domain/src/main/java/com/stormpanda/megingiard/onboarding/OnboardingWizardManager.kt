@@ -34,10 +34,12 @@ object OnboardingWizardManager {
             OnboardingStepId.FINISHED,
         )
 
-    fun shouldAutoStartWizard(): Boolean =
-        SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION ||
-            SettingsManager.showWelcomeTutorial.value ||
-            SettingsManager.showQuickMenuTutorial.value
+    fun shouldAutoStartWizard(): Boolean {
+        if (SettingsManager.welcomeTourCompletedVersion.value >= SettingsManager.CURRENT_WELCOME_TOUR_VERSION) {
+            return false
+        }
+        return SettingsManager.showWelcomeTutorial.value || SettingsManager.showQuickMenuTutorial.value
+    }
 
     fun isStepFulfilled(id: OnboardingStepId): Boolean = false
 

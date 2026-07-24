@@ -480,8 +480,10 @@ fun MainAppScreen() {
             )
         }
 
-        LaunchedEffect(welcomeTourCompletedVersion, showWelcomeTutorial, showQuickMenuTutorial) {
-            OnboardingWizardManager.startWizard(context)
+        LaunchedEffect(welcomeTourCompletedVersion) {
+            if (OnboardingWizardManager.shouldAutoStartWizard()) {
+                OnboardingWizardManager.startWizard(context)
+            }
         }
 
         val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
