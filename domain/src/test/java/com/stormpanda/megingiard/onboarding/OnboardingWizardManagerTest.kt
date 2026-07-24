@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.onboarding
 
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
+import com.stormpanda.megingiard.settings.SettingsManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -26,6 +27,12 @@ class OnboardingWizardManagerTest {
             val fulfilled = OnboardingWizardManager.isStepFulfilled(id)
             assertNotNull(fulfilled)
         }
+    }
+
+    @Test
+    fun `shouldAutoStartWizard compares against CURRENT_WELCOME_TOUR_VERSION`() {
+        assertTrue(OnboardingWizardManager.shouldAutoStartWizard())
+        assertEquals(1, SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
     }
 
     @Test

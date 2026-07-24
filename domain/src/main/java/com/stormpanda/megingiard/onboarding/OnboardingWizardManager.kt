@@ -13,7 +13,7 @@ private const val TAG = "OnboardingWizardManager"
 
 /**
  * Singleton state holder managing the multi-step onboarding welcome tour.
- * Evaluates step fulfillment, handles automatic step skipping, and coordinates tour navigation.
+ * Evaluates tour versioning, step fulfillment, handles automatic step skipping, and coordinates tour navigation.
  */
 object OnboardingWizardManager {
     private val _isWizardActive = MutableStateFlow(false)
@@ -35,16 +35,34 @@ object OnboardingWizardManager {
             OnboardingStepId.PRIVILEGED_MODE,
         )
 
+    fun shouldAutoStartWizard(): Boolean = SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION
+
     fun isStepFulfilled(id: OnboardingStepId): Boolean =
         when (id) {
-            OnboardingStepId.WELCOME -> !SettingsManager.showWelcomeTutorial.value
-            OnboardingStepId.QUICK_MENU -> !SettingsManager.showQuickMenuTutorial.value
+            OnboardingStepId.WELCOME -> false
+            OnboardingStepId.QUICK_MENU -> false
             OnboardingStepId.ACCESSIBILITY -> false
             OnboardingStepId.PRIVILEGED_MODE -> false
         }
 
-    fun startWizard(context: Context) {
-        AppLog.d(TAG, "Initializing onboarding wizard")
+    fun startWizard(
+        context: Context,
+        force: Boolean = false,
+    ) {
+        if (!force && !shouldAutoStartWizard()) {
+            AppLog.d(
+                TAG,
+                "Welcome tour already completed for version ${SettingsManager.welcomeTourCompletedVersion.value}. Skipping auto-start.",
+            )
+            _isWizardActive.value = false
+            return
+        }
+
+        if (force) {
+            completedStepIds.clear()
+        }
+
+        AppLog.d(TAG, "Initializing onboarding wizard (force=$force)")
         reevaluateSteps(context)
 
         val firstPendingIndex = _steps.value.indexOfFirst { !it.isCompleted }
@@ -106,6 +124,7 @@ object OnboardingWizardManager {
     fun skipWizard() {
         AppLog.d(TAG, "Skipping onboarding wizard")
         completedStepIds.addAll(orderedStepIds)
+        SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         SettingsManager.setShowWelcomeTutorial(false)
         SettingsManager.setShowQuickMenuTutorial(false)
         _isWizardActive.value = false
@@ -114,6 +133,7 @@ object OnboardingWizardManager {
     fun finishWizard() {
         AppLog.d(TAG, "Finishing onboarding wizard")
         completedStepIds.addAll(orderedStepIds)
+        SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         SettingsManager.setShowWelcomeTutorial(false)
         SettingsManager.setShowQuickMenuTutorial(false)
         _isWizardActive.value = false

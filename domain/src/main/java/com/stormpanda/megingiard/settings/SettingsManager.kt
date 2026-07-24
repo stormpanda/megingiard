@@ -98,6 +98,8 @@ object SettingsManager {
     private val _steamGridDbApiToken = MutableStateFlow("")
     val steamGridDbApiToken: StateFlow<String> = _steamGridDbApiToken.asStateFlow()
 
+    const val CURRENT_WELCOME_TOUR_VERSION = 1
+
     private val _showWelcomeTutorial = MutableStateFlow(true)
     val showWelcomeTutorial: StateFlow<Boolean> = _showWelcomeTutorial.asStateFlow()
 
@@ -106,6 +108,9 @@ object SettingsManager {
 
     private val _showQuickMenuTutorial = MutableStateFlow(true)
     val showQuickMenuTutorial: StateFlow<Boolean> = _showQuickMenuTutorial.asStateFlow()
+
+    private val _welcomeTourCompletedVersion = MutableStateFlow(0)
+    val welcomeTourCompletedVersion: StateFlow<Int> = _welcomeTourCompletedVersion.asStateFlow()
 
     // Mirror settings live in [MirrorSettings] (pinch-while-projecting + remember-* flags + session save/restore).
     // Keyboard settings live in [KeyboardSettings].
@@ -179,6 +184,7 @@ object SettingsManager {
                     _showWelcomeTutorial.value = prefs[KEY_SHOW_WELCOME_TUTORIAL] ?: true
                     _showMacroEditorTutorial.value = prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] ?: true
                     _showQuickMenuTutorial.value = prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] ?: true
+                    _welcomeTourCompletedVersion.value = prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] ?: 0
                     MirrorSettings.loadFrom(prefs)
                     KeyboardSettings.loadFrom(prefs)
                     TouchpadSettings.loadFrom(prefs)
@@ -235,17 +241,31 @@ object SettingsManager {
         updateSettingPref(KEY_SHOW_QUICK_MENU_TUTORIAL, value, _showQuickMenuTutorial, scope, dataStore, TAG, "setShowQuickMenuTutorial")
     }
 
+    fun setWelcomeTourCompletedVersion(value: Int) {
+        updateSettingPref(
+            KEY_WELCOME_TOUR_COMPLETED_VERSION,
+            value,
+            _welcomeTourCompletedVersion,
+            scope,
+            dataStore,
+            TAG,
+            "setWelcomeTourCompletedVersion",
+        )
+    }
+
     fun resetAllTutorials() {
         AppLog.d(TAG, "resetAllTutorials()")
         _showWelcomeTutorial.value = true
         _showMacroEditorTutorial.value = true
         _showQuickMenuTutorial.value = true
+        _welcomeTourCompletedVersion.value = 0
         scope.launch {
             if (::dataStore.isInitialized) {
                 dataStore.edit { prefs ->
                     prefs[KEY_SHOW_WELCOME_TUTORIAL] = true
                     prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
                     prefs[KEY_SHOW_QUICK_MENU_TUTORIAL] = true
+                    prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] = 0
                 }
             }
         }

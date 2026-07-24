@@ -106,15 +106,15 @@ To onboard new users, the app runs a unified 4-step **Onboarding Welcome Tour Wi
    - **Step 3 (Accessibility):** Guides accessibility setup (auto-skipped if already active).
    - **Step 4 (Privileged Mode):** Guides privileged daemon setup (auto-skipped if already running).
 
-2. **Auto-Skipping & Stepper Progress Indicator:**
-   - `OnboardingWizardManager` evaluates step fulfillment conditions dynamically (`isStepFulfilled`).
-   - Steps that are already satisfied by the device or previous setup are **automatically skipped** and displayed as completed (`✓`) in `OnboardingStepper` right from the start.
-   - The wizard opens directly on the first pending step. If all steps are satisfied, the tour completes without showing popups.
+2. **Tour Versioning & Auto-Start:**
+   - `SettingsManager.welcomeTourCompletedVersion` tracks the integer version of the last completed welcome tour (default `0`, current version `CURRENT_WELCOME_TOUR_VERSION = 1`).
+   - The welcome tour automatically launches if `welcomeTourCompletedVersion < CURRENT_WELCOME_TOUR_VERSION`, ensuring that new tour versions are presented even if a user completed an earlier version.
+   - Completing or finishing the tour persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`.
 
-3. **Footer Navigation:**
-   - Provides `Back` (outlined), `Next` (primary), and `Finish` (primary) navigation buttons along with a `Don't show again` option on the first step.
-
-All tutorial flags can be reset under **Global Settings** -> **Data** -> **Reset tutorials** to re-run the onboarding tour experience.
+3. **Footer Navigation & Settings Re-run Option:**
+   - Provides `Back` (outlined button), `Next` (primary button), and `Finish` (primary button) navigation controls.
+   - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Start Welcome Tour** (first entry in the General settings section).
+   - All tutorial flags can also be reset under **Global Settings** -> **Data** -> **Reset tutorials**.
 
 ### String resource conventions
 

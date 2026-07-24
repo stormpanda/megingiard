@@ -65,6 +65,7 @@ import com.stormpanda.megingiard.config.buildExportFilename
 import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.DeadzoneDialog
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
@@ -257,6 +258,16 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_general),
                         colors = colors,
                     ) {
+                        ConfigActionRow(
+                            label = stringResource(R.string.settings_start_welcome_tour),
+                            description = stringResource(R.string.settings_start_welcome_tour_desc),
+                            accentColor = effectiveAccent,
+                            onClick = {
+                                OnboardingWizardManager.startWizard(context, force = true)
+                                onBack()
+                            },
+                        )
+                        AppDivider()
                         LanguagePickerRow(
                             language = appLanguage,
                             accentColor = effectiveAccent,
@@ -754,6 +765,10 @@ private fun GlobalSettingsHelpModal(
         HelpIntro(stringResource(R.string.help_settings_intro))
 
         HelpSection(stringResource(R.string.settings_section_general))
+        HelpEntry(
+            label = stringResource(R.string.settings_start_welcome_tour),
+            description = stringResource(R.string.settings_start_welcome_tour_desc),
+        )
         HelpEntry(
             label = stringResource(R.string.settings_language),
             description = stringResource(R.string.help_settings_language_desc),

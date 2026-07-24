@@ -98,6 +98,7 @@ internal val KEY_SAVED_PROJECTION = booleanPreferencesKey("mirror_saved_projecti
 internal val KEY_SHOW_WELCOME_TUTORIAL = booleanPreferencesKey("show_welcome_tutorial")
 internal val KEY_SHOW_MACRO_EDITOR_TUTORIAL = booleanPreferencesKey("show_macro_editor_tutorial")
 internal val KEY_SHOW_QUICK_MENU_TUTORIAL = booleanPreferencesKey("show_quick_menu_tutorial")
+internal val KEY_WELCOME_TOUR_COMPLETED_VERSION = intPreferencesKey("welcome_tour_completed_version")
 
 // Internal backups storage key — isolated from SECTION_MAP export/import
 internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
@@ -180,6 +181,7 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_SHOW_WELCOME_TUTORIAL,
         KEY_SHOW_MACRO_EDITOR_TUTORIAL,
         KEY_SHOW_QUICK_MENU_TUTORIAL,
+        KEY_WELCOME_TOUR_COMPLETED_VERSION,
         KEY_INTERNAL_BACKUPS,
     )
 
@@ -232,6 +234,7 @@ internal val INT_KEYS: Set<Preferences.Key<*>> =
     setOf(
         KEY_ACCENT_COLOR,
         KEY_TOUCHPAD_MIRROR_DIM,
+        KEY_WELCOME_TOUR_COMPLETED_VERSION,
     )
 
 internal val FLOAT_KEYS: Set<Preferences.Key<*>> =
