@@ -36,7 +36,10 @@ object OnboardingWizardManager {
             OnboardingStepId.PRIVILEGED_MODE,
         )
 
-    fun shouldAutoStartWizard(): Boolean = SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION
+    fun shouldAutoStartWizard(): Boolean =
+        SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION ||
+            SettingsManager.showWelcomeTutorial.value ||
+            SettingsManager.showQuickMenuTutorial.value
 
     fun isStepFulfilled(id: OnboardingStepId): Boolean =
         when (id) {
@@ -64,6 +67,9 @@ object OnboardingWizardManager {
 
         if (force) {
             completedStepIds.clear()
+            SettingsManager.setWelcomeTourCompletedVersion(0)
+            SettingsManager.setShowWelcomeTutorial(true)
+            SettingsManager.setShowQuickMenuTutorial(true)
         }
 
         AppLog.d(TAG, "Initializing onboarding wizard (force=$force)")

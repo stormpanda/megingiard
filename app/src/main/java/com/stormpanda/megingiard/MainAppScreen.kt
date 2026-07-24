@@ -110,6 +110,7 @@ fun MainAppScreen() {
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
+    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
     val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
     val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
@@ -479,10 +480,8 @@ fun MainAppScreen() {
             )
         }
 
-        LaunchedEffect(showWelcomeTutorial, showQuickMenuTutorial) {
-            if (showWelcomeTutorial || showQuickMenuTutorial) {
-                OnboardingWizardManager.startWizard(context)
-            }
+        LaunchedEffect(welcomeTourCompletedVersion, showWelcomeTutorial, showQuickMenuTutorial) {
+            OnboardingWizardManager.startWizard(context)
         }
 
         val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
