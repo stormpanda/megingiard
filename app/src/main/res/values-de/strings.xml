@@ -1027,8 +1027,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_theme_prev">Vorheriges Thema</string>
     <string name="onboarding_theme_next">Nächstes Thema</string>
     <string name="onboarding_step_accessibility">Barrierefreiheit</string>
-    <string name="onboarding_accessibility_title">Barrierefreiheitsdienst</string>
-    <string name="onboarding_accessibility_desc">Megingiard nutzt den Barrierefreiheitsdienst für Touch-Eingaben, virtuelle Tastatureingaben und App-Wechsel. Du kannst ihn jetzt aktivieren oder überspringen.</string>
+    <string name="onboarding_accessibility_title">Barrierefreiheitsdienst (empfohlen!)</string>
+    <string name="onboarding_accessibility_desc">Megingiard nutzt den Barrierefreiheitsdienst für den automatischen Wechsel von Makro-Profilen beim Starten von Spielen und zur Unterstützung bei der Einrichtung des Privilegierten Modus. Du kannst ihn jetzt aktivieren oder überspringen.</string>
     <string name="onboarding_step_finished">Fertig</string>
     <string name="onboarding_finished_title">Alles bereit!</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>

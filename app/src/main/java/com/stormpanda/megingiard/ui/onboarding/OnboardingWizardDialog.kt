@@ -123,6 +123,62 @@ fun OnboardingWizardDialog(
 
     val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
 
+    var isAccessibilityActive by remember {
+        mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
+    }
+    var isCheckingAccessibility by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
+                    isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(isCheckingAccessibility, isAccessibilityActive) {
+        if (isCheckingAccessibility && !isAccessibilityActive) {
+            AppLog.d(TAG, "Starting 1s polling loop for accessibility activation in onboarding")
+            while (isActive && !isAccessibilityActive) {
+                delay(1000L)
+                val active = MegingiardAccessibilityService.isEnabled(context)
+                if (active) {
+                    isAccessibilityActive = true
+                    isCheckingAccessibility = false
+                    AppLog.i(TAG, "Accessibility service activation detected in onboarding")
+                    break
+                }
+            }
+        }
+    }
+
+    val launchAccessibilitySettings = {
+        if (!isAccessibilityActive) {
+            isCheckingAccessibility = true
+        }
+        try {
+            val intent =
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                    )
+                }
+            val options = ActivityOptions.makeBasic()
+            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+            context.startActivity(intent, options.toBundle())
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to open accessibility settings from onboarding: ${e.message}")
+        }
+    }
+
     BackHandler(enabled = true) {
         if (!isFirstStep) {
             OnboardingWizardManager.prevStep(context)
@@ -190,7 +246,10 @@ fun OnboardingWizardDialog(
                         }
 
                         OnboardingStepId.ACCESSIBILITY -> {
-                            AccessibilityStepContent()
+                            AccessibilityStepContent(
+                                isAccessibilityActive = isAccessibilityActive,
+                                onLaunchAccessibilitySettings = launchAccessibilitySettings,
+                            )
                         }
 
                         OnboardingStepId.FINISHED -> {
@@ -237,6 +296,7 @@ fun OnboardingWizardDialog(
                     }
 
                     Button(
+                        enabled = currentStepState.id != OnboardingStepId.ACCESSIBILITY || isAccessibilityActive,
                         onClick = {
                             if (isLastStep) {
                                 OnboardingWizardManager.finishWizard()
@@ -552,65 +612,12 @@ fun OnboardingStepper(
 private const val TAG = "OnboardingWizardDialog"
 
 @Composable
-fun AccessibilityStepContent(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
+fun AccessibilityStepContent(
+    isAccessibilityActive: Boolean,
+    onLaunchAccessibilitySettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalAppColors.current
-
-    var isAccessibilityActive by remember {
-        mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
-    }
-    var isCheckingAccessibility by remember { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    LaunchedEffect(isCheckingAccessibility, isAccessibilityActive) {
-        if (isCheckingAccessibility && !isAccessibilityActive) {
-            AppLog.d(TAG, "Starting 1s polling loop for accessibility activation in onboarding")
-            while (isActive && !isAccessibilityActive) {
-                delay(1000L)
-                val active = MegingiardAccessibilityService.isEnabled(context)
-                if (active) {
-                    isAccessibilityActive = true
-                    isCheckingAccessibility = false
-                    AppLog.i(TAG, "Accessibility service activation detected in onboarding")
-                    break
-                }
-            }
-        }
-    }
-
-    val launchAccessibilitySettings = {
-        if (!isAccessibilityActive) {
-            isCheckingAccessibility = true
-        }
-        try {
-            val intent =
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                    )
-                }
-            val options = ActivityOptions.makeBasic()
-            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-            context.startActivity(intent, options.toBundle())
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to open accessibility settings from onboarding: ${e.message}")
-        }
-    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -679,7 +686,7 @@ fun AccessibilityStepContent(modifier: Modifier = Modifier) {
 
                 if (!isAccessibilityActive) {
                     Button(
-                        onClick = { launchAccessibilitySettings() },
+                        onClick = { onLaunchAccessibilitySettings() },
                     ) {
                         Text(stringResource(R.string.settings_accessibility_setup))
                     }
