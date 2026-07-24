@@ -48,6 +48,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -113,6 +114,7 @@ private data class PostReleasePillState(
 @Composable
 fun QuickMenuStepContent(overlayAtBottom: Boolean) {
     val colors = LocalAppColors.current
+    val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
 
     Column {
         Text(
@@ -142,6 +144,28 @@ fun QuickMenuStepContent(overlayAtBottom: Boolean) {
                 onCheckedChange = { SettingsManager.setOverlayAtBottom(it) },
             )
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.settings_overlay_fade_out),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Switch(
+                checked = overlayFadeOut,
+                onCheckedChange = { SettingsManager.setOverlayFadeOut(it) },
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.quick_menu_tutorial_fade_out_hint),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 

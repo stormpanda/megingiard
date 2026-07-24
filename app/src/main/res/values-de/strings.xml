@@ -1021,6 +1021,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_start_welcome_tour_desc">Führe die Schritt-für-Schritt-Einführung und Randgesten-Tour erneut aus</string>
     <string name="onboarding_step_welcome">Willkommen</string>
     <string name="onboarding_step_quick_menu">Rand-Gesten</string>
+    <string name="onboarding_step_theme">Design</string>
+    <string name="onboarding_theme_title">Wähle deinen Stil</string>
+    <string name="onboarding_theme_desc">Wähle ein visuelles Thema für Megingiard. Du kannst dies jederzeit in den globalen Einstellungen ändern.</string>
+    <string name="onboarding_theme_prev">Vorheriges Thema</string>
+    <string name="onboarding_theme_next">Nächstes Thema</string>
     <string name="onboarding_step_finished">Fertig</string>
     <string name="onboarding_finished_title">Alles bereit!</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
@@ -1028,6 +1033,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_btn_next">Weiter</string>
     <string name="onboarding_btn_back">Zurück</string>
     <string name="onboarding_btn_finish">Tour abschließen</string>
+    <string name="quick_menu_tutorial_fade_out_hint">Hinweis: Das Ausblenden der Steuerelemente ist während dieser Willkommenstour deaktiviert.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>

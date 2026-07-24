@@ -32,6 +32,7 @@ object OnboardingWizardManager {
         listOf(
             OnboardingStepId.WELCOME,
             OnboardingStepId.QUICK_MENU,
+            OnboardingStepId.THEME,
             OnboardingStepId.FINISHED,
         )
 

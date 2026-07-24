@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.ui.onboarding
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,17 +26,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +56,9 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.settings.ThemeMode
+import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
@@ -141,6 +151,10 @@ fun OnboardingWizardDialog(
                             QuickMenuStepContent(overlayAtBottom = overlayAtBottom)
                         }
 
+                        OnboardingStepId.THEME -> {
+                            ThemeStepContent()
+                        }
+
                         OnboardingStepId.FINISHED -> {
                             FinishedStepContent()
                         }
@@ -221,6 +235,104 @@ fun OnboardingWizardDialog(
         ) {
             wizardCardContent()
         }
+    }
+}
+
+@Composable
+fun ThemeStepContent() {
+    val colors = LocalAppColors.current
+    val currentThemeMode by SettingsManager.themeMode.collectAsState()
+    val themes = remember { ThemeMode.entries }
+    val currentIndex = themes.indexOf(currentThemeMode).coerceAtLeast(0)
+
+    var isNextAnimation by remember { mutableStateOf(true) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_theme_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.onboarding_theme_desc),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Animated Theme Selector Carousel Row with Arrow Buttons
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                    .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            IconButton(
+                onClick = {
+                    val prevIndex = if (currentIndex > 0) currentIndex - 1 else themes.size - 1
+                    isNextAnimation = false
+                    SettingsManager.setThemeMode(themes[prevIndex])
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.onboarding_theme_prev),
+                    tint = colors.accent,
+                )
+            }
+
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                AnimatedContent(
+                    targetState = currentThemeMode,
+                    transitionSpec = {
+                        if (isNextAnimation) {
+                            (slideInHorizontally { it } + fadeIn()) togetherWith
+                                (slideOutHorizontally { -it } + fadeOut())
+                        } else {
+                            (slideInHorizontally { -it } + fadeIn()) togetherWith
+                                (slideOutHorizontally { it } + fadeOut())
+                        }
+                    },
+                    label = "theme-carousel-animation",
+                ) { theme ->
+                    Text(
+                        text = stringResource(theme.displayNameResId()),
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
+            IconButton(
+                onClick = {
+                    val nextIndex = if (currentIndex < themes.size - 1) currentIndex + 1 else 0
+                    isNextAnimation = true
+                    SettingsManager.setThemeMode(themes[nextIndex])
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = stringResource(R.string.onboarding_theme_next),
+                    tint = colors.accent,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
     }
 }
 
@@ -338,6 +450,7 @@ fun OnboardingStepper(
             when (currentStep?.id) {
                 OnboardingStepId.WELCOME -> stringResource(R.string.onboarding_step_welcome)
                 OnboardingStepId.QUICK_MENU -> stringResource(R.string.onboarding_step_quick_menu)
+                OnboardingStepId.THEME -> stringResource(R.string.onboarding_step_theme)
                 OnboardingStepId.FINISHED -> stringResource(R.string.onboarding_step_finished)
                 null -> ""
             }

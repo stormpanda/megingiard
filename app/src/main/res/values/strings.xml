@@ -1014,6 +1014,11 @@ Open Settings to create a layout.</string>
     <string name="settings_start_welcome_tour_desc">Re-run the step-by-step onboarding guide and edge gesture tour</string>
     <string name="onboarding_step_welcome">Welcome</string>
     <string name="onboarding_step_quick_menu">Edge Gestures</string>
+    <string name="onboarding_step_theme">Theme</string>
+    <string name="onboarding_theme_title">Choose Your Style</string>
+    <string name="onboarding_theme_desc">Select a visual theme for Megingiard. You can change this at any time in Global Settings.</string>
+    <string name="onboarding_theme_prev">Previous Theme</string>
+    <string name="onboarding_theme_next">Next Theme</string>
     <string name="onboarding_step_finished">Finished</string>
     <string name="onboarding_finished_title">You\'re All Set!</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
@@ -1021,6 +1026,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_btn_next">Next</string>
     <string name="onboarding_btn_back">Back</string>
     <string name="onboarding_btn_finish">Finish Tour</string>
+    <string name="quick_menu_tutorial_fade_out_hint">Note: Controls fade-out is suppressed while trying out gestures in this tour.</string>
 
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
