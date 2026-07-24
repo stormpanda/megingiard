@@ -459,7 +459,7 @@ private fun StepPair(
     autoFillMessage?.let { msg ->
         Text(
             text = msg,
-            color = if (autoFillSuccess) colors.actionColorSystem else colors.onSurfaceSecondary,
+            color = if (autoFillSuccess) colors.actionColorSystem else colors.error,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(top = SW_GAP),
         )
@@ -617,44 +617,46 @@ private fun StepBootstrap(
     val ord = stage.ordinal
     // Checklist row ordinals map to BootstrapStage ordinals:
     //  CONNECTING_ADB = 2, PUSHING_BINARY = 3, SPAWNING_DAEMON = 4, VERIFYING = 5
-    Text(
-        text = stringResource(R.string.privd_wizard_step3_intro),
-        color = colors.onSurface,
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
-        ChecklistRow(
-            label = stringResource(R.string.privd_wizard_checklist_adb),
-            status = checklistStatus(ord, BootstrapStage.CONNECTING_ADB.ordinal),
+    Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
+        Text(
+            text = stringResource(R.string.privd_wizard_step3_intro),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
         )
-        ChecklistRow(
-            label = stringResource(R.string.privd_wizard_checklist_push),
-            status = checklistStatus(ord, BootstrapStage.PUSHING_BINARY.ordinal),
-        )
-        ChecklistRow(
-            label = stringResource(R.string.privd_wizard_checklist_spawn),
-            status = checklistStatus(ord, BootstrapStage.SPAWNING_DAEMON.ordinal),
-        )
-        ChecklistRow(
-            label = stringResource(R.string.privd_wizard_checklist_verify),
-            status = checklistStatus(ord, BootstrapStage.VERIFYING.ordinal),
-        )
-    }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(SW_GAP),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TextButton(onClick = onBack, enabled = !busy) {
-            Text(stringResource(R.string.privd_wizard_back))
-        }
-        Button(onClick = onStart, enabled = !busy) {
-            Text(
-                if (busy) {
-                    stringResource(R.string.privd_wizard_bootstrapping)
-                } else {
-                    stringResource(R.string.privd_wizard_step3_start)
-                },
+        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
+            ChecklistRow(
+                label = stringResource(R.string.privd_wizard_checklist_adb),
+                status = checklistStatus(ord, BootstrapStage.CONNECTING_ADB.ordinal),
             )
+            ChecklistRow(
+                label = stringResource(R.string.privd_wizard_checklist_push),
+                status = checklistStatus(ord, BootstrapStage.PUSHING_BINARY.ordinal),
+            )
+            ChecklistRow(
+                label = stringResource(R.string.privd_wizard_checklist_spawn),
+                status = checklistStatus(ord, BootstrapStage.SPAWNING_DAEMON.ordinal),
+            )
+            ChecklistRow(
+                label = stringResource(R.string.privd_wizard_checklist_verify),
+                status = checklistStatus(ord, BootstrapStage.VERIFYING.ordinal),
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(SW_GAP),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onBack, enabled = !busy) {
+                Text(stringResource(R.string.privd_wizard_back))
+            }
+            Button(onClick = onStart, enabled = !busy) {
+                Text(
+                    if (busy) {
+                        stringResource(R.string.privd_wizard_bootstrapping)
+                    } else {
+                        stringResource(R.string.privd_wizard_step3_start)
+                    },
+                )
+            }
         }
     }
 }
