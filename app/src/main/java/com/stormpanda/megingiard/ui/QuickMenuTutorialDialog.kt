@@ -146,9 +146,11 @@ fun QuickMenuStepContent(overlayAtBottom: Boolean) {
 }
 
 @Composable
-fun QuickMenuTutorialDialog(
+fun QuickMenuGestureTrialOverlay(
     overlayAtBottom: Boolean,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit = {},
+    showScrim: Boolean = true,
+    content: @Composable (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
@@ -194,10 +196,6 @@ fun QuickMenuTutorialDialog(
                 activePostRelease = null
             }
         }
-    }
-
-    LaunchedEffect(Unit) {
-        AppLog.d(TAG, "Quick Menu tutorial dialog shown")
     }
 
     val bounceTransition = rememberInfiniteTransition(label = "quick-menu-arrow-bounce")
@@ -249,8 +247,13 @@ fun QuickMenuTutorialDialog(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
-                .pointerInput(overlayAtBottom) {
+                .then(
+                    if (showScrim) {
+                        Modifier.background(Color.Black.copy(alpha = QM_SCRIM_ALPHA))
+                    } else {
+                        Modifier
+                    },
+                ).pointerInput(overlayAtBottom) {
                     val swipeThresholdPx = QuickMenuBarLayout.SWIPE_THRESHOLD.toPx()
                     val edgeZonePx = QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx()
                     val kbZoneWidthPx = QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx()
@@ -304,7 +307,7 @@ fun QuickMenuTutorialDialog(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        AppLog.d(TAG, "Quick Menu tutorial dialog dismissed via background click")
+                        AppLog.d(TAG, "Quick Menu tutorial gesture overlay dismissed via background click")
                         onDismiss()
                     },
                 ),
@@ -338,82 +341,7 @@ fun QuickMenuTutorialDialog(
                     ).padding(end = QuickMenuBarLayout.TAB_PADDING),
         )
 
-        // Centered dialog card
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = QM_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = 16.dp)
-                    .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                    .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
-                    .background(colors.surface)
-                    .border(
-                        QM_DIALOG_BORDER_WIDTH,
-                        brush = rememberQuickMenuBezelBrush(),
-                        shape = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS),
-                    ).padding(
-                        start = QM_DIALOG_PADDING_HORIZONTAL,
-                        end = QM_DIALOG_PADDING_HORIZONTAL,
-                        top = QM_DIALOG_PADDING_TOP,
-                        bottom = QM_DIALOG_PADDING_BOTTOM,
-                    ).clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // absorb clicks so dialog itself doesn't dismiss
-                    ),
-        ) {
-            Text(
-                text = stringResource(R.string.quick_menu_tutorial_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Spacer(modifier = Modifier.height(QM_TITLE_BODY_SPACING))
-            Column(
-                modifier =
-                    Modifier
-                        .weight(weight = 1f, fill = false)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                Text(
-                    text = stringResource(R.string.quick_menu_tutorial_body),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_overlay_position),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Switch(
-                        checked = overlayAtBottom,
-                        onCheckedChange = { SettingsManager.setOverlayAtBottom(it) },
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(QM_BODY_BUTTON_SPACING))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                Button(
-                    onClick = {
-                        AppLog.d(TAG, "Quick Menu tutorial dialog confirmed")
-                        onDismiss()
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.welcome_btn_got_it),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        }
+        content?.invoke()
 
         // ── 3 Static Edge Labels & Bouncing Arrows ───────────────────────────
         val arrowIcon = if (overlayAtBottom) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward
@@ -722,6 +650,67 @@ fun QuickMenuTutorialDialog(
                         contentDescription = null,
                         tint = if (isPastThreshold || showCheckmark) colors.onAccent else colors.onSurface,
                         modifier = Modifier.size(PILL_ICON_SIZE),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickMenuTutorialDialog(
+    overlayAtBottom: Boolean,
+    onDismiss: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "Quick Menu tutorial dialog shown")
+    }
+
+    QuickMenuGestureTrialOverlay(
+        overlayAtBottom = overlayAtBottom,
+        onDismiss = onDismiss,
+        showScrim = true,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .widthIn(max = QM_DIALOG_MAX_WIDTH)
+                    .padding(horizontal = 16.dp)
+                    .shadow(QM_DIALOG_SHADOW_ELEVATION, RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                    .clip(RoundedCornerShape(QM_DIALOG_CORNER_RADIUS))
+                    .background(colors.surface)
+                    .border(
+                        QM_DIALOG_BORDER_WIDTH,
+                        brush = rememberQuickMenuBezelBrush(),
+                        shape = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS),
+                    ).padding(
+                        start = QM_DIALOG_PADDING_HORIZONTAL,
+                        end = QM_DIALOG_PADDING_HORIZONTAL,
+                        top = QM_DIALOG_PADDING_TOP,
+                        bottom = QM_DIALOG_PADDING_BOTTOM,
+                    ).clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}, // absorb clicks so dialog itself doesn't dismiss
+                    ),
+        ) {
+            QuickMenuStepContent(overlayAtBottom = overlayAtBottom)
+            Spacer(modifier = Modifier.height(QM_BODY_BUTTON_SPACING))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Button(
+                    onClick = {
+                        AppLog.d(TAG, "Quick Menu tutorial dialog confirmed")
+                        onDismiss()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.welcome_btn_got_it),
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
             }

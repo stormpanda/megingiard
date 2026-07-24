@@ -48,6 +48,7 @@ import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
@@ -82,21 +83,9 @@ fun OnboardingWizardDialog(
     val isLastStep = activeStepIndex == totalSteps - 1
     val isFirstStep = activeStepIndex == 0
 
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = OW_SCRIM_ALPHA))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {
-                        OnboardingWizardManager.skipWizard()
-                        onDismiss()
-                    },
-                ),
-        contentAlignment = Alignment.Center,
-    ) {
+    val isQuickMenuStep = currentStepState.id == OnboardingStepId.QUICK_MENU
+
+    val wizardCardContent: @Composable () -> Unit = {
         Column(
             modifier =
                 Modifier
@@ -208,6 +197,36 @@ fun OnboardingWizardDialog(
                     )
                 }
             }
+        }
+    }
+
+    if (isQuickMenuStep) {
+        QuickMenuGestureTrialOverlay(
+            overlayAtBottom = overlayAtBottom,
+            onDismiss = {
+                OnboardingWizardManager.skipWizard()
+                onDismiss()
+            },
+            showScrim = true,
+            content = wizardCardContent,
+        )
+    } else {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = OW_SCRIM_ALPHA))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            OnboardingWizardManager.skipWizard()
+                            onDismiss()
+                        },
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            wizardCardContent()
         }
     }
 }
