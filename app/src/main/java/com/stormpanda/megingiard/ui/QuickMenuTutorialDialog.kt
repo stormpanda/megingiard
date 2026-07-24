@@ -94,7 +94,7 @@ private val QM_DIALOG_CORNER_RADIUS = 28.dp
 private val QM_DIALOG_BORDER_WIDTH = 1.dp
 private val QM_TITLE_BODY_SPACING = 12.dp
 private val QM_BODY_BUTTON_SPACING = 12.dp
-private val QM_ARROW_EDGE_PADDING = 8.dp
+private val QM_ARROW_EDGE_PADDING = 16.dp
 private val QM_ARROW_SIZE = 32.dp
 
 private const val GESTURE_VISUAL_MULTIPLIER = 1.8f
@@ -391,10 +391,10 @@ fun QuickMenuTutorialDialog(
                 Modifier
                     .align(if (overlayAtBottom) Alignment.BottomStart else Alignment.TopStart)
                     .padding(
-                        start = QuickMenuBarLayout.SLIDING_PILL_PADDING,
+                        start = QuickMenuBarLayout.TAB_PADDING,
                         top = topPad,
                         bottom = botPad,
-                    ).width(QuickMenuBarLayout.SLIDING_PILL_SIZE),
+                    ).width(QuickMenuBarLayout.TAB_WIDTH),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -406,7 +406,7 @@ fun QuickMenuTutorialDialog(
                         maxLines = 1,
                         softWrap = false,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Icon(
                         imageVector = arrowIcon,
                         contentDescription = null,
@@ -426,7 +426,7 @@ fun QuickMenuTutorialDialog(
                                 .offset(y = bounceOffset.dp)
                                 .size(QM_ARROW_SIZE),
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.quick_menu_label_keyboard),
                         color = colors.accent,
@@ -446,7 +446,7 @@ fun QuickMenuTutorialDialog(
                     .padding(
                         top = topPad,
                         bottom = botPad,
-                    ).width(QuickMenuBarLayout.SLIDING_PILL_SIZE),
+                    ).width(QuickMenuBarLayout.TAB_WIDTH),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -458,7 +458,7 @@ fun QuickMenuTutorialDialog(
                         maxLines = 1,
                         softWrap = false,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Icon(
                         imageVector = arrowIcon,
                         contentDescription = null,
@@ -478,7 +478,7 @@ fun QuickMenuTutorialDialog(
                                 .offset(y = bounceOffset.dp)
                                 .size(QM_ARROW_SIZE),
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.quick_menu_label_menu),
                         color = colors.accent,
@@ -496,10 +496,10 @@ fun QuickMenuTutorialDialog(
                 Modifier
                     .align(if (overlayAtBottom) Alignment.BottomEnd else Alignment.TopEnd)
                     .padding(
-                        end = QuickMenuBarLayout.SLIDING_PILL_PADDING,
+                        end = QuickMenuBarLayout.TAB_PADDING,
                         top = topPad,
                         bottom = botPad,
-                    ).width(QuickMenuBarLayout.SLIDING_PILL_SIZE),
+                    ).width(QuickMenuBarLayout.TAB_WIDTH),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -511,7 +511,7 @@ fun QuickMenuTutorialDialog(
                         maxLines = 1,
                         softWrap = false,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Icon(
                         imageVector = arrowIcon,
                         contentDescription = null,
@@ -531,7 +531,7 @@ fun QuickMenuTutorialDialog(
                                 .offset(y = bounceOffset.dp)
                                 .size(QM_ARROW_SIZE),
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.quick_menu_label_mouse),
                         color = colors.accent,
