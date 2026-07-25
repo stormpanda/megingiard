@@ -42,9 +42,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -83,6 +86,9 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
@@ -159,6 +165,28 @@ fun OnboardingWizardDialog(
                 delay(1000L)
             }
         }
+    }
+
+    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
+    val privdState by PrivdManager.state.collectAsState()
+    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
+    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
+    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
+
+    LaunchedEffect(isPrivilegedStep) {
+        if (isPrivilegedStep) {
+            AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status in onboarding")
+            while (isActive) {
+                isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+                isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
+                isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                delay(1000L)
+            }
+        }
+    }
+
+    val startAutoSetup = {
+        MegingiardAccessibilityService.startMultiStageAutoSetup(context)
     }
 
     val launchAccessibilitySettings = {
@@ -252,6 +280,17 @@ fun OnboardingWizardDialog(
                             )
                         }
 
+                        OnboardingStepId.PRIVILEGED -> {
+                            PrivilegedStepContent(
+                                isAccessibilityActive = isAccessibilityActive,
+                                isDevModeActive = isDevModeActive,
+                                isWirelessActive = isWirelessActive,
+                                isDevicePaired = isDevicePaired,
+                                privdState = privdState,
+                                onStartAutoSetup = startAutoSetup,
+                            )
+                        }
+
                         OnboardingStepId.FINISHED -> {
                             FinishedStepContent()
                         }
@@ -284,7 +323,7 @@ fun OnboardingWizardDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (currentStepState.id == OnboardingStepId.ACCESSIBILITY) {
+                    if (currentStepState.id == OnboardingStepId.ACCESSIBILITY || currentStepState.id == OnboardingStepId.PRIVILEGED) {
                         OutlinedButton(
                             onClick = { OnboardingWizardManager.nextStep(context) },
                         ) {
@@ -295,8 +334,15 @@ fun OnboardingWizardDialog(
                         }
                     }
 
+                    val isNextEnabled =
+                        when (currentStepState.id) {
+                            OnboardingStepId.ACCESSIBILITY -> isAccessibilityActive
+                            OnboardingStepId.PRIVILEGED -> privdState == PrivdState.RUNNING || isDevicePaired
+                            else -> true
+                        }
+
                     Button(
-                        enabled = currentStepState.id != OnboardingStepId.ACCESSIBILITY || isAccessibilityActive,
+                        enabled = isNextEnabled,
                         onClick = {
                             if (isLastStep) {
                                 OnboardingWizardManager.finishWizard()
@@ -512,6 +558,168 @@ fun FinishedStepContent() {
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun PrivilegedStepContent(
+    isAccessibilityActive: Boolean,
+    isDevModeActive: Boolean,
+    isWirelessActive: Boolean,
+    isDevicePaired: Boolean,
+    privdState: PrivdState,
+    onStartAutoSetup: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = stringResource(R.string.onboarding_privd_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.onboarding_privd_desc),
+            color = colors.onSurfaceSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Multi-stage status checklist
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                    .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            val devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.PENDING
+            val wirelessStatus = if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.PENDING
+            val pairingStatus = if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.PENDING
+            val daemonStatus =
+                when (privdState) {
+                    PrivdState.RUNNING -> ChecklistStatus.DONE
+                    PrivdState.BOOTSTRAPPING, PrivdState.CONNECTING -> ChecklistStatus.ACTIVE
+                    else -> ChecklistStatus.PENDING
+                }
+
+            PrivdChecklistRow(
+                label = stringResource(R.string.onboarding_privd_stage_dev),
+                status = devStatus,
+            )
+            PrivdChecklistRow(
+                label = stringResource(R.string.onboarding_privd_stage_wireless),
+                status = wirelessStatus,
+            )
+            PrivdChecklistRow(
+                label = stringResource(R.string.onboarding_privd_stage_pairing),
+                status = pairingStatus,
+            )
+            PrivdChecklistRow(
+                label = stringResource(R.string.onboarding_privd_stage_daemon),
+                status = daemonStatus,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (privdState != PrivdState.RUNNING) {
+            Button(
+                onClick = onStartAutoSetup,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoFixHigh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.onboarding_privd_auto_setup),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 4.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = colors.actionColorSystem,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.privd_toast_all_set),
+                    color = colors.actionColorSystem,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
+
+@Composable
+private fun PrivdChecklistRow(
+    label: String,
+    status: ChecklistStatus,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        when (status) {
+            ChecklistStatus.PENDING -> {
+                Icon(
+                    imageVector = Icons.Rounded.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            ChecklistStatus.ACTIVE -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = colors.accent,
+                )
+            }
+
+            ChecklistStatus.DONE -> {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        Text(
+            text = label,
+            color =
+                when (status) {
+                    ChecklistStatus.DONE -> colors.onSurface
+                    ChecklistStatus.ACTIVE -> colors.onSurface
+                    ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+                },
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 

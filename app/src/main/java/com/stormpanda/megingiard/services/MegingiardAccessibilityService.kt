@@ -22,7 +22,9 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdPairScreenTextScanner
+import com.stormpanda.megingiard.privd.PrivdState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -190,8 +192,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                         AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Clicking Pair Dialog row)")
                                         autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
                                     } else {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Auto-setup pipeline completed successfully")
+                                        AppLog.i(TAG, "startAutoToggleLoop: Auto-setup pipeline completed successfully, connecting daemon")
                                         autoTogglePendingTimestamp = 0L
+                                        serviceScope.launch(Dispatchers.IO) {
+                                            PrivdManager.connect(context)
+                                        }
                                         break
                                     }
                                 }
@@ -223,7 +228,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             "startAutoToggleLoop: Auto-discovered pairing params port=$portInt, code=$codeStr. Triggering PrivdBootstrapper.pair()",
                                         )
                                         serviceScope.launch(Dispatchers.IO) {
-                                            PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
+                                            val ok = PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
+                                            if (ok) {
+                                                AppLog.i(
+                                                    TAG,
+                                                    "startAutoToggleLoop: Pairing succeeded! Connecting daemon via PrivdManager.connect()",
+                                                )
+                                                PrivdManager.connect(context)
+                                            }
                                         }
                                         autoTogglePendingTimestamp = 0L
                                         break
@@ -584,6 +596,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
             AppLog.i(TAG, "startMultiStageAutoSetup: devMode=$devModeActive, wirelessActive=$wirelessActive, paired=$paired")
 
             if (devModeActive && wirelessActive && paired) {
+                if (PrivdManager.state.value != PrivdState.RUNNING) {
+                    AppLog.i(TAG, "startMultiStageAutoSetup: Prerequisites already active, initiating PrivdManager.connect()")
+                    instance?.serviceScope?.launch(Dispatchers.IO) {
+                        PrivdManager.connect(context)
+                    }
+                }
                 Toast.makeText(context, R.string.privd_toast_all_set, Toast.LENGTH_LONG).show()
                 return
             }

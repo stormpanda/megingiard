@@ -8,6 +8,7 @@ enum class OnboardingStepId {
     QUICK_MENU,
     THEME,
     ACCESSIBILITY,
+    PRIVILEGED,
     FINISHED,
 }
 
