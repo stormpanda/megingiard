@@ -20,6 +20,9 @@ import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
+import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdPairScreenTextScanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -30,14 +33,22 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val TAG = "MegingiardAccessService"
-private const val AUTO_TOGGLE_MAX_ATTEMPTS = 20
+private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
 private const val AUTO_TOGGLE_STEP_DELAY_MS = 350L
 
+private enum class AutoSetupTargetStage {
+    STAGE_B_WIRELESS_DEBUG,
+    STAGE_C_PAIRING,
+}
+
 private enum class AutoToggleStage {
+    ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER,
     CLICK_SEARCH_BAR,
     ENTER_SEARCH_QUERY,
     CLICK_SEARCH_RESULT,
     TOGGLE_SWITCH,
+    CLICK_PAIR_DIALOG,
+    SCAN_PAIRING_CODE_AND_PAIR,
 }
 
 /**
@@ -50,7 +61,8 @@ private enum class AutoToggleStage {
 class MegingiardAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var autoToggleJob: Job? = null
-    private var autoToggleStage = AutoToggleStage.CLICK_SEARCH_BAR
+    private var autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+    private var autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -89,13 +101,24 @@ class MegingiardAccessibilityService : AccessibilityService() {
         if (autoToggleJob?.isActive == true) return
         autoToggleJob =
             serviceScope.launch {
-                AppLog.i(TAG, "startAutoToggleLoop: Starting Search-based auto-toggle loop")
+                AppLog.i(TAG, "startAutoToggleLoop: Starting Search-based auto-toggle loop in stage $autoToggleStage")
                 var attempts = 0
-                autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+                val context = applicationContext
+                val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
+
                 while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && autoTogglePendingTimestamp != 0L) {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
                         when (autoToggleStage) {
+                            AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
+                                val clicked = findAndClickBuildNumber(rootNode)
+                                if (clicked || isDevModeActive(context)) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Unlocked Developer Mode (Stage A), advancing to Stage B")
+                                    autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+                                    launchSearchActivity(context, displayOptions)
+                                }
+                            }
+
                             AutoToggleStage.CLICK_SEARCH_BAR -> {
                                 val clicked = findAndClickSearchBar(rootNode)
                                 if (clicked) {
@@ -130,8 +153,43 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 val toggled = findAndToggleSwitch(rootNode)
                                 if (toggled) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Successfully toggled Wireless Debugging switch ON")
-                                    autoTogglePendingTimestamp = 0L
-                                    break
+                                    if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING && !isDevicePaired(context)) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Pairing)")
+                                        autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                    } else {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Auto-setup pipeline completed successfully")
+                                        autoTogglePendingTimestamp = 0L
+                                        break
+                                    }
+                                }
+                            }
+
+                            AutoToggleStage.CLICK_PAIR_DIALOG -> {
+                                val clickedPair = findAndClickPairDialog(rootNode)
+                                if (clickedPair) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row")
+                                    autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
+                                }
+                            }
+
+                            AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR -> {
+                                val sb = StringBuilder()
+                                collectAllText(rootNode, sb)
+                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(sb.toString())
+                                if (scanResult.isComplete) {
+                                    val portInt = scanResult.port?.toIntOrNull()
+                                    val codeStr = scanResult.code
+                                    if (portInt != null && !codeStr.isNullOrBlank()) {
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: Auto-discovered pairing params port=$portInt, code=$codeStr. Triggering PrivdBootstrapper.pair()",
+                                        )
+                                        serviceScope.launch(Dispatchers.IO) {
+                                            PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
+                                        }
+                                        autoTogglePendingTimestamp = 0L
+                                        break
+                                    }
                                 }
                             }
                         }
@@ -317,6 +375,76 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return null
     }
 
+    private fun findAndClickBuildNumber(node: AccessibilityNodeInfo): Boolean {
+        val text = node.text?.toString() ?: ""
+        val contentDesc = node.contentDescription?.toString() ?: ""
+        val viewId = node.viewIdResourceName ?: ""
+        val combined = "$text $contentDesc $viewId".lowercase()
+
+        val isBuildNumber =
+            combined.contains("build number") ||
+                combined.contains("build-nummer") ||
+                viewId.contains("build_number")
+
+        if (isBuildNumber) {
+            val clickable = findClickableAncestorOrSelf(node) ?: node
+            AppLog.i(TAG, "findAndClickBuildNumber: Found Build Number item, clicking 7 times")
+            for (k in 0..6) {
+                clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+            return true
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (findAndClickBuildNumber(child)) return true
+        }
+        return false
+    }
+
+    private fun findAndClickPairDialog(node: AccessibilityNodeInfo): Boolean {
+        val text = node.text?.toString() ?: ""
+        val contentDesc = node.contentDescription?.toString() ?: ""
+        val viewId = node.viewIdResourceName ?: ""
+        val combined = "$text $contentDesc $viewId".lowercase()
+
+        val isPairItem =
+            combined.contains("pair device with pairing code") ||
+                combined.contains("geräte-kopplungscode") ||
+                combined.contains("kopplungscode koppeln") ||
+                combined.contains("pair with pairing code")
+
+        if (isPairItem) {
+            val clickable = findClickableAncestorOrSelf(node) ?: node
+            AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row, clicking")
+            return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (findAndClickPairDialog(child)) return true
+        }
+        return false
+    }
+
+    private fun collectAllText(
+        node: AccessibilityNodeInfo,
+        sb: StringBuilder,
+    ) {
+        val text = node.text?.toString()
+        if (!text.isNullOrBlank()) {
+            sb.append(text).append("\n")
+        }
+        val contentDesc = node.contentDescription?.toString()
+        if (!contentDesc.isNullOrBlank() && contentDesc != text) {
+            sb.append(contentDesc).append("\n")
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            collectAllText(child, sb)
+        }
+    }
+
     private fun getRootNodeForDisplay(targetDisplayId: Int): AccessibilityNodeInfo? {
         try {
             for (window in windows) {
@@ -354,15 +482,33 @@ class MegingiardAccessibilityService : AccessibilityService() {
          */
         fun isInstanceActive(): Boolean = instance != null
 
+        fun isDevModeActive(context: Context): Boolean =
+            try {
+                Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
+            } catch (e: Exception) {
+                false
+            }
+
+        fun isWirelessDebuggingActive(context: Context): Boolean =
+            try {
+                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
+            } catch (e: Exception) {
+                false
+            }
+
+        fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
+
+        fun triggerWirelessDebuggingAutoToggle(context: Context) = startMultiStageAutoSetup(context)
+
         /**
-         * Triggers Direct Page Launch to Settings Search on the primary screen (Display 0)
-         * and activates Search-based Wireless Debugging auto-toggle via Accessibility Service.
+         * Triggers multi-stage automated setup (Stage A: Dev Mode, Stage B: Wireless Debugging, Stage C: Pairing)
+         * based on current device starting conditions.
          */
-        fun triggerWirelessDebuggingAutoToggle(context: Context) {
+        fun startMultiStageAutoSetup(context: Context) {
             val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
             if (!isEnabled(context)) {
-                AppLog.w(TAG, "triggerWirelessDebuggingAutoToggle: Accessibility Service is not enabled")
+                AppLog.w(TAG, "startMultiStageAutoSetup: Accessibility Service is not enabled")
                 Toast.makeText(context, R.string.privd_toast_accessibility_required, Toast.LENGTH_LONG).show()
                 val accessibilityIntent =
                     Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
@@ -372,11 +518,63 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 return
             }
 
+            val devModeActive = isDevModeActive(context)
+            val wirelessActive = isWirelessDebuggingActive(context)
+            val paired = isDevicePaired(context)
+
+            AppLog.i(TAG, "startMultiStageAutoSetup: devMode=$devModeActive, wirelessActive=$wirelessActive, paired=$paired")
+
+            if (devModeActive && wirelessActive && paired) {
+                Toast.makeText(context, R.string.privd_toast_all_set, Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val targetStage =
+                when {
+                    !devModeActive -> AutoSetupTargetStage.STAGE_C_PAIRING
+                    !wirelessActive && !paired -> AutoSetupTargetStage.STAGE_C_PAIRING
+                    !wirelessActive && paired -> AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
+                    else -> AutoSetupTargetStage.STAGE_C_PAIRING
+                }
+
+            val initialStage =
+                when {
+                    !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER
+                    !wirelessActive -> AutoToggleStage.ENTER_SEARCH_QUERY
+                    else -> AutoToggleStage.CLICK_PAIR_DIALOG
+                }
+
+            instance?.autoSetupTargetStage = targetStage
+            instance?.autoToggleStage = initialStage
             autoTogglePendingTimestamp = System.currentTimeMillis()
-            AppLog.i(TAG, "triggerWirelessDebuggingAutoToggle: Launching Settings Search on Display 0")
 
             instance?.startAutoToggleLoop()
 
+            when (initialStage) {
+                AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
+                    val aboutIntent =
+                        Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        }
+                    context.startActivity(aboutIntent, displayOptions)
+                }
+
+                AutoToggleStage.ENTER_SEARCH_QUERY -> {
+                    launchSearchActivity(context, displayOptions)
+                }
+
+                AutoToggleStage.CLICK_PAIR_DIALOG -> {
+                    launchWirelessDebuggingSettings(context, displayOptions)
+                }
+
+                else -> {}
+            }
+        }
+
+        private fun launchSearchActivity(
+            context: Context,
+            displayOptions: Bundle,
+        ) {
             val searchActivityIntent =
                 Intent().apply {
                     component =
@@ -406,6 +604,29 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     } catch (e3: Exception) {
                         AppLog.e(TAG, "Failed to launch Settings: $e3")
                     }
+                }
+            }
+        }
+
+        private fun launchWirelessDebuggingSettings(
+            context: Context,
+            displayOptions: Bundle,
+        ) {
+            val wirelessDebuggingIntent =
+                Intent("android.settings.WIRELESS_DEBUGGING_SETTINGS").apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+            val devSettingsIntent =
+                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+            try {
+                context.startActivity(wirelessDebuggingIntent, displayOptions)
+            } catch (e: Exception) {
+                try {
+                    context.startActivity(devSettingsIntent, displayOptions)
+                } catch (e2: Exception) {
+                    AppLog.e(TAG, "Failed to launch Wireless Debugging settings: $e2")
                 }
             }
         }

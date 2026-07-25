@@ -196,9 +196,9 @@ internal fun PrivdSettingsCard(
                 Text(stringResource(R.string.privd_action_show_wizard))
             }
             TextButton(onClick = {
-                MegingiardAccessibilityService.triggerWirelessDebuggingAutoToggle(context)
+                MegingiardAccessibilityService.startMultiStageAutoSetup(context)
             }) {
-                Text(stringResource(R.string.privd_action_test_autotoggle))
+                Text(stringResource(R.string.privd_action_auto_setup))
             }
         }
 

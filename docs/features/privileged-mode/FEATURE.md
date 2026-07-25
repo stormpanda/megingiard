@@ -66,10 +66,14 @@ every device since Android 11 (API 30).
 - When activated or when entering Step 2, the app MUST inspect visible accessibility text nodes on the primary display (Display 0) via `MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)`.
 - Using `PrivdPairScreenTextScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
 
-### FR-PV9: Wireless Debugging Auto-Toggle Test
+### FR-PV9: Multi-Stage Privileged Mode Auto-Setup
 
-- The Privileged Mode card in Global Settings MUST expose a "Test Auto-Toggle" button next to "Set up…".
-- Clicking the button MUST use `MegingiardAccessibilityService` to directly launch system Settings on Display 0, navigate via Settings Search ("Wireless debugging"), select the search result, and toggle the Wireless Debugging switch ON automatically.
+- The Privileged Mode card in Global Settings MUST expose an "Auto Setup" button next to "Set up…".
+- Clicking the button MUST evaluate device setup conditions and run the appropriate automated pipeline on Display 0 via `MegingiardAccessibilityService`:
+  - **Stage A (Dev Mode Activation)**: If Developer Options are disabled, launches About Phone settings and taps "Build number" 7 times to unlock Developer Mode.
+  - **Stage B (Wireless Debugging Activation)**: If Wireless Debugging is disabled, launches Settings Search, inputs `"Wireless debugging"`, selects the result item, and toggles Wireless Debugging `ON`.
+  - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, opens the pairing dialog, scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and connects via `PrivdClient.pair()`.
+  - **All Set**: If Developer Mode, Wireless Debugging, and ADB pairing are all active, displays a Toast notification: *"You're all set! Privileged Mode is ready."*
 - If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
 
 
