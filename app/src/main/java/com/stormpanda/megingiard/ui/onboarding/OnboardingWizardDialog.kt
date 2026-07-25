@@ -103,6 +103,8 @@ import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
+private const val TAG = "OnboardingWizardDialog"
+
 private val OW_DIALOG_MAX_WIDTH = 480.dp
 private val OW_DIALOG_CORNER_RADIUS = 16.dp
 private val OW_DIALOG_BORDER_WIDTH = 2.dp
@@ -929,8 +931,6 @@ fun OnboardingStepper(
         }
     }
 }
-
-private const val TAG = "OnboardingWizardDialog"
 
 @Composable
 fun AccessibilityStepContent(

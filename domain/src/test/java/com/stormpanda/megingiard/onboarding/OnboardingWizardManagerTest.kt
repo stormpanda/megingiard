@@ -22,14 +22,6 @@ class OnboardingWizardManagerTest {
     }
 
     @Test
-    fun `isStepFulfilled returns boolean without crash`() {
-        for (id in OnboardingStepId.entries) {
-            val fulfilled = OnboardingWizardManager.isStepFulfilled(id)
-            assertNotNull(fulfilled)
-        }
-    }
-
-    @Test
     fun `shouldAutoStartWizard compares against CURRENT_WELCOME_TOUR_VERSION`() {
         assertTrue(OnboardingWizardManager.shouldAutoStartWizard())
         assertEquals(1, SettingsManager.CURRENT_WELCOME_TOUR_VERSION)

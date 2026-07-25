@@ -38,8 +38,6 @@ object OnboardingWizardManager {
 
     fun shouldAutoStartWizard(): Boolean = SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION
 
-    fun isStepFulfilled(id: OnboardingStepId): Boolean = false
-
     fun startWizard(
         context: Context,
         force: Boolean = false,
