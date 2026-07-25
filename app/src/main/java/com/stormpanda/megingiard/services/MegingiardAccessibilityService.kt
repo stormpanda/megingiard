@@ -34,6 +34,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "MegingiardAccessService"
 private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
@@ -580,7 +581,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 false
             }
 
-        fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
+        fun isDevicePaired(context: Context): Boolean =
+            PrivdBootstrapper.hasCredentials(context) && PrivdManager.state.value != PrivdState.FAILED
 
         fun dismissNotificationShade(): Boolean = instance?.performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE) ?: false
 
@@ -634,10 +636,24 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
             if (devModeActive && wirelessActive && paired) {
                 if (PrivdManager.state.value != PrivdState.RUNNING) {
-                    AppLog.i(TAG, "startMultiStageAutoSetup: Prerequisites already active, initiating PrivdManager.connect()")
+                    AppLog.i(TAG, "startMultiStageAutoSetup: Prerequisites active, attempting PrivdManager.connect()")
                     instance?.serviceScope?.launch(Dispatchers.IO) {
-                        PrivdManager.connect(context)
+                        val ok = PrivdManager.connect(context)
+                        if (!ok) {
+                            AppLog.w(
+                                TAG,
+                                "startMultiStageAutoSetup: Connect/bootstrap failed despite saved credentials. Falling back to Stage C (Pairing).",
+                            )
+                            withContext(Dispatchers.Main) {
+                                instance?.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
+                                instance?.autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                autoTogglePendingTimestamp = System.currentTimeMillis()
+                                instance?.startAutoToggleLoop()
+                                launchWirelessDebuggingSettings(context, displayOptions)
+                            }
+                        }
                     }
+                    return
                 }
                 Toast.makeText(context, R.string.privd_toast_all_set, Toast.LENGTH_LONG).show()
                 return
