@@ -495,9 +495,12 @@ object AppStateManager {
                 if (state == PrivdState.RUNNING && accessibilityActive) {
                     _isPrivdPromptDismissed.value = false
                 }
-                if (dismissed || bgSettingsActive) {
+                if (!accessibilityActive) {
+                    _isPrivdPromptDismissed.value = false
+                    _isPrivdPromptShowing.value = true
+                } else if (dismissed || bgSettingsActive) {
                     _isPrivdPromptShowing.value = false
-                } else if (!accessibilityActive || (state == PrivdState.FAILED && showPromptPref && hasCreds)) {
+                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
                     _isPrivdPromptShowing.value = true
                 }
             }.collect {}
