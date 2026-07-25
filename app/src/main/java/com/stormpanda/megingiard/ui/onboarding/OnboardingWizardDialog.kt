@@ -345,7 +345,7 @@ fun OnboardingWizardDialog(
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
-                                isDevModeActive && isWirelessActive && isDevicePaired &&
+                                isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
                                     privdState == PrivdState.RUNNING
                             }
 
@@ -586,8 +586,10 @@ fun PrivilegedStepContent(
 ) {
     val colors = LocalAppColors.current
     var hasAutoSetupBeenStarted by remember {
-        mutableStateOf(privdState == PrivdState.RUNNING)
+        mutableStateOf(false)
     }
+
+    val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -609,35 +611,47 @@ fun PrivilegedStepContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Sequential status checklist calculation
-        val devStatus =
-            if (hasAutoSetupBeenStarted) {
-                if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-            } else {
-                ChecklistStatus.PENDING
-            }
+        val devStatus: ChecklistStatus
+        val wirelessStatus: ChecklistStatus
+        val pairingStatus: ChecklistStatus
+        val daemonStatus: ChecklistStatus
 
-        val wirelessStatus =
-            if (hasAutoSetupBeenStarted && devStatus == ChecklistStatus.DONE) {
-                if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-            } else {
-                ChecklistStatus.PENDING
-            }
+        if (isAllSet) {
+            devStatus = ChecklistStatus.DONE
+            wirelessStatus = ChecklistStatus.DONE
+            pairingStatus = ChecklistStatus.DONE
+            daemonStatus = ChecklistStatus.DONE
+        } else if (!isWifiActive || !hasAutoSetupBeenStarted) {
+            devStatus = ChecklistStatus.PENDING
+            wirelessStatus = ChecklistStatus.PENDING
+            pairingStatus = ChecklistStatus.PENDING
+            daemonStatus = ChecklistStatus.PENDING
+        } else {
+            devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
 
-        val pairingStatus =
-            if (hasAutoSetupBeenStarted && devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
-                if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-            } else {
-                ChecklistStatus.PENDING
-            }
+            wirelessStatus =
+                if (devStatus == ChecklistStatus.DONE) {
+                    if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                } else {
+                    ChecklistStatus.PENDING
+                }
 
-        val daemonStatus =
-            if (hasAutoSetupBeenStarted && devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
-                pairingStatus == ChecklistStatus.DONE
-            ) {
-                if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-            } else {
-                ChecklistStatus.PENDING
-            }
+            pairingStatus =
+                if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
+                    if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                } else {
+                    ChecklistStatus.PENDING
+                }
+
+            daemonStatus =
+                if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
+                    pairingStatus == ChecklistStatus.DONE
+                ) {
+                    if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                } else {
+                    ChecklistStatus.PENDING
+                }
+        }
 
         // Multi-stage status checklist
         Column(
@@ -669,53 +683,7 @@ fun PrivilegedStepContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (privdState != PrivdState.RUNNING) {
-            if (!isWifiActive) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = colors.error,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_privd_wifi_warning),
-                        color = colors.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            } else {
-                Button(
-                    onClick = {
-                        hasAutoSetupBeenStarted = true
-                        onStartAutoSetup()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.AutoFixHigh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.onboarding_privd_auto_setup),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-            }
-        } else {
+        if (isAllSet) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
@@ -733,6 +701,50 @@ fun PrivilegedStepContent(
                     color = colors.actionColorSystem,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
+                )
+            }
+        } else if (!isWifiActive) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = null,
+                    tint = colors.error,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_privd_wifi_warning),
+                    color = colors.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        } else {
+            Button(
+                onClick = {
+                    hasAutoSetupBeenStarted = true
+                    onStartAutoSetup()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoFixHigh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.onboarding_privd_auto_setup),
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         }
