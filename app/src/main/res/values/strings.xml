@@ -1014,8 +1014,9 @@ Open Settings to create a layout.</string>
     <string name="macro_tutorial_btn_dont_show">Don\'t show again</string>
 
     <!-- Onboarding Wizard -->
-    <string name="settings_start_welcome_tour">Start Welcome Tour</string>
+    <string name="settings_start_welcome_tour">Start Welcome Tour / Quick Setup</string>
     <string name="settings_start_welcome_tour_desc">Re-run the step-by-step onboarding guide and edge gesture tour</string>
+    <string name="settings_start_welcome_tour_btn">Start</string>
     <string name="onboarding_step_welcome">Welcome</string>
     <string name="onboarding_step_quick_menu">Edge Gestures</string>
     <string name="onboarding_step_theme">Theme</string>

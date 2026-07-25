@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -327,16 +329,24 @@ internal fun ConfigActionRow(
     label: String,
     description: String,
     accentColor: Color,
+    buttonText: String? = null,
     onClick: () -> Unit,
 ) {
     AppSettingsRow(onClick = onClick) {
         SettingLabelColumn(label = label, subtitle = description, modifier = Modifier.weight(1f))
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-            contentDescription = null,
-            tint = accentColor,
-            modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
-        )
+        Spacer(modifier = Modifier.width(8.dp))
+        if (buttonText != null) {
+            Button(onClick = onClick) {
+                Text(text = buttonText)
+            }
+        } else {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(GS_ACCENT_ARROW_SIZE),
+            )
+        }
     }
 }
 

@@ -1021,8 +1021,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macro_tutorial_btn_dont_show">Nicht mehr anzeigen</string>
 
     <!-- Onboarding Wizard -->
-    <string name="settings_start_welcome_tour">Willkommenstour starten</string>
+    <string name="settings_start_welcome_tour">Willkommenstour / Schnell-Einrichtung starten</string>
     <string name="settings_start_welcome_tour_desc">Führe die Schritt-für-Schritt-Einführung und Randgesten-Tour erneut aus</string>
+    <string name="settings_start_welcome_tour_btn">Starten</string>
     <string name="onboarding_step_welcome">Willkommen</string>
     <string name="onboarding_step_quick_menu">Rand-Gesten</string>
     <string name="onboarding_step_theme">Design</string>

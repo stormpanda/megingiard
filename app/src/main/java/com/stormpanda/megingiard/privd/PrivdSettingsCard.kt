@@ -195,11 +195,6 @@ internal fun PrivdSettingsCard(
             TextButton(onClick = onShowWizard) {
                 Text(stringResource(R.string.privd_action_show_wizard))
             }
-            TextButton(onClick = {
-                MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-            }) {
-                Text(stringResource(R.string.privd_action_auto_setup))
-            }
         }
 
         // ── Ping result / Status Guidance ──────────────────────────────────

@@ -262,6 +262,7 @@ fun GlobalSettingsScreen(
                         ConfigActionRow(
                             label = stringResource(R.string.settings_start_welcome_tour),
                             description = stringResource(R.string.settings_start_welcome_tour_desc),
+                            buttonText = stringResource(R.string.settings_start_welcome_tour_btn),
                             accentColor = effectiveAccent,
                             onClick = {
                                 AppStateManager.closeActiveModal()
