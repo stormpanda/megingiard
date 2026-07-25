@@ -83,6 +83,7 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.security.SignatureGuard
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -273,6 +274,7 @@ class MainActivity : ComponentActivity() {
             File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
                 File(noBackupFilesDir, "privd_adb_cert.bin").exists()
         AppStateManager.setHasAdbCredentials(hasCreds)
+        AppStateManager.setAccessibilityActive(MegingiardAccessibilityService.isEnabled(this))
         AppStateManager.resetPrivdPromptState()
 
         // Handle .mgrd config files opened from a file manager or share sheet.
