@@ -542,7 +542,10 @@ fun ThemeStepContent() {
 }
 
 @Composable
-fun FinishedStepContent() {
+fun FinishedStepContent(
+    titleText: String = stringResource(R.string.onboarding_finished_title),
+    descText: String? = stringResource(R.string.onboarding_finished_desc),
+) {
     val colors = LocalAppColors.current
 
     Column(
@@ -559,18 +562,21 @@ fun FinishedStepContent() {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = stringResource(R.string.onboarding_finished_title),
+            text = titleText,
             color = colors.onSurface,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.onboarding_finished_desc),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
         )
+        if (!descText.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = descText,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -584,6 +590,9 @@ fun PrivilegedStepContent(
     isDevicePaired: Boolean,
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
+    titleText: String = stringResource(R.string.onboarding_privd_title),
+    descText: String = stringResource(R.string.onboarding_privd_desc),
+    buttonText: String = stringResource(R.string.onboarding_privd_auto_setup),
 ) {
     val colors = LocalAppColors.current
     var hasAutoSetupBeenStarted by remember {
@@ -603,14 +612,15 @@ fun PrivilegedStepContent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringResource(R.string.onboarding_privd_title),
+            text = titleText,
             color = colors.onSurface,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = stringResource(R.string.onboarding_privd_desc),
+            text = descText,
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
@@ -751,7 +761,7 @@ fun PrivilegedStepContent(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringResource(R.string.onboarding_privd_auto_setup),
+                    text = buttonText,
                     color = colors.actionColorSystem,
                     style = MaterialTheme.typography.labelLarge,
                 )

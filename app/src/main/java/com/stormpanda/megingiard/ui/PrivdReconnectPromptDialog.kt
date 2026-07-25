@@ -286,11 +286,17 @@ fun PrivdReconnectPromptDialog(
                             isDevicePaired = isDevicePaired,
                             privdState = privdState,
                             onStartAutoSetup = startAutoSetup,
+                            titleText = stringResource(R.string.privd_reconnect_title),
+                            descText = stringResource(R.string.privd_reconnect_desc),
+                            buttonText = stringResource(R.string.privd_reconnect_auto_button),
                         )
                     }
 
                     OnboardingStepId.FINISHED -> {
-                        FinishedStepContent()
+                        FinishedStepContent(
+                            titleText = stringResource(R.string.privd_toast_all_set),
+                            descText = null,
+                        )
                     }
 
                     else -> {}
@@ -366,7 +372,7 @@ fun PrivdReconnectPromptDialog(
                         Text(
                             text =
                                 if (isLastStep) {
-                                    stringResource(R.string.onboarding_btn_finish)
+                                    stringResource(R.string.privd_reconnect_btn_close)
                                 } else {
                                     stringResource(R.string.onboarding_btn_next)
                                 },

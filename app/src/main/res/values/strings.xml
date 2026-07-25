@@ -1030,6 +1030,10 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_title">Privileged Mode (recommended!)</string>
     <string name="onboarding_privd_desc">Unlocks low-latency direct touch injection, trackpoint precision, and physical gamepad recording without root or PC connection. You can use Auto Setup for a one-tap automated configuration.</string>
     <string name="onboarding_privd_auto_setup">Start Auto Setup</string>
+    <string name="privd_reconnect_title">Reconnect Privileged Mode</string>
+    <string name="privd_reconnect_desc">Privileged Mode was disconnected, for example because of a device reboot or because Wireless Debugging was deactivated.</string>
+    <string name="privd_reconnect_auto_button">Auto Reconnect</string>
+    <string name="privd_reconnect_btn_close">Close</string>
     <string name="onboarding_privd_stage_dev">Developer Options</string>
     <string name="onboarding_privd_stage_wireless">Wireless Debugging</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless Pairing</string>
