@@ -94,6 +94,7 @@ import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
+import com.stormpanda.megingiard.ui.AppMagicalButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
@@ -735,7 +736,7 @@ fun PrivilegedStepContent(
                 )
             }
         } else {
-            Button(
+            AppMagicalButton(
                 onClick = {
                     hasAutoSetupBeenStarted = true
                     onStartAutoSetup()
@@ -745,11 +746,13 @@ fun PrivilegedStepContent(
                 Icon(
                     imageVector = Icons.Rounded.AutoFixHigh,
                     contentDescription = null,
+                    tint = colors.actionColorSystem,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.onboarding_privd_auto_setup),
+                    color = colors.actionColorSystem,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
