@@ -45,6 +45,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
@@ -193,6 +194,11 @@ internal fun PrivdSettingsCard(
             }
             TextButton(onClick = onShowWizard) {
                 Text(stringResource(R.string.privd_action_show_wizard))
+            }
+            TextButton(onClick = {
+                MegingiardAccessibilityService.triggerWirelessDebuggingAutoToggle(context)
+            }) {
+                Text(stringResource(R.string.privd_action_test_autotoggle))
             }
         }
 

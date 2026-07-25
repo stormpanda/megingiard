@@ -66,6 +66,12 @@ every device since Android 11 (API 30).
 - When activated or when entering Step 2, the app MUST inspect visible accessibility text nodes on the primary display (Display 0) via `MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)`.
 - Using `PrivdPairScreenTextScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
 
+### FR-PV9: Wireless Debugging Auto-Toggle Test
+
+- The Privileged Mode card in Global Settings MUST expose a "Test Auto-Toggle" button next to "Set up…".
+- Clicking the button MUST use `MegingiardAccessibilityService` to directly launch system Settings on Display 0, navigate via Settings Search ("Wireless debugging"), select the search result, and toggle the Wireless Debugging switch ON automatically.
+- If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
+
 
 ### FR-PV5: No Always-Connected Requirement
 
