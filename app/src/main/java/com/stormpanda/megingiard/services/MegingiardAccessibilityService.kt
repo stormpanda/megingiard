@@ -582,6 +582,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
 
+        fun dismissNotificationShade(): Boolean = instance?.performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE) ?: false
+
         fun triggerWirelessDebuggingAutoToggle(context: Context) = startMultiStageAutoSetup(context)
 
         /**
@@ -601,6 +603,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 context.startActivity(accessibilityIntent, displayOptions)
                 return
             }
+
+            AppLog.i(TAG, "startMultiStageAutoSetup: Dismissing Quick Settings / Notification shade if expanded")
+            dismissNotificationShade()
 
             if (!isWifiActive(context)) {
                 AppLog.w(TAG, "startMultiStageAutoSetup: Wi-Fi is not active")
