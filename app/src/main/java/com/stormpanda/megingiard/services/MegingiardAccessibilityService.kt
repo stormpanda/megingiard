@@ -49,6 +49,8 @@ private enum class AutoToggleStage {
     ENTER_SEARCH_QUERY,
     CLICK_SEARCH_RESULT,
     TOGGLE_SWITCH,
+    ENTER_PAIRING_SEARCH_QUERY,
+    CLICK_PAIRING_SEARCH_RESULT,
     CLICK_PAIR_DIALOG,
     SCAN_PAIRING_CODE_AND_PAIR,
 }
@@ -146,7 +148,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.ENTER_SEARCH_QUERY -> {
-                                val entered = findAndSetSearchQuery(rootNode)
+                                val entered = findAndSetSearchQuery(rootNode, "Wireless debugging")
                                 if (entered) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Wireless debugging'")
                                     autoToggleStage = AutoToggleStage.CLICK_SEARCH_RESULT
@@ -187,13 +189,40 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                     if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING &&
                                         !isMegingiardInPairedDevices(rootNode)
                                     ) {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Pairing)")
-                                        autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: Advancing to Stage C (Launching Search for Pair device with pairing code)",
+                                        )
+                                        autoToggleStage = AutoToggleStage.ENTER_PAIRING_SEARCH_QUERY
+                                        launchSearchActivity(context, displayOptions)
                                     } else {
                                         AppLog.i(TAG, "startAutoToggleLoop: Auto-setup pipeline completed successfully")
                                         autoTogglePendingTimestamp = 0L
                                         break
                                     }
+                                }
+                            }
+
+                            AutoToggleStage.ENTER_PAIRING_SEARCH_QUERY -> {
+                                val entered = findAndSetSearchQuery(rootNode, "Pair device with pairing code")
+                                if (entered) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Pair device with pairing code' for Stage C")
+                                    autoToggleStage = AutoToggleStage.CLICK_PAIRING_SEARCH_RESULT
+                                }
+                            }
+
+                            AutoToggleStage.CLICK_PAIRING_SEARCH_RESULT -> {
+                                val clicked =
+                                    findAndClickSearchResultItem(
+                                        rootNode,
+                                        "pair device with pairing code",
+                                        "geräte-kopplungscode",
+                                        "kopplungscode koppeln",
+                                        "pair with pairing code",
+                                    )
+                                if (clicked) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair device with pairing code search result")
+                                    autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
                                 }
                             }
 
