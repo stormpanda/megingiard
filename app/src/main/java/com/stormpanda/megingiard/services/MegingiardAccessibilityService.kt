@@ -584,7 +584,21 @@ class MegingiardAccessibilityService : AccessibilityService() {
         fun isDevicePaired(context: Context): Boolean =
             PrivdBootstrapper.hasCredentials(context) && PrivdManager.state.value != PrivdState.FAILED
 
-        fun dismissNotificationShade(): Boolean = instance?.performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE) ?: false
+        fun dismissNotificationShade(): Boolean {
+            val inst = instance ?: return false
+            val shadeDismissed = inst.performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
+            try {
+                val rootNode = inst.rootInActiveWindow
+                val pkgName = rootNode?.packageName?.toString()
+                if (pkgName == "com.android.systemui" || pkgName?.contains("panel") == true) {
+                    AppLog.i(TAG, "dismissNotificationShade: System UI / Internet dialog active ($pkgName), issuing GLOBAL_ACTION_BACK")
+                    inst.performGlobalAction(GLOBAL_ACTION_BACK)
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "dismissNotificationShade: Exception checking active window node: ${e.message}")
+            }
+            return shadeDismissed
+        }
 
         fun triggerWirelessDebuggingAutoToggle(context: Context) = startMultiStageAutoSetup(context)
 
