@@ -482,7 +482,7 @@ fun MainAppScreen() {
             )
         }
 
-        if (showPromptDialog) {
+        if (showPromptDialog && !isWizardActive) {
             PrivdReconnectPromptDialog(
                 onConnect = {
                     coroutineScope.launch(Dispatchers.IO) {
