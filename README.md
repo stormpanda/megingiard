@@ -83,19 +83,39 @@ Given its hardware-specific approach and advanced features, this project is exte
 
 ## Screenshots
 
-### MacroPad in Action — Genshin Impact Example
+### Dual-Screen Companion Setup
 
-|                                                       Primary screen                                                       |                                                            Secondary screen                                                             |
-| :------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------: |
-| ![Genshin Impact running on the primary (top) screen of the AYN Thor](./assets/screenshots/Genshin_Impact_Example-TOP.png) | ![A custom MacroPad layout for Genshin Impact on the secondary (bottom) screen](./assets/screenshots/Genshin_Impact_Example-BOTTOM.png) |
+| Primary screen | Secondary screen |
+| :---: | :---: |
+| ![Primary Screen on the AYN Thor](./assets/screenshots/primary_screen.png) | ![Secondary Screen with custom MacroPad layout on the AYN Thor](./assets/screenshots/secondary_screen.png) |
 
-_A custom MacroPad profile built for Genshin Impact. The game runs on the primary screen as usual; the secondary screen hosts a fully configured button layout with gamepad and keyboard actions._
+_Dual-screen companion experience in action. The primary screen displays your target game or app, while the secondary screen hosts your custom MacroPad layout or active companion tool._
+
+---
+
+### Welcome Tour & Onboarding
+
+![The built-in interactive welcome tour tutorial](./assets/screenshots/welcome_tour.png)
+
+_The step-by-step interactive welcome tour that guides new users through Megingiard's features, gestures, Quick Menu navigation, and initial configuration._
+
+---
+
+### Virtual Keyboards & Touchpads
+
+| Compact Full Keyboard | Ergonomic Split Keyboard |
+| :---: | :---: |
+| ![Compact Full Keyboard Layout](./assets/screenshots/compact_full_keyboard.png) | ![Ergonomic Split Keyboard Layout](./assets/screenshots/ergonomic_keyboard.png) |
+| **Relative Mouse Touchpad** | **Absolute Touch Touchpad** |
+| ![Relative Mouse Touchpad Mode](./assets/screenshots/relative_mouse_touchpad.png) | ![Absolute Touch Touchpad Mode](./assets/screenshots/absolute_touch_touchpad.png) |
+
+_Virtual input modes designed for the secondary screen. Top row: Full Compact and Ergonomic Split on-screen keyboards with sticky modifiers and trackpoints. Bottom row: Kernel-level Relative Mouse Trackpad and Absolute Touch direct digitizer emulation modes._
 
 ---
 
 ### Layout Editor
 
-![The MacroPad layout editor with a rectangular snap grid active, showing freely placed buttons of various sizes](./assets/screenshots/Layout_Editor_Grid-BOTTOM.png)
+![The MacroPad layout editor with snap grid active](./assets/screenshots/layout_editor.png)
 
 _The built-in layout editor with rectangular snap grid enabled. Buttons can be placed freely, resized, and snapped to grid for precise alignment._
 
@@ -103,7 +123,7 @@ _The built-in layout editor with rectangular snap grid enabled. Buttons can be p
 
 ### Button Editor
 
-![The per-button configuration screen showing action type selection, icon picker, and size options](./assets/screenshots/Button_Editor-BOTTOM.png)
+![The per-button configuration screen](./assets/screenshots/button_editor.png)
 
 _Per-button configuration: choose the action type (keyboard key, gamepad button, mouse button, scroll wheel, or trackpoint), pick an icon from the Material Symbols library, and set the button size and shape._
 
@@ -111,7 +131,7 @@ _Per-button configuration: choose the action type (keyboard key, gamepad button,
 
 ### Macro Editor
 
-![The macro editor showing a timed sequence of key and gamepad events with timestamps](./assets/screenshots/Macro_Editor-BOTTOM.png)
+![The macro editor showing a timed sequence of key and gamepad events](./assets/screenshots/macro_editor.png)
 
 _The macro editor lets you inspect and fine-tune recorded or hand-crafted event sequences, complete with precise timing control for each step._
 
@@ -127,17 +147,17 @@ _Macro recording in progress. Tap buttons on the secondary screen (or use your p
 
 ### Quick Menu
 
-![The edge quick menu expanded in dark theme, showing tool and profile switcher options](./assets/screenshots/Pill_Menu_Dark-BOTTOM.png)
+![The edge quick menu expanded in dark theme](./assets/screenshots/quick_menu.png)
 
 _The Quick Menu — swipe the edge quick menu bar inward to switch between Mirror, MacroPad, Keyboard, and Touchpad, change profiles, control the mirror, or open settings. Everything accessible without leaving your current screen._
 
 ---
 
-### Privileged Mode Settings
+### Privileged Mode & Wireless Debugging Setup
 
-![The Privileged Mode settings card showing per-feature toggles for Gamepad Merge, Gamepad Recording, and Privileged Mirror](./assets/screenshots/Settings_Privd_Mode-BOTTOM.png)
+![The Privileged Mode setup card showing Wireless Debugging configuration and status](./assets/screenshots/privd_setup.png)
 
-_The Privileged Mode settings card. Each privileged feature — Gamepad Merge, Gamepad Recording, and Privileged Mirror — has its own independent toggle so you can enable only what you need._
+_The Privileged Mode setup & settings card. Easily pair on-device via Wireless Debugging, deploy the helper daemon, and toggle individual privileged capabilities (Gamepad Merge, Gamepad Recording, Privileged Mirror)._
 
 ---
 
