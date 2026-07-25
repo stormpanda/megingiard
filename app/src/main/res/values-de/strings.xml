@@ -45,7 +45,7 @@
     <string name="theme_aurora">Nordlicht Aurora</string>
     <string name="theme_retro_phosphor">Retro-Phosphor</string>
     <string name="theme_royal_asgard">Königliches Asgard</string>
-    <string name="settings_overlay_position">Steuerleiste unten platzieren</string>
+    <string name="settings_overlay_position">Quick-Menü-Leisten unten platzieren</string>
     <string name="settings_overlay_fade_out">Steuerleiste ausblenden</string>
     <string name="settings_overlay_fade_out_desc">Die Schnellmenüleiste nach einigen Sekunden Inaktivität ausblenden</string>
     <string name="mirror_edge_blend_label">Kantenübergänge</string>
@@ -314,6 +314,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_action_disconnect">Trennen</string>
     <string name="privd_action_test">Verbindung testen</string>
     <string name="privd_action_show_wizard">Einrichten…</string>
+    <string name="privd_action_test_autotoggle">Auto-Toggle testen</string>
+    <string name="privd_action_auto_setup">Auto-Einrichtung</string>
+    <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>
+    <string name="privd_toast_all_set">Alles bereit! Privilegiierter Modus ist einsatzbereit.</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
     <string name="privd_ping_fail">Keine Antwort vom Daemon. Die Verbindung ist möglicherweise abgebrochen.</string>
 
@@ -1016,9 +1020,47 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macro_tutorial_btn_got_it">Verstanden</string>
     <string name="macro_tutorial_btn_dont_show">Nicht mehr anzeigen</string>
 
+    <!-- Onboarding Wizard -->
+    <string name="settings_start_welcome_tour">Willkommenstour starten</string>
+    <string name="settings_start_welcome_tour_desc">Führe die Schritt-für-Schritt-Einführung und Randgesten-Tour erneut aus</string>
+    <string name="onboarding_step_welcome">Willkommen</string>
+    <string name="onboarding_step_quick_menu">Rand-Gesten</string>
+    <string name="onboarding_step_theme">Design</string>
+    <string name="onboarding_theme_title">Wähle deinen Stil</string>
+    <string name="onboarding_theme_desc">Wähle ein visuelles Thema für Megingiard. Du kannst dies jederzeit in den globalen Einstellungen ändern.</string>
+    <string name="onboarding_theme_prev">Vorheriges Thema</string>
+    <string name="onboarding_theme_next">Nächstes Thema</string>
+    <string name="onboarding_step_accessibility">Barrierefreiheit</string>
+    <string name="onboarding_accessibility_title">Barrierefreiheitsdienst</string>
+    <string name="onboarding_accessibility_desc">Der Barrierefreiheitsdienst ist für Megingiard erforderlich. Er wird für Kernfunktionen wie den automatischen Makro-Profilwechsel beim Starten von Spielen, die Einrichtung des Privilegierten Modus sowie kommende Funktionen benötigt.</string>
+    <string name="onboarding_step_privileged">Privilegierter Modus</string>
+    <string name="onboarding_privd_title">Privilegierter Modus (empfohlen!)</string>
+    <string name="onboarding_privd_desc">Ermöglicht direkte Eingabe-Injektion ohne Latenz, Trackpoint-Präzision und physikalische Gamepad-Aufzeichnung ohne Root oder PC-Verbindung. Nutze die Auto-Einrichtung für eine 1-Tap-Konfiguration.</string>
+    <string name="onboarding_privd_auto_setup">Auto-Einrichtung starten</string>
+    <string name="privd_reconnect_title">Privilegierten Modus neu verbinden</string>
+    <string name="privd_reconnect_desc">Der privilegierte Modus wurde getrennt, zum Beispiel durch einen Geräteneustart oder weil Wireless Debugging deaktiviert wurde.</string>
+    <string name="privd_reconnect_auto_button">Automatisch verbinden</string>
+    <string name="privd_reconnect_all_set">Alles erledigt!</string>
+    <string name="privd_reconnect_btn_close">Schließen</string>
+    <string name="onboarding_privd_stage_dev">Entwickleroptionen</string>
+    <string name="onboarding_privd_stage_wireless">Drahtloses Debugging</string>
+    <string name="onboarding_privd_stage_pairing">ADB Wireless-Kopplung</string>
+    <string name="onboarding_privd_stage_daemon">Daemon-Verbindung</string>
+    <string name="onboarding_privd_wifi_warning">WLAN ist ausgeschaltet. WLAN muss auf deinem Gerät aktiviert sein, um drahtloses Debugging zu ermöglichen.</string>
+    <string name="onboarding_step_finished">Fertig</string>
+    <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>
+    <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
+    <string name="onboarding_step_counter">Schritt %1$d von %2$d</string>
+    <string name="onboarding_btn_next">Weiter</string>
+    <string name="onboarding_btn_back">Zurück</string>
+    <string name="onboarding_btn_skip">Überspringen</string>
+    <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Menü öffnen</string>
-    <string name="quick_menu_tutorial_body">Streiche über die Schnellmenüleiste am Bildschirmrand, um das Schnellmenü zu öffnen. Du kannst damit Profile, Layouts und Einstellungen schnell wechseln.\n\nHinweis: Du kannst in den globalen Einstellungen (Darstellung) konfigurieren, dass die Leiste automatisch ausgeblendet wird, falls du eine sauberere Ansicht bevorzugst. Diese Funktion ist standardmäßig deaktiviert.</string>
+    <string name="quick_menu_tutorial_body">Wische an einer der 3 Quick-Menü-Leisten, um die Gesten auszuprobieren! Das Ziehen einer Leiste über den Schwellenwert bestätigt die Geste mit einem Häkchen, wenn korrekt ausgeführt.</string>
+    <string name="quick_menu_label_keyboard">Tastatur</string>
+    <string name="quick_menu_label_menu">Menü</string>
+    <string name="quick_menu_label_mouse">Maus</string>
 
     <!-- SteamGridDB integration -->
     <string name="settings_steamgriddb_token">SteamGridDB API-Token</string>

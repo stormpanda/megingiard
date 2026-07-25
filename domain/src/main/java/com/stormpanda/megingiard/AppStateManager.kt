@@ -3,6 +3,7 @@ package com.stormpanda.megingiard
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
@@ -162,6 +163,10 @@ object AppStateManager {
     val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
 
     fun openQuickMenu() {
+        if (OnboardingWizardManager.isWizardActive.value) {
+            AppLog.w(TAG, "openQuickMenu suppressed while onboarding wizard is active")
+            return
+        }
         AppLog.i(TAG, "openQuickMenu")
         _isQuickMenuOpen.value = true
     }
@@ -215,6 +220,14 @@ object AppStateManager {
     fun setPrivdPromptDismissed(dismissed: Boolean) {
         AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
         _isPrivdPromptDismissed.value = dismissed
+    }
+
+    private val _isAccessibilityActive = MutableStateFlow(true)
+    val isAccessibilityActive: StateFlow<Boolean> = _isAccessibilityActive.asStateFlow()
+
+    fun setAccessibilityActive(active: Boolean) {
+        AppLog.d(TAG, "setAccessibilityActive($active)")
+        _isAccessibilityActive.value = active
     }
 
     fun resetPrivdPromptState() {
@@ -351,6 +364,10 @@ object AppStateManager {
         active: Boolean,
         layout: KbLayout? = null,
     ) {
+        if (active && OnboardingWizardManager.isWizardActive.value) {
+            AppLog.w(TAG, "setFullscreenKeyboardActive suppressed while onboarding wizard is active")
+            return
+        }
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
             _forcedKeyboardLayout.value = layout
@@ -367,6 +384,10 @@ object AppStateManager {
         active: Boolean,
         sensitivity: Float = 1.0f,
     ) {
+        if (active && OnboardingWizardManager.isWizardActive.value) {
+            AppLog.w(TAG, "setFullscreenMouseActive suppressed while onboarding wizard is active")
+            return
+        }
         AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
         if (active) {
             _fullscreenMouseSensitivity.value = sensitivity
@@ -431,6 +452,10 @@ object AppStateManager {
      * Dispatches to the correct action based on current navigation state.
      */
     fun handleEdgeSwipe() {
+        if (OnboardingWizardManager.isWizardActive.value) {
+            AppLog.w(TAG, "handleEdgeSwipe suppressed while onboarding wizard is active")
+            return
+        }
         AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${_isQuickMenuOpen.value}")
         when {
             isAnyModalActive.value -> closeActiveModal()
@@ -458,11 +483,22 @@ object AppStateManager {
                 _hasAdbCredentials,
                 _isPrivdPromptDismissed,
                 _isBackgroundSettingsActive,
-            ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
-                if (state == PrivdState.RUNNING) {
+                _isAccessibilityActive,
+            ) { array ->
+                val state = array[0] as PrivdState
+                val showPromptPref = array[1] as Boolean
+                val hasCreds = array[2] as Boolean
+                val dismissed = array[3] as Boolean
+                val bgSettingsActive = array[4] as Boolean
+                val accessibilityActive = array[5] as Boolean
+
+                if (state == PrivdState.RUNNING && accessibilityActive) {
                     _isPrivdPromptDismissed.value = false
                 }
-                if (dismissed || bgSettingsActive) {
+                if (!accessibilityActive) {
+                    _isPrivdPromptDismissed.value = false
+                    _isPrivdPromptShowing.value = true
+                } else if (dismissed || bgSettingsActive) {
                     _isPrivdPromptShowing.value = false
                 } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
                     _isPrivdPromptShowing.value = true

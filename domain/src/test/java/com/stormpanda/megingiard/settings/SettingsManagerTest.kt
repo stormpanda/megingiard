@@ -6,6 +6,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -28,23 +29,19 @@ class SettingsManagerTest {
 
     @Test
     fun testWelcomeTutorialDefaultsAndUpdates() {
-        // 1. Verify default values are true
-        assertTrue(SettingsManager.showWelcomeTutorial.value)
+        // 1. Verify default values
+        assertEquals(0, SettingsManager.welcomeTourCompletedVersion.value)
         assertTrue(SettingsManager.showMacroEditorTutorial.value)
-        assertTrue(SettingsManager.showQuickMenuTutorial.value)
 
-        // 2. Set to false and verify updates
-        SettingsManager.setShowWelcomeTutorial(false)
+        // 2. Set updates and verify
+        SettingsManager.setWelcomeTourCompletedVersion(1)
         SettingsManager.setShowMacroEditorTutorial(false)
-        SettingsManager.setShowQuickMenuTutorial(false)
-        assertFalse(SettingsManager.showWelcomeTutorial.value)
+        assertEquals(1, SettingsManager.welcomeTourCompletedVersion.value)
         assertFalse(SettingsManager.showMacroEditorTutorial.value)
-        assertFalse(SettingsManager.showQuickMenuTutorial.value)
 
-        // 3. Reset all tutorials and verify reset to true
+        // 3. Reset all tutorials and verify reset
         SettingsManager.resetAllTutorials()
-        assertTrue(SettingsManager.showWelcomeTutorial.value)
+        assertEquals(0, SettingsManager.welcomeTourCompletedVersion.value)
         assertTrue(SettingsManager.showMacroEditorTutorial.value)
-        assertTrue(SettingsManager.showQuickMenuTutorial.value)
     }
 }

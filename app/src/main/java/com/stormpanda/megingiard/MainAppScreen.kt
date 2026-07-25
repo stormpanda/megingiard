@@ -1,8 +1,13 @@
 package com.stormpanda.megingiard
 
 import android.content.Context
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.os.Vibrator
+import android.provider.Settings
 import android.view.Display
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -40,9 +45,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,6 +66,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.config.ConfigManager
@@ -71,7 +82,9 @@ import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
@@ -84,6 +97,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -107,7 +121,7 @@ fun MainAppScreen() {
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val showWelcomeTutorial by SettingsManager.showWelcomeTutorial.collectAsState()
+    val welcomeTourCompletedVersion by SettingsManager.welcomeTourCompletedVersion.collectAsState()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
     val isKeyboardSettingsOpen by AppStateManager.isKeyboardSettingsOpen.collectAsState()
     val isTouchpadSettingsOpen by AppStateManager.isTouchpadSettingsOpen.collectAsState()
@@ -115,27 +129,12 @@ fun MainAppScreen() {
     val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
-    var showWelcomeLocal by remember { mutableStateOf(true) }
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
 
     LaunchedEffect(isBackgroundSettingsActive) {
         if (isBackgroundSettingsActive) {
             AppStateManager.setPrivdPromptDismissed(true)
-        }
-    }
-
-    val showQuickMenuTutorial by SettingsManager.showQuickMenuTutorial.collectAsState()
-    var showQuickMenuLocal by remember { mutableStateOf(true) }
-
-    LaunchedEffect(showWelcomeTutorial) {
-        if (showWelcomeTutorial) {
-            showWelcomeLocal = true
-        }
-    }
-    LaunchedEffect(showQuickMenuTutorial) {
-        if (showQuickMenuTutorial) {
-            showQuickMenuLocal = true
         }
     }
 
@@ -205,6 +204,8 @@ fun MainAppScreen() {
     } else {
         BackHandler { showExitDialog = true }
 
+        val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+
         Box(
             modifier =
                 Modifier
@@ -215,8 +216,9 @@ fun MainAppScreen() {
                         kbBarMinX,
                         kbBarMaxX,
                         isGesturesEnabled,
+                        isWizardActive,
                     ) {
-                        if (!isGesturesEnabled) return@pointerInput
+                        if (!isGesturesEnabled || isWizardActive) return@pointerInput
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
@@ -477,37 +479,113 @@ fun MainAppScreen() {
             )
         }
 
-        if (showWelcomeTutorial && showWelcomeLocal) {
-            WelcomeTutorialDialog(
-                onDismiss = {
-                    showWelcomeLocal = false
-                    SettingsManager.setShowWelcomeTutorial(false)
-                },
-            )
-        } else if (showQuickMenuTutorial && showQuickMenuLocal) {
-            QuickMenuTutorialDialog(
+        LaunchedEffect(welcomeTourCompletedVersion) {
+            if (OnboardingWizardManager.shouldAutoStartWizard()) {
+                OnboardingWizardManager.startWizard()
+            }
+        }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(context, lifecycleOwner) {
+            val contentObserver =
+                object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(selfChange: Boolean) {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed, active=$active")
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active && !OnboardingWizardManager.isWizardActive.value) {
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        }
+                    }
+                }
+
+            val uri = Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            context.contentResolver.registerContentObserver(uri, false, contentObserver)
+
+            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+            val listener =
+                AccessibilityManager.AccessibilityStateChangeListener { _ ->
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    if (!active && !OnboardingWizardManager.isWizardActive.value) {
+                        AppLog.w(TAG, "Accessibility State Listener: Service disabled, triggering reconnect dialog")
+                        AppStateManager.setPrivdPromptDismissed(false)
+                    }
+                }
+            am?.addAccessibilityStateChangeListener(listener)
+
+            val observer =
+                LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active && !OnboardingWizardManager.isWizardActive.value) {
+                            AppLog.w(TAG, "ON_RESUME: Accessibility Service disabled, triggering reconnect dialog")
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        }
+                    }
+                }
+            lifecycleOwner.lifecycle.addObserver(observer)
+
+            onDispose {
+                context.contentResolver.unregisterContentObserver(contentObserver)
+                am?.removeAccessibilityStateChangeListener(listener)
+                lifecycleOwner.lifecycle.removeObserver(observer)
+            }
+        }
+
+        if (isWizardActive) {
+            OnboardingWizardDialog(
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
-                    showQuickMenuLocal = false
-                    SettingsManager.setShowQuickMenuTutorial(false)
+                    OnboardingWizardManager.finishWizard()
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    if (!active) {
+                        AppLog.w(TAG, "Welcome Tour finished but Accessibility Service is OFF! Re-triggering reconnect prompt")
+                        AppStateManager.setPrivdPromptDismissed(false)
+                    }
                 },
             )
         }
 
-        if (showPromptDialog) {
-            PrivdReconnectPromptDialog(
-                onConnect = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        PrivdManager.connect(context)
-                    }
-                },
-                onSkip = {
-                    AppStateManager.setPrivdPromptDismissed(true)
-                },
-                onDone = {
-                    AppStateManager.setPrivdPromptDismissed(true)
-                },
-            )
+        var promptInstanceKey by remember { mutableIntStateOf(0) }
+
+        if (showPromptDialog && !isWizardActive) {
+            key(promptInstanceKey) {
+                PrivdReconnectPromptDialog(
+                    onConnect = {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            PrivdManager.connect(context)
+                        }
+                    },
+                    onSkip = {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active) {
+                            AppLog.w(TAG, "Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering fresh reconnect prompt")
+                            promptInstanceKey++
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        } else {
+                            AppStateManager.setPrivdPromptDismissed(true)
+                        }
+                    },
+                    onDone = {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active) {
+                            AppLog.w(
+                                TAG,
+                                "Reconnect dialog finished but Accessibility Service is OFF! Re-triggering fresh reconnect prompt",
+                            )
+                            promptInstanceKey++
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        } else {
+                            AppStateManager.setPrivdPromptDismissed(true)
+                        }
+                    },
+                )
+            }
         }
 
         importError?.let { error ->

@@ -201,4 +201,73 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.isPrivdPromptActive.value)
             assertFalse(AppStateManager.isPrivdPromptDismissed.value)
         }
+
+    @Test
+    fun `setAccessibilityActive updates isAccessibilityActive flow`() =
+        runTest {
+            AppStateManager.setAccessibilityActive(true)
+            assertTrue(AppStateManager.isAccessibilityActive.value)
+
+            AppStateManager.setAccessibilityActive(false)
+            assertFalse(AppStateManager.isAccessibilityActive.value)
+
+            AppStateManager.setAccessibilityActive(true)
+            assertTrue(AppStateManager.isAccessibilityActive.value)
+        }
+
+    @Test
+    fun `deactivating accessibility service triggers reconnect prompt even when Privd is RUNNING`() =
+        runTest {
+            // Reset states
+            AppStateManager.resetPrivdPromptState()
+            AppStateManager.setHasAdbCredentials(true)
+            AppStateManager.setBackgroundSettingsActive(false)
+            AppStateManager.setAccessibilityActive(true)
+            MacroPadSettings.setPrivdShowAdbPromptForTesting(true)
+            PrivdManager.setStateForTesting(PrivdState.RUNNING)
+
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.isPrivdPromptActive.value)
+
+            // Deactivate Accessibility Service -> Prompt becomes active immediately
+            AppStateManager.setAccessibilityActive(false)
+            testScheduler.advanceUntilIdle()
+            assertTrue(AppStateManager.isPrivdPromptActive.value)
+
+            // Re-enable Accessibility Service and dismiss prompt
+            AppStateManager.setAccessibilityActive(true)
+            AppStateManager.setPrivdPromptDismissed(true)
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.isPrivdPromptActive.value)
+        }
+
+    @Test
+    fun `attempting to dismiss prompt while accessibility is disabled keeps prompt active`() =
+        runTest {
+            // Setup initial running state with accessibility active
+            AppStateManager.resetPrivdPromptState()
+            AppStateManager.setHasAdbCredentials(true)
+            AppStateManager.setBackgroundSettingsActive(false)
+            AppStateManager.setAccessibilityActive(true)
+            PrivdManager.setStateForTesting(PrivdState.RUNNING)
+
+            testScheduler.advanceUntilIdle()
+            assertFalse(AppStateManager.isPrivdPromptActive.value)
+
+            // Disable Accessibility Service -> Prompt becomes active
+            AppStateManager.setAccessibilityActive(false)
+            testScheduler.advanceUntilIdle()
+            assertTrue(AppStateManager.isPrivdPromptActive.value)
+
+            // Attempt to dismiss prompt while accessibility is still false
+            AppStateManager.setPrivdPromptDismissed(true)
+            testScheduler.advanceUntilIdle()
+
+            // Prompt MUST remain active because Accessibility Service is mandatory!
+            assertTrue(AppStateManager.isPrivdPromptActive.value)
+            assertFalse(AppStateManager.isPrivdPromptDismissed.value)
+
+            // Cleanup
+            AppStateManager.setAccessibilityActive(true)
+        }
 }

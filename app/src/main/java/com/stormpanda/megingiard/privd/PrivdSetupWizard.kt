@@ -70,49 +70,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
+import com.stormpanda.megingiard.ui.AppMagicalButton
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
-
-@Composable
-private fun rememberMagicalBezelBrush(accentColor: Color = LocalAppColors.current.actionColorSystem): Brush {
-    val transition = rememberInfiniteTransition(label = "MagicalBezel")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 3500, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart,
-            ),
-        label = "Angle",
-    )
-
-    return remember(angle, accentColor) {
-        val rad = Math.toRadians(angle.toDouble())
-        val cos = kotlin.math.cos(rad).toFloat()
-        val sin = kotlin.math.sin(rad).toFloat()
-
-        val startX = 500f * (1f - cos)
-        val startY = 500f * (1f - sin)
-        val endX = 500f * (1f + cos)
-        val endY = 500f * (1f + sin)
-
-        Brush.linearGradient(
-            colorStops =
-                arrayOf(
-                    0.0f to Color.White.copy(alpha = 0.85f),
-                    0.2f to accentColor.copy(alpha = 0.9f),
-                    0.45f to Color.White.copy(alpha = 0.25f),
-                    0.7f to Color.Transparent,
-                    0.85f to accentColor.copy(alpha = 0.5f),
-                    1.0f to Color.White.copy(alpha = 0.85f),
-                ),
-            start = Offset(startX, startY),
-            end = Offset(endX, endY),
-        )
-    }
-}
 
 private const val TAG = "PrivdSetupWizard"
 private const val SW_SCRIM_ALPHA = 0.5f
@@ -485,35 +446,10 @@ private fun StepPair(
                 },
             )
         }
-        val magicalBrush = rememberMagicalBezelBrush()
-        val glowColor = colors.actionColorSystem
-        OutlinedButton(
+        AppMagicalButton(
             onClick = { performAutoFillScan() },
             enabled = !busy && !autoFillScanning,
-            border = BorderStroke(1.5.dp, magicalBrush),
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .drawBehind {
-                        val dy = 1.5.dp.toPx()
-                        val dx = 4.5.dp.toPx()
-                        val pillRadius = (size.height + 2 * dy) / 2f
-
-                        // Outer feathered glow layer
-                        drawRoundRect(
-                            color = glowColor.copy(alpha = 0.08f),
-                            cornerRadius = CornerRadius(pillRadius + 2.dp.toPx()),
-                            size = Size(size.width + 2 * (dx + 2.dp.toPx()), size.height + 2 * dy),
-                            topLeft = Offset(-(dx + 2.dp.toPx()), -dy),
-                        )
-                        // Inner core glow layer
-                        drawRoundRect(
-                            color = glowColor.copy(alpha = 0.16f),
-                            cornerRadius = CornerRadius(pillRadius),
-                            size = Size(size.width + 2 * dx, size.height + 2 * dy),
-                            topLeft = Offset(-dx, -dy),
-                        )
-                    },
+            modifier = Modifier.weight(1f),
         ) {
             if (autoFillScanning) {
                 CircularProgressIndicator(

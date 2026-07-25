@@ -54,17 +54,32 @@ every device since Android 11 (API 30).
   daemon socket on every cold start so users do not need to re-run the
   wizard after each reboot. Auto-connect is unconditionally active.
 
-### FR-PV7: Reconnection Prompt Modal on App Start
+### FR-PV7: Mandatory Accessibility Service & Dynamic Reconnection Wizard
 
-- If Privileged Mode has been previously set up (saved ADB credentials exist) but the connection fails on app start (e.g. because Wireless Debugging was disabled after reboot), the app shows a modal dialog prompting the user to re-enable Privileged Mode.
-- The modal uses the same wording as the global settings "call to action" texts with the same color coding, and has a Connect button to retry and a Skip button to dismiss. If Wireless Debugging is disabled, it also displays a "Developer Settings" button to open the system developer settings directly on the main display.
-- A toggle in Global Settings allows users to enable/disable showing this prompt dialog on app start (default: true/enabled).
+- Accessibility Service is **mandatory** for core Megingiard functionality (automatic game macro profile switching, system dialog dismissal, and auto-setup helper).
+- An event-driven `AccessibilityStateChangeListener` and `ON_RESUME` observer monitor the service status. If Accessibility Service is deactivated in System Settings while the app is active and the Welcome Tour is not running (`!isWizardActive`), the app automatically triggers the compact Reconnection Wizard dialog.
+- The Reconnection Wizard renders a multi-step dialog matching the Welcome Tour styling (`OnboardingStepper`, `AppMagicalButton`, dark backdrop scrim):
+  - **Accessibility Step**: Included whenever Accessibility Service is inactive. The description states that Accessibility is mandatory for core features, and the Skip button is removed.
+  - **Privileged Mode Step**: **Optional**. Excluded dynamically if Privileged Mode is already in the `RUNNING` state and only Accessibility Service is missing. Included if Privileged Mode is disconnected or in `FAILED` state.
+  - **Finished Step**: Displays "You're all set!" with a "Close" finish button.
 
 ### FR-PV8: Accessibility Pairing Auto-Fill
 
 - Step 2 (`StepPair`) of the setup wizard MUST provide an **Auto-fill (read screen)** button.
 - When activated or when entering Step 2, the app MUST inspect visible accessibility text nodes on the primary display (Display 0) via `MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)`.
 - Using `PrivdPairScreenTextScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
+
+### FR-PV9: Multi-Stage Privileged Mode Auto-Setup & Onboarding Tour Integration
+
+- The Privileged Mode card in Global Settings and Step 5 (`PRIVILEGED`) of the Welcome Tour MUST expose an "Auto Setup" button.
+- Clicking the button MUST evaluate device setup conditions and run the appropriate automated pipeline on Display 0 via `MegingiardAccessibilityService`:
+  - **Stage A (Dev Mode Activation)**: If Developer Options are disabled, launches About Phone settings and taps "Build number" 7 times to unlock Developer Mode.
+  - **Stage B (Wireless Debugging Activation)**: If Wireless Debugging is disabled, launches Settings Search, inputs `"Wireless debugging"`, selects the result item, and toggles Wireless Debugging `ON`.
+  - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, opens the pairing dialog, scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
+  - **Full-Service Auto-Connect**: Upon completing pairing or toggling Wireless Debugging for an already paired device, the service MUST automatically initiate `PrivdManager.connect()` to start the privileged daemon seamlessly without extra taps.
+  - **All Set**: If Developer Mode, Wireless Debugging, and ADB pairing are all active, automatically initiates `PrivdManager.connect()` if disconnected and displays a Toast notification: *"You're all set! Privileged Mode is ready."*
+- Step 5 of the Welcome Tour MUST render a live status checklist displaying stage progress icons (`PENDING`, `ACTIVE`, `DONE`) for Developer Options, Wireless Debugging, ADB Pairing, and Daemon Connection.
+- If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
 
 
 ### FR-PV5: No Always-Connected Requirement

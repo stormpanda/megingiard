@@ -96,21 +96,27 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 
 Modal visibility is controlled by a local `Boolean` state variable (`showXxxHelp`) declared with `remember { mutableStateOf(false) }` (or `rememberSaveable` for screens using `Scaffold`). No global state is used; visibility is entirely local to each screen's composable.
 
-### Onboarding & Welcome Dialogs
+### Onboarding Welcome Tour & Wizard
 
-To onboard new users, the app chains two introductory popups upon the first launch:
+To onboard new users, the app runs a 5-step **Onboarding Welcome Tour Wizard** managed by `OnboardingWizardManager` and hosted inside `OnboardingWizardDialog`:
 
-1. **Welcome Onboarding Dialog:**
-   - A `WelcomeTutorialDialog` is shown on first launch to introduce Megingiard\'s features and highlight the in-app help (?) buttons.
-   - It only contains a single "Got it" button, which dismisses the modal and flags it as completed (writing `showWelcomeTutorial = false` to Settings) so that it is never shown again.
-   
-2. **Quick Menu Swipe Onboarding Dialog:**
-   - Appears immediately after the welcome modal is closed for the first time.
-   - Explains how to swipe the edge-anchored quick menu bar indicator to open the Quick Menu.
-   - Renders a styled modal containing a "Got it" button that marks the tutorial as completed.
-   - Displays an animated bouncing arrow pointing directly at the quick menu bar's edge location (aligned top or bottom center depending on the user's overlay placement setting).
+1. **Multi-Step Onboarding Tour:**
+   - **Step 1 (Welcome):** Introduces Megingiard's features and highlights in-app help (`?`) buttons.
+   - **Step 2 (Edge Gestures):** Explains edge swipe gestures with interactive trial drag pills, static edge labels, checkmark completion animations, and a live top/bottom position toggle switch.
+   - **Step 3 (Theme):** Allows selecting a visual theme for the app with a live preview.
+   - **Step 4 (Accessibility Service):** Offers launching Android Accessibility Settings on the bottom screen (`Display.DEFAULT_DISPLAY`) to activate the accessibility service with a 1s polling loop and live status indicator dot, plus a secondary **Skip** button.
+   - **Step 5 (Privileged Mode):** Provides a one-tap multi-stage automated setup process for Developer Options, Wireless Debugging, ADB Wireless Pairing, and Daemon Connection with live checklist status icons, plus a secondary **Skip** button.
+   - **Step 6 (Finished):** Confirms tour completion with a completion icon, summary text, and an explicit **Finish Tour** button.
 
-Both tutorial flags can be reset simultaneously under **Global Settings** -> **Data** -> **Reset tutorials** to show these onboarding experiences again.
+2. **Tour Versioning & Completion Persistence:**
+   - `SettingsManager.welcomeTourCompletedVersion` tracks the integer version of the last completed welcome tour (default `0`, current version `CURRENT_WELCOME_TOUR_VERSION = 1`).
+   - The welcome tour automatically launches if `welcomeTourCompletedVersion < CURRENT_WELCOME_TOUR_VERSION`, ensuring that new tour versions are presented even if a user completed an earlier version.
+   - **Strict Persistence Rule:** Only explicitly clicking the **Finish Tour** button on the final step (`FinishedStepContent`) persists `setWelcomeTourCompletedVersion(CURRENT_WELCOME_TOUR_VERSION)`. Dismissing or skipping the dialog does not persist completion state.
+
+3. **Footer Navigation & Settings Re-run Option:**
+   - Provides `Back` (outlined button), `Skip` (outlined button on Step 4), `Next` (primary button), and `Finish Tour` (primary button) navigation controls.
+   - Users can manually restart the welcome tour anytime via **Global Settings** -> **General** -> **Start Welcome Tour** (first entry in the General settings section).
+   - All tutorial flags can also be reset under **Global Settings** -> **Data** -> **Reset tutorials**.
 
 ### String resource conventions
 
@@ -136,8 +142,10 @@ help_close_cd  — content description for the Close button
 | File | Responsibility |
 |---|---|
 | `ui/HelpModal.kt` | Shared `HelpModal`, `HelpIconButton`, `HelpEntry`, `HelpSection`, `HelpIntro` composables |
-| `ui/WelcomeTutorialDialog.kt` | First-boot welcome onboarding dialog |
-| `ui/QuickMenuTutorialDialog.kt` | Swipe menu affordance onboarding dialog |
+| `onboarding/OnboardingWizardManager.kt` | Domain state singleton managing onboarding tour steps and auto-skipping |
+| `ui/onboarding/OnboardingWizardDialog.kt` | Multi-step tour host dialog with `OnboardingStepper` header and step navigation |
+| `ui/WelcomeTutorialDialog.kt` | Step 1 (`WelcomeStepContent`) onboarding content |
+| `ui/QuickMenuTutorialDialog.kt` | Step 2 (`QuickMenuStepContent`) gesture trial onboarding content |
 | `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -16,14 +17,16 @@ private val WT_CONTENT_SPACING = 16.dp
 private val WT_INTRO_SPACING = 6.dp
 
 @Composable
-fun WelcomeTutorialDialog(onDismiss: () -> Unit) {
+fun WelcomeStepContent() {
     val colors = LocalAppColors.current
 
-    AppTutorialModal(
-        title = stringResource(R.string.welcome_title),
-        tag = TAG,
-        onDismiss = onDismiss,
-    ) {
+    Column {
+        Text(
+            text = stringResource(R.string.welcome_title),
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = stringResource(R.string.welcome_desc),
             color = colors.onSurfaceSecondary,
@@ -42,5 +45,16 @@ fun WelcomeTutorialDialog(onDismiss: () -> Unit) {
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodyMedium,
         )
+    }
+}
+
+@Composable
+fun WelcomeTutorialDialog(onDismiss: () -> Unit) {
+    AppTutorialModal(
+        title = stringResource(R.string.welcome_title),
+        tag = TAG,
+        onDismiss = onDismiss,
+    ) {
+        WelcomeStepContent()
     }
 }

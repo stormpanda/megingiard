@@ -106,6 +106,7 @@ import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -121,6 +122,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.paletteFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -411,8 +413,10 @@ class MirrorPresentation(
                             val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
                             val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
                             val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
+                            val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
                             val isGesturesEnabled =
-                                !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
+                                !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive &&
+                                    !isWizardActive
                             val density = LocalDensity.current
                             val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
                             val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
@@ -815,6 +819,16 @@ class MirrorPresentation(
                                 ) {
                                     TouchpadSettingsOverlay(
                                         onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
+                                    )
+                                }
+
+                                val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+                                if (isWizardActive) {
+                                    OnboardingWizardDialog(
+                                        overlayAtBottom = overlayAtBottom,
+                                        onDismiss = {
+                                            OnboardingWizardManager.finishWizard()
+                                        },
                                     )
                                 }
                             }

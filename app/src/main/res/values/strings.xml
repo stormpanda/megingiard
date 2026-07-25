@@ -40,7 +40,7 @@
     <string name="theme_aurora">Aurora Borealis</string>
     <string name="theme_retro_phosphor">Retro Phosphor</string>
     <string name="theme_royal_asgard">Royal Asgard</string>
-    <string name="settings_overlay_position">Place controls at bottom</string>
+    <string name="settings_overlay_position">Place quick menu bars at bottom</string>
     <string name="settings_overlay_fade_out">Fade out controls</string>
     <string name="settings_overlay_fade_out_desc">Fade out the quick menu bar overlay after a few seconds of inactivity</string>
     <string name="mirror_edge_blend_label">Edge blending</string>
@@ -360,6 +360,10 @@ Open Settings to create a layout.</string>
     <string name="privd_action_disconnect">Disconnect</string>
     <string name="privd_action_test">Test connection</string>
     <string name="privd_action_show_wizard">Set up…</string>
+    <string name="privd_action_test_autotoggle">Test Auto-Toggle</string>
+    <string name="privd_action_auto_setup">Auto Setup</string>
+    <string name="privd_toast_accessibility_required">Accessibility Service is required for auto-toggle. Please enable it in Settings.</string>
+    <string name="privd_toast_all_set">You’re all set! Privileged Mode is ready.</string>
     <string name="privd_ping_ok">Daemon responded — connection is healthy.</string>
     <string name="privd_ping_fail">No response from daemon. The connection may be stale.</string>
 
@@ -1009,9 +1013,47 @@ Open Settings to create a layout.</string>
     <string name="macro_tutorial_btn_got_it">Got it</string>
     <string name="macro_tutorial_btn_dont_show">Don\'t show again</string>
 
+    <!-- Onboarding Wizard -->
+    <string name="settings_start_welcome_tour">Start Welcome Tour</string>
+    <string name="settings_start_welcome_tour_desc">Re-run the step-by-step onboarding guide and edge gesture tour</string>
+    <string name="onboarding_step_welcome">Welcome</string>
+    <string name="onboarding_step_quick_menu">Edge Gestures</string>
+    <string name="onboarding_step_theme">Theme</string>
+    <string name="onboarding_theme_title">Choose Your Style</string>
+    <string name="onboarding_theme_desc">Select a visual theme for Megingiard. You can change this at any time in Global Settings.</string>
+    <string name="onboarding_theme_prev">Previous Theme</string>
+    <string name="onboarding_theme_next">Next Theme</string>
+    <string name="onboarding_step_accessibility">Accessibility</string>
+    <string name="onboarding_accessibility_title">Accessibility Service</string>
+    <string name="onboarding_accessibility_desc">Accessibility Service is mandatory for Megingiard. It is necessary for core features like automatic macro profile switching when launching games and setting up Privileged Mode, as well as upcoming features.</string>
+    <string name="onboarding_step_privileged">Privileged Mode</string>
+    <string name="onboarding_privd_title">Privileged Mode (recommended!)</string>
+    <string name="onboarding_privd_desc">Unlocks low-latency direct touch injection, trackpoint precision, and physical gamepad recording without root or PC connection. You can use Auto Setup for a one-tap automated configuration.</string>
+    <string name="onboarding_privd_auto_setup">Start Auto Setup</string>
+    <string name="privd_reconnect_title">Reconnect Privileged Mode</string>
+    <string name="privd_reconnect_desc">Privileged Mode was disconnected, for example because of a device reboot or because Wireless Debugging was deactivated.</string>
+    <string name="privd_reconnect_auto_button">Auto Reconnect</string>
+    <string name="privd_reconnect_all_set">You\'re All Set!</string>
+    <string name="privd_reconnect_btn_close">Close</string>
+    <string name="onboarding_privd_stage_dev">Developer Options</string>
+    <string name="onboarding_privd_stage_wireless">Wireless Debugging</string>
+    <string name="onboarding_privd_stage_pairing">ADB Wireless Pairing</string>
+    <string name="onboarding_privd_stage_daemon">Daemon Connection</string>
+    <string name="onboarding_privd_wifi_warning">Wi-Fi is turned off. Wi-Fi must be enabled on your device to make Wireless Debugging possible.</string>
+    <string name="onboarding_step_finished">Finished</string>
+    <string name="onboarding_finished_title">You\'re All Set! Ready to Tinker?</string>
+    <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>
+    <string name="onboarding_step_counter">Step %1$d of %2$d</string>
+    <string name="onboarding_btn_next">Next</string>
+    <string name="onboarding_btn_back">Back</string>
+    <string name="onboarding_btn_skip">Skip</string>
+    <string name="onboarding_btn_finish">Yeah man, I wanna do it!</string>
     <!-- Quick Menu Tutorial -->
     <string name="quick_menu_tutorial_title">Opening the Menu</string>
-    <string name="quick_menu_tutorial_body">Swipe the quick menu bar indicator at the edge of the screen to open the Quick Menu. You can use it to switch profiles, layouts, or settings quickly.\n\nNote: You can configure the bar to fade out automatically in Global Settings (Appearance) if you prefer a cleaner look. This behavior is disabled by default.</string>
+    <string name="quick_menu_tutorial_body">Swipe any of the 3 quick menu bars to try out the gestures! Pulling a bar past the threshold confirms the gesture with a checkmark if executed correctly.</string>
+    <string name="quick_menu_label_keyboard">Keyboard</string>
+    <string name="quick_menu_label_menu">Menu</string>
+    <string name="quick_menu_label_mouse">Mouse</string>
 
     <!-- SteamGridDB integration -->
     <string name="settings_steamgriddb_token">SteamGridDB API Token</string>
