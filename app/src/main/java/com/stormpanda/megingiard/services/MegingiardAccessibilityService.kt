@@ -49,8 +49,6 @@ private enum class AutoToggleStage {
     ENTER_SEARCH_QUERY,
     CLICK_SEARCH_RESULT,
     TOGGLE_SWITCH,
-    ENTER_PAIRING_SEARCH_QUERY,
-    CLICK_PAIRING_SEARCH_RESULT,
     CLICK_PAIR_DIALOG,
     SCAN_PAIRING_CODE_AND_PAIR,
 }
@@ -189,12 +187,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                     if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING &&
                                         !isMegingiardInPairedDevices(rootNode)
                                     ) {
-                                        AppLog.i(
-                                            TAG,
-                                            "startAutoToggleLoop: Advancing to Stage C (Launching Search for Pair device with pairing code)",
-                                        )
-                                        autoToggleStage = AutoToggleStage.ENTER_PAIRING_SEARCH_QUERY
-                                        launchSearchActivity(context, displayOptions)
+                                        AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Clicking Pair Dialog row)")
+                                        autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
                                     } else {
                                         AppLog.i(TAG, "startAutoToggleLoop: Auto-setup pipeline completed successfully")
                                         autoTogglePendingTimestamp = 0L
@@ -203,41 +197,23 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 }
                             }
 
-                            AutoToggleStage.ENTER_PAIRING_SEARCH_QUERY -> {
-                                val entered = findAndSetSearchQuery(rootNode, "Pair device with pairing code")
-                                if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Pair device with pairing code' for Stage C")
-                                    autoToggleStage = AutoToggleStage.CLICK_PAIRING_SEARCH_RESULT
-                                }
-                            }
-
-                            AutoToggleStage.CLICK_PAIRING_SEARCH_RESULT -> {
-                                val clicked =
-                                    findAndClickSearchResultItem(
-                                        rootNode,
-                                        "pair device with pairing code",
-                                        "geräte-kopplungscode",
-                                        "kopplungscode koppeln",
-                                        "pair with pairing code",
-                                    )
-                                if (clicked) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair device with pairing code search result")
-                                    autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
-                                }
-                            }
-
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
                                 val clickedPair = findAndClickPairDialog(rootNode)
                                 if (clickedPair) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row")
+                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row, advancing to SCAN_PAIRING_CODE_AND_PAIR")
                                     autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
+                                } else {
+                                    val clickedSubScreen =
+                                        findAndClickSearchResultItem(rootNode, "wireless debugging", "drahtloses debugging")
+                                    if (clickedSubScreen) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging row text to enter sub-screen")
+                                    }
                                 }
                             }
 
                             AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR -> {
-                                val sb = StringBuilder()
-                                collectAllText(rootNode, sb)
-                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(sb.toString())
+                                val allText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText)
                                 if (scanResult.isComplete) {
                                     val portInt = scanResult.port?.toIntOrNull()
                                     val codeStr = scanResult.code
