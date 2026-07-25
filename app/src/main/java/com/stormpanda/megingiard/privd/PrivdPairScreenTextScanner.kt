@@ -23,7 +23,10 @@ data class PrivdPairScreenTextResult(
 object PrivdPairScreenTextScanner {
     private val PAIRING_CODE_REGEX = Regex("""\b(\d{6})\b""")
     private val IP_PORT_REGEX = Regex("""\b(?:\d{1,3}\.){3}\d{1,3}:(\d{4,5})\b""")
-    private val EXPLICIT_PORT_REGEX = Regex("""(?i)(?:port|ip address & port|address & port)[:\s]*(\d{4,5})\b""")
+    private val EXPLICIT_PORT_REGEX =
+        Regex(
+            """(?i)(?:port|ip address & port|address & port|ip-adresse und port|ip-adresse & port|wlan-kopplungscode|dirección ip y puerto|direccion ip y puerto|adresse ip et port)[:\s]*(\d{4,5})\b""",
+        )
     private val FIVE_DIGIT_PORT_REGEX = Regex("""\b(\d{5})\b""")
 
     /**

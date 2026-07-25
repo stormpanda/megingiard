@@ -6,6 +6,7 @@ import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.BitmapFactory
 import android.media.MediaScannerConnection
 import android.os.Build
@@ -13,6 +14,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.LocaleList
 import android.os.Process
+import android.provider.Settings
 import android.view.Display
 import android.view.WindowManager
 import android.widget.Toast
@@ -213,6 +215,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
+        logColdStartLocaleDiagnostics()
 
         // Init settings first so the persisted log level is active before anything
         // else runs (including SignatureGuard below). SettingsManager.init() reads
@@ -398,11 +401,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
-            SettingsManager.appLanguage.drop(1).collect { lang ->
+            SettingsManager.appLanguage.collect { lang ->
                 AppLog.d(TAG, "appLanguage changed to $lang → applying locales")
                 val desired =
                     when (lang) {
-                        AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
+                        AppLanguage.SYSTEM -> LocaleList.getDefault()
                         AppLanguage.EN -> LocaleList(Locale.ENGLISH)
                         AppLanguage.DE -> LocaleList(Locale.GERMAN)
                     }
@@ -749,6 +752,62 @@ class MainActivity : ComponentActivity() {
                 action = ACTION_STOP
             }
         startService(stopIntent)
+    }
+
+    private fun logColdStartLocaleDiagnostics() {
+        AppLog.i(TAG, "=== COLD START LOCALE DIAGNOSTICS BEGIN ===")
+
+        val defaultLocale = Locale.getDefault()
+        AppLog.i(
+            TAG,
+            "1. Locale.getDefault() -> tag=${defaultLocale.toLanguageTag()}, lang=${defaultLocale.language}, country=${defaultLocale.country}",
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val llDefault = LocaleList.getDefault()
+            AppLog.i(TAG, "2. LocaleList.getDefault() -> toLanguageTags=${llDefault.toLanguageTags()}, size=${llDefault.size()}")
+        }
+
+        val sysConfig = Resources.getSystem().configuration
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            AppLog.i(TAG, "3. Resources.getSystem().configuration.locales -> toLanguageTags=${sysConfig.locales.toLanguageTags()}")
+        } else {
+            @Suppress("DEPRECATION")
+            AppLog.i(TAG, "3. Resources.getSystem().configuration.locale -> ${sysConfig.locale}")
+        }
+
+        val appContextConfig = applicationContext.resources.configuration
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            AppLog.i(
+                TAG,
+                "4. applicationContext.resources.configuration.locales -> toLanguageTags=${appContextConfig.locales.toLanguageTags()}",
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            AppLog.i(TAG, "4. applicationContext.resources.configuration.locale -> ${appContextConfig.locale}")
+        }
+
+        val activityConfig = resources.configuration
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            AppLog.i(TAG, "5. Activity resources.configuration.locales -> toLanguageTags=${activityConfig.locales.toLanguageTags()}")
+        } else {
+            @Suppress("DEPRECATION")
+            AppLog.i(TAG, "5. Activity resources.configuration.locale -> ${activityConfig.locale}")
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val lm = getSystemService(LocaleManager::class.java)
+            AppLog.i(TAG, "6a. LocaleManager.applicationLocales -> toLanguageTags=${lm?.applicationLocales?.toLanguageTags()}")
+            AppLog.i(TAG, "6b. LocaleManager.systemLocales -> toLanguageTags=${lm?.systemLocales?.toLanguageTags()}")
+        }
+
+        val sysLocalesSettingSystem = Settings.System.getString(contentResolver, "system_locales")
+        val sysLocalesSettingGlobal = Settings.Global.getString(contentResolver, "system_locales")
+        AppLog.i(TAG, "7. Settings system_locales -> System='$sysLocalesSettingSystem', Global='$sysLocalesSettingGlobal'")
+
+        AppLog.i(TAG, "8. SettingsManager.appLanguage -> ${SettingsManager.appLanguage.value}")
+
+        AppLog.i(TAG, "=== COLD START LOCALE DIAGNOSTICS END ===")
     }
 
     /** Called when the app is already running and receives a new ACTION_VIEW intent. */

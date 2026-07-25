@@ -93,7 +93,7 @@ fun PrivdReconnectPromptDialog(
     val colors = LocalAppColors.current
 
     val isAccessibilityActiveAtStart = remember { MegingiardAccessibilityService.isEnabled(context) }
-    val privdStateAtStart = PrivdManager.state.value
+    val privdStateAtStart = remember { PrivdManager.state.value }
 
     val stepIds =
         remember(isAccessibilityActiveAtStart, privdStateAtStart) {

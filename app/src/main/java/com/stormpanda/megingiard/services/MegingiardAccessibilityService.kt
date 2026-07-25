@@ -3,14 +3,17 @@ package com.stormpanda.megingiard.services
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.app.ActivityOptions
+import android.app.LocaleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Path
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.LocaleList
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.Display
@@ -36,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 private const val TAG = "MegingiardAccessService"
 private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
@@ -117,17 +121,47 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && autoTogglePendingTimestamp != 0L) {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
+                        val handledAllowDialog = findAndClickAllowNetworkDialog(rootNode)
+                        if (handledAllowDialog) {
+                            AppLog.i(TAG, "startAutoToggleLoop: Handled Allow Wireless Debugging network dialog")
+                            delay(500L)
+                            continue
+                        }
+
                         when (autoToggleStage) {
                             AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
-                                val entered = findAndSetSearchQuery(rootNode, "Build number")
+                                val langCode = getPrimaryLanguageCode()
+                                val config = getAutoSetupConfig(langCode)
+
+                                var entered = false
+                                var chosenQuery = ""
+                                for (query in config.buildNumberKeywords) {
+                                    if (findAndSetSearchQuery(rootNode, query)) {
+                                        entered = true
+                                        chosenQuery = query
+                                        break
+                                    }
+                                }
+
                                 if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Build number' for Stage A")
+                                    AppLog.i(
+                                        TAG,
+                                        "startAutoToggleLoop: Entered search query '$chosenQuery' for Stage A (langCode=$langCode)",
+                                    )
                                     autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT
+                                } else {
+                                    val clickedBar = findAndClickSearchBar(rootNode)
+                                    if (clickedBar) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar fallback for Stage A")
+                                        autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER
+                                    }
                                 }
                             }
 
                             AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT -> {
-                                val clicked = findAndClickSearchResultItem(rootNode, "build number", "build-nummer")
+                                val langCode = getPrimaryLanguageCode()
+                                val config = getAutoSetupConfig(langCode)
+                                val clicked = findAndClickSearchResultItem(rootNode, *config.buildNumberKeywords.toTypedArray())
                                 if (clicked) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Build number search result")
                                     autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER
@@ -152,9 +186,21 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.ENTER_SEARCH_QUERY -> {
-                                val entered = findAndSetSearchQuery(rootNode, "Wireless debugging")
+                                val langCode = getPrimaryLanguageCode()
+                                val config = getAutoSetupConfig(langCode)
+
+                                var entered = false
+                                var chosenQuery = ""
+                                for (query in config.searchQueries) {
+                                    if (findAndSetSearchQuery(rootNode, query)) {
+                                        entered = true
+                                        chosenQuery = query
+                                        break
+                                    }
+                                }
+
                                 if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Wireless debugging'")
+                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query '$chosenQuery' (langCode=$langCode)")
                                     autoToggleStage = AutoToggleStage.CLICK_SEARCH_RESULT
                                 } else {
                                     val clickedBar = findAndClickSearchBar(rootNode)
@@ -207,15 +253,20 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
+                                val langCode = getPrimaryLanguageCode()
+                                val config = getAutoSetupConfig(langCode)
                                 val clickedPair = findAndClickPairDialog(rootNode)
                                 if (clickedPair) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row, advancing to SCAN_PAIRING_CODE_AND_PAIR")
                                     autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
                                 } else {
                                     val clickedSubScreen =
-                                        findAndClickSearchResultItem(rootNode, "wireless debugging", "drahtloses debugging")
+                                        findAndClickSearchResultItem(rootNode, *config.wirelessKeywords.toTypedArray())
                                     if (clickedSubScreen) {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging row text to enter sub-screen")
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: Clicked Wireless Debugging row text to enter sub-screen (langCode=$langCode)",
+                                        )
                                     }
                                 }
                             }
@@ -370,20 +421,21 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun findAndClickSearchResult(node: AccessibilityNodeInfo): Boolean =
-        findAndClickSearchResultItem(node, "wireless debugging", "wireless-debugging", "drahtloses debugging", "drahtlos-debugging")
+    private fun findAndClickSearchResult(node: AccessibilityNodeInfo): Boolean {
+        val langCode = getPrimaryLanguageCode()
+        val config = getAutoSetupConfig(langCode)
+        return findAndClickSearchResultItem(node, *config.wirelessKeywords.toTypedArray())
+    }
 
     private fun findAndToggleSwitch(node: AccessibilityNodeInfo): Boolean {
+        val langCode = getPrimaryLanguageCode()
+        val config = getAutoSetupConfig(langCode)
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc $viewId".lowercase()
 
-        val isWirelessText =
-            combined.contains("wireless debugging") ||
-                combined.contains("wireless-debugging") ||
-                combined.contains("drahtloses debugging") ||
-                combined.contains("drahtlos-debugging")
+        val isWirelessText = config.wirelessKeywords.any { combined.contains(it) }
 
         if (isWirelessText) {
             val switchNode = findSwitchOrCheckable(node) ?: node
@@ -435,15 +487,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun findAndClickBuildNumber(node: AccessibilityNodeInfo): Boolean {
+        val langCode = getPrimaryLanguageCode()
+        val config = getAutoSetupConfig(langCode)
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc $viewId".lowercase()
 
-        val isBuildNumber =
-            combined.contains("build number") ||
-                combined.contains("build-nummer") ||
-                viewId.contains("build_number")
+        val isBuildNumber = config.buildNumberKeywords.any { combined.contains(it) } || viewId.contains("build_number")
 
         if (isBuildNumber) {
             val clickable = findClickableAncestorOrSelf(node) ?: node
@@ -478,16 +529,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun findAndClickPairDialog(node: AccessibilityNodeInfo): Boolean {
+        val langCode = getPrimaryLanguageCode()
+        val config = getAutoSetupConfig(langCode)
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc $viewId".lowercase()
 
-        val isPairItem =
-            combined.contains("pair device with pairing code") ||
-                combined.contains("geräte-kopplungscode") ||
-                combined.contains("kopplungscode koppeln") ||
-                combined.contains("pair with pairing code")
+        val isPairItem = config.pairingDialogKeywords.any { combined.contains(it) }
 
         if (isPairItem) {
             val clickable = findClickableAncestorOrSelf(node) ?: node
@@ -500,6 +549,99 @@ class MegingiardAccessibilityService : AccessibilityService() {
             if (findAndClickPairDialog(child)) return true
         }
         return false
+    }
+
+    private fun findAndClickAllowNetworkDialog(rootNode: AccessibilityNodeInfo): Boolean {
+        val sb = StringBuilder()
+        collectAllText(rootNode, sb)
+        val fullText = sb.toString().lowercase()
+
+        val hasAllow =
+            fullText.contains("zulassen") || fullText.contains("allow") || fullText.contains("permitir") || fullText.contains("autoriser")
+        val hasNetwork =
+            fullText.contains("netzwerk") || fullText.contains("network") || fullText.contains("red") || fullText.contains("réseau") ||
+                fullText.contains("reseau") ||
+                fullText.contains("wlan") ||
+                fullText.contains("debugging")
+
+        if (!hasAllow || !hasNetwork) {
+            return false
+        }
+
+        AppLog.i(TAG, "findAndClickAllowNetworkDialog: Network trust dialog detected on screen")
+
+        val langCode = getPrimaryLanguageCode()
+        val config = getAutoSetupConfig(langCode)
+
+        val positiveBtn = findPositiveButton(rootNode, config.allowButtonKeywords)
+        if (positiveBtn != null) {
+            val target = findClickableAncestorOrSelf(positiveBtn) ?: positiveBtn
+            AppLog.i(
+                TAG,
+                "findAndClickAllowNetworkDialog: Found positive button, attempting click on target (clickable=${target.isClickable})",
+            )
+            val clicked = target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            if (clicked) {
+                AppLog.i(TAG, "findAndClickAllowNetworkDialog: Successfully clicked positive button")
+                return true
+            } else {
+                AppLog.w(
+                    TAG,
+                    "findAndClickAllowNetworkDialog: performAction(ACTION_CLICK) returned false on target, trying direct positiveBtn click",
+                )
+                val directClicked = positiveBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (directClicked) {
+                    AppLog.i(TAG, "findAndClickAllowNetworkDialog: Successfully clicked direct positiveBtn node")
+                    return true
+                }
+            }
+        } else {
+            AppLog.w(
+                TAG,
+                "findAndClickAllowNetworkDialog: Dialog detected but findPositiveButton returned null! Full dialog text:\n$fullText",
+            )
+        }
+
+        return false
+    }
+
+    private fun findPositiveButton(
+        node: AccessibilityNodeInfo,
+        buttonKeywords: List<String>,
+    ): AccessibilityNodeInfo? {
+        val className = node.className?.toString() ?: ""
+        if (node.isCheckable || className.contains("CheckBox") || className.contains("Checkable")) {
+            return null
+        }
+
+        var ancestor = node.parent
+        while (ancestor != null) {
+            val aClass = ancestor.className?.toString() ?: ""
+            if (ancestor.isCheckable || aClass.contains("CheckBox") || aClass.contains("Checkable")) {
+                return null
+            }
+            ancestor = ancestor.parent
+        }
+
+        val viewId = node.viewIdResourceName ?: ""
+        val text = (node.text?.toString() ?: "").trim()
+        val contentDesc = (node.contentDescription?.toString() ?: "").trim()
+        val exactText = text.ifBlank { contentDesc }.lowercase()
+
+        val isPositiveId = viewId.endsWith(":id/button1") || viewId.contains("button1")
+        val isMatchingText = buttonKeywords.any { exactText == it }
+
+        if (isPositiveId || isMatchingText) {
+            AppLog.i(TAG, "findPositiveButton: Found button match '$exactText' ($viewId, $className, clickable=${node.isClickable})")
+            return node
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findPositiveButton(child, buttonKeywords)
+            if (found != null) return found
+        }
+        return null
     }
 
     private fun collectAllText(
@@ -555,6 +697,156 @@ class MegingiardAccessibilityService : AccessibilityService() {
         AppLog.i(TAG, "onDestroy: Accessibility Service destroyed")
         AppStateManager.setAccessibilityActive(false)
         AppStateManager.setPrivdPromptDismissed(false)
+    }
+
+    private data class AutoSetupLangConfig(
+        val searchQueries: List<String>,
+        val wirelessKeywords: List<String>,
+        val buildNumberKeywords: List<String>,
+        val pairingDialogKeywords: List<String>,
+        val allowButtonKeywords: List<String>,
+    )
+
+    private val AUTO_SETUP_CONFIGS =
+        mapOf(
+            "de" to
+                AutoSetupLangConfig(
+                    searchQueries =
+                        listOf(
+                            "Debugging über WLAN",
+                            "Drahtloses Debugging",
+                            "WLAN-Debugging",
+                            "Wireless debugging",
+                        ),
+                    wirelessKeywords =
+                        listOf(
+                            "debugging über wlan",
+                            "debugging uber wlan",
+                            "drahtloses debugging",
+                            "drahtlos-debugging",
+                            "wlan-debugging",
+                            "wlan debugging",
+                        ),
+                    buildNumberKeywords = listOf("build-nummer", "buildnummer"),
+                    pairingDialogKeywords =
+                        listOf(
+                            "gerät über einen kopplungscode koppeln",
+                            "gerät über kopplungscode koppeln",
+                            "gerät mit kopplungscode koppeln",
+                            "mit kopplungscode koppeln",
+                            "geräte-kopplungscode",
+                            "kopplungscode koppeln",
+                            "wlan-kopplungscode",
+                            "wlan-kopplungscode koppeln",
+                            "kopplungscode",
+                        ),
+                    allowButtonKeywords = listOf("zulassen", "ok"),
+                ),
+            "es" to
+                AutoSetupLangConfig(
+                    searchQueries =
+                        listOf(
+                            "Depuración inalámbrica",
+                            "Depuración por Wi-Fi",
+                            "Depuracion inalambrica",
+                            "Depuracion por Wi-Fi",
+                            "Wireless debugging",
+                        ),
+                    wirelessKeywords =
+                        listOf(
+                            "depuración inalámbrica",
+                            "depuración por wi-fi",
+                            "depuracion inalambrica",
+                            "depuracion por wi-fi",
+                            "depurar por wi-fi",
+                        ),
+                    buildNumberKeywords = listOf("número de compilación", "numero de compilacion"),
+                    pairingDialogKeywords =
+                        listOf(
+                            "emparejar dispositivo con código de sincronización",
+                            "emparejar dispositivo con codigo de sincronizacion",
+                            "código de sincronización",
+                            "codigo de sincronizacion",
+                            "vincular dispositivo mediante código de vinculación",
+                            "vincular dispositivo con código de vinculación",
+                            "vincular con código de vinculación",
+                            "código de vinculación",
+                            "vincular dispositivo",
+                        ),
+                    allowButtonKeywords = listOf("permitir", "ok"),
+                ),
+            "fr" to
+                AutoSetupLangConfig(
+                    searchQueries = listOf("Débogage sans fil", "Debogage sans fil", "Wireless debugging"),
+                    wirelessKeywords = listOf("débogage sans fil", "debogage sans fil", "débogage wi-fi", "debogage wi-fi"),
+                    buildNumberKeywords = listOf("numéro de build", "numero de build"),
+                    pairingDialogKeywords =
+                        listOf(
+                            "associer l'appareil avec un code d'association",
+                            "associer le périphérique avec un code d'association",
+                            "appairer l'appareil avec un code de synchronisation",
+                            "code d'association via le wi-fi",
+                            "code d'association",
+                            "code de synchronisation",
+                            "appairer l'appareil",
+                            "associer le périphérique",
+                        ),
+                    allowButtonKeywords = listOf("autoriser", "ok"),
+                ),
+        )
+
+    private fun getPrimaryLanguageCode(): String {
+        // Priority 1: LocaleManager.systemLocales (Android 13+ / API 33+)
+        // Returns the pure OS System Locales set in Android Settings, immune to per-app locale overrides
+        val lmSysLang =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val lm = getSystemService(LocaleManager::class.java)
+                val sysLocales = lm?.systemLocales
+                if (sysLocales != null && sysLocales.size() > 0) {
+                    sysLocales.get(0)?.language
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+
+        // Priority 2: Raw system_locales setting from Android Settings provider
+        val rawSysLocales = Settings.System.getString(contentResolver, "system_locales")
+        val rawSysLang =
+            rawSysLocales
+                ?.split(",")
+                ?.firstOrNull()
+                ?.split("-")
+                ?.firstOrNull()
+                ?.trim()
+
+        // Fallback: Locale.getDefault()
+        val appLang = Locale.getDefault().language
+
+        val detected = listOfNotNull(lmSysLang, rawSysLang, appLang).firstOrNull { !it.isNullOrBlank() } ?: "en"
+        AppLog.i(TAG, "getPrimaryLanguageCode -> lmSysLang=$lmSysLang, rawSysLang=$rawSysLang, appLang=$appLang => detected=$detected")
+        return detected.lowercase()
+    }
+
+    private fun getAutoSetupConfig(langCode: String): AutoSetupLangConfig {
+        val defaultConfig =
+            AutoSetupLangConfig(
+                searchQueries = listOf("Wireless debugging"),
+                wirelessKeywords = listOf("wireless debugging", "wireless-debugging"),
+                buildNumberKeywords = listOf("build number", "build_number"),
+                pairingDialogKeywords = listOf("pair device with pairing code", "pair with pairing code"),
+                allowButtonKeywords = listOf("allow", "ok"),
+            )
+
+        val specific = AUTO_SETUP_CONFIGS[langCode] ?: return defaultConfig
+        return AutoSetupLangConfig(
+            searchQueries = (specific.searchQueries + defaultConfig.searchQueries).distinct(),
+            wirelessKeywords = (specific.wirelessKeywords + defaultConfig.wirelessKeywords).distinct(),
+            buildNumberKeywords = (specific.buildNumberKeywords + defaultConfig.buildNumberKeywords).distinct(),
+            pairingDialogKeywords = (specific.pairingDialogKeywords + defaultConfig.pairingDialogKeywords).distinct(),
+            allowButtonKeywords = (specific.allowButtonKeywords + defaultConfig.allowButtonKeywords).distinct(),
+        )
     }
 
     companion object {
