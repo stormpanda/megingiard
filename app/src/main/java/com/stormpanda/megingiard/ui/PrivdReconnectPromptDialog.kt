@@ -156,6 +156,12 @@ fun PrivdReconnectPromptDialog(
         }
     }
 
+    LaunchedEffect(isAccessibilityActive) {
+        if (!isAccessibilityActive) {
+            activeStepIndex = 0
+        }
+    }
+
     val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
     val privdState by PrivdManager.state.collectAsState()
     var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }

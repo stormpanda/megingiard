@@ -49,6 +49,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -547,34 +549,43 @@ fun MainAppScreen() {
             )
         }
 
+        var promptInstanceKey by remember { mutableIntStateOf(0) }
+
         if (showPromptDialog && !isWizardActive) {
-            PrivdReconnectPromptDialog(
-                onConnect = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        PrivdManager.connect(context)
-                    }
-                },
-                onSkip = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
-                    if (!active) {
-                        AppLog.w(TAG, "Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering reconnect prompt")
-                        AppStateManager.setPrivdPromptDismissed(false)
-                    } else {
-                        AppStateManager.setPrivdPromptDismissed(true)
-                    }
-                },
-                onDone = {
-                    val active = MegingiardAccessibilityService.isEnabled(context)
-                    AppStateManager.setAccessibilityActive(active)
-                    if (!active) {
-                        AppLog.w(TAG, "Reconnect dialog finished but Accessibility Service is OFF! Re-triggering reconnect prompt")
-                        AppStateManager.setPrivdPromptDismissed(false)
-                    } else {
-                        AppStateManager.setPrivdPromptDismissed(true)
-                    }
-                },
-            )
+            key(promptInstanceKey) {
+                PrivdReconnectPromptDialog(
+                    onConnect = {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            PrivdManager.connect(context)
+                        }
+                    },
+                    onSkip = {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active) {
+                            AppLog.w(TAG, "Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering fresh reconnect prompt")
+                            promptInstanceKey++
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        } else {
+                            AppStateManager.setPrivdPromptDismissed(true)
+                        }
+                    },
+                    onDone = {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active) {
+                            AppLog.w(
+                                TAG,
+                                "Reconnect dialog finished but Accessibility Service is OFF! Re-triggering fresh reconnect prompt",
+                            )
+                            promptInstanceKey++
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        } else {
+                            AppStateManager.setPrivdPromptDismissed(true)
+                        }
+                    },
+                )
+            }
         }
 
         importError?.let { error ->
