@@ -481,7 +481,7 @@ fun MainAppScreen() {
 
         LaunchedEffect(welcomeTourCompletedVersion) {
             if (OnboardingWizardManager.shouldAutoStartWizard()) {
-                OnboardingWizardManager.startWizard(context)
+                OnboardingWizardManager.startWizard()
             }
         }
 

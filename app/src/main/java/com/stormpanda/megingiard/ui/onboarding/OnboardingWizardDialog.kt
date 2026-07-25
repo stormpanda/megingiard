@@ -215,7 +215,7 @@ fun OnboardingWizardDialog(
 
     BackHandler(enabled = true) {
         if (!isFirstStep) {
-            OnboardingWizardManager.prevStep(context)
+            OnboardingWizardManager.prevStep()
         }
     }
 
@@ -315,7 +315,7 @@ fun OnboardingWizardDialog(
             ) {
                 if (!isFirstStep) {
                     OutlinedButton(
-                        onClick = { OnboardingWizardManager.prevStep(context) },
+                        onClick = { OnboardingWizardManager.prevStep() },
                     ) {
                         Text(
                             text = stringResource(R.string.onboarding_btn_back),
@@ -332,7 +332,7 @@ fun OnboardingWizardDialog(
                 ) {
                     if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
                         OutlinedButton(
-                            onClick = { OnboardingWizardManager.nextStep(context) },
+                            onClick = { OnboardingWizardManager.nextStep() },
                         ) {
                             Text(
                                 text = stringResource(R.string.onboarding_btn_skip),
@@ -364,7 +364,7 @@ fun OnboardingWizardDialog(
                                 OnboardingWizardManager.finishWizard()
                                 onDismiss()
                             } else {
-                                OnboardingWizardManager.nextStep(context)
+                                OnboardingWizardManager.nextStep()
                             }
                         },
                     ) {

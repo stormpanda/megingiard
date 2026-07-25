@@ -58,6 +58,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
@@ -263,7 +264,8 @@ fun GlobalSettingsScreen(
                             description = stringResource(R.string.settings_start_welcome_tour_desc),
                             accentColor = effectiveAccent,
                             onClick = {
-                                OnboardingWizardManager.startWizard(context, force = true)
+                                AppStateManager.closeActiveModal()
+                                OnboardingWizardManager.startWizard(force = true)
                                 onBack()
                             },
                         )

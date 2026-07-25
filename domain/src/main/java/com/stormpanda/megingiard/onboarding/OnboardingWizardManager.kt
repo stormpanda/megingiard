@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.onboarding
 
-import android.content.Context
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
@@ -38,10 +37,7 @@ object OnboardingWizardManager {
 
     fun shouldAutoStartWizard(): Boolean = SettingsManager.welcomeTourCompletedVersion.value < SettingsManager.CURRENT_WELCOME_TOUR_VERSION
 
-    fun startWizard(
-        context: Context,
-        force: Boolean = false,
-    ) {
+    fun startWizard(force: Boolean = false) {
         if (_isWizardActive.value && !force) {
             AppLog.d(TAG, "Wizard is already active. Ignoring non-forced start call.")
             return
@@ -69,7 +65,7 @@ object OnboardingWizardManager {
         _isWizardActive.value = true
     }
 
-    fun nextStep(context: Context? = null) {
+    fun nextStep() {
         val currentIndex = _activeStepIndex.value
         if (currentIndex < 0 || currentIndex >= orderedStepIds.size - 1) return
 
@@ -79,7 +75,7 @@ object OnboardingWizardManager {
         updateStepStates(nextIndex)
     }
 
-    fun prevStep(context: Context? = null) {
+    fun prevStep() {
         val currentIndex = _activeStepIndex.value
         if (currentIndex <= 0) return
 

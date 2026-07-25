@@ -19,6 +19,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Toast
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
@@ -74,8 +75,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
-        com.stormpanda.megingiard.AppStateManager
-            .setAccessibilityActive(true)
+        AppStateManager.setAccessibilityActive(true)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
@@ -543,10 +543,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         AppLog.w(TAG, "onUnbind: Megingiard Accessibility Service disabled")
         if (instance == this) instance = null
-        com.stormpanda.megingiard.AppStateManager
-            .setAccessibilityActive(false)
-        com.stormpanda.megingiard.AppStateManager
-            .setPrivdPromptDismissed(false)
+        AppStateManager.setAccessibilityActive(false)
+        AppStateManager.setPrivdPromptDismissed(false)
         return super.onUnbind(intent)
     }
 
@@ -555,10 +553,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
         serviceScope.cancel()
         if (instance == this) instance = null
         AppLog.i(TAG, "onDestroy: Accessibility Service destroyed")
-        com.stormpanda.megingiard.AppStateManager
-            .setAccessibilityActive(false)
-        com.stormpanda.megingiard.AppStateManager
-            .setPrivdPromptDismissed(false)
+        AppStateManager.setAccessibilityActive(false)
+        AppStateManager.setPrivdPromptDismissed(false)
     }
 
     companion object {

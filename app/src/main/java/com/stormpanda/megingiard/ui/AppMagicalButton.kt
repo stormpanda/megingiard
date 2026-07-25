@@ -68,6 +68,13 @@ fun rememberMagicalBezelBrush(accentColor: Color = LocalAppColors.current.action
 /**
  * Reusable OutlinedButton with an animated magical shimmering bezel gradient and dual-layer glow.
  * Shared across Privileged Mode Auto-Setup and Auto-Fill (read screen) action buttons.
+ *
+ * NOTE: [Accepted Performance Trade-off]
+ * This button animates `rememberMagicalBezelBrush()` frame-by-frame and passes it to `OutlinedButton(border=...)`,
+ * which triggers recomposition on every animation frame while visible. This is an intentional and accepted
+ * design choice because `AppMagicalButton` is used exclusively within lightweight modal dialogs (such as the
+ * Onboarding Tour and Privileged Reconnect prompt) where shimmering visual feedback is prioritized and main app
+ * rendering performance is not impacted.
  */
 @Composable
 fun AppMagicalButton(
