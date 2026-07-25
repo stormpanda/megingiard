@@ -591,6 +591,12 @@ fun PrivilegedStepContent(
 
     val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING
 
+    LaunchedEffect(isAllSet) {
+        if (!isAllSet) {
+            hasAutoSetupBeenStarted = false
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
