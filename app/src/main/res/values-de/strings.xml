@@ -1031,8 +1031,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_theme_prev">Vorheriges Thema</string>
     <string name="onboarding_theme_next">Nächstes Thema</string>
     <string name="onboarding_step_accessibility">Barrierefreiheit</string>
-    <string name="onboarding_accessibility_title">Barrierefreiheitsdienst (empfohlen!)</string>
-    <string name="onboarding_accessibility_desc">Der Barrierefreiheitsdienst ist für Megingiard erforderlich. Er wird für Kernfunktionen wie den automatischen Makro-Profilwechsel beim Starten von Spielen und die Einrichtung des Privilegierten Modus benötigt.</string>
+    <string name="onboarding_accessibility_title">Barrierefreiheitsdienst</string>
+    <string name="onboarding_accessibility_desc">Der Barrierefreiheitsdienst ist für Megingiard erforderlich. Er wird für Kernfunktionen wie den automatischen Makro-Profilwechsel beim Starten von Spielen, die Einrichtung des Privilegierten Modus sowie kommende Funktionen benötigt.</string>
     <string name="onboarding_step_privileged">Privilegierter Modus</string>
     <string name="onboarding_privd_title">Privilegierter Modus (empfohlen!)</string>
     <string name="onboarding_privd_desc">Ermöglicht direkte Eingabe-Injektion ohne Latenz, Trackpoint-Präzision und physikalische Gamepad-Aufzeichnung ohne Root oder PC-Verbindung. Nutze die Auto-Einrichtung für eine 1-Tap-Konfiguration.</string>
