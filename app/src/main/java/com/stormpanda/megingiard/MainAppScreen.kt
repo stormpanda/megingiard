@@ -537,6 +537,12 @@ fun MainAppScreen() {
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {
                     OnboardingWizardManager.finishWizard()
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    if (!active) {
+                        AppLog.w(TAG, "Welcome Tour finished but Accessibility Service is OFF! Re-triggering reconnect prompt")
+                        AppStateManager.setPrivdPromptDismissed(false)
+                    }
                 },
             )
         }
@@ -549,10 +555,24 @@ fun MainAppScreen() {
                     }
                 },
                 onSkip = {
-                    AppStateManager.setPrivdPromptDismissed(true)
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    if (!active) {
+                        AppLog.w(TAG, "Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering reconnect prompt")
+                        AppStateManager.setPrivdPromptDismissed(false)
+                    } else {
+                        AppStateManager.setPrivdPromptDismissed(true)
+                    }
                 },
                 onDone = {
-                    AppStateManager.setPrivdPromptDismissed(true)
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    if (!active) {
+                        AppLog.w(TAG, "Reconnect dialog finished but Accessibility Service is OFF! Re-triggering reconnect prompt")
+                        AppStateManager.setPrivdPromptDismissed(false)
+                    } else {
+                        AppStateManager.setPrivdPromptDismissed(true)
+                    }
                 },
             )
         }
