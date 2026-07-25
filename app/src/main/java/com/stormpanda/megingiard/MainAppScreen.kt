@@ -1,7 +1,11 @@
 package com.stormpanda.megingiard
 
 import android.content.Context
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.os.Vibrator
+import android.provider.Settings
 import android.view.Display
 import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
@@ -481,6 +485,21 @@ fun MainAppScreen() {
 
         val lifecycleOwner = LocalLifecycleOwner.current
         DisposableEffect(context, lifecycleOwner) {
+            val contentObserver =
+                object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(selfChange: Boolean) {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed, active=$active")
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active && !OnboardingWizardManager.isWizardActive.value) {
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        }
+                    }
+                }
+
+            val uri = Settings.Secure.getUriFor(Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            context.contentResolver.registerContentObserver(uri, false, contentObserver)
+
             val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
             val listener =
                 AccessibilityManager.AccessibilityStateChangeListener { _ ->
@@ -507,6 +526,7 @@ fun MainAppScreen() {
             lifecycleOwner.lifecycle.addObserver(observer)
 
             onDispose {
+                context.contentResolver.unregisterContentObserver(contentObserver)
                 am?.removeAccessibilityStateChangeListener(listener)
                 lifecycleOwner.lifecycle.removeObserver(observer)
             }
