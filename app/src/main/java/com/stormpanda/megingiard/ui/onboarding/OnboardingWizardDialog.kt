@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -169,14 +170,16 @@ fun OnboardingWizardDialog(
 
     val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
     val privdState by PrivdManager.state.collectAsState()
+    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
     var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
     var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
     var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
 
     LaunchedEffect(isPrivilegedStep) {
         if (isPrivilegedStep) {
-            AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status in onboarding")
+            AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status & Wi-Fi in onboarding")
             while (isActive) {
+                isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
                 isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
                 isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                 isDevicePaired = PrivdBootstrapper.hasCredentials(context)
@@ -282,12 +285,30 @@ fun OnboardingWizardDialog(
 
                         OnboardingStepId.PRIVILEGED -> {
                             PrivilegedStepContent(
+                                isWifiActive = isWifiActive,
                                 isAccessibilityActive = isAccessibilityActive,
                                 isDevModeActive = isDevModeActive,
                                 isWirelessActive = isWirelessActive,
                                 isDevicePaired = isDevicePaired,
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
+                                onOpenWifiSettings = {
+                                    try {
+                                        val intent =
+                                            Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                                                addFlags(
+                                                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                                                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                                                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                                                )
+                                            }
+                                        val options = ActivityOptions.makeBasic()
+                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                        context.startActivity(intent, options.toBundle())
+                                    } catch (e: Exception) {
+                                        AppLog.e(TAG, "Failed to launch Wi-Fi settings from onboarding: ${e.message}")
+                                    }
+                                },
                             )
                         }
 
@@ -563,12 +584,14 @@ fun FinishedStepContent() {
 
 @Composable
 fun PrivilegedStepContent(
+    isWifiActive: Boolean,
     isAccessibilityActive: Boolean,
     isDevModeActive: Boolean,
     isWirelessActive: Boolean,
     isDevicePaired: Boolean,
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
+    onOpenWifiSettings: () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -590,6 +613,49 @@ fun PrivilegedStepContent(
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(16.dp))
+
+        if (!isWifiActive) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = colors.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.onboarding_privd_wifi_warning),
+                        color = colors.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onOpenWifiSettings,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.onboarding_privd_open_wifi),
+                        color = colors.error,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // Multi-stage status checklist
         Column(

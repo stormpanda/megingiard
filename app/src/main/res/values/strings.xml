@@ -1034,6 +1034,8 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_stage_wireless">Wireless Debugging</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless Pairing</string>
     <string name="onboarding_privd_stage_daemon">Daemon Connection</string>
+    <string name="onboarding_privd_wifi_warning">Wi-Fi is turned off. Wi-Fi must be enabled on your device to make Wireless Debugging possible.</string>
+    <string name="onboarding_privd_open_wifi">Open Wi-Fi Settings</string>
     <string name="onboarding_step_finished">Finished</string>
     <string name="onboarding_finished_title">You\'re All Set! Ready to Tinker?</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>

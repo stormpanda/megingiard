@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Path
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -553,6 +554,18 @@ class MegingiardAccessibilityService : AccessibilityService() {
          */
         fun isInstanceActive(): Boolean = instance != null
 
+        fun isWifiActive(context: Context): Boolean =
+            try {
+                val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+                wifiManager?.isWifiEnabled == true
+            } catch (e: Exception) {
+                try {
+                    Settings.Global.getInt(context.contentResolver, Settings.Global.WIFI_ON, 0) != 0
+                } catch (e2: Exception) {
+                    false
+                }
+            }
+
         fun isDevModeActive(context: Context): Boolean =
             try {
                 Settings.Global.getInt(context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0) != 0
@@ -586,6 +599,25 @@ class MegingiardAccessibilityService : AccessibilityService() {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     }
                 context.startActivity(accessibilityIntent, displayOptions)
+                return
+            }
+
+            if (!isWifiActive(context)) {
+                AppLog.w(TAG, "startMultiStageAutoSetup: Wi-Fi is not active")
+                Toast.makeText(context, R.string.onboarding_privd_wifi_warning, Toast.LENGTH_LONG).show()
+                val wifiIntent =
+                    Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                try {
+                    context.startActivity(wifiIntent, displayOptions)
+                } catch (e: Exception) {
+                    val wirelessIntent =
+                        Intent(Settings.ACTION_WIRELESS_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                        }
+                    context.startActivity(wirelessIntent, displayOptions)
+                }
                 return
             }
 
