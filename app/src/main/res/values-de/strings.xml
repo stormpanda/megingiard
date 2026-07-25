@@ -1040,6 +1040,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_reconnect_title">Privilegierten Modus neu verbinden</string>
     <string name="privd_reconnect_desc">Der privilegierte Modus wurde getrennt, zum Beispiel durch einen Geräteneustart oder weil Wireless Debugging deaktiviert wurde.</string>
     <string name="privd_reconnect_auto_button">Automatisch verbinden</string>
+    <string name="privd_reconnect_all_set">Alles erledigt!</string>
     <string name="privd_reconnect_btn_close">Schließen</string>
     <string name="onboarding_privd_stage_dev">Entwickleroptionen</string>
     <string name="onboarding_privd_stage_wireless">Drahtloses Debugging</string>

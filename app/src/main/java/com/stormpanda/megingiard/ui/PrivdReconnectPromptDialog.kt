@@ -292,7 +292,7 @@ fun PrivdReconnectPromptDialog(
 
                     OnboardingStepId.FINISHED -> {
                         FinishedStepContent(
-                            titleText = stringResource(R.string.privd_toast_all_set),
+                            titleText = stringResource(R.string.privd_reconnect_all_set),
                             descText = null,
                         )
                     }
@@ -309,21 +309,7 @@ fun PrivdReconnectPromptDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (!isFirstStep) {
-                    OutlinedButton(
-                        onClick = {
-                            isNextAnimation = false
-                            activeStepIndex = (activeStepIndex - 1).coerceAtLeast(0)
-                        },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.onboarding_btn_back),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                    }
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
+                Spacer(modifier = Modifier.weight(1f))
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
