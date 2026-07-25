@@ -42,6 +42,8 @@ private enum class AutoSetupTargetStage {
 }
 
 private enum class AutoToggleStage {
+    ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER,
+    ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT,
     ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER,
     CLICK_SEARCH_BAR,
     ENTER_SEARCH_QUERY,
@@ -110,6 +112,22 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
                         when (autoToggleStage) {
+                            AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
+                                val entered = findAndSetSearchQuery(rootNode, "Build number")
+                                if (entered) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Build number' for Stage A")
+                                    autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT
+                                }
+                            }
+
+                            AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT -> {
+                                val clicked = findAndClickSearchResultItem(rootNode, "build number", "build-nummer")
+                                if (clicked) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Build number search result")
+                                    autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER
+                                }
+                            }
+
                             AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
                                 val clicked = findAndClickBuildNumber(rootNode)
                                 if (clicked || isDevModeActive(context)) {
@@ -233,7 +251,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun findAndSetSearchQuery(node: AccessibilityNodeInfo): Boolean {
+    private fun findAndSetSearchQuery(
+        node: AccessibilityNodeInfo,
+        query: String = "Wireless debugging",
+    ): Boolean {
         val viewId = node.viewIdResourceName ?: ""
         val className = node.className?.toString() ?: ""
 
@@ -251,12 +272,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 Bundle().apply {
                     putCharSequence(
                         AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                        "Wireless debugging",
+                        query,
                     )
                 }
             val success = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
             if (success) {
-                AppLog.i(TAG, "findAndSetSearchQuery: Successfully set text via ACTION_SET_TEXT on $viewId ($className)")
+                AppLog.i(TAG, "findAndSetSearchQuery: Successfully set text '$query' via ACTION_SET_TEXT on $viewId ($className)")
                 return true
             } else {
                 AppLog.w(TAG, "findAndSetSearchQuery: ACTION_SET_TEXT returned false on $viewId ($className)")
@@ -265,12 +286,15 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndSetSearchQuery(child)) return true
+            if (findAndSetSearchQuery(child, query)) return true
         }
         return false
     }
 
-    private fun findAndClickSearchResult(node: AccessibilityNodeInfo): Boolean {
+    private fun findAndClickSearchResultItem(
+        node: AccessibilityNodeInfo,
+        vararg targetKeywords: String,
+    ): Boolean {
         val viewId = node.viewIdResourceName ?: ""
         val className = node.className?.toString() ?: ""
 
@@ -287,11 +311,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         val contentDesc = node.contentDescription?.toString() ?: ""
         val combined = "$text $contentDesc".lowercase()
 
-        val isMatch =
-            combined.contains("wireless debugging") ||
-                combined.contains("wireless-debugging") ||
-                combined.contains("drahtloses debugging") ||
-                combined.contains("drahtlos-debugging")
+        val isMatch = targetKeywords.any { combined.contains(it.lowercase()) }
 
         if (isMatch) {
             val clickable = findClickableAncestorOrSelf(node)
@@ -300,7 +320,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 if (!clickedId.contains("search_src") && !clickedId.contains("search_view")) {
                     val success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     if (success) {
-                        AppLog.i(TAG, "findAndClickSearchResult: Successfully clicked search result item for '$text'")
+                        AppLog.i(TAG, "findAndClickSearchResultItem: Successfully clicked search result item for '$text'")
                         return true
                     }
                 }
@@ -309,10 +329,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndClickSearchResult(child)) return true
+            if (findAndClickSearchResultItem(child, *targetKeywords)) return true
         }
         return false
     }
+
+    private fun findAndClickSearchResult(node: AccessibilityNodeInfo): Boolean =
+        findAndClickSearchResultItem(node, "wireless debugging", "wireless-debugging", "drahtloses debugging", "drahtlos-debugging")
 
     private fun findAndToggleSwitch(node: AccessibilityNodeInfo): Boolean {
         val text = node.text?.toString() ?: ""
@@ -539,7 +562,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
             val initialStage =
                 when {
-                    !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER
+                    !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER
                     !wirelessActive -> AutoToggleStage.ENTER_SEARCH_QUERY
                     else -> AutoToggleStage.CLICK_PAIR_DIALOG
                 }
@@ -551,12 +574,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
             instance?.startAutoToggleLoop()
 
             when (initialStage) {
-                AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
-                    val aboutIntent =
-                        Intent(Settings.ACTION_DEVICE_INFO_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        }
-                    context.startActivity(aboutIntent, displayOptions)
+                AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
+                    launchSearchActivity(context, displayOptions)
                 }
 
                 AutoToggleStage.ENTER_SEARCH_QUERY -> {
