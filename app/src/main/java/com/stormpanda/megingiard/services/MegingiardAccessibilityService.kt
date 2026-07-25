@@ -171,7 +171,22 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 val toggled = findAndToggleSwitch(rootNode)
                                 if (toggled) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Successfully toggled Wireless Debugging switch ON")
-                                    if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING && !isDevicePaired(context)) {
+                                    val isPairedOnScreen = isMegingiardInPairedDevices(rootNode)
+                                    val hasLocalCreds = isDevicePaired(context)
+                                    AppLog.i(TAG, "startAutoToggleLoop: isPairedOnScreen=$isPairedOnScreen, hasLocalCreds=$hasLocalCreds")
+
+                                    if (hasLocalCreds && !isPairedOnScreen) {
+                                        AppLog.w(
+                                            TAG,
+                                            "startAutoToggleLoop: Stored credentials present but Megingiard not listed in system paired devices! Clearing stale credentials and triggering pairing.",
+                                        )
+                                        PrivdBootstrapper.clearCredentials(context)
+                                        autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
+                                    }
+
+                                    if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING &&
+                                        !isMegingiardInPairedDevices(rootNode)
+                                    ) {
                                         AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Pairing)")
                                         autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
                                     } else {
@@ -425,6 +440,22 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
+    private fun isMegingiardInPairedDevices(node: AccessibilityNodeInfo): Boolean {
+        val text = node.text?.toString() ?: ""
+        val contentDesc = node.contentDescription?.toString() ?: ""
+        val combined = "$text $contentDesc".lowercase()
+
+        if (combined.contains("megingiard")) {
+            return true
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (isMegingiardInPairedDevices(child)) return true
+        }
+        return false
+    }
+
     private fun findAndClickPairDialog(node: AccessibilityNodeInfo): Boolean {
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
@@ -542,15 +573,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val devModeActive = isDevModeActive(context)
-            var paired = isDevicePaired(context)
-
-            if (!devModeActive && paired) {
-                AppLog.w(TAG, "startMultiStageAutoSetup: Dev Mode is OFF but stale credentials exist — clearing credentials")
-                PrivdBootstrapper.clearCredentials(context)
-                paired = false
-            }
-
             val wirelessActive = isWirelessDebuggingActive(context)
+            val paired = isDevicePaired(context)
 
             AppLog.i(TAG, "startMultiStageAutoSetup: devMode=$devModeActive, wirelessActive=$wirelessActive, paired=$paired")
 

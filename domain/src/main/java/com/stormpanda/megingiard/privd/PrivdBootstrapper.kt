@@ -275,7 +275,7 @@ object PrivdBootstrapper {
     fun hasCredentials(context: Context): Boolean = PrivdAdbConnectionManager.hasCredentials(context)
 
     /**
-     * Clears saved ADB key and certificate credentials from disk and Keystore.
+     * Clears saved ADB key and certificate credentials from disk.
      */
     fun clearCredentials(context: Context) = PrivdAdbConnectionManager.clearCredentials(context)
 

@@ -76,9 +76,9 @@ internal class PrivdAdbConnectionManager private constructor(
             val certFile = File(context.applicationContext.noBackupFilesDir, CERT_FILE)
             if (keyFile.exists()) keyFile.delete()
             if (certFile.exists()) certFile.delete()
-            PrivdPairKey.delete(context.applicationContext)
+            PrivdPairKey.delete(context)
             instance = null
-            AppLog.i(TAG, "clearCredentials: Removed stored ADB credentials and pair keys")
+            AppLog.i("PrivdAdbConnMgr", "clearCredentials: ADB key & cert credentials deleted")
         }
 
         @Synchronized
