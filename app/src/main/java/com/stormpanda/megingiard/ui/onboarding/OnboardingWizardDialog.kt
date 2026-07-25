@@ -340,9 +340,18 @@ fun OnboardingWizardDialog(
 
                     val isNextEnabled =
                         when (currentStepState.id) {
-                            OnboardingStepId.ACCESSIBILITY -> isAccessibilityActive
-                            OnboardingStepId.PRIVILEGED -> privdState == PrivdState.RUNNING || isDevicePaired
-                            else -> true
+                            OnboardingStepId.ACCESSIBILITY -> {
+                                isAccessibilityActive
+                            }
+
+                            OnboardingStepId.PRIVILEGED -> {
+                                isDevModeActive && isWirelessActive && isDevicePaired &&
+                                    privdState == PrivdState.RUNNING
+                            }
+
+                            else -> {
+                                true
+                            }
                         }
 
                     Button(
@@ -576,6 +585,9 @@ fun PrivilegedStepContent(
     onStartAutoSetup: () -> Unit,
 ) {
     val colors = LocalAppColors.current
+    var hasAutoSetupBeenStarted by remember {
+        mutableStateOf(privdState == PrivdState.RUNNING)
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -596,6 +608,37 @@ fun PrivilegedStepContent(
         )
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Sequential status checklist calculation
+        val devStatus =
+            if (hasAutoSetupBeenStarted) {
+                if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+            } else {
+                ChecklistStatus.PENDING
+            }
+
+        val wirelessStatus =
+            if (hasAutoSetupBeenStarted && devStatus == ChecklistStatus.DONE) {
+                if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+            } else {
+                ChecklistStatus.PENDING
+            }
+
+        val pairingStatus =
+            if (hasAutoSetupBeenStarted && devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
+                if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+            } else {
+                ChecklistStatus.PENDING
+            }
+
+        val daemonStatus =
+            if (hasAutoSetupBeenStarted && devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
+                pairingStatus == ChecklistStatus.DONE
+            ) {
+                if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+            } else {
+                ChecklistStatus.PENDING
+            }
+
         // Multi-stage status checklist
         Column(
             modifier =
@@ -606,16 +649,6 @@ fun PrivilegedStepContent(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            val devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.PENDING
-            val wirelessStatus = if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.PENDING
-            val pairingStatus = if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.PENDING
-            val daemonStatus =
-                when (privdState) {
-                    PrivdState.RUNNING -> ChecklistStatus.DONE
-                    PrivdState.BOOTSTRAPPING, PrivdState.CONNECTING -> ChecklistStatus.ACTIVE
-                    else -> ChecklistStatus.PENDING
-                }
-
             PrivdChecklistRow(
                 label = stringResource(R.string.onboarding_privd_stage_dev),
                 status = devStatus,
@@ -664,7 +697,10 @@ fun PrivilegedStepContent(
                 }
             } else {
                 Button(
-                    onClick = onStartAutoSetup,
+                    onClick = {
+                        hasAutoSetupBeenStarted = true
+                        onStartAutoSetup()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(
