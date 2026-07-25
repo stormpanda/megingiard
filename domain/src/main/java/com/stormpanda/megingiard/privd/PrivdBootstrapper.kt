@@ -275,6 +275,11 @@ object PrivdBootstrapper {
     fun hasCredentials(context: Context): Boolean = PrivdAdbConnectionManager.hasCredentials(context)
 
     /**
+     * Clears saved ADB key and certificate credentials from disk and Keystore.
+     */
+    fun clearCredentials(context: Context) = PrivdAdbConnectionManager.clearCredentials(context)
+
+    /**
      * Returns true if the device's ADB Wireless-Debugging service is enabled and returning a port.
      */
     fun isWirelessDebuggingActive(): Boolean = readAdbTlsConnectPort() > 0

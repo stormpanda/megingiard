@@ -542,8 +542,15 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val devModeActive = isDevModeActive(context)
+            var paired = isDevicePaired(context)
+
+            if (!devModeActive && paired) {
+                AppLog.w(TAG, "startMultiStageAutoSetup: Dev Mode is OFF but stale credentials exist — clearing credentials")
+                PrivdBootstrapper.clearCredentials(context)
+                paired = false
+            }
+
             val wirelessActive = isWirelessDebuggingActive(context)
-            val paired = isDevicePaired(context)
 
             AppLog.i(TAG, "startMultiStageAutoSetup: devMode=$devModeActive, wirelessActive=$wirelessActive, paired=$paired")
 
