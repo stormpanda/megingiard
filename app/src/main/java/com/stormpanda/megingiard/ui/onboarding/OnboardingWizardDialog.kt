@@ -292,23 +292,6 @@ fun OnboardingWizardDialog(
                                 isDevicePaired = isDevicePaired,
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
-                                onOpenWifiSettings = {
-                                    try {
-                                        val intent =
-                                            Intent(Settings.ACTION_WIFI_SETTINGS).apply {
-                                                addFlags(
-                                                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                                                        Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                                                        Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                                                )
-                                            }
-                                        val options = ActivityOptions.makeBasic()
-                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                        context.startActivity(intent, options.toBundle())
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to launch Wi-Fi settings from onboarding: ${e.message}")
-                                    }
-                                },
                             )
                         }
 
@@ -591,7 +574,6 @@ fun PrivilegedStepContent(
     isDevicePaired: Boolean,
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
-    onOpenWifiSettings: () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
@@ -613,49 +595,6 @@ fun PrivilegedStepContent(
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(16.dp))
-
-        if (!isWifiActive) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = colors.error,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_privd_wifi_warning),
-                        color = colors.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = onOpenWifiSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = stringResource(R.string.onboarding_privd_open_wifi),
-                        color = colors.error,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        }
 
         // Multi-stage status checklist
         Column(
@@ -698,20 +637,47 @@ fun PrivilegedStepContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (privdState != PrivdState.RUNNING) {
-            Button(
-                onClick = onStartAutoSetup,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.AutoFixHigh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.onboarding_privd_auto_setup),
-                    style = MaterialTheme.typography.labelLarge,
-                )
+            if (!isWifiActive) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                            .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = colors.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.onboarding_privd_wifi_warning),
+                        color = colors.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            } else {
+                Button(
+                    onClick = onStartAutoSetup,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.AutoFixHigh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.onboarding_privd_auto_setup),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         } else {
             Row(

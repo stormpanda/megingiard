@@ -1042,7 +1042,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless-Kopplung</string>
     <string name="onboarding_privd_stage_daemon">Daemon-Verbindung</string>
     <string name="onboarding_privd_wifi_warning">WLAN ist ausgeschaltet. WLAN muss auf deinem Gerät aktiviert sein, um drahtloses Debugging zu ermöglichen.</string>
-    <string name="onboarding_privd_open_wifi">WLAN-Einstellungen öffnen</string>
     <string name="onboarding_step_finished">Fertig</string>
     <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>
