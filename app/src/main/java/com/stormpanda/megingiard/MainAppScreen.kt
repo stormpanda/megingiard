@@ -3,6 +3,7 @@ package com.stormpanda.megingiard
 import android.content.Context
 import android.os.Vibrator
 import android.view.Display
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -40,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,6 +60,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.config.ConfigManager
@@ -73,6 +78,7 @@ import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
@@ -470,6 +476,39 @@ fun MainAppScreen() {
         LaunchedEffect(welcomeTourCompletedVersion) {
             if (OnboardingWizardManager.shouldAutoStartWizard()) {
                 OnboardingWizardManager.startWizard(context)
+            }
+        }
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(context, lifecycleOwner) {
+            val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
+            val listener =
+                AccessibilityManager.AccessibilityStateChangeListener { _ ->
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    if (!active && !OnboardingWizardManager.isWizardActive.value) {
+                        AppLog.w(TAG, "Accessibility State Listener: Service disabled, triggering reconnect dialog")
+                        AppStateManager.setPrivdPromptDismissed(false)
+                    }
+                }
+            am?.addAccessibilityStateChangeListener(listener)
+
+            val observer =
+                LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        val active = MegingiardAccessibilityService.isEnabled(context)
+                        AppStateManager.setAccessibilityActive(active)
+                        if (!active && !OnboardingWizardManager.isWizardActive.value) {
+                            AppLog.w(TAG, "ON_RESUME: Accessibility Service disabled, triggering reconnect dialog")
+                            AppStateManager.setPrivdPromptDismissed(false)
+                        }
+                    }
+                }
+            lifecycleOwner.lifecycle.addObserver(observer)
+
+            onDispose {
+                am?.removeAccessibilityStateChangeListener(listener)
+                lifecycleOwner.lifecycle.removeObserver(observer)
             }
         }
 

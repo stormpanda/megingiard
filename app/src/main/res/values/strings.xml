@@ -1025,7 +1025,7 @@ Open Settings to create a layout.</string>
     <string name="onboarding_theme_next">Next Theme</string>
     <string name="onboarding_step_accessibility">Accessibility</string>
     <string name="onboarding_accessibility_title">Accessibility Service (recommended!)</string>
-    <string name="onboarding_accessibility_desc">Megingiard uses the Accessibility Service for automatic macro profile switching when launching games and assisting during Privileged Mode pairing. You can enable it now or skip to set it up later.</string>
+    <string name="onboarding_accessibility_desc">Accessibility Service is mandatory for Megingiard. It is necessary for core features like automatic macro profile switching when launching games and setting up Privileged Mode.</string>
     <string name="onboarding_step_privileged">Privileged Mode</string>
     <string name="onboarding_privd_title">Privileged Mode (recommended!)</string>
     <string name="onboarding_privd_desc">Unlocks low-latency direct touch injection, trackpoint precision, and physical gamepad recording without root or PC connection. You can use Auto Setup for a one-tap automated configuration.</string>

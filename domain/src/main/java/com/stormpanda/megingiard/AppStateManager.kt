@@ -222,6 +222,14 @@ object AppStateManager {
         _isPrivdPromptDismissed.value = dismissed
     }
 
+    private val _isAccessibilityActive = MutableStateFlow(true)
+    val isAccessibilityActive: StateFlow<Boolean> = _isAccessibilityActive.asStateFlow()
+
+    fun setAccessibilityActive(active: Boolean) {
+        AppLog.d(TAG, "setAccessibilityActive($active)")
+        _isAccessibilityActive.value = active
+    }
+
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
         _isPrivdPromptShowing.value = false
@@ -475,13 +483,21 @@ object AppStateManager {
                 _hasAdbCredentials,
                 _isPrivdPromptDismissed,
                 _isBackgroundSettingsActive,
-            ) { state, showPromptPref, hasCreds, dismissed, bgSettingsActive ->
-                if (state == PrivdState.RUNNING) {
+                _isAccessibilityActive,
+            ) { array ->
+                val state = array[0] as PrivdState
+                val showPromptPref = array[1] as Boolean
+                val hasCreds = array[2] as Boolean
+                val dismissed = array[3] as Boolean
+                val bgSettingsActive = array[4] as Boolean
+                val accessibilityActive = array[5] as Boolean
+
+                if (state == PrivdState.RUNNING && accessibilityActive) {
                     _isPrivdPromptDismissed.value = false
                 }
                 if (dismissed || bgSettingsActive) {
                     _isPrivdPromptShowing.value = false
-                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
+                } else if (!accessibilityActive || (state == PrivdState.FAILED && showPromptPref && hasCreds)) {
                     _isPrivdPromptShowing.value = true
                 }
             }.collect {}

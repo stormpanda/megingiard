@@ -328,7 +328,7 @@ fun OnboardingWizardDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (currentStepState.id == OnboardingStepId.ACCESSIBILITY || currentStepState.id == OnboardingStepId.PRIVILEGED) {
+                    if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
                         OutlinedButton(
                             onClick = { OnboardingWizardManager.nextStep(context) },
                         ) {

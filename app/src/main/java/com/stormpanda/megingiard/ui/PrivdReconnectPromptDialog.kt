@@ -93,21 +93,19 @@ fun PrivdReconnectPromptDialog(
     val colors = LocalAppColors.current
 
     val isAccessibilityActiveAtStart = remember { MegingiardAccessibilityService.isEnabled(context) }
+    val privdStateAtStart = PrivdManager.state.value
 
     val stepIds =
-        remember(isAccessibilityActiveAtStart) {
+        remember(isAccessibilityActiveAtStart, privdStateAtStart) {
+            val list = mutableListOf<OnboardingStepId>()
             if (!isAccessibilityActiveAtStart) {
-                listOf(
-                    OnboardingStepId.ACCESSIBILITY,
-                    OnboardingStepId.PRIVILEGED,
-                    OnboardingStepId.FINISHED,
-                )
-            } else {
-                listOf(
-                    OnboardingStepId.PRIVILEGED,
-                    OnboardingStepId.FINISHED,
-                )
+                list.add(OnboardingStepId.ACCESSIBILITY)
             }
+            if (privdStateAtStart != PrivdState.RUNNING) {
+                list.add(OnboardingStepId.PRIVILEGED)
+            }
+            list.add(OnboardingStepId.FINISHED)
+            list
         }
 
     var activeStepIndex by remember { mutableStateOf(0) }
@@ -331,7 +329,7 @@ fun PrivdReconnectPromptDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (currentStepState.id == OnboardingStepId.ACCESSIBILITY || currentStepState.id == OnboardingStepId.PRIVILEGED) {
+                    if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
                         OutlinedButton(
                             onClick = onSkip,
                         ) {
