@@ -6,14 +6,9 @@ import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,9 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PageSize
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
@@ -33,23 +25,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -60,10 +46,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.math.absoluteValue
 
 private const val TAG = "FocusTopLauncherScreen"
 
@@ -80,11 +63,13 @@ fun FocusTopLauncherScreen(
     onVirtualIndexChange: (Int) -> Unit,
     onAppClick: (InstalledAppInfo) -> Unit,
     editingAppInfo: InstalledAppInfo? = null,
+    dialogVirtualIndex: Int = 10_000,
+    onDialogVirtualIndexChange: (Int) -> Unit = {},
+    confirmDialogTrigger: Int = 0,
     onDismissEditingApp: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val coroutineScope = rememberCoroutineScope()
     val apiKey by SettingsManager.steamGridDbApiToken.collectAsState()
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
@@ -105,27 +90,6 @@ fun FocusTopLauncherScreen(
             }
         }
         return
-    }
-
-    val pagerState =
-        rememberPagerState(
-            initialPage = virtualIndex,
-            pageCount = { Int.MAX_VALUE },
-        )
-
-    LaunchedEffect(virtualIndex) {
-        if (pagerState.currentPage != virtualIndex) {
-            pagerState.animateScrollToPage(virtualIndex)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { pagerState.currentPage }
-            .collectLatest { page ->
-                if (page != virtualIndex) {
-                    onVirtualIndexChange(page)
-                }
-            }
     }
 
     Surface(
@@ -154,76 +118,27 @@ fun FocusTopLauncherScreen(
             ) {
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Endless centered 2:3 poster carousel with synchronized scaling
-                BoxWithConstraints(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(310.dp),
-                ) {
-                    val horizontalPadding = ((maxWidth - FTL_POSTER_WIDTH) / 2).coerceAtLeast(0.dp)
-
-                    HorizontalPager(
-                        state = pagerState,
-                        pageSize = PageSize.Fixed(FTL_POSTER_WIDTH),
-                        pageSpacing = FTL_POSTER_SPACING,
-                        contentPadding = PaddingValues(horizontal = horizontalPadding),
-                        modifier = Modifier.fillMaxSize(),
-                    ) { page ->
-                        val actualIndex = Math.floorMod(page, apps.size)
+                // Endless centered 2:3 poster carousel using reusable HorizontalPosterCarousel
+                HorizontalPosterCarousel(
+                    itemCount = apps.size,
+                    virtualIndex = virtualIndex,
+                    onVirtualIndexChange = onVirtualIndexChange,
+                    onItemClick = { actualIndex ->
                         val appInfo = apps[actualIndex]
-                        val isSelected = page == pagerState.currentPage
-
-                        // Continuous page offset calculation for 1:1 synchronized scale & alpha
-                        val pageOffset =
-                            (
-                                (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                            ).absoluteValue
-
-                        val scale = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
-                        val alpha = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(FTL_POSTER_WIDTH, FTL_POSTER_HEIGHT)
-                                    .graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                        this.alpha = alpha
-                                    }.shadow(
-                                        elevation = if (isSelected) 20.dp else 4.dp,
-                                        shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
-                                        ambientColor = if (isSelected) appColors.accent else Color.Black,
-                                        spotColor = if (isSelected) appColors.accent else Color.Black,
-                                    ).clip(RoundedCornerShape(FTL_POSTER_CORNER_RADIUS))
-                                    .background(
-                                        if (isSelected) appColors.surfaceVariant else appColors.surface,
-                                    ).border(
-                                        width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) appColors.accent else appColors.divider,
-                                        shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
-                                    ).clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                    ) {
-                                        if (isSelected) {
-                                            onAppClick(appInfo)
-                                        } else {
-                                            coroutineScope.launch {
-                                                pagerState.animateScrollToPage(page)
-                                            }
-                                        }
-                                    },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            PosterCardContent(appInfo = appInfo)
-                        }
-                    }
+                        onAppClick(appInfo)
+                    },
+                    posterWidth = FTL_POSTER_WIDTH,
+                    posterHeight = FTL_POSTER_HEIGHT,
+                    posterSpacing = FTL_POSTER_SPACING,
+                    carouselHeight = 310.dp,
+                    posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                ) { actualIndex, _ ->
+                    val appInfo = apps[actualIndex]
+                    PosterCardContent(appInfo = appInfo)
                 }
 
                 // Focused App Title at the bottom of the screen
-                val currentActualIndex = Math.floorMod(pagerState.currentPage, apps.size)
+                val currentActualIndex = Math.floorMod(virtualIndex, apps.size)
                 val currentApp = apps.getOrNull(currentActualIndex)
                 Box(
                     modifier =
@@ -257,6 +172,9 @@ fun FocusTopLauncherScreen(
                 GameFocusArtworkDialog(
                     appInfo = editingAppInfo,
                     apiKey = apiKey,
+                    virtualIndex = dialogVirtualIndex,
+                    onVirtualIndexChange = onDialogVirtualIndexChange,
+                    confirmTrigger = confirmDialogTrigger,
                     onDismiss = onDismissEditingApp,
                 )
             }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -43,9 +44,19 @@ private enum class ScrollDirection { NONE, LEFT, RIGHT }
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
+    private val dialogVirtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
+    private val confirmDialogTriggerState = mutableIntStateOf(0)
     private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
+
     private var currentDirection = ScrollDirection.NONE
     private var repeatJob: Job? = null
+
+    private fun getActiveVirtualIndexState(): MutableIntState =
+        if (editingAppInfoState.value != null) {
+            dialogVirtualIndexState
+        } else {
+            virtualIndexState
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +101,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
                             },
                             editingAppInfo = editingApp,
+                            dialogVirtualIndex = dialogVirtualIndexState.intValue,
+                            onDialogVirtualIndexChange = { dialogVirtualIndexState.intValue = it },
+                            confirmDialogTrigger = confirmDialogTriggerState.intValue,
                             onDismissEditingApp = { editingAppInfoState.value = null },
                         )
                     }
@@ -117,10 +131,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         if (direction == ScrollDirection.NONE) return
 
+        val activeIndexState = getActiveVirtualIndexState()
         if (direction == ScrollDirection.LEFT) {
-            virtualIndexState.intValue--
+            activeIndexState.intValue--
         } else if (direction == ScrollDirection.RIGHT) {
-            virtualIndexState.intValue++
+            activeIndexState.intValue++
         }
 
         repeatJob =
@@ -128,9 +143,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 delay(INITIAL_REPEAT_DELAY_MS)
                 while (isActive && currentDirection == direction) {
                     if (direction == ScrollDirection.LEFT) {
-                        virtualIndexState.intValue--
+                        activeIndexState.intValue--
                     } else if (direction == ScrollDirection.RIGHT) {
-                        virtualIndexState.intValue++
+                        activeIndexState.intValue++
                     }
                     delay(REPEAT_INTERVAL_MS)
                 }
@@ -147,11 +162,46 @@ class FocusTopLauncherActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
-        // If an editing dialog is open, let the dialog handle inputs
         if (editingAppInfoState.value != null) {
+            // Navigation when Artwork Chooser Dialog is open
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                -> {
+                    startRepeat(ScrollDirection.LEFT)
+                    return true
+                }
+
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+                -> {
+                    startRepeat(ScrollDirection.RIGHT)
+                    return true
+                }
+
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_BUTTON_A,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                -> {
+                    AppLog.i(TAG, "Gamepad select key pressed inside artwork dialog")
+                    confirmDialogTriggerState.intValue++
+                    return true
+                }
+
+                KeyEvent.KEYCODE_BACK,
+                KeyEvent.KEYCODE_ESCAPE,
+                KeyEvent.KEYCODE_BUTTON_B,
+                -> {
+                    AppLog.i(TAG, "Gamepad back key pressed, closing artwork dialog")
+                    editingAppInfoState.value = null
+                    return true
+                }
+            }
             return super.onKeyDown(keyCode, event)
         }
 
+        // Navigation when Main Launcher is active
         val apps = InstalledAppsManager.installedApps.value
         if (apps.isNotEmpty()) {
             when (keyCode) {
@@ -190,6 +240,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val targetApp = apps.getOrNull(actualIndex)
                     if (targetApp != null) {
                         AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
+                        dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                        confirmDialogTriggerState.intValue = 0
                         editingAppInfoState.value = targetApp
                         return true
                     }
@@ -226,10 +278,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
-        if (editingAppInfoState.value != null) {
-            return super.onGenericMotionEvent(event)
-        }
-
         if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
             val axisX = event.getAxisValue(MotionEvent.AXIS_X)
