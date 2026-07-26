@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -190,7 +191,10 @@ fun FocusTopLauncherScreen(
                                         width = if (isSelected) 3.dp else 1.dp,
                                         color = if (isSelected) appColors.accent else appColors.divider,
                                         shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
-                                    ).clickable {
+                                    ).clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                    ) {
                                         if (isSelected) {
                                             onAppClick(appInfo)
                                         } else {

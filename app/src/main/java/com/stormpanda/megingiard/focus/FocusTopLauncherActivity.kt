@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard.focus
 
 import android.os.Bundle
+import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +33,8 @@ private const val INITIAL_LOOP_OFFSET = 10_000
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
+    private var lastStickLeft = false
+    private var lastStickRight = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -123,5 +127,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
+            val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            val axisX = event.getAxisValue(MotionEvent.AXIS_X)
+            val x = if (axisHatX != 0f) axisHatX else axisX
+
+            if (x < -0.5f) {
+                if (!lastStickLeft) {
+                    lastStickLeft = true
+                    virtualIndexState.intValue--
+                }
+                return true
+            } else {
+                lastStickLeft = false
+            }
+
+            if (x > 0.5f) {
+                if (!lastStickRight) {
+                    lastStickRight = true
+                    virtualIndexState.intValue++
+                }
+                return true
+            } else {
+                lastStickRight = false
+            }
+        }
+        return super.onGenericMotionEvent(event)
     }
 }
