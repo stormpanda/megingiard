@@ -252,7 +252,7 @@ private fun PosterCardContent(
         }
 
     val iconBitmap =
-        remember(appInfo.icon) {
+        remember(appInfo.icon, coverBitmap) {
             if (coverBitmap == null) appInfo.icon?.toBitmapSafe() else null
         }
 
