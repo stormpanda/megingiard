@@ -20,9 +20,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +53,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,6 +88,10 @@ fun GameFocusArtworkDialog(
     val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
+    var searchQuery by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
+    var isEditingQuery by remember { mutableStateOf(false) }
+    var searchInputText by remember(searchQuery) { mutableStateOf(searchQuery) }
+
     var games by remember { mutableStateOf<List<SteamGridDbGame>>(emptyList()) }
     var selectedGameIndex by remember { mutableIntStateOf(0) }
     var isSearchLoading by remember { mutableStateOf(true) }
@@ -84,23 +100,23 @@ fun GameFocusArtworkDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectingImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
 
-    // Initial search for games matching appInfo.label
-    LaunchedEffect(appInfo.packageName) {
-        AppLog.i(TAG, "Searching SteamGridDB games for '${appInfo.label}'")
+    // Search for games matching current searchQuery
+    LaunchedEffect(searchQuery) {
+        AppLog.i(TAG, "Searching SteamGridDB games for '$searchQuery'")
         isSearchLoading = true
         errorMessage = null
         games = emptyList()
         selectedGameIndex = 0
 
         scope.launch(Dispatchers.IO) {
-            val searchRes = SteamGridDbClient.searchGames(appInfo.label, apiKey)
+            val searchRes = SteamGridDbClient.searchGames(searchQuery, apiKey)
             val fetchedGames = searchRes.getOrNull() ?: emptyList()
 
             withContext(Dispatchers.Main) {
                 games = fetchedGames
                 isSearchLoading = false
                 if (fetchedGames.isEmpty()) {
-                    errorMessage = "No SteamGridDB game found for '${appInfo.label}'"
+                    errorMessage = "No SteamGridDB game found for '$searchQuery'"
                 }
             }
         }
@@ -193,19 +209,130 @@ fun GameFocusArtworkDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = stringResource(R.string.focus_change_artwork_title),
-                style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurface,
-                    ),
-                textAlign = TextAlign.Center,
-            )
+            // Headline Section with Editable Search Term Button
+            if (isEditingQuery) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = searchInputText,
+                        onValueChange = { searchInputText = it },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurface),
+                        placeholder = {
+                            Text(
+                                text = "Enter search term...",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors =
+                            OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = appColors.accent,
+                                unfocusedBorderColor = appColors.divider,
+                                cursorColor = appColors.accent,
+                            ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions =
+                            KeyboardActions(
+                                onSearch = {
+                                    if (searchInputText.isNotBlank()) {
+                                        searchQuery = searchInputText.trim()
+                                        isEditingQuery = false
+                                    }
+                                },
+                            ),
+                    )
+
+                    IconButton(
+                        onClick = {
+                            if (searchInputText.isNotBlank()) {
+                                searchQuery = searchInputText.trim()
+                                isEditingQuery = false
+                            }
+                        },
+                        modifier =
+                            Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(appColors.accent),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Search",
+                            tint = appColors.onAccent,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { isEditingQuery = false },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cancel edit",
+                            tint = appColors.onSurfaceSecondary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.focus_change_artwork_title),
+                        style =
+                            MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = appColors.onSurface,
+                            ),
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text(
+                        text = "• $searchQuery",
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color = appColors.accent,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    IconButton(
+                        onClick = {
+                            searchInputText = searchQuery
+                            isEditingQuery = true
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit search query",
+                            tint = appColors.accent,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Selectable Games Row (Touch or L1/R1 navigable)
+            // Selectable Games Row (Touch or L1/R1 navigable with auto-scroll)
             if (games.isNotEmpty()) {
                 GameSelectionRow(
                     games = games,
@@ -214,7 +341,7 @@ fun GameFocusArtworkDialog(
                 )
             } else {
                 Text(
-                    text = appInfo.label,
+                    text = searchQuery,
                     style =
                         MaterialTheme.typography.bodyMedium.copy(
                             color = appColors.onSurfaceSecondary,
@@ -311,6 +438,14 @@ private fun GameSelectionRow(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val listState = rememberLazyListState()
+
+    // Smoothly scroll LazyRow to keep the L1/R1 selected item visible on screen
+    LaunchedEffect(selectedIndex) {
+        if (games.isNotEmpty() && selectedIndex in games.indices) {
+            listState.animateScrollToItem(selectedIndex)
+        }
+    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -339,8 +474,9 @@ private fun GameSelectionRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Scrollable Row of Game Chips
+        // Scrollable Row of Game Chips with Auto-Scroll State
         LazyRow(
+            state = listState,
             modifier = Modifier.weight(1f, fill = false),
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
