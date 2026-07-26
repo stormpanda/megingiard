@@ -55,9 +55,11 @@ data class AutoSetupLanguageConfig(
                 pairDeviceKeywords =
                     listOf(
                         "gerät über einen kopplungscode koppeln",
+                        "gerät über einen kopplungscode koppen",
                         "geräte-kopplungscode",
                         "kopplungscode koppeln",
                         "mit kopplungscode koppeln",
+                        "wlan-kopplungscode",
                     ),
                 explicitPortKeywords =
                     listOf(

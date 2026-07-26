@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.services
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.app.ActivityOptions
+import android.app.LocaleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -110,55 +111,36 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun getSystemAutoSetupConfig(context: Context): AutoSetupLanguageConfig {
-        val systemLocale = resolveSystemLocale(context)
-        val config = AutoSetupLanguageConfig.fromLocale(systemLocale)
+        val lmSysLang =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val lm = context.getSystemService(LocaleManager::class.java)
+                val sysLocales = lm?.systemLocales
+                if (sysLocales != null && sysLocales.size() > 0) {
+                    sysLocales.get(0)?.language
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+
+        val rawSysLocales = Settings.System.getString(context.contentResolver, "system_locales")
+        val rawSysLang =
+            rawSysLocales
+                ?.split(",")
+                ?.firstOrNull()
+                ?.split("-")
+                ?.firstOrNull()
+                ?.trim()
+
+        val appLang = Locale.getDefault().language
+
+        val detectedLang = listOfNotNull(lmSysLang, rawSysLang, appLang).firstOrNull { it.isNotBlank() } ?: "en"
         AppLog.i(
             TAG,
-            "getSystemAutoSetupConfig: Resolved system locale as '$systemLocale' (language='${systemLocale.language}'), selected config for '${config.languageCode}'",
+            "getSystemAutoSetupConfig: System language detected as '$detectedLang' (lmSysLang=$lmSysLang, rawSysLang=$rawSysLang, appLang=$appLang)",
         )
-        return config
-    }
-
-    private fun resolveSystemLocale(context: Context): Locale {
-        try {
-            val configLocales = context.resources.configuration.locales
-            if (!configLocales.isEmpty) {
-                val loc = configLocales[0]
-                if (loc != null && loc.language.isNotBlank()) {
-                    AppLog.d(TAG, "resolveSystemLocale: Resolved via context configuration: $loc")
-                    return loc
-                }
-            }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "resolveSystemLocale: Context config resolution failed: $e")
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                val defaultLocales = LocaleList.getDefault()
-                if (!defaultLocales.isEmpty) {
-                    val loc = defaultLocales[0]
-                    if (loc != null && loc.language.isNotBlank()) {
-                        AppLog.d(TAG, "resolveSystemLocale: Resolved via LocaleList.getDefault(): $loc")
-                        return loc
-                    }
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "resolveSystemLocale: LocaleList.getDefault() failed: $e")
-            }
-        }
-
-        try {
-            val loc = Locale.getDefault()
-            if (loc != null && loc.language.isNotBlank()) {
-                AppLog.d(TAG, "resolveSystemLocale: Resolved via Locale.getDefault(): $loc")
-                return loc
-            }
-        } catch (e: Exception) {
-            AppLog.w(TAG, "resolveSystemLocale: Locale.getDefault() failed: $e")
-        }
-
-        return Locale.ENGLISH
+        return AutoSetupLanguageConfig.fromLanguageTag(detectedLang)
     }
 
     private fun startAutoToggleLoop() {
