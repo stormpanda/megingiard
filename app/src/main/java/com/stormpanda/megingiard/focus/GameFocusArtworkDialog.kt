@@ -47,10 +47,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -65,6 +68,7 @@ import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -92,6 +96,9 @@ fun GameFocusArtworkDialog(
     var isEditingQuery by remember { mutableStateOf(false) }
     var searchInputText by remember(searchQuery) { mutableStateOf(searchQuery) }
 
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     var games by remember { mutableStateOf<List<SteamGridDbGame>>(emptyList()) }
     var selectedGameIndex by remember { mutableIntStateOf(0) }
     var isSearchLoading by remember { mutableStateOf(true) }
@@ -99,6 +106,17 @@ fun GameFocusArtworkDialog(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectingImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
+
+    // Request focus and open soft keyboard automatically when editing search query
+    LaunchedEffect(isEditingQuery) {
+        if (isEditingQuery) {
+            focusRequester.requestFocus()
+            delay(100)
+            keyboardController?.show()
+        } else {
+            keyboardController?.hide()
+        }
+    }
 
     // Search for games matching current searchQuery
     LaunchedEffect(searchQuery) {
@@ -209,7 +227,20 @@ fun GameFocusArtworkDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Headline Section with Editable Search Term Button
+            // Main Dialog Headline
+            Text(
+                text = stringResource(R.string.focus_change_artwork_title),
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = appColors.onSurface,
+                    ),
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // App / Search Term Row with Edit Button Below Title
             if (isEditingQuery) {
                 Row(
                     modifier =
@@ -230,7 +261,10 @@ fun GameFocusArtworkDialog(
                                 style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
                             )
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester),
                         colors =
                             OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = appColors.accent,
@@ -284,23 +318,12 @@ fun GameFocusArtworkDialog(
                 }
             } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringResource(R.string.focus_change_artwork_title),
-                        style =
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = appColors.onSurface,
-                            ),
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Text(
-                        text = "• $searchQuery",
+                        text = searchQuery,
                         style =
                             MaterialTheme.typography.bodyMedium.copy(
                                 color = appColors.accent,
@@ -308,7 +331,6 @@ fun GameFocusArtworkDialog(
                             ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
                     )
 
                     Spacer(modifier = Modifier.width(4.dp))
@@ -318,13 +340,13 @@ fun GameFocusArtworkDialog(
                             searchInputText = searchQuery
                             isEditingQuery = true
                         },
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier.size(28.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Edit search query",
                             tint = appColors.accent,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
