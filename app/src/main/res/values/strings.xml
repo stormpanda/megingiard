@@ -1099,6 +1099,9 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_error_generic_message">An unexpected error occurred. Please try again.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
 
+    <!-- Game Focus -->
+    <string name="focus_change_artwork_title">Change Artwork</string>
+
     <!-- Touchpad settings -->
     <string name="settings_touchpad_title">Touchpad Settings</string>
     <string name="settings_section_relative_mouse">Relative Mouse Mode</string>

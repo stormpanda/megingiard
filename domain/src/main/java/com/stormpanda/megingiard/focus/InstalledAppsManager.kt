@@ -82,6 +82,21 @@ object InstalledAppsManager {
         triggerSteamGridDbScraping(context, coversDir)
     }
 
+    fun updateAppCover(
+        packageName: String,
+        coverPath: String,
+    ) {
+        _installedApps.value =
+            _installedApps.value.map { item ->
+                if (item.packageName == packageName) {
+                    item.copy(coverPath = coverPath)
+                } else {
+                    item
+                }
+            }
+        AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath")
+    }
+
     private fun triggerSteamGridDbScraping(
         context: Context,
         coversDir: File,
@@ -120,14 +135,7 @@ object InstalledAppsManager {
                     tempFile.delete()
 
                     // Update in-memory state
-                    _installedApps.value =
-                        _installedApps.value.map { item ->
-                            if (item.packageName == app.packageName) {
-                                item.copy(coverPath = targetFile.absolutePath)
-                            } else {
-                                item
-                            }
-                        }
+                    updateAppCover(app.packageName, targetFile.absolutePath)
                     AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
                 } catch (e: Exception) {
                     AppLog.w(TAG, "Failed to scrape cover for ${app.label}: ${e.message}")

@@ -1106,6 +1106,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="steamgriddb_error_generic_message">Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es noch einmal.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
 
+    <!-- Game Focus -->
+    <string name="focus_change_artwork_title">Cover-Artwork ändern</string>
+
     <!-- Touchpad settings -->
     <string name="settings_touchpad_title">Touchpad-Einstellungen</string>
     <string name="settings_section_relative_mouse">Relative-Maus-Modus</string>

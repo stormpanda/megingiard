@@ -51,22 +51,17 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.absoluteValue
 
@@ -88,7 +83,6 @@ fun FocusTopLauncherScreen(
     onDismissEditingApp: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
     val appColors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     val apiKey by SettingsManager.steamGridDbApiToken.collectAsState()
@@ -255,42 +249,15 @@ fun FocusTopLauncherScreen(
             }
         }
 
-        // SteamGridDB Artwork Selection Dialog
+        // Custom Megingiard Artwork Selection Modal Dialog
         if (editingAppInfo != null) {
             if (apiKey.isBlank()) {
                 showApiTokenMissingDialog = true
             } else {
-                SteamGridDbScrapeDialog(
-                    initialSearchQuery = editingAppInfo.label,
-                    onImageSelected = { uri ->
-                        coroutineScope.launch(Dispatchers.IO) {
-                            try {
-                                val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
-                                val targetFile = File(coversDir, "${editingAppInfo.packageName}.png")
-
-                                context.contentResolver.openInputStream(uri)?.use { input ->
-                                    targetFile.outputStream().use { output ->
-                                        input.copyTo(output)
-                                    }
-                                }
-                                AppLog.i(
-                                    TAG,
-                                    "Saved new SteamGridDB artwork for ${editingAppInfo.packageName} to ${targetFile.absolutePath}",
-                                )
-                                withContext(Dispatchers.Main) {
-                                    InstalledAppsManager.loadInstalledApps(context)
-                                    onDismissEditingApp()
-                                }
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Failed to save selected artwork from $uri: ${e.message}", e)
-                                withContext(Dispatchers.Main) {
-                                    onDismissEditingApp()
-                                }
-                            }
-                        }
-                    },
-                    onDismiss = { onDismissEditingApp() },
-                    accentColor = appColors.accent,
+                GameFocusArtworkDialog(
+                    appInfo = editingAppInfo,
+                    apiKey = apiKey,
+                    onDismiss = onDismissEditingApp,
                 )
             }
         }
@@ -339,9 +306,10 @@ private fun PosterCardContent(
     val appColors = LocalAppColors.current
 
     val coverBitmap =
-        remember(appInfo.coverPath) {
+        remember(appInfo.coverPath, appInfo.coverPath?.let { File(it).lastModified() }) {
             appInfo.coverPath?.let { path ->
-                if (File(path).exists()) {
+                val file = File(path)
+                if (file.exists() && file.length() > 0) {
                     try {
                         BitmapFactory.decodeFile(path)?.asImageBitmap()
                     } catch (e: Exception) {
