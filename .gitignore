@@ -10,6 +10,7 @@
 /build
 /app/build
 /app/release
+/app/debug
 /core/build
 /domain/build
 /mirrorserver/build

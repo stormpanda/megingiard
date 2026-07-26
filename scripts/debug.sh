@@ -1,0 +1,112 @@
+#!/usr/bin/env zsh
+
+# Megingiard Debug Workflow Automation Script
+#
+# Commands:
+#   build          Compiles the debug APK and copies it to app/debug/
+#   install        Installs the built debug APK on a connected device via ADB
+#   build-install  Builds and installs the debug APK in a single step
+#
+set -e
+
+SCRIPT_DIR="${0:A:h}"
+PROJECT_ROOT="$SCRIPT_DIR/.."
+GRADLE_FILE="$PROJECT_ROOT/app/build.gradle.kts"
+
+# Ensure running from project root
+cd "$PROJECT_ROOT"
+
+log_info() {
+    echo -e "\033[1;34m[INFO]\033[0m $1"
+}
+
+log_success() {
+    echo -e "\033[1;32m[SUCCESS]\033[0m $1"
+}
+
+log_error() {
+    echo -e "\033[1;31m[ERROR]\033[0m $1" >&2
+}
+
+build_debug_apk() {
+    version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+    debug_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+
+    log_info "Building debug APK for version $debug_version..."
+    ./gradlew :app:assembleDebug
+
+    generated_apk="app/build/outputs/apk/debug/app-debug.apk"
+    if [[ ! -f "$generated_apk" ]]; then
+        log_error "Generated debug APK not found at $generated_apk"
+        exit 1
+    fi
+
+    rm -f app/debug/*.apk(N)
+    mkdir -p app/debug
+    copied_apk="app/debug/Megingiard-v${debug_version}-debug.apk"
+    cp "$generated_apk" "$copied_apk"
+    log_success "Debug APK successfully created at $copied_apk"
+}
+
+install_debug_apk() {
+    strict_mode="${1:-true}"
+    version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
+    debug_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
+    debug_apk="app/debug/Megingiard-v${debug_version}-debug.apk"
+
+    if [[ ! -f "$debug_apk" ]]; then
+        debug_apk=$(ls app/debug/*.apk 2>/dev/null | head -n 1 || true)
+    fi
+
+    if [[ -z "$debug_apk" || ! -f "$debug_apk" ]]; then
+        log_error "Debug APK not found in app/debug/. Please run 'scripts/debug.sh build' first."
+        exit 1
+    fi
+
+    ADB="${ADB:-$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")}"
+    DEVICE="${DEVICE:-}"
+    ADB_CMD=("$ADB")
+    if [[ -n "$DEVICE" ]]; then
+        ADB_CMD+=("-s" "$DEVICE")
+    fi
+
+    if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
+        if "${ADB_CMD[@]}" devices 2>/dev/null | grep -v "List of devices" | grep -qE '[[:space:]]device$'; then
+            log_info "Thor/Android device detected via ADB."
+            log_info "Installing Debug APK on device ($debug_apk)..."
+            "${ADB_CMD[@]}" install -r "$debug_apk"
+            log_success "Successfully installed Debug APK on device."
+        else
+            if [[ "$strict_mode" == "true" ]]; then
+                log_error "No connected Thor/Android device found via ADB."
+                exit 1
+            else
+                log_info "No connected Thor/Android device found via ADB. Skipping device install."
+            fi
+        fi
+    else
+        if [[ "$strict_mode" == "true" ]]; then
+            log_error "ADB executable not found at '$ADB'."
+            exit 1
+        else
+            log_info "ADB executable not found at '$ADB'. Skipping device install."
+        fi
+    fi
+}
+
+case "$1" in
+    build)
+        build_debug_apk
+        ;;
+    install)
+        install_debug_apk true
+        ;;
+    build-install|build_and_install|all)
+        build_debug_apk
+        install_debug_apk true
+        ;;
+    *)
+        echo "Usage: $0 {build|install|build-install}"
+        exit 1
+        ;;
+esac
