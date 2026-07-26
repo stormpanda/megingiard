@@ -4,8 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,7 +32,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -62,17 +59,17 @@ import kotlin.math.absoluteValue
 
 private const val TAG = "FocusTopLauncherScreen"
 
-private val FTL_POSTER_CORNER_RADIUS = 14.dp
-private val FTL_POSTER_WIDTH = 135.dp
-private val FTL_POSTER_HEIGHT = 202.dp // 2:3 aspect ratio (135 * 1.5 = 202.5)
-private val FTL_POSTER_SPACING = 10.dp
-private val FTL_ICON_SIZE = 64.dp
+private val FTL_POSTER_CORNER_RADIUS = 16.dp
+private val FTL_POSTER_WIDTH = 175.dp
+private val FTL_POSTER_HEIGHT = 262.dp // 2:3 aspect ratio (~30% larger)
+private val FTL_POSTER_SPACING = 12.dp
+private val FTL_ICON_SIZE = 80.dp
 
 @Composable
 fun FocusTopLauncherScreen(
     apps: List<InstalledAppInfo>,
-    selectedIndex: Int,
-    onSelectedIndexChange: (Int) -> Unit,
+    virtualIndex: Int,
+    onVirtualIndexChange: (Int) -> Unit,
     onAppClick: (InstalledAppInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -99,21 +96,21 @@ fun FocusTopLauncherScreen(
 
     val pagerState =
         rememberPagerState(
-            initialPage = selectedIndex.coerceIn(0, (apps.size - 1).coerceAtLeast(0)),
-            pageCount = { apps.size },
+            initialPage = virtualIndex,
+            pageCount = { Int.MAX_VALUE },
         )
 
-    LaunchedEffect(selectedIndex) {
-        if (pagerState.currentPage != selectedIndex && selectedIndex in apps.indices) {
-            pagerState.animateScrollToPage(selectedIndex)
+    LaunchedEffect(virtualIndex) {
+        if (pagerState.currentPage != virtualIndex) {
+            pagerState.animateScrollToPage(virtualIndex)
         }
     }
 
     LaunchedEffect(Unit) {
         snapshotFlow { pagerState.currentPage }
             .collectLatest { page ->
-                if (page != selectedIndex) {
-                    onSelectedIndexChange(page)
+                if (page != virtualIndex) {
+                    onVirtualIndexChange(page)
                 }
             }
     }
@@ -142,14 +139,14 @@ fun FocusTopLauncherScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Dynamically centered 2:3 poster carousel
+                // Endless centered 2:3 poster carousel with synchronized scaling
                 BoxWithConstraints(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(230.dp),
+                            .height(310.dp),
                 ) {
                     val horizontalPadding = ((maxWidth - FTL_POSTER_WIDTH) / 2).coerceAtLeast(0.dp)
 
@@ -160,25 +157,18 @@ fun FocusTopLauncherScreen(
                         contentPadding = PaddingValues(horizontal = horizontalPadding),
                         modifier = Modifier.fillMaxSize(),
                     ) { page ->
-                        val appInfo = apps[page]
+                        val actualIndex = Math.floorMod(page, apps.size)
+                        val appInfo = apps[actualIndex]
                         val isSelected = page == pagerState.currentPage
 
+                        // Continuous page offset calculation for 1:1 synchronized scale & alpha
                         val pageOffset =
                             (
                                 (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                             ).absoluteValue
 
-                        val scale by animateFloatAsState(
-                            targetValue = if (isSelected) 1.08f else (1.0f - (pageOffset * 0.12f)).coerceAtLeast(0.85f),
-                            animationSpec = tween(durationMillis = 180),
-                            label = "posterScale",
-                        )
-
-                        val alpha by animateFloatAsState(
-                            targetValue = if (isSelected) 1.0f else (1.0f - (pageOffset * 0.35f)).coerceIn(0.55f, 1.0f),
-                            animationSpec = tween(durationMillis = 180),
-                            label = "posterAlpha",
-                        )
+                        val scale = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
+                        val alpha = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
 
                         Box(
                             modifier =
@@ -189,7 +179,7 @@ fun FocusTopLauncherScreen(
                                         scaleY = scale
                                         this.alpha = alpha
                                     }.shadow(
-                                        elevation = if (isSelected) 16.dp else 4.dp,
+                                        elevation = if (isSelected) 20.dp else 4.dp,
                                         shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
                                         ambientColor = if (isSelected) appColors.accent else Color.Black,
                                         spotColor = if (isSelected) appColors.accent else Color.Black,
@@ -217,19 +207,20 @@ fun FocusTopLauncherScreen(
                 }
 
                 // Focused App Title at the bottom of the screen
-                val currentApp = apps.getOrNull(pagerState.currentPage)
+                val currentActualIndex = Math.floorMod(pagerState.currentPage, apps.size)
+                val currentApp = apps.getOrNull(currentActualIndex)
                 Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (currentApp != null) {
                         Text(
                             text = currentApp.label,
                             style =
-                                MaterialTheme.typography.headlineMedium.copy(
+                                MaterialTheme.typography.headlineLarge.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = appColors.onSurface,
                                 ),
@@ -304,7 +295,7 @@ private fun PosterCardContent(
                     imageVector = Icons.Default.Apps,
                     contentDescription = appInfo.label,
                     tint = appColors.accent,
-                    modifier = Modifier.size(44.dp),
+                    modifier = Modifier.size(48.dp),
                 )
             }
         }

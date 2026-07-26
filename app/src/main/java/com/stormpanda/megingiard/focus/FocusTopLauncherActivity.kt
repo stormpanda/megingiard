@@ -27,9 +27,10 @@ import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
 
 private const val TAG = "FocusTopLauncherActivity"
+private const val INITIAL_LOOP_OFFSET = 10_000
 
 class FocusTopLauncherActivity : ComponentActivity() {
-    private val selectedIndexState = mutableIntStateOf(0)
+    private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,8 +67,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     ) {
                         FocusTopLauncherScreen(
                             apps = apps,
-                            selectedIndex = selectedIndexState.intValue,
-                            onSelectedIndexChange = { selectedIndexState.intValue = it },
+                            virtualIndex = virtualIndexState.intValue,
+                            onVirtualIndexChange = { virtualIndexState.intValue = it },
                             onAppClick = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher: ${appInfo.label}")
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
@@ -95,14 +96,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
                 -> {
-                    selectedIndexState.intValue = (selectedIndexState.intValue - 1).coerceAtLeast(0)
+                    virtualIndexState.intValue--
                     return true
                 }
 
                 KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
                 -> {
-                    selectedIndexState.intValue = (selectedIndexState.intValue + 1).coerceAtMost(apps.size - 1)
+                    virtualIndexState.intValue++
                     return true
                 }
 
@@ -111,7 +112,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 -> {
-                    val targetApp = apps.getOrNull(selectedIndexState.intValue)
+                    val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
+                    val targetApp = apps.getOrNull(actualIndex)
                     if (targetApp != null) {
                         AppLog.i(TAG, "Gamepad launch key pressed for: ${targetApp.label}")
                         InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
