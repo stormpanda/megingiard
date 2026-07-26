@@ -783,10 +783,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             )
                             withContext(Dispatchers.Main) {
                                 instance?.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
-                                instance?.autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                instance?.autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
                                 autoTogglePendingTimestamp = System.currentTimeMillis()
                                 instance?.startAutoToggleLoop()
-                                launchWirelessDebuggingSettings(context, displayOptions)
+                                launchSearchActivity(context, displayOptions)
                             }
                         }
                     }
@@ -807,8 +807,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
             val initialStage =
                 when {
                     !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER
-                    !wirelessActive -> AutoToggleStage.ENTER_SEARCH_QUERY
-                    else -> AutoToggleStage.CLICK_PAIR_DIALOG
+                    else -> AutoToggleStage.ENTER_SEARCH_QUERY
                 }
 
             instance?.autoSetupTargetStage = targetStage
@@ -824,10 +823,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                 AutoToggleStage.ENTER_SEARCH_QUERY -> {
                     launchSearchActivity(context, displayOptions)
-                }
-
-                AutoToggleStage.CLICK_PAIR_DIALOG -> {
-                    launchWirelessDebuggingSettings(context, displayOptions)
                 }
 
                 else -> {}
