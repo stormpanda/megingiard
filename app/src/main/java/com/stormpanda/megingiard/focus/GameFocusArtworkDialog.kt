@@ -25,9 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +68,8 @@ import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
+import com.stormpanda.megingiard.ui.ExpandableOptionItem
+import com.stormpanda.megingiard.ui.ExpandableOptionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -85,6 +89,10 @@ fun GameFocusArtworkDialog(
     confirmTrigger: Int = 0,
     l1Trigger: Int = 0,
     r1Trigger: Int = 0,
+    isOptionsMenuExpanded: Boolean = false,
+    onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    dpadUpTrigger: Int = 0,
+    dpadRightTrigger: Int = 0,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -106,6 +114,31 @@ fun GameFocusArtworkDialog(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectingImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
+
+    val useAppIcon =
+        remember(appInfo.packageName) {
+            {
+                val coversDir = File(context.cacheDir, "gamefocus_covers")
+                val targetFile = File(coversDir, "${appInfo.packageName}.png")
+                if (targetFile.exists()) targetFile.delete()
+                InstalledAppsManager.updateAppCover(appInfo.packageName, null)
+                AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
+                onDismiss()
+            }
+        }
+
+    // React to Dpad Up / Dpad Right option shortcuts
+    LaunchedEffect(dpadUpTrigger) {
+        if (dpadUpTrigger > 0) {
+            isEditingQuery = true
+        }
+    }
+
+    LaunchedEffect(dpadRightTrigger) {
+        if (dpadRightTrigger > 0) {
+            useAppIcon()
+        }
+    }
 
     // Request focus and open soft keyboard automatically when editing search query
     LaunchedEffect(isEditingQuery) {
@@ -238,9 +271,9 @@ fun GameFocusArtworkDialog(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // App / Search Term Row with Edit Button Below Title
+            // Conditional Edit Search Term Input Field
             if (isEditingQuery) {
                 Row(
                     modifier =
@@ -316,43 +349,9 @@ fun GameFocusArtworkDialog(
                         )
                     }
                 }
-            } else {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = searchQuery,
-                        style =
-                            MaterialTheme.typography.bodyMedium.copy(
-                                color = appColors.accent,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    IconButton(
-                        onClick = {
-                            searchInputText = searchQuery
-                            isEditingQuery = true
-                        },
-                        modifier = Modifier.size(28.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit search query",
-                            tint = appColors.accent,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Selectable Games Row (Touch or L1/R1 navigable with auto-scroll)
             if (games.isNotEmpty()) {
@@ -437,10 +436,35 @@ fun GameFocusArtworkDialog(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Bottom Navigation Row with Lower Left Reusable Expandable Options Menu
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                ExpandableOptionsMenu(
+                    isExpanded = isOptionsMenuExpanded,
+                    onExpandedChange = onOptionsMenuExpandedChange,
+                    options =
+                        listOf(
+                            ExpandableOptionItem(
+                                label = "Close",
+                                icon = Icons.Default.Menu,
+                                onClick = { onOptionsMenuExpandedChange(false) },
+                            ),
+                            ExpandableOptionItem(
+                                label = "Change Search Term",
+                                icon = Icons.Default.KeyboardArrowUp,
+                                onClick = { isEditingQuery = true },
+                            ),
+                            ExpandableOptionItem(
+                                label = "Use App Icon",
+                                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                onClick = { useAppIcon() },
+                            ),
+                        ),
+                )
+
                 TextButton(onClick = onDismiss) {
                     Text(
                         text = stringResource(R.string.settings_cancel),

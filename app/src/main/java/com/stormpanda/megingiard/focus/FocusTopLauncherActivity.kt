@@ -48,6 +48,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val confirmDialogTriggerState = mutableIntStateOf(0)
     private val l1TriggerState = mutableIntStateOf(0)
     private val r1TriggerState = mutableIntStateOf(0)
+
+    private val isOptionsMenuExpandedState = mutableStateOf(false)
+    private val dpadUpOptionsTriggerState = mutableIntStateOf(0)
+    private val dpadRightOptionsTriggerState = mutableIntStateOf(0)
+
     private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
 
     private var currentDirection = ScrollDirection.NONE
@@ -108,6 +113,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             confirmDialogTrigger = confirmDialogTriggerState.intValue,
                             l1Trigger = l1TriggerState.intValue,
                             r1Trigger = r1TriggerState.intValue,
+                            isOptionsMenuExpanded = isOptionsMenuExpandedState.value,
+                            onOptionsMenuExpandedChange = { isOptionsMenuExpandedState.value = it },
+                            dpadUpTrigger = dpadUpOptionsTriggerState.intValue,
+                            dpadRightTrigger = dpadRightOptionsTriggerState.intValue,
                             onDismissEditingApp = { editingAppInfoState.value = null },
                         )
                     }
@@ -167,7 +176,46 @@ class FocusTopLauncherActivity : ComponentActivity() {
         event: KeyEvent?,
     ): Boolean {
         if (editingAppInfoState.value != null) {
-            // Navigation when Artwork Chooser Dialog is open
+            // Options Menu Gamepad Shortcuts when expanded
+            if (isOptionsMenuExpandedState.value) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    -> {
+                        AppLog.i(TAG, "Dpad UP pressed while options menu expanded -> Change Search Term")
+                        dpadUpOptionsTriggerState.intValue++
+                        isOptionsMenuExpandedState.value = false
+                        return true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    -> {
+                        AppLog.i(TAG, "Dpad RIGHT pressed while options menu expanded -> Use App Icon")
+                        dpadRightOptionsTriggerState.intValue++
+                        isOptionsMenuExpandedState.value = false
+                        return true
+                    }
+
+                    KeyEvent.KEYCODE_BUTTON_SELECT,
+                    KeyEvent.KEYCODE_MENU,
+                    -> {
+                        AppLog.i(TAG, "Gamepad Select/Menu pressed while options menu expanded -> Closing options")
+                        isOptionsMenuExpandedState.value = false
+                        return true
+                    }
+                }
+            } else {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_SELECT,
+                    KeyEvent.KEYCODE_MENU,
+                    -> {
+                        AppLog.i(TAG, "Gamepad Select/Menu pressed -> Opening options menu")
+                        isOptionsMenuExpandedState.value = true
+                        return true
+                    }
+                }
+            }
+
+            // Carousel Navigation when Artwork Chooser Dialog is open
             when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
@@ -262,6 +310,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         confirmDialogTriggerState.intValue = 0
                         l1TriggerState.intValue = 0
                         r1TriggerState.intValue = 0
+                        isOptionsMenuExpandedState.value = false
+                        dpadUpOptionsTriggerState.intValue = 0
+                        dpadRightOptionsTriggerState.intValue = 0
                         editingAppInfoState.value = targetApp
                         return true
                     }

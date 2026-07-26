@@ -84,7 +84,7 @@ object InstalledAppsManager {
 
     fun updateAppCover(
         packageName: String,
-        coverPath: String,
+        coverPath: String?,
     ) {
         _installedApps.value =
             _installedApps.value.map { item ->

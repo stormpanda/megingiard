@@ -68,6 +68,10 @@ fun FocusTopLauncherScreen(
     confirmDialogTrigger: Int = 0,
     l1Trigger: Int = 0,
     r1Trigger: Int = 0,
+    isOptionsMenuExpanded: Boolean = false,
+    onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    dpadUpTrigger: Int = 0,
+    dpadRightTrigger: Int = 0,
     onDismissEditingApp: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -179,6 +183,10 @@ fun FocusTopLauncherScreen(
                     confirmTrigger = confirmDialogTrigger,
                     l1Trigger = l1Trigger,
                     r1Trigger = r1Trigger,
+                    isOptionsMenuExpanded = isOptionsMenuExpanded,
+                    onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
+                    dpadUpTrigger = dpadUpTrigger,
+                    dpadRightTrigger = dpadRightTrigger,
                     onDismiss = onDismissEditingApp,
                 )
             }
