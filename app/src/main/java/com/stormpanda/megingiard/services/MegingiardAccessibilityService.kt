@@ -12,6 +12,7 @@ import android.graphics.Path
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
+import android.os.LocaleList
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.Display
@@ -38,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 private const val TAG = "MegingiardAccessService"
 private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
@@ -107,22 +109,63 @@ class MegingiardAccessibilityService : AccessibilityService() {
         startAutoToggleLoop()
     }
 
-    private fun getSystemAutoSetupConfig(): AutoSetupLanguageConfig {
-        val systemLocale =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Resources.getSystem().configuration.locales[0]
-            } else {
-                @Suppress("DEPRECATION")
-                Resources.getSystem().configuration.locale
+    private fun getSystemAutoSetupConfig(context: Context): AutoSetupLanguageConfig {
+        val systemLocale = resolveSystemLocale(context)
+        val config = AutoSetupLanguageConfig.fromLocale(systemLocale)
+        AppLog.i(
+            TAG,
+            "getSystemAutoSetupConfig: Resolved system locale as '$systemLocale' (language='${systemLocale.language}'), selected config for '${config.languageCode}'",
+        )
+        return config
+    }
+
+    private fun resolveSystemLocale(context: Context): Locale {
+        try {
+            val configLocales = context.resources.configuration.locales
+            if (!configLocales.isEmpty) {
+                val loc = configLocales[0]
+                if (loc != null && loc.language.isNotBlank()) {
+                    AppLog.d(TAG, "resolveSystemLocale: Resolved via context configuration: $loc")
+                    return loc
+                }
             }
-        return AutoSetupLanguageConfig.fromLocale(systemLocale)
+        } catch (e: Exception) {
+            AppLog.w(TAG, "resolveSystemLocale: Context config resolution failed: $e")
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                val defaultLocales = LocaleList.getDefault()
+                if (!defaultLocales.isEmpty) {
+                    val loc = defaultLocales[0]
+                    if (loc != null && loc.language.isNotBlank()) {
+                        AppLog.d(TAG, "resolveSystemLocale: Resolved via LocaleList.getDefault(): $loc")
+                        return loc
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "resolveSystemLocale: LocaleList.getDefault() failed: $e")
+            }
+        }
+
+        try {
+            val loc = Locale.getDefault()
+            if (loc != null && loc.language.isNotBlank()) {
+                AppLog.d(TAG, "resolveSystemLocale: Resolved via Locale.getDefault(): $loc")
+                return loc
+            }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "resolveSystemLocale: Locale.getDefault() failed: $e")
+        }
+
+        return Locale.ENGLISH
     }
 
     private fun startAutoToggleLoop() {
         if (autoToggleJob?.isActive == true) return
         autoToggleJob =
             serviceScope.launch {
-                val config = getSystemAutoSetupConfig()
+                val config = getSystemAutoSetupConfig(applicationContext)
                 AppLog.i(
                     TAG,
                     "startAutoToggleLoop: Starting Search-based auto-toggle loop in stage $autoToggleStage using language '${config.languageCode}'",
