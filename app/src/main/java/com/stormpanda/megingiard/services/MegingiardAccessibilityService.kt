@@ -317,16 +317,35 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
+        val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc".lowercase().trim()
 
-        val isMatch = allowKeywords.any { kw -> combined == kw.lowercase() }
+        val isMatch =
+            allowKeywords.any { kw ->
+                val cleanKw = kw.lowercase().trim()
+                combined == cleanKw ||
+                    combined.startsWith(cleanKw) ||
+                    cleanKw in combined.split(Regex("\\s+")) ||
+                    text.equals(cleanKw, ignoreCase = true) ||
+                    contentDesc.equals(cleanKw, ignoreCase = true)
+            } || (viewId.contains("button1") && combined.isNotBlank() && !combined.contains("cancel") && !combined.contains("abbrechen"))
 
-        if (isMatch && (node.isClickable || node.className?.toString()?.contains("Button") == true)) {
+        if (isMatch) {
             val clickableNode = findClickableAncestorOrSelf(node) ?: node
+            clickableNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
             val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             if (success) {
-                AppLog.i(TAG, "findAndClickAllowDialogButton: Clicked network trust dialog positive button '$text'")
+                AppLog.i(TAG, "findAndClickAllowDialogButton: Clicked network trust dialog positive button '$text' ($viewId)")
                 return true
+            } else {
+                val directSuccess = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (directSuccess) {
+                    AppLog.i(
+                        TAG,
+                        "findAndClickAllowDialogButton: Clicked network trust dialog positive button directly '$text' ($viewId)",
+                    )
+                    return true
+                }
             }
         }
 
