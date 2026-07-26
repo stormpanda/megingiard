@@ -1,8 +1,9 @@
 package com.stormpanda.megingiard
 
 import android.util.Log
+import com.stormpanda.megingiard.domain.BuildConfig
 
-private const val APPLOG_TAG_PREFIX = "Mgnrd"
+private val APPLOG_TAG_PREFIX = if (BuildConfig.DEBUG) "MgnrdD" else "Mgnrd"
 
 /**
  * Unified logging facade for Megingiard.
