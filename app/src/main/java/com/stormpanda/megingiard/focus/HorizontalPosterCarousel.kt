@@ -51,11 +51,13 @@ fun HorizontalPosterCarousel(
     posterSpacing: Dp = HPC_DEFAULT_POSTER_SPACING,
     carouselHeight: Dp = HPC_DEFAULT_CAROUSEL_HEIGHT,
     posterCornerRadius: Dp = HPC_DEFAULT_CORNER_RADIUS,
+    ambientGlowColor: Color = Color.Unspecified,
     itemContent: @Composable (actualIndex: Int, isSelected: Boolean) -> Unit,
 ) {
     if (itemCount <= 0) return
 
     val appColors = LocalAppColors.current
+    val activeGlowColor = if (ambientGlowColor != Color.Unspecified) ambientGlowColor else appColors.accent
     val coroutineScope = rememberCoroutineScope()
 
     val pagerState =
@@ -115,10 +117,10 @@ fun HorizontalPosterCarousel(
                             scaleY = scale
                             this.alpha = alpha
                         }.shadow(
-                            elevation = if (isSelected) 16.dp else 4.dp,
+                            elevation = if (isSelected) 20.dp else 4.dp,
                             shape = RoundedCornerShape(posterCornerRadius),
-                            ambientColor = if (isSelected) appColors.accent else Color.Black,
-                            spotColor = if (isSelected) appColors.accent else Color.Black,
+                            ambientColor = if (isSelected) activeGlowColor else Color.Black,
+                            spotColor = if (isSelected) activeGlowColor else Color.Black,
                         ).clip(RoundedCornerShape(posterCornerRadius))
                         .background(
                             if (isSelected) appColors.surfaceVariant else appColors.surface,

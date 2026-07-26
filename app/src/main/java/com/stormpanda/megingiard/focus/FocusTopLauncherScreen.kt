@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -98,6 +100,31 @@ fun FocusTopLauncherScreen(
         return
     }
 
+    val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndex, apps.size) else 0
+    val currentApp = apps.getOrNull(currentActualIndex)
+
+    // Extract dynamic 2 main colors using AndroidX Palette API
+    val extractedPalette =
+        remember(currentApp?.packageName, currentApp?.coverPath) {
+            if (currentApp != null) {
+                AppPaletteExtractor.extractColors(currentApp, appColors.accent, appColors.appBackground)
+            } else {
+                ExtractedAppPalette(appColors.accent, appColors.appBackground)
+            }
+        }
+
+    // Smoothly animate background gradient and ambient glow colors when focused app changes
+    val animatedPrimaryColor by animateColorAsState(
+        targetValue = extractedPalette.primaryColor,
+        animationSpec = tween(durationMillis = 400),
+        label = "animatedPrimaryColor",
+    )
+    val animatedSecondaryColor by animateColorAsState(
+        targetValue = extractedPalette.secondaryColor,
+        animationSpec = tween(durationMillis = 400),
+        label = "animatedSecondaryColor",
+    )
+
     Surface(
         modifier = modifier.fillMaxSize(),
         color = appColors.appBackground,
@@ -110,8 +137,8 @@ fun FocusTopLauncherScreen(
                         Brush.verticalGradient(
                             colors =
                                 listOf(
-                                    appColors.appBackground,
-                                    appColors.accent.copy(alpha = 0.08f),
+                                    animatedPrimaryColor.copy(alpha = 0.35f),
+                                    animatedSecondaryColor.copy(alpha = 0.18f),
                                     appColors.appBackground,
                                 ),
                         ),
@@ -138,14 +165,13 @@ fun FocusTopLauncherScreen(
                     posterSpacing = FTL_POSTER_SPACING,
                     carouselHeight = 310.dp,
                     posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                    ambientGlowColor = animatedPrimaryColor,
                 ) { actualIndex, _ ->
                     val appInfo = apps[actualIndex]
                     PosterCardContent(appInfo = appInfo)
                 }
 
                 // Focused App Title at the bottom of the screen
-                val currentActualIndex = Math.floorMod(virtualIndex, apps.size)
-                val currentApp = apps.getOrNull(currentActualIndex)
                 Box(
                     modifier =
                         Modifier

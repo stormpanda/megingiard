@@ -199,6 +199,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.material)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.palette.ktx)
     implementation(libs.reorderable)
     implementation(libs.kotlinx.serialization.json)
 

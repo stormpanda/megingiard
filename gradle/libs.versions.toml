@@ -17,8 +17,10 @@ libadbAndroid = "3.1.1"
 sunSecurityAndroid = "1.1"
 conscrypt = "2.5.0"
 robolectric = "4.12.2"
+paletteKtx = "1.0.0"
 
 [libraries]
+androidx-palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "paletteKtx" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
