@@ -14,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
@@ -42,6 +43,7 @@ private enum class ScrollDirection { NONE, LEFT, RIGHT }
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
+    private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
     private var currentDirection = ScrollDirection.NONE
     private var repeatJob: Job? = null
 
@@ -65,6 +67,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
             val apps by InstalledAppsManager.installedApps.collectAsState()
+            val editingApp = editingAppInfoState.value
 
             MaterialTheme(
                 colorScheme = colorSchemeFor(appColors, themeMode),
@@ -86,6 +89,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 AppLog.i(TAG, "Launching app from top launcher: ${appInfo.label}")
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
                             },
+                            editingAppInfo = editingApp,
+                            onDismissEditingApp = { editingAppInfoState.value = null },
                         )
                     }
                 }
@@ -112,7 +117,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         if (direction == ScrollDirection.NONE) return
 
-        // Instant step on initial press
         if (direction == ScrollDirection.LEFT) {
             virtualIndexState.intValue--
         } else if (direction == ScrollDirection.RIGHT) {
@@ -143,6 +147,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
+        // If an editing dialog is open, let the dialog handle inputs
+        if (editingAppInfoState.value != null) {
+            return super.onKeyDown(keyCode, event)
+        }
+
         val apps = InstalledAppsManager.installedApps.value
         if (apps.isNotEmpty()) {
             when (keyCode) {
@@ -170,6 +179,18 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (targetApp != null) {
                         AppLog.i(TAG, "Gamepad launch key pressed for: ${targetApp.label}")
                         InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_BUTTON_Y,
+                KeyEvent.KEYCODE_Y,
+                -> {
+                    val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
+                    val targetApp = apps.getOrNull(actualIndex)
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
+                        editingAppInfoState.value = targetApp
                         return true
                     }
                 }
@@ -205,6 +226,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        if (editingAppInfoState.value != null) {
+            return super.onGenericMotionEvent(event)
+        }
+
         if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
             val axisX = event.getAxisValue(MotionEvent.AXIS_X)

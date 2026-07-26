@@ -31,10 +31,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,15 +51,22 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
+import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.absoluteValue
 
@@ -72,10 +84,16 @@ fun FocusTopLauncherScreen(
     virtualIndex: Int,
     onVirtualIndexChange: (Int) -> Unit,
     onAppClick: (InstalledAppInfo) -> Unit,
+    editingAppInfo: InstalledAppInfo? = null,
+    onDismissEditingApp: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     val appColors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
+    val apiKey by SettingsManager.steamGridDbApiToken.collectAsState()
+
+    var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
     if (apps.isEmpty()) {
         Surface(
@@ -235,6 +253,80 @@ fun FocusTopLauncherScreen(
                     }
                 }
             }
+        }
+
+        // SteamGridDB Artwork Selection Dialog
+        if (editingAppInfo != null) {
+            if (apiKey.isBlank()) {
+                showApiTokenMissingDialog = true
+            } else {
+                SteamGridDbScrapeDialog(
+                    initialSearchQuery = editingAppInfo.label,
+                    onImageSelected = { uri ->
+                        coroutineScope.launch(Dispatchers.IO) {
+                            try {
+                                val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+                                val targetFile = File(coversDir, "${editingAppInfo.packageName}.png")
+
+                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                    targetFile.outputStream().use { output ->
+                                        input.copyTo(output)
+                                    }
+                                }
+                                AppLog.i(
+                                    TAG,
+                                    "Saved new SteamGridDB artwork for ${editingAppInfo.packageName} to ${targetFile.absolutePath}",
+                                )
+                                withContext(Dispatchers.Main) {
+                                    InstalledAppsManager.loadInstalledApps(context)
+                                    onDismissEditingApp()
+                                }
+                            } catch (e: Exception) {
+                                AppLog.e(TAG, "Failed to save selected artwork from $uri: ${e.message}", e)
+                                withContext(Dispatchers.Main) {
+                                    onDismissEditingApp()
+                                }
+                            }
+                        }
+                    },
+                    onDismiss = { onDismissEditingApp() },
+                    accentColor = appColors.accent,
+                )
+            }
+        }
+
+        if (showApiTokenMissingDialog) {
+            AppAlertDialog(
+                onDismissRequest = {
+                    showApiTokenMissingDialog = false
+                    onDismissEditingApp()
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.steamgriddb_token_missing_title),
+                        style = MaterialTheme.typography.titleLarge.copy(color = appColors.onSurface),
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(R.string.steamgriddb_token_missing_message),
+                        style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showApiTokenMissingDialog = false
+                            onDismissEditingApp()
+                        },
+                    ) {
+                        Text(
+                            text = stringResource(R.string.steamgriddb_error_dismiss),
+                            color = appColors.accent,
+                        )
+                    }
+                },
+            )
         }
     }
 }
