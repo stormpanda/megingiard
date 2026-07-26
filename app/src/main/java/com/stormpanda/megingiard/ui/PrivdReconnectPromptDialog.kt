@@ -92,16 +92,16 @@ fun PrivdReconnectPromptDialog(
     val context = LocalContext.current
     val colors = LocalAppColors.current
 
-    val isAccessibilityActiveAtStart = remember { MegingiardAccessibilityService.isEnabled(context) }
-    val privdStateAtStart = remember { PrivdManager.state.value }
+    val privdState by PrivdManager.state.collectAsState()
+    var isAccessibilityActive by remember { mutableStateOf(MegingiardAccessibilityService.isEnabled(context)) }
 
     val stepIds =
-        remember(isAccessibilityActiveAtStart, privdStateAtStart) {
+        remember(isAccessibilityActive, privdState) {
             val list = mutableListOf<OnboardingStepId>()
-            if (!isAccessibilityActiveAtStart) {
+            if (!isAccessibilityActive) {
                 list.add(OnboardingStepId.ACCESSIBILITY)
             }
-            if (privdStateAtStart != PrivdState.RUNNING) {
+            if (privdState != PrivdState.RUNNING) {
                 list.add(OnboardingStepId.PRIVILEGED)
             }
             list.add(OnboardingStepId.FINISHED)
@@ -127,7 +127,6 @@ fun PrivdReconnectPromptDialog(
 
     var isNextAnimation by remember { mutableStateOf(true) }
 
-    var isAccessibilityActive by remember { mutableStateOf(MegingiardAccessibilityService.isEnabled(context)) }
     val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -163,7 +162,6 @@ fun PrivdReconnectPromptDialog(
     }
 
     val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
-    val privdState by PrivdManager.state.collectAsState()
     var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
     var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
     var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }

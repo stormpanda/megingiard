@@ -477,6 +477,16 @@ object AppStateManager {
             }
         }
         scope.launch {
+            var lastState = PrivdManager.state.value
+            PrivdManager.state.collect { newState ->
+                if (lastState == PrivdState.RUNNING && newState != PrivdState.RUNNING) {
+                    AppLog.w(TAG, "Privd state dropped from RUNNING to $newState; resetting prompt dismissed flag")
+                    _isPrivdPromptDismissed.value = false
+                }
+                lastState = newState
+            }
+        }
+        scope.launch {
             combine(
                 PrivdManager.state,
                 MacroPadSettings.privdShowAdbPrompt,
