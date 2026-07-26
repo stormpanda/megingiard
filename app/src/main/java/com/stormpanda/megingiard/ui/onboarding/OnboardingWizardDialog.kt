@@ -86,6 +86,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
@@ -337,7 +338,10 @@ fun OnboardingWizardDialog(
                 ) {
                     if (currentStepState.id == OnboardingStepId.PRIVILEGED) {
                         OutlinedButton(
-                            onClick = { OnboardingWizardManager.nextStep() },
+                            onClick = {
+                                AppStateManager.setPrivdPromptDismissed(true)
+                                OnboardingWizardManager.nextStep()
+                            },
                         ) {
                             Text(
                                 text = stringResource(R.string.onboarding_btn_skip),
