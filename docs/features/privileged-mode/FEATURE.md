@@ -58,6 +58,7 @@ every device since Android 11 (API 30).
 
 - Accessibility Service is **mandatory** for core Megingiard functionality (automatic game macro profile switching, system dialog dismissal, and auto-setup helper).
 - An event-driven `AccessibilityStateChangeListener` and `ON_RESUME` observer monitor the service status. If Accessibility Service is deactivated in System Settings while the app is active and the Welcome Tour is not running (`!isWizardActive`), the app automatically triggers the compact Reconnection Wizard dialog.
+- When Privileged Mode state drops from `RUNNING` (e.g., daemon socket disconnect or Wireless Debugging deactivation), `AppStateManager` automatically resets `_isPrivdPromptDismissed`, immediately presenting the Reconnection Wizard dialog to the user.
 - The Reconnection Wizard renders a multi-step dialog matching the Welcome Tour styling (`OnboardingStepper`, `AppMagicalButton`, dark backdrop scrim):
   - **Accessibility Step**: Included whenever Accessibility Service is inactive. The description states that Accessibility is mandatory for core features, and the Skip button is removed.
   - **Privileged Mode Step**: **Optional**. Excluded dynamically if Privileged Mode is already in the `RUNNING` state and only Accessibility Service is missing. Included if Privileged Mode is disconnected or in `FAILED` state.
