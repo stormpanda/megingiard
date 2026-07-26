@@ -493,9 +493,6 @@ fun MainAppScreen() {
                         val active = MegingiardAccessibilityService.isEnabled(context)
                         AppLog.d(TAG, "ContentObserver: ENABLED_ACCESSIBILITY_SERVICES changed, active=$active")
                         AppStateManager.setAccessibilityActive(active)
-                        if (!active && !OnboardingWizardManager.isWizardActive.value) {
-                            AppStateManager.setPrivdPromptDismissed(false)
-                        }
                     }
                 }
 
@@ -507,10 +504,6 @@ fun MainAppScreen() {
                 AccessibilityManager.AccessibilityStateChangeListener { _ ->
                     val active = MegingiardAccessibilityService.isEnabled(context)
                     AppStateManager.setAccessibilityActive(active)
-                    if (!active && !OnboardingWizardManager.isWizardActive.value) {
-                        AppLog.w(TAG, "Accessibility State Listener: Service disabled, triggering reconnect dialog")
-                        AppStateManager.setPrivdPromptDismissed(false)
-                    }
                 }
             am?.addAccessibilityStateChangeListener(listener)
 
@@ -519,10 +512,6 @@ fun MainAppScreen() {
                     if (event == Lifecycle.Event.ON_RESUME) {
                         val active = MegingiardAccessibilityService.isEnabled(context)
                         AppStateManager.setAccessibilityActive(active)
-                        if (!active && !OnboardingWizardManager.isWizardActive.value) {
-                            AppLog.w(TAG, "ON_RESUME: Accessibility Service disabled, triggering reconnect dialog")
-                            AppStateManager.setPrivdPromptDismissed(false)
-                        }
                     }
                 }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -541,10 +530,6 @@ fun MainAppScreen() {
                     OnboardingWizardManager.finishWizard()
                     val active = MegingiardAccessibilityService.isEnabled(context)
                     AppStateManager.setAccessibilityActive(active)
-                    if (!active) {
-                        AppLog.w(TAG, "Welcome Tour finished but Accessibility Service is OFF! Re-triggering reconnect prompt")
-                        AppStateManager.setPrivdPromptDismissed(false)
-                    }
                 },
             )
         }

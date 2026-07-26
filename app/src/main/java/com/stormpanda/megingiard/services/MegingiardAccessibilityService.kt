@@ -657,7 +657,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
         AppLog.w(TAG, "onUnbind: Megingiard Accessibility Service disabled")
         if (instance == this) instance = null
         AppStateManager.setAccessibilityActive(false)
-        AppStateManager.setPrivdPromptDismissed(false)
         return super.onUnbind(intent)
     }
 
@@ -667,7 +666,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
         if (instance == this) instance = null
         AppLog.i(TAG, "onDestroy: Accessibility Service destroyed")
         AppStateManager.setAccessibilityActive(false)
-        AppStateManager.setPrivdPromptDismissed(false)
     }
 
     companion object {
