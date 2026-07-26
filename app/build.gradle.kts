@@ -70,10 +70,23 @@ android {
         }
     }
 
+    flavorDimensions += "variant"
+    productFlavors {
+        create("standard") {
+            dimension = "variant"
+            buildConfigField("Boolean", "IS_GAME_FOCUS_VARIANT", "false")
+        }
+        create("gameFocus") {
+            dimension = "variant"
+            applicationIdSuffix = ".gamefocus"
+            resValue("string", "app_name", "Megingiard Game Focus")
+            buildConfigField("Boolean", "IS_GAME_FOCUS_VARIANT", "true")
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "Megingiard Debug")
         }
         release {
             val releaseSigningConfig = signingConfigs.findByName("release")
@@ -94,7 +107,7 @@ android {
         variant.outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             if (variant.buildType.name == "release") {
-                output.outputFileName = "Megingiard-v${variant.versionName}.apk"
+                output.outputFileName = "Megingiard-${variant.flavorName}-v${variant.versionName}.apk"
             }
         }
     }

@@ -62,6 +62,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
+import com.stormpanda.megingiard.focus.FocusTopLauncherActivity
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -269,6 +270,21 @@ class MainActivity : ComponentActivity() {
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
+
+        if (BuildConfig.IS_GAME_FOCUS_VARIANT) {
+            AppLog.i(TAG, "gameFocus variant active -> launching FocusTopLauncherActivity on primary display")
+            try {
+                val options = ActivityOptions.makeBasic()
+                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                val launcherIntent =
+                    Intent(this, FocusTopLauncherActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    }
+                startActivity(launcherIntent, options.toBundle())
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to launch FocusTopLauncherActivity: ${e.message}", e)
+            }
+        }
 
         val hasCreds =
             File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
