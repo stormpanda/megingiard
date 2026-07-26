@@ -111,12 +111,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun getSystemAutoSetupConfig(context: Context): AutoSetupLanguageConfig {
-        val lmSysLang =
+        val lmSysLoc =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val lm = context.getSystemService(LocaleManager::class.java)
                 val sysLocales = lm?.systemLocales
                 if (sysLocales != null && sysLocales.size() > 0) {
-                    sysLocales.get(0)?.language
+                    sysLocales.get(0)?.toLanguageTag()
                 } else {
                     null
                 }
@@ -125,22 +125,21 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
         val rawSysLocales = Settings.System.getString(context.contentResolver, "system_locales")
-        val rawSysLang =
+        val rawSysTag =
             rawSysLocales
                 ?.split(",")
                 ?.firstOrNull()
-                ?.split("-")
-                ?.firstOrNull()
                 ?.trim()
 
-        val appLang = Locale.getDefault().language
+        val appTag = Locale.getDefault().toLanguageTag()
 
-        val detectedLang = listOfNotNull(lmSysLang, rawSysLang, appLang).firstOrNull { it.isNotBlank() } ?: "en"
+        val detectedTag = listOfNotNull(lmSysLoc, rawSysTag, appTag).firstOrNull { it.isNotBlank() } ?: "en-US"
+        val config = AutoSetupLanguageConfig.fromLanguageTag(detectedTag)
         AppLog.i(
             TAG,
-            "getSystemAutoSetupConfig: System language detected as '$detectedLang' (lmSysLang=$lmSysLang, rawSysLang=$rawSysLang, appLang=$appLang)",
+            "getSystemAutoSetupConfig: System locale tag detected as '$detectedTag' (lmSysLoc=$lmSysLoc, rawSysTag=$rawSysTag, appTag=$appTag) => mapped config localeTag='${config.localeTag}'",
         )
-        return AutoSetupLanguageConfig.fromLanguageTag(detectedLang)
+        return config
     }
 
     private fun startAutoToggleLoop() {
