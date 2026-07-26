@@ -36,6 +36,19 @@ class AutoSetupLanguageConfigTest {
     }
 
     @Test
+    fun fromLocale_returnsCountrySpecificFrenchConfigs() {
+        val configFrFr = AutoSetupLanguageConfig.fromLocale(Locale.FRANCE)
+        val configFrCa = AutoSetupLanguageConfig.fromLocale(Locale.CANADA_FRENCH)
+
+        assertEquals("fr-FR", configFrFr.localeTag)
+        assertEquals("fr", configFrFr.languageCode)
+        assertEquals("Numéro de build", configFrFr.buildNumberQueryAndKeyword)
+        assertEquals("Débogage sans fil", configFrFr.wirelessDebuggingQueryAndKeyword)
+
+        assertEquals("fr-CA", configFrCa.localeTag)
+    }
+
+    @Test
     fun fromLocale_returnsCountrySpecificEnglishConfigs() {
         val configUs = AutoSetupLanguageConfig.fromLocale(Locale.US)
         val configUk = AutoSetupLanguageConfig.fromLocale(Locale.UK)
@@ -51,10 +64,10 @@ class AutoSetupLanguageConfigTest {
 
     @Test
     fun fromLocale_fallsBackForUnsupportedLocales() {
-        val configFr = AutoSetupLanguageConfig.fromLocale(Locale.FRANCE)
+        val configIt = AutoSetupLanguageConfig.fromLocale(Locale.ITALY)
         val configJa = AutoSetupLanguageConfig.fromLocale(Locale.JAPAN)
 
-        assertEquals("en-US", configFr.localeTag)
+        assertEquals("en-US", configIt.localeTag)
         assertEquals("en-US", configJa.localeTag)
     }
 
@@ -64,12 +77,16 @@ class AutoSetupLanguageConfigTest {
         val deAtTag = AutoSetupLanguageConfig.fromLanguageTag("de-AT")
         val esEsTag = AutoSetupLanguageConfig.fromLanguageTag("es-ES")
         val esMxTag = AutoSetupLanguageConfig.fromLanguageTag("es-MX")
+        val frFrTag = AutoSetupLanguageConfig.fromLanguageTag("fr-FR")
+        val frCaTag = AutoSetupLanguageConfig.fromLanguageTag("fr-CA")
         val enGbTag = AutoSetupLanguageConfig.fromLanguageTag("en-GB")
 
         assertEquals("de-DE", deDeTag.localeTag)
         assertEquals("de-AT", deAtTag.localeTag)
         assertEquals("es-ES", esEsTag.localeTag)
         assertEquals("es-MX", esMxTag.localeTag)
+        assertEquals("fr-FR", frFrTag.localeTag)
+        assertEquals("fr-CA", frCaTag.localeTag)
         assertEquals("en-GB", enGbTag.localeTag)
     }
 }

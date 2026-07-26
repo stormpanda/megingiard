@@ -8,8 +8,8 @@ import java.util.Locale
  * Provides locale-specific search terms, keywords, and labels needed to locate and interact
  * with Android system settings screens across different country locales.
  *
- * @property localeTag BCP 47 locale tag incorporating language and country (e.g. "de-DE", "en-US", "es-ES").
- * @property languageCode Primary 2-letter ISO language code (e.g., "en", "de", "es").
+ * @property localeTag BCP 47 locale tag incorporating language and country (e.g. "de-DE", "en-US", "es-ES", "fr-FR").
+ * @property languageCode Primary 2-letter ISO language code (e.g., "en", "de", "es", "fr").
  * @property buildNumberQueryAndKeyword Search query and UI node matching string for Build Number.
  * @property wirelessDebuggingQueryAndKeyword Search query and UI node matching string for Wireless Debugging.
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
@@ -105,6 +105,42 @@ data class AutoSetupLanguageConfig(
 
         val SPANISH = SPANISH_ES
 
+        val FRENCH_FR =
+            AutoSetupLanguageConfig(
+                localeTag = "fr-FR",
+                languageCode = "fr",
+                buildNumberQueryAndKeyword = "Numéro de build",
+                wirelessDebuggingQueryAndKeyword = "Débogage sans fil",
+                pairDeviceKeywords =
+                    listOf(
+                        "associer l'appareil avec un code d'association",
+                        "associer le périphérique avec un code d'association",
+                        "appairer l'appareil avec un code de synchronisation",
+                        "code d'association",
+                        "code de synchronisation",
+                    ),
+                explicitPortKeywords =
+                    listOf(
+                        "adresse ip et port",
+                        "port",
+                    ),
+                searchBarKeywords =
+                    listOf(
+                        "rechercher dans les paramètres",
+                        "rechercher",
+                        "recherche",
+                    ),
+                allowButtonKeywords =
+                    listOf(
+                        "autoriser",
+                        "ok",
+                    ),
+            )
+
+        val FRENCH_CA = FRENCH_FR.copy(localeTag = "fr-CA")
+
+        val FRENCH = FRENCH_FR
+
         val ENGLISH_US =
             AutoSetupLanguageConfig(
                 localeTag = "en-US",
@@ -148,6 +184,8 @@ data class AutoSetupLanguageConfig(
                 SPANISH_ES,
                 SPANISH_MX,
                 SPANISH_US,
+                FRENCH_FR,
+                FRENCH_CA,
                 ENGLISH_US,
                 ENGLISH_GB,
                 ENGLISH_CA,
@@ -156,7 +194,7 @@ data class AutoSetupLanguageConfig(
 
         /**
          * Selects appropriate [AutoSetupLanguageConfig] for given [Locale].
-         * Matches full language tag (language + country, e.g. "de-DE", "es-ES", "en-US") first.
+         * Matches full language tag (language + country, e.g. "de-DE", "es-ES", "fr-FR", "en-US") first.
          */
         fun fromLocale(locale: Locale): AutoSetupLanguageConfig {
             val fullTag = locale.toLanguageTag().lowercase().replace("_", "-")
@@ -169,13 +207,14 @@ data class AutoSetupLanguageConfig(
             return when (lang) {
                 "de" -> GERMAN_DE
                 "es" -> SPANISH_ES
+                "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
                 else -> ENGLISH_US
             }
         }
 
         /**
-         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag (e.g. "de-DE", "es-ES", "en-GB").
+         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag (e.g. "de-DE", "es-ES", "fr-FR", "en-GB").
          */
         fun fromLanguageTag(languageTag: String): AutoSetupLanguageConfig {
             val cleanTag = languageTag.trim().lowercase().replace("_", "-")
@@ -188,6 +227,7 @@ data class AutoSetupLanguageConfig(
             return when (primaryLang) {
                 "de" -> GERMAN_DE
                 "es" -> SPANISH_ES
+                "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
                 else -> ENGLISH_US
             }
