@@ -122,6 +122,7 @@ fun GameFocusArtworkDialog(
                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
                 if (targetFile.exists()) targetFile.delete()
                 InstalledAppsManager.updateAppCover(appInfo.packageName, null)
+                InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
                 AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
                 onDismiss()
             }
@@ -227,6 +228,7 @@ fun GameFocusArtworkDialog(
                                 tempFile.delete()
 
                                 InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath)
+                                InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
                                 AppLog.i(TAG, "Selected and updated artwork for ${appInfo.packageName}")
                             }
                         } catch (e: Exception) {
@@ -454,12 +456,12 @@ fun GameFocusArtworkDialog(
                             ),
                             ExpandableOptionItem(
                                 label = "Change Search Term",
-                                iconSymbol = "keyboard_arrow_up",
+                                iconSymbol = "gamepad_up",
                                 onClick = { isEditingQuery = true },
                             ),
                             ExpandableOptionItem(
                                 label = "Use App Icon",
-                                iconSymbol = "keyboard_arrow_right",
+                                iconSymbol = "gamepad_right",
                                 onClick = { useAppIcon() },
                             ),
                         ),

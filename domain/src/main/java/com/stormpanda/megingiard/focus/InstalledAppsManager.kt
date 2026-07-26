@@ -28,6 +28,45 @@ object InstalledAppsManager {
     private val _installedApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> = _installedApps.asStateFlow()
 
+    private val scrapedPackages = HashSet<String>()
+    private var isScrapedPackagesLoaded = false
+
+    private fun loadScrapedPackages(context: Context): Set<String> {
+        if (!isScrapedPackagesLoaded) {
+            val file = File(context.filesDir, "gamefocus_scraped_apps.txt")
+            if (file.exists()) {
+                try {
+                    file.readLines().map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                        scrapedPackages.add(it)
+                    }
+                    AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to read scraped packages file: ${e.message}")
+                }
+            }
+            isScrapedPackagesLoaded = true
+        }
+        return scrapedPackages
+    }
+
+    fun markAppAsScraped(
+        context: Context,
+        packageName: String,
+    ) {
+        synchronized(scrapedPackages) {
+            loadScrapedPackages(context)
+            if (scrapedPackages.add(packageName)) {
+                try {
+                    val file = File(context.filesDir, "gamefocus_scraped_apps.txt")
+                    file.writeText(scrapedPackages.joinToString("\n"))
+                    AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Failed to persist scraped packages file: ${e.message}", e)
+                }
+            }
+        }
+    }
+
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         val packageManager = context.packageManager
@@ -108,10 +147,11 @@ object InstalledAppsManager {
         }
 
         scope.launch {
+            val scrapedSet = synchronized(scrapedPackages) { loadScrapedPackages(context).toSet() }
             val currentApps = _installedApps.value
-            val missingCovers = currentApps.filter { it.coverPath == null }
+            val missingCovers = currentApps.filter { it.coverPath == null && !scrapedSet.contains(it.packageName) }
             if (missingCovers.isEmpty()) {
-                AppLog.d(TAG, "All apps already have cached cover art")
+                AppLog.d(TAG, "No un-scraped apps missing cover art")
                 return@launch
             }
 
@@ -120,6 +160,14 @@ object InstalledAppsManager {
             missingCovers.forEach { app ->
                 try {
                     val searchResult = SteamGridDbClient.searchGames(app.label, apiKey)
+                    if (searchResult.isFailure) {
+                        AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry next startup")
+                        return@forEach
+                    }
+
+                    // Search request completed (HTTP success) -> mark as scraped
+                    markAppAsScraped(context, app.packageName)
+
                     val games = searchResult.getOrNull()
                     val gameId = games?.firstOrNull()?.id ?: return@forEach
 
