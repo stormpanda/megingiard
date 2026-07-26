@@ -11,6 +11,7 @@
 /app/build
 /app/release
 /app/debug
+/app/debug-gf
 /core/build
 /domain/build
 /mirrorserver/build

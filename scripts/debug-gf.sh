@@ -1,11 +1,11 @@
 #!/usr/bin/env zsh
 
-# Megingiard Debug Workflow Automation Script
+# Megingiard Game Focus Debug Workflow Automation Script
 #
 # Commands:
-#   build          Compiles the debug APK and copies it to app/debug/
-#   install        Installs the built debug APK on a connected device via ADB
-#   build-install  Builds and installs the debug APK in a single step
+#   build          Compiles the Game Focus debug APK and copies it to app/debug-gf/
+#   install        Installs the built Game Focus debug APK on a connected device via ADB
+#   build-install  Builds and installs the Game Focus debug APK in a single step
 #
 set -e
 
@@ -32,37 +32,34 @@ build_debug_apk() {
     version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
     debug_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
-    log_info "Building debug APK for version $debug_version..."
-    ./gradlew :app:assembleStandardDebug
+    log_info "Building Game Focus debug APK for version $debug_version..."
+    ./gradlew :app:assembleGameFocusDebug
 
-    generated_apk="app/build/outputs/apk/standard/debug/app-standard-debug.apk"
+    generated_apk="app/build/outputs/apk/gameFocus/debug/app-gameFocus-debug.apk"
     if [[ ! -f "$generated_apk" ]]; then
-        generated_apk="app/build/outputs/apk/debug/app-debug.apk"
-    fi
-    if [[ ! -f "$generated_apk" ]]; then
-        log_error "Generated debug APK not found at $generated_apk"
+        log_error "Generated Game Focus debug APK not found at $generated_apk"
         exit 1
     fi
 
-    rm -f app/debug/*.apk(N)
-    mkdir -p app/debug
-    copied_apk="app/debug/Megingiard-v${debug_version}-debug.apk"
+    rm -f app/debug-gf/*.apk(N)
+    mkdir -p app/debug-gf
+    copied_apk="app/debug-gf/Megingiard-GameFocus-v${debug_version}-debug.apk"
     cp "$generated_apk" "$copied_apk"
-    log_success "Debug APK successfully created at $copied_apk"
+    log_success "Game Focus debug APK successfully created at $copied_apk"
 }
 
 install_debug_apk() {
     strict_mode="${1:-true}"
     version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
     debug_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
-    debug_apk="app/debug/Megingiard-v${debug_version}-debug.apk"
+    debug_apk="app/debug-gf/Megingiard-GameFocus-v${debug_version}-debug.apk"
 
     if [[ ! -f "$debug_apk" ]]; then
-        debug_apk=$(ls app/debug/*.apk 2>/dev/null | head -n 1 || true)
+        debug_apk=$(ls app/debug-gf/*.apk 2>/dev/null | head -n 1 || true)
     fi
 
     if [[ -z "$debug_apk" || ! -f "$debug_apk" ]]; then
-        log_error "Debug APK not found in app/debug/. Please run 'scripts/debug.sh build' first."
+        log_error "Game Focus debug APK not found in app/debug-gf/. Please run 'scripts/debug-gf.sh build' first."
         exit 1
     fi
 
@@ -76,9 +73,9 @@ install_debug_apk() {
     if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
         if "${ADB_CMD[@]}" devices 2>/dev/null | grep -v "List of devices" | grep -qE '[[:space:]]device$'; then
             log_info "Thor/Android device detected via ADB."
-            log_info "Installing Debug APK on device ($debug_apk)..."
+            log_info "Installing Game Focus debug APK on device ($debug_apk)..."
             "${ADB_CMD[@]}" install -r "$debug_apk"
-            log_success "Successfully installed Debug APK on device."
+            log_success "Successfully installed Game Focus debug APK on device."
         else
             if [[ "$strict_mode" == "true" ]]; then
                 log_error "No connected Thor/Android device found via ADB."
