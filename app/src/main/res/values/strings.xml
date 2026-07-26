@@ -1041,6 +1041,11 @@ Open Settings to create a layout.</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless Pairing</string>
     <string name="onboarding_privd_stage_daemon">Daemon Connection</string>
     <string name="onboarding_privd_wifi_warning">Wi-Fi is turned off. Wi-Fi must be enabled on your device to make Wireless Debugging possible.</string>
+    <string name="onboarding_privd_unsupported_lang_warning">The current system language (%1$s) is not supported for Auto Setup yet. Please request your language to be supported!</string>
+    <string name="onboarding_privd_manual_title">Set up privileged mode manually</string>
+    <string name="onboarding_privd_manual_step_1">1. Skip this step for now by proceeding to the next step.</string>
+    <string name="onboarding_privd_manual_step_2">2. Open Global Settings → Privileged Mode.</string>
+    <string name="onboarding_privd_manual_step_3">3. Follow the manual pairing instructions there to activate Privileged Mode.</string>
     <string name="onboarding_step_finished">Finished</string>
     <string name="onboarding_finished_title">You\'re All Set! Ready to Tinker?</string>
     <string name="onboarding_finished_desc">You have completed the welcome tour. You can re-run this tour at any time from Global Settings → General.</string>

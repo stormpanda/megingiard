@@ -1048,6 +1048,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless-Kopplung</string>
     <string name="onboarding_privd_stage_daemon">Daemon-Verbindung</string>
     <string name="onboarding_privd_wifi_warning">WLAN ist ausgeschaltet. WLAN muss auf deinem Gerät aktiviert sein, um drahtloses Debugging zu ermöglichen.</string>
+    <string name="onboarding_privd_unsupported_lang_warning">Die aktuelle System-Sprache (%1$s) wird für die automatische Einrichtung noch nicht unterstützt. Bitte beantrage Unterstützung für deine Sprache!</string>
+    <string name="onboarding_privd_manual_title">Privilegierten Modus manuell einrichten</string>
+    <string name="onboarding_privd_manual_step_1">1. Überspringe diesen Schritt vorerst, indem du zum nächsten Schritt weitergehst.</string>
+    <string name="onboarding_privd_manual_step_2">2. Öffne Globale Einstellungen → Privilegierter Modus.</string>
+    <string name="onboarding_privd_manual_step_3">3. Folge dort den manuellen Kopplungsanweisungen, um den Privilegierten Modus zu aktivieren.</string>
     <string name="onboarding_step_finished">Fertig</string>
     <string name="onboarding_finished_title">Alles erledigt! Bereit zum Basteln?</string>
     <string name="onboarding_finished_desc">Du hast die Willkommenstour abgeschlossen. Du kannst diese Tour jederzeit unter Globale Einstellungen → Allgemein erneut starten.</string>

@@ -81,6 +81,7 @@ internal val KEY_MACROPAD_RECENT_COLORS = stringPreferencesKey("macropad_recent_
 
 // Privileged Mode — show ADB reconnect prompt on app start when connection fails
 internal val KEY_PRIVD_SHOW_ADB_PROMPT = booleanPreferencesKey("privd_show_adb_prompt")
+internal val KEY_PRIVD_PROMPT_DISMISSED = booleanPreferencesKey("privd_prompt_dismissed")
 
 // Privileged Mode — per-stick evdev dead zone for physical gamepad recording (0.0–1.0, default 0.15).
 internal val KEY_PRIVD_DEADZONE_LEFT = floatPreferencesKey("privd_deadzone_left")
@@ -179,6 +180,7 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_SHOW_MACRO_EDITOR_TUTORIAL,
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
         KEY_INTERNAL_BACKUPS,
+        KEY_PRIVD_PROMPT_DISMISSED,
     )
 
 /** Reverse lookup: DataStore key name → section name. */

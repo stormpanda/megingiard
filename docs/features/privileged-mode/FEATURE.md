@@ -78,6 +78,8 @@ every device since Android 11 (API 30).
   - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, opens the pairing dialog, scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
   - **Full-Service Auto-Connect**: Upon completing pairing or toggling Wireless Debugging for an already paired device, the service MUST automatically initiate `PrivdManager.connect()` to start the privileged daemon seamlessly without extra taps.
   - **All Set**: If Developer Mode, Wireless Debugging, and ADB pairing are all active, automatically initiates `PrivdManager.connect()` if disconnected and displays a Toast notification: *"You're all set! Privileged Mode is ready."*
+  - **Multi-Language System Navigation**: Settings search queries and UI node matching MUST dynamically adapt to the Android system language and country locale (e.g. English `en-US`/`en-GB`, German `de-DE`/`de-AT`, Spanish `es-ES`/`es-MX`, French `fr-FR`/`fr-CA`) by querying `LocaleManager.systemLocales` via `AutoSetupLanguageConfig`.
+  - **Network Trust Dialog Auto-Confirmation**: If the system displays a Wireless Debugging network trust confirmation dialog ("Debugging über WLAN in diesem Netzwerk zulassen?"), the service MUST automatically click the positive action button ("ZULASSEN" / "ALLOW") while strictly ignoring checkable CheckBox nodes.
 - Step 5 of the Welcome Tour MUST render a live status checklist displaying stage progress icons (`PENDING`, `ACTIVE`, `DONE`) for Developer Options, Wireless Debugging, ADB Pairing, and Daemon Connection.
 - If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
 
@@ -248,6 +250,8 @@ This dialog uses the same wording and colors as the settings status messages. It
 3. **Developer Settings:** A shortcut button that opens the system's Developer Options / Wireless Debugging screen on the main display. This button is only shown when Wireless Debugging is inactive (`isWirelessDebuggingActive == false`).
 
 Opening the Global Settings screen also automatically suppresses/skips the dialog to avoid overlapping layouts.
+
+- **Unsupported Language Fallback**: When `AutoSetupLanguageConfig.fromLocaleOrNull(systemLocale)` returns `null` (unsupported system language), `PrivilegedStepContent` replaces the automated checklist card and "Auto Setup" button with a **Manual Setup Steps Card** formatted in `colors.surfaceVariant` with rounded corners and border. The description text displays a warning message in `colors.error` notifying the user that their system language is not yet supported for auto-setup and asking them to request support.
 
 ### Security Model
 

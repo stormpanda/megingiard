@@ -55,4 +55,29 @@ class PrivdPairScreenTextScannerTest {
         assertEquals("42135", result.port)
         assertTrue(result.isComplete)
     }
+
+    @Test
+    fun parsePairingInfoFromText_extractsCodeAndPortFromGermanSampleText() {
+        val sampleGermanText =
+            """
+            22:15
+            Debugging über WLAN
+            Gerät über einen Kopplungscode koppeln
+            WLAN-Kopplungscode
+            849201
+            IP-Adresse & Port
+            192.168.178.50:41209
+            ABBRECHEN
+            """.trimIndent()
+
+        val result =
+            PrivdPairScreenTextScanner.parsePairingInfoFromText(
+                sampleGermanText,
+                AutoSetupLanguageConfig.GERMAN,
+            )
+
+        assertEquals("849201", result.code)
+        assertEquals("41209", result.port)
+        assertTrue(result.isComplete)
+    }
 }
