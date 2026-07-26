@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.focus
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,195 +22,271 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
 private const val TAG = "FocusTopLauncherScreen"
 
-private val FTL_BG_COLOR = Color(0xFF101216)
-private val FTL_SURFACE_COLOR = Color(0xFF1B1E26)
-private val FTL_CARD_BG = Color(0xFF232733)
-private val FTL_BORDER_COLOR = Color(0xFF383E50)
-private val FTL_ACCENT_COLOR = Color(0xFF6366F1)
-private val FTL_TEXT_PRIMARY = Color(0xFFF3F4F6)
-private val FTL_TEXT_SECONDARY = Color(0xFF9CA3AF)
-
-private val FTL_CORNER_RADIUS = 14.dp
-private val FTL_ICON_SIZE = 54.dp
-private val FTL_GRID_SPACING = 12.dp
+private val FTL_CARD_CORNER_RADIUS = 20.dp
+private val FTL_ICON_SIZE = 110.dp
+private val FTL_CARD_WIDTH = 210.dp
+private val FTL_CARD_HEIGHT = 210.dp
 
 @Composable
 fun FocusTopLauncherScreen(
     apps: List<InstalledAppInfo>,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onRefresh: () -> Unit,
+    selectedIndex: Int,
+    onSelectedIndexChange: (Int) -> Unit,
     onAppClick: (InstalledAppInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val filteredApps =
-        remember(apps, searchQuery) {
-            if (searchQuery.isBlank()) {
-                apps
-            } else {
-                apps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+    val appColors = LocalAppColors.current
+    val coroutineScope = rememberCoroutineScope()
+
+    if (apps.isEmpty()) {
+        Surface(
+            modifier = modifier.fillMaxSize(),
+            color = appColors.appBackground,
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.focus_launcher_no_apps),
+                    style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
+                )
             }
         }
+        return
+    }
+
+    val pagerState =
+        rememberPagerState(
+            initialPage = selectedIndex.coerceIn(0, (apps.size - 1).coerceAtLeast(0)),
+            pageCount = { apps.size },
+        )
+
+    LaunchedEffect(selectedIndex) {
+        if (pagerState.currentPage != selectedIndex && selectedIndex in apps.indices) {
+            pagerState.animateScrollToPage(selectedIndex)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { pagerState.currentPage }
+            .collectLatest { page ->
+                if (page != selectedIndex) {
+                    onSelectedIndexChange(page)
+                }
+            }
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = FTL_BG_COLOR,
+        color = appColors.appBackground,
     ) {
-        Column(
+        Box(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .background(
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    appColors.appBackground,
+                                    appColors.accent.copy(alpha = 0.08f),
+                                    appColors.appBackground,
+                                ),
+                        ),
+                    ),
         ) {
-            // Header Bar
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = stringResource(R.string.focus_launcher_title),
-                        tint = FTL_ACCENT_COLOR,
-                        modifier = Modifier.size(28.dp),
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Horizontal Carousel for Gamepad D-Pad & Touch Browsing
+                HorizontalPager(
+                    state = pagerState,
+                    contentPadding = PaddingValues(horizontal = 160.dp),
+                    pageSpacing = 16.dp,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(250.dp),
+                ) { page ->
+                    val appInfo = apps[page]
+                    val isSelected = page == pagerState.currentPage
+
+                    val pageOffset =
+                        (
+                            (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                        ).absoluteValue
+
+                    val scale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.08f else (1.0f - (pageOffset * 0.15f)).coerceAtLeast(0.82f),
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cardScale",
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = stringResource(R.string.focus_launcher_title),
-                        style =
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = FTL_TEXT_PRIMARY,
-                            ),
+
+                    val alpha by animateFloatAsState(
+                        targetValue = if (isSelected) 1.0f else (1.0f - (pageOffset * 0.45f)).coerceIn(0.4f, 1.0f),
+                        animationSpec = tween(durationMillis = 200),
+                        label = "cardAlpha",
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+
                     Box(
                         modifier =
                             Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(FTL_SURFACE_COLOR)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                                .size(FTL_CARD_WIDTH, FTL_CARD_HEIGHT)
+                                .graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    this.alpha = alpha
+                                }.shadow(
+                                    elevation = if (isSelected) 16.dp else 4.dp,
+                                    shape = RoundedCornerShape(FTL_CARD_CORNER_RADIUS),
+                                    ambientColor = if (isSelected) appColors.accent else Color.Black,
+                                    spotColor = if (isSelected) appColors.accent else Color.Black,
+                                ).clip(RoundedCornerShape(FTL_CARD_CORNER_RADIUS))
+                                .background(
+                                    if (isSelected) appColors.surfaceVariant else appColors.surface,
+                                ).border(
+                                    width = if (isSelected) 3.dp else 1.dp,
+                                    color = if (isSelected) appColors.accent else appColors.divider,
+                                    shape = RoundedCornerShape(FTL_CARD_CORNER_RADIUS),
+                                ).clickable {
+                                    if (isSelected) {
+                                        onAppClick(appInfo)
+                                    } else {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(page)
+                                        }
+                                    }
+                                },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = "${filteredApps.size}",
-                            style =
-                                MaterialTheme.typography.labelMedium.copy(
-                                    color = FTL_TEXT_SECONDARY,
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                        )
+                        AppCardContent(appInfo = appInfo)
                     }
                 }
 
-                IconButton(onClick = onRefresh) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.focus_launcher_refresh),
-                        tint = FTL_TEXT_SECONDARY,
-                    )
+                // Focused App Information & Launch Action
+                val currentApp = apps.getOrNull(pagerState.currentPage)
+                if (currentApp != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = currentApp.label,
+                            style =
+                                MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = appColors.onSurface,
+                                ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = currentApp.packageName,
+                            style =
+                                MaterialTheme.typography.bodySmall.copy(
+                                    color = appColors.onSurfaceSecondary.copy(alpha = 0.8f),
+                                ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Launch Action Badge
+                        Box(
+                            modifier =
+                                Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(appColors.accent.copy(alpha = 0.15f))
+                                    .border(1.dp, appColors.accent.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                                    .clickable { onAppClick(currentApp) }
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = stringResource(R.string.focus_launcher_title),
+                                    tint = appColors.accent,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Launch App",
+                                    style =
+                                        MaterialTheme.typography.labelLarge.copy(
+                                            color = appColors.accent,
+                                            fontWeight = FontWeight.Bold,
+                                        ),
+                                )
+                            }
+                        }
+                    }
                 }
-            }
 
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.focus_launcher_search_hint),
-                        color = FTL_TEXT_SECONDARY,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.focus_launcher_search_hint),
-                        tint = FTL_TEXT_SECONDARY,
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(FTL_CORNER_RADIUS),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = FTL_SURFACE_COLOR,
-                        unfocusedContainerColor = FTL_SURFACE_COLOR,
-                        disabledContainerColor = FTL_SURFACE_COLOR,
-                        focusedBorderColor = FTL_ACCENT_COLOR,
-                        unfocusedBorderColor = FTL_BORDER_COLOR,
-                        focusedTextColor = FTL_TEXT_PRIMARY,
-                        unfocusedTextColor = FTL_TEXT_PRIMARY,
-                    ),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-            )
-
-            // App Grid Browser
-            if (filteredApps.isEmpty()) {
+                // Page Indicator Footer
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.padding(bottom = 20.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = stringResource(R.string.focus_launcher_no_apps),
-                        style = MaterialTheme.typography.bodyLarge.copy(color = FTL_TEXT_SECONDARY),
+                        text = "${pagerState.currentPage + 1} / ${apps.size}",
+                        style =
+                            MaterialTheme.typography.labelMedium.copy(
+                                color = appColors.onSurfaceSecondary,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
                     )
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 110.dp),
-                    horizontalArrangement = Arrangement.spacedBy(FTL_GRID_SPACING),
-                    verticalArrangement = Arrangement.spacedBy(FTL_GRID_SPACING),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(
-                        items = filteredApps,
-                        key = { "${it.packageName}/${it.activityName}" },
-                    ) { appInfo ->
-                        AppCard(
-                            appInfo = appInfo,
-                            onClick = { onAppClick(appInfo) },
-                        )
-                    }
                 }
             }
         }
@@ -216,69 +294,42 @@ fun FocusTopLauncherScreen(
 }
 
 @Composable
-private fun AppCard(
+private fun AppCardContent(
     appInfo: InstalledAppInfo,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
     val bitmap = remember(appInfo.icon) { appInfo.icon?.toBitmapSafe() }
 
     Box(
-        modifier =
-            modifier
-                .clip(RoundedCornerShape(FTL_CORNER_RADIUS))
-                .background(FTL_CARD_BG)
-                .border(1.dp, FTL_BORDER_COLOR, RoundedCornerShape(FTL_CORNER_RADIUS))
-                .clickable(onClick = onClick)
-                .padding(10.dp),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = appInfo.label,
-                    modifier =
-                        Modifier
-                            .size(FTL_ICON_SIZE)
-                            .aspectRatio(1f),
-                )
-            } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(FTL_ICON_SIZE)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(FTL_SURFACE_COLOR),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = appInfo.label,
-                        tint = FTL_ACCENT_COLOR,
-                        modifier = Modifier.size(32.dp),
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = appInfo.label,
-                style =
-                    MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = FTL_TEXT_PRIMARY,
-                    ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = appInfo.label,
+                modifier =
+                    Modifier
+                        .size(FTL_ICON_SIZE)
+                        .aspectRatio(1f),
             )
+        } else {
+            Box(
+                modifier =
+                    Modifier
+                        .size(FTL_ICON_SIZE)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(appColors.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Apps,
+                    contentDescription = appInfo.label,
+                    tint = appColors.accent,
+                    modifier = Modifier.size(56.dp),
+                )
+            }
         }
     }
 }
