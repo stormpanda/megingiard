@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -60,10 +62,11 @@ import kotlin.math.absoluteValue
 
 private const val TAG = "FocusTopLauncherScreen"
 
-private val FTL_POSTER_CORNER_RADIUS = 16.dp
-private val FTL_POSTER_WIDTH = 165.dp
-private val FTL_POSTER_HEIGHT = 248.dp
-private val FTL_ICON_SIZE = 72.dp
+private val FTL_POSTER_CORNER_RADIUS = 14.dp
+private val FTL_POSTER_WIDTH = 135.dp
+private val FTL_POSTER_HEIGHT = 202.dp // 2:3 aspect ratio (135 * 1.5 = 202.5)
+private val FTL_POSTER_SPACING = 10.dp
+private val FTL_ICON_SIZE = 64.dp
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -128,7 +131,7 @@ fun FocusTopLauncherScreen(
                             colors =
                                 listOf(
                                     appColors.appBackground,
-                                    appColors.accent.copy(alpha = 0.07f),
+                                    appColors.accent.copy(alpha = 0.08f),
                                     appColors.appBackground,
                                 ),
                         ),
@@ -141,85 +144,92 @@ fun FocusTopLauncherScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Centered 2:3 Poster Carousel
-                HorizontalPager(
-                    state = pagerState,
-                    contentPadding = PaddingValues(horizontal = 135.dp),
-                    pageSpacing = 6.dp,
+                // Dynamically centered 2:3 poster carousel
+                BoxWithConstraints(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(280.dp),
-                ) { page ->
-                    val appInfo = apps[page]
-                    val isSelected = page == pagerState.currentPage
+                            .height(230.dp),
+                ) {
+                    val horizontalPadding = ((maxWidth - FTL_POSTER_WIDTH) / 2).coerceAtLeast(0.dp)
 
-                    val pageOffset =
-                        (
-                            (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                        ).absoluteValue
+                    HorizontalPager(
+                        state = pagerState,
+                        pageSize = PageSize.Fixed(FTL_POSTER_WIDTH),
+                        pageSpacing = FTL_POSTER_SPACING,
+                        contentPadding = PaddingValues(horizontal = horizontalPadding),
+                        modifier = Modifier.fillMaxSize(),
+                    ) { page ->
+                        val appInfo = apps[page]
+                        val isSelected = page == pagerState.currentPage
 
-                    val scale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.08f else (1.0f - (pageOffset * 0.14f)).coerceAtLeast(0.84f),
-                        animationSpec = tween(durationMillis = 180),
-                        label = "posterScale",
-                    )
+                        val pageOffset =
+                            (
+                                (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                            ).absoluteValue
 
-                    val alpha by animateFloatAsState(
-                        targetValue = if (isSelected) 1.0f else (1.0f - (pageOffset * 0.4f)).coerceIn(0.45f, 1.0f),
-                        animationSpec = tween(durationMillis = 180),
-                        label = "posterAlpha",
-                    )
+                        val scale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.08f else (1.0f - (pageOffset * 0.12f)).coerceAtLeast(0.85f),
+                            animationSpec = tween(durationMillis = 180),
+                            label = "posterScale",
+                        )
 
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(FTL_POSTER_WIDTH, FTL_POSTER_HEIGHT)
-                                .graphicsLayer {
-                                    scaleX = scale
-                                    scaleY = scale
-                                    this.alpha = alpha
-                                }.shadow(
-                                    elevation = if (isSelected) 18.dp else 4.dp,
-                                    shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
-                                    ambientColor = if (isSelected) appColors.accent else Color.Black,
-                                    spotColor = if (isSelected) appColors.accent else Color.Black,
-                                ).clip(RoundedCornerShape(FTL_POSTER_CORNER_RADIUS))
-                                .background(
-                                    if (isSelected) appColors.surfaceVariant else appColors.surface,
-                                ).border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) appColors.accent else appColors.divider,
-                                    shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
-                                ).clickable {
-                                    if (isSelected) {
-                                        onAppClick(appInfo)
-                                    } else {
-                                        coroutineScope.launch {
-                                            pagerState.animateScrollToPage(page)
+                        val alpha by animateFloatAsState(
+                            targetValue = if (isSelected) 1.0f else (1.0f - (pageOffset * 0.35f)).coerceIn(0.55f, 1.0f),
+                            animationSpec = tween(durationMillis = 180),
+                            label = "posterAlpha",
+                        )
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(FTL_POSTER_WIDTH, FTL_POSTER_HEIGHT)
+                                    .graphicsLayer {
+                                        scaleX = scale
+                                        scaleY = scale
+                                        this.alpha = alpha
+                                    }.shadow(
+                                        elevation = if (isSelected) 16.dp else 4.dp,
+                                        shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
+                                        ambientColor = if (isSelected) appColors.accent else Color.Black,
+                                        spotColor = if (isSelected) appColors.accent else Color.Black,
+                                    ).clip(RoundedCornerShape(FTL_POSTER_CORNER_RADIUS))
+                                    .background(
+                                        if (isSelected) appColors.surfaceVariant else appColors.surface,
+                                    ).border(
+                                        width = if (isSelected) 3.dp else 1.dp,
+                                        color = if (isSelected) appColors.accent else appColors.divider,
+                                        shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
+                                    ).clickable {
+                                        if (isSelected) {
+                                            onAppClick(appInfo)
+                                        } else {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(page)
+                                            }
                                         }
-                                    }
-                                },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        PosterCardContent(appInfo = appInfo)
+                                    },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            PosterCardContent(appInfo = appInfo)
+                        }
                     }
                 }
 
-                // Focused App Name at the Bottom of Screen
+                // Focused App Title at the bottom of the screen
                 val currentApp = apps.getOrNull(pagerState.currentPage)
                 Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 18.dp),
+                            .padding(horizontal = 24.dp, vertical = 16.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (currentApp != null) {
                         Text(
                             text = currentApp.label,
                             style =
-                                MaterialTheme.typography.headlineLarge.copy(
+                                MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = appColors.onSurface,
                                 ),
@@ -286,7 +296,7 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .size(FTL_ICON_SIZE)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {
@@ -294,7 +304,7 @@ private fun PosterCardContent(
                     imageVector = Icons.Default.Apps,
                     contentDescription = appInfo.label,
                     tint = appColors.accent,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(44.dp),
                 )
             }
         }
