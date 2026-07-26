@@ -46,6 +46,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
     private val dialogVirtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
     private val confirmDialogTriggerState = mutableIntStateOf(0)
+    private val l1TriggerState = mutableIntStateOf(0)
+    private val r1TriggerState = mutableIntStateOf(0)
     private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
 
     private var currentDirection = ScrollDirection.NONE
@@ -104,6 +106,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             dialogVirtualIndex = dialogVirtualIndexState.intValue,
                             onDialogVirtualIndexChange = { dialogVirtualIndexState.intValue = it },
                             confirmDialogTrigger = confirmDialogTriggerState.intValue,
+                            l1Trigger = l1TriggerState.intValue,
+                            r1Trigger = r1TriggerState.intValue,
                             onDismissEditingApp = { editingAppInfoState.value = null },
                         )
                     }
@@ -179,6 +183,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     return true
                 }
 
+                KeyEvent.KEYCODE_BUTTON_L1,
+                -> {
+                    AppLog.i(TAG, "Gamepad L1 pressed inside artwork dialog")
+                    l1TriggerState.intValue++
+                    return true
+                }
+
+                KeyEvent.KEYCODE_BUTTON_R1,
+                -> {
+                    AppLog.i(TAG, "Gamepad R1 pressed inside artwork dialog")
+                    r1TriggerState.intValue++
+                    return true
+                }
+
                 KeyEvent.KEYCODE_DPAD_CENTER,
                 KeyEvent.KEYCODE_BUTTON_A,
                 KeyEvent.KEYCODE_ENTER,
@@ -242,6 +260,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
                         dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
                         confirmDialogTriggerState.intValue = 0
+                        l1TriggerState.intValue = 0
+                        r1TriggerState.intValue = 0
                         editingAppInfoState.value = targetApp
                         return true
                     }

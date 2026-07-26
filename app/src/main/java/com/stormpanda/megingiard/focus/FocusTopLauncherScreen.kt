@@ -66,6 +66,8 @@ fun FocusTopLauncherScreen(
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
     confirmDialogTrigger: Int = 0,
+    l1Trigger: Int = 0,
+    r1Trigger: Int = 0,
     onDismissEditingApp: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -175,6 +177,8 @@ fun FocusTopLauncherScreen(
                     virtualIndex = dialogVirtualIndex,
                     onVirtualIndexChange = onDialogVirtualIndexChange,
                     confirmTrigger = confirmDialogTrigger,
+                    l1Trigger = l1Trigger,
+                    r1Trigger = r1Trigger,
                     onDismiss = onDismissEditingApp,
                 )
             }

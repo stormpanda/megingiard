@@ -2,9 +2,14 @@ package com.stormpanda.megingiard.focus
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +17,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,12 +28,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -37,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
+import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -55,6 +67,8 @@ fun GameFocusArtworkDialog(
     virtualIndex: Int = 10_000,
     onVirtualIndexChange: (Int) -> Unit = {},
     confirmTrigger: Int = 0,
+    l1Trigger: Int = 0,
+    r1Trigger: Int = 0,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,38 +76,70 @@ fun GameFocusArtworkDialog(
     val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
-    var isLoading by remember { mutableStateOf(true) }
+    var games by remember { mutableStateOf<List<SteamGridDbGame>>(emptyList()) }
+    var selectedGameIndex by remember { mutableIntStateOf(0) }
+    var isSearchLoading by remember { mutableStateOf(true) }
+    var isImagesLoading by remember { mutableStateOf(false) }
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectingImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
 
+    // Initial search for games matching appInfo.label
     LaunchedEffect(appInfo.packageName) {
-        AppLog.i(TAG, "Fetching SteamGridDB artwork options for ${appInfo.label}")
-        isLoading = true
+        AppLog.i(TAG, "Searching SteamGridDB games for '${appInfo.label}'")
+        isSearchLoading = true
         errorMessage = null
+        games = emptyList()
+        selectedGameIndex = 0
 
         scope.launch(Dispatchers.IO) {
             val searchRes = SteamGridDbClient.searchGames(appInfo.label, apiKey)
-            val games = searchRes.getOrNull()
-            val gameId = games?.firstOrNull()?.id
-
-            if (gameId == null) {
-                withContext(Dispatchers.Main) {
-                    errorMessage = "No SteamGridDB game found for '${appInfo.label}'"
-                    isLoading = false
-                }
-                return@launch
-            }
-
-            val imgRes = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
-            val fetchedImages = imgRes.getOrNull() ?: emptyList()
+            val fetchedGames = searchRes.getOrNull() ?: emptyList()
 
             withContext(Dispatchers.Main) {
-                images = fetchedImages
-                if (fetchedImages.isEmpty()) {
-                    errorMessage = "No cover artwork found for '${appInfo.label}'"
+                games = fetchedGames
+                isSearchLoading = false
+                if (fetchedGames.isEmpty()) {
+                    errorMessage = "No SteamGridDB game found for '${appInfo.label}'"
                 }
-                isLoading = false
+            }
+        }
+    }
+
+    // Handle L1 and R1 triggers to switch selected game
+    LaunchedEffect(l1Trigger) {
+        if (l1Trigger > 0 && games.isNotEmpty()) {
+            selectedGameIndex = Math.floorMod(selectedGameIndex - 1, games.size)
+        }
+    }
+
+    LaunchedEffect(r1Trigger) {
+        if (r1Trigger > 0 && games.isNotEmpty()) {
+            selectedGameIndex = Math.floorMod(selectedGameIndex + 1, games.size)
+        }
+    }
+
+    // Fetch images whenever selectedGameIndex or games list changes
+    LaunchedEffect(selectedGameIndex, games) {
+        val currentGame = games.getOrNull(selectedGameIndex)
+        if (currentGame != null) {
+            AppLog.i(TAG, "Fetching SteamGridDB artwork options for game '${currentGame.name}' (id=${currentGame.id})")
+            isImagesLoading = true
+            errorMessage = null
+            images = emptyList()
+            onVirtualIndexChange(10_000)
+
+            scope.launch(Dispatchers.IO) {
+                val imgRes = SteamGridDbClient.fetchImages(currentGame.id, "grids", apiKey)
+                val fetchedImages = imgRes.getOrNull() ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    images = fetchedImages
+                    if (fetchedImages.isEmpty()) {
+                        errorMessage = "No cover artwork found for '${currentGame.name}'"
+                    }
+                    isImagesLoading = false
+                }
             }
         }
     }
@@ -157,21 +203,31 @@ fun GameFocusArtworkDialog(
                 textAlign = TextAlign.Center,
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
-                text = appInfo.label,
-                style =
-                    MaterialTheme.typography.bodyMedium.copy(
-                        color = appColors.onSurfaceSecondary,
-                    ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
+            // Selectable Games Row (Touch or L1/R1 navigable)
+            if (games.isNotEmpty()) {
+                GameSelectionRow(
+                    games = games,
+                    selectedIndex = selectedGameIndex,
+                    onGameSelect = { selectedGameIndex = it },
+                )
+            } else {
+                Text(
+                    text = appInfo.label,
+                    style =
+                        MaterialTheme.typography.bodyMedium.copy(
+                            color = appColors.onSurfaceSecondary,
+                        ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
+            // Poster Carousel Container
             Box(
                 modifier =
                     Modifier
@@ -179,7 +235,7 @@ fun GameFocusArtworkDialog(
                         .height(230.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                if (isLoading || selectingImage != null) {
+                if (isSearchLoading || isImagesLoading || selectingImage != null) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
@@ -189,8 +245,14 @@ fun GameFocusArtworkDialog(
                             modifier = Modifier.size(36.dp),
                         )
                         Spacer(modifier = Modifier.height(10.dp))
+                        val loadingStatusText =
+                            when {
+                                selectingImage != null -> "Downloading artwork..."
+                                isSearchLoading -> "Searching SteamGridDB..."
+                                else -> "Fetching game covers..."
+                            }
                         Text(
-                            text = if (selectingImage != null) "Downloading artwork..." else "Searching SteamGridDB...",
+                            text = loadingStatusText,
                             style = MaterialTheme.typography.bodySmall.copy(color = appColors.onSurfaceSecondary),
                         )
                     }
@@ -237,6 +299,106 @@ fun GameFocusArtworkDialog(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GameSelectionRow(
+    games: List<SteamGridDbGame>,
+    selectedIndex: Int,
+    onGameSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val appColors = LocalAppColors.current
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        // L1 Badge Indicator
+        Box(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(appColors.surfaceVariant)
+                    .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 7.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "L1",
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = appColors.accent,
+                    ),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Scrollable Row of Game Chips
+        LazyRow(
+            modifier = Modifier.weight(1f, fill = false),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            itemsIndexed(games, key = { _, game -> game.id }) { index, game ->
+                val isSelected = index == selectedIndex
+                Box(
+                    modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (isSelected) appColors.accent else appColors.surfaceVariant)
+                            .border(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) appColors.accent else appColors.divider,
+                                shape = RoundedCornerShape(20.dp),
+                            ).clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) {
+                                onGameSelect(index)
+                            }.padding(horizontal = 14.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = game.name,
+                        style =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) appColors.onAccent else appColors.onSurfaceSecondary,
+                            ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // R1 Badge Indicator
+        Box(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(appColors.surfaceVariant)
+                    .border(1.dp, appColors.divider, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 7.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "R1",
+                style =
+                    MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = appColors.accent,
+                    ),
+            )
         }
     }
 }
