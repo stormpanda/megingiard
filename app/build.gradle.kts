@@ -71,6 +71,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "Megingiard Debug")
+        }
         release {
             val releaseSigningConfig = signingConfigs.findByName("release")
             if (releaseSigningConfig != null && releaseSigningConfig.storeFile?.exists() == true) {

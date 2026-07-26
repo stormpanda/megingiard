@@ -23,7 +23,7 @@ object AutoSwitchCoordinator {
         val normalized = packageName.trim()
         if (normalized.isBlank()) return
 
-        if (normalized == APP_PACKAGE_SELF) {
+        if (normalized == APP_PACKAGE_SELF || normalized == "$APP_PACKAGE_SELF.debug") {
             AppLog.d(TAG, "onPackageChanged: Ignoring self-package ($normalized)")
             return
         }

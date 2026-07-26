@@ -97,9 +97,11 @@ class AutoSwitchCoordinatorTest {
         // Given we are currently on profile1
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
 
-        // When Megingiard itself gains focus
+        // When Megingiard itself (release or debug) gains focus
         AutoSwitchCoordinator.onPackageChanged("com.stormpanda.megingiard")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
 
+        AutoSwitchCoordinator.onPackageChanged("com.stormpanda.megingiard.debug")
         // Then it is ignored and foreground app state does not record it
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
