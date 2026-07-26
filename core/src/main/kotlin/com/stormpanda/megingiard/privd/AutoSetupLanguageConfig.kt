@@ -8,8 +8,8 @@ import java.util.Locale
  * Provides locale-specific search terms, keywords, and labels needed to locate and interact
  * with Android system settings screens across different country locales.
  *
- * @property localeTag BCP 47 locale tag incorporating language and country (e.g. "de-DE", "en-US").
- * @property languageCode Primary 2-letter ISO language code (e.g., "en", "de").
+ * @property localeTag BCP 47 locale tag incorporating language and country (e.g. "de-DE", "en-US", "es-ES").
+ * @property languageCode Primary 2-letter ISO language code (e.g., "en", "de", "es").
  * @property buildNumberQueryAndKeyword Search query and UI node matching string for Build Number.
  * @property wirelessDebuggingQueryAndKeyword Search query and UI node matching string for Wireless Debugging.
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
@@ -68,6 +68,43 @@ data class AutoSetupLanguageConfig(
 
         val GERMAN = GERMAN_DE
 
+        val SPANISH_ES =
+            AutoSetupLanguageConfig(
+                localeTag = "es-ES",
+                languageCode = "es",
+                buildNumberQueryAndKeyword = "Número de compilación",
+                wirelessDebuggingQueryAndKeyword = "Depuración inalámbrica",
+                pairDeviceKeywords =
+                    listOf(
+                        "vincular dispositivo con un código de vinculación",
+                        "vincular dispositivo con código de vinculación",
+                        "código de vinculación",
+                        "emparejar dispositivo con un código de sincronización",
+                        "código de sincronización",
+                    ),
+                explicitPortKeywords =
+                    listOf(
+                        "dirección ip y puerto",
+                        "puerto",
+                    ),
+                searchBarKeywords =
+                    listOf(
+                        "buscar en ajustes",
+                        "buscar en la configuración",
+                        "buscar",
+                    ),
+                allowButtonKeywords =
+                    listOf(
+                        "permitir",
+                        "ok",
+                    ),
+            )
+
+        val SPANISH_MX = SPANISH_ES.copy(localeTag = "es-MX")
+        val SPANISH_US = SPANISH_ES.copy(localeTag = "es-US")
+
+        val SPANISH = SPANISH_ES
+
         val ENGLISH_US =
             AutoSetupLanguageConfig(
                 localeTag = "en-US",
@@ -108,6 +145,9 @@ data class AutoSetupLanguageConfig(
                 GERMAN_DE,
                 GERMAN_AT,
                 GERMAN_CH,
+                SPANISH_ES,
+                SPANISH_MX,
+                SPANISH_US,
                 ENGLISH_US,
                 ENGLISH_GB,
                 ENGLISH_CA,
@@ -116,7 +156,7 @@ data class AutoSetupLanguageConfig(
 
         /**
          * Selects appropriate [AutoSetupLanguageConfig] for given [Locale].
-         * Matches full language tag (language + country, e.g. "de-DE", "de-AT") first.
+         * Matches full language tag (language + country, e.g. "de-DE", "es-ES", "en-US") first.
          */
         fun fromLocale(locale: Locale): AutoSetupLanguageConfig {
             val fullTag = locale.toLanguageTag().lowercase().replace("_", "-")
@@ -128,13 +168,14 @@ data class AutoSetupLanguageConfig(
             val lang = locale.language.lowercase()
             return when (lang) {
                 "de" -> GERMAN_DE
+                "es" -> SPANISH_ES
                 "en" -> ENGLISH_US
                 else -> ENGLISH_US
             }
         }
 
         /**
-         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag (e.g. "de-DE", "de-AT", "en-GB").
+         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag (e.g. "de-DE", "es-ES", "en-GB").
          */
         fun fromLanguageTag(languageTag: String): AutoSetupLanguageConfig {
             val cleanTag = languageTag.trim().lowercase().replace("_", "-")
@@ -146,6 +187,7 @@ data class AutoSetupLanguageConfig(
             val primaryLang = cleanTag.split("-").firstOrNull() ?: ""
             return when (primaryLang) {
                 "de" -> GERMAN_DE
+                "es" -> SPANISH_ES
                 "en" -> ENGLISH_US
                 else -> ENGLISH_US
             }
