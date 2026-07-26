@@ -193,10 +193,9 @@ data class AutoSetupLanguageConfig(
             ).associateBy { it.localeTag.lowercase() }
 
         /**
-         * Selects appropriate [AutoSetupLanguageConfig] for given [Locale].
-         * Matches full language tag (language + country, e.g. "de-DE", "es-ES", "fr-FR", "en-US") first.
+         * Selects appropriate [AutoSetupLanguageConfig] for given [Locale], or null if unsupported.
          */
-        fun fromLocale(locale: Locale): AutoSetupLanguageConfig {
+        fun fromLocaleOrNull(locale: Locale): AutoSetupLanguageConfig? {
             val fullTag = locale.toLanguageTag().lowercase().replace("_", "-")
             val matchedByTag = CONFIGS_BY_TAG[fullTag]
             if (matchedByTag != null) {
@@ -209,14 +208,20 @@ data class AutoSetupLanguageConfig(
                 "es" -> SPANISH_ES
                 "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
-                else -> ENGLISH_US
+                else -> null
             }
         }
 
         /**
-         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag (e.g. "de-DE", "es-ES", "fr-FR", "en-GB").
+         * Selects appropriate [AutoSetupLanguageConfig] for given [Locale].
+         * Matches full language tag (language + country, e.g. "de-DE", "es-ES", "fr-FR", "en-US") first.
          */
-        fun fromLanguageTag(languageTag: String): AutoSetupLanguageConfig {
+        fun fromLocale(locale: Locale): AutoSetupLanguageConfig = fromLocaleOrNull(locale) ?: ENGLISH_US
+
+        /**
+         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag, or null if unsupported.
+         */
+        fun fromLanguageTagOrNull(languageTag: String): AutoSetupLanguageConfig? {
             val cleanTag = languageTag.trim().lowercase().replace("_", "-")
             val matchedByTag = CONFIGS_BY_TAG[cleanTag]
             if (matchedByTag != null) {
@@ -229,8 +234,13 @@ data class AutoSetupLanguageConfig(
                 "es" -> SPANISH_ES
                 "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
-                else -> ENGLISH_US
+                else -> null
             }
         }
+
+        /**
+         * Selects appropriate [AutoSetupLanguageConfig] for a locale string tag (e.g. "de-DE", "es-ES", "fr-FR", "en-GB").
+         */
+        fun fromLanguageTag(languageTag: String): AutoSetupLanguageConfig = fromLanguageTagOrNull(languageTag) ?: ENGLISH_US
     }
 }

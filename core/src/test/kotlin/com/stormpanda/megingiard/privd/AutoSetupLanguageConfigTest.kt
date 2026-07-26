@@ -89,4 +89,35 @@ class AutoSetupLanguageConfigTest {
         assertEquals("fr-CA", frCaTag.localeTag)
         assertEquals("en-GB", enGbTag.localeTag)
     }
+
+    @Test
+    fun fromLocaleOrNull_returnsNullForUnsupportedLocales() {
+        val configIt = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.ITALY)
+        val configJa = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.JAPAN)
+        val configZh = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.SIMPLIFIED_CHINESE)
+        val configRu = AutoSetupLanguageConfig.fromLocaleOrNull(Locale("ru", "RU"))
+
+        org.junit.Assert.assertNull(configIt)
+        org.junit.Assert.assertNull(configJa)
+        org.junit.Assert.assertNull(configZh)
+        org.junit.Assert.assertNull(configRu)
+
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.GERMANY))
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.FRANCE))
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.US))
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale("es", "ES")))
+    }
+
+    @Test
+    fun fromLanguageTagOrNull_returnsNullForUnsupportedLanguageTags() {
+        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ja-JP"))
+        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-CN"))
+        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ru-RU"))
+        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("it-IT"))
+
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("de-DE"))
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("es-ES"))
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("fr-FR"))
+        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("en-US"))
+    }
 }

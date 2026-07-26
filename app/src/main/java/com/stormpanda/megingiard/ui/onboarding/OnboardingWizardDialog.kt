@@ -1,7 +1,9 @@
 package com.stormpanda.megingiard.ui.onboarding
 
 import android.app.ActivityOptions
+import android.app.LocaleManager
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -87,6 +90,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
@@ -102,6 +106,7 @@ import com.stormpanda.megingiard.ui.WelcomeStepContent
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import java.util.Locale
 
 private const val TAG = "OnboardingWizardDialog"
 
@@ -596,7 +601,34 @@ fun PrivilegedStepContent(
     descText: String = stringResource(R.string.onboarding_privd_desc),
     buttonText: String = stringResource(R.string.onboarding_privd_auto_setup),
 ) {
+    val context = LocalContext.current
     val colors = LocalAppColors.current
+    val systemLocale =
+        remember {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val lm = context.getSystemService(LocaleManager::class.java)
+                val locales = lm?.systemLocales
+                if (locales != null && !locales.isEmpty) {
+                    locales.get(0)
+                } else {
+                    Locale.getDefault()
+                }
+            } else {
+                val systemLocalesSetting = Settings.System.getString(context.contentResolver, "system_locales")
+                if (!systemLocalesSetting.isNullOrBlank()) {
+                    val firstTag = systemLocalesSetting.split(",").firstOrNull()
+                    if (!firstTag.isNullOrBlank()) Locale.forLanguageTag(firstTag) else Locale.getDefault()
+                } else {
+                    Locale.getDefault()
+                }
+            }
+        }
+
+    val isLanguageSupported =
+        remember(systemLocale) {
+            AutoSetupLanguageConfig.fromLocaleOrNull(systemLocale) != null
+        }
+
     var hasAutoSetupBeenStarted by remember {
         mutableStateOf(false)
     }
@@ -622,151 +654,195 @@ fun PrivilegedStepContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = descText,
-            color = colors.onSurfaceSecondary,
+            text =
+                if (isLanguageSupported) {
+                    descText
+                } else {
+                    stringResource(
+                        R.string.onboarding_privd_unsupported_lang_warning,
+                        systemLocale.displayName,
+                    )
+                },
+            color = if (isLanguageSupported) colors.onSurfaceSecondary else colors.error,
             style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isLanguageSupported) FontWeight.Normal else FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Sequential status checklist calculation
-        val devStatus: ChecklistStatus
-        val wirelessStatus: ChecklistStatus
-        val pairingStatus: ChecklistStatus
-        val daemonStatus: ChecklistStatus
-
-        if (isAllSet) {
-            devStatus = ChecklistStatus.DONE
-            wirelessStatus = ChecklistStatus.DONE
-            pairingStatus = ChecklistStatus.DONE
-            daemonStatus = ChecklistStatus.DONE
-        } else if (!isWifiActive || !hasAutoSetupBeenStarted) {
-            devStatus = ChecklistStatus.PENDING
-            wirelessStatus = ChecklistStatus.PENDING
-            pairingStatus = ChecklistStatus.PENDING
-            daemonStatus = ChecklistStatus.PENDING
-        } else {
-            devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-
-            wirelessStatus =
-                if (devStatus == ChecklistStatus.DONE) {
-                    if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                } else {
-                    ChecklistStatus.PENDING
-                }
-
-            pairingStatus =
-                if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
-                    if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                } else {
-                    ChecklistStatus.PENDING
-                }
-
-            daemonStatus =
-                if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
-                    pairingStatus == ChecklistStatus.DONE
-                ) {
-                    if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
-                } else {
-                    ChecklistStatus.PENDING
-                }
-        }
-
-        // Multi-stage status checklist
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                    .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_dev),
-                status = devStatus,
-            )
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_wireless),
-                status = wirelessStatus,
-            )
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_pairing),
-                status = pairingStatus,
-            )
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_daemon),
-                status = daemonStatus,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (isAllSet) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(vertical = 4.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = colors.actionColorSystem,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.privd_toast_all_set),
-                    color = colors.actionColorSystem,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        } else if (!isWifiActive) {
-            Row(
+        if (!isLanguageSupported) {
+            // Manual Setup Steps Card for Unsupported Languages
+            Column(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                        .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Warning,
-                    contentDescription = null,
-                    tint = colors.error,
-                    modifier = Modifier.size(20.dp),
+                Text(
+                    text = stringResource(R.string.onboarding_privd_manual_title),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = stringResource(R.string.onboarding_privd_wifi_warning),
-                    color = colors.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.onboarding_privd_manual_step_1),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_privd_manual_step_2),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(R.string.onboarding_privd_manual_step_3),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         } else {
-            AppMagicalButton(
-                onClick = {
-                    hasAutoSetupBeenStarted = true
-                    onStartAutoSetup()
-                },
-                modifier = Modifier.fillMaxWidth(),
+            // Sequential status checklist calculation
+            val devStatus: ChecklistStatus
+            val wirelessStatus: ChecklistStatus
+            val pairingStatus: ChecklistStatus
+            val daemonStatus: ChecklistStatus
+
+            if (isAllSet) {
+                devStatus = ChecklistStatus.DONE
+                wirelessStatus = ChecklistStatus.DONE
+                pairingStatus = ChecklistStatus.DONE
+                daemonStatus = ChecklistStatus.DONE
+            } else if (!isWifiActive || !hasAutoSetupBeenStarted) {
+                devStatus = ChecklistStatus.PENDING
+                wirelessStatus = ChecklistStatus.PENDING
+                pairingStatus = ChecklistStatus.PENDING
+                daemonStatus = ChecklistStatus.PENDING
+            } else {
+                devStatus = if (isDevModeActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+
+                wirelessStatus =
+                    if (devStatus == ChecklistStatus.DONE) {
+                        if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                    } else {
+                        ChecklistStatus.PENDING
+                    }
+
+                pairingStatus =
+                    if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE) {
+                        if (isDevicePaired) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                    } else {
+                        ChecklistStatus.PENDING
+                    }
+
+                daemonStatus =
+                    if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
+                        pairingStatus == ChecklistStatus.DONE
+                    ) {
+                        if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                    } else {
+                        ChecklistStatus.PENDING
+                    }
+            }
+
+            // Multi-stage status checklist
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.AutoFixHigh,
-                    contentDescription = null,
-                    tint = colors.actionColorSystem,
-                    modifier = Modifier.size(18.dp),
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_dev),
+                    status = devStatus,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = buttonText,
-                    color = colors.actionColorSystem,
-                    style = MaterialTheme.typography.labelLarge,
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_wireless),
+                    status = wirelessStatus,
                 )
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_pairing),
+                    status = pairingStatus,
+                )
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_daemon),
+                    status = daemonStatus,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isAllSet) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 4.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = colors.actionColorSystem,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.privd_toast_all_set),
+                        color = colors.actionColorSystem,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            } else if (!isWifiActive) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                            .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = colors.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.onboarding_privd_wifi_warning),
+                        color = colors.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            } else {
+                AppMagicalButton(
+                    onClick = {
+                        hasAutoSetupBeenStarted = true
+                        onStartAutoSetup()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.AutoFixHigh,
+                        contentDescription = null,
+                        tint = colors.actionColorSystem,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = buttonText,
+                        color = colors.actionColorSystem,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         }
     }

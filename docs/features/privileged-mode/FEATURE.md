@@ -251,6 +251,8 @@ This dialog uses the same wording and colors as the settings status messages. It
 
 Opening the Global Settings screen also automatically suppresses/skips the dialog to avoid overlapping layouts.
 
+- **Unsupported Language Fallback**: When `AutoSetupLanguageConfig.fromLocaleOrNull(systemLocale)` returns `null` (unsupported system language), `PrivilegedStepContent` replaces the automated checklist card and "Auto Setup" button with a **Manual Setup Steps Card** formatted in `colors.surfaceVariant` with rounded corners and border. The description text displays a warning message in `colors.error` notifying the user that their system language is not yet supported for auto-setup and asking them to request support.
+
 ### Security Model
 
 Privileged Mode crosses the app sandbox boundary by delegating selected kernel I/O to `megingiard_privd`, a shell-UID helper started through ADB Wireless Debugging. The socket is therefore treated as a privileged command channel: every connection must authenticate before feature commands are accepted.
