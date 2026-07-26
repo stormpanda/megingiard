@@ -350,8 +350,8 @@ fun OnboardingWizardDialog(
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
-                                isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
-                                    privdState == PrivdState.RUNNING
+                                privdState == PrivdState.RUNNING ||
+                                    (isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired)
                             }
 
                             else -> {
@@ -617,7 +617,7 @@ fun PrivilegedStepContent(
         }
     }
 
-    LaunchedEffect(setupAttemptCounter) {
+    LaunchedEffect(setupAttemptCounter, isAllSet) {
         if (setupAttemptCounter > 0 && hasAutoSetupBeenStarted && !isAllSet) {
             hasTimedOut = false
             var elapsed = 0L
