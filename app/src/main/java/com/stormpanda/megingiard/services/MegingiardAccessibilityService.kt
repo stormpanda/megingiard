@@ -891,9 +891,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         fun isWirelessDebuggingActive(context: Context): Boolean =
             try {
-                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
+                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0 ||
+                    Settings.Global.getInt(context.contentResolver, "adb_wireless_enabled", 0) != 0 ||
+                    PrivdBootstrapper.isWirelessDebuggingActive()
             } catch (e: Exception) {
-                false
+                PrivdBootstrapper.isWirelessDebuggingActive()
             }
 
         fun isDevicePaired(context: Context): Boolean =

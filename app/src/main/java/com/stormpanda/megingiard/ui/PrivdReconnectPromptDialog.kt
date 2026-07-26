@@ -339,8 +339,8 @@ fun PrivdReconnectPromptDialog(
                             }
 
                             OnboardingStepId.PRIVILEGED -> {
-                                isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired &&
-                                    privdState == PrivdState.RUNNING
+                                privdState == PrivdState.RUNNING ||
+                                    (isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired)
                             }
 
                             else -> {

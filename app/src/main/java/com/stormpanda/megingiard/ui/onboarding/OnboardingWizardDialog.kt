@@ -609,12 +609,10 @@ fun PrivilegedStepContent(
         mutableStateOf(0)
     }
 
-    val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING
+    val isAllSet = privdState == PrivdState.RUNNING || (isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired)
 
     LaunchedEffect(isAllSet) {
-        if (!isAllSet) {
-            hasAutoSetupBeenStarted = false
-        } else {
+        if (isAllSet) {
             hasTimedOut = false
         }
     }
@@ -623,16 +621,16 @@ fun PrivilegedStepContent(
         if (setupAttemptCounter > 0 && hasAutoSetupBeenStarted && !isAllSet) {
             hasTimedOut = false
             var elapsed = 0L
-            while (isActive && elapsed < 10_000L) {
-                if (isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING) {
+            while (isActive && elapsed < 25_000L) {
+                if (isAllSet) {
                     hasTimedOut = false
                     return@LaunchedEffect
                 }
                 delay(500L)
                 elapsed += 500L
             }
-            if (isActive && !(isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING)) {
-                AppLog.w("OnboardingWizard", "Privd daemon setup timed out after 10 seconds")
+            if (isActive && !isAllSet) {
+                AppLog.w("OnboardingWizard", "Privd daemon setup timed out after 25 seconds")
                 hasTimedOut = true
             }
         }
