@@ -23,14 +23,16 @@ data class PrivdPairScreenTextResult(
 object PrivdPairScreenTextScanner {
     private val PAIRING_CODE_REGEX = Regex("""\b(\d{6})\b""")
     private val IP_PORT_REGEX = Regex("""\b(?:\d{1,3}\.){3}\d{1,3}:(\d{4,5})\b""")
-    private val EXPLICIT_PORT_REGEX = Regex("""(?i)(?:port|ip address & port|address & port)[:\s]*(\d{4,5})\b""")
     private val FIVE_DIGIT_PORT_REGEX = Regex("""\b(\d{5})\b""")
 
     /**
      * Parses raw text (from Accessibility node trees) to extract the
      * 6-digit pairing code and pairing port.
      */
-    fun parsePairingInfoFromText(text: String): PrivdPairScreenTextResult {
+    fun parsePairingInfoFromText(
+        text: String,
+        config: AutoSetupLanguageConfig? = null,
+    ): PrivdPairScreenTextResult {
         if (text.isBlank()) {
             AppLog.d(TAG, "parsePairingInfoFromText: input text is blank")
             return PrivdPairScreenTextResult(port = null, code = null)
@@ -44,9 +46,21 @@ object PrivdPairScreenTextScanner {
         // Priority A: IP:PORT format (e.g. 192.168.178.35:35283 -> 35283)
         var pairingPort = IP_PORT_REGEX.find(text)?.groupValues?.get(1)
 
-        // Priority B: Port explicitly after "IP address & Port" or "Port"
+        // Priority B: Port explicitly after "IP address & Port", "IP-Adresse & Port", "Port", etc.
         if (pairingPort == null) {
-            pairingPort = EXPLICIT_PORT_REGEX.find(text)?.groupValues?.get(1)
+            val keywords =
+                (config?.explicitPortKeywords ?: emptyList()) +
+                    listOf(
+                        "port",
+                        "ip address & port",
+                        "address & port",
+                        "ip-adresse & port",
+                        "ip-adresse und port",
+                        "adresse & port",
+                    )
+            val keywordsPattern = keywords.distinct().joinToString("|") { Regex.escape(it) }
+            val explicitPortRegex = Regex("""(?i)(?:$keywordsPattern)[:\s]*(\d{4,5})\b""")
+            pairingPort = explicitPortRegex.find(text)?.groupValues?.get(1)
         }
 
         // Priority C: Standalone 5-digit number

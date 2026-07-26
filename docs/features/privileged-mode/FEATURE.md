@@ -78,6 +78,7 @@ every device since Android 11 (API 30).
   - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, opens the pairing dialog, scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
   - **Full-Service Auto-Connect**: Upon completing pairing or toggling Wireless Debugging for an already paired device, the service MUST automatically initiate `PrivdManager.connect()` to start the privileged daemon seamlessly without extra taps.
   - **All Set**: If Developer Mode, Wireless Debugging, and ADB pairing are all active, automatically initiates `PrivdManager.connect()` if disconnected and displays a Toast notification: *"You're all set! Privileged Mode is ready."*
+  - **Multi-Language System Navigation**: Settings search queries and UI node matching MUST dynamically adapt to the Android system language (e.g. English vs. German `"Build-Nummer"`, `"Debugging über WLAN"`, `"IP-Adresse & Port"`) by querying `Resources.getSystem().configuration` via `AutoSetupLanguageConfig`.
 - Step 5 of the Welcome Tour MUST render a live status checklist displaying stage progress icons (`PENDING`, `ACTIVE`, `DONE`) for Developer Options, Wireless Debugging, ADB Pairing, and Daemon Connection.
 - If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
 

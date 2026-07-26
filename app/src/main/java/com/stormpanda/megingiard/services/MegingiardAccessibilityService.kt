@@ -6,6 +6,7 @@ import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Path
 import android.net.wifi.WifiManager
@@ -22,6 +23,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
+import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -105,11 +107,26 @@ class MegingiardAccessibilityService : AccessibilityService() {
         startAutoToggleLoop()
     }
 
+    private fun getSystemAutoSetupConfig(): AutoSetupLanguageConfig {
+        val systemLocale =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Resources.getSystem().configuration.locales[0]
+            } else {
+                @Suppress("DEPRECATION")
+                Resources.getSystem().configuration.locale
+            }
+        return AutoSetupLanguageConfig.fromLocale(systemLocale)
+    }
+
     private fun startAutoToggleLoop() {
         if (autoToggleJob?.isActive == true) return
         autoToggleJob =
             serviceScope.launch {
-                AppLog.i(TAG, "startAutoToggleLoop: Starting Search-based auto-toggle loop in stage $autoToggleStage")
+                val config = getSystemAutoSetupConfig()
+                AppLog.i(
+                    TAG,
+                    "startAutoToggleLoop: Starting Search-based auto-toggle loop in stage $autoToggleStage using language '${config.languageCode}'",
+                )
                 var attempts = 0
                 val context = applicationContext
                 val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
@@ -119,15 +136,18 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     if (rootNode != null) {
                         when (autoToggleStage) {
                             AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
-                                val entered = findAndSetSearchQuery(rootNode, "Build number")
+                                val entered = findAndSetSearchQuery(rootNode, config.buildNumberQueryAndKeyword)
                                 if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Build number' for Stage A")
+                                    AppLog.i(
+                                        TAG,
+                                        "startAutoToggleLoop: Entered search query '${config.buildNumberQueryAndKeyword}' for Stage A",
+                                    )
                                     autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT
                                 }
                             }
 
                             AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT -> {
-                                val clicked = findAndClickSearchResultItem(rootNode, "build number", "build-nummer")
+                                val clicked = findAndClickSearchResultItem(rootNode, config.buildNumberQueryAndKeyword)
                                 if (clicked) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Build number search result")
                                     autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER
@@ -135,7 +155,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
-                                val clicked = findAndClickBuildNumber(rootNode)
+                                val clicked = findAndClickBuildNumber(rootNode, config.buildNumberQueryAndKeyword)
                                 if (clicked || isDevModeActive(context)) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Unlocked Developer Mode (Stage A), advancing to Stage B")
                                     autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
@@ -144,7 +164,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.CLICK_SEARCH_BAR -> {
-                                val clicked = findAndClickSearchBar(rootNode)
+                                val clicked = findAndClickSearchBar(rootNode, config.searchBarKeywords)
                                 if (clicked) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar")
                                     autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
@@ -152,12 +172,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.ENTER_SEARCH_QUERY -> {
-                                val entered = findAndSetSearchQuery(rootNode, "Wireless debugging")
+                                val entered = findAndSetSearchQuery(rootNode, config.wirelessDebuggingQueryAndKeyword)
                                 if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query 'Wireless debugging'")
+                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query '${config.wirelessDebuggingQueryAndKeyword}'")
                                     autoToggleStage = AutoToggleStage.CLICK_SEARCH_RESULT
                                 } else {
-                                    val clickedBar = findAndClickSearchBar(rootNode)
+                                    val clickedBar = findAndClickSearchBar(rootNode, config.searchBarKeywords)
                                     if (clickedBar) {
                                         AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar fallback")
                                         autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
@@ -166,7 +186,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.CLICK_SEARCH_RESULT -> {
-                                val clickedResult = findAndClickSearchResult(rootNode)
+                                val clickedResult = findAndClickSearchResultItem(rootNode, config.wirelessDebuggingQueryAndKeyword)
                                 if (clickedResult) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging search result")
                                     autoToggleStage = AutoToggleStage.TOGGLE_SWITCH
@@ -174,7 +194,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.TOGGLE_SWITCH -> {
-                                val toggled = findAndToggleSwitch(rootNode)
+                                val toggled = findAndToggleSwitch(rootNode, config.wirelessDebuggingQueryAndKeyword)
                                 if (toggled) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Successfully toggled Wireless Debugging switch ON")
                                     val isPairedOnScreen = isMegingiardInPairedDevices(rootNode)
@@ -207,13 +227,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
-                                val clickedPair = findAndClickPairDialog(rootNode)
+                                val clickedPair = findAndClickPairDialog(rootNode, config.pairDeviceKeywords)
                                 if (clickedPair) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row, advancing to SCAN_PAIRING_CODE_AND_PAIR")
                                     autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
                                 } else {
                                     val clickedSubScreen =
-                                        findAndClickSearchResultItem(rootNode, "wireless debugging", "drahtloses debugging")
+                                        findAndClickSearchResultItem(rootNode, config.wirelessDebuggingQueryAndKeyword)
                                     if (clickedSubScreen) {
                                         AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging row text to enter sub-screen")
                                     }
@@ -222,7 +242,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                             AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR -> {
                                 val allText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
-                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText)
+                                val scanResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(allText, config)
                                 if (scanResult.isComplete) {
                                     val portInt = scanResult.port?.toIntOrNull()
                                     val codeStr = scanResult.code
@@ -258,7 +278,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
     }
 
-    private fun findAndClickSearchBar(node: AccessibilityNodeInfo): Boolean {
+    private fun findAndClickSearchBar(
+        node: AccessibilityNodeInfo,
+        searchKeywords: List<String>,
+    ): Boolean {
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
@@ -267,10 +290,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         val isSearchNode =
             viewId.contains("search_action_bar") ||
                 viewId.contains("search_bar") ||
-                combined.contains("search settings") ||
-                combined.contains("einstellungen suchen") ||
-                combined.contains("search") ||
-                combined.contains("suchen")
+                searchKeywords.any { combined.contains(it.lowercase()) }
 
         if (isSearchNode) {
             val clickableNode = findClickableAncestorOrSelf(node)
@@ -282,14 +302,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndClickSearchBar(child)) return true
+            if (findAndClickSearchBar(child, searchKeywords)) return true
         }
         return false
     }
 
     private fun findAndSetSearchQuery(
         node: AccessibilityNodeInfo,
-        query: String = "Wireless debugging",
+        query: String,
     ): Boolean {
         val viewId = node.viewIdResourceName ?: ""
         val className = node.className?.toString() ?: ""
@@ -347,7 +367,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
         val contentDesc = node.contentDescription?.toString() ?: ""
         val combined = "$text $contentDesc".lowercase()
 
-        val isMatch = targetKeywords.any { combined.contains(it.lowercase()) }
+        val isMatch =
+            targetKeywords.any { kw ->
+                val cleanKw = kw.lowercase()
+                combined.contains(cleanKw) ||
+                    combined.contains(cleanKw.replace("-", " ")) ||
+                    combined.contains(cleanKw.replace("-", ""))
+            }
 
         if (isMatch) {
             val clickable = findClickableAncestorOrSelf(node)
@@ -370,20 +396,22 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun findAndClickSearchResult(node: AccessibilityNodeInfo): Boolean =
-        findAndClickSearchResultItem(node, "wireless debugging", "wireless-debugging", "drahtloses debugging", "drahtlos-debugging")
-
-    private fun findAndToggleSwitch(node: AccessibilityNodeInfo): Boolean {
+    private fun findAndToggleSwitch(
+        node: AccessibilityNodeInfo,
+        targetKeyword: String,
+    ): Boolean {
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc $viewId".lowercase()
 
+        val cleanKw = targetKeyword.lowercase()
         val isWirelessText =
-            combined.contains("wireless debugging") ||
-                combined.contains("wireless-debugging") ||
-                combined.contains("drahtloses debugging") ||
-                combined.contains("drahtlos-debugging")
+            combined.contains(cleanKw) ||
+                combined.contains(cleanKw.replace("-", " ")) ||
+                combined.contains(cleanKw.replace("-", "")) ||
+                combined.contains("wireless debugging") ||
+                combined.contains("debugging über wlan")
 
         if (isWirelessText) {
             val switchNode = findSwitchOrCheckable(node) ?: node
@@ -408,7 +436,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndToggleSwitch(child)) return true
+            if (findAndToggleSwitch(child, targetKeyword)) return true
         }
         return false
     }
@@ -434,15 +462,20 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return null
     }
 
-    private fun findAndClickBuildNumber(node: AccessibilityNodeInfo): Boolean {
+    private fun findAndClickBuildNumber(
+        node: AccessibilityNodeInfo,
+        targetKeyword: String,
+    ): Boolean {
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc $viewId".lowercase()
 
+        val cleanKw = targetKeyword.lowercase()
         val isBuildNumber =
-            combined.contains("build number") ||
-                combined.contains("build-nummer") ||
+            combined.contains(cleanKw) ||
+                combined.contains(cleanKw.replace("-", " ")) ||
+                combined.contains(cleanKw.replace("-", "")) ||
                 viewId.contains("build_number")
 
         if (isBuildNumber) {
@@ -456,7 +489,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndClickBuildNumber(child)) return true
+            if (findAndClickBuildNumber(child, targetKeyword)) return true
         }
         return false
     }
@@ -477,17 +510,19 @@ class MegingiardAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun findAndClickPairDialog(node: AccessibilityNodeInfo): Boolean {
+    private fun findAndClickPairDialog(
+        node: AccessibilityNodeInfo,
+        pairKeywords: List<String>,
+    ): Boolean {
         val text = node.text?.toString() ?: ""
         val contentDesc = node.contentDescription?.toString() ?: ""
         val viewId = node.viewIdResourceName ?: ""
         val combined = "$text $contentDesc $viewId".lowercase()
 
         val isPairItem =
-            combined.contains("pair device with pairing code") ||
-                combined.contains("geräte-kopplungscode") ||
-                combined.contains("kopplungscode koppeln") ||
-                combined.contains("pair with pairing code")
+            pairKeywords.any { kw ->
+                combined.contains(kw.lowercase())
+            }
 
         if (isPairItem) {
             val clickable = findClickableAncestorOrSelf(node) ?: node
@@ -497,7 +532,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndClickPairDialog(child)) return true
+            if (findAndClickPairDialog(child, pairKeywords)) return true
         }
         return false
     }
