@@ -267,6 +267,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             TAG,
                                             "startAutoToggleLoop: Clicked Wireless Debugging row text to enter sub-screen (langCode=$langCode)",
                                         )
+                                    } else if (attempts >= 3) {
+                                        AppLog.w(
+                                            TAG,
+                                            "startAutoToggleLoop: Stuck in CLICK_PAIR_DIALOG without pair button or row on screen. Redirecting to search.",
+                                        )
+                                        autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+                                        launchSearchActivity(context, displayOptions)
                                     }
                                 }
                             }
@@ -448,7 +455,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
                         parent?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     }
                 } else {
-                    AppLog.i(TAG, "findAndToggleSwitch: Wireless Debugging switch is already ON")
+                    AppLog.i(TAG, "findAndToggleSwitch: Wireless Debugging switch is already ON, clicking row text to enter sub-screen")
+                    val clickableRow = findClickableAncestorOrSelf(node)
+                    if (clickableRow != null && clickableRow != switchNode) {
+                        clickableRow.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    }
                 }
                 return true
             } else if (node.isClickable) {
@@ -964,10 +975,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             )
                             withContext(Dispatchers.Main) {
                                 instance?.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
-                                instance?.autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                instance?.autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
                                 autoTogglePendingTimestamp = System.currentTimeMillis()
                                 instance?.startAutoToggleLoop()
-                                launchWirelessDebuggingSettings(context, displayOptions)
+                                launchSearchActivity(context, displayOptions)
                             }
                         }
                     }
@@ -988,8 +999,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
             val initialStage =
                 when {
                     !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER
-                    !wirelessActive -> AutoToggleStage.ENTER_SEARCH_QUERY
-                    else -> AutoToggleStage.CLICK_PAIR_DIALOG
+                    else -> AutoToggleStage.ENTER_SEARCH_QUERY
                 }
 
             instance?.autoSetupTargetStage = targetStage

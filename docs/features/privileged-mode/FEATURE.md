@@ -75,7 +75,7 @@ every device since Android 11 (API 30).
 - Clicking the button MUST evaluate device setup conditions and run the appropriate automated pipeline on Display 0 via `MegingiardAccessibilityService`:
   - **Stage A (Dev Mode Activation)**: If Developer Options are disabled, launches About Phone settings and taps "Build number" 7 times to unlock Developer Mode.
   - **Stage B (Wireless Debugging Activation)**: If Wireless Debugging is disabled, launches Settings Search, inputs `"Wireless debugging"`, selects the result item, and toggles Wireless Debugging `ON`.
-  - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, opens the pairing dialog, scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
+  - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, navigates to the Wireless Debugging sub-screen via Settings Search, opens the pairing dialog ("Pair device with pairing code"), scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
   - **Full-Service Auto-Connect**: Upon completing pairing or toggling Wireless Debugging for an already paired device, the service MUST automatically initiate `PrivdManager.connect()` to start the privileged daemon seamlessly without extra taps.
   - **All Set**: If Developer Mode, Wireless Debugging, and ADB pairing are all active, automatically initiates `PrivdManager.connect()` if disconnected and displays a Toast notification: *"You're all set! Privileged Mode is ready."*
 - Step 5 of the Welcome Tour MUST render a live status checklist displaying stage progress icons (`PENDING`, `ACTIVE`, `DONE`) for Developer Options, Wireless Debugging, ADB Pairing, and Daemon Connection.
