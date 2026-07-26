@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,6 +80,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -600,12 +602,39 @@ fun PrivilegedStepContent(
     var hasAutoSetupBeenStarted by remember {
         mutableStateOf(false)
     }
+    var hasTimedOut by remember {
+        mutableStateOf(false)
+    }
+    var setupAttemptCounter by remember {
+        mutableStateOf(0)
+    }
 
     val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING
 
     LaunchedEffect(isAllSet) {
         if (!isAllSet) {
             hasAutoSetupBeenStarted = false
+        } else {
+            hasTimedOut = false
+        }
+    }
+
+    LaunchedEffect(setupAttemptCounter) {
+        if (setupAttemptCounter > 0 && hasAutoSetupBeenStarted && !isAllSet) {
+            hasTimedOut = false
+            var elapsed = 0L
+            while (isActive && elapsed < 10_000L) {
+                if (isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING) {
+                    hasTimedOut = false
+                    return@LaunchedEffect
+                }
+                delay(500L)
+                elapsed += 500L
+            }
+            if (isActive && !(isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING)) {
+                AppLog.w("OnboardingWizard", "Privd daemon setup timed out after 10 seconds")
+                hasTimedOut = true
+            }
         }
     }
 
@@ -620,13 +649,15 @@ fun PrivilegedStepContent(
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = descText,
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
+        if (!hasTimedOut) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = descText,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         // Sequential status checklist calculation
@@ -672,32 +703,69 @@ fun PrivilegedStepContent(
                 }
         }
 
-        // Multi-stage status checklist
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                    .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_dev),
-                status = devStatus,
-            )
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_wireless),
-                status = wirelessStatus,
-            )
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_pairing),
-                status = pairingStatus,
-            )
-            PrivdChecklistRow(
-                label = stringResource(R.string.onboarding_privd_stage_daemon),
-                status = daemonStatus,
-            )
+        if (hasTimedOut) {
+            // Error Message Box shown instead of progress steps
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = colors.error,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.privd_timeout_title),
+                        color = colors.error,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.privd_timeout_desc),
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 18.sp,
+                )
+            }
+        } else {
+            // Multi-stage status checklist
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
+                        .border(1.dp, colors.controlOverlayBorder, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_dev),
+                    status = devStatus,
+                )
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_wireless),
+                    status = wirelessStatus,
+                )
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_pairing),
+                    status = pairingStatus,
+                )
+                PrivdChecklistRow(
+                    label = stringResource(R.string.onboarding_privd_stage_daemon),
+                    status = daemonStatus,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -747,10 +815,34 @@ fun PrivilegedStepContent(
                     modifier = Modifier.weight(1f),
                 )
             }
+        } else if (hasTimedOut) {
+            AppMagicalButton(
+                onClick = {
+                    hasTimedOut = false
+                    hasAutoSetupBeenStarted = true
+                    setupAttemptCounter++
+                    onStartAutoSetup()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = null,
+                    tint = colors.actionColorSystem,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.privd_timeout_retry),
+                    color = colors.actionColorSystem,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
         } else {
             AppMagicalButton(
                 onClick = {
                     hasAutoSetupBeenStarted = true
+                    setupAttemptCounter++
                     onStartAutoSetup()
                 },
                 modifier = Modifier.fillMaxWidth(),

@@ -1043,6 +1043,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_reconnect_auto_button">Automatisch verbinden</string>
     <string name="privd_reconnect_all_set">Alles erledigt!</string>
     <string name="privd_reconnect_btn_close">Schließen</string>
+    <string name="privd_timeout_title">Automatische Einrichtung fehlgeschlagen</string>
+    <string name="privd_timeout_desc">Die automatische Einrichtung konnte nicht innerhalb von 10 Sekunden abgeschlossen werden.\n\n• Bitte erstellen Sie einen Fehlerbericht oder beantragen Sie die Unterstützung Ihrer System-Sprache auf GitHub.\n• Derzeit unterstützte System-Sprachen: Englisch, Deutsch, Spanisch (Spanien) und Französisch (Frankreich).\n• Die manuelle Einrichtung kann jederzeit in den Globalen Einstellungen gestartet werden.</string>
+    <string name="privd_timeout_retry">Auto-Einrichtung wiederholen</string>
     <string name="onboarding_privd_stage_dev">Entwickleroptionen</string>
     <string name="onboarding_privd_stage_wireless">Drahtloses Debugging</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless-Kopplung</string>

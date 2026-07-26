@@ -1036,6 +1036,9 @@ Open Settings to create a layout.</string>
     <string name="privd_reconnect_auto_button">Auto Reconnect</string>
     <string name="privd_reconnect_all_set">You\'re All Set!</string>
     <string name="privd_reconnect_btn_close">Close</string>
+    <string name="privd_timeout_title">Automated Setup Failed</string>
+    <string name="privd_timeout_desc">The automated setup did not complete within 10 seconds.\n\n• Please file a bug report or request support for your system language on GitHub.\n• Currently supported system languages: English, German, Spanish (Spain), and French (France).\n• Manual setup can be launched at any time from Global Settings.</string>
+    <string name="privd_timeout_retry">Retry Auto Setup</string>
     <string name="onboarding_privd_stage_dev">Developer Options</string>
     <string name="onboarding_privd_stage_wireless">Wireless Debugging</string>
     <string name="onboarding_privd_stage_pairing">ADB Wireless Pairing</string>
