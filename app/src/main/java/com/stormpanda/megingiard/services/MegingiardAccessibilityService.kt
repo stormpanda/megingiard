@@ -159,6 +159,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && autoTogglePendingTimestamp != 0L) {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
+                        val clickedAllow = findAndClickAllowDialogButton(rootNode, config.allowButtonKeywords)
+                        if (clickedAllow) {
+                            AppLog.i(TAG, "startAutoToggleLoop: Confirmed Wireless Debugging network trust dialog")
+                        }
+
                         when (autoToggleStage) {
                             AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
                                 val entered = findAndSetSearchQuery(rootNode, config.buildNumberQueryAndKeyword)
@@ -301,6 +306,36 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     autoTogglePendingTimestamp = 0L
                 }
             }
+    }
+
+    private fun findAndClickAllowDialogButton(
+        node: AccessibilityNodeInfo,
+        allowKeywords: List<String>,
+    ): Boolean {
+        if (node.isCheckable || node.className?.toString()?.contains("CheckBox") == true) {
+            return false
+        }
+
+        val text = node.text?.toString() ?: ""
+        val contentDesc = node.contentDescription?.toString() ?: ""
+        val combined = "$text $contentDesc".lowercase().trim()
+
+        val isMatch = allowKeywords.any { kw -> combined == kw.lowercase() }
+
+        if (isMatch && (node.isClickable || node.className?.toString()?.contains("Button") == true)) {
+            val clickableNode = findClickableAncestorOrSelf(node) ?: node
+            val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            if (success) {
+                AppLog.i(TAG, "findAndClickAllowDialogButton: Clicked network trust dialog positive button '$text'")
+                return true
+            }
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (findAndClickAllowDialogButton(child, allowKeywords)) return true
+        }
+        return false
     }
 
     private fun findAndClickSearchBar(

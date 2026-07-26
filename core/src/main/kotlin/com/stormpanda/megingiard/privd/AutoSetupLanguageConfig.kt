@@ -14,6 +14,7 @@ import java.util.Locale
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
  * @property explicitPortKeywords List of UI text labels used by text scanner to extract explicit pairing ports.
  * @property searchBarKeywords List of UI text keywords used to fallback-detect search bar/button.
+ * @property allowButtonKeywords List of UI text keywords used to confirm network trust dialogs.
  */
 data class AutoSetupLanguageConfig(
     val languageCode: String,
@@ -22,6 +23,7 @@ data class AutoSetupLanguageConfig(
     val pairDeviceKeywords: List<String>,
     val explicitPortKeywords: List<String>,
     val searchBarKeywords: List<String>,
+    val allowButtonKeywords: List<String>,
 ) {
     companion object {
         val ENGLISH =
@@ -44,6 +46,11 @@ data class AutoSetupLanguageConfig(
                     listOf(
                         "search settings",
                         "search",
+                    ),
+                allowButtonKeywords =
+                    listOf(
+                        "allow",
+                        "ok",
                     ),
             )
 
@@ -73,6 +80,11 @@ data class AutoSetupLanguageConfig(
                         "einstellungen durchsuchen",
                         "einstellungen suchen",
                         "suchen",
+                    ),
+                allowButtonKeywords =
+                    listOf(
+                        "zulassen",
+                        "ok",
                     ),
             )
 
