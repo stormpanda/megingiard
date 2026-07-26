@@ -9,13 +9,22 @@ import android.content.pm.ResolveInfo
 import android.os.Build
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.io.File
 
 private const val TAG = "InstalledAppsManager"
 
 object InstalledAppsManager {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     private val _installedApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val installedApps: StateFlow<List<InstalledAppInfo>> = _installedApps.asStateFlow()
 
@@ -37,6 +46,8 @@ object InstalledAppsManager {
                 packageManager.queryIntentActivities(mainIntent, 0)
             }
 
+        val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+
         val apps =
             resolveInfoList
                 .filter { resolveInfo ->
@@ -46,16 +57,83 @@ object InstalledAppsManager {
                     val packageName = resolveInfo.activityInfo.packageName
                     val activityName = resolveInfo.activityInfo.name
                     val icon = resolveInfo.loadIcon(packageManager)
+
+                    val cachedCoverFile = File(coversDir, "$packageName.png")
+                    val coverPath =
+                        if (cachedCoverFile.exists() && cachedCoverFile.length() > 0) {
+                            cachedCoverFile.absolutePath
+                        } else {
+                            null
+                        }
+
                     InstalledAppInfo(
                         packageName = packageName,
                         activityName = activityName,
                         label = label,
                         icon = icon,
+                        coverPath = coverPath,
                     )
                 }.sortedBy { it.label.lowercase() }
 
         _installedApps.value = apps
         AppLog.d(TAG, "Loaded ${apps.size} installed apps for launcher browser")
+
+        // Trigger background SteamGridDB cover scraping if API key is configured
+        triggerSteamGridDbScraping(context, coversDir)
+    }
+
+    private fun triggerSteamGridDbScraping(
+        context: Context,
+        coversDir: File,
+    ) {
+        val apiKey = SettingsManager.steamGridDbApiToken.value
+        if (apiKey.isBlank()) {
+            AppLog.d(TAG, "SteamGridDB API key is blank, skipping cover scraping")
+            return
+        }
+
+        scope.launch {
+            val currentApps = _installedApps.value
+            val missingCovers = currentApps.filter { it.coverPath == null }
+            if (missingCovers.isEmpty()) {
+                AppLog.d(TAG, "All apps already have cached cover art")
+                return@launch
+            }
+
+            AppLog.i(TAG, "Starting background SteamGridDB cover scraping for ${missingCovers.size} apps")
+
+            missingCovers.forEach { app ->
+                try {
+                    val searchResult = SteamGridDbClient.searchGames(app.label, apiKey)
+                    val games = searchResult.getOrNull()
+                    val gameId = games?.firstOrNull()?.id ?: return@forEach
+
+                    val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
+                    val images = imagesResult.getOrNull()
+                    val imageUrl = images?.firstOrNull()?.url ?: return@forEach
+
+                    val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
+                    val tempFile = tempResult.getOrNull() ?: return@forEach
+
+                    val targetFile = File(coversDir, "${app.packageName}.png")
+                    tempFile.copyTo(targetFile, overwrite = true)
+                    tempFile.delete()
+
+                    // Update in-memory state
+                    _installedApps.value =
+                        _installedApps.value.map { item ->
+                            if (item.packageName == app.packageName) {
+                                item.copy(coverPath = targetFile.absolutePath)
+                            } else {
+                                item
+                            }
+                        }
+                    AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to scrape cover for ${app.label}: ${e.message}")
+                }
+            }
+        }
     }
 
     fun launchAppOnPrimaryDisplay(

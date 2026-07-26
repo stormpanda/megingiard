@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.focus
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.animateFloatAsState
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,13 +21,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -47,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,14 +55,15 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlin.math.absoluteValue
 
 private const val TAG = "FocusTopLauncherScreen"
 
-private val FTL_CARD_CORNER_RADIUS = 20.dp
-private val FTL_ICON_SIZE = 110.dp
-private val FTL_CARD_WIDTH = 210.dp
-private val FTL_CARD_HEIGHT = 210.dp
+private val FTL_POSTER_CORNER_RADIUS = 16.dp
+private val FTL_POSTER_WIDTH = 165.dp
+private val FTL_POSTER_HEIGHT = 248.dp
+private val FTL_ICON_SIZE = 72.dp
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -128,7 +128,7 @@ fun FocusTopLauncherScreen(
                             colors =
                                 listOf(
                                     appColors.appBackground,
-                                    appColors.accent.copy(alpha = 0.08f),
+                                    appColors.accent.copy(alpha = 0.07f),
                                     appColors.appBackground,
                                 ),
                         ),
@@ -139,17 +139,17 @@ fun FocusTopLauncherScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // Horizontal Carousel for Gamepad D-Pad & Touch Browsing
+                // Centered 2:3 Poster Carousel
                 HorizontalPager(
                     state = pagerState,
-                    contentPadding = PaddingValues(horizontal = 160.dp),
-                    pageSpacing = 16.dp,
+                    contentPadding = PaddingValues(horizontal = 135.dp),
+                    pageSpacing = 6.dp,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .height(250.dp),
+                            .height(280.dp),
                 ) { page ->
                     val appInfo = apps[page]
                     val isSelected = page == pagerState.currentPage
@@ -160,37 +160,37 @@ fun FocusTopLauncherScreen(
                         ).absoluteValue
 
                     val scale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.08f else (1.0f - (pageOffset * 0.15f)).coerceAtLeast(0.82f),
-                        animationSpec = tween(durationMillis = 200),
-                        label = "cardScale",
+                        targetValue = if (isSelected) 1.08f else (1.0f - (pageOffset * 0.14f)).coerceAtLeast(0.84f),
+                        animationSpec = tween(durationMillis = 180),
+                        label = "posterScale",
                     )
 
                     val alpha by animateFloatAsState(
-                        targetValue = if (isSelected) 1.0f else (1.0f - (pageOffset * 0.45f)).coerceIn(0.4f, 1.0f),
-                        animationSpec = tween(durationMillis = 200),
-                        label = "cardAlpha",
+                        targetValue = if (isSelected) 1.0f else (1.0f - (pageOffset * 0.4f)).coerceIn(0.45f, 1.0f),
+                        animationSpec = tween(durationMillis = 180),
+                        label = "posterAlpha",
                     )
 
                     Box(
                         modifier =
                             Modifier
-                                .size(FTL_CARD_WIDTH, FTL_CARD_HEIGHT)
+                                .size(FTL_POSTER_WIDTH, FTL_POSTER_HEIGHT)
                                 .graphicsLayer {
                                     scaleX = scale
                                     scaleY = scale
                                     this.alpha = alpha
                                 }.shadow(
-                                    elevation = if (isSelected) 16.dp else 4.dp,
-                                    shape = RoundedCornerShape(FTL_CARD_CORNER_RADIUS),
+                                    elevation = if (isSelected) 18.dp else 4.dp,
+                                    shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
                                     ambientColor = if (isSelected) appColors.accent else Color.Black,
                                     spotColor = if (isSelected) appColors.accent else Color.Black,
-                                ).clip(RoundedCornerShape(FTL_CARD_CORNER_RADIUS))
+                                ).clip(RoundedCornerShape(FTL_POSTER_CORNER_RADIUS))
                                 .background(
                                     if (isSelected) appColors.surfaceVariant else appColors.surface,
                                 ).border(
                                     width = if (isSelected) 3.dp else 1.dp,
                                     color = if (isSelected) appColors.accent else appColors.divider,
-                                    shape = RoundedCornerShape(FTL_CARD_CORNER_RADIUS),
+                                    shape = RoundedCornerShape(FTL_POSTER_CORNER_RADIUS),
                                 ).clickable {
                                     if (isSelected) {
                                         onAppClick(appInfo)
@@ -202,91 +202,32 @@ fun FocusTopLauncherScreen(
                                 },
                         contentAlignment = Alignment.Center,
                     ) {
-                        AppCardContent(appInfo = appInfo)
+                        PosterCardContent(appInfo = appInfo)
                     }
                 }
 
-                // Focused App Information & Launch Action
+                // Focused App Name at the Bottom of Screen
                 val currentApp = apps.getOrNull(pagerState.currentPage)
-                if (currentApp != null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 32.dp),
-                    ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (currentApp != null) {
                         Text(
                             text = currentApp.label,
                             style =
-                                MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold,
+                                MaterialTheme.typography.headlineLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
                                     color = appColors.onSurface,
                                 ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Center,
                         )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = currentApp.packageName,
-                            style =
-                                MaterialTheme.typography.bodySmall.copy(
-                                    color = appColors.onSurfaceSecondary.copy(alpha = 0.8f),
-                                ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        // Launch Action Badge
-                        Box(
-                            modifier =
-                                Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(appColors.accent.copy(alpha = 0.15f))
-                                    .border(1.dp, appColors.accent.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                                    .clickable { onAppClick(currentApp) }
-                                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = stringResource(R.string.focus_launcher_title),
-                                    tint = appColors.accent,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Launch App",
-                                    style =
-                                        MaterialTheme.typography.labelLarge.copy(
-                                            color = appColors.accent,
-                                            fontWeight = FontWeight.Bold,
-                                        ),
-                                )
-                            }
-                        }
                     }
-                }
-
-                // Page Indicator Footer
-                Box(
-                    modifier = Modifier.padding(bottom = 20.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "${pagerState.currentPage + 1} / ${apps.size}",
-                        style =
-                            MaterialTheme.typography.labelMedium.copy(
-                                color = appColors.onSurfaceSecondary,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                    )
                 }
             }
         }
@@ -294,20 +235,46 @@ fun FocusTopLauncherScreen(
 }
 
 @Composable
-private fun AppCardContent(
+private fun PosterCardContent(
     appInfo: InstalledAppInfo,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val bitmap = remember(appInfo.icon) { appInfo.icon?.toBitmapSafe() }
+
+    val coverBitmap =
+        remember(appInfo.coverPath) {
+            appInfo.coverPath?.let { path ->
+                if (File(path).exists()) {
+                    try {
+                        BitmapFactory.decodeFile(path)?.asImageBitmap()
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        }
+
+    val iconBitmap =
+        remember(appInfo.icon) {
+            if (coverBitmap == null) appInfo.icon?.toBitmapSafe() else null
+        }
 
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        if (bitmap != null) {
+        if (coverBitmap != null) {
             Image(
-                bitmap = bitmap,
+                bitmap = coverBitmap,
+                contentDescription = appInfo.label,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else if (iconBitmap != null) {
+            Image(
+                bitmap = iconBitmap,
                 contentDescription = appInfo.label,
                 modifier =
                     Modifier
@@ -327,7 +294,7 @@ private fun AppCardContent(
                     imageVector = Icons.Default.Apps,
                     contentDescription = appInfo.label,
                     tint = appColors.accent,
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(48.dp),
                 )
             }
         }

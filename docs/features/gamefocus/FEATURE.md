@@ -8,20 +8,26 @@
 
 ### Overview
 
-Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpanda.megingiard.gamefocus`) providing a dual-screen experience on handheld devices such as the AYN Thor. It displays an unfiltered installed application browser on the primary top display (Display 0) while maintaining the full Megingiard companion controls (MacroPad, Touchpad, Keyboard, Mirror Card, Quick Menu) on the secondary bottom display (Display 4).
+Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpanda.megingiard.gamefocus`) providing a dual-screen experience on handheld devices such as the AYN Thor. It displays a 2:3 vertical poster carousel of all installed applications on the primary top display (Display 0) while maintaining the full Megingiard companion controls (MacroPad, Touchpad, Keyboard, Mirror Card, Quick Menu) on the secondary bottom display (Display 4).
 
 ### FR-GF1: Dual-Screen Execution
 
 - Megingiard Game Focus MUST run its companion utility interface on the bottom screen (Display 4).
 - It MUST launch the top screen launcher window (`FocusTopLauncherActivity`) on the primary display (`Display.DEFAULT_DISPLAY`, Display 0).
 
-### FR-GF2: App Browser & Launching
+### FR-GF2: 2:3 Poster Carousel & Gamepad Navigation
 
-- The top screen launcher MUST list all installed user applications and emulators.
-- The launcher MUST allow filtering installed apps by title via a search input.
-- Tapping an application card MUST launch that application directly onto the primary display (Display 0) via `ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`.
+- The top display MUST present installed applications in a 2:3 aspect ratio portrait poster carousel.
+- Spacing between posters MUST be minimal (`6.dp`), with the currently highlighted poster centered horizontally on the screen.
+- Navigation MUST support D-pad left/right, joystick, left/right touch gestures, and launch upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
+- The application title MUST be displayed in large bold typography at the bottom of the screen.
 
-### FR-GF3: Coexistence
+### FR-GF3: SteamGridDB Cover Art Scraping
+
+- Upon launcher start, if `SettingsManager.steamGridDbApiToken` is configured, cover art MUST be scraped automatically from SteamGridDB in the background.
+- Scraped cover images MUST be cached locally in `cacheDir/gamefocus_covers/` to avoid repeated network requests.
+
+### FR-GF4: Coexistence
 
 - Megingiard Game Focus MUST have application ID `com.stormpanda.megingiard.gamefocus` (`.debug` for debug builds).
 - It MUST be installable alongside the standard Megingiard app without package or state conflicts.
@@ -35,7 +41,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 ```
                ┌───────────────────────────────────────────────┐
                │    Top Display (0): FocusTopLauncherActivity  │
-               │   • FocusTopLauncherScreen (Compose Grid)     │
+               │   • FocusTopLauncherScreen (2:3 Poster Pager) │
                └──────────────────────┬────────────────────────┘
                                       │ launches apps via setLaunchDisplayId(0)
                                       ▼
@@ -50,6 +56,5 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 ```
 
 - **Gradle Product Flavors:** Configured in `app/build.gradle.kts` under `flavorDimensions += "variant"` with `standard` and `gameFocus` flavors.
-- **BuildConfig Flag:** `BuildConfig.IS_GAME_FOCUS_VARIANT` is set to `true` for `gameFocus` and `false` for `standard`.
-- **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager.queryIntentActivities` for `Intent.ACTION_MAIN` + `Intent.CATEGORY_LAUNCHER`, sorting results and launching apps on `Display.DEFAULT_DISPLAY`.
+- **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager`, managing local cover art disk caching, and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient`.
 - **Manifest Integration:** `app/src/gameFocus/AndroidManifest.xml` declares `FocusTopLauncherActivity` with `android.intent.category.HOME` and `android.intent.category.DEFAULT` filters.

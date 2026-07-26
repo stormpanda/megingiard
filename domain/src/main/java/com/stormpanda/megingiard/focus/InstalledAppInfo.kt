@@ -7,4 +7,5 @@ data class InstalledAppInfo(
     val activityName: String,
     val label: String,
     val icon: Drawable? = null,
+    val coverPath: String? = null,
 )

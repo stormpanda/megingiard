@@ -14,11 +14,13 @@ class InstalledAppsManagerTest {
                 activityName = "com.example.game.MainActivity",
                 label = "Super Game",
                 icon = null,
+                coverPath = "/tmp/cover.png",
             )
 
         assertEquals("com.example.game", app.packageName)
         assertEquals("com.example.game.MainActivity", app.activityName)
         assertEquals("Super Game", app.label)
+        assertEquals("/tmp/cover.png", app.coverPath)
         assertNull(app.icon)
     }
 
