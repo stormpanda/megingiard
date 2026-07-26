@@ -176,47 +176,51 @@ class FocusTopLauncherActivity : ComponentActivity() {
         event: KeyEvent?,
     ): Boolean {
         if (editingAppInfoState.value != null) {
-            // Options Menu Gamepad Shortcuts when expanded
+            // Strict Input Isolation: Traps all inputs while modal artwork dialog is open
             if (isOptionsMenuExpandedState.value) {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_UP,
-                    -> {
+                return when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> {
                         AppLog.i(TAG, "Dpad UP pressed while options menu expanded -> Change Search Term")
                         dpadUpOptionsTriggerState.intValue++
                         isOptionsMenuExpandedState.value = false
-                        return true
+                        true
                     }
 
-                    KeyEvent.KEYCODE_DPAD_RIGHT,
-                    -> {
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
                         AppLog.i(TAG, "Dpad RIGHT pressed while options menu expanded -> Use App Icon")
                         dpadRightOptionsTriggerState.intValue++
                         isOptionsMenuExpandedState.value = false
-                        return true
+                        true
                     }
 
                     KeyEvent.KEYCODE_BUTTON_SELECT,
                     KeyEvent.KEYCODE_MENU,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    KeyEvent.KEYCODE_BUTTON_B,
                     -> {
-                        AppLog.i(TAG, "Gamepad Select/Menu pressed while options menu expanded -> Closing options")
+                        AppLog.i(TAG, "Closing options menu")
                         isOptionsMenuExpandedState.value = false
-                        return true
+                        true
                     }
-                }
-            } else {
-                when (keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_SELECT,
-                    KeyEvent.KEYCODE_MENU,
-                    -> {
-                        AppLog.i(TAG, "Gamepad Select/Menu pressed -> Opening options menu")
-                        isOptionsMenuExpandedState.value = true
-                        return true
+
+                    else -> {
+                        // Suppress any other button/D-pad event while options menu is open
+                        true
                     }
                 }
             }
 
-            // Carousel Navigation when Artwork Chooser Dialog is open
+            // Options menu is collapsed - handle artwork chooser dialog controls
             when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_SELECT,
+                KeyEvent.KEYCODE_MENU,
+                -> {
+                    AppLog.i(TAG, "Gamepad Select/Menu pressed -> Opening options menu")
+                    isOptionsMenuExpandedState.value = true
+                    return true
+                }
+
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
                 -> {
@@ -231,15 +235,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     return true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_L1,
-                -> {
+                KeyEvent.KEYCODE_BUTTON_L1 -> {
                     AppLog.i(TAG, "Gamepad L1 pressed inside artwork dialog")
                     l1TriggerState.intValue++
                     return true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_R1,
-                -> {
+                KeyEvent.KEYCODE_BUTTON_R1 -> {
                     AppLog.i(TAG, "Gamepad R1 pressed inside artwork dialog")
                     r1TriggerState.intValue++
                     return true
@@ -263,8 +265,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     editingAppInfoState.value = null
                     return true
                 }
+
+                else -> {
+                    // Suppress unhandled D-pad keys (e.g. Up/Down) from affecting background launcher
+                    return true
+                }
             }
-            return super.onKeyDown(keyCode, event)
         }
 
         // Navigation when Main Launcher is active
@@ -326,6 +332,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
+        if (editingAppInfoState.value != null) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+                -> {
+                    stopRepeat()
+                    return true
+                }
+            }
+            return true
+        }
+
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
@@ -349,6 +369,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        if (editingAppInfoState.value != null) {
+            return true
+        }
+
         if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
             val axisX = event.getAxisValue(MotionEvent.AXIS_X)
