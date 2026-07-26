@@ -16,6 +16,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The mirror MUST remain perfectly synchronised even while resource-intensive applications (games) are running on the primary screen.
 - The mirror MUST be DRM-free; it MUST NOT produce a black screen on hardware-secured content.
 - `ImageReader` and software bitmap-copy approaches are explicitly excluded due to latency and DRM interference.
+- **Reconnect Dialog Priority**: When the Privileged Mode reconnect prompt dialog (`AppStateManager.isPrivdPromptActive`) is active, `ScreenCaptureService` MUST hide `MirrorPresentation` (`shouldShowMirrorPresentation() = false`), and `MirrorPresentation` MUST render `PrivdReconnectPromptDialog` in its overlay hierarchy to guarantee the reconnect dialog is never hidden behind screen mirroring.
 
 ### FR-M2: Cutout Layout Editor (Placement & Sizing)
 

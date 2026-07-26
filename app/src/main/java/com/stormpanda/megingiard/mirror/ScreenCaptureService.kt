@@ -88,6 +88,17 @@ class ScreenCaptureService : Service() {
         }
 
         scope.launch {
+            AppStateManager.isPrivdPromptActive.collect { active ->
+                AppLog.d(TAG, "isPrivdPromptActive=$active → ${if (active) "hide" else "show"} mirror presentation")
+                if (active) {
+                    mirrorPresentation?.hide()
+                } else if (shouldShowMirrorPresentation()) {
+                    mirrorPresentation?.show()
+                }
+            }
+        }
+
+        scope.launch {
             PrivdClient.state.collect { state ->
                 if (state == PrivdConnectionState.CONNECTED && isPrivilegedMode) {
                     AppLog.i(TAG, "Privd reconnected while mirror active -> updating direct server surfaces")
@@ -628,17 +639,19 @@ class ScreenCaptureService : Service() {
         val ambientPreviewActive = AmbientPreviewManager.isActive.value
         val userLeaving = AppStateManager.isUserLeaving.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
+        val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
 
         val shouldShow =
             capturing && validScreen &&
                 !filePickerOpen && !editorActive &&
                 (!ambientActive || ambientPreviewActive) &&
                 !userLeaving &&
-                !recordingRequested
+                !recordingRequested &&
+                !isPrivdPromptActive
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive)",
         )
         return shouldShow
     }

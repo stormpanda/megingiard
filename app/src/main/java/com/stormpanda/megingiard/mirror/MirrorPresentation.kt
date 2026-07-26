@@ -63,8 +63,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -107,6 +110,8 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -117,6 +122,7 @@ import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
@@ -830,6 +836,50 @@ class MirrorPresentation(
                                             OnboardingWizardManager.finishWizard()
                                         },
                                     )
+                                }
+
+                                val isPrivdPromptActive by AppStateManager.isPrivdPromptActive.collectAsState()
+                                var promptInstanceKey by remember { mutableIntStateOf(0) }
+                                val dialogScope = rememberCoroutineScope()
+
+                                if (isPrivdPromptActive && !isWizardActive) {
+                                    key(promptInstanceKey) {
+                                        PrivdReconnectPromptDialog(
+                                            onConnect = {
+                                                dialogScope.launch(Dispatchers.IO) {
+                                                    PrivdManager.connect(context)
+                                                }
+                                            },
+                                            onSkip = {
+                                                val active = MegingiardAccessibilityService.isEnabled(context)
+                                                AppStateManager.setAccessibilityActive(active)
+                                                if (!active) {
+                                                    AppLog.w(
+                                                        TAG,
+                                                        "MirrorPresentation: Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering reconnect prompt",
+                                                    )
+                                                    promptInstanceKey += 1
+                                                    AppStateManager.setPrivdPromptDismissed(false)
+                                                } else {
+                                                    AppStateManager.setPrivdPromptDismissed(true)
+                                                }
+                                            },
+                                            onDone = {
+                                                val active = MegingiardAccessibilityService.isEnabled(context)
+                                                AppStateManager.setAccessibilityActive(active)
+                                                if (!active) {
+                                                    AppLog.w(
+                                                        TAG,
+                                                        "MirrorPresentation: Reconnect dialog finished but Accessibility Service is OFF! Re-triggering reconnect prompt",
+                                                    )
+                                                    promptInstanceKey += 1
+                                                    AppStateManager.setPrivdPromptDismissed(false)
+                                                } else {
+                                                    AppStateManager.setPrivdPromptDismissed(true)
+                                                }
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
