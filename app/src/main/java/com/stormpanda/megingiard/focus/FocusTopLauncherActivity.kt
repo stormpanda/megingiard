@@ -369,14 +369,44 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
-        if (editingAppInfoState.value != null) {
-            return true
-        }
-
         if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+            val axisHatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
             val axisX = event.getAxisValue(MotionEvent.AXIS_X)
+            val axisY = event.getAxisValue(MotionEvent.AXIS_Y)
+
             val x = if (axisHatX != 0f) axisHatX else axisX
+            val y = if (axisHatY != 0f) axisHatY else axisY
+
+            if (editingAppInfoState.value != null) {
+                if (isOptionsMenuExpandedState.value) {
+                    if (y < -0.5f) {
+                        AppLog.i(TAG, "Joystick Hat/Stick UP pressed while options expanded -> Change Search Term")
+                        dpadUpOptionsTriggerState.intValue++
+                        isOptionsMenuExpandedState.value = false
+                        return true
+                    } else if (x > 0.5f) {
+                        AppLog.i(TAG, "Joystick Hat/Stick RIGHT pressed while options expanded -> Use App Icon")
+                        dpadRightOptionsTriggerState.intValue++
+                        isOptionsMenuExpandedState.value = false
+                        return true
+                    }
+                    return true
+                }
+
+                if (x < -0.5f) {
+                    startRepeat(ScrollDirection.LEFT)
+                    return true
+                } else if (x > 0.5f) {
+                    startRepeat(ScrollDirection.RIGHT)
+                    return true
+                } else {
+                    if (currentDirection != ScrollDirection.NONE) {
+                        stopRepeat()
+                    }
+                }
+                return true
+            }
 
             if (x < -0.5f) {
                 startRepeat(ScrollDirection.LEFT)
@@ -390,6 +420,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
         }
-        return super.onGenericMotionEvent(event)
+        return if (editingAppInfoState.value != null) true else super.onGenericMotionEvent(event)
     }
 }

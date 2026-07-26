@@ -7,11 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,15 +17,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import kotlinx.coroutines.delay
 
 data class ExpandableOptionItem(
     val label: String,
-    val icon: ImageVector,
+    val iconSymbol: String,
     val onClick: () -> Unit,
 )
 
@@ -62,7 +58,7 @@ fun ExpandableOptionsMenu(
         modifier = modifier,
         contentAlignment = Alignment.CenterStart,
     ) {
-        // Collapsed Single Options Button (Fades out as menu expands)
+        // Collapsed Single Options Button (Subdued look matching Cancel button)
         if (expansionFraction < 1f) {
             TextButton(
                 onClick = { onExpandedChange(true) },
@@ -72,11 +68,10 @@ fun ExpandableOptionsMenu(
                     },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Options",
+                    MaterialSymbol(
+                        name = "menu",
+                        size = 18.dp,
                         tint = appColors.onSurfaceSecondary,
-                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -91,7 +86,7 @@ fun ExpandableOptionsMenu(
             }
         }
 
-        // Expanded Options Row (Fades in and spreads out horizontally from stacked origin)
+        // Expanded Options Row (Subdued look matching Options button, spreading out horizontally)
         if (expansionFraction > 0f) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -111,22 +106,21 @@ fun ExpandableOptionsMenu(
                             Modifier
                                 .graphicsLayer {
                                     translationX = -spreadOffsetPx
-                                }.padding(end = 4.dp),
+                                }.padding(end = 2.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                                tint = appColors.accent,
-                                modifier = Modifier.size(18.dp),
+                            MaterialSymbol(
+                                name = item.iconSymbol,
+                                size = 18.dp,
+                                tint = appColors.onSurfaceSecondary,
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = item.label,
                                 style =
                                     MaterialTheme.typography.labelMedium.copy(
-                                        color = appColors.onSurface,
-                                        fontWeight = FontWeight.Medium,
+                                        color = appColors.onSurfaceSecondary,
+                                        fontWeight = FontWeight.SemiBold,
                                     ),
                             )
                         }

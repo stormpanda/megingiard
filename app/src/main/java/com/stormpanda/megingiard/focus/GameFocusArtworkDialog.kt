@@ -449,17 +449,17 @@ fun GameFocusArtworkDialog(
                         listOf(
                             ExpandableOptionItem(
                                 label = "Close",
-                                icon = Icons.Default.Menu,
+                                iconSymbol = "menu",
                                 onClick = { onOptionsMenuExpandedChange(false) },
                             ),
                             ExpandableOptionItem(
                                 label = "Change Search Term",
-                                icon = Icons.Default.KeyboardArrowUp,
+                                iconSymbol = "keyboard_arrow_up",
                                 onClick = { isEditingQuery = true },
                             ),
                             ExpandableOptionItem(
                                 label = "Use App Icon",
-                                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                iconSymbol = "keyboard_arrow_right",
                                 onClick = { useAppIcon() },
                             ),
                         ),
