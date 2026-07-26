@@ -15,6 +15,7 @@ class AutoSetupLanguageConfigTest {
         assertEquals("de", configDeDe.languageCode)
         assertEquals("Build-Nummer", configDeDe.buildNumberQueryAndKeyword)
         assertEquals("Debugging über WLAN", configDeDe.wirelessDebuggingQueryAndKeyword)
+        assertEquals("USB-Debugging", configDeDe.usbDebuggingQueryAndKeyword)
 
         assertEquals("de-AT", configDeAt.localeTag)
         assertEquals("de-CH", configDeCh.localeTag)
@@ -30,6 +31,7 @@ class AutoSetupLanguageConfigTest {
         assertEquals("es", configEsEs.languageCode)
         assertEquals("Número de compilación", configEsEs.buildNumberQueryAndKeyword)
         assertEquals("Depuración inalámbrica", configEsEs.wirelessDebuggingQueryAndKeyword)
+        assertEquals("Depuración por USB", configEsEs.usbDebuggingQueryAndKeyword)
 
         assertEquals("es-MX", configEsMx.localeTag)
         assertEquals("es-US", configEsUs.localeTag)
@@ -44,6 +46,7 @@ class AutoSetupLanguageConfigTest {
         assertEquals("fr", configFrFr.languageCode)
         assertEquals("Numéro de build", configFrFr.buildNumberQueryAndKeyword)
         assertEquals("Débogage sans fil", configFrFr.wirelessDebuggingQueryAndKeyword)
+        assertEquals("Débogage USB", configFrFr.usbDebuggingQueryAndKeyword)
 
         assertEquals("fr-CA", configFrCa.localeTag)
     }
@@ -60,6 +63,7 @@ class AutoSetupLanguageConfigTest {
 
         assertEquals("Build number", configUs.buildNumberQueryAndKeyword)
         assertEquals("Wireless debugging", configUs.wirelessDebuggingQueryAndKeyword)
+        assertEquals("USB debugging", configUs.usbDebuggingQueryAndKeyword)
     }
 
     @Test

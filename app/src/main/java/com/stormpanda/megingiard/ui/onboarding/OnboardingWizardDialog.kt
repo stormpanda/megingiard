@@ -181,6 +181,7 @@ fun OnboardingWizardDialog(
     val privdState by PrivdManager.state.collectAsState()
     var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
     var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
+    var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
     var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
     var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
 
@@ -190,6 +191,7 @@ fun OnboardingWizardDialog(
             while (isActive) {
                 isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
                 isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+                isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
                 isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                 isDevicePaired = PrivdBootstrapper.hasCredentials(context)
                 delay(1000L)
@@ -298,6 +300,7 @@ fun OnboardingWizardDialog(
                                 isAccessibilityActive = isAccessibilityActive,
                                 isDevModeActive = isDevModeActive,
                                 isWirelessActive = isWirelessActive,
+                                isUsbActive = isUsbActive,
                                 isDevicePaired = isDevicePaired,
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
@@ -598,6 +601,7 @@ fun PrivilegedStepContent(
     isAccessibilityActive: Boolean,
     isDevModeActive: Boolean,
     isWirelessActive: Boolean,
+    isUsbActive: Boolean = true,
     isDevicePaired: Boolean,
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
@@ -637,7 +641,7 @@ fun PrivilegedStepContent(
         mutableStateOf(false)
     }
 
-    val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isDevicePaired && privdState == PrivdState.RUNNING
+    val isAllSet = isWifiActive && isDevModeActive && isWirelessActive && isUsbActive && isDevicePaired && privdState == PrivdState.RUNNING
 
     LaunchedEffect(isAllSet) {
         if (!isAllSet) {
@@ -729,7 +733,7 @@ fun PrivilegedStepContent(
 
                 wirelessStatus =
                     if (devStatus == ChecklistStatus.DONE) {
-                        if (isWirelessActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                        if (isWirelessActive && isUsbActive) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
                     } else {
                         ChecklistStatus.PENDING
                     }

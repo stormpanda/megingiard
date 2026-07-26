@@ -55,6 +55,9 @@ private enum class AutoToggleStage {
     ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER,
     ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT,
     ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER,
+    ENTER_USB_DEBUG_SEARCH_QUERY,
+    CLICK_USB_DEBUG_SEARCH_RESULT,
+    TOGGLE_USB_DEBUG_SWITCH,
     CLICK_SEARCH_BAR,
     ENTER_SEARCH_QUERY,
     CLICK_SEARCH_RESULT,
@@ -186,9 +189,71 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
                                 val clicked = findAndClickBuildNumber(rootNode, config.buildNumberQueryAndKeyword)
                                 if (clicked || isDevModeActive(context)) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Unlocked Developer Mode (Stage A), advancing to Stage B")
-                                    autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+                                    AppLog.i(TAG, "startAutoToggleLoop: Unlocked Developer Mode (Stage A)")
+                                    if (!isUsbDebuggingActive(context)) {
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: USB debugging inactive, advancing to ENTER_USB_DEBUG_SEARCH_QUERY",
+                                        )
+                                        autoToggleStage = AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
+                                    } else {
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: USB debugging active, advancing to Stage B (ENTER_SEARCH_QUERY)",
+                                        )
+                                        autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+                                    }
                                     launchSearchActivity(context, displayOptions)
+                                }
+                            }
+
+                            AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY -> {
+                                val entered = findAndSetSearchQuery(rootNode, config.usbDebuggingQueryAndKeyword)
+                                if (entered) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query '${config.usbDebuggingQueryAndKeyword}'")
+                                    autoToggleStage = AutoToggleStage.CLICK_USB_DEBUG_SEARCH_RESULT
+                                } else {
+                                    val clickedBar = findAndClickSearchBar(rootNode, config.searchBarKeywords)
+                                    if (clickedBar) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar fallback for USB Debugging")
+                                        autoToggleStage = AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
+                                    }
+                                }
+                            }
+
+                            AutoToggleStage.CLICK_USB_DEBUG_SEARCH_RESULT -> {
+                                val clickedResult = findAndClickSearchResultItem(rootNode, config.usbDebuggingQueryAndKeyword)
+                                if (clickedResult) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked USB Debugging search result")
+                                    autoToggleStage = AutoToggleStage.TOGGLE_USB_DEBUG_SWITCH
+                                }
+                            }
+
+                            AutoToggleStage.TOGGLE_USB_DEBUG_SWITCH -> {
+                                if (isUsbDebuggingActive(context)) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: USB Debugging is active! Advancing to Wireless Debugging search")
+                                    if (!isWirelessDebuggingActive(context) ||
+                                        autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING ||
+                                        !isDevicePaired(context)
+                                    ) {
+                                        autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+                                        launchSearchActivity(context, displayOptions)
+                                    } else {
+                                        AppLog.i(TAG, "startAutoToggleLoop: USB & Wireless Debugging active and paired, connecting daemon")
+                                        autoTogglePendingTimestamp = 0L
+                                        serviceScope.launch(Dispatchers.IO) {
+                                            PrivdManager.connect(context)
+                                        }
+                                        break
+                                    }
+                                } else {
+                                    val toggled = findAndToggleSwitch(rootNode, config.usbDebuggingQueryAndKeyword)
+                                    if (toggled) {
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: Toggled USB Debugging switch, waiting for system dialog confirmation",
+                                        )
+                                    }
                                 }
                             }
 
@@ -239,7 +304,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                         autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
                                     }
 
-                                    if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING &&
+                                    if (!isUsbDebuggingActive(context)) {
+                                        AppLog.i(
+                                            TAG,
+                                            "startAutoToggleLoop: USB debugging inactive after Wireless toggle, advancing to ENTER_USB_DEBUG_SEARCH_QUERY",
+                                        )
+                                        autoToggleStage = AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
+                                        launchSearchActivity(context, displayOptions)
+                                    } else if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING &&
                                         !isMegingiardInPairedDevices(rootNode)
                                     ) {
                                         AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Clicking Pair Dialog row)")
@@ -484,30 +556,54 @@ class MegingiardAccessibilityService : AccessibilityService() {
         val combined = "$text $contentDesc $viewId".lowercase()
 
         val cleanKw = targetKeyword.lowercase()
-        val isWirelessText =
+        val isTargetText =
             combined.contains(cleanKw) ||
                 combined.contains(cleanKw.replace("-", " ")) ||
                 combined.contains(cleanKw.replace("-", "")) ||
                 combined.contains("wireless debugging") ||
-                combined.contains("debugging über wlan")
+                combined.contains("debugging über wlan") ||
+                combined.contains("usb debugging") ||
+                combined.contains("usb-debugging")
 
-        if (isWirelessText) {
-            val switchNode = findSwitchOrCheckable(node) ?: node
-            if (switchNode.isCheckable) {
-                if (!switchNode.isChecked) {
-                    AppLog.i(TAG, "findAndToggleSwitch: Wireless Debugging switch is OFF, clicking switch")
-                    val clicked = switchNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    if (!clicked) {
-                        val parent = findClickableAncestorOrSelf(switchNode)
-                        parent?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    }
+        if (isTargetText) {
+            val container = node.parent ?: node
+            val switchNode =
+                findSwitchOrCheckable(node)
+                    ?: findSwitchOrCheckable(container)
+                    ?: findSwitchOrCheckable(container.parent ?: container)
+
+            val isChecked = switchNode?.isChecked == true
+
+            if (!isChecked) {
+                AppLog.i(TAG, "findAndToggleSwitch: Target '$targetKeyword' is OFF, attempting row and switch click ($viewId)")
+
+                // 1. Try clicking preference row container first (triggers Preference.performClick())
+                val rowClickable =
+                    findClickableAncestorOrSelf(node)
+                        ?: findClickableAncestorOrSelf(container)
+                        ?: (if (switchNode != null) findClickableAncestorOrSelf(switchNode) else null)
+
+                var clicked = rowClickable?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
+
+                // 2. If row click failed, click switch widget directly
+                if (!clicked && switchNode != null) {
+                    clicked = switchNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                }
+
+                // 3. Fallback: focus + click row
+                if (!clicked && rowClickable != null) {
+                    rowClickable.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                    clicked = rowClickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                }
+
+                if (clicked) {
+                    AppLog.i(TAG, "findAndToggleSwitch: Successfully issued ACTION_CLICK for '$targetKeyword'")
                 } else {
-                    AppLog.i(TAG, "findAndToggleSwitch: Wireless Debugging switch is already ON")
+                    AppLog.w(TAG, "findAndToggleSwitch: Failed to click row or switch for '$targetKeyword'")
                 }
                 return true
-            } else if (node.isClickable) {
-                AppLog.i(TAG, "findAndToggleSwitch: Clicking Wireless Debugging item row")
-                node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            } else {
+                AppLog.i(TAG, "findAndToggleSwitch: Switch for '$targetKeyword' is already ON")
                 return true
             }
         }
@@ -535,8 +631,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
             val found = findSwitchOrCheckable(child)
             if (found != null) return found
         }
-        val parent = node.parent
-        if (parent != null && parent.isCheckable) return parent
         return null
     }
 
@@ -704,6 +798,13 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 false
             }
 
+        fun isUsbDebuggingActive(context: Context): Boolean =
+            try {
+                Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) != 0
+            } catch (e: Exception) {
+                false
+            }
+
         fun isDevicePaired(context: Context): Boolean =
             PrivdBootstrapper.hasCredentials(context) && PrivdManager.state.value != PrivdState.FAILED
 
@@ -726,7 +827,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
         fun triggerWirelessDebuggingAutoToggle(context: Context) = startMultiStageAutoSetup(context)
 
         /**
-         * Triggers multi-stage automated setup (Stage A: Dev Mode, Stage B: Wireless Debugging, Stage C: Pairing)
+         * Triggers multi-stage automated setup (Stage A: Dev Mode, Stage B: Wireless Debugging & USB Debugging, Stage C: Pairing)
          * based on current device starting conditions.
          */
         fun startMultiStageAutoSetup(context: Context) {
@@ -766,12 +867,16 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val devModeActive = isDevModeActive(context)
+            val usbActive = isUsbDebuggingActive(context)
             val wirelessActive = isWirelessDebuggingActive(context)
             val paired = isDevicePaired(context)
 
-            AppLog.i(TAG, "startMultiStageAutoSetup: devMode=$devModeActive, wirelessActive=$wirelessActive, paired=$paired")
+            AppLog.i(
+                TAG,
+                "startMultiStageAutoSetup: devMode=$devModeActive, usbActive=$usbActive, wirelessActive=$wirelessActive, paired=$paired",
+            )
 
-            if (devModeActive && wirelessActive && paired) {
+            if (devModeActive && usbActive && wirelessActive && paired) {
                 if (PrivdManager.state.value != PrivdState.RUNNING) {
                     AppLog.i(TAG, "startMultiStageAutoSetup: Prerequisites active, attempting PrivdManager.connect()")
                     instance?.serviceScope?.launch(Dispatchers.IO) {
@@ -807,6 +912,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
             val initialStage =
                 when {
                     !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER
+                    !usbActive -> AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
                     else -> AutoToggleStage.ENTER_SEARCH_QUERY
                 }
 
@@ -817,11 +923,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
             instance?.startAutoToggleLoop()
 
             when (initialStage) {
-                AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
-                    launchSearchActivity(context, displayOptions)
-                }
-
-                AutoToggleStage.ENTER_SEARCH_QUERY -> {
+                AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER,
+                AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY,
+                AutoToggleStage.ENTER_SEARCH_QUERY,
+                -> {
                     launchSearchActivity(context, displayOptions)
                 }
 

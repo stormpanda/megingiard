@@ -12,6 +12,7 @@ import java.util.Locale
  * @property languageCode Primary 2-letter ISO language code (e.g., "en", "de", "es", "fr").
  * @property buildNumberQueryAndKeyword Search query and UI node matching string for Build Number.
  * @property wirelessDebuggingQueryAndKeyword Search query and UI node matching string for Wireless Debugging.
+ * @property usbDebuggingQueryAndKeyword Search query and UI node matching string for USB Debugging.
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
  * @property explicitPortKeywords List of UI text labels used by text scanner to extract explicit pairing ports.
  * @property searchBarKeywords List of UI text keywords used to fallback-detect search bar/button.
@@ -22,6 +23,7 @@ data class AutoSetupLanguageConfig(
     val languageCode: String,
     val buildNumberQueryAndKeyword: String,
     val wirelessDebuggingQueryAndKeyword: String,
+    val usbDebuggingQueryAndKeyword: String,
     val pairDeviceKeywords: List<String>,
     val explicitPortKeywords: List<String>,
     val searchBarKeywords: List<String>,
@@ -34,6 +36,7 @@ data class AutoSetupLanguageConfig(
                 languageCode = "de",
                 buildNumberQueryAndKeyword = "Build-Nummer",
                 wirelessDebuggingQueryAndKeyword = "Debugging über WLAN",
+                usbDebuggingQueryAndKeyword = "USB-Debugging",
                 pairDeviceKeywords =
                     listOf(
                         "gerät über einen kopplungscode koppeln",
@@ -74,6 +77,7 @@ data class AutoSetupLanguageConfig(
                 languageCode = "es",
                 buildNumberQueryAndKeyword = "Número de compilación",
                 wirelessDebuggingQueryAndKeyword = "Depuración inalámbrica",
+                usbDebuggingQueryAndKeyword = "Depuración por USB",
                 pairDeviceKeywords =
                     listOf(
                         "vincular dispositivo con un código de vinculación",
@@ -111,6 +115,7 @@ data class AutoSetupLanguageConfig(
                 languageCode = "fr",
                 buildNumberQueryAndKeyword = "Numéro de build",
                 wirelessDebuggingQueryAndKeyword = "Débogage sans fil",
+                usbDebuggingQueryAndKeyword = "Débogage USB",
                 pairDeviceKeywords =
                     listOf(
                         "associer l'appareil avec un code d'association",
@@ -147,6 +152,7 @@ data class AutoSetupLanguageConfig(
                 languageCode = "en",
                 buildNumberQueryAndKeyword = "Build number",
                 wirelessDebuggingQueryAndKeyword = "Wireless debugging",
+                usbDebuggingQueryAndKeyword = "USB debugging",
                 pairDeviceKeywords =
                     listOf(
                         "pair device with pairing code",
