@@ -549,43 +549,24 @@ fun MainAppScreen() {
             )
         }
 
-        var promptInstanceKey by remember { mutableIntStateOf(0) }
-
         if (showPromptDialog && !isWizardActive) {
-            key(promptInstanceKey) {
-                PrivdReconnectPromptDialog(
-                    onConnect = {
-                        coroutineScope.launch(Dispatchers.IO) {
-                            PrivdManager.connect(context)
-                        }
-                    },
-                    onSkip = {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppStateManager.setAccessibilityActive(active)
-                        if (!active) {
-                            AppLog.w(TAG, "Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering fresh reconnect prompt")
-                            promptInstanceKey++
-                            AppStateManager.setPrivdPromptDismissed(false)
-                        } else {
-                            AppStateManager.setPrivdPromptDismissed(true)
-                        }
-                    },
-                    onDone = {
-                        val active = MegingiardAccessibilityService.isEnabled(context)
-                        AppStateManager.setAccessibilityActive(active)
-                        if (!active) {
-                            AppLog.w(
-                                TAG,
-                                "Reconnect dialog finished but Accessibility Service is OFF! Re-triggering fresh reconnect prompt",
-                            )
-                            promptInstanceKey++
-                            AppStateManager.setPrivdPromptDismissed(false)
-                        } else {
-                            AppStateManager.setPrivdPromptDismissed(true)
-                        }
-                    },
-                )
-            }
+            PrivdReconnectPromptDialog(
+                onConnect = {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        PrivdManager.connect(context)
+                    }
+                },
+                onSkip = {
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    AppStateManager.setPrivdPromptDismissed(true)
+                },
+                onDone = {
+                    val active = MegingiardAccessibilityService.isEnabled(context)
+                    AppStateManager.setAccessibilityActive(active)
+                    AppStateManager.setPrivdPromptDismissed(true)
+                },
+            )
         }
 
         importError?.let { error ->

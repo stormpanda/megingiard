@@ -839,47 +839,26 @@ class MirrorPresentation(
                                 }
 
                                 val isPrivdPromptActive by AppStateManager.isPrivdPromptActive.collectAsState()
-                                var promptInstanceKey by remember { mutableIntStateOf(0) }
                                 val dialogScope = rememberCoroutineScope()
 
                                 if (isPrivdPromptActive && !isWizardActive) {
-                                    key(promptInstanceKey) {
-                                        PrivdReconnectPromptDialog(
-                                            onConnect = {
-                                                dialogScope.launch(Dispatchers.IO) {
-                                                    PrivdManager.connect(context)
-                                                }
-                                            },
-                                            onSkip = {
-                                                val active = MegingiardAccessibilityService.isEnabled(context)
-                                                AppStateManager.setAccessibilityActive(active)
-                                                if (!active) {
-                                                    AppLog.w(
-                                                        TAG,
-                                                        "MirrorPresentation: Reconnect dialog skipped but Accessibility Service is OFF! Re-triggering reconnect prompt",
-                                                    )
-                                                    promptInstanceKey += 1
-                                                    AppStateManager.setPrivdPromptDismissed(false)
-                                                } else {
-                                                    AppStateManager.setPrivdPromptDismissed(true)
-                                                }
-                                            },
-                                            onDone = {
-                                                val active = MegingiardAccessibilityService.isEnabled(context)
-                                                AppStateManager.setAccessibilityActive(active)
-                                                if (!active) {
-                                                    AppLog.w(
-                                                        TAG,
-                                                        "MirrorPresentation: Reconnect dialog finished but Accessibility Service is OFF! Re-triggering reconnect prompt",
-                                                    )
-                                                    promptInstanceKey += 1
-                                                    AppStateManager.setPrivdPromptDismissed(false)
-                                                } else {
-                                                    AppStateManager.setPrivdPromptDismissed(true)
-                                                }
-                                            },
-                                        )
-                                    }
+                                    PrivdReconnectPromptDialog(
+                                        onConnect = {
+                                            dialogScope.launch(Dispatchers.IO) {
+                                                PrivdManager.connect(context)
+                                            }
+                                        },
+                                        onSkip = {
+                                            val active = MegingiardAccessibilityService.isEnabled(context)
+                                            AppStateManager.setAccessibilityActive(active)
+                                            AppStateManager.setPrivdPromptDismissed(true)
+                                        },
+                                        onDone = {
+                                            val active = MegingiardAccessibilityService.isEnabled(context)
+                                            AppStateManager.setAccessibilityActive(active)
+                                            AppStateManager.setPrivdPromptDismissed(true)
+                                        },
+                                    )
                                 }
                             }
                         }
