@@ -214,12 +214,11 @@ object AppStateManager {
     private val _isBackgroundSettingsActive = MutableStateFlow(false)
     val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
 
-    private val _isPrivdPromptDismissed = MutableStateFlow(false)
-    val isPrivdPromptDismissed: StateFlow<Boolean> = _isPrivdPromptDismissed.asStateFlow()
+    val isPrivdPromptDismissed: StateFlow<Boolean> = MacroPadSettings.privdPromptDismissed
 
     fun setPrivdPromptDismissed(dismissed: Boolean) {
         AppLog.d(TAG, "setPrivdPromptDismissed($dismissed)")
-        _isPrivdPromptDismissed.value = dismissed
+        MacroPadSettings.setPrivdPromptDismissed(dismissed)
     }
 
     private val _isAccessibilityActive = MutableStateFlow(true)
@@ -233,7 +232,6 @@ object AppStateManager {
     fun resetPrivdPromptState() {
         AppLog.d(TAG, "resetPrivdPromptState")
         _isPrivdPromptShowing.value = false
-        _isPrivdPromptDismissed.value = false
     }
 
     private val _isPrivdPromptShowing = MutableStateFlow(false)
@@ -416,7 +414,7 @@ object AppStateManager {
             _isFullscreenKeyboardActive.value = false
             _isFullscreenMouseActive.value = false
             _isViewportEditActive.value = false
-            _isPrivdPromptDismissed.value = true
+            setPrivdPromptDismissed(true)
         } else {
             _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
         }
@@ -481,7 +479,7 @@ object AppStateManager {
                 PrivdManager.state,
                 MacroPadSettings.privdShowAdbPrompt,
                 _hasAdbCredentials,
-                _isPrivdPromptDismissed,
+                MacroPadSettings.privdPromptDismissed,
                 _isBackgroundSettingsActive,
                 _isAccessibilityActive,
             ) { array ->
@@ -492,11 +490,11 @@ object AppStateManager {
                 val bgSettingsActive = array[4] as Boolean
                 val accessibilityActive = array[5] as Boolean
 
-                if (state == PrivdState.RUNNING && accessibilityActive) {
-                    _isPrivdPromptDismissed.value = false
+                if (state == PrivdState.RUNNING && accessibilityActive && dismissed) {
+                    MacroPadSettings.setPrivdPromptDismissed(false)
                 }
                 if (!accessibilityActive) {
-                    _isPrivdPromptDismissed.value = false
+                    MacroPadSettings.setPrivdPromptDismissed(false)
                     _isPrivdPromptShowing.value = true
                 } else if (dismissed || bgSettingsActive) {
                     _isPrivdPromptShowing.value = false

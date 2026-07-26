@@ -70,6 +70,11 @@ object MacroPadSettings {
     /** Whether to show a modal prompt on app start if reconnection to the daemon fails. */
     val privdShowAdbPrompt: StateFlow<Boolean> = _privdShowAdbPrompt.asStateFlow()
 
+    private val _privdPromptDismissed = MutableStateFlow(false)
+
+    /** Persisted flag indicating the user explicitly skipped/dismissed the Privileged Mode reconnect prompt. */
+    val privdPromptDismissed: StateFlow<Boolean> = _privdPromptDismissed.asStateFlow()
+
     private val _deadzoneLeft = MutableStateFlow(PRIVD_DEFAULT_DEADZONE)
 
     /** Dead zone radius for the left analog stick during physical gamepad recording (0.0–1.0). */
@@ -104,6 +109,7 @@ object MacroPadSettings {
         _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
         _privdShowAdbPrompt.value = prefs[KEY_PRIVD_SHOW_ADB_PROMPT] ?: true
+        _privdPromptDismissed.value = prefs[KEY_PRIVD_PROMPT_DISMISSED] ?: false
         _deadzoneLeft.value = prefs[KEY_PRIVD_DEADZONE_LEFT] ?: PRIVD_DEFAULT_DEADZONE
         _deadzoneRight.value = prefs[KEY_PRIVD_DEADZONE_RIGHT] ?: PRIVD_DEFAULT_DEADZONE
 
@@ -163,6 +169,14 @@ object MacroPadSettings {
 
     internal fun setPrivdShowAdbPromptForTesting(value: Boolean) {
         _privdShowAdbPrompt.value = value
+    }
+
+    fun setPrivdPromptDismissed(value: Boolean) {
+        AppLog.d(TAG, "setPrivdPromptDismissed($value)")
+        _privdPromptDismissed.value = value
+        if (::dataStore.isInitialized) {
+            scope.launch { dataStore.edit { prefs -> prefs[KEY_PRIVD_PROMPT_DISMISSED] = value } }
+        }
     }
 
     fun setDeadzoneLeft(value: Float) {
