@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
@@ -27,14 +28,22 @@ import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 private const val TAG = "FocusTopLauncherActivity"
 private const val INITIAL_LOOP_OFFSET = 10_000
+private const val INITIAL_REPEAT_DELAY_MS = 300L
+private const val REPEAT_INTERVAL_MS = 100L
+
+private enum class ScrollDirection { NONE, LEFT, RIGHT }
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
-    private var lastStickLeft = false
-    private var lastStickRight = false
+    private var currentDirection = ScrollDirection.NONE
+    private var repeatJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +99,46 @@ class FocusTopLauncherActivity : ComponentActivity() {
         InstalledAppsManager.loadInstalledApps(this)
     }
 
+    override fun onPause() {
+        super.onPause()
+        stopRepeat()
+    }
+
+    private fun startRepeat(direction: ScrollDirection) {
+        if (currentDirection == direction) return
+
+        currentDirection = direction
+        repeatJob?.cancel()
+
+        if (direction == ScrollDirection.NONE) return
+
+        // Instant step on initial press
+        if (direction == ScrollDirection.LEFT) {
+            virtualIndexState.intValue--
+        } else if (direction == ScrollDirection.RIGHT) {
+            virtualIndexState.intValue++
+        }
+
+        repeatJob =
+            lifecycleScope.launch {
+                delay(INITIAL_REPEAT_DELAY_MS)
+                while (isActive && currentDirection == direction) {
+                    if (direction == ScrollDirection.LEFT) {
+                        virtualIndexState.intValue--
+                    } else if (direction == ScrollDirection.RIGHT) {
+                        virtualIndexState.intValue++
+                    }
+                    delay(REPEAT_INTERVAL_MS)
+                }
+            }
+    }
+
+    private fun stopRepeat() {
+        currentDirection = ScrollDirection.NONE
+        repeatJob?.cancel()
+        repeatJob = null
+    }
+
     override fun onKeyDown(
         keyCode: Int,
         event: KeyEvent?,
@@ -100,14 +149,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
                 -> {
-                    virtualIndexState.intValue--
+                    startRepeat(ScrollDirection.LEFT)
                     return true
                 }
 
                 KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
                 -> {
-                    virtualIndexState.intValue++
+                    startRepeat(ScrollDirection.RIGHT)
                     return true
                 }
 
@@ -129,6 +178,32 @@ class FocusTopLauncherActivity : ComponentActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun onKeyUp(
+        keyCode: Int,
+        event: KeyEvent?,
+    ): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+            -> {
+                if (currentDirection == ScrollDirection.LEFT) {
+                    stopRepeat()
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+            -> {
+                if (currentDirection == ScrollDirection.RIGHT) {
+                    stopRepeat()
+                }
+                return true
+            }
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         if (event != null && (event.source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             val axisHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
@@ -136,23 +211,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val x = if (axisHatX != 0f) axisHatX else axisX
 
             if (x < -0.5f) {
-                if (!lastStickLeft) {
-                    lastStickLeft = true
-                    virtualIndexState.intValue--
-                }
+                startRepeat(ScrollDirection.LEFT)
+                return true
+            } else if (x > 0.5f) {
+                startRepeat(ScrollDirection.RIGHT)
                 return true
             } else {
-                lastStickLeft = false
-            }
-
-            if (x > 0.5f) {
-                if (!lastStickRight) {
-                    lastStickRight = true
-                    virtualIndexState.intValue++
+                if (currentDirection != ScrollDirection.NONE) {
+                    stopRepeat()
                 }
-                return true
-            } else {
-                lastStickRight = false
             }
         }
         return super.onGenericMotionEvent(event)
