@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -35,7 +36,7 @@ import kotlin.math.absoluteValue
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
 private val HPC_DEFAULT_POSTER_HEIGHT = 262.dp
-private val HPC_DEFAULT_POSTER_SPACING = 12.dp
+private val HPC_DEFAULT_POSTER_SPACING = 13.5.dp
 private val HPC_DEFAULT_CAROUSEL_HEIGHT = 310.dp
 private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
 
@@ -59,6 +60,7 @@ fun HorizontalPosterCarousel(
     val appColors = LocalAppColors.current
     val activeGlowColor = if (ambientGlowColor != Color.Unspecified) ambientGlowColor else appColors.accent
     val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
 
     val pagerState =
         rememberPagerState(
@@ -108,6 +110,16 @@ fun HorizontalPosterCarousel(
             val scale = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
             val alpha = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
 
+            // Compensate for center card scale expansion (1.18x) by pushing direct left/right neighbors outwards
+            val rawOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
+            val sign = kotlin.math.sign(rawOffset)
+            val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
+            val extraPushPx =
+                remember(density) {
+                    with(density) { 16.dp.toPx() }
+                }
+            val translationXShift = sign * neighborFactor * extraPushPx
+
             Box(
                 modifier =
                     Modifier
@@ -115,6 +127,7 @@ fun HorizontalPosterCarousel(
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
+                            translationX = translationXShift
                             this.alpha = alpha
                         }.shadow(
                             elevation = if (isSelected) 20.dp else 4.dp,

@@ -62,10 +62,10 @@ import java.io.File
 private const val TAG = "FocusTopLauncherScreen"
 
 private val FTL_POSTER_CORNER_RADIUS = 16.dp
-private val FTL_POSTER_WIDTH = 175.dp
-private val FTL_POSTER_HEIGHT = 262.dp // 2:3 aspect ratio (~30% larger)
+private val FTL_POSTER_WIDTH = 158.dp
+private val FTL_POSTER_HEIGHT = 237.dp // 2:3 aspect ratio
 private val FTL_POSTER_SPACING = 12.dp
-private val FTL_ICON_SIZE = 80.dp
+private val FTL_ICON_SIZE = 72.dp
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -177,38 +177,50 @@ fun FocusTopLauncherScreen(
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Endless centered 2:3 poster carousel using reusable HorizontalPosterCarousel
-                HorizontalPosterCarousel(
-                    itemCount = apps.size,
-                    virtualIndex = virtualIndex,
-                    onVirtualIndexChange = onVirtualIndexChange,
-                    onItemClick = { actualIndex ->
-                        val appInfo = apps[actualIndex]
-                        onAppClick(appInfo)
-                    },
-                    posterWidth = FTL_POSTER_WIDTH,
-                    posterHeight = FTL_POSTER_HEIGHT,
-                    posterSpacing = FTL_POSTER_SPACING,
-                    carouselHeight = 310.dp,
-                    posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                    ambientGlowColor = animatedPrimaryColor,
-                ) { actualIndex, _ ->
-                    val appInfo = apps[actualIndex]
-                    PosterCardContent(appInfo = appInfo)
-                }
-
-                // Focused App Title at the bottom of the screen with subdue launch indicator buttons on the right
-                Box(
+                // Left-aligned subdued headline "Android Apps"
+                Text(
+                    text = stringResource(R.string.gamefocus_header_android_apps),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary,
+                        ),
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
+                            .padding(start = 24.dp, top = 16.dp, bottom = 2.dp),
+                )
+
+                Spacer(modifier = Modifier.weight(0.8f))
+
+                // Gallery Group (Carousel + App Name grouped together)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    // Endless centered 2:3 poster carousel using reusable HorizontalPosterCarousel
+                    HorizontalPosterCarousel(
+                        itemCount = apps.size,
+                        virtualIndex = virtualIndex,
+                        onVirtualIndexChange = onVirtualIndexChange,
+                        onItemClick = { actualIndex ->
+                            val appInfo = apps[actualIndex]
+                            onAppClick(appInfo)
+                        },
+                        posterWidth = FTL_POSTER_WIDTH,
+                        posterHeight = FTL_POSTER_HEIGHT,
+                        posterSpacing = FTL_POSTER_SPACING,
+                        carouselHeight = 265.dp,
+                        posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                        ambientGlowColor = animatedPrimaryColor,
+                    ) { actualIndex, _ ->
+                        val appInfo = apps[actualIndex]
+                        PosterCardContent(appInfo = appInfo)
+                    }
+
+                    Spacer(modifier = Modifier.height(30.dp)) // Increased gap between cover art and app title
+
+                    // Focused App Title
                     if (currentApp != null) {
                         Text(
                             text = currentApp.label,
@@ -223,65 +235,71 @@ fun FocusTopLauncherScreen(
                             modifier = Modifier.padding(horizontal = 140.dp),
                         )
                     }
+                }
 
-                    // Bottom-Right subdued touch buttons for Top Screen (A) / Bottom Screen (X)
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        TextButton(
-                            onClick = {
-                                if (currentApp != null) {
-                                    onAppClickTop(currentApp)
-                                }
-                            },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CutoutLetterCircleIcon(
-                                    letter = "A",
-                                    size = 18.dp,
-                                    tint = appColors.onSurfaceSecondary,
-                                    cutoutColor = appColors.appBackground,
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.gamefocus_launch_top),
-                                    style =
-                                        MaterialTheme.typography.labelMedium.copy(
-                                            color = appColors.onSurfaceSecondary,
-                                            fontWeight = FontWeight.SemiBold,
-                                        ),
-                                )
-                            }
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            // Bottom-Right subdued touch buttons for Top Screen (A) / Bottom Screen (X)
+            // Margins reduced by 50% so they sit lower and right in the corner
+            Row(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = {
+                        if (currentApp != null) {
+                            onAppClickTop(currentApp)
                         }
+                    },
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CutoutLetterCircleIcon(
+                            letter = "A",
+                            size = 18.dp,
+                            tint = appColors.onSurfaceSecondary,
+                            cutoutColor = appColors.appBackground,
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.gamefocus_launch_top),
+                            style =
+                                MaterialTheme.typography.labelMedium.copy(
+                                    color = appColors.onSurfaceSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                        )
+                    }
+                }
 
-                        Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(2.dp))
 
-                        TextButton(
-                            onClick = {
-                                if (currentApp != null) {
-                                    onAppClickBottom(currentApp)
-                                }
-                            },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CutoutLetterCircleIcon(
-                                    letter = "X",
-                                    size = 18.dp,
-                                    tint = appColors.onSurfaceSecondary,
-                                    cutoutColor = appColors.appBackground,
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.gamefocus_launch_bottom),
-                                    style =
-                                        MaterialTheme.typography.labelMedium.copy(
-                                            color = appColors.onSurfaceSecondary,
-                                            fontWeight = FontWeight.SemiBold,
-                                        ),
-                                )
-                            }
+                TextButton(
+                    onClick = {
+                        if (currentApp != null) {
+                            onAppClickBottom(currentApp)
                         }
+                    },
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CutoutLetterCircleIcon(
+                            letter = "X",
+                            size = 18.dp,
+                            tint = appColors.onSurfaceSecondary,
+                            cutoutColor = appColors.appBackground,
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.gamefocus_launch_bottom),
+                            style =
+                                MaterialTheme.typography.labelMedium.copy(
+                                    color = appColors.onSurfaceSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                ),
+                        )
                     }
                 }
             }

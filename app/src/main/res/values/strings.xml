@@ -1181,5 +1181,6 @@ Open Settings to create a layout.</string>
     <!-- Game Focus dual display launch -->
     <string name="gamefocus_launch_top">Top Screen</string>
     <string name="gamefocus_launch_bottom">Bottom Screen</string>
+    <string name="gamefocus_header_android_apps">Android Apps</string>
 
 </resources>
