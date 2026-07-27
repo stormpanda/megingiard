@@ -57,7 +57,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - The category header MUST present a dense vertical rolling 3-item text column displaying the previous category (faded top, 0.35f alpha), active category (full opacity), and next category (faded bottom, 0.35f alpha). Switching categories MUST trigger a vertical rolling animation across all 3 category text lines in unison.
 - Upon switching categories, the poster carousel MUST slide and fade out in the opposite direction of the category switch (e.g. D-pad DOWN slides the carousel out to the top while the new carousel slides in from the bottom).
 - Apps marked as Favorites MUST display a `kid_star` Material Symbol icon in the **top-right corner** of their cover art rendered in theme accent color (`appColors.accent`).
-- Pressing **Select** / **Menu** (`KEYCODE_BUTTON_SELECT`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableOptionsMenu` offering "Add to Favorites" / "Remove from Favorites" triggered by D-pad UP.
+- Pressing **Select** / **Menu** (`KEYCODE_BUTTON_SELECT`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableOptionsMenu` offering an integral "Close" option (`iconSymbol = "menu"`) and a "Favorites" option (`iconSymbol = "gamepad_up"`).
 - On-screen touch buttons (`ExpandableOptionsMenu`, Top Screen A, Bottom Screen X) MUST have D-pad focusability disabled (`canFocus = false`) and focus indications removed to prevent buttons from taking D-pad or Joystick focus during launcher navigation.
 - Favorites (`filesDir/gamefocus_favorites.txt`) and Recently Used launch history (`filesDir/gamefocus_last_used.txt`) MUST be persisted to disk across application restarts.
 

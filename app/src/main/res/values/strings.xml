@@ -1186,6 +1186,7 @@ Open Settings to create a layout.</string>
     <string name="gamefocus_cat_last_used">Recently Used</string>
     <string name="gamefocus_option_add_favorite">Add to Favorites</string>
     <string name="gamefocus_option_remove_favorite">Remove from Favorites</string>
+    <string name="gamefocus_option_close">Close</string>
     <string name="gamefocus_no_favorites">No Favorite Apps Added</string>
     <string name="gamefocus_no_last_used">No Recently Used Apps</string>
 

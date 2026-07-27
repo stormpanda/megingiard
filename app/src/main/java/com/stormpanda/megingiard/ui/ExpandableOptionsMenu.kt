@@ -21,8 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MaterialSymbol
 import kotlinx.coroutines.delay
 
@@ -43,6 +45,26 @@ fun ExpandableOptionsMenu(
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
     val noFocusInteractionSource = remember { MutableInteractionSource() }
+
+    val closeLabel = stringResource(R.string.gamefocus_option_close)
+    val effectiveOptions =
+        remember(options, closeLabel) {
+            if (options.none {
+                    it.iconSymbol == "menu" || it.label.equals(closeLabel, ignoreCase = true) ||
+                        it.label.equals("Close", ignoreCase = true)
+                }
+            ) {
+                listOf(
+                    ExpandableOptionItem(
+                        label = closeLabel,
+                        iconSymbol = "menu",
+                        onClick = { onExpandedChange(false) },
+                    ),
+                ) + options
+            } else {
+                options
+            }
+        }
 
     // Auto dismiss timer after 5 seconds when expanded
     LaunchedEffect(isExpanded) {
@@ -102,7 +124,7 @@ fun ExpandableOptionsMenu(
                         alpha = (expansionFraction * 1.5f - 0.5f).coerceIn(0f, 1f)
                     },
             ) {
-                options.forEachIndexed { index, item ->
+                effectiveOptions.forEachIndexed { index, item ->
                     val spreadOffsetPx = with(density) { (index * 24.dp.toPx()) * (1f - expansionFraction) }
                     TextButton(
                         onClick = {

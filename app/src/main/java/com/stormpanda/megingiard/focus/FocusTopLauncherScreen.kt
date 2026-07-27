@@ -292,7 +292,7 @@ fun FocusTopLauncherScreen(
                                     } else {
                                         stringResource(R.string.gamefocus_option_add_favorite)
                                     },
-                                iconSymbol = "kid_star",
+                                iconSymbol = "gamepad_up",
                                 onClick = {
                                     if (currentApp != null) {
                                         onToggleFavorite(currentApp)
