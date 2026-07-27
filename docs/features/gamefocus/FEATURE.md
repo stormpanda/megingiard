@@ -43,7 +43,13 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - The background MUST display a smooth animated 3-stop vertical gradient (`animatedPrimaryColor` -> `animatedSecondaryColor` -> `appBackground`) transitioning continuously as the user scrolls between games.
 - The focused game poster card MUST display a dynamic ambient glow shadow using its extracted primary color (`ambientColor` & `spotColor`).
 
-### FR-GF6: Coexistence
+### FR-GF6: Dual-Display Target App Launching
+
+- Pressing the Gamepad **A** button (`KEYCODE_BUTTON_A` / `KEYCODE_DPAD_CENTER` / `ENTER`) MUST launch the highlighted application on the primary top display (`Display.DEFAULT_DISPLAY`, Display 0).
+- Pressing the Gamepad **X** button (`KEYCODE_BUTTON_X` or `KEYCODE_X`) MUST launch the highlighted application on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
+- The bottom-right corner of the launcher UI MUST present subdued touch-enabled indicator buttons ("Top Screen" with cutout letter **A** circle icon and "Bottom Screen" with cutout letter **X** circle icon) styled framelessly (`onSurfaceSecondary`, no background box, no border) for touch launching.
+
+### FR-GF7: Coexistence
 
 - Megingiard Game Focus MUST have application ID `com.stormpanda.megingiard.gamefocus` (`.debug` for debug builds).
 - It MUST be installable alongside the standard Megingiard app without package or state conflicts.

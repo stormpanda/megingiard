@@ -103,9 +103,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             apps = apps,
                             virtualIndex = virtualIndexState.intValue,
                             onVirtualIndexChange = { virtualIndexState.intValue = it },
-                            onAppClick = { appInfo ->
-                                AppLog.i(TAG, "Launching app from top launcher: ${appInfo.label}")
+                            onAppClickTop = { appInfo ->
+                                AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
+                            },
+                            onAppClickBottom = { appInfo ->
+                                AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
+                                InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
                             },
                             editingAppInfo = editingApp,
                             dialogVirtualIndex = dialogVirtualIndexState.intValue,
@@ -299,8 +303,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
                     val targetApp = apps.getOrNull(actualIndex)
                     if (targetApp != null) {
-                        AppLog.i(TAG, "Gamepad launch key pressed for: ${targetApp.label}")
+                        AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
                         InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                        return true
+                    }
+                }
+
+                KeyEvent.KEYCODE_BUTTON_X,
+                KeyEvent.KEYCODE_X,
+                -> {
+                    val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
+                    val targetApp = apps.getOrNull(actualIndex)
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Gamepad X button pressed for: ${targetApp.label} -> Launching on Bottom Display")
+                        InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
                         return true
                     }
                 }

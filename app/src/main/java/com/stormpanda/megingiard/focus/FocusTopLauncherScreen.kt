@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
@@ -53,6 +55,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
+import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.io.File
 
@@ -69,7 +72,9 @@ fun FocusTopLauncherScreen(
     apps: List<InstalledAppInfo>,
     virtualIndex: Int,
     onVirtualIndexChange: (Int) -> Unit,
-    onAppClick: (InstalledAppInfo) -> Unit,
+    onAppClickTop: (InstalledAppInfo) -> Unit = {},
+    onAppClickBottom: (InstalledAppInfo) -> Unit = {},
+    onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
     editingAppInfo: InstalledAppInfo? = null,
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
@@ -196,12 +201,12 @@ fun FocusTopLauncherScreen(
                     PosterCardContent(appInfo = appInfo)
                 }
 
-                // Focused App Title at the bottom of the screen
+                // Focused App Title at the bottom of the screen with subdue launch indicator buttons on the right
                 Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                            .padding(horizontal = 24.dp, vertical = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (currentApp != null) {
@@ -215,7 +220,68 @@ fun FocusTopLauncherScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 140.dp),
                         )
+                    }
+
+                    // Bottom-Right subdued touch buttons for Top Screen (A) / Bottom Screen (X)
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                if (currentApp != null) {
+                                    onAppClickTop(currentApp)
+                                }
+                            },
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CutoutLetterCircleIcon(
+                                    letter = "A",
+                                    size = 18.dp,
+                                    tint = appColors.onSurfaceSecondary,
+                                    cutoutColor = appColors.appBackground,
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.gamefocus_launch_top),
+                                    style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            color = appColors.onSurfaceSecondary,
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(2.dp))
+
+                        TextButton(
+                            onClick = {
+                                if (currentApp != null) {
+                                    onAppClickBottom(currentApp)
+                                }
+                            },
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CutoutLetterCircleIcon(
+                                    letter = "X",
+                                    size = 18.dp,
+                                    tint = appColors.onSurfaceSecondary,
+                                    cutoutColor = appColors.appBackground,
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.gamefocus_launch_bottom),
+                                    style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            color = appColors.onSurfaceSecondary,
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -9,6 +9,7 @@ import android.content.pm.ResolveInfo
 import android.os.Build
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import kotlinx.coroutines.CoroutineScope
@@ -195,6 +196,21 @@ object InstalledAppsManager {
     fun launchAppOnPrimaryDisplay(
         context: Context,
         appInfo: InstalledAppInfo,
+    ): Boolean = launchAppOnDisplay(context, appInfo, Display.DEFAULT_DISPLAY)
+
+    fun launchAppOnSecondaryDisplay(
+        context: Context,
+        appInfo: InstalledAppInfo,
+    ): Boolean {
+        val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
+        val displayId = secondaryDisplay?.displayId ?: 4 // Fallback to secondary display ID 4 on AYN Thor
+        return launchAppOnDisplay(context, appInfo, displayId)
+    }
+
+    fun launchAppOnDisplay(
+        context: Context,
+        appInfo: InstalledAppInfo,
+        displayId: Int,
     ): Boolean =
         try {
             val intent =
@@ -205,13 +221,13 @@ object InstalledAppsManager {
                 }
             val options =
                 ActivityOptions.makeBasic().apply {
-                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                    setLaunchDisplayId(displayId)
                 }
             context.startActivity(intent, options.toBundle())
-            AppLog.i(TAG, "Successfully launched ${appInfo.label} (${appInfo.packageName}) on primary display")
+            AppLog.i(TAG, "Successfully launched ${appInfo.label} (${appInfo.packageName}) on display $displayId")
             true
         } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to launch app ${appInfo.label}: ${e.message}", e)
+            AppLog.e(TAG, "Failed to launch app ${appInfo.label} on display $displayId: ${e.message}", e)
             false
         }
 }

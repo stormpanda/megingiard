@@ -1185,4 +1185,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_export_include_backgrounds">Hintergrundbilder einschließen</string>
     <string name="config_import_section_background_images">Hintergrundbilder (%1$d)</string>
 
+    <!-- Game Focus dual display launch -->
+    <string name="gamefocus_launch_top">Oberer Bildschirm</string>
+    <string name="gamefocus_launch_bottom">Unterer Bildschirm</string>
+
 </resources>
