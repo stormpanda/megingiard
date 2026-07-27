@@ -185,74 +185,82 @@ fun FocusTopLauncherScreen(
                             targetState.ordinal > initialState.ordinal ||
                                 (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
                         if (isMovingDown) {
-                            (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
+                            (slideInVertically { height -> height } + fadeIn())
+                                .togetherWith(slideOutVertically { height -> -height } + fadeOut())
                         } else {
-                            (slideInVertically { -it } + fadeIn()).togetherWith(slideOutVertically { it } + fadeOut())
+                            (slideInVertically { height -> -height } + fadeIn())
+                                .togetherWith(slideOutVertically { height -> height } + fadeOut())
                         }
                     },
                     label = "CarouselCategoryTransition",
+                    modifier = Modifier.fillMaxSize(),
                 ) { category ->
-                    if (apps.isEmpty()) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .height(310.dp)
-                                    .fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text =
-                                    when (category) {
-                                        GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
-                                        GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
-                                        else -> stringResource(R.string.focus_launcher_no_apps)
-                                    },
-                                style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
-                            )
-                        }
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            // Carousel
-                            HorizontalPosterCarousel(
-                                itemCount = apps.size,
-                                virtualIndex = virtualIndex,
-                                onVirtualIndexChange = onVirtualIndexChange,
-                                onItemClick = { actualIndex ->
-                                    val appInfo = apps.getOrNull(actualIndex)
-                                    if (appInfo != null) onAppClick(appInfo)
-                                },
-                                posterWidth = FTL_POSTER_WIDTH,
-                                posterHeight = FTL_POSTER_HEIGHT,
-                                posterSpacing = FTL_POSTER_SPACING,
-                                carouselHeight = 265.dp,
-                                posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                                ambientGlowColor = animatedPrimaryColor,
-                            ) { actualIndex, _ ->
-                                val appInfo = apps[actualIndex]
-                                PosterCardContent(
-                                    appInfo = appInfo,
-                                    isFavorite = favoritesSet.contains(appInfo.packageName),
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (apps.isEmpty()) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .height(310.dp)
+                                        .fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text =
+                                        when (category) {
+                                            GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
+                                            GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
+                                            else -> stringResource(R.string.focus_launcher_no_apps)
+                                        },
+                                    style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
                                 )
                             }
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                // Carousel
+                                HorizontalPosterCarousel(
+                                    itemCount = apps.size,
+                                    virtualIndex = virtualIndex,
+                                    onVirtualIndexChange = onVirtualIndexChange,
+                                    onItemClick = { actualIndex ->
+                                        val appInfo = apps.getOrNull(actualIndex)
+                                        if (appInfo != null) onAppClick(appInfo)
+                                    },
+                                    posterWidth = FTL_POSTER_WIDTH,
+                                    posterHeight = FTL_POSTER_HEIGHT,
+                                    posterSpacing = FTL_POSTER_SPACING,
+                                    carouselHeight = 290.dp,
+                                    posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                                    ambientGlowColor = animatedPrimaryColor,
+                                ) { actualIndex, _ ->
+                                    val appInfo = apps[actualIndex]
+                                    PosterCardContent(
+                                        appInfo = appInfo,
+                                        isFavorite = favoritesSet.contains(appInfo.packageName),
+                                    )
+                                }
 
-                            Spacer(modifier = Modifier.height(30.dp))
+                                Spacer(modifier = Modifier.height(30.dp))
 
-                            // Focused App Title
-                            if (currentApp != null) {
-                                Text(
-                                    text = currentApp.label,
-                                    style =
-                                        MaterialTheme.typography.headlineLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = appColors.onSurface,
-                                        ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 140.dp),
-                                )
+                                // Focused App Title
+                                if (currentApp != null) {
+                                    Text(
+                                        text = currentApp.label,
+                                        style =
+                                            MaterialTheme.typography.headlineLarge.copy(
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = appColors.onSurface,
+                                            ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(horizontal = 140.dp),
+                                    )
+                                }
                             }
                         }
                     }
