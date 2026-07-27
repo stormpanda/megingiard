@@ -38,6 +38,8 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 ### FR-GF5: Dynamic Palette Gradients & Ambient Glow
 
 - The launcher top screen MUST dynamically extract primary and secondary color palettes from the active game cover image (or native app icon) using AndroidX `Palette`.
+- Extracted game palettes MUST be persisted to disk (`filesDir/gamefocus_palettes.txt`) so dynamic colors render instantly (0ms) on cold app launch without waiting for background extraction.
+- Rendered app icon bitmaps MUST be cached to disk (`cacheDir/gamefocus_icons/${packageName}.png`) so first-time icon rendering decodes in ~1ms without blocking the UI thread.
 - The background MUST display a smooth animated 3-stop vertical gradient (`animatedPrimaryColor` -> `animatedSecondaryColor` -> `appBackground`) transitioning continuously as the user scrolls between games.
 - The focused game poster card MUST display a dynamic ambient glow shadow using its extracted primary color (`ambientColor` & `spotColor`).
 
@@ -56,7 +58,8 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                ┌───────────────────────────────────────────────┐
                │    Top Display (0): FocusTopLauncherActivity  │
                │   • FocusTopLauncherScreen (2:3 Poster Pager) │
-               │   • AppPaletteExtractor (AndroidX Palette API)│
+               │   • FocusImageCache (LruCache + Icon Disk PNG)│
+               │   • AppPaletteExtractor (Palette + Disk Cache)│
                │   • ExpandableOptionsMenu (Subdued D-Pad UI)  │
                │   • SteamGridDbScrapeDialog (Y Button Editor) │
                └──────────────────────┬────────────────────────┘
@@ -74,5 +77,6 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - **Gradle Product Flavors:** Configured in `app/build.gradle.kts` under `flavorDimensions += "variant"` with `standard` and `gameFocus` flavors.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager`, managing local cover art disk caching, persistent scraped package tracking (`gamefocus_scraped_apps.txt`), and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient`.
-- **AppPaletteExtractor:** Utility object in `app/src/main/java/com/stormpanda/megingiard/focus/AppPaletteExtractor.kt` extracting vibrant/dominant colors via AndroidX `Palette`.
+- **AppPaletteExtractor:** Utility object in `app/src/main/java/com/stormpanda/megingiard/focus/AppPaletteExtractor.kt` extracting vibrant/dominant colors via AndroidX `Palette` with `LruCache` and disk persistence (`gamefocus_palettes.txt`).
+- **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
 - **Manifest Integration:** `app/src/gameFocus/AndroidManifest.xml` declares `FocusTopLauncherActivity` with `android.intent.category.HOME` and `android.intent.category.DEFAULT` filters.

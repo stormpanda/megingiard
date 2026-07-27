@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.focus
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -16,6 +17,7 @@ import java.io.File
 private const val TAG = "AppPaletteExtractor"
 private const val PALETTE_CACHE_SIZE = 100
 private const val PALETTE_TARGET_AREA = 128 * 128
+private const val PALETTE_FILE_NAME = "gamefocus_palettes.txt"
 
 data class ExtractedAppPalette(
     val primaryColor: Color,
@@ -24,6 +26,76 @@ data class ExtractedAppPalette(
 
 object AppPaletteExtractor {
     private val paletteCache = LruCache<String, ExtractedAppPalette>(PALETTE_CACHE_SIZE)
+    private var isInitialized = false
+    private var appContext: Context? = null
+
+    fun init(context: Context) {
+        if (isInitialized) return
+        appContext = context.applicationContext
+        loadPersistedPalettes(context.applicationContext)
+        isInitialized = true
+    }
+
+    private fun loadPersistedPalettes(context: Context) {
+        val file = File(context.filesDir, PALETTE_FILE_NAME)
+        if (!file.exists()) return
+
+        try {
+            var count = 0
+            file.readLines().forEach { line ->
+                val parts = line.split("|")
+                if (parts.size == 3) {
+                    val key = parts[0]
+                    val primaryInt = parts[1].toLongOrNull()?.toInt()
+                    val secondaryInt = parts[2].toLongOrNull()?.toInt()
+                    if (primaryInt != null && secondaryInt != null) {
+                        paletteCache.put(key, ExtractedAppPalette(Color(primaryInt), Color(secondaryInt)))
+                        count++
+                    }
+                }
+            }
+            AppLog.d(TAG, "Loaded $count persisted game palettes from disk")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to load persisted palettes: ${e.message}")
+        }
+    }
+
+    private fun persistPalette(
+        cacheKey: String,
+        palette: ExtractedAppPalette,
+    ) {
+        val context = appContext ?: return
+        try {
+            val file = File(context.filesDir, PALETTE_FILE_NAME)
+            file.appendText("$cacheKey|${palette.primaryColor.toArgb()}|${palette.secondaryColor.toArgb()}\n")
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to persist palette entry: ${e.message}")
+        }
+    }
+
+    fun invalidatePalette(packageName: String) {
+        val context = appContext
+        val keysToRemove = mutableListOf<String>()
+        paletteCache.snapshot().keys.forEach { key ->
+            if (key.startsWith("$packageName:")) keysToRemove.add(key)
+        }
+        keysToRemove.forEach { paletteCache.remove(it) }
+
+        if (context != null) {
+            try {
+                val file = File(context.filesDir, PALETTE_FILE_NAME)
+                if (file.exists()) {
+                    val remainingLines =
+                        file.readLines().filterNot { line ->
+                            line.startsWith("$packageName:")
+                        }
+                    file.writeText(remainingLines.joinToString("\n") + if (remainingLines.isNotEmpty()) "\n" else "")
+                }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to invalidate persisted palette for $packageName: ${e.message}")
+            }
+        }
+    }
 
     suspend fun extractColorsAsync(
         appInfo: InstalledAppInfo,
@@ -31,11 +103,19 @@ object AppPaletteExtractor {
         defaultSecondary: Color,
     ): ExtractedAppPalette =
         withContext(Dispatchers.Default) {
+            val startTime = System.currentTimeMillis()
             val cacheKey = "${appInfo.packageName}:${appInfo.coverPath ?: "icon"}"
-            paletteCache.get(cacheKey)?.let { return@withContext it }
+            val cached = paletteCache.get(cacheKey)
+            if (cached != null) {
+                AppLog.d(TAG, "Palette cache HIT for ${appInfo.label} [0ms]")
+                return@withContext cached
+            }
 
             val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
             paletteCache.put(cacheKey, palette)
+            persistPalette(cacheKey, palette)
+            val elapsed = System.currentTimeMillis() - startTime
+            AppLog.d(TAG, "Palette extracted for ${appInfo.label} in ${elapsed}ms")
             palette
         }
 
@@ -44,11 +124,19 @@ object AppPaletteExtractor {
         defaultPrimary: Color,
         defaultSecondary: Color,
     ): ExtractedAppPalette {
+        val startTime = System.currentTimeMillis()
         val cacheKey = "${appInfo.packageName}:${appInfo.coverPath ?: "icon"}"
-        paletteCache.get(cacheKey)?.let { return it }
+        val cached = paletteCache.get(cacheKey)
+        if (cached != null) {
+            AppLog.d(TAG, "Palette cache HIT for ${appInfo.label} [0ms]")
+            return cached
+        }
 
         val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
         paletteCache.put(cacheKey, palette)
+        persistPalette(cacheKey, palette)
+        val elapsed = System.currentTimeMillis() - startTime
+        AppLog.d(TAG, "Palette extracted (sync) for ${appInfo.label} in ${elapsed}ms")
         return palette
     }
 

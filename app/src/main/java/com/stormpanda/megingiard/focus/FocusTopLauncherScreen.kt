@@ -1,9 +1,11 @@
 package com.stormpanda.megingiard.focus
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.util.LruCache
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -27,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,11 +43,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -79,7 +84,12 @@ fun FocusTopLauncherScreen(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val context = LocalContext.current
     val apiKey by SettingsManager.steamGridDbApiToken.collectAsState()
+
+    LaunchedEffect(Unit) {
+        AppPaletteExtractor.init(context)
+    }
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
@@ -103,6 +113,12 @@ fun FocusTopLauncherScreen(
 
     val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndex, apps.size) else 0
     val currentApp = apps.getOrNull(currentActualIndex)
+
+    LaunchedEffect(currentActualIndex) {
+        currentApp?.let { app ->
+            AppLog.d(TAG, "Focused game changed to index=$currentActualIndex, package=${app.packageName}, label=${app.label}")
+        }
+    }
 
     // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
     val defaultPalette =
@@ -263,32 +279,124 @@ fun FocusTopLauncherScreen(
     }
 }
 
+private object FocusImageCache {
+    private val coverCache = LruCache<String, ImageBitmap>(80)
+    private val iconCache = LruCache<String, ImageBitmap>(80)
+
+    fun getCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
+        val path = appInfo.coverPath ?: return null
+        val file = File(path)
+        if (!file.exists() || file.length() == 0L) return null
+
+        val cacheKey = "$path:${file.lastModified()}"
+        val cached = coverCache.get(cacheKey)
+        if (cached != null) {
+            return cached
+        }
+
+        val startTime = System.currentTimeMillis()
+        val bitmap =
+            try {
+                val options =
+                    BitmapFactory.Options().apply {
+                        inSampleSize = 2 // Downsample 2x for poster display (saves 4x memory and decodes faster)
+                    }
+                BitmapFactory.decodeFile(path, options)?.asImageBitmap()
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to decode cover file $path: ${e.message}")
+                null
+            }
+
+        val elapsed = System.currentTimeMillis() - startTime
+        AppLog.d(TAG, "Decoded poster card cover for ${appInfo.label} in ${elapsed}ms")
+
+        if (bitmap != null) {
+            coverCache.put(cacheKey, bitmap)
+        }
+        return bitmap
+    }
+
+    fun getIconBitmap(
+        context: Context,
+        appInfo: InstalledAppInfo,
+    ): ImageBitmap? {
+        val cacheKey = appInfo.packageName
+        val cached = iconCache.get(cacheKey)
+        if (cached != null) {
+            return cached
+        }
+
+        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+        val iconFile = File(iconsDir, "${appInfo.packageName}.png")
+        if (iconFile.exists() && iconFile.length() > 0) {
+            val startTime = System.currentTimeMillis()
+            val diskBitmap =
+                try {
+                    BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
+                } catch (e: Exception) {
+                    null
+                }
+
+            if (diskBitmap != null) {
+                val elapsed = System.currentTimeMillis() - startTime
+                AppLog.d(TAG, "Loaded disk-cached icon PNG for ${appInfo.label} in ${elapsed}ms")
+                iconCache.put(cacheKey, diskBitmap)
+                return diskBitmap
+            }
+        }
+
+        val startTime = System.currentTimeMillis()
+        val bitmap = appInfo.icon?.toBitmapSafe()
+
+        val elapsed = System.currentTimeMillis() - startTime
+        AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
+
+        if (bitmap != null) {
+            iconCache.put(cacheKey, bitmap)
+            try {
+                val androidBmp = appInfo.icon?.toAndroidBitmap()
+                if (androidBmp != null) {
+                    java.io.FileOutputStream(iconFile).use { out ->
+                        androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
+                    }
+                    androidBmp.recycle()
+                }
+            } catch (_: Exception) {
+            }
+        }
+        return bitmap
+    }
+
+    private fun Drawable.toAndroidBitmap(): Bitmap? =
+        try {
+            val w = intrinsicWidth.coerceIn(1, 128)
+            val h = intrinsicHeight.coerceIn(1, 128)
+            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            setBounds(0, 0, w, h)
+            draw(canvas)
+            bitmap
+        } catch (e: Exception) {
+            null
+        }
+}
+
 @Composable
 private fun PosterCardContent(
     appInfo: InstalledAppInfo,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val context = LocalContext.current
 
     val coverBitmap =
         remember(appInfo.coverPath, appInfo.coverPath?.let { File(it).lastModified() }) {
-            appInfo.coverPath?.let { path ->
-                val file = File(path)
-                if (file.exists() && file.length() > 0) {
-                    try {
-                        BitmapFactory.decodeFile(path)?.asImageBitmap()
-                    } catch (e: Exception) {
-                        null
-                    }
-                } else {
-                    null
-                }
-            }
+            FocusImageCache.getCoverBitmap(appInfo)
         }
 
     val iconBitmap =
         remember(appInfo.icon, coverBitmap) {
-            if (coverBitmap == null) appInfo.icon?.toBitmapSafe() else null
+            if (coverBitmap == null) FocusImageCache.getIconBitmap(context, appInfo) else null
         }
 
     Box(
