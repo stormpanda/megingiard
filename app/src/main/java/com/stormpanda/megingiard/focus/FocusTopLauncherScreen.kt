@@ -65,8 +65,8 @@ import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
-import com.stormpanda.megingiard.ui.ExpandableOptionItem
-import com.stormpanda.megingiard.ui.ExpandableOptionsMenu
+import com.stormpanda.megingiard.ui.ExpandableActionItem
+import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.io.File
 
@@ -272,7 +272,7 @@ fun FocusTopLauncherScreen(
                 Spacer(modifier = Modifier.weight(1f))
             }
 
-            // Bottom-Left Main Options Menu (Select Button)
+            // Bottom-Left Main Actions Menu (Select Button)
             Box(
                 modifier =
                     Modifier
@@ -280,12 +280,12 @@ fun FocusTopLauncherScreen(
                         .padding(start = 16.dp, bottom = 4.dp),
             ) {
                 val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
-                ExpandableOptionsMenu(
+                ExpandableActionsMenu(
                     isExpanded = isMainOptionsMenuExpanded,
                     onExpandedChange = onMainOptionsMenuExpandedChange,
-                    options =
+                    actions =
                         listOf(
-                            ExpandableOptionItem(
+                            ExpandableActionItem(
                                 label =
                                     if (isCurrentFavorite) {
                                         stringResource(R.string.gamefocus_option_remove_favorite)

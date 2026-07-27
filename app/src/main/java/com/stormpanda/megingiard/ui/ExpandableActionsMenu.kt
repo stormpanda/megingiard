@@ -28,17 +28,17 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MaterialSymbol
 import kotlinx.coroutines.delay
 
-data class ExpandableOptionItem(
+data class ExpandableActionItem(
     val label: String,
     val iconSymbol: String,
     val onClick: () -> Unit,
 )
 
 @Composable
-fun ExpandableOptionsMenu(
+fun ExpandableActionsMenu(
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    options: List<ExpandableOptionItem>,
+    actions: List<ExpandableActionItem>,
     modifier: Modifier = Modifier,
     autoDismissMs: Long = 5000L,
 ) {
@@ -47,22 +47,22 @@ fun ExpandableOptionsMenu(
     val noFocusInteractionSource = remember { MutableInteractionSource() }
 
     val closeLabel = stringResource(R.string.gamefocus_option_close)
-    val effectiveOptions =
-        remember(options, closeLabel) {
-            if (options.none {
+    val effectiveActions =
+        remember(actions, closeLabel) {
+            if (actions.none {
                     it.iconSymbol == "menu" || it.label.equals(closeLabel, ignoreCase = true) ||
                         it.label.equals("Close", ignoreCase = true)
                 }
             ) {
                 listOf(
-                    ExpandableOptionItem(
+                    ExpandableActionItem(
                         label = closeLabel,
                         iconSymbol = "menu",
                         onClick = { onExpandedChange(false) },
                     ),
-                ) + options
+                ) + actions
             } else {
-                options
+                actions
             }
         }
 
@@ -84,17 +84,14 @@ fun ExpandableOptionsMenu(
         modifier = modifier,
         contentAlignment = Alignment.CenterStart,
     ) {
-        // Collapsed Single Options Button (Subdued look matching Cancel button)
-        if (expansionFraction < 1f) {
+        // Collapsed Single Actions Button (Subdued look matching Cancel button, no fading)
+        if (expansionFraction < 0.5f) {
             TextButton(
                 onClick = { onExpandedChange(true) },
                 interactionSource = noFocusInteractionSource,
                 modifier =
                     Modifier
-                        .focusProperties { canFocus = false }
-                        .graphicsLayer {
-                            alpha = (1f - expansionFraction * 1.5f).coerceIn(0f, 1f)
-                        },
+                        .focusProperties { canFocus = false },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     MaterialSymbol(
@@ -104,7 +101,7 @@ fun ExpandableOptionsMenu(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Options",
+                        text = "Actions",
                         style =
                             MaterialTheme.typography.labelLarge.copy(
                                 color = appColors.onSurfaceSecondary,
@@ -115,17 +112,15 @@ fun ExpandableOptionsMenu(
             }
         }
 
-        // Expanded Options Row (Subdued look matching Options button, spreading out horizontally)
-        if (expansionFraction > 0f) {
+        // Expanded Actions Row (First/Close item has NO alpha fade; subsequent items fade in/out)
+        if (expansionFraction >= 0.5f) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier =
-                    Modifier.graphicsLayer {
-                        alpha = (expansionFraction * 1.5f - 0.5f).coerceIn(0f, 1f)
-                    },
             ) {
-                effectiveOptions.forEachIndexed { index, item ->
+                effectiveActions.forEachIndexed { index, item ->
                     val spreadOffsetPx = with(density) { (index * 24.dp.toPx()) * (1f - expansionFraction) }
+                    val itemAlpha = if (index == 0) 1f else (expansionFraction * 2f - 1f).coerceIn(0f, 1f)
+
                     TextButton(
                         onClick = {
                             onExpandedChange(false)
@@ -137,6 +132,7 @@ fun ExpandableOptionsMenu(
                                 .focusProperties { canFocus = false }
                                 .graphicsLayer {
                                     translationX = -spreadOffsetPx
+                                    alpha = itemAlpha
                                 }.padding(end = 2.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

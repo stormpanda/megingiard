@@ -68,8 +68,8 @@ import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.ExpandableOptionItem
-import com.stormpanda.megingiard.ui.ExpandableOptionsMenu
+import com.stormpanda.megingiard.ui.ExpandableActionItem
+import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -444,22 +444,17 @@ fun GameFocusArtworkDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ExpandableOptionsMenu(
+                ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,
                     onExpandedChange = onOptionsMenuExpandedChange,
-                    options =
+                    actions =
                         listOf(
-                            ExpandableOptionItem(
-                                label = "Close",
-                                iconSymbol = "menu",
-                                onClick = { onOptionsMenuExpandedChange(false) },
-                            ),
-                            ExpandableOptionItem(
+                            ExpandableActionItem(
                                 label = "Change Search Term",
                                 iconSymbol = "gamepad_up",
                                 onClick = { isEditingQuery = true },
                             ),
-                            ExpandableOptionItem(
+                            ExpandableActionItem(
                                 label = "Use App Icon",
                                 iconSymbol = "gamepad_right",
                                 onClick = { useAppIcon() },
