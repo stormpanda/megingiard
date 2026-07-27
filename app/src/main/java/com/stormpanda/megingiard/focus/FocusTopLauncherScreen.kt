@@ -123,20 +123,13 @@ fun FocusTopLauncherScreen(
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
-    val allAppsTargetPage = remember { mutableIntStateOf(10_000) }
-    val favoritesTargetPage = remember { mutableIntStateOf(10_000) }
-    val lastUsedTargetPage = remember { mutableIntStateOf(10_000) }
+    var lastHighlightedPackages by remember {
+        mutableStateOf<Map<GameFocusCategory, String>>(emptyMap())
+    }
 
-    val activeTargetPageState =
-        when (selectedCategory) {
-            GameFocusCategory.ALL_APPS -> allAppsTargetPage
-            GameFocusCategory.FAVORITES -> favoritesTargetPage
-            GameFocusCategory.LAST_USED -> lastUsedTargetPage
-        }
-
-    val allAppsPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
-    val favoritesPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
-    val lastUsedPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
+    val allAppsPagerState = rememberPagerState(initialPage = 0) { apps.size }
+    val favoritesPagerState = rememberPagerState(initialPage = 0) { apps.size }
+    val lastUsedPagerState = rememberPagerState(initialPage = 0) { apps.size }
 
     val activePagerState =
         when (selectedCategory) {
@@ -145,45 +138,51 @@ fun FocusTopLauncherScreen(
             GameFocusCategory.LAST_USED -> lastUsedPagerState
         }
 
-    LaunchedEffect(dpadLeftTrigger) {
-        if (dpadLeftTrigger > 0) {
-            activeTargetPageState.intValue--
-        }
-    }
-
-    LaunchedEffect(dpadStepRightTrigger) {
-        if (dpadStepRightTrigger > 0) {
-            activeTargetPageState.intValue++
-        }
-    }
-
-    val targetPage = activeTargetPageState.intValue
-
-    // Keep PagerState smoothly scrolling towards targetPage
-    LaunchedEffect(targetPage, activePagerState) {
-        if (activePagerState.currentPage != targetPage) {
-            activePagerState.animateScrollToPage(targetPage)
-        }
-    }
-
-    // Synchronize touch dragging back to activeTargetPageState when user releases drag
-    val isDragged by activePagerState.interactionSource.collectIsDraggedAsState()
-    LaunchedEffect(activePagerState) {
-        snapshotFlow { isDragged to activePagerState.settledPage }
-            .collectLatest { (dragged, settled) ->
-                if (dragged) {
-                    activeTargetPageState.intValue = settled
-                }
+    // Sync active pager state with package memory when category changes
+    LaunchedEffect(selectedCategory) {
+        val lastPkg = lastHighlightedPackages[selectedCategory]
+        val targetIndex =
+            if (lastPkg != null) {
+                val found = apps.indexOfFirst { it.packageName == lastPkg }
+                if (found >= 0) found else 0
+            } else {
+                0
             }
+        if (apps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
+            AppLog.d(TAG, "Category switched to ${selectedCategory.name} -> scrolling to remembered index $targetIndex (package=$lastPkg)")
+            activePagerState.scrollToPage(targetIndex)
+        }
     }
 
-    val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(targetPage, apps.size) else 0
-    val currentApp = apps.getOrNull(currentActualIndex)
+    // Handle D-pad LEFT step with wrap-around
+    LaunchedEffect(dpadLeftTrigger) {
+        if (dpadLeftTrigger > 0 && apps.isNotEmpty()) {
+            val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
+            AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
+            activePagerState.animateScrollToPage(prevIndex)
+        }
+    }
 
-    LaunchedEffect(currentApp) {
+    // Handle D-pad RIGHT step with wrap-around
+    LaunchedEffect(dpadStepRightTrigger) {
+        if (dpadStepRightTrigger > 0 && apps.isNotEmpty()) {
+            val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
+            AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
+            activePagerState.animateScrollToPage(nextIndex)
+        }
+    }
+
+    val currentApp =
+        remember(activePagerState.currentPage, apps) {
+            apps.getOrNull(activePagerState.currentPage)
+        }
+
+    // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
+    LaunchedEffect(currentApp, selectedCategory) {
         onFocusedAppChanged(currentApp)
-        currentApp?.let { app ->
-            AppLog.d(TAG, "Focused game changed to index=$currentActualIndex, package=${app.packageName}, label=${app.label}")
+        if (currentApp != null) {
+            lastHighlightedPackages = lastHighlightedPackages + (selectedCategory to currentApp.packageName)
+            AppLog.d(TAG, "Focused game changed for ${selectedCategory.name}: package=${currentApp.packageName}, label=${currentApp.label}")
         }
     }
 
@@ -294,6 +293,7 @@ fun FocusTopLauncherScreen(
                                 HorizontalPosterCarousel(
                                     itemCount = apps.size,
                                     pagerState = categoryPagerState,
+                                    targetPage = categoryPagerState.targetPage,
                                     onItemClick = { actualIndex ->
                                         val appInfo = apps.getOrNull(actualIndex)
                                         if (appInfo != null) onAppClick(appInfo)

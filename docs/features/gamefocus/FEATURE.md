@@ -56,6 +56,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
   - **Plane 2 (Hovering Controls Overlay Plane):** An overlay layer positioned on top of the gallery plane containing the category header (top-left), expandable actions menu (bottom-left), and subdued touch launch indicator buttons (bottom-right).
 - The launcher MUST support three interactive app categories: **Favorites**, **Android Apps** (all installed apps), and **Recently Used** (last 10 launched apps).
 - Categories MUST be switchable using Gamepad **D-pad UP** / **D-pad DOWN** or joystick vertical movement.
+- Switching between categories MUST restore the exact application last highlighted in that category (tracked by package name), or cleanly default to index 0 if the application is no longer in the list.
 - The active category header MUST hover on the **top-left** of the screen (`start = 24.dp, top = 16.dp`) matching the original launcher headline styling (`titleMedium` bold).
 - The category header MUST present a dense vertical rolling 3-item text column displaying the previous category (faded top, 0.35f alpha), active category (full opacity), and next category (faded bottom, 0.35f alpha). Switching categories MUST trigger a vertical rolling animation across all 3 category text lines in unison.
 - Upon switching categories, the poster carousel MUST slide and fade out in the opposite direction of the category switch (e.g. D-pad DOWN slides the carousel out to the top while the new carousel slides in from the bottom).

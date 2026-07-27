@@ -49,6 +49,7 @@ fun HorizontalPosterCarousel(
     pagerState: PagerState,
     onItemClick: (actualIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
+    targetPage: Int = pagerState.targetPage,
     posterWidth: Dp = HPC_DEFAULT_POSTER_WIDTH,
     posterHeight: Dp = HPC_DEFAULT_POSTER_HEIGHT,
     posterSpacing: Dp = HPC_DEFAULT_POSTER_SPACING,
@@ -80,19 +81,16 @@ fun HorizontalPosterCarousel(
             modifier = Modifier.fillMaxSize(),
         ) { page ->
             val actualIndex = Math.floorMod(page, itemCount)
-            val isSelected = page == pagerState.currentPage
+            val isSelected = page == targetPage
 
-            // Synchronized continuous page offset calculation for 1:1 scale & alpha
-            val pageOffset =
-                (
-                    (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                ).absoluteValue
+            // Synchronized continuous page offset calculation using getOffsetDistanceInPages
+            val rawOffset = pagerState.getOffsetDistanceInPages(page)
+            val pageOffset = rawOffset.absoluteValue
 
             val scale = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
             val alpha = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
 
             // Compensate for center card scale expansion (1.18x) by pushing direct left/right neighbors outwards
-            val rawOffset = (page - pagerState.currentPage) - pagerState.currentPageOffsetFraction
             val sign = kotlin.math.sign(rawOffset)
             val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
             val extraPushPx =

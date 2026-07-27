@@ -191,10 +191,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
             return
         }
 
+        AppLog.d(TAG, "startRepeat: direction=$direction")
         if (direction == ScrollDirection.LEFT) {
             dpadLeftTriggerState.intValue++
+            AppLog.d(TAG, "Incremented dpadLeftTriggerState to ${dpadLeftTriggerState.intValue}")
         } else if (direction == ScrollDirection.RIGHT) {
             dpadStepRightTriggerState.intValue++
+            AppLog.d(TAG, "Incremented dpadStepRightTriggerState to ${dpadStepRightTriggerState.intValue}")
         }
 
         repeatJob =
@@ -203,8 +206,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 while (isActive && currentDirection == direction) {
                     if (direction == ScrollDirection.LEFT) {
                         dpadLeftTriggerState.intValue++
+                        AppLog.d(TAG, "Repeat tick: dpadLeftTriggerState = ${dpadLeftTriggerState.intValue}")
                     } else if (direction == ScrollDirection.RIGHT) {
                         dpadStepRightTriggerState.intValue++
+                        AppLog.d(TAG, "Repeat tick: dpadStepRightTriggerState = ${dpadStepRightTriggerState.intValue}")
                     }
                     delay(REPEAT_INTERVAL_MS)
                 }
@@ -212,6 +217,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     }
 
     private fun stopRepeat() {
+        AppLog.d(TAG, "stopRepeat: currentDirection was $currentDirection")
         currentDirection = ScrollDirection.NONE
         repeatJob?.cancel()
         repeatJob = null
