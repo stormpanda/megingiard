@@ -6,8 +6,14 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
 import android.util.LruCache
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,9 +59,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
+import com.stormpanda.megingiard.ui.ExpandableOptionItem
+import com.stormpanda.megingiard.ui.ExpandableOptionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.io.File
 
@@ -75,6 +84,11 @@ fun FocusTopLauncherScreen(
     onAppClickTop: (InstalledAppInfo) -> Unit = {},
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
+    selectedCategory: GameFocusCategory = GameFocusCategory.ALL_APPS,
+    favoritesSet: Set<String> = emptySet(),
+    isMainOptionsMenuExpanded: Boolean = false,
+    onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    onToggleFavorite: (InstalledAppInfo) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
@@ -98,24 +112,6 @@ fun FocusTopLauncherScreen(
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
-    if (apps.isEmpty()) {
-        Surface(
-            modifier = modifier.fillMaxSize(),
-            color = appColors.appBackground,
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(R.string.focus_launcher_no_apps),
-                    style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
-                )
-            }
-        }
-        return
-    }
-
     val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndex, apps.size) else 0
     val currentApp = apps.getOrNull(currentActualIndex)
 
@@ -130,7 +126,8 @@ fun FocusTopLauncherScreen(
         remember(appColors.accent, appColors.appBackground) {
             ExtractedAppPalette(appColors.accent, appColors.appBackground)
         }
-    val extractedPalette by produceState(
+
+    val activePalette by produceState(
         initialValue = defaultPalette,
         key1 = currentApp?.packageName,
         key2 = currentApp?.coverPath,
@@ -143,14 +140,14 @@ fun FocusTopLauncherScreen(
             }
     }
 
-    // Smoothly animate background gradient and ambient glow colors when focused app changes
     val animatedPrimaryColor by animateColorAsState(
-        targetValue = extractedPalette.primaryColor,
+        targetValue = activePalette.primaryColor,
         animationSpec = tween(durationMillis = 400),
         label = "animatedPrimaryColor",
     )
+
     val animatedSecondaryColor by animateColorAsState(
-        targetValue = extractedPalette.secondaryColor,
+        targetValue = activePalette.secondaryColor,
         animationSpec = tween(durationMillis = 400),
         label = "animatedSecondaryColor",
     )
@@ -178,66 +175,131 @@ fun FocusTopLauncherScreen(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Left-aligned subdued headline "Android Apps"
-                Text(
-                    text = stringResource(R.string.gamefocus_header_android_apps),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary,
-                        ),
+                // Interactive Category Header
+                InteractiveCategoryHeader(
+                    selectedCategory = selectedCategory,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = 24.dp, top = 16.dp, bottom = 2.dp),
+                            .padding(top = 10.dp, bottom = 2.dp),
                 )
 
                 Spacer(modifier = Modifier.weight(0.8f))
 
-                // Gallery Group (Carousel + App Name grouped together)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    // Endless centered 2:3 poster carousel using reusable HorizontalPosterCarousel
-                    HorizontalPosterCarousel(
-                        itemCount = apps.size,
-                        virtualIndex = virtualIndex,
-                        onVirtualIndexChange = onVirtualIndexChange,
-                        onItemClick = { actualIndex ->
-                            val appInfo = apps[actualIndex]
-                            onAppClick(appInfo)
-                        },
-                        posterWidth = FTL_POSTER_WIDTH,
-                        posterHeight = FTL_POSTER_HEIGHT,
-                        posterSpacing = FTL_POSTER_SPACING,
-                        carouselHeight = 265.dp,
-                        posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                        ambientGlowColor = animatedPrimaryColor,
-                    ) { actualIndex, _ ->
-                        val appInfo = apps[actualIndex]
-                        PosterCardContent(appInfo = appInfo)
-                    }
+                // Gallery Group (Carousel + App Name grouped together with category transition)
+                AnimatedContent(
+                    targetState = selectedCategory,
+                    transitionSpec = {
+                        val isMovingDown =
+                            targetState.ordinal > initialState.ordinal ||
+                                (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
+                        if (isMovingDown) {
+                            (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
+                        } else {
+                            (slideInVertically { -it } + fadeIn()).togetherWith(slideOutVertically { it } + fadeOut())
+                        }
+                    },
+                    label = "CarouselCategoryTransition",
+                ) { category ->
+                    if (apps.isEmpty()) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .height(310.dp)
+                                    .fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text =
+                                    when (category) {
+                                        GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
+                                        GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
+                                        else -> stringResource(R.string.focus_launcher_no_apps)
+                                    },
+                                style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
+                            )
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // Carousel
+                            HorizontalPosterCarousel(
+                                itemCount = apps.size,
+                                virtualIndex = virtualIndex,
+                                onVirtualIndexChange = onVirtualIndexChange,
+                                onItemClick = { actualIndex ->
+                                    val appInfo = apps.getOrNull(actualIndex)
+                                    if (appInfo != null) onAppClick(appInfo)
+                                },
+                                posterWidth = FTL_POSTER_WIDTH,
+                                posterHeight = FTL_POSTER_HEIGHT,
+                                posterSpacing = FTL_POSTER_SPACING,
+                                carouselHeight = 265.dp,
+                                posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                                ambientGlowColor = animatedPrimaryColor,
+                            ) { actualIndex, _ ->
+                                val appInfo = apps[actualIndex]
+                                PosterCardContent(
+                                    appInfo = appInfo,
+                                    isFavorite = favoritesSet.contains(appInfo.packageName),
+                                )
+                            }
 
-                    Spacer(modifier = Modifier.height(30.dp)) // Increased gap between cover art and app title
+                            Spacer(modifier = Modifier.height(30.dp))
 
-                    // Focused App Title
-                    if (currentApp != null) {
-                        Text(
-                            text = currentApp.label,
-                            style =
-                                MaterialTheme.typography.headlineLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = appColors.onSurface,
-                                ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 140.dp),
-                        )
+                            // Focused App Title
+                            if (currentApp != null) {
+                                Text(
+                                    text = currentApp.label,
+                                    style =
+                                        MaterialTheme.typography.headlineLarge.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = appColors.onSurface,
+                                        ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(horizontal = 140.dp),
+                                )
+                            }
+                        }
                     }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
+            }
+
+            // Bottom-Left Main Options Menu (Select Button)
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 16.dp, bottom = 4.dp),
+            ) {
+                val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+                ExpandableOptionsMenu(
+                    isExpanded = isMainOptionsMenuExpanded,
+                    onExpandedChange = onMainOptionsMenuExpandedChange,
+                    options =
+                        listOf(
+                            ExpandableOptionItem(
+                                label =
+                                    if (isCurrentFavorite) {
+                                        stringResource(R.string.gamefocus_option_remove_favorite)
+                                    } else {
+                                        stringResource(R.string.gamefocus_option_add_favorite)
+                                    },
+                                iconSymbol = "kid_star",
+                                onClick = {
+                                    if (currentApp != null) {
+                                        onToggleFavorite(currentApp)
+                                        onMainOptionsMenuExpandedChange(false)
+                                    }
+                                },
+                            ),
+                        ),
+                )
             }
 
             // Bottom-Right subdued touch buttons for Top Screen (A) / Bottom Screen (X)
@@ -466,8 +528,81 @@ private object FocusImageCache {
 }
 
 @Composable
+private fun InteractiveCategoryHeader(
+    selectedCategory: GameFocusCategory,
+    modifier: Modifier = Modifier,
+) {
+    val appColors = LocalAppColors.current
+
+    val prevCat = selectedCategory.previous()
+    val nextCat = selectedCategory.next()
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        // Previous category (faint, small)
+        Text(
+            text = stringResource(prevCat.stringResId),
+            style =
+                MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                ),
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Active category (large, animated text)
+        AnimatedContent(
+            targetState = selectedCategory,
+            transitionSpec = {
+                val isMovingDown =
+                    targetState.ordinal > initialState.ordinal ||
+                        (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
+                if (isMovingDown) {
+                    (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
+                } else {
+                    (slideInVertically { -it } + fadeIn()).togetherWith(slideOutVertically { it } + fadeOut())
+                }
+            },
+            label = "CategoryTitleTransition",
+        ) { category ->
+            Text(
+                text = stringResource(category.stringResId),
+                style =
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = appColors.onSurface,
+                    ),
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Next category (faint, small)
+        Text(
+            text = stringResource(nextCat.stringResId),
+            style =
+                MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                ),
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
 private fun PosterCardContent(
     appInfo: InstalledAppInfo,
+    isFavorite: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -517,6 +652,22 @@ private fun PosterCardContent(
                     contentDescription = appInfo.label,
                     tint = appColors.accent,
                     modifier = Modifier.size(48.dp),
+                )
+            }
+        }
+
+        if (isFavorite) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(10.dp),
+                contentAlignment = Alignment.TopEnd,
+            ) {
+                MaterialSymbol(
+                    name = "kid_star",
+                    size = 22.dp,
+                    tint = appColors.accent,
                 )
             }
         }

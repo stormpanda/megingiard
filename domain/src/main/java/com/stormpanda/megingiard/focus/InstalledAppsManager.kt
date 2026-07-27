@@ -32,6 +32,87 @@ object InstalledAppsManager {
     private val scrapedPackages = HashSet<String>()
     private var isScrapedPackagesLoaded = false
 
+    private val _favorites = MutableStateFlow<Set<String>>(emptySet())
+    val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
+
+    private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
+    val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
+
+    private fun loadFavorites(context: Context) {
+        val file = File(context.filesDir, "gamefocus_favorites.txt")
+        if (file.exists()) {
+            try {
+                val set =
+                    file
+                        .readLines()
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .toSet()
+                _favorites.value = set
+                AppLog.d(TAG, "Loaded ${set.size} favorite apps from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load favorites file: ${e.message}")
+            }
+        }
+    }
+
+    fun toggleFavorite(
+        context: Context,
+        packageName: String,
+    ) {
+        val current = _favorites.value.toMutableSet()
+        if (current.contains(packageName)) {
+            current.remove(packageName)
+            AppLog.i(TAG, "Removed $packageName from favorites")
+        } else {
+            current.add(packageName)
+            AppLog.i(TAG, "Added $packageName to favorites")
+        }
+        _favorites.value = current
+        try {
+            val file = File(context.filesDir, "gamefocus_favorites.txt")
+            file.writeText(current.joinToString("\n"))
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
+        }
+    }
+
+    private fun loadLastUsed(context: Context) {
+        val file = File(context.filesDir, "gamefocus_last_used.txt")
+        if (file.exists()) {
+            try {
+                val list =
+                    file
+                        .readLines()
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .take(10)
+                _lastUsed.value = list
+                AppLog.d(TAG, "Loaded ${list.size} last used apps from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load last used file: ${e.message}")
+            }
+        }
+    }
+
+    fun recordAppLaunch(
+        context: Context,
+        packageName: String,
+    ) {
+        val list = _lastUsed.value.toMutableList()
+        list.remove(packageName)
+        list.add(0, packageName)
+        val trimmed = list.take(10)
+        _lastUsed.value = trimmed
+        try {
+            val file = File(context.filesDir, "gamefocus_last_used.txt")
+            file.writeText(trimmed.joinToString("\n"))
+            AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to persist last used apps: ${e.message}", e)
+        }
+    }
+
     private fun loadScrapedPackages(context: Context): Set<String> {
         if (!isScrapedPackagesLoaded) {
             val file = File(context.filesDir, "gamefocus_scraped_apps.txt")
@@ -70,6 +151,9 @@ object InstalledAppsManager {
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
+        loadFavorites(context)
+        loadLastUsed(context)
+
         val packageManager = context.packageManager
         val mainIntent =
             Intent(Intent.ACTION_MAIN, null).apply {
@@ -224,6 +308,7 @@ object InstalledAppsManager {
                     setLaunchDisplayId(displayId)
                 }
             context.startActivity(intent, options.toBundle())
+            recordAppLaunch(context, appInfo.packageName)
             AppLog.i(TAG, "Successfully launched ${appInfo.label} (${appInfo.packageName}) on display $displayId")
             true
         } catch (e: Exception) {

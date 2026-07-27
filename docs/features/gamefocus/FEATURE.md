@@ -49,7 +49,17 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Pressing the Gamepad **X** button (`KEYCODE_BUTTON_X` or `KEYCODE_X`) MUST launch the highlighted application on the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4).
 - The bottom-right corner of the launcher UI MUST present subdued touch-enabled indicator buttons ("Top Screen" with cutout letter **A** circle icon and "Bottom Screen" with cutout letter **X** circle icon) styled framelessly (`onSurfaceSecondary`, no background box, no border) for touch launching.
 
-### FR-GF7: Coexistence
+### FR-GF7: Interactive Categories & Favorites System
+
+- The launcher MUST support three interactive app categories: **Favorites**, **Android Apps** (all installed apps), and **Recently Used** (last 10 launched apps).
+- Categories MUST be switchable using Gamepad **D-pad UP** / **D-pad DOWN** or joystick vertical movement.
+- The active category header MUST be displayed centered in full bold typography, with previous and next category labels displayed above and below in fainter, smaller text (`onSurfaceSecondary` with 0.35f alpha). Switching categories MUST animate text position and color transitions.
+- Upon switching categories, the poster carousel MUST slide and fade out in the opposite direction of the category switch (e.g. D-pad DOWN slides the carousel out to the top while the new carousel slides in from the bottom).
+- Apps marked as Favorites MUST display a `kid_star` Material Symbol icon in the **top-right corner** of their cover art rendered in theme accent color (`appColors.accent`).
+- Pressing **Select** / **Menu** (`KEYCODE_BUTTON_SELECT`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableOptionsMenu` offering "Add to Favorites" / "Remove from Favorites" triggered by D-pad UP.
+- Favorites (`filesDir/gamefocus_favorites.txt`) and Recently Used launch history (`filesDir/gamefocus_last_used.txt`) MUST be persisted to disk across application restarts.
+
+### FR-GF8: Coexistence
 
 - Megingiard Game Focus MUST have application ID `com.stormpanda.megingiard.gamefocus` (`.debug` for debug builds).
 - It MUST be installable alongside the standard Megingiard app without package or state conflicts.

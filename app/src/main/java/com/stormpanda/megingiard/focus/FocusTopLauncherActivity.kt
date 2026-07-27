@@ -16,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
@@ -48,6 +49,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val confirmDialogTriggerState = mutableIntStateOf(0)
     private val l1TriggerState = mutableIntStateOf(0)
     private val r1TriggerState = mutableIntStateOf(0)
+
+    private val selectedCategoryState = mutableStateOf(GameFocusCategory.ALL_APPS)
+    private val isMainOptionsMenuExpandedState = mutableStateOf(false)
 
     private val isOptionsMenuExpandedState = mutableStateOf(false)
     private val dpadUpOptionsTriggerState = mutableIntStateOf(0)
@@ -84,7 +88,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val userAccentArgb by SettingsManager.accentColor.collectAsState()
             val appColors = paletteFor(themeMode, Color(userAccentArgb))
 
-            val apps by InstalledAppsManager.installedApps.collectAsState()
+            val allApps by InstalledAppsManager.installedApps.collectAsState()
+            val favorites by InstalledAppsManager.favorites.collectAsState()
+            val lastUsed by InstalledAppsManager.lastUsed.collectAsState()
+
+            val selectedCategory = selectedCategoryState.value
+            val displayedApps =
+                remember(allApps, favorites, lastUsed, selectedCategory) {
+                    when (selectedCategory) {
+                        GameFocusCategory.ALL_APPS -> allApps
+                        GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
+                        GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                    }
+                }
+
             val editingApp = editingAppInfoState.value
 
             MaterialTheme(
@@ -100,7 +117,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         color = appColors.appBackground,
                     ) {
                         FocusTopLauncherScreen(
-                            apps = apps,
+                            apps = displayedApps,
                             virtualIndex = virtualIndexState.intValue,
                             onVirtualIndexChange = { virtualIndexState.intValue = it },
                             onAppClickTop = { appInfo ->
@@ -110,6 +127,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onAppClickBottom = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
                                 InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
+                            },
+                            selectedCategory = selectedCategory,
+                            favoritesSet = favorites,
+                            isMainOptionsMenuExpanded = isMainOptionsMenuExpandedState.value,
+                            onMainOptionsMenuExpandedChange = { isMainOptionsMenuExpandedState.value = it },
+                            onToggleFavorite = { appInfo ->
+                                InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
                             },
                             editingAppInfo = editingApp,
                             dialogVirtualIndex = dialogVirtualIndexState.intValue,
@@ -278,28 +302,96 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         // Navigation when Main Launcher is active
-        val apps = InstalledAppsManager.installedApps.value
-        if (apps.isNotEmpty()) {
-            when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT,
-                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
-                -> {
-                    startRepeat(ScrollDirection.LEFT)
-                    return true
+        val allApps = InstalledAppsManager.installedApps.value
+        val favorites = InstalledAppsManager.favorites.value
+        val lastUsed = InstalledAppsManager.lastUsed.value
+        val selectedCategory = selectedCategoryState.value
+        val apps =
+            when (selectedCategory) {
+                GameFocusCategory.ALL_APPS -> allApps
+                GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
+                GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+            }
+
+        if (isMainOptionsMenuExpandedState.value) {
+            val actualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndexState.intValue, apps.size) else 0
+            val targetApp = apps.getOrNull(actualIndex)
+            return when (keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (targetApp != null) {
+                        InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    true
                 }
 
-                KeyEvent.KEYCODE_DPAD_RIGHT,
-                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_BUTTON_SELECT,
+                KeyEvent.KEYCODE_MENU,
+                KeyEvent.KEYCODE_BACK,
+                KeyEvent.KEYCODE_ESCAPE,
+                KeyEvent.KEYCODE_BUTTON_B,
                 -> {
-                    startRepeat(ScrollDirection.RIGHT)
-                    return true
+                    isMainOptionsMenuExpandedState.value = false
+                    true
                 }
 
-                KeyEvent.KEYCODE_DPAD_CENTER,
-                KeyEvent.KEYCODE_BUTTON_A,
-                KeyEvent.KEYCODE_ENTER,
-                KeyEvent.KEYCODE_NUMPAD_ENTER,
-                -> {
+                else -> {
+                    true
+                }
+            }
+        }
+
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_SELECT,
+            KeyEvent.KEYCODE_MENU,
+            -> {
+                if (apps.isNotEmpty()) {
+                    isMainOptionsMenuExpandedState.value = true
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+            -> {
+                val prevCategory = selectedCategoryState.value.previous()
+                AppLog.i(TAG, "D-pad UP pressed -> switching launcher category to ${prevCategory.name}")
+                selectedCategoryState.value = prevCategory
+                virtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
+            -> {
+                val nextCategory = selectedCategoryState.value.next()
+                AppLog.i(TAG, "D-pad DOWN pressed -> switching launcher category to ${nextCategory.name}")
+                selectedCategoryState.value = nextCategory
+                virtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+            -> {
+                if (apps.isNotEmpty()) startRepeat(ScrollDirection.LEFT)
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+            -> {
+                if (apps.isNotEmpty()) startRepeat(ScrollDirection.RIGHT)
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            -> {
+                if (apps.isNotEmpty()) {
                     val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
                     val targetApp = apps.getOrNull(actualIndex)
                     if (targetApp != null) {
@@ -308,10 +400,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         return true
                     }
                 }
+            }
 
-                KeyEvent.KEYCODE_BUTTON_X,
-                KeyEvent.KEYCODE_X,
-                -> {
+            KeyEvent.KEYCODE_BUTTON_X,
+            KeyEvent.KEYCODE_X,
+            -> {
+                if (apps.isNotEmpty()) {
                     val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
                     val targetApp = apps.getOrNull(actualIndex)
                     if (targetApp != null) {
@@ -320,10 +414,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         return true
                     }
                 }
+            }
 
-                KeyEvent.KEYCODE_BUTTON_Y,
-                KeyEvent.KEYCODE_Y,
-                -> {
+            KeyEvent.KEYCODE_BUTTON_Y,
+            KeyEvent.KEYCODE_Y,
+            -> {
+                if (apps.isNotEmpty()) {
                     val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
                     val targetApp = apps.getOrNull(actualIndex)
                     if (targetApp != null) {
@@ -420,6 +516,33 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (currentDirection != ScrollDirection.NONE) {
                         stopRepeat()
                     }
+                }
+                return true
+            }
+
+            if (isMainOptionsMenuExpandedState.value) {
+                val allApps = InstalledAppsManager.installedApps.value
+                val favorites = InstalledAppsManager.favorites.value
+                val lastUsed = InstalledAppsManager.lastUsed.value
+                val selectedCategory = selectedCategoryState.value
+                val apps =
+                    when (selectedCategory) {
+                        GameFocusCategory.ALL_APPS -> allApps
+                        GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
+                        GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                    }
+
+                if (y < -0.5f) {
+                    val actualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndexState.intValue, apps.size) else 0
+                    val targetApp = apps.getOrNull(actualIndex)
+                    if (targetApp != null) {
+                        InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    return true
+                } else if (y > 0.5f) {
+                    isMainOptionsMenuExpandedState.value = false
+                    return true
                 }
                 return true
             }
