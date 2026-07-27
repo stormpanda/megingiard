@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
@@ -44,7 +45,6 @@ private const val REPEAT_INTERVAL_MS = 100L
 private enum class ScrollDirection { NONE, LEFT, RIGHT }
 
 class FocusTopLauncherActivity : ComponentActivity() {
-    private val virtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
     private val dialogVirtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
     private val confirmDialogTriggerState = mutableIntStateOf(0)
     private val l1TriggerState = mutableIntStateOf(0)
@@ -62,28 +62,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private var currentDirection = ScrollDirection.NONE
     private var repeatJob: Job? = null
 
-    private val categoryVirtualIndices =
-        mutableMapOf<GameFocusCategory, Int>().apply {
-            for (cat in GameFocusCategory.entries) {
-                put(cat, INITIAL_LOOP_OFFSET)
-            }
-        }
-
-    private fun switchCategory(newCategory: GameFocusCategory) {
-        val currentCat = selectedCategoryState.value
-        if (currentCat == newCategory) return
-        categoryVirtualIndices[currentCat] = virtualIndexState.intValue
-        selectedCategoryState.value = newCategory
-        virtualIndexState.intValue = categoryVirtualIndices[newCategory] ?: INITIAL_LOOP_OFFSET
-        AppLog.d(TAG, "Switched category from ${currentCat.name} to ${newCategory.name}, restored index ${virtualIndexState.intValue}")
-    }
-
-    private fun getActiveVirtualIndexState(): MutableIntState =
-        if (editingAppInfoState.value != null) {
-            dialogVirtualIndexState
-        } else {
-            virtualIndexState
-        }
+    private val dpadLeftTriggerState = mutableIntStateOf(0)
+    private val dpadStepRightTriggerState = mutableIntStateOf(0)
+    private val focusedAppState = mutableStateOf<InstalledAppInfo?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -134,11 +115,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     ) {
                         FocusTopLauncherScreen(
                             apps = displayedApps,
-                            virtualIndex = virtualIndexState.intValue,
-                            onVirtualIndexChange = { newIndex ->
-                                virtualIndexState.intValue = newIndex
-                                categoryVirtualIndices[selectedCategoryState.value] = newIndex
-                            },
                             onAppClickTop = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
@@ -164,6 +140,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onOptionsMenuExpandedChange = { isOptionsMenuExpandedState.value = it },
                             dpadUpTrigger = dpadUpOptionsTriggerState.intValue,
                             dpadRightTrigger = dpadRightOptionsTriggerState.intValue,
+                            dpadLeftTrigger = dpadLeftTriggerState.intValue,
+                            dpadStepRightTrigger = dpadStepRightTriggerState.intValue,
+                            onFocusedAppChanged = { focusedAppState.value = it },
                             onDismissEditingApp = { editingAppInfoState.value = null },
                         )
                     }
@@ -191,11 +170,31 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
         if (direction == ScrollDirection.NONE) return
 
-        val activeIndexState = getActiveVirtualIndexState()
+        if (editingAppInfoState.value != null) {
+            if (direction == ScrollDirection.LEFT) {
+                dialogVirtualIndexState.intValue--
+            } else if (direction == ScrollDirection.RIGHT) {
+                dialogVirtualIndexState.intValue++
+            }
+            repeatJob =
+                lifecycleScope.launch {
+                    delay(INITIAL_REPEAT_DELAY_MS)
+                    while (isActive && currentDirection == direction) {
+                        if (direction == ScrollDirection.LEFT) {
+                            dialogVirtualIndexState.intValue--
+                        } else if (direction == ScrollDirection.RIGHT) {
+                            dialogVirtualIndexState.intValue++
+                        }
+                        delay(REPEAT_INTERVAL_MS)
+                    }
+                }
+            return
+        }
+
         if (direction == ScrollDirection.LEFT) {
-            activeIndexState.intValue--
+            dpadLeftTriggerState.intValue++
         } else if (direction == ScrollDirection.RIGHT) {
-            activeIndexState.intValue++
+            dpadStepRightTriggerState.intValue++
         }
 
         repeatJob =
@@ -203,9 +202,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 delay(INITIAL_REPEAT_DELAY_MS)
                 while (isActive && currentDirection == direction) {
                     if (direction == ScrollDirection.LEFT) {
-                        activeIndexState.intValue--
+                        dpadLeftTriggerState.intValue++
                     } else if (direction == ScrollDirection.RIGHT) {
-                        activeIndexState.intValue++
+                        dpadStepRightTriggerState.intValue++
                     }
                     delay(REPEAT_INTERVAL_MS)
                 }
@@ -333,8 +332,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
         if (isMainOptionsMenuExpandedState.value) {
-            val actualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndexState.intValue, apps.size) else 0
-            val targetApp = apps.getOrNull(actualIndex)
+            val targetApp = focusedAppState.value
             return when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP -> {
                     if (targetApp != null) {
@@ -376,7 +374,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             -> {
                 val prevCategory = selectedCategoryState.value.previous()
                 AppLog.i(TAG, "D-pad UP pressed -> switching launcher category to ${prevCategory.name}")
-                switchCategory(prevCategory)
+                selectedCategoryState.value = prevCategory
                 return true
             }
 
@@ -385,7 +383,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             -> {
                 val nextCategory = selectedCategoryState.value.next()
                 AppLog.i(TAG, "D-pad DOWN pressed -> switching launcher category to ${nextCategory.name}")
-                switchCategory(nextCategory)
+                selectedCategoryState.value = nextCategory
                 return true
             }
 
@@ -408,49 +406,40 @@ class FocusTopLauncherActivity : ComponentActivity() {
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
             -> {
-                if (apps.isNotEmpty()) {
-                    val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
-                    val targetApp = apps.getOrNull(actualIndex)
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
-                        InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
-                        return true
-                    }
+                val targetApp = focusedAppState.value
+                if (targetApp != null) {
+                    AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
+                    InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                    return true
                 }
             }
 
             KeyEvent.KEYCODE_BUTTON_X,
             KeyEvent.KEYCODE_X,
             -> {
-                if (apps.isNotEmpty()) {
-                    val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
-                    val targetApp = apps.getOrNull(actualIndex)
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Gamepad X button pressed for: ${targetApp.label} -> Launching on Bottom Display")
-                        InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
-                        return true
-                    }
+                val targetApp = focusedAppState.value
+                if (targetApp != null) {
+                    AppLog.i(TAG, "Gamepad X button pressed for: ${targetApp.label} -> Launching on Bottom Display")
+                    InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
+                    return true
                 }
             }
 
             KeyEvent.KEYCODE_BUTTON_Y,
             KeyEvent.KEYCODE_Y,
             -> {
-                if (apps.isNotEmpty()) {
-                    val actualIndex = Math.floorMod(virtualIndexState.intValue, apps.size)
-                    val targetApp = apps.getOrNull(actualIndex)
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
-                        dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
-                        confirmDialogTriggerState.intValue = 0
-                        l1TriggerState.intValue = 0
-                        r1TriggerState.intValue = 0
-                        isOptionsMenuExpandedState.value = false
-                        dpadUpOptionsTriggerState.intValue = 0
-                        dpadRightOptionsTriggerState.intValue = 0
-                        editingAppInfoState.value = targetApp
-                        return true
-                    }
+                val targetApp = focusedAppState.value
+                if (targetApp != null) {
+                    AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
+                    dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                    confirmDialogTriggerState.intValue = 0
+                    l1TriggerState.intValue = 0
+                    r1TriggerState.intValue = 0
+                    isOptionsMenuExpandedState.value = false
+                    dpadUpOptionsTriggerState.intValue = 0
+                    dpadRightOptionsTriggerState.intValue = 0
+                    editingAppInfoState.value = targetApp
+                    return true
                 }
             }
         }
@@ -550,8 +539,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     }
 
                 if (y < -0.5f) {
-                    val actualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndexState.intValue, apps.size) else 0
-                    val targetApp = apps.getOrNull(actualIndex)
+                    val targetApp = focusedAppState.value
                     if (targetApp != null) {
                         InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
                     }

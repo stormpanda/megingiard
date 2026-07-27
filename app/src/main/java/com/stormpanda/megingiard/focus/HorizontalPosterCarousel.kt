@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,10 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -43,8 +46,7 @@ private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
 @Composable
 fun HorizontalPosterCarousel(
     itemCount: Int,
-    virtualIndex: Int,
-    onVirtualIndexChange: (Int) -> Unit,
+    pagerState: PagerState,
     onItemClick: (actualIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     posterWidth: Dp = HPC_DEFAULT_POSTER_WIDTH,
@@ -61,27 +63,6 @@ fun HorizontalPosterCarousel(
     val activeGlowColor = if (ambientGlowColor != Color.Unspecified) ambientGlowColor else appColors.accent
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-
-    val pagerState =
-        rememberPagerState(
-            initialPage = virtualIndex,
-            pageCount = { Int.MAX_VALUE },
-        )
-
-    LaunchedEffect(virtualIndex) {
-        if (pagerState.currentPage != virtualIndex) {
-            pagerState.animateScrollToPage(virtualIndex)
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { pagerState.currentPage }
-            .collectLatest { page ->
-                if (page != virtualIndex) {
-                    onVirtualIndexChange(page)
-                }
-            }
-    }
 
     BoxWithConstraints(
         modifier =

@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
@@ -83,8 +85,6 @@ private val FTL_TITLE_GAP = 25.dp
 @Composable
 fun FocusTopLauncherScreen(
     apps: List<InstalledAppInfo>,
-    virtualIndex: Int,
-    onVirtualIndexChange: (Int) -> Unit,
     onAppClickTop: (InstalledAppInfo) -> Unit = {},
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
@@ -103,6 +103,9 @@ fun FocusTopLauncherScreen(
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     dpadUpTrigger: Int = 0,
     dpadRightTrigger: Int = 0,
+    dpadLeftTrigger: Int = 0,
+    dpadStepRightTrigger: Int = 0,
+    onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -116,10 +119,34 @@ fun FocusTopLauncherScreen(
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
-    val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndex, apps.size) else 0
+    val allAppsPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
+    val favoritesPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
+    val lastUsedPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
+
+    val activePagerState =
+        when (selectedCategory) {
+            GameFocusCategory.ALL_APPS -> allAppsPagerState
+            GameFocusCategory.FAVORITES -> favoritesPagerState
+            GameFocusCategory.LAST_USED -> lastUsedPagerState
+        }
+
+    LaunchedEffect(dpadLeftTrigger) {
+        if (dpadLeftTrigger > 0) {
+            activePagerState.animateScrollToPage(activePagerState.currentPage - 1)
+        }
+    }
+
+    LaunchedEffect(dpadStepRightTrigger) {
+        if (dpadStepRightTrigger > 0) {
+            activePagerState.animateScrollToPage(activePagerState.currentPage + 1)
+        }
+    }
+
+    val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(activePagerState.currentPage, apps.size) else 0
     val currentApp = apps.getOrNull(currentActualIndex)
 
-    LaunchedEffect(currentActualIndex) {
+    LaunchedEffect(currentApp) {
+        onFocusedAppChanged(currentApp)
         currentApp?.let { app ->
             AppLog.d(TAG, "Focused game changed to index=$currentActualIndex, package=${app.packageName}, label=${app.label}")
         }
@@ -223,10 +250,15 @@ fun FocusTopLauncherScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 // Carousel
+                                val categoryPagerState =
+                                    when (category) {
+                                        GameFocusCategory.ALL_APPS -> allAppsPagerState
+                                        GameFocusCategory.FAVORITES -> favoritesPagerState
+                                        GameFocusCategory.LAST_USED -> lastUsedPagerState
+                                    }
                                 HorizontalPosterCarousel(
                                     itemCount = apps.size,
-                                    virtualIndex = virtualIndex,
-                                    onVirtualIndexChange = onVirtualIndexChange,
+                                    pagerState = categoryPagerState,
                                     onItemClick = { actualIndex ->
                                         val appInfo = apps.getOrNull(actualIndex)
                                         if (appInfo != null) onAppClick(appInfo)

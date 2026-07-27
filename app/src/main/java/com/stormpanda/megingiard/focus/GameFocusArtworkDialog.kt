@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -46,6 +47,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,6 +75,7 @@ import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -414,10 +417,23 @@ fun GameFocusArtworkDialog(
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 } else {
+                    val dialogPagerState = rememberPagerState(initialPage = virtualIndex) { Int.MAX_VALUE }
+                    LaunchedEffect(virtualIndex) {
+                        if (dialogPagerState.currentPage != virtualIndex) {
+                            dialogPagerState.animateScrollToPage(virtualIndex)
+                        }
+                    }
+                    LaunchedEffect(Unit) {
+                        snapshotFlow { dialogPagerState.currentPage }
+                            .collectLatest { page ->
+                                if (page != virtualIndex) {
+                                    onVirtualIndexChange(page)
+                                }
+                            }
+                    }
                     HorizontalPosterCarousel(
                         itemCount = images.size,
-                        virtualIndex = virtualIndex,
-                        onVirtualIndexChange = onVirtualIndexChange,
+                        pagerState = dialogPagerState,
                         onItemClick = { actualIndex ->
                             images.getOrNull(actualIndex)?.let { imageItem ->
                                 onConfirmSelection(imageItem)
