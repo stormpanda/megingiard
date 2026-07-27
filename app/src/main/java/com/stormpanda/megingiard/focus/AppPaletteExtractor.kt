@@ -4,13 +4,18 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.util.LruCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.palette.graphics.Palette
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "AppPaletteExtractor"
+private const val PALETTE_CACHE_SIZE = 100
+private const val PALETTE_TARGET_AREA = 128 * 128
 
 data class ExtractedAppPalette(
     val primaryColor: Color,
@@ -18,17 +23,50 @@ data class ExtractedAppPalette(
 )
 
 object AppPaletteExtractor {
+    private val paletteCache = LruCache<String, ExtractedAppPalette>(PALETTE_CACHE_SIZE)
+
+    suspend fun extractColorsAsync(
+        appInfo: InstalledAppInfo,
+        defaultPrimary: Color,
+        defaultSecondary: Color,
+    ): ExtractedAppPalette =
+        withContext(Dispatchers.Default) {
+            val cacheKey = "${appInfo.packageName}:${appInfo.coverPath ?: "icon"}"
+            paletteCache.get(cacheKey)?.let { return@withContext it }
+
+            val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
+            paletteCache.put(cacheKey, palette)
+            palette
+        }
+
     fun extractColors(
         appInfo: InstalledAppInfo,
         defaultPrimary: Color,
         defaultSecondary: Color,
     ): ExtractedAppPalette {
+        val cacheKey = "${appInfo.packageName}:${appInfo.coverPath ?: "icon"}"
+        paletteCache.get(cacheKey)?.let { return it }
+
+        val palette = extractColorsInternal(appInfo, defaultPrimary, defaultSecondary)
+        paletteCache.put(cacheKey, palette)
+        return palette
+    }
+
+    private fun extractColorsInternal(
+        appInfo: InstalledAppInfo,
+        defaultPrimary: Color,
+        defaultSecondary: Color,
+    ): ExtractedAppPalette {
+        var bitmap: Bitmap? = null
         try {
-            var bitmap: Bitmap? = null
             appInfo.coverPath?.let { path ->
                 val file = File(path)
                 if (file.exists() && file.length() > 0) {
-                    bitmap = BitmapFactory.decodeFile(path)
+                    val options =
+                        BitmapFactory.Options().apply {
+                            inSampleSize = 4 // Downsample 4x for fast decoding & memory efficiency
+                        }
+                    bitmap = BitmapFactory.decodeFile(path, options)
                 }
             }
 
@@ -37,8 +75,14 @@ object AppPaletteExtractor {
                 bitmap = iconDrawable.toAndroidBitmap()
             }
 
-            if (bitmap != null) {
-                val palette = Palette.from(bitmap!!).generate()
+            val targetBitmap = bitmap
+            if (targetBitmap != null && !targetBitmap.isRecycled) {
+                val palette =
+                    Palette
+                        .from(targetBitmap)
+                        .resizeBitmapArea(PALETTE_TARGET_AREA)
+                        .generate()
+
                 val swatches = palette.swatches.sortedByDescending { it.population }
 
                 val primaryInt =
@@ -56,6 +100,11 @@ object AppPaletteExtractor {
             }
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to extract palette for ${appInfo.label}: ${e.message}")
+        } finally {
+            try {
+                bitmap?.recycle()
+            } catch (_: Exception) {
+            }
         }
 
         return ExtractedAppPalette(

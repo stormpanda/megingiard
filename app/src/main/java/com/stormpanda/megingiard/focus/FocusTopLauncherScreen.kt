@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -103,15 +104,23 @@ fun FocusTopLauncherScreen(
     val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(virtualIndex, apps.size) else 0
     val currentApp = apps.getOrNull(currentActualIndex)
 
-    // Extract dynamic 2 main colors using AndroidX Palette API
-    val extractedPalette =
-        remember(currentApp?.packageName, currentApp?.coverPath) {
-            if (currentApp != null) {
-                AppPaletteExtractor.extractColors(currentApp, appColors.accent, appColors.appBackground)
-            } else {
-                ExtractedAppPalette(appColors.accent, appColors.appBackground)
-            }
+    // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
+    val defaultPalette =
+        remember(appColors.accent, appColors.appBackground) {
+            ExtractedAppPalette(appColors.accent, appColors.appBackground)
         }
+    val extractedPalette by produceState(
+        initialValue = defaultPalette,
+        key1 = currentApp?.packageName,
+        key2 = currentApp?.coverPath,
+    ) {
+        value =
+            if (currentApp != null) {
+                AppPaletteExtractor.extractColorsAsync(currentApp, appColors.accent, appColors.appBackground)
+            } else {
+                defaultPalette
+            }
+    }
 
     // Smoothly animate background gradient and ambient glow colors when focused app changes
     val animatedPrimaryColor by animateColorAsState(
