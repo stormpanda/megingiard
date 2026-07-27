@@ -272,4 +272,12 @@ class PrivdSubsystemTest {
         assertTrue(steps.any { it is MacroStep.JoystickPath })
         PhysicalGamepadRecordingManager.resetState()
     }
+
+    @Test
+    fun `readAdbTlsConnectPort handles missing getprop command gracefully without hanging`() {
+        val port =
+            com.stormpanda.megingiard.privd.PrivdBootstrapper
+                .readAdbTlsConnectPort()
+        assertTrue(port >= 0)
+    }
 }

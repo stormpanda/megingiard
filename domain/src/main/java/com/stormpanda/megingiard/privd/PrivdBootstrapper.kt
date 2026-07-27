@@ -297,16 +297,16 @@ object PrivdBootstrapper {
                 ProcessBuilder("getprop", "service.adb.tls.port")
                     .redirectErrorStream(true)
                     .start()
-            val output =
-                proc.inputStream.bufferedReader().use { reader ->
-                    reader.readLine()?.trim().orEmpty()
-                }
             val exited = proc.waitFor(GETPROP_TIMEOUT_MS, TimeUnit.MILLISECONDS)
             if (!exited) {
                 AppLog.w(TAG, "readAdbTlsConnectPort() getprop timed out after $GETPROP_TIMEOUT_MS ms")
                 proc.destroyForcibly()
                 return 0
             }
+            val output =
+                proc.inputStream.bufferedReader().use { reader ->
+                    reader.readLine()?.trim().orEmpty()
+                }
             output.toIntOrNull() ?: 0
         } catch (e: Exception) {
             AppLog.w(TAG, "readAdbTlsConnectPort() threw: $e")
