@@ -62,6 +62,22 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private var currentDirection = ScrollDirection.NONE
     private var repeatJob: Job? = null
 
+    private val categoryVirtualIndices =
+        mutableMapOf<GameFocusCategory, Int>().apply {
+            for (cat in GameFocusCategory.entries) {
+                put(cat, INITIAL_LOOP_OFFSET)
+            }
+        }
+
+    private fun switchCategory(newCategory: GameFocusCategory) {
+        val currentCat = selectedCategoryState.value
+        if (currentCat == newCategory) return
+        categoryVirtualIndices[currentCat] = virtualIndexState.intValue
+        selectedCategoryState.value = newCategory
+        virtualIndexState.intValue = categoryVirtualIndices[newCategory] ?: INITIAL_LOOP_OFFSET
+        AppLog.d(TAG, "Switched category from ${currentCat.name} to ${newCategory.name}, restored index ${virtualIndexState.intValue}")
+    }
+
     private fun getActiveVirtualIndexState(): MutableIntState =
         if (editingAppInfoState.value != null) {
             dialogVirtualIndexState
@@ -119,7 +135,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         FocusTopLauncherScreen(
                             apps = displayedApps,
                             virtualIndex = virtualIndexState.intValue,
-                            onVirtualIndexChange = { virtualIndexState.intValue = it },
+                            onVirtualIndexChange = { newIndex ->
+                                virtualIndexState.intValue = newIndex
+                                categoryVirtualIndices[selectedCategoryState.value] = newIndex
+                            },
                             onAppClickTop = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
@@ -357,8 +376,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             -> {
                 val prevCategory = selectedCategoryState.value.previous()
                 AppLog.i(TAG, "D-pad UP pressed -> switching launcher category to ${prevCategory.name}")
-                selectedCategoryState.value = prevCategory
-                virtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                switchCategory(prevCategory)
                 return true
             }
 
@@ -367,8 +385,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             -> {
                 val nextCategory = selectedCategoryState.value.next()
                 AppLog.i(TAG, "D-pad DOWN pressed -> switching launcher category to ${nextCategory.name}")
-                selectedCategoryState.value = nextCategory
-                virtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                switchCategory(nextCategory)
                 return true
             }
 
