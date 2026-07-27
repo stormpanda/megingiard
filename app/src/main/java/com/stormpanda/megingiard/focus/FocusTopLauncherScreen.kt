@@ -17,6 +17,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,10 +44,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +73,7 @@ import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 
 private const val TAG = "FocusTopLauncherScreen"
@@ -119,6 +123,17 @@ fun FocusTopLauncherScreen(
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
+    val allAppsTargetPage = remember { mutableIntStateOf(10_000) }
+    val favoritesTargetPage = remember { mutableIntStateOf(10_000) }
+    val lastUsedTargetPage = remember { mutableIntStateOf(10_000) }
+
+    val activeTargetPageState =
+        when (selectedCategory) {
+            GameFocusCategory.ALL_APPS -> allAppsTargetPage
+            GameFocusCategory.FAVORITES -> favoritesTargetPage
+            GameFocusCategory.LAST_USED -> lastUsedTargetPage
+        }
+
     val allAppsPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
     val favoritesPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
     val lastUsedPagerState = rememberPagerState(initialPage = 10_000) { Int.MAX_VALUE }
@@ -132,17 +147,37 @@ fun FocusTopLauncherScreen(
 
     LaunchedEffect(dpadLeftTrigger) {
         if (dpadLeftTrigger > 0) {
-            activePagerState.animateScrollToPage(activePagerState.currentPage - 1)
+            activeTargetPageState.intValue--
         }
     }
 
     LaunchedEffect(dpadStepRightTrigger) {
         if (dpadStepRightTrigger > 0) {
-            activePagerState.animateScrollToPage(activePagerState.currentPage + 1)
+            activeTargetPageState.intValue++
         }
     }
 
-    val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(activePagerState.currentPage, apps.size) else 0
+    val targetPage = activeTargetPageState.intValue
+
+    // Keep PagerState smoothly scrolling towards targetPage
+    LaunchedEffect(targetPage, activePagerState) {
+        if (activePagerState.currentPage != targetPage) {
+            activePagerState.animateScrollToPage(targetPage)
+        }
+    }
+
+    // Synchronize touch dragging back to activeTargetPageState when user releases drag
+    val isDragged by activePagerState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(activePagerState) {
+        snapshotFlow { isDragged to activePagerState.settledPage }
+            .collectLatest { (dragged, settled) ->
+                if (dragged) {
+                    activeTargetPageState.intValue = settled
+                }
+            }
+    }
+
+    val currentActualIndex = if (apps.isNotEmpty()) Math.floorMod(targetPage, apps.size) else 0
     val currentApp = apps.getOrNull(currentActualIndex)
 
     LaunchedEffect(currentApp) {
