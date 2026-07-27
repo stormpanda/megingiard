@@ -57,8 +57,10 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -85,6 +87,7 @@ private val FTL_POSTER_SPACING = 12.dp
 private val FTL_ICON_SIZE = 72.dp
 private val FTL_GALLERY_TOP_OFFSET = 10.dp
 private val FTL_TITLE_GAP = 25.dp
+private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -613,6 +616,7 @@ private fun InteractiveCategoryHeader(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val density = LocalDensity.current
 
     AnimatedContent(
         targetState = selectedCategory,
@@ -635,7 +639,7 @@ private fun InteractiveCategoryHeader(
         Column(
             horizontalAlignment = Alignment.Start,
         ) {
-            // Previous category (fainter, top fade)
+            // Previous category (curved backward top for 3D roll illusion)
             Text(
                 text = stringResource(currentPrev.stringResId),
                 style =
@@ -645,11 +649,16 @@ private fun InteractiveCategoryHeader(
                     ),
                 maxLines = 1,
                 textAlign = TextAlign.Start,
+                modifier =
+                    Modifier.graphicsLayer {
+                        rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
+                        cameraDistance = 16 * density.density
+                    },
             )
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Active category (highlighted, top-left aligned)
+            // Active category (highlighted, center-front)
             Text(
                 text = stringResource(currentCat.stringResId),
                 style =
@@ -663,7 +672,7 @@ private fun InteractiveCategoryHeader(
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            // Next category (fainter, bottom fade)
+            // Next category (curved backward bottom for 3D roll illusion)
             Text(
                 text = stringResource(currentNext.stringResId),
                 style =
@@ -673,6 +682,11 @@ private fun InteractiveCategoryHeader(
                     ),
                 maxLines = 1,
                 textAlign = TextAlign.Start,
+                modifier =
+                    Modifier.graphicsLayer {
+                        rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
+                        cameraDistance = 16 * density.density
+                    },
             )
         }
     }
