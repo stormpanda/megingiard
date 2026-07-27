@@ -181,9 +181,7 @@ fun FocusTopLauncherScreen(
                 AnimatedContent(
                     targetState = selectedCategory,
                     transitionSpec = {
-                        val isMovingDown =
-                            targetState.ordinal > initialState.ordinal ||
-                                (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
+                        val isMovingDown = initialState.next() == targetState
                         if (isMovingDown) {
                             (slideInVertically { height -> height } + fadeIn())
                                 .togetherWith(slideOutVertically { height -> -height } + fadeOut())
@@ -549,9 +547,7 @@ private fun InteractiveCategoryHeader(
     AnimatedContent(
         targetState = selectedCategory,
         transitionSpec = {
-            val isMovingDown =
-                targetState.ordinal > initialState.ordinal ||
-                    (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
+            val isMovingDown = initialState.next() == targetState
             if (isMovingDown) {
                 (slideInVertically { height -> height / 3 } + fadeIn())
                     .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
