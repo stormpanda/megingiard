@@ -175,13 +175,13 @@ fun FocusTopLauncherScreen(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Interactive Category Header
+                // Top-Left Subdued Category Header ("Android Apps", "Favorites", "Recently Used")
                 InteractiveCategoryHeader(
                     selectedCategory = selectedCategory,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(top = 10.dp, bottom = 2.dp),
+                            .padding(start = 24.dp, top = 16.dp, bottom = 2.dp),
                 )
 
                 Spacer(modifier = Modifier.weight(0.8f))
@@ -534,68 +534,69 @@ private fun InteractiveCategoryHeader(
 ) {
     val appColors = LocalAppColors.current
 
-    val prevCat = selectedCategory.previous()
-    val nextCat = selectedCategory.next()
+    AnimatedContent(
+        targetState = selectedCategory,
+        transitionSpec = {
+            val isMovingDown =
+                targetState.ordinal > initialState.ordinal ||
+                    (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
+            if (isMovingDown) {
+                (slideInVertically { height -> height / 3 } + fadeIn())
+                    .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
+            } else {
+                (slideInVertically { height -> -height / 3 } + fadeIn())
+                    .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
+            }
+        },
+        label = "CategoryRollingTransition",
+        modifier = modifier,
+    ) { currentCat ->
+        val currentPrev = currentCat.previous()
+        val currentNext = currentCat.next()
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        // Previous category (faint, small)
-        Text(
-            text = stringResource(prevCat.stringResId),
-            style =
-                MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                ),
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-        )
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        // Active category (large, animated text)
-        AnimatedContent(
-            targetState = selectedCategory,
-            transitionSpec = {
-                val isMovingDown =
-                    targetState.ordinal > initialState.ordinal ||
-                        (initialState == GameFocusCategory.LAST_USED && targetState == GameFocusCategory.FAVORITES)
-                if (isMovingDown) {
-                    (slideInVertically { it } + fadeIn()).togetherWith(slideOutVertically { -it } + fadeOut())
-                } else {
-                    (slideInVertically { -it } + fadeIn()).togetherWith(slideOutVertically { it } + fadeOut())
-                }
-            },
-            label = "CategoryTitleTransition",
-        ) { category ->
+        Column(
+            horizontalAlignment = Alignment.Start,
+        ) {
+            // Previous category (fainter, top fade)
             Text(
-                text = stringResource(category.stringResId),
+                text = stringResource(currentPrev.stringResId),
                 style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = appColors.onSurface,
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
                     ),
                 maxLines = 1,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Active category (highlighted, top-left aligned)
+            Text(
+                text = stringResource(currentCat.stringResId),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = appColors.onSurfaceSecondary,
+                    ),
+                maxLines = 1,
+                textAlign = TextAlign.Start,
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Next category (fainter, bottom fade)
+            Text(
+                text = stringResource(currentNext.stringResId),
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                    ),
+                maxLines = 1,
+                textAlign = TextAlign.Start,
             )
         }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        // Next category (faint, small)
-        Text(
-            text = stringResource(nextCat.stringResId),
-            style =
-                MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                ),
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 

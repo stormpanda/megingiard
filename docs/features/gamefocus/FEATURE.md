@@ -53,7 +53,8 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - The launcher MUST support three interactive app categories: **Favorites**, **Android Apps** (all installed apps), and **Recently Used** (last 10 launched apps).
 - Categories MUST be switchable using Gamepad **D-pad UP** / **D-pad DOWN** or joystick vertical movement.
-- The active category header MUST be displayed centered in full bold typography, with previous and next category labels displayed above and below in fainter, smaller text (`onSurfaceSecondary` with 0.35f alpha). Switching categories MUST animate text position and color transitions.
+- The active category header MUST be positioned on the **top-left** of the screen (`start = 24.dp, top = 16.dp`) matching the original launcher headline styling (`titleMedium` bold).
+- The category header MUST present a dense vertical rolling 3-item text column displaying the previous category (faded top, 0.35f alpha), active category (full opacity), and next category (faded bottom, 0.35f alpha). Switching categories MUST trigger a vertical rolling animation across all 3 category text lines in unison.
 - Upon switching categories, the poster carousel MUST slide and fade out in the opposite direction of the category switch (e.g. D-pad DOWN slides the carousel out to the top while the new carousel slides in from the bottom).
 - Apps marked as Favorites MUST display a `kid_star` Material Symbol icon in the **top-right corner** of their cover art rendered in theme accent color (`appColors.accent`).
 - Pressing **Select** / **Menu** (`KEYCODE_BUTTON_SELECT`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableOptionsMenu` offering "Add to Favorites" / "Remove from Favorites" triggered by D-pad UP.
