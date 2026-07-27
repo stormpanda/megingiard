@@ -173,22 +173,11 @@ fun FocusTopLauncherScreen(
                         ),
                     ),
         ) {
-            Column(
+            // Plane 1: Full-Screen Gallery & App Title Plane
+            Box(
                 modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                contentAlignment = Alignment.Center,
             ) {
-                // Top-Left Subdued Category Header ("Android Apps", "Favorites", "Recently Used")
-                InteractiveCategoryHeader(
-                    selectedCategory = selectedCategory,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(start = 24.dp, top = 16.dp, bottom = 2.dp),
-                )
-
-                Spacer(modifier = Modifier.weight(0.8f))
-
-                // Gallery Group (Carousel + App Name grouped together with category transition)
                 AnimatedContent(
                     targetState = selectedCategory,
                     transitionSpec = {
@@ -268,11 +257,20 @@ fun FocusTopLauncherScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
             }
 
-            // Bottom-Left Main Actions Menu (Select Button)
+            // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
+
+            // Top-Left Category Header hovering over the gallery plane
+            InteractiveCategoryHeader(
+                selectedCategory = selectedCategory,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 24.dp, top = 16.dp),
+            )
+
+            // Bottom-Left Main Actions Menu hovering over the gallery plane
             Box(
                 modifier =
                     Modifier
@@ -304,8 +302,7 @@ fun FocusTopLauncherScreen(
                 )
             }
 
-            // Bottom-Right subdued touch buttons for Top Screen (A) / Bottom Screen (X)
-            // Margins reduced by 50% so they sit lower and right in the corner
+            // Bottom-Right subdued touch buttons hovering over the gallery plane
             val noFocusInteractionSource = remember { MutableInteractionSource() }
             Row(
                 modifier =
