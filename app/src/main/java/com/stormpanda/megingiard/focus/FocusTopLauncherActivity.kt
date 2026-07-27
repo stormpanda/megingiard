@@ -130,6 +130,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onToggleFavorite = { appInfo ->
                                 InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
                             },
+                            onOpenAppInfo = { appInfo ->
+                                InstalledAppsManager.openAppInfo(this, appInfo.packageName)
+                            },
                             editingAppInfo = editingApp,
                             dialogVirtualIndex = dialogVirtualIndexState.intValue,
                             onDialogVirtualIndexChange = { dialogVirtualIndexState.intValue = it },
@@ -348,7 +351,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "D-pad DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
+                        InstalledAppsManager.openAppInfo(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    true
+                }
+
                 KeyEvent.KEYCODE_BUTTON_SELECT,
                 KeyEvent.KEYCODE_MENU,
                 KeyEvent.KEYCODE_BACK,
@@ -552,6 +563,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     isMainOptionsMenuExpandedState.value = false
                     return true
                 } else if (y > 0.5f) {
+                    val targetApp = focusedAppState.value
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Joystick DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
+                        InstalledAppsManager.openAppInfo(this, targetApp.packageName)
+                    }
                     isMainOptionsMenuExpandedState.value = false
                     return true
                 }

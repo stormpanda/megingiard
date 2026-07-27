@@ -100,6 +100,7 @@ fun FocusTopLauncherScreen(
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     onToggleFavorite: (InstalledAppInfo) -> Unit = {},
+    onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
@@ -373,6 +374,16 @@ fun FocusTopLauncherScreen(
                                 onClick = {
                                     if (currentApp != null) {
                                         onToggleFavorite(currentApp)
+                                        onMainOptionsMenuExpandedChange(false)
+                                    }
+                                },
+                            ),
+                            ExpandableActionItem(
+                                label = stringResource(R.string.gamefocus_option_app_info),
+                                iconSymbol = "gamepad_down",
+                                onClick = {
+                                    if (currentApp != null) {
+                                        onOpenAppInfo(currentApp)
                                         onMainOptionsMenuExpandedChange(false)
                                     }
                                 },
