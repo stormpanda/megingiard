@@ -77,6 +77,8 @@ private val FTL_POSTER_WIDTH = 158.dp
 private val FTL_POSTER_HEIGHT = 237.dp // 2:3 aspect ratio
 private val FTL_POSTER_SPACING = 12.dp
 private val FTL_ICON_SIZE = 72.dp
+private val FTL_GALLERY_TOP_OFFSET = 10.dp
+private val FTL_TITLE_GAP = 25.dp
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -217,6 +219,7 @@ fun FocusTopLauncherScreen(
                             }
                         } else {
                             Column(
+                                modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 // Carousel
@@ -242,7 +245,7 @@ fun FocusTopLauncherScreen(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.height(30.dp))
+                                Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
 
                                 // Focused App Title
                                 if (currentApp != null) {
