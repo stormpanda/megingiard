@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +15,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +42,7 @@ fun ExpandableOptionsMenu(
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
+    val noFocusInteractionSource = remember { MutableInteractionSource() }
 
     // Auto dismiss timer after 5 seconds when expanded
     LaunchedEffect(isExpanded) {
@@ -62,10 +66,13 @@ fun ExpandableOptionsMenu(
         if (expansionFraction < 1f) {
             TextButton(
                 onClick = { onExpandedChange(true) },
+                interactionSource = noFocusInteractionSource,
                 modifier =
-                    Modifier.graphicsLayer {
-                        alpha = (1f - expansionFraction * 1.5f).coerceIn(0f, 1f)
-                    },
+                    Modifier
+                        .focusProperties { canFocus = false }
+                        .graphicsLayer {
+                            alpha = (1f - expansionFraction * 1.5f).coerceIn(0f, 1f)
+                        },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     MaterialSymbol(
@@ -102,8 +109,10 @@ fun ExpandableOptionsMenu(
                             onExpandedChange(false)
                             item.onClick()
                         },
+                        interactionSource = noFocusInteractionSource,
                         modifier =
                             Modifier
+                                .focusProperties { canFocus = false }
                                 .graphicsLayer {
                                     translationX = -spreadOffsetPx
                                 }.padding(end = 2.dp),

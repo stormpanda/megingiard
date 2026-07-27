@@ -16,6 +16,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -304,6 +306,7 @@ fun FocusTopLauncherScreen(
 
             // Bottom-Right subdued touch buttons for Top Screen (A) / Bottom Screen (X)
             // Margins reduced by 50% so they sit lower and right in the corner
+            val noFocusInteractionSource = remember { MutableInteractionSource() }
             Row(
                 modifier =
                     Modifier
@@ -317,6 +320,8 @@ fun FocusTopLauncherScreen(
                             onAppClickTop(currentApp)
                         }
                     },
+                    interactionSource = noFocusInteractionSource,
+                    modifier = Modifier.focusProperties { canFocus = false },
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CutoutLetterCircleIcon(
@@ -345,6 +350,8 @@ fun FocusTopLauncherScreen(
                             onAppClickBottom(currentApp)
                         }
                     },
+                    interactionSource = noFocusInteractionSource,
+                    modifier = Modifier.focusProperties { canFocus = false },
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CutoutLetterCircleIcon(

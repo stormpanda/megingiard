@@ -58,6 +58,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Upon switching categories, the poster carousel MUST slide and fade out in the opposite direction of the category switch (e.g. D-pad DOWN slides the carousel out to the top while the new carousel slides in from the bottom).
 - Apps marked as Favorites MUST display a `kid_star` Material Symbol icon in the **top-right corner** of their cover art rendered in theme accent color (`appColors.accent`).
 - Pressing **Select** / **Menu** (`KEYCODE_BUTTON_SELECT`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableOptionsMenu` offering "Add to Favorites" / "Remove from Favorites" triggered by D-pad UP.
+- On-screen touch buttons (`ExpandableOptionsMenu`, Top Screen A, Bottom Screen X) MUST have D-pad focusability disabled (`canFocus = false`) and focus indications removed to prevent buttons from taking D-pad or Joystick focus during launcher navigation.
 - Favorites (`filesDir/gamefocus_favorites.txt`) and Recently Used launch history (`filesDir/gamefocus_last_used.txt`) MUST be persisted to disk across application restarts.
 
 ### FR-GF8: Coexistence
