@@ -121,7 +121,8 @@ fun FocusTopLauncherScreen(
 ) {
     val appColors = LocalAppColors.current
     val context = LocalContext.current
-    val apiKey by SettingsManager.steamGridDbApiToken.collectAsState()
+    val apiKey by remember(context) { MegingiardSettingsClient.observeSteamGridDbApiToken(context) }
+        .collectAsState(initial = SettingsManager.steamGridDbApiToken.value)
 
     LaunchedEffect(Unit) {
         AppPaletteExtractor.init(context)
