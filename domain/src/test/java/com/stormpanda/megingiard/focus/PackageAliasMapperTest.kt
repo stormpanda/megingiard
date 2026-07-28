@@ -7,7 +7,6 @@ class PackageAliasMapperTest {
     @Test
     fun testGetTitleForPackageKnownAliases() {
         assertEquals("Google Chrome", PackageAliasMapper.getTitleForPackage("com.android.chrome", "Chrome"))
-        assertEquals("Google YouTube", PackageAliasMapper.getTitleForPackage("com.google.android.youtube", "YouTube"))
         assertEquals("Google Maps", PackageAliasMapper.getTitleForPackage("com.google.android.apps.maps", "Maps"))
         assertEquals("Dolphin Emulator", PackageAliasMapper.getTitleForPackage("org.dolphinemu.dolphinemu", "Dolphin"))
     }

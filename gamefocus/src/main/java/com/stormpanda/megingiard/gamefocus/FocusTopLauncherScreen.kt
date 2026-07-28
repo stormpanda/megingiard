@@ -77,6 +77,7 @@ import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 
@@ -90,6 +91,8 @@ private val FTL_ICON_SIZE = 72.dp
 private val FTL_GALLERY_TOP_OFFSET = 10.dp
 private val FTL_TITLE_GAP = 25.dp
 private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
+private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
+private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -193,6 +196,25 @@ fun FocusTopLauncherScreen(
         }
     }
 
+    var backgroundApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
+
+    // Throttle background color updates during rapid gallery navigation
+    LaunchedEffect(activePagerState, apps) {
+        snapshotFlow {
+            val page = activePagerState.currentPage
+            apps.getOrNull(page)
+        }.collectLatest { target ->
+            if (activePagerState.isScrollInProgress) {
+                delay(FTL_BACKGROUND_COLOR_DEBOUNCE_MS)
+            }
+            backgroundApp = target
+        }
+    }
+
+    LaunchedEffect(selectedCategory) {
+        backgroundApp = apps.getOrNull(activePagerState.currentPage)
+    }
+
     // Extract dynamic 2 main colors asynchronously off the UI thread using AndroidX Palette API
     val defaultPalette =
         remember(appColors.accent, appColors.appBackground) {
@@ -201,12 +223,12 @@ fun FocusTopLauncherScreen(
 
     val activePalette by produceState(
         initialValue = defaultPalette,
-        key1 = currentApp?.packageName,
-        key2 = currentApp?.coverPath,
+        key1 = backgroundApp?.packageName,
+        key2 = backgroundApp?.coverPath,
     ) {
         value =
-            if (currentApp != null) {
-                AppPaletteExtractor.extractColorsAsync(currentApp, appColors.accent, appColors.appBackground)
+            if (backgroundApp != null) {
+                AppPaletteExtractor.extractColorsAsync(backgroundApp!!, appColors.accent, appColors.appBackground)
             } else {
                 defaultPalette
             }
@@ -214,13 +236,13 @@ fun FocusTopLauncherScreen(
 
     val animatedPrimaryColor by animateColorAsState(
         targetValue = activePalette.primaryColor,
-        animationSpec = tween(durationMillis = 400),
+        animationSpec = tween(durationMillis = FTL_BACKGROUND_COLOR_ANIM_MS),
         label = "animatedPrimaryColor",
     )
 
     val animatedSecondaryColor by animateColorAsState(
         targetValue = activePalette.secondaryColor,
-        animationSpec = tween(durationMillis = 400),
+        animationSpec = tween(durationMillis = FTL_BACKGROUND_COLOR_ANIM_MS),
         label = "animatedSecondaryColor",
     )
 
