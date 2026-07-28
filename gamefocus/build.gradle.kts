@@ -24,9 +24,6 @@ android {
         versionName = "0.8.0-SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
     }
 
     signingConfigs {
@@ -47,6 +44,9 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            ndk {
+                abiFilters.add("arm64-v8a")
+            }
         }
         release {
             val releaseSigningConfig = signingConfigs.findByName("release")
