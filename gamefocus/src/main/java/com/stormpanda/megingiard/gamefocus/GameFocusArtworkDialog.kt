@@ -628,6 +628,7 @@ private fun ArtworkOptionItem(
                     isThumbLoading = false
                 }
             } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load thumbnail from ${imageItem.thumb}: ${e.message}")
                 withContext(Dispatchers.Main) {
                     isThumbLoading = false
                 }

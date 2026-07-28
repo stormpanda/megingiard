@@ -40,6 +40,8 @@ object InstalledAppsManager {
     val installedApps: StateFlow<List<InstalledAppInfo>> = _installedApps.asStateFlow()
 
     private val scrapedPackages = HashSet<String>()
+
+    @Volatile
     private var isScrapedPackagesLoaded = false
 
     private val _favorites = MutableStateFlow<Set<String>>(emptySet())
@@ -123,23 +125,24 @@ object InstalledAppsManager {
         }
     }
 
-    private fun loadScrapedPackages(context: Context): Set<String> {
-        if (!isScrapedPackagesLoaded) {
-            val file = File(context.filesDir, FILE_SCRAPED_APPS)
-            if (file.exists()) {
-                try {
-                    file.readLines().map { it.trim() }.filter { it.isNotEmpty() }.forEach {
-                        scrapedPackages.add(it)
+    private fun loadScrapedPackages(context: Context): Set<String> =
+        synchronized(scrapedPackages) {
+            if (!isScrapedPackagesLoaded) {
+                val file = File(context.filesDir, FILE_SCRAPED_APPS)
+                if (file.exists()) {
+                    try {
+                        file.readLines().map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                            scrapedPackages.add(it)
+                        }
+                        AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
+                    } catch (e: Exception) {
+                        AppLog.w(TAG, "Failed to read scraped packages file: ${e.message}")
                     }
-                    AppLog.d(TAG, "Loaded ${scrapedPackages.size} scraped package records from disk")
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to read scraped packages file: ${e.message}")
                 }
+                isScrapedPackagesLoaded = true
             }
-            isScrapedPackagesLoaded = true
+            scrapedPackages
         }
-        return scrapedPackages
-    }
 
     fun markAppAsScraped(
         context: Context,

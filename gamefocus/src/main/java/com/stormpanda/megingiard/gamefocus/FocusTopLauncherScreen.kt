@@ -639,7 +639,8 @@ private object FocusImageCache {
                     }
                     androidBmp.recycle()
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
             }
         }
         return bitmap
