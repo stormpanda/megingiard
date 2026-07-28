@@ -33,6 +33,7 @@ private val HLC_SPACING = 4.dp
 private const val HLC_CAMERA_DISTANCE_MULTIPLIER = 16
 private const val HLC_ANIM_IN_MS = 160
 private const val HLC_ANIM_OUT_MS = 140
+private val HLC_OFFSETS = listOf(-4, -3, -2, -1, 0, 1, 2, 3, 4)
 
 @Composable
 fun HorizontalLetterCarousel(
@@ -85,8 +86,7 @@ fun HorizontalLetterCarousel(
             horizontalArrangement = Arrangement.spacedBy(HLC_SPACING),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val offsets = listOf(-4, -3, -2, -1, 0, 1, 2, 3, 4)
-            for (offset in offsets) {
+            for (offset in HLC_OFFSETS) {
                 val targetIndex = activeIndex + offset
                 val letterChar = letters.getOrNull(targetIndex)
 

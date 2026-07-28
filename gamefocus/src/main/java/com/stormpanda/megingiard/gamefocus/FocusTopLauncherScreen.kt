@@ -234,6 +234,21 @@ fun FocusTopLauncherScreen(
         isLetterOverlayActive = false
     }
 
+    fun scheduleLetterCommit() {
+        letterCommitJob?.cancel()
+        letterCommitJob =
+            scope.launch {
+                delay(FTL_LETTER_NAV_DEBOUNCE_MS)
+                val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
+                if (targetLetter != null) {
+                    val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
+                    AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                    activePagerState.animateScrollToPage(targetAppIndex)
+                }
+                isLetterOverlayActive = false
+            }
+    }
+
     // Handle Gamepad L1 step (previous starting letter in letter carousel)
     LaunchedEffect(prevLetterTrigger) {
         if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
@@ -249,19 +264,7 @@ fun FocusTopLauncherScreen(
                     TAG,
                     "L1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
-
-                letterCommitJob?.cancel()
-                letterCommitJob =
-                    scope.launch {
-                        delay(FTL_LETTER_NAV_DEBOUNCE_MS)
-                        val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
-                        if (targetLetter != null) {
-                            val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
-                            AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
-                            activePagerState.animateScrollToPage(targetAppIndex)
-                        }
-                        isLetterOverlayActive = false
-                    }
+                scheduleLetterCommit()
             }
         }
     }
@@ -281,19 +284,7 @@ fun FocusTopLauncherScreen(
                     TAG,
                     "R1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
-
-                letterCommitJob?.cancel()
-                letterCommitJob =
-                    scope.launch {
-                        delay(FTL_LETTER_NAV_DEBOUNCE_MS)
-                        val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
-                        if (targetLetter != null) {
-                            val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
-                            AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
-                            activePagerState.animateScrollToPage(targetAppIndex)
-                        }
-                        isLetterOverlayActive = false
-                    }
+                scheduleLetterCommit()
             }
         }
     }
