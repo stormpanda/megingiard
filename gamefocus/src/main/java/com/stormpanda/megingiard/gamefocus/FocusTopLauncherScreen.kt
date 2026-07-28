@@ -71,6 +71,7 @@ import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.focus.LetterNavigationHelper
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -182,6 +183,24 @@ fun FocusTopLauncherScreen(
             val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
             AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
             activePagerState.animateScrollToPage(nextIndex)
+        }
+    }
+
+    // Handle Gamepad L1 step (previous starting letter)
+    LaunchedEffect(l1Trigger) {
+        if (l1Trigger > 0 && apps.isNotEmpty() && editingAppInfo == null) {
+            val targetIndex = LetterNavigationHelper.findPreviousLetterAppIndex(apps, activePagerState.currentPage)
+            AppLog.d(TAG, "L1 letter skip for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$targetIndex")
+            activePagerState.animateScrollToPage(targetIndex)
+        }
+    }
+
+    // Handle Gamepad R1 step (next starting letter)
+    LaunchedEffect(r1Trigger) {
+        if (r1Trigger > 0 && apps.isNotEmpty() && editingAppInfo == null) {
+            val targetIndex = LetterNavigationHelper.findNextLetterAppIndex(apps, activePagerState.currentPage)
+            AppLog.d(TAG, "R1 letter skip for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$targetIndex")
+            activePagerState.animateScrollToPage(targetIndex)
         }
     }
 

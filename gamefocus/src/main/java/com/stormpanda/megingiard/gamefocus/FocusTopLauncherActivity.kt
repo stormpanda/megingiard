@@ -446,6 +446,22 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
 
+            KeyEvent.KEYCODE_BUTTON_L1 -> {
+                if (apps.isNotEmpty()) {
+                    AppLog.i(TAG, "Gamepad L1 pressed -> skipping to previous starting letter")
+                    l1TriggerState.intValue++
+                }
+                return true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_R1 -> {
+                if (apps.isNotEmpty()) {
+                    AppLog.i(TAG, "Gamepad R1 pressed -> skipping to next starting letter")
+                    r1TriggerState.intValue++
+                }
+                return true
+            }
+
             KeyEvent.KEYCODE_BUTTON_Y,
             KeyEvent.KEYCODE_Y,
             -> {

@@ -20,7 +20,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - The top display MUST present installed applications in an endless 2:3 aspect ratio portrait poster carousel.
 - Spacing between posters MUST be tight (`12.dp`), with the currently highlighted poster centered horizontally on the screen.
-- Navigation MUST support D-pad left/right, joystick holding with key repeat delay (`300ms` initial delay, `100ms` repeat interval), left/right touch gestures, and launch upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
+- Navigation MUST support D-pad left/right, joystick holding with key repeat delay (`300ms` initial delay, `100ms` repeat interval), left/right touch gestures, Gamepad L1 bumper button (`KEYCODE_BUTTON_L1`) to skip backward to the previous starting letter group (or beginning of the current letter group), Gamepad R1 bumper button (`KEYCODE_BUTTON_R1`) to skip forward to the next starting letter group, and launch upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
 - The application title MUST be displayed in large bold typography at the bottom of the screen.
 
 ### FR-GF3: SteamGridDB Cover Art Scraping
@@ -104,6 +104,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for primary `<application>` manifest labels (`ApplicationInfo.loadLabel`), managing local cover art disk caching, persistent scraped package tracking (`gamefocus_scraped_apps.txt`), and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient` with automated query sanitization (`cleanSearchQuery`).
+- **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.
 - **AppPaletteExtractor:** Utility object in `gamefocus/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting vibrant/dominant colors via AndroidX `Palette` with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
 - **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.
