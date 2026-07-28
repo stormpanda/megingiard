@@ -17,7 +17,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,6 +46,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -70,7 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
-import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.focus.LetterNavigationHelper
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -79,9 +78,12 @@ import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 
 private const val TAG = "FocusTopLauncherScreen"
 
@@ -95,6 +97,11 @@ private val FTL_TITLE_GAP = 25.dp
 private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
+private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
+
+private class JobRefHolder(
+    var job: Job? = null,
+)
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -112,8 +119,10 @@ fun FocusTopLauncherScreen(
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
     confirmDialogTrigger: Int = 0,
-    l1Trigger: Int = 0,
-    r1Trigger: Int = 0,
+    dialogL1Trigger: Int = 0,
+    dialogR1Trigger: Int = 0,
+    prevLetterTrigger: Int = 0,
+    nextLetterTrigger: Int = 0,
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     dpadUpTrigger: Int = 0,
@@ -132,6 +141,8 @@ fun FocusTopLauncherScreen(
     LaunchedEffect(Unit) {
         AppPaletteExtractor.init(context)
     }
+
+    val uniqueLetters = remember(apps) { LetterNavigationHelper.getUniqueStartingLetters(apps) }
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
@@ -167,21 +178,50 @@ fun FocusTopLauncherScreen(
         }
     }
 
+    val scope = rememberCoroutineScope()
+    var isLetterOverlayActive by remember { mutableStateOf(false) }
+    var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
+    val letterCommitJobRef = remember { JobRefHolder() }
+
+    // Dismiss letter overlay without action if user manually scrolls the pager
+    LaunchedEffect(Unit) {
+        snapshotFlow { activePagerState.isScrollInProgress }
+            .collectLatest { isScrolling ->
+                if (isScrolling && isLetterOverlayActive) {
+                    AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
+                    letterCommitJobRef.job?.cancel()
+                    isLetterOverlayActive = false
+                }
+            }
+    }
+
     // Handle D-pad LEFT step with wrap-around
     LaunchedEffect(dpadLeftTrigger) {
         if (dpadLeftTrigger > 0 && apps.isNotEmpty()) {
-            val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
-            AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
-            activePagerState.animateScrollToPage(prevIndex)
+            if (isLetterOverlayActive) {
+                AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
+                letterCommitJobRef.job?.cancel()
+                isLetterOverlayActive = false
+            } else {
+                val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
+                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
+                activePagerState.animateScrollToPage(prevIndex)
+            }
         }
     }
 
     // Handle D-pad RIGHT step with wrap-around
     LaunchedEffect(dpadStepRightTrigger) {
         if (dpadStepRightTrigger > 0 && apps.isNotEmpty()) {
-            val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
-            AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
-            activePagerState.animateScrollToPage(nextIndex)
+            if (isLetterOverlayActive) {
+                AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
+                letterCommitJobRef.job?.cancel()
+                isLetterOverlayActive = false
+            } else {
+                val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
+                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
+                activePagerState.animateScrollToPage(nextIndex)
+            }
         }
     }
 
@@ -189,6 +229,67 @@ fun FocusTopLauncherScreen(
         remember(activePagerState.currentPage, apps) {
             apps.getOrNull(activePagerState.currentPage)
         }
+
+    // Reset letter overlay on category switch or dialog edit
+    LaunchedEffect(selectedCategory, editingAppInfo) {
+        letterCommitJobRef.job?.cancel()
+        isLetterOverlayActive = false
+    }
+
+    fun scheduleLetterCommit() {
+        letterCommitJobRef.job?.cancel()
+        letterCommitJobRef.job =
+            scope.launch {
+                delay(FTL_LETTER_NAV_DEBOUNCE_MS)
+                val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
+                if (targetLetter != null) {
+                    val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
+                    AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                    activePagerState.animateScrollToPage(targetAppIndex)
+                }
+                isLetterOverlayActive = false
+            }
+    }
+
+    // Handle Gamepad L1 step (previous starting letter in letter carousel)
+    LaunchedEffect(prevLetterTrigger) {
+        if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
+            if (uniqueLetters.isNotEmpty()) {
+                if (!isLetterOverlayActive) {
+                    isLetterOverlayActive = true
+                    val currentLetter = currentApp?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                    selectedLetterNavIndex = initialIndex
+                }
+                selectedLetterNavIndex = (selectedLetterNavIndex - 1).coerceAtLeast(0)
+                AppLog.d(
+                    TAG,
+                    "L1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                )
+                scheduleLetterCommit()
+            }
+        }
+    }
+
+    // Handle Gamepad R1 step (next starting letter in letter carousel)
+    LaunchedEffect(nextLetterTrigger) {
+        if (nextLetterTrigger > 0 && apps.isNotEmpty()) {
+            if (uniqueLetters.isNotEmpty()) {
+                if (!isLetterOverlayActive) {
+                    isLetterOverlayActive = true
+                    val currentLetter = currentApp?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                    selectedLetterNavIndex = initialIndex
+                }
+                selectedLetterNavIndex = (selectedLetterNavIndex + 1).coerceAtMost(uniqueLetters.size - 1)
+                AppLog.d(
+                    TAG,
+                    "R1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                )
+                scheduleLetterCommit()
+            }
+        }
+    }
 
     // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
     LaunchedEffect(currentApp, selectedCategory) {
@@ -361,23 +462,39 @@ fun FocusTopLauncherScreen(
 
                                 Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
 
-                                // Focused App Title
-                                if (currentApp != null) {
-                                    Text(
-                                        text = currentApp.label,
-                                        style =
-                                            MaterialTheme.typography.headlineLarge.copy(
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = appColors.onSurface,
-                                            ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center,
-                                        modifier =
-                                            Modifier
-                                                .zIndex(1f)
-                                                .padding(horizontal = 140.dp),
-                                    )
+                                // Focused App Title or Horizontal Letter Carousel Overlay
+                                AnimatedContent(
+                                    targetState = isLetterOverlayActive,
+                                    transitionSpec = {
+                                        (slideInVertically { height -> height / 2 } + fadeIn())
+                                            .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
+                                    },
+                                    label = "TitleLetterCarouselTransition",
+                                    modifier =
+                                        Modifier
+                                            .zIndex(1f)
+                                            .padding(horizontal = 40.dp),
+                                ) { isOverlay ->
+                                    if (isOverlay && uniqueLetters.isNotEmpty()) {
+                                        HorizontalLetterCarousel(
+                                            letters = uniqueLetters,
+                                            selectedIndex = selectedLetterNavIndex,
+                                        )
+                                    } else {
+                                        if (currentApp != null) {
+                                            Text(
+                                                text = currentApp.label,
+                                                style =
+                                                    MaterialTheme.typography.headlineLarge.copy(
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = appColors.onSurface,
+                                                    ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -518,8 +635,8 @@ fun FocusTopLauncherScreen(
                     virtualIndex = dialogVirtualIndex,
                     onVirtualIndexChange = onDialogVirtualIndexChange,
                     confirmTrigger = confirmDialogTrigger,
-                    l1Trigger = l1Trigger,
-                    r1Trigger = r1Trigger,
+                    l1Trigger = dialogL1Trigger,
+                    r1Trigger = dialogR1Trigger,
                     isOptionsMenuExpanded = isOptionsMenuExpanded,
                     onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
                     dpadUpTrigger = dpadUpTrigger,
@@ -642,7 +759,7 @@ private object FocusImageCache {
             try {
                 val androidBmp = appInfo.icon?.toAndroidBitmap()
                 if (androidBmp != null) {
-                    java.io.FileOutputStream(iconFile).use { out ->
+                    FileOutputStream(iconFile).use { out ->
                         androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                     }
                     androidBmp.recycle()
