@@ -101,6 +101,10 @@ private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 
+private class JobRefHolder(
+    var job: Job? = null,
+)
+
 @Composable
 fun FocusTopLauncherScreen(
     apps: List<InstalledAppInfo>,
@@ -179,7 +183,7 @@ fun FocusTopLauncherScreen(
     val scope = rememberCoroutineScope()
     var isLetterOverlayActive by remember { mutableStateOf(false) }
     var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
-    var letterCommitJob by remember { mutableStateOf<Job?>(null) }
+    val letterCommitJobRef = remember { JobRefHolder() }
 
     // Dismiss letter overlay without action if user manually scrolls the pager
     LaunchedEffect(Unit) {
@@ -187,7 +191,7 @@ fun FocusTopLauncherScreen(
             .collectLatest { isScrolling ->
                 if (isScrolling && isLetterOverlayActive) {
                     AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
-                    letterCommitJob?.cancel()
+                    letterCommitJobRef.job?.cancel()
                     isLetterOverlayActive = false
                 }
             }
@@ -198,7 +202,7 @@ fun FocusTopLauncherScreen(
         if (dpadLeftTrigger > 0 && apps.isNotEmpty()) {
             if (isLetterOverlayActive) {
                 AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
-                letterCommitJob?.cancel()
+                letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
                 val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
@@ -213,7 +217,7 @@ fun FocusTopLauncherScreen(
         if (dpadStepRightTrigger > 0 && apps.isNotEmpty()) {
             if (isLetterOverlayActive) {
                 AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
-                letterCommitJob?.cancel()
+                letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
                 val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
@@ -230,13 +234,13 @@ fun FocusTopLauncherScreen(
 
     // Reset letter overlay on category switch or dialog edit
     LaunchedEffect(selectedCategory, editingAppInfo) {
-        letterCommitJob?.cancel()
+        letterCommitJobRef.job?.cancel()
         isLetterOverlayActive = false
     }
 
     fun scheduleLetterCommit() {
-        letterCommitJob?.cancel()
-        letterCommitJob =
+        letterCommitJobRef.job?.cancel()
+        letterCommitJobRef.job =
             scope.launch {
                 delay(FTL_LETTER_NAV_DEBOUNCE_MS)
                 val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)

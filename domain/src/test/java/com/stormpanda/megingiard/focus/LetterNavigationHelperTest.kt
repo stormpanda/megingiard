@@ -52,6 +52,8 @@ class LetterNavigationHelperTest {
         assertEquals(2, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'B'))
         assertEquals(3, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'C'))
         assertEquals(5, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'D'))
+        assertEquals(2, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'b'))
+        assertEquals(3, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'c'))
     }
 
     @Test

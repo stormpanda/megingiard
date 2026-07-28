@@ -27,8 +27,9 @@ object LetterNavigationHelper {
         apps: List<InstalledAppInfo>,
         targetLetter: Char,
     ): Int {
+        val upperTarget = targetLetter.uppercaseChar()
         for (i in apps.indices) {
-            if (getStartingLetter(apps[i].label) == targetLetter) {
+            if (getStartingLetter(apps[i].label) == upperTarget) {
                 return i
             }
         }
