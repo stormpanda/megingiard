@@ -19,7 +19,7 @@ import java.io.File
 private const val TAG = "AppPaletteExtractor"
 private const val PALETTE_CACHE_SIZE = 100
 private const val PALETTE_TARGET_AREA = 128 * 128
-private const val PALETTE_FILE_NAME = "gamefocus_palettes.txt"
+private const val PREFS_NAME = "gamefocus_palettes"
 private const val CARD_BG_DARKEN_FACTOR = 0.35f
 
 data class ExtractedAppPalette(
@@ -52,24 +52,23 @@ object AppPaletteExtractor {
     }
 
     private fun loadPersistedPalettes(context: Context) {
-        val file = File(context.filesDir, PALETTE_FILE_NAME)
-        if (!file.exists()) return
-
         try {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             var count = 0
-            file.readLines().forEach { line ->
-                val parts = line.split("|")
-                if (parts.size == 3) {
-                    val key = parts[0]
-                    val primaryInt = parts[1].toLongOrNull()?.toInt()
-                    val secondaryInt = parts[2].toLongOrNull()?.toInt()
-                    if (primaryInt != null && secondaryInt != null) {
-                        paletteCache.put(key, ExtractedAppPalette(Color(primaryInt), Color(secondaryInt), isExtracted = true))
-                        count++
+            prefs.all.forEach { (key, value) ->
+                if (value is String) {
+                    val parts = value.split("|")
+                    if (parts.size == 2) {
+                        val primaryInt = parts[0].toIntOrNull()
+                        val secondaryInt = parts[1].toIntOrNull()
+                        if (primaryInt != null && secondaryInt != null) {
+                            paletteCache.put(key, ExtractedAppPalette(Color(primaryInt), Color(secondaryInt), isExtracted = true))
+                            count++
+                        }
                     }
                 }
             }
-            AppLog.d(TAG, "Loaded $count persisted game palettes from disk")
+            AppLog.d(TAG, "Loaded $count persisted game palettes from SharedPreferences")
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to load persisted palettes: ${e.message}")
         }
@@ -81,8 +80,9 @@ object AppPaletteExtractor {
     ) {
         val context = appContext ?: return
         try {
-            val file = File(context.filesDir, PALETTE_FILE_NAME)
-            file.appendText("$cacheKey|${palette.primaryColor.toArgb()}|${palette.secondaryColor.toArgb()}\n")
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val value = "${palette.primaryColor.toArgb()}|${palette.secondaryColor.toArgb()}"
+            prefs.edit().putString(cacheKey, value).apply()
         } catch (e: Exception) {
             AppLog.w(TAG, "Failed to persist palette entry: ${e.message}")
         }
@@ -98,14 +98,14 @@ object AppPaletteExtractor {
 
         if (context != null) {
             try {
-                val file = File(context.filesDir, PALETTE_FILE_NAME)
-                if (file.exists()) {
-                    val remainingLines =
-                        file.readLines().filterNot { line ->
-                            line.startsWith("$packageName:")
-                        }
-                    file.writeText(remainingLines.joinToString("\n") + if (remainingLines.isNotEmpty()) "\n" else "")
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val editor = prefs.edit()
+                prefs.all.keys.forEach { key ->
+                    if (key.startsWith("$packageName:")) {
+                        editor.remove(key)
+                    }
                 }
+                editor.apply()
             } catch (e: Exception) {
                 AppLog.w(TAG, "Failed to invalidate persisted palette for $packageName: ${e.message}")
             }
