@@ -105,7 +105,9 @@ fun GameFocusArtworkDialog(
     val appColors = LocalAppColors.current
     val scope = rememberCoroutineScope()
 
-    var searchQuery by remember(appInfo.packageName) { mutableStateOf(appInfo.label) }
+    var searchQuery by remember(appInfo.packageName) {
+        mutableStateOf(SteamGridDbClient.cleanSearchQuery(appInfo.label))
+    }
     var isEditingQuery by remember { mutableStateOf(false) }
     var searchInputText by remember(searchQuery) { mutableStateOf(searchQuery) }
 

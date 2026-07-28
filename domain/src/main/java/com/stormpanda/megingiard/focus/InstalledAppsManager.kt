@@ -179,7 +179,10 @@ object InstalledAppsManager {
                 .filter { resolveInfo ->
                     resolveInfo.activityInfo.packageName != context.packageName
                 }.map { resolveInfo ->
-                    val label = resolveInfo.loadLabel(packageManager).toString()
+                    val label =
+                        resolveInfo.activityInfo.applicationInfo
+                            .loadLabel(packageManager)
+                            .toString()
                     val packageName = resolveInfo.activityInfo.packageName
                     val activityName = resolveInfo.activityInfo.name
                     val icon = resolveInfo.loadIcon(packageManager)
@@ -279,7 +282,9 @@ object InstalledAppsManager {
 
             missingCovers.forEach { app ->
                 try {
-                    val searchResult = SteamGridDbClient.searchGames(app.label, apiKey)
+                    val cleanedQuery = SteamGridDbClient.cleanSearchQuery(app.label)
+                    AppLog.d(TAG, "Scraping cover art for '${app.label}' (cleaned: '$cleanedQuery')")
+                    val searchResult = SteamGridDbClient.searchGames(cleanedQuery, apiKey)
                     if (searchResult.isFailure) {
                         AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry next startup")
                         return@forEach
