@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.focus
+package com.stormpanda.megingiard.gamefocus
 
 import android.os.Bundle
 import android.view.InputDevice
@@ -25,7 +25,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
@@ -81,9 +82,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
         InstalledAppsManager.loadInstalledApps(this)
 
         setContent {
-            val themeMode by SettingsManager.themeMode.collectAsState()
-            val userAccentArgb by SettingsManager.accentColor.collectAsState()
-            val appColors = paletteFor(themeMode, Color(userAccentArgb))
+            val remoteThemeState by MegingiardThemeClient
+                .observeTheme(
+                    this,
+                ).collectAsState(initial = Pair(com.stormpanda.megingiard.settings.ThemeMode.DARK, null))
+            val (themeMode, userAccent) = remoteThemeState
+            val appColors = paletteFor(themeMode, userAccent)
 
             val allApps by InstalledAppsManager.installedApps.collectAsState()
             val favorites by InstalledAppsManager.favorites.collectAsState()

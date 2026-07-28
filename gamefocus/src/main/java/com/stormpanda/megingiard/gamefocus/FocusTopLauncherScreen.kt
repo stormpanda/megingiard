@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.focus
+package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -67,14 +67,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.macropad.MaterialSymbol
+import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 

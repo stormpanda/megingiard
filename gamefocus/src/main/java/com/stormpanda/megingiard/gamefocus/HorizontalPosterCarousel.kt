@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.focus
+package com.stormpanda.megingiard.gamefocus
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

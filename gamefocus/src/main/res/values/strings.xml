@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Megingiard Game Focus</string>
+    <string name="focus_launcher_title">Game Focus Launcher</string>
+    <string name="focus_launcher_refresh">Refresh</string>
+    <string name="focus_launcher_search_hint">Search apps &amp; games…</string>
+    <string name="focus_launcher_no_apps">No apps found</string>
+    <string name="focus_change_artwork_title">Change Artwork</string>
+    <string name="settings_cancel">Cancel</string>
+
+    <string name="gamefocus_launch_top">Top Screen</string>
+    <string name="gamefocus_launch_bottom">Bottom Screen</string>
+    <string name="gamefocus_header_android_apps">Android Apps</string>
+    <string name="gamefocus_cat_favorites">Favorites</string>
+    <string name="gamefocus_cat_last_used">Recently Used</string>
+    <string name="gamefocus_option_add_favorite">Add to Favorites</string>
+    <string name="gamefocus_option_remove_favorite">Remove from Favorites</string>
+    <string name="gamefocus_option_app_info">App Info</string>
+    <string name="gamefocus_option_close">Close</string>
+    <string name="gamefocus_no_favorites">No Favorite Apps Added</string>
+    <string name="gamefocus_no_last_used">No Recently Used Apps</string>
+
+    <string name="steamgriddb_token_missing_title">API Token Required</string>
+    <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>
+    <string name="steamgriddb_error_dismiss">OK</string>
+</resources>

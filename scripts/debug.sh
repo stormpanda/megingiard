@@ -37,12 +37,9 @@ build_debug_apk() {
     debug_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
     log_info "Building debug APK for version $debug_version..."
-    ./gradlew :app:assembleStandardDebug
+    ./gradlew :app:assembleDebug
 
-    generated_apk="app/build/outputs/apk/standard/debug/app-standard-debug.apk"
-    if [[ ! -f "$generated_apk" ]]; then
-        generated_apk="app/build/outputs/apk/debug/app-debug.apk"
-    fi
+    generated_apk="app/build/outputs/apk/debug/app-debug.apk"
     if [[ ! -f "$generated_apk" ]]; then
         log_error "Generated debug APK not found at $generated_apk"
         exit 1

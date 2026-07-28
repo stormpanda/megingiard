@@ -259,14 +259,19 @@ object SettingsManager {
         updateSettingPref(KEY_EXCLUDE_FROM_RECENTS, value, _excludeFromRecents, scope, dataStore, TAG, "setExcludeFromRecents")
     }
 
+    @Volatile
+    var onThemeChangedListener: (() -> Unit)? = null
+
     fun setAccentColor(argb: Int) {
         updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, dataStore, TAG, "setAccentColor")
+        onThemeChangedListener?.invoke()
     }
 
     fun setThemeMode(value: ThemeMode) {
         AppLog.d(TAG, "setThemeMode($value)")
         _themeMode.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_THEME_MODE] = value.name } }
+        onThemeChangedListener?.invoke()
     }
 
     fun setOverlayAtBottom(value: Boolean) {

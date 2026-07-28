@@ -1,7 +1,7 @@
-package com.stormpanda.megingiard.focus
+package com.stormpanda.megingiard.gamefocus
 
 import androidx.annotation.StringRes
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.gamefocus.R
 
 /**
  * Categories available in Megingiard Game Focus launcher.

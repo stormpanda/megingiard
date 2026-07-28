@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.focus
+package com.stormpanda.megingiard.gamefocus
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -8,8 +8,10 @@ import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.focus.InstalledAppInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -160,7 +162,7 @@ object AppPaletteExtractor {
 
             val iconDrawable = appInfo.icon
             if (bitmap == null && iconDrawable != null) {
-                bitmap = iconDrawable.toAndroidBitmap()
+                bitmap = iconDrawable.toBitmap()
             }
 
             val targetBitmap = bitmap

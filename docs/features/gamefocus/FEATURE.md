@@ -98,8 +98,9 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                └───────────────────────────────────────────────┘
 ```
 
-- **Gradle Product Flavors:** Configured in `app/build.gradle.kts` under `flavorDimensions += "variant"` with `standard` and `gameFocus` flavors.
+- **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
+- **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager`, managing local cover art disk caching, persistent scraped package tracking (`gamefocus_scraped_apps.txt`), and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient`.
-- **AppPaletteExtractor:** Utility object in `app/src/main/java/com/stormpanda/megingiard/focus/AppPaletteExtractor.kt` extracting vibrant/dominant colors via AndroidX `Palette` with `LruCache` and disk persistence (`gamefocus_palettes.txt`).
+- **AppPaletteExtractor:** Utility object in `gamefocus/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting vibrant/dominant colors via AndroidX `Palette` with `LruCache` and disk persistence (`gamefocus_palettes.txt`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
-- **Manifest Integration:** `app/src/gameFocus/AndroidManifest.xml` declares `FocusTopLauncherActivity` with `android.intent.category.HOME` and `android.intent.category.DEFAULT` filters.
+- **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.

@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.focus
+package com.stormpanda.megingiard.gamefocus
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
@@ -65,7 +65,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage

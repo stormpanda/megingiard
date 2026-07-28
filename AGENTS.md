@@ -199,9 +199,10 @@ affect runtime behaviour or user-facing interactions.
 
 ## 6 Package Structure
 
-The project is split into three Gradle modules:
+The project is split into four Gradle modules:
 
-* **`:app`** — Android UI layer (Activities, viewmodels, custom Compose views, and secondary screen presentations).
+* **`:app`** — Main Android companion app UI layer (Activities, viewmodels, custom Compose views, and secondary screen presentations).
+* **`:gamefocus`** — Standalone Android launcher application (`com.stormpanda.megingiard.gamefocus`) providing top-screen 2:3 game poster browsing, SteamGridDB artwork scraping, and inter-process theme syncing.
 * **`:domain`** — Platform-free business logic, device managers, input injection facades, and singleton state holders. Must **never** import Android UI or Composable dependencies.
 * **`:core`** — Pure JVM/Kotlin data models, serializable schemas, constants, and math helpers. Must **never** have Android dependencies.
 

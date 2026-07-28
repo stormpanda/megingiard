@@ -15,6 +15,7 @@ set -e
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
 GRADLE_FILE="$PROJECT_ROOT/app/build.gradle.kts"
+GF_GRADLE_FILE="$PROJECT_ROOT/gamefocus/build.gradle.kts"
 LOCAL_PROPERTIES="$PROJECT_ROOT/local.properties"
 
 # Ensure we are running from project root
@@ -64,10 +65,10 @@ build_release_apk() {
     version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
     release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
-    log_info "Building release APK for version $release_version..."
-    ./gradlew :app:assembleRelease
+    log_info "Building release APKs for version $release_version..."
+    ./gradlew :app:assembleRelease :gamefocus:assembleRelease
 
-    # Ensure output dir exists, clean old artifacts, and copy the APK
+    # Ensure output dir exists, clean old artifacts, and copy the APKs
     rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
     mkdir -p app/release
     generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
@@ -81,11 +82,18 @@ build_release_apk() {
     cp "$generated_apk" "$copied_apk"
     log_info "Copied APK to $copied_apk"
 
+    gf_generated_apk="gamefocus/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
+    if [[ -f "$gf_generated_apk" ]]; then
+        gf_copied_apk="app/release/Megingiard-GameFocus-v${release_version}.apk"
+        cp "$gf_generated_apk" "$gf_copied_apk"
+        log_info "Copied Game Focus APK to $gf_copied_apk"
+    fi
+
     # Run checksum script
     log_info "Generating SHA-256 checksum..."
     scripts/generate_checksum.sh
 
-    log_success "Release Build $release_version APK successfully created and signed."
+    log_success "Release Build $release_version APKs successfully created and signed."
 }
 
 # Helper function to install built release APK on connected Thor/Android device
@@ -198,10 +206,13 @@ case "$1" in
 
         # Update build.gradle.kts versionName on the release branch
         sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$release_version\"/" "$GRADLE_FILE"
+        if [[ -f "$GF_GRADLE_FILE" ]]; then
+            sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$release_version\"/" "$GF_GRADLE_FILE"
+        fi
 
         # Commit release version change if modified
-        if [[ -n "$(git status --porcelain "$GRADLE_FILE")" ]]; then
-            git add "$GRADLE_FILE"
+        if [[ -n "$(git status --porcelain "$GRADLE_FILE" "$GF_GRADLE_FILE")" ]]; then
+            git add "$GRADLE_FILE" "$GF_GRADLE_FILE"
             git commit -m "chore(release): set version name to $release_version for release"
             log_info "Committed release version bump on $release_branch."
         fi
@@ -321,6 +332,10 @@ case "$1" in
                 # main is already on a SNAPSHOT (e.g. 0.8.0-SNAPSHOT after merging a hotfix)
                 log_info "Main is on $current_version. Incrementing versionCode to $next_code..."
                 sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
+                if [[ -f "$GF_GRADLE_FILE" ]]; then
+                    sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GF_GRADLE_FILE"
+                    git add "$GF_GRADLE_FILE"
+                fi
                 git add "$GRADLE_FILE"
                 git commit -m "chore(release): set version code to $next_code for development"
                 log_success "Successfully updated versionCode to $next_code on main (not pushed)."
@@ -336,6 +351,11 @@ case "$1" in
 
                 sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
                 sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+                if [[ -f "$GF_GRADLE_FILE" ]]; then
+                    sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GF_GRADLE_FILE"
+                    sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GF_GRADLE_FILE"
+                    git add "$GF_GRADLE_FILE"
+                fi
 
                 git add "$GRADLE_FILE"
                 git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"
@@ -353,6 +373,11 @@ case "$1" in
 
             sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
             sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+            if [[ -f "$GF_GRADLE_FILE" ]]; then
+                sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GF_GRADLE_FILE"
+                sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GF_GRADLE_FILE"
+                git add "$GF_GRADLE_FILE"
+            fi
 
             git add "$GRADLE_FILE"
             git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"

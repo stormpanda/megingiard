@@ -11,7 +11,7 @@ set -e
 
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
-GRADLE_FILE="$PROJECT_ROOT/app/build.gradle.kts"
+GRADLE_FILE="$PROJECT_ROOT/gamefocus/build.gradle.kts"
 
 # Ensure running from project root
 cd "$PROJECT_ROOT"
@@ -37,9 +37,9 @@ build_debug_apk() {
     debug_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
     log_info "Building Game Focus debug APK for version $debug_version..."
-    ./gradlew :app:assembleGameFocusDebug
+    ./gradlew :gamefocus:assembleDebug
 
-    generated_apk="app/build/outputs/apk/gameFocus/debug/app-gameFocus-debug.apk"
+    generated_apk="gamefocus/build/outputs/apk/debug/gamefocus-debug.apk"
     if [[ ! -f "$generated_apk" ]]; then
         log_error "Generated Game Focus debug APK not found at $generated_apk"
         exit 1

@@ -62,7 +62,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
-import com.stormpanda.megingiard.focus.FocusTopLauncherActivity
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -83,6 +82,7 @@ import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.provider.MegingiardThemeProvider
 import com.stormpanda.megingiard.security.SignatureGuard
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -271,43 +271,8 @@ class MainActivity : ComponentActivity() {
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
 
-        if (BuildConfig.IS_GAME_FOCUS_VARIANT) {
-            val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
-            AppLog.i(TAG, "gameFocus variant active (displayId=$currentDisplayId)")
-            try {
-                val options = ActivityOptions.makeBasic()
-                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                val launcherIntent =
-                    Intent(this, FocusTopLauncherActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                    }
-                startActivity(launcherIntent, options.toBundle())
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to launch FocusTopLauncherActivity: ${e.message}", e)
-            }
-
-            if (currentDisplayId == Display.DEFAULT_DISPLAY) {
-                val secondaryDisplay = DisplayDetector.findSecondaryDisplay(this)
-                if (secondaryDisplay != null) {
-                    AppLog.i(
-                        TAG,
-                        "gameFocus variant started on primary display -> re-targeting MainActivity to secondary display id=${secondaryDisplay.displayId}",
-                    )
-                    try {
-                        val options = ActivityOptions.makeBasic()
-                        options.setLaunchDisplayId(secondaryDisplay.displayId)
-                        val companionIntent =
-                            Intent(this, MainActivity::class.java).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                            }
-                        startActivity(companionIntent, options.toBundle())
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to re-target MainActivity to secondary display: ${e.message}", e)
-                    }
-                    finish()
-                    return
-                }
-            }
+        SettingsManager.onThemeChangedListener = {
+            MegingiardThemeProvider.notifyThemeChanged(this)
         }
 
         val hasCreds =
