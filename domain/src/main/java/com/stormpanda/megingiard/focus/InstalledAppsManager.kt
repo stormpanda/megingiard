@@ -223,10 +223,37 @@ object InstalledAppsManager {
         AppLog.i(TAG, "Updated in-memory cover path for $packageName to $coverPath")
     }
 
+    private var isSettingsObserverRegistered = false
+
+    private fun registerSettingsObserverIfNeeded(
+        context: Context,
+        coversDir: File,
+    ) {
+        if (isSettingsObserverRegistered) return
+        isSettingsObserverRegistered = true
+        scope.launch {
+            com.stormpanda.megingiard.ipc
+                .observeContentProvider(
+                    context,
+                    com.stormpanda.megingiard.ipc.MegingiardIpcContract.SETTINGS_URI,
+                ) { resolver, uri ->
+                    com.stormpanda.megingiard.ipc.IpcSettingsParser
+                        .parse(resolver, uri)
+                }.collect { config ->
+                    if (config.steamGridDbApiToken.isNotBlank()) {
+                        AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
+                        triggerSteamGridDbScraping(context, coversDir)
+                    }
+                }
+        }
+    }
+
     private fun triggerSteamGridDbScraping(
         context: Context,
         coversDir: File,
     ) {
+        registerSettingsObserverIfNeeded(context, coversDir)
+
         var apiKey = SettingsManager.steamGridDbApiToken.value
         if (apiKey.isBlank()) {
             val ipcConfig =
