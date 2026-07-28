@@ -48,8 +48,10 @@ private enum class ScrollDirection { NONE, LEFT, RIGHT }
 class FocusTopLauncherActivity : ComponentActivity() {
     private val dialogVirtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
     private val confirmDialogTriggerState = mutableIntStateOf(0)
-    private val l1TriggerState = mutableIntStateOf(0)
-    private val r1TriggerState = mutableIntStateOf(0)
+    private val dialogL1TriggerState = mutableIntStateOf(0)
+    private val dialogR1TriggerState = mutableIntStateOf(0)
+    private val prevLetterTriggerState = mutableIntStateOf(0)
+    private val nextLetterTriggerState = mutableIntStateOf(0)
 
     private val selectedCategoryState = mutableStateOf(GameFocusCategory.ALL_APPS)
     private val isMainOptionsMenuExpandedState = mutableStateOf(false)
@@ -141,8 +143,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             dialogVirtualIndex = dialogVirtualIndexState.intValue,
                             onDialogVirtualIndexChange = { dialogVirtualIndexState.intValue = it },
                             confirmDialogTrigger = confirmDialogTriggerState.intValue,
-                            l1Trigger = l1TriggerState.intValue,
-                            r1Trigger = r1TriggerState.intValue,
+                            dialogL1Trigger = dialogL1TriggerState.intValue,
+                            dialogR1Trigger = dialogR1TriggerState.intValue,
+                            prevLetterTrigger = prevLetterTriggerState.intValue,
+                            nextLetterTrigger = nextLetterTriggerState.intValue,
                             isOptionsMenuExpanded = isOptionsMenuExpandedState.value,
                             onOptionsMenuExpandedChange = { isOptionsMenuExpandedState.value = it },
                             dpadUpTrigger = dpadUpOptionsTriggerState.intValue,
@@ -296,13 +300,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                 KeyEvent.KEYCODE_BUTTON_L1 -> {
                     AppLog.i(TAG, "Gamepad L1 pressed inside artwork dialog")
-                    l1TriggerState.intValue++
+                    dialogL1TriggerState.intValue++
                     return true
                 }
 
                 KeyEvent.KEYCODE_BUTTON_R1 -> {
                     AppLog.i(TAG, "Gamepad R1 pressed inside artwork dialog")
-                    r1TriggerState.intValue++
+                    dialogR1TriggerState.intValue++
                     return true
                 }
 
@@ -449,7 +453,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             KeyEvent.KEYCODE_BUTTON_L1 -> {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad L1 pressed -> skipping to previous starting letter")
-                    l1TriggerState.intValue++
+                    prevLetterTriggerState.intValue++
                 }
                 return true
             }
@@ -457,7 +461,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             KeyEvent.KEYCODE_BUTTON_R1 -> {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad R1 pressed -> skipping to next starting letter")
-                    r1TriggerState.intValue++
+                    nextLetterTriggerState.intValue++
                 }
                 return true
             }
@@ -470,8 +474,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
                     dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
                     confirmDialogTriggerState.intValue = 0
-                    l1TriggerState.intValue = 0
-                    r1TriggerState.intValue = 0
+                    dialogL1TriggerState.intValue = 0
+                    dialogR1TriggerState.intValue = 0
                     isOptionsMenuExpandedState.value = false
                     dpadUpOptionsTriggerState.intValue = 0
                     dpadRightOptionsTriggerState.intValue = 0

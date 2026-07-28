@@ -113,8 +113,10 @@ fun FocusTopLauncherScreen(
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
     confirmDialogTrigger: Int = 0,
-    l1Trigger: Int = 0,
-    r1Trigger: Int = 0,
+    dialogL1Trigger: Int = 0,
+    dialogR1Trigger: Int = 0,
+    prevLetterTrigger: Int = 0,
+    nextLetterTrigger: Int = 0,
     isOptionsMenuExpanded: Boolean = false,
     onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     dpadUpTrigger: Int = 0,
@@ -187,8 +189,8 @@ fun FocusTopLauncherScreen(
     }
 
     // Handle Gamepad L1 step (previous starting letter)
-    LaunchedEffect(l1Trigger) {
-        if (l1Trigger > 0 && apps.isNotEmpty() && editingAppInfo == null) {
+    LaunchedEffect(prevLetterTrigger) {
+        if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
             val targetIndex = LetterNavigationHelper.findPreviousLetterAppIndex(apps, activePagerState.currentPage)
             AppLog.d(TAG, "L1 letter skip for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$targetIndex")
             activePagerState.animateScrollToPage(targetIndex)
@@ -196,8 +198,8 @@ fun FocusTopLauncherScreen(
     }
 
     // Handle Gamepad R1 step (next starting letter)
-    LaunchedEffect(r1Trigger) {
-        if (r1Trigger > 0 && apps.isNotEmpty() && editingAppInfo == null) {
+    LaunchedEffect(nextLetterTrigger) {
+        if (nextLetterTrigger > 0 && apps.isNotEmpty()) {
             val targetIndex = LetterNavigationHelper.findNextLetterAppIndex(apps, activePagerState.currentPage)
             AppLog.d(TAG, "R1 letter skip for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$targetIndex")
             activePagerState.animateScrollToPage(targetIndex)
@@ -537,8 +539,8 @@ fun FocusTopLauncherScreen(
                     virtualIndex = dialogVirtualIndex,
                     onVirtualIndexChange = onDialogVirtualIndexChange,
                     confirmTrigger = confirmDialogTrigger,
-                    l1Trigger = l1Trigger,
-                    r1Trigger = r1Trigger,
+                    l1Trigger = dialogL1Trigger,
+                    r1Trigger = dialogR1Trigger,
                     isOptionsMenuExpanded = isOptionsMenuExpanded,
                     onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
                     dpadUpTrigger = dpadUpTrigger,
