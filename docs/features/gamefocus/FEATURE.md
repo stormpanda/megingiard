@@ -20,7 +20,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - The top display MUST present installed applications in an endless 2:3 aspect ratio portrait poster carousel.
 - Spacing between posters MUST be tight (`12.dp`), with the currently highlighted poster centered horizontally on the screen.
-- Navigation MUST support D-pad left/right, joystick holding with key repeat delay (`300ms` initial delay, `100ms` repeat interval), left/right touch gestures, Gamepad L1/R1 bumper buttons (`KEYCODE_BUTTON_L1`/`KEYCODE_BUTTON_R1`) to temporarily display an interactive 9-item 3D horizontal letter carousel (`HorizontalLetterCarousel`) of existing library starting letters at the bottom of the screen with a 500ms inactivity debounce before committing the gallery scroll, and launch upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
+- Navigation MUST support D-pad left/right, joystick holding with key repeat delay (`300ms` initial delay, `100ms` repeat interval), left/right touch gestures, Gamepad L1/R1 bumper buttons (`KEYCODE_BUTTON_L1`/`KEYCODE_BUTTON_R1`) to temporarily display an interactive 9-item 3D horizontal letter carousel (`HorizontalLetterCarousel`) of existing library starting letters at the bottom of the screen with a 500ms inactivity debounce before committing the gallery scroll. Navigating via D-pad, joystick stick, or touch scroll while the letter carousel overlay is active MUST immediately cancel the letter carousel without action. Launching occurs upon D-pad center or Gamepad `A` button (`KEYCODE_BUTTON_A`).
 - The application title MUST be displayed in large bold typography at the bottom of the screen.
 
 ### FR-GF3: SteamGridDB Cover Art Scraping

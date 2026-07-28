@@ -176,28 +176,49 @@ fun FocusTopLauncherScreen(
         }
     }
 
+    val scope = rememberCoroutineScope()
+    var isLetterOverlayActive by remember { mutableStateOf(false) }
+    var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
+    var letterCommitJob by remember { mutableStateOf<Job?>(null) }
+
+    // Dismiss letter overlay without action if user manually scrolls the pager
+    LaunchedEffect(activePagerState.isScrollInProgress) {
+        if (activePagerState.isScrollInProgress && isLetterOverlayActive) {
+            AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
+            letterCommitJob?.cancel()
+            isLetterOverlayActive = false
+        }
+    }
+
     // Handle D-pad LEFT step with wrap-around
     LaunchedEffect(dpadLeftTrigger) {
         if (dpadLeftTrigger > 0 && apps.isNotEmpty()) {
-            val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
-            AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
-            activePagerState.animateScrollToPage(prevIndex)
+            if (isLetterOverlayActive) {
+                AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
+                letterCommitJob?.cancel()
+                isLetterOverlayActive = false
+            } else {
+                val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
+                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
+                activePagerState.animateScrollToPage(prevIndex)
+            }
         }
     }
 
     // Handle D-pad RIGHT step with wrap-around
     LaunchedEffect(dpadStepRightTrigger) {
         if (dpadStepRightTrigger > 0 && apps.isNotEmpty()) {
-            val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
-            AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
-            activePagerState.animateScrollToPage(nextIndex)
+            if (isLetterOverlayActive) {
+                AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
+                letterCommitJob?.cancel()
+                isLetterOverlayActive = false
+            } else {
+                val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
+                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
+                activePagerState.animateScrollToPage(nextIndex)
+            }
         }
     }
-
-    val scope = rememberCoroutineScope()
-    var isLetterOverlayActive by remember { mutableStateOf(false) }
-    var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
-    var letterCommitJob by remember { mutableStateOf<Job?>(null) }
 
     val currentApp =
         remember(activePagerState.currentPage, apps) {
