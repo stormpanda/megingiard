@@ -15,6 +15,7 @@ set -e
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
 GRADLE_FILE="$PROJECT_ROOT/app/build.gradle.kts"
+GF_GRADLE_FILE="$PROJECT_ROOT/gamefocus/build.gradle.kts"
 LOCAL_PROPERTIES="$PROJECT_ROOT/local.properties"
 
 # Ensure we are running from project root
@@ -23,6 +24,10 @@ cd "$PROJECT_ROOT"
 # Helper to print colored output
 log_info() {
     echo -e "\033[1;34m[INFO]\033[0m $1"
+}
+
+log_warn() {
+    echo -e "\033[1;33m[WARN]\033[0m $1"
 }
 
 log_success() {
@@ -60,10 +65,10 @@ build_release_apk() {
     version_line=$(grep -E 'versionName[[:space:]]*=' "$GRADLE_FILE")
     release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
-    log_info "Building release APK for version $release_version..."
-    ./gradlew :app:assembleRelease
+    log_info "Building release APKs for version $release_version..."
+    ./gradlew :app:assembleRelease :gamefocus:assembleRelease
 
-    # Ensure output dir exists, clean old artifacts, and copy the APK
+    # Ensure output dir exists, clean old artifacts, and copy the APKs
     rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
     mkdir -p app/release
     generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
@@ -77,11 +82,18 @@ build_release_apk() {
     cp "$generated_apk" "$copied_apk"
     log_info "Copied APK to $copied_apk"
 
+    gf_generated_apk="gamefocus/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
+    if [[ -f "$gf_generated_apk" ]]; then
+        gf_copied_apk="app/release/Megingiard-GameFocus-v${release_version}.apk"
+        cp "$gf_generated_apk" "$gf_copied_apk"
+        log_info "Copied Game Focus APK to $gf_copied_apk"
+    fi
+
     # Run checksum script
     log_info "Generating SHA-256 checksum..."
     scripts/generate_checksum.sh
 
-    log_success "Release Build $release_version APK successfully created and signed."
+    log_success "Release Build $release_version APKs successfully created and signed."
 }
 
 # Helper function to install built release APK on connected Thor/Android device
@@ -98,32 +110,42 @@ install_release_apk() {
 
     ADB="${ADB:-$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")}"
     DEVICE="${DEVICE:-}"
-    ADB_CMD=("$ADB")
-    if [[ -n "$DEVICE" ]]; then
-        ADB_CMD+=("-s" "$DEVICE")
-    fi
 
     if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
-        if "${ADB_CMD[@]}" devices 2>/dev/null | grep -v "List of devices" | grep -qE '[[:space:]]device$'; then
-            remote_download_dir="/sdcard/Download"
-            remote_apk_path="${remote_download_dir}/$(basename "$copied_apk")"
-
-            log_info "Thor/Android device detected via ADB."
-            log_info "Copying APK to Thor's Download folder ($remote_apk_path)..."
-            "${ADB_CMD[@]}" push "$copied_apk" "$remote_apk_path"
-
-            log_info "Installing APK on Thor via ADB ($copied_apk)..."
-            "${ADB_CMD[@]}" install -r "$copied_apk"
-
-            log_success "Successfully installed $copied_apk on Thor."
-        else
-            if [[ "$strict_mode" == "true" ]]; then
-                log_error "No connected Thor/Android device found via ADB."
-                exit 1
+        if [[ -z "$DEVICE" ]]; then
+            local raw_devices=(${(f)"$("$ADB" devices 2>/dev/null | grep -v "List of devices" | grep -E '[[:space:]]device$' | awk '{print $1}')"})
+            local devices=(${raw_devices:#})
+            if (( ${#devices} == 0 )); then
+                if [[ "$strict_mode" == "true" ]]; then
+                    log_error "No connected Thor/Android device found via ADB."
+                    exit 1
+                else
+                    log_info "No connected Thor/Android device found via ADB. Skipping device install."
+                    return 0
+                fi
+            elif (( ${#devices} == 1 )); then
+                DEVICE="${devices[1]}"
+                log_info "Thor/Android device detected via ADB ($DEVICE)."
             else
-                log_info "No connected Thor/Android device found via ADB. Skipping device install."
+                DEVICE="${devices[1]}"
+                log_warn "Multiple ADB devices detected (${(j:, :)devices}). Using first device: $DEVICE"
             fi
+        else
+            log_info "Using explicitly targeted ADB device ($DEVICE)."
         fi
+
+        ADB_CMD=("$ADB" "-s" "$DEVICE")
+
+        remote_download_dir="/sdcard/Download"
+        remote_apk_path="${remote_download_dir}/$(basename "$copied_apk")"
+
+        log_info "Copying APK to Thor's Download folder ($remote_apk_path)..."
+        "${ADB_CMD[@]}" push "$copied_apk" "$remote_apk_path"
+
+        log_info "Installing APK on Thor via ADB ($copied_apk)..."
+        "${ADB_CMD[@]}" install -r "$copied_apk"
+
+        log_success "Successfully installed $copied_apk on Thor."
     else
         if [[ "$strict_mode" == "true" ]]; then
             log_error "ADB executable not found at '$ADB'."
@@ -184,10 +206,13 @@ case "$1" in
 
         # Update build.gradle.kts versionName on the release branch
         sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$release_version\"/" "$GRADLE_FILE"
+        if [[ -f "$GF_GRADLE_FILE" ]]; then
+            sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$release_version\"/" "$GF_GRADLE_FILE"
+        fi
 
         # Commit release version change if modified
-        if [[ -n "$(git status --porcelain "$GRADLE_FILE")" ]]; then
-            git add "$GRADLE_FILE"
+        if [[ -n "$(git status --porcelain "$GRADLE_FILE" "$GF_GRADLE_FILE")" ]]; then
+            git add "$GRADLE_FILE" "$GF_GRADLE_FILE"
             git commit -m "chore(release): set version name to $release_version for release"
             log_info "Committed release version bump on $release_branch."
         fi
@@ -232,6 +257,8 @@ case "$1" in
 
         apk_path="app/release/Megingiard-v${release_version}.apk"
         checksum_path="app/release/Megingiard-v${release_version}-checksum-sha256.txt"
+        gf_apk_path="app/release/Megingiard-GameFocus-v${release_version}.apk"
+        gf_checksum_path="app/release/Megingiard-GameFocus-v${release_version}-checksum-sha256.txt"
 
         if [[ ! -f "$apk_path" || ! -f "$checksum_path" ]]; then
             log_error "Release artifacts not found. Please run 'scripts/release.sh build' first."
@@ -239,21 +266,25 @@ case "$1" in
         fi
 
         log_info "Creating GitHub Release Draft for version $release_version..."
-        
+
         # Verify gh CLI is installed
         if ! command -v gh >/dev/null 2>&1; then
             log_error "GitHub CLI 'gh' is not installed or not in PATH."
             exit 1
         fi
 
+        artifacts=("$apk_path" "$checksum_path")
+        if [[ -f "$gf_apk_path" && -f "$gf_checksum_path" ]]; then
+            artifacts+=("$gf_apk_path" "$gf_checksum_path")
+        fi
+
         gh release create "$release_version" \
             --draft \
             --title "Megingiard-v$release_version" \
             --notes-file "$changelog_file" \
-            "$apk_path" \
-            "$checksum_path"
+            "${artifacts[@]}"
 
-        log_success "Release draft Megingiard-v$release_version successfully uploaded with APK and checksum."
+        log_success "Release draft Megingiard-v$release_version successfully uploaded with APKs and checksums."
         ;;
 
     finish)
@@ -307,6 +338,10 @@ case "$1" in
                 # main is already on a SNAPSHOT (e.g. 0.8.0-SNAPSHOT after merging a hotfix)
                 log_info "Main is on $current_version. Incrementing versionCode to $next_code..."
                 sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
+                if [[ -f "$GF_GRADLE_FILE" ]]; then
+                    sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GF_GRADLE_FILE"
+                    git add "$GF_GRADLE_FILE"
+                fi
                 git add "$GRADLE_FILE"
                 git commit -m "chore(release): set version code to $next_code for development"
                 log_success "Successfully updated versionCode to $next_code on main (not pushed)."
@@ -322,6 +357,11 @@ case "$1" in
 
                 sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
                 sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+                if [[ -f "$GF_GRADLE_FILE" ]]; then
+                    sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GF_GRADLE_FILE"
+                    sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GF_GRADLE_FILE"
+                    git add "$GF_GRADLE_FILE"
+                fi
 
                 git add "$GRADLE_FILE"
                 git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"
@@ -339,6 +379,11 @@ case "$1" in
 
             sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GRADLE_FILE"
             sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GRADLE_FILE"
+            if [[ -f "$GF_GRADLE_FILE" ]]; then
+                sed -i '' -E "s/versionCode[[:space:]]*=[[:space:]]*[0-9]*/versionCode = $next_code/" "$GF_GRADLE_FILE"
+                sed -i '' -E "s/versionName[[:space:]]*=[[:space:]]*\"[^\"]*\"/versionName = \"$next_version\"/" "$GF_GRADLE_FILE"
+                git add "$GF_GRADLE_FILE"
+            fi
 
             git add "$GRADLE_FILE"
             git commit -m "chore(release): set version code to $next_code and version name to $next_version for development"

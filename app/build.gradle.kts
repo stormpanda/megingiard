@@ -44,9 +44,6 @@ android {
         versionName = "0.8.0-SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
 
         buildConfigField(
             "String",
@@ -73,7 +70,9 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "Megingiard Debug")
+            ndk {
+                abiFilters.add("arm64-v8a")
+            }
         }
         release {
             val releaseSigningConfig = signingConfigs.findByName("release")
@@ -118,6 +117,48 @@ kotlin {
 }
 
 // Register native C unit test execution task
+// Task to fail release builds when no signing-certificate SHA-256 has been configured.
+abstract class ValidateReleaseSignatureTask : DefaultTask() {
+    @get:Input
+    abstract val expectedSha256: Property<String>
+
+    @get:Input
+    abstract val malformed: Property<Boolean>
+
+    @get:Input
+    abstract val allowUnpinned: Property<Boolean>
+
+    @TaskAction
+    fun validate() {
+        val sha = expectedSha256.get()
+        val isMalformed = malformed.get()
+        val unpinned = allowUnpinned.get()
+        if ((sha.isBlank() || isMalformed) && !unpinned) {
+            throw GradleException(
+                "Release build aborted: 'megingiard.signing.sha256' must be set " +
+                    "to a 64-character hex SHA-256 fingerprint in local.properties. " +
+                    "Without it, SignatureGuard cannot pin the release APK identity.\n" +
+                    "  1. Read your release cert SHA-256:\n" +
+                    "       keytool -list -v -keystore megingiard.jks -alias release\n" +
+                    "  2. Add to local.properties:\n" +
+                    "       megingiard.signing.sha256=AB:CD:…\n" +
+                    "Override (NOT for distribution) with " +
+                    "-Pmegingiard.allowUnpinnedRelease=true"
+            )
+        }
+    }
+}
+
+val validateReleaseSignature = tasks.register<ValidateReleaseSignatureTask>("validateReleaseSignature") {
+    expectedSha256.set(expectedSigningSha256)
+    malformed.set(expectedSigningSha256IsMalformed)
+    allowUnpinned.set(
+        (project.findProperty("megingiard.allowUnpinnedRelease") as? String)
+            ?.equals("true", ignoreCase = true) == true
+    )
+}
+
+// Register native C unit test execution task
 val nativeCTest = tasks.register<Exec>("nativeCTest") {
     group = "verification"
     description = "Compiles and executes native C unit tests."
@@ -136,37 +177,8 @@ afterEvaluate {
     tasks.matching { it.name.startsWith("package") || it.name.startsWith("generate") && it.name.contains("Assets") }.configureEach {
         dependsOn(":mirrorserver:dex")
     }
-
-    // Fail release builds when no signing-certificate SHA-256 has been
-    // configured. Without it, SignatureGuard runs in "Skipped" mode and the
-    // shipped APK has no tamper protection — almost certainly a mistake.
-    // Devs who knowingly want an unpinned local release build can opt out via
-    //   ./gradlew assembleRelease -Pmegingiard.allowUnpinnedRelease=true
-    val allowUnpinned = (project.findProperty("megingiard.allowUnpinnedRelease") as? String)
-        ?.equals("true", ignoreCase = true) == true
-    val releaseGuardTasks = listOf(
-        "assembleRelease",
-        "bundleRelease",
-        "packageRelease",
-    )
-    releaseGuardTasks.forEach { taskName ->
-        tasks.matching { it.name == taskName }.configureEach {
-            doFirst {
-                if ((expectedSigningSha256.isBlank() || expectedSigningSha256IsMalformed) && !allowUnpinned) {
-                    throw GradleException(
-                        "Release build aborted: 'megingiard.signing.sha256' must be set " +
-                            "to a 64-character hex SHA-256 fingerprint in local.properties. " +
-                            "Without it, SignatureGuard cannot pin the release APK identity.\n" +
-                            "  1. Read your release cert SHA-256:\n" +
-                            "       keytool -list -v -keystore megingiard.jks -alias release\n" +
-                            "  2. Add to local.properties:\n" +
-                            "       megingiard.signing.sha256=AB:CD:…\n" +
-                            "Override (NOT for distribution) with " +
-                            "-Pmegingiard.allowUnpinnedRelease=true"
-                    )
-                }
-            }
-        }
+    tasks.matching { it.name in listOf("assembleRelease", "bundleRelease", "packageRelease") }.configureEach {
+        dependsOn(validateReleaseSignature)
     }
 }
 
@@ -186,6 +198,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.material)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.palette.ktx)
     implementation(libs.reorderable)
     implementation(libs.kotlinx.serialization.json)
 

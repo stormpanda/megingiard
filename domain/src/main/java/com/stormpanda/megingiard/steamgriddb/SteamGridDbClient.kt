@@ -84,17 +84,43 @@ data class SteamGridDbImage(
 object SteamGridDbClient {
     private val json = Json { ignoreUnknownKeys = true }
 
+    fun cleanSearchQuery(rawQuery: String): String {
+        if (rawQuery.isBlank()) return rawQuery
+
+        // 1. Remove bracketed / parenthetical expressions e.g. (Android), [Global], (v1.0), (USA)
+        var cleaned = rawQuery.replace(Regex("""\(.*?\)|\[.*?\]"""), " ")
+
+        // 2. Remove common version string patterns like v1.0, 1.0.2 at end or standalone
+        cleaned = cleaned.replace(Regex("""(?i)\bv?\d+(\.\d+)+\b"""), " ")
+
+        // 3. Remove standalone noise words commonly found in app names (case-insensitive)
+        val noiseRegex = Regex("""(?i)\b(android|mobile|emulator|edition|official|free|lite|app)\b""")
+        cleaned = cleaned.replace(noiseRegex, " ")
+
+        // 4. Clean symbols and normalize spaces
+        cleaned =
+            cleaned
+                .replace(Regex("""[^\w\s\-\':]"""), " ")
+                .replace(Regex("""\s+"""), " ")
+                .trim()
+                .trim('-', ':', '_')
+                .trim()
+
+        return if (cleaned.isNotBlank()) cleaned else rawQuery.trim()
+    }
+
     suspend fun searchGames(
         query: String,
         apiKey: String,
     ): Result<List<SteamGridDbGame>> {
-        AppLog.d(TAG, "searchGames: query=$query")
+        val cleanedQuery = cleanSearchQuery(query)
+        AppLog.d(TAG, "searchGames: rawQuery='$query' -> cleanedQuery='$cleanedQuery'")
         if (apiKey.isBlank()) {
             return Result.failure(IllegalArgumentException("API Key is blank"))
         }
         val encodedQuery =
             withContext(Dispatchers.IO) {
-                URLEncoder.encode(query, "UTF-8")
+                URLEncoder.encode(cleanedQuery, "UTF-8").replace("+", "%20")
             }
         val urlString = "$BASE_URL/search/autocomplete/$encodedQuery"
         return fetchString(urlString, apiKey)

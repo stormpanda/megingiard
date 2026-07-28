@@ -34,6 +34,7 @@
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
+| `docs/features/gamefocus/FEATURE.md`       | Megingiard Game Focus — dual-screen top launcher & bottom companion build variant        |
 | `docs/features/help/FEATURE.md`            | In-App Help Tutorials — shared HelpModal infrastructure and per-screen content composables |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
@@ -198,9 +199,10 @@ affect runtime behaviour or user-facing interactions.
 
 ## 6 Package Structure
 
-The project is split into three Gradle modules:
+The project is split into four Gradle modules:
 
-* **`:app`** — Android UI layer (Activities, viewmodels, custom Compose views, and secondary screen presentations).
+* **`:app`** — Main Android companion app UI layer (Activities, viewmodels, custom Compose views, and secondary screen presentations).
+* **`:gamefocus`** — Standalone Android launcher application (`com.stormpanda.megingiard.gamefocus`) providing top-screen 2:3 game poster browsing, SteamGridDB artwork scraping, and inter-process theme syncing.
 * **`:domain`** — Platform-free business logic, device managers, input injection facades, and singleton state holders. Must **never** import Android UI or Composable dependencies.
 * **`:core`** — Pure JVM/Kotlin data models, serializable schemas, constants, and math helpers. Must **never** have Android dependencies.
 

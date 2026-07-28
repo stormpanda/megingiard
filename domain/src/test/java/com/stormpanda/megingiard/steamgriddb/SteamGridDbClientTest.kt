@@ -128,4 +128,16 @@ class SteamGridDbClientTest {
         assertEquals("https://cdn.steamgriddb.com/thumb/1.png", image.thumb)
         assertEquals("https://cdn.steamgriddb.com/grid/1.png", image.url)
     }
+
+    @Test
+    fun testCleanSearchQuery() {
+        assertEquals("Google Chrome", SteamGridDbClient.cleanSearchQuery("Google Chrome (Android)"))
+        assertEquals("Galaxy Attack", SteamGridDbClient.cleanSearchQuery("Galaxy Attack (Premium)"))
+        assertEquals("Super Mario World", SteamGridDbClient.cleanSearchQuery("Super Mario World [v1.0.2] (USA)"))
+        assertEquals("Citra", SteamGridDbClient.cleanSearchQuery("Citra Emulator Mobile"))
+        assertEquals("Minecraft", SteamGridDbClient.cleanSearchQuery("Minecraft Mobile Edition"))
+        assertEquals("PPSSPP - PSP", SteamGridDbClient.cleanSearchQuery("PPSSPP - PSP Emulator"))
+        assertEquals("SimpleApp", SteamGridDbClient.cleanSearchQuery("SimpleApp"))
+        assertEquals("Mobile", SteamGridDbClient.cleanSearchQuery("Mobile"))
+    }
 }

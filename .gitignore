@@ -9,11 +9,14 @@
 /.idea/assetWizardSettings.xml
 /build
 /app/build
+/gamefocus/build
 /app/release
 /app/debug
+/app/debug-gf
 /core/build
 /domain/build
 /mirrorserver/build
+build/
 /captures
 /screenshots
 .DS_Store

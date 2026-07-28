@@ -28,6 +28,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Megingiard"
 include(":app")
+include(":gamefocus")
 include(":domain")
 include(":core")
 include(":mirrorserver")

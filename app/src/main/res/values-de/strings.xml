@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Megingiard</string>
+    <string name="focus_launcher_title">Game Focus Launcher</string>
+    <string name="focus_launcher_refresh">Aktualisieren</string>
+    <string name="focus_launcher_search_hint">Apps &amp; Spiele suchen…</string>
+    <string name="focus_launcher_no_apps">Keine Apps gefunden</string>
     <string name="mirror_waiting_permission">Warte auf Bildschirmberechtigung\u2026</string>
     <string name="wrong_screen_message">Megingiard muss auf dem unteren Bildschirm laufen.\nBitte verschiebe die App, um fortzufahren.</string>
     <string name="cd_wrong_screen_arrow">Pfeil zeigt zum unteren Bildschirm</string>
@@ -1102,6 +1106,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="steamgriddb_error_generic_message">Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es noch einmal.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
 
+    <!-- Game Focus -->
+    <string name="focus_change_artwork_title">Cover-Artwork ändern</string>
+
     <!-- Touchpad settings -->
     <string name="settings_touchpad_title">Touchpad-Einstellungen</string>
     <string name="settings_section_relative_mouse">Relative-Maus-Modus</string>
@@ -1177,5 +1184,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_section_feedback">Haptik</string>
     <string name="config_export_include_backgrounds">Hintergrundbilder einschließen</string>
     <string name="config_import_section_background_images">Hintergrundbilder (%1$d)</string>
+
 
 </resources>

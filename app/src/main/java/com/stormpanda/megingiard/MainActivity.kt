@@ -82,6 +82,7 @@ import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import com.stormpanda.megingiard.provider.MegingiardSettingsProvider
 import com.stormpanda.megingiard.security.SignatureGuard
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -269,6 +270,11 @@ class MainActivity : ComponentActivity() {
         // Provide a stable applicationContext to MacroExecutor so that TouchTap macro
         // steps can start TouchInjector without needing the caller to supply a Context.
         MacroExecutor.init(this)
+
+        SettingsManager.onThemeChangedListener = {
+            MegingiardSettingsProvider.notifyThemeChanged(this)
+            MegingiardSettingsProvider.notifySettingsChanged(this)
+        }
 
         val hasCreds =
             File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
