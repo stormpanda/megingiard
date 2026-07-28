@@ -337,7 +337,6 @@ fun FocusTopLauncherScreen(
                                     posterSpacing = FTL_POSTER_SPACING,
                                     carouselHeight = 290.dp,
                                     posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                                    ambientGlowColor = animatedPrimaryColor,
                                     cardBackgroundColor = { actualIndex, isSelected ->
                                         val appInfo = apps.getOrNull(actualIndex)
                                         if (appInfo != null) {

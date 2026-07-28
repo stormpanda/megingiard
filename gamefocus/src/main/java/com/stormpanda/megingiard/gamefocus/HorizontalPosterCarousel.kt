@@ -1,10 +1,10 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,20 +15,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -36,6 +37,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import android.graphics.Paint as NativePaint
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
 private val HPC_DEFAULT_POSTER_HEIGHT = 262.dp
@@ -43,6 +45,9 @@ private val HPC_DEFAULT_POSTER_SPACING = 13.5.dp
 private val HPC_DEFAULT_CAROUSEL_HEIGHT = 310.dp
 private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
 private val HPC_EXTRA_PUSH_DP = 16.dp
+private val HPC_GLOW_BLUR_RADIUS = 16.dp
+private val HPC_GLOW_STROKE_WIDTH = 8.dp
+private const val HPC_GLOW_ALPHA = 0.85f
 
 @Composable
 fun HorizontalPosterCarousel(
@@ -56,14 +61,13 @@ fun HorizontalPosterCarousel(
     posterSpacing: Dp = HPC_DEFAULT_POSTER_SPACING,
     carouselHeight: Dp = HPC_DEFAULT_CAROUSEL_HEIGHT,
     posterCornerRadius: Dp = HPC_DEFAULT_CORNER_RADIUS,
-    ambientGlowColor: Color = Color.Unspecified,
     cardBackgroundColor: ((actualIndex: Int, isSelected: Boolean) -> Color)? = null,
     itemContent: @Composable (actualIndex: Int, isSelected: Boolean) -> Unit,
 ) {
     if (itemCount <= 0) return
 
     val appColors = LocalAppColors.current
-    val activeGlowColor = if (ambientGlowColor != Color.Unspecified) ambientGlowColor else appColors.accent
+    val activeGlowColor = appColors.accent
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -120,6 +124,33 @@ fun HorizontalPosterCarousel(
                             scaleY = s
                             alpha = a
                             translationX = sign * neighborFactor * extraPushPx
+                        }.drawBehind {
+                            if (isSelected) {
+                                val cornerRadiusPx = posterCornerRadius.toPx()
+                                val blurRadiusPx = HPC_GLOW_BLUR_RADIUS.toPx()
+                                val strokeWidthPx = HPC_GLOW_STROKE_WIDTH.toPx()
+                                val glowColorArgb = activeGlowColor.copy(alpha = HPC_GLOW_ALPHA).toArgb()
+
+                                drawIntoCanvas { canvas ->
+                                    val nativePaint =
+                                        NativePaint().apply {
+                                            isAntiAlias = true
+                                            color = glowColorArgb
+                                            style = NativePaint.Style.STROKE
+                                            strokeWidth = strokeWidthPx
+                                            maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                        }
+                                    canvas.nativeCanvas.drawRoundRect(
+                                        0f,
+                                        0f,
+                                        size.width,
+                                        size.height,
+                                        cornerRadiusPx,
+                                        cornerRadiusPx,
+                                        nativePaint,
+                                    )
+                                }
+                            }
                         }.shadow(
                             elevation = if (isSelected) 20.dp else 4.dp,
                             shape = RoundedCornerShape(posterCornerRadius),
