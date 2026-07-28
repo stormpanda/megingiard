@@ -1185,18 +1185,5 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_export_include_backgrounds">Hintergrundbilder einschließen</string>
     <string name="config_import_section_background_images">Hintergrundbilder (%1$d)</string>
 
-    <!-- Game Focus dual display launch & categories -->
-    <string name="gamefocus_launch_top">Oberer Bildschirm</string>
-    <string name="gamefocus_launch_bottom">Unterer Bildschirm</string>
-    <string name="gamefocus_header_android_apps">Android Apps</string>
-    <string name="gamefocus_cat_favorites">Favoriten</string>
-    <string name="gamefocus_cat_last_used">Zuletzt verwendet</string>
-    <string name="gamefocus_option_add_favorite">Zu Favoriten hinzufügen</string>
-    <string name="gamefocus_option_remove_favorite">Aus Favoriten entfernen</string>
-    <string name="gamefocus_option_app_info">App-Info</string>
-    <string name="gamefocus_option_close">Schließen</string>
-    <string name="gamefocus_option_actions">Aktionen</string>
-    <string name="gamefocus_no_favorites">Keine Favoriten hinzugefügt</string>
-    <string name="gamefocus_no_last_used">Keine kürzlich verwendeten Apps</string>
 
 </resources>
