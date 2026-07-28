@@ -112,6 +112,11 @@ object AppPaletteExtractor {
         }
     }
 
+    fun getCachedColorsOrNull(appInfo: InstalledAppInfo): ExtractedAppPalette? {
+        val cacheKey = getCacheKey(appInfo)
+        return paletteCache.get(cacheKey)
+    }
+
     private fun getCacheKey(appInfo: InstalledAppInfo): String {
         val coverPath = appInfo.coverPath
         return if (coverPath != null) {

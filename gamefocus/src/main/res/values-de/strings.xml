@@ -17,10 +17,13 @@
     <string name="gamefocus_option_remove_favorite">Aus Favoriten entfernen</string>
     <string name="gamefocus_option_app_info">App-Info</string>
     <string name="gamefocus_option_close">Schließen</string>
+    <string name="gamefocus_option_actions">Aktionen</string>
     <string name="gamefocus_no_favorites">Keine Favoriten vorhanden</string>
     <string name="gamefocus_no_last_used">Keine kürzlich genutzten Apps</string>
 
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB Cover-Scraping erfordert einen API-Token. Bitte erstelle einen API-Schlüssel in deinen SteamGridDB-Einstellungen und trage ihn in Megingiards Einstellungen ein.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
+    <string name="steamgriddb_cd_search">Suchen</string>
+    <string name="steamgriddb_cd_cancel_edit">Bearbeitung abbrechen</string>
 </resources>

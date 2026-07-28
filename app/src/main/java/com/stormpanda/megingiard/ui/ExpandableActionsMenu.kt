@@ -101,7 +101,7 @@ fun ExpandableActionsMenu(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Actions",
+                        text = stringResource(R.string.gamefocus_option_actions),
                         style =
                             MaterialTheme.typography.labelLarge.copy(
                                 color = appColors.onSurfaceSecondary,

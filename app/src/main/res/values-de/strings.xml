@@ -1195,6 +1195,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamefocus_option_remove_favorite">Aus Favoriten entfernen</string>
     <string name="gamefocus_option_app_info">App-Info</string>
     <string name="gamefocus_option_close">Schließen</string>
+    <string name="gamefocus_option_actions">Aktionen</string>
     <string name="gamefocus_no_favorites">Keine Favoriten hinzugefügt</string>
     <string name="gamefocus_no_last_used">Keine kürzlich verwendeten Apps</string>
 

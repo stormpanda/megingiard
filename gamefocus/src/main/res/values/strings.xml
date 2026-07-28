@@ -17,10 +17,13 @@
     <string name="gamefocus_option_remove_favorite">Remove from Favorites</string>
     <string name="gamefocus_option_app_info">App Info</string>
     <string name="gamefocus_option_close">Close</string>
+    <string name="gamefocus_option_actions">Actions</string>
     <string name="gamefocus_no_favorites">No Favorite Apps Added</string>
     <string name="gamefocus_no_last_used">No Recently Used Apps</string>
 
     <string name="steamgriddb_token_missing_title">API Token Required</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>
     <string name="steamgriddb_error_dismiss">OK</string>
+    <string name="steamgriddb_cd_search">Search</string>
+    <string name="steamgriddb_cd_cancel_edit">Cancel edit</string>
 </resources>

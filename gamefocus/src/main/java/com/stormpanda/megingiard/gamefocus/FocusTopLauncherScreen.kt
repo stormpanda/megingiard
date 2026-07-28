@@ -336,13 +336,8 @@ fun FocusTopLauncherScreen(
                                     cardBackgroundColor = { actualIndex, isSelected ->
                                         val appInfo = apps.getOrNull(actualIndex)
                                         if (appInfo != null) {
-                                            val palette =
-                                                AppPaletteExtractor.extractColors(
-                                                    appInfo,
-                                                    appColors.accent,
-                                                    appColors.appBackground,
-                                                )
-                                            if (palette.isExtracted) {
+                                            val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
+                                            if (palette != null && palette.isExtracted) {
                                                 palette.darkenedPrimaryColor
                                             } else {
                                                 if (isSelected) appColors.surfaceVariant else appColors.surface

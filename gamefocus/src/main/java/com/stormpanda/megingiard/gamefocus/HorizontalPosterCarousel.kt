@@ -42,6 +42,7 @@ private val HPC_DEFAULT_POSTER_HEIGHT = 262.dp
 private val HPC_DEFAULT_POSTER_SPACING = 13.5.dp
 private val HPC_DEFAULT_CAROUSEL_HEIGHT = 310.dp
 private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
+private val HPC_EXTRA_PUSH_DP = 16.dp
 
 @Composable
 fun HorizontalPosterCarousel(
@@ -100,7 +101,7 @@ fun HorizontalPosterCarousel(
             val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
             val extraPushPx =
                 remember(density) {
-                    with(density) { 16.dp.toPx() }
+                    with(density) { HPC_EXTRA_PUSH_DP.toPx() }
                 }
             val translationXShift = sign * neighborFactor * extraPushPx
 

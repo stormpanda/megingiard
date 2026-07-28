@@ -342,7 +342,7 @@ fun GameFocusArtworkDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Search",
+                            contentDescription = stringResource(R.string.steamgriddb_cd_search),
                             tint = appColors.onAccent,
                             modifier = Modifier.size(20.dp),
                         )
@@ -354,7 +354,7 @@ fun GameFocusArtworkDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Cancel edit",
+                            contentDescription = stringResource(R.string.steamgriddb_cd_cancel_edit),
                             tint = appColors.onSurfaceSecondary,
                             modifier = Modifier.size(20.dp),
                         )

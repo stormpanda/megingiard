@@ -11,6 +11,9 @@ import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.ipc.IpcSettingsParser
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
+import com.stormpanda.megingiard.ipc.observeContentProvider
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
@@ -24,6 +27,11 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 private const val TAG = "InstalledAppsManager"
+private const val FILE_FAVORITES = "gamefocus_favorites.txt"
+private const val FILE_LAST_USED = "gamefocus_last_used.txt"
+private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
+private const val DIR_COVERS = "gamefocus_covers"
+private const val MAX_RECENT_APPS = 10
 
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -41,7 +49,7 @@ object InstalledAppsManager {
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
 
     private fun loadFavorites(context: Context) {
-        val file = File(context.filesDir, "gamefocus_favorites.txt")
+        val file = File(context.filesDir, FILE_FAVORITES)
         if (file.exists()) {
             try {
                 val set =
@@ -72,7 +80,7 @@ object InstalledAppsManager {
         }
         _favorites.value = current
         try {
-            val file = File(context.filesDir, "gamefocus_favorites.txt")
+            val file = File(context.filesDir, FILE_FAVORITES)
             file.writeText(current.joinToString("\n"))
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
@@ -80,7 +88,7 @@ object InstalledAppsManager {
     }
 
     private fun loadLastUsed(context: Context) {
-        val file = File(context.filesDir, "gamefocus_last_used.txt")
+        val file = File(context.filesDir, FILE_LAST_USED)
         if (file.exists()) {
             try {
                 val list =
@@ -88,7 +96,7 @@ object InstalledAppsManager {
                         .readLines()
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }
-                        .take(10)
+                        .take(MAX_RECENT_APPS)
                 _lastUsed.value = list
                 AppLog.d(TAG, "Loaded ${list.size} last used apps from disk")
             } catch (e: Exception) {
@@ -104,10 +112,10 @@ object InstalledAppsManager {
         val list = _lastUsed.value.toMutableList()
         list.remove(packageName)
         list.add(0, packageName)
-        val trimmed = list.take(10)
+        val trimmed = list.take(MAX_RECENT_APPS)
         _lastUsed.value = trimmed
         try {
-            val file = File(context.filesDir, "gamefocus_last_used.txt")
+            val file = File(context.filesDir, FILE_LAST_USED)
             file.writeText(trimmed.joinToString("\n"))
             AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
         } catch (e: Exception) {
@@ -117,7 +125,7 @@ object InstalledAppsManager {
 
     private fun loadScrapedPackages(context: Context): Set<String> {
         if (!isScrapedPackagesLoaded) {
-            val file = File(context.filesDir, "gamefocus_scraped_apps.txt")
+            val file = File(context.filesDir, FILE_SCRAPED_APPS)
             if (file.exists()) {
                 try {
                     file.readLines().map { it.trim() }.filter { it.isNotEmpty() }.forEach {
@@ -141,7 +149,7 @@ object InstalledAppsManager {
             loadScrapedPackages(context)
             if (scrapedPackages.add(packageName)) {
                 try {
-                    val file = File(context.filesDir, "gamefocus_scraped_apps.txt")
+                    val file = File(context.filesDir, FILE_SCRAPED_APPS)
                     file.writeText(scrapedPackages.joinToString("\n"))
                     AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
                 } catch (e: Exception) {
@@ -172,7 +180,7 @@ object InstalledAppsManager {
                 packageManager.queryIntentActivities(mainIntent, 0)
             }
 
-        val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+        val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
 
         val apps =
             resolveInfoList
@@ -236,19 +244,17 @@ object InstalledAppsManager {
         if (isSettingsObserverRegistered) return
         isSettingsObserverRegistered = true
         scope.launch {
-            com.stormpanda.megingiard.ipc
-                .observeContentProvider(
-                    context,
-                    com.stormpanda.megingiard.ipc.MegingiardIpcContract.SETTINGS_URI,
-                ) { resolver, uri ->
-                    com.stormpanda.megingiard.ipc.IpcSettingsParser
-                        .parse(resolver, uri)
-                }.collect { config ->
-                    if (config.steamGridDbApiToken.isNotBlank()) {
-                        AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
-                        triggerSteamGridDbScraping(context, coversDir)
-                    }
+            observeContentProvider(
+                context,
+                MegingiardIpcContract.SETTINGS_URI,
+            ) { resolver, uri ->
+                IpcSettingsParser.parse(resolver, uri)
+            }.collect { config ->
+                if (config.steamGridDbApiToken.isNotBlank()) {
+                    AppLog.i(TAG, "SteamGridDB API key updated via IPC ContentObserver -> triggering cover scraping")
+                    triggerSteamGridDbScraping(context, coversDir)
                 }
+            }
         }
     }
 
@@ -260,9 +266,7 @@ object InstalledAppsManager {
 
         var apiKey = SettingsManager.steamGridDbApiToken.value
         if (apiKey.isBlank()) {
-            val ipcConfig =
-                com.stormpanda.megingiard.ipc.IpcSettingsParser
-                    .parse(context.contentResolver)
+            val ipcConfig = IpcSettingsParser.parse(context.contentResolver)
             apiKey = ipcConfig.steamGridDbApiToken
         }
         if (apiKey.isBlank()) {
