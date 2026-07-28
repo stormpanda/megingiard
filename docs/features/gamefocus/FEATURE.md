@@ -41,7 +41,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 ### FR-GF5: Dynamic Palette Gradients & Ambient Glow
 
 - The launcher top screen MUST dynamically extract primary and secondary color palettes from the active game cover image (or native app icon) using AndroidX `Palette`.
-- Poster cards MUST use the darkened primary color extracted from the app icon/artwork (`darkenedPrimaryColor`, HSV brightness reduced to 35%) as their card background color to maximize icon contrast, falling back to theme surface colors (`surfaceVariant` / `surface`) if no palette is extracted.
+- Poster cards MUST use the darkened primary color extracted from the app icon/artwork (`darkenedPrimaryColor`, HSV brightness reduced to 35%) as their card background color to maximize icon contrast, falling back to theme surface colors (`surfaceVariant` / `surface`) if no palette is extracted. Whenever artwork is updated or deactivated to use the app symbol, the palette cache is invalidated and colors are re-extracted from the active artwork or native app icon respectively.
 - Extracted game palettes MUST be persisted to disk (`filesDir/gamefocus_palettes.txt`) so dynamic colors render instantly (0ms) on cold app launch without waiting for background extraction.
 - Rendered app icon bitmaps MUST be cached to disk (`cacheDir/gamefocus_icons/${packageName}.png`) so first-time icon rendering decodes in ~1ms without blocking the UI thread.
 - The background MUST display a smooth animated 3-stop vertical gradient (`animatedPrimaryColor` -> `animatedSecondaryColor` -> `appBackground`) transitioning continuously as the user scrolls between games.

@@ -128,6 +128,7 @@ fun GameFocusArtworkDialog(
                 val coversDir = File(context.cacheDir, "gamefocus_covers")
                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
                 if (targetFile.exists()) targetFile.delete()
+                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
                 InstalledAppsManager.updateAppCover(appInfo.packageName, null)
                 InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
                 AppLog.i(TAG, "Reverted to app icon for ${appInfo.packageName}")
@@ -234,6 +235,7 @@ fun GameFocusArtworkDialog(
                                 tempFile.copyTo(targetFile, overwrite = true)
                                 tempFile.delete()
 
+                                AppPaletteExtractor.invalidatePalette(appInfo.packageName)
                                 InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath)
                                 InstalledAppsManager.markAppAsScraped(context, appInfo.packageName)
                                 AppLog.i(TAG, "Selected and updated artwork for ${appInfo.packageName}")

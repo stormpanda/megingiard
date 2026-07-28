@@ -112,6 +112,17 @@ object AppPaletteExtractor {
         }
     }
 
+    private fun getCacheKey(appInfo: InstalledAppInfo): String {
+        val coverPath = appInfo.coverPath
+        return if (coverPath != null) {
+            val file = File(coverPath)
+            val modTime = if (file.exists()) file.lastModified() else 0L
+            "${appInfo.packageName}:$coverPath:$modTime"
+        } else {
+            "${appInfo.packageName}:icon"
+        }
+    }
+
     suspend fun extractColorsAsync(
         appInfo: InstalledAppInfo,
         defaultPrimary: Color,
@@ -119,7 +130,7 @@ object AppPaletteExtractor {
     ): ExtractedAppPalette =
         withContext(Dispatchers.Default) {
             val startTime = System.currentTimeMillis()
-            val cacheKey = "${appInfo.packageName}:${appInfo.coverPath ?: "icon"}"
+            val cacheKey = getCacheKey(appInfo)
             val cached = paletteCache.get(cacheKey)
             if (cached != null) {
                 AppLog.d(TAG, "Palette cache HIT for ${appInfo.label} [0ms]")
@@ -140,7 +151,7 @@ object AppPaletteExtractor {
         defaultSecondary: Color,
     ): ExtractedAppPalette {
         val startTime = System.currentTimeMillis()
-        val cacheKey = "${appInfo.packageName}:${appInfo.coverPath ?: "icon"}"
+        val cacheKey = getCacheKey(appInfo)
         val cached = paletteCache.get(cacheKey)
         if (cached != null) {
             AppLog.d(TAG, "Palette cache HIT for ${appInfo.label} [0ms]")
@@ -175,7 +186,7 @@ object AppPaletteExtractor {
 
             val iconDrawable = appInfo.icon
             if (bitmap == null && iconDrawable != null) {
-                bitmap = iconDrawable.toBitmap()
+                bitmap = iconDrawable.toAndroidBitmap()
             }
 
             val targetBitmap = bitmap
