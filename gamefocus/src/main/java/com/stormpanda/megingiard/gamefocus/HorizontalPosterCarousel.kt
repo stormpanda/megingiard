@@ -89,31 +89,27 @@ fun HorizontalPosterCarousel(
                 cardBackgroundColor?.invoke(actualIndex, isSelected)
                     ?: if (isSelected) appColors.surfaceVariant else appColors.surface
 
-            // Synchronized continuous page offset calculation using getOffsetDistanceInPages
-            val rawOffset = pagerState.getOffsetDistanceInPages(page)
-            val pageOffset = rawOffset.absoluteValue
-
-            val scale = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
-            val alpha = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
-
-            // Compensate for center card scale expansion (1.18x) by pushing direct left/right neighbors outwards
-            val sign = kotlin.math.sign(rawOffset)
-            val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
             val extraPushPx =
                 remember(density) {
                     with(density) { HPC_EXTRA_PUSH_DP.toPx() }
                 }
-            val translationXShift = sign * neighborFactor * extraPushPx
 
             Box(
                 modifier =
                     Modifier
                         .size(posterWidth, posterHeight)
                         .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            translationX = translationXShift
-                            this.alpha = alpha
+                            val rawOffset = pagerState.getOffsetDistanceInPages(page)
+                            val pageOffset = rawOffset.absoluteValue
+                            val s = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
+                            val a = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)
+                            val sign = kotlin.math.sign(rawOffset)
+                            val neighborFactor = (1.0f - (rawOffset.absoluteValue - 1.0f).absoluteValue).coerceIn(0.0f, 1.0f)
+
+                            scaleX = s
+                            scaleY = s
+                            alpha = a
+                            translationX = sign * neighborFactor * extraPushPx
                         }.shadow(
                             elevation = if (isSelected) 20.dp else 4.dp,
                             shape = RoundedCornerShape(posterCornerRadius),

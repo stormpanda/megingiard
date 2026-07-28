@@ -40,6 +40,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -301,7 +302,7 @@ fun GameFocusArtworkDialog(
                         textStyle = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurface),
                         placeholder = {
                             Text(
-                                text = "Enter search term...",
+                                text = stringResource(R.string.steamgriddb_search_placeholder),
                                 style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
                             )
                         },
@@ -611,7 +612,18 @@ private fun ArtworkOptionItem(
 ) {
     val appColors = LocalAppColors.current
     var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var rawBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
     var isThumbLoading by remember { mutableStateOf(true) }
+
+    DisposableEffect(imageItem.thumb) {
+        onDispose {
+            rawBitmap?.let { bmp ->
+                if (!bmp.isRecycled) {
+                    bmp.recycle()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(imageItem.thumb) {
         withContext(Dispatchers.IO) {
@@ -623,6 +635,7 @@ private fun ArtworkOptionItem(
                 val stream = connection.getInputStream()
                 val decoded = BitmapFactory.decodeStream(stream)
                 stream.close()
+                rawBitmap = decoded
                 withContext(Dispatchers.Main) {
                     bitmap = decoded?.asImageBitmap()
                     isThumbLoading = false
@@ -643,7 +656,7 @@ private fun ArtworkOptionItem(
         if (bitmap != null) {
             Image(
                 bitmap = bitmap!!,
-                contentDescription = "SteamGridDB Artwork Option",
+                contentDescription = stringResource(R.string.steamgriddb_cd_artwork_option),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -654,7 +667,7 @@ private fun ArtworkOptionItem(
             )
         } else {
             Text(
-                text = "Preview Unavailable",
+                text = stringResource(R.string.steamgriddb_preview_unavailable),
                 style = MaterialTheme.typography.labelSmall.copy(color = appColors.onSurfaceSecondary),
                 textAlign = TextAlign.Center,
             )

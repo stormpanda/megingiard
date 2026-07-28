@@ -26,4 +26,7 @@
     <string name="steamgriddb_error_dismiss">OK</string>
     <string name="steamgriddb_cd_search">Suchen</string>
     <string name="steamgriddb_cd_cancel_edit">Bearbeitung abbrechen</string>
+    <string name="steamgriddb_search_placeholder">Suchbegriff eingeben…</string>
+    <string name="steamgriddb_preview_unavailable">Vorschau nicht verfügbar</string>
+    <string name="steamgriddb_cd_artwork_option">SteamGridDB Grafik-Option</string>
 </resources>

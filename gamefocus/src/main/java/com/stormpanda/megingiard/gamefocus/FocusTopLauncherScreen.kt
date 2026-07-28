@@ -53,6 +53,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
@@ -254,16 +255,19 @@ fun FocusTopLauncherScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors =
-                                listOf(
-                                    animatedPrimaryColor.copy(alpha = 0.35f),
-                                    animatedSecondaryColor.copy(alpha = 0.18f),
-                                    appColors.appBackground,
+                    .drawBehind {
+                        drawRect(
+                            brush =
+                                Brush.verticalGradient(
+                                    colors =
+                                        listOf(
+                                            animatedPrimaryColor.copy(alpha = 0.35f),
+                                            animatedSecondaryColor.copy(alpha = 0.18f),
+                                            appColors.appBackground,
+                                        ),
                                 ),
-                        ),
-                    ),
+                        )
+                    },
         ) {
             // Plane 1: Full-Screen Gallery & App Title Plane
             Box(
