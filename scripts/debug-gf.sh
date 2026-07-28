@@ -20,6 +20,10 @@ log_info() {
     echo -e "\033[1;34m[INFO]\033[0m $1"
 }
 
+log_warn() {
+    echo -e "\033[1;33m[WARN]\033[0m $1"
+}
+
 log_success() {
     echo -e "\033[1;32m[SUCCESS]\033[0m $1"
 }
@@ -65,25 +69,34 @@ install_debug_apk() {
 
     ADB="${ADB:-$(command -v adb 2>/dev/null || echo "$HOME/Library/Android/sdk/platform-tools/adb")}"
     DEVICE="${DEVICE:-}"
-    ADB_CMD=("$ADB")
-    if [[ -n "$DEVICE" ]]; then
-        ADB_CMD+=("-s" "$DEVICE")
-    fi
 
     if command -v "$ADB" >/dev/null 2>&1 || [[ -x "$ADB" ]]; then
-        if "${ADB_CMD[@]}" devices 2>/dev/null | grep -v "List of devices" | grep -qE '[[:space:]]device$'; then
-            log_info "Thor/Android device detected via ADB."
-            log_info "Installing Game Focus debug APK on device ($debug_apk)..."
-            "${ADB_CMD[@]}" install -r "$debug_apk"
-            log_success "Successfully installed Game Focus debug APK on device."
-        else
-            if [[ "$strict_mode" == "true" ]]; then
-                log_error "No connected Thor/Android device found via ADB."
-                exit 1
+        if [[ -z "$DEVICE" ]]; then
+            local raw_devices=(${(f)"$("$ADB" devices 2>/dev/null | grep -v "List of devices" | grep -E '[[:space:]]device$' | awk '{print $1}')"})
+            local devices=(${raw_devices:#})
+            if (( ${#devices} == 0 )); then
+                if [[ "$strict_mode" == "true" ]]; then
+                    log_error "No connected Thor/Android device found via ADB."
+                    exit 1
+                else
+                    log_info "No connected Thor/Android device found via ADB. Skipping device install."
+                    return 0
+                fi
+            elif (( ${#devices} == 1 )); then
+                DEVICE="${devices[1]}"
+                log_info "Thor/Android device detected via ADB ($DEVICE)."
             else
-                log_info "No connected Thor/Android device found via ADB. Skipping device install."
+                DEVICE="${devices[1]}"
+                log_warn "Multiple ADB devices detected (${(j:, :)devices}). Using first device: $DEVICE"
             fi
+        else
+            log_info "Using explicitly targeted ADB device ($DEVICE)."
         fi
+
+        ADB_CMD=("$ADB" "-s" "$DEVICE")
+        log_info "Installing Game Focus debug APK on device ($debug_apk)..."
+        "${ADB_CMD[@]}" install -r "$debug_apk"
+        log_success "Successfully installed Game Focus debug APK on device."
     else
         if [[ "$strict_mode" == "true" ]]; then
             log_error "ADB executable not found at '$ADB'."
