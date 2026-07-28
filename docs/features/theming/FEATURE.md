@@ -148,6 +148,14 @@ MaterialTheme(
 
 `paletteFor(mode, userAccent)` applies the user-selected accent only when `mode.supportsCustomAccent == true`.
 
+### Inter-Process Theme Synchronization — `MegingiardSettingsProvider` & `MegingiardThemeClient`
+
+For external applications (such as the standalone Megingiard Game Focus launcher app `:gamefocus`), theme settings are shared across process boundaries via Android's `ContentProvider` and `ContentObserver` architecture:
+
+- **IPC Contract & Parsing (`domain/src/main/java/com/stormpanda/megingiard/ipc/`):** Defines `MegingiardIpcContract` (`content://com.stormpanda.megingiard.provider/theme`), `IpcThemeParser`, `IpcSettingsParser`, and the generic `observeContentProvider` reactive Flow extension.
+- **Provider Host (`MegingiardSettingsProvider.kt` in `:app`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
+- **Observer Client (`MegingiardThemeClient.kt` in `:gamefocus`):** Consumes `observeContentProvider()` to query initial state synchronously on launch and reactively update `LocalAppColors` whenever theme change notifications arrive.
+
 ### Secondary Display — `MirrorPresentation.kt`
 
 `MirrorPresentation` independently collects `SettingsManager.themeMode` and `SettingsManager.accentColor` and wraps its own Compose tree with the same provider, ensuring the Mirror screen also responds to theme changes and uses the same effective accent.

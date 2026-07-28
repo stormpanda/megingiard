@@ -82,7 +82,7 @@ import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
-import com.stormpanda.megingiard.provider.MegingiardThemeProvider
+import com.stormpanda.megingiard.provider.MegingiardSettingsProvider
 import com.stormpanda.megingiard.security.SignatureGuard
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
@@ -272,7 +272,8 @@ class MainActivity : ComponentActivity() {
         MacroExecutor.init(this)
 
         SettingsManager.onThemeChangedListener = {
-            MegingiardThemeProvider.notifyThemeChanged(this)
+            MegingiardSettingsProvider.notifyThemeChanged(this)
+            MegingiardSettingsProvider.notifySettingsChanged(this)
         }
 
         val hasCreds =

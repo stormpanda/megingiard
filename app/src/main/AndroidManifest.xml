@@ -71,7 +71,7 @@
         </service>
 
         <provider
-            android:name=".provider.MegingiardThemeProvider"
+            android:name=".provider.MegingiardSettingsProvider"
             android:authorities="com.stormpanda.megingiard.provider"
             android:exported="true" />
 

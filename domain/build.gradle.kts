@@ -143,5 +143,6 @@ dependencies {
     implementation(libs.conscrypt.android)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
 }

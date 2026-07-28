@@ -227,9 +227,15 @@ object InstalledAppsManager {
         context: Context,
         coversDir: File,
     ) {
-        val apiKey = SettingsManager.steamGridDbApiToken.value
+        var apiKey = SettingsManager.steamGridDbApiToken.value
         if (apiKey.isBlank()) {
-            AppLog.d(TAG, "SteamGridDB API key is blank, skipping cover scraping")
+            val ipcConfig =
+                com.stormpanda.megingiard.ipc.IpcSettingsParser
+                    .parse(context.contentResolver)
+            apiKey = ipcConfig.steamGridDbApiToken
+        }
+        if (apiKey.isBlank()) {
+            AppLog.d(TAG, "SteamGridDB API key is blank locally and via IPC, skipping cover scraping")
             return
         }
 
