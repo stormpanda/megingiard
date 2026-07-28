@@ -272,7 +272,8 @@ class MainActivity : ComponentActivity() {
         MacroExecutor.init(this)
 
         if (BuildConfig.IS_GAME_FOCUS_VARIANT) {
-            AppLog.i(TAG, "gameFocus variant active -> launching FocusTopLauncherActivity on primary display")
+            val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+            AppLog.i(TAG, "gameFocus variant active (displayId=$currentDisplayId)")
             try {
                 val options = ActivityOptions.makeBasic()
                 options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
@@ -283,6 +284,29 @@ class MainActivity : ComponentActivity() {
                 startActivity(launcherIntent, options.toBundle())
             } catch (e: Exception) {
                 AppLog.e(TAG, "Failed to launch FocusTopLauncherActivity: ${e.message}", e)
+            }
+
+            if (currentDisplayId == Display.DEFAULT_DISPLAY) {
+                val secondaryDisplay = DisplayDetector.findSecondaryDisplay(this)
+                if (secondaryDisplay != null) {
+                    AppLog.i(
+                        TAG,
+                        "gameFocus variant started on primary display -> re-targeting MainActivity to secondary display id=${secondaryDisplay.displayId}",
+                    )
+                    try {
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(secondaryDisplay.displayId)
+                        val companionIntent =
+                            Intent(this, MainActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                            }
+                        startActivity(companionIntent, options.toBundle())
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to re-target MainActivity to secondary display: ${e.message}", e)
+                    }
+                    finish()
+                    return
+                }
             }
         }
 

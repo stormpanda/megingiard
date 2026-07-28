@@ -14,6 +14,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - Megingiard Game Focus MUST run its companion utility interface on the bottom screen (Display 4).
 - It MUST launch the top screen launcher window (`FocusTopLauncherActivity`) on the primary display (`Display.DEFAULT_DISPLAY`, Display 0).
+- If `MainActivity` is started on the primary display (`Display.DEFAULT_DISPLAY`), it MUST launch `FocusTopLauncherActivity` on Display 0 and automatically re-target itself to the secondary bottom display (`DisplayDetector.findSecondaryDisplay(context)`, Display 4) via `ActivityOptions.setLaunchDisplayId()`, finishing the top-display `MainActivity` instance to prevent false-positive `WrongScreenOverlay` rendering.
 
 ### FR-GF2: 2:3 Poster Carousel & Gamepad Navigation
 
