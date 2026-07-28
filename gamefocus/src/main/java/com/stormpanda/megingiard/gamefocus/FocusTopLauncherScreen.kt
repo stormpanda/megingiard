@@ -17,7 +17,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -71,7 +69,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
-import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.focus.LetterNavigationHelper
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -86,6 +83,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.FileOutputStream
 
 private const val TAG = "FocusTopLauncherScreen"
 
@@ -761,7 +759,7 @@ private object FocusImageCache {
             try {
                 val androidBmp = appInfo.icon?.toAndroidBitmap()
                 if (androidBmp != null) {
-                    java.io.FileOutputStream(iconFile).use { out ->
+                    FileOutputStream(iconFile).use { out ->
                         androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                     }
                     androidBmp.recycle()
