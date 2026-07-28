@@ -23,6 +23,38 @@ class LetterNavigationHelperTest {
     }
 
     @Test
+    fun testGetUniqueStartingLetters() {
+        val apps =
+            listOf(
+                makeApp("Apex"),
+                makeApp("Asphalt"),
+                makeApp("Brawl"),
+                makeApp("Call of Duty"),
+                makeApp("Castlevania"),
+                makeApp("Doom"),
+            )
+        val unique = LetterNavigationHelper.getUniqueStartingLetters(apps)
+        assertEquals(listOf('A', 'B', 'C', 'D'), unique)
+    }
+
+    @Test
+    fun testFindFirstIndexOfLetter() {
+        val apps =
+            listOf(
+                makeApp("Apex"), // 0: A
+                makeApp("Asphalt"), // 1: A
+                makeApp("Brawl"), // 2: B
+                makeApp("Call of Duty"), // 3: C
+                makeApp("Castlevania"), // 4: C
+                makeApp("Doom"), // 5: D
+            )
+        assertEquals(0, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'A'))
+        assertEquals(2, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'B'))
+        assertEquals(3, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'C'))
+        assertEquals(5, LetterNavigationHelper.findFirstIndexOfLetter(apps, 'D'))
+    }
+
+    @Test
     fun testFindNextLetterAppIndex() {
         val apps =
             listOf(
@@ -82,6 +114,7 @@ class LetterNavigationHelperTest {
     fun testEdgeCases() {
         assertEquals(0, LetterNavigationHelper.findNextLetterAppIndex(emptyList(), 0))
         assertEquals(0, LetterNavigationHelper.findPreviousLetterAppIndex(emptyList(), 0))
+        assertEquals(emptyList<Char>(), LetterNavigationHelper.getUniqueStartingLetters(emptyList()))
 
         val single = listOf(makeApp("Only Game"))
         assertEquals(0, LetterNavigationHelper.findNextLetterAppIndex(single, 0))

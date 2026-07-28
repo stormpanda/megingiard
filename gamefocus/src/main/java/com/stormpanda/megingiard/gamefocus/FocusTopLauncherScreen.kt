@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -80,8 +81,10 @@ import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.io.File
 
 private const val TAG = "FocusTopLauncherScreen"
@@ -188,28 +191,87 @@ fun FocusTopLauncherScreen(
         }
     }
 
-    // Handle Gamepad L1 step (previous starting letter)
-    LaunchedEffect(prevLetterTrigger) {
-        if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
-            val targetIndex = LetterNavigationHelper.findPreviousLetterAppIndex(apps, activePagerState.currentPage)
-            AppLog.d(TAG, "L1 letter skip for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$targetIndex")
-            activePagerState.animateScrollToPage(targetIndex)
-        }
-    }
-
-    // Handle Gamepad R1 step (next starting letter)
-    LaunchedEffect(nextLetterTrigger) {
-        if (nextLetterTrigger > 0 && apps.isNotEmpty()) {
-            val targetIndex = LetterNavigationHelper.findNextLetterAppIndex(apps, activePagerState.currentPage)
-            AppLog.d(TAG, "R1 letter skip for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$targetIndex")
-            activePagerState.animateScrollToPage(targetIndex)
-        }
-    }
+    val scope = rememberCoroutineScope()
+    var isLetterOverlayActive by remember { mutableStateOf(false) }
+    var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
+    var letterCommitJob by remember { mutableStateOf<Job?>(null) }
 
     val currentApp =
         remember(activePagerState.currentPage, apps) {
             apps.getOrNull(activePagerState.currentPage)
         }
+
+    // Reset letter overlay on category switch or dialog edit
+    LaunchedEffect(selectedCategory, editingAppInfo) {
+        letterCommitJob?.cancel()
+        isLetterOverlayActive = false
+    }
+
+    // Handle Gamepad L1 step (previous starting letter in letter carousel)
+    LaunchedEffect(prevLetterTrigger) {
+        if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
+            val uniqueLetters = LetterNavigationHelper.getUniqueStartingLetters(apps)
+            if (uniqueLetters.isNotEmpty()) {
+                if (!isLetterOverlayActive) {
+                    isLetterOverlayActive = true
+                    val currentLetter = currentApp?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                    selectedLetterNavIndex = initialIndex
+                }
+                selectedLetterNavIndex = if (selectedLetterNavIndex > 0) selectedLetterNavIndex - 1 else uniqueLetters.size - 1
+                AppLog.d(
+                    TAG,
+                    "L1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                )
+
+                letterCommitJob?.cancel()
+                letterCommitJob =
+                    scope.launch {
+                        delay(500L)
+                        val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
+                        if (targetLetter != null) {
+                            val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
+                            AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                            activePagerState.animateScrollToPage(targetAppIndex)
+                        }
+                        isLetterOverlayActive = false
+                    }
+            }
+        }
+    }
+
+    // Handle Gamepad R1 step (next starting letter in letter carousel)
+    LaunchedEffect(nextLetterTrigger) {
+        if (nextLetterTrigger > 0 && apps.isNotEmpty()) {
+            val uniqueLetters = LetterNavigationHelper.getUniqueStartingLetters(apps)
+            if (uniqueLetters.isNotEmpty()) {
+                if (!isLetterOverlayActive) {
+                    isLetterOverlayActive = true
+                    val currentLetter = currentApp?.let { LetterNavigationHelper.getStartingLetter(it.label) }
+                    val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
+                    selectedLetterNavIndex = initialIndex
+                }
+                selectedLetterNavIndex = (selectedLetterNavIndex + 1) % uniqueLetters.size
+                AppLog.d(
+                    TAG,
+                    "R1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                )
+
+                letterCommitJob?.cancel()
+                letterCommitJob =
+                    scope.launch {
+                        delay(500L)
+                        val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
+                        if (targetLetter != null) {
+                            val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
+                            AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
+                            activePagerState.animateScrollToPage(targetAppIndex)
+                        }
+                        isLetterOverlayActive = false
+                    }
+            }
+        }
+    }
 
     // Bi-directional synchronization: update lastHighlightedPackages and notify focused app
     LaunchedEffect(currentApp, selectedCategory) {
@@ -382,23 +444,41 @@ fun FocusTopLauncherScreen(
 
                                 Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
 
-                                // Focused App Title
-                                if (currentApp != null) {
-                                    Text(
-                                        text = currentApp.label,
-                                        style =
-                                            MaterialTheme.typography.headlineLarge.copy(
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = appColors.onSurface,
-                                            ),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = TextAlign.Center,
-                                        modifier =
-                                            Modifier
-                                                .zIndex(1f)
-                                                .padding(horizontal = 140.dp),
-                                    )
+                                // Focused App Title or Horizontal Letter Carousel Overlay
+                                val uniqueLetters = remember(apps) { LetterNavigationHelper.getUniqueStartingLetters(apps) }
+
+                                AnimatedContent(
+                                    targetState = isLetterOverlayActive,
+                                    transitionSpec = {
+                                        (slideInVertically { height -> height / 2 } + fadeIn())
+                                            .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
+                                    },
+                                    label = "TitleLetterCarouselTransition",
+                                    modifier =
+                                        Modifier
+                                            .zIndex(1f)
+                                            .padding(horizontal = 40.dp),
+                                ) { isOverlay ->
+                                    if (isOverlay && uniqueLetters.isNotEmpty()) {
+                                        HorizontalLetterCarousel(
+                                            letters = uniqueLetters,
+                                            selectedIndex = selectedLetterNavIndex,
+                                        )
+                                    } else {
+                                        if (currentApp != null) {
+                                            Text(
+                                                text = currentApp.label,
+                                                style =
+                                                    MaterialTheme.typography.headlineLarge.copy(
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = appColors.onSurface,
+                                                    ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

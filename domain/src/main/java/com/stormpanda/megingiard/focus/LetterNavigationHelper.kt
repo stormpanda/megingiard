@@ -14,6 +14,27 @@ object LetterNavigationHelper {
         return firstChar.uppercaseChar()
     }
 
+    fun getUniqueStartingLetters(apps: List<InstalledAppInfo>): List<Char> {
+        if (apps.isEmpty()) return emptyList()
+        val set = LinkedHashSet<Char>()
+        for (app in apps) {
+            set.add(getStartingLetter(app.label))
+        }
+        return set.toList()
+    }
+
+    fun findFirstIndexOfLetter(
+        apps: List<InstalledAppInfo>,
+        targetLetter: Char,
+    ): Int {
+        for (i in apps.indices) {
+            if (getStartingLetter(apps[i].label) == targetLetter) {
+                return i
+            }
+        }
+        return 0
+    }
+
     fun findNextLetterAppIndex(
         apps: List<InstalledAppInfo>,
         currentIndex: Int,
@@ -101,17 +122,5 @@ object LetterNavigationHelper {
             "findPreviousLetterAppIndex (wrap-around): current=$safeIndex ('$currentLetter') -> target=$firstIndexOfLastGroup ('$lastLetter')",
         )
         return firstIndexOfLastGroup
-    }
-
-    private fun findFirstIndexOfLetter(
-        apps: List<InstalledAppInfo>,
-        targetLetter: Char,
-    ): Int {
-        for (i in apps.indices) {
-            if (getStartingLetter(apps[i].label) == targetLetter) {
-                return i
-            }
-        }
-        return 0
     }
 }
