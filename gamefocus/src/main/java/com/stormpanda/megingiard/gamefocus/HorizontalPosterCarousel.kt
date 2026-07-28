@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.gamefocus
 
-import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,21 +22,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
-import android.graphics.Paint as NativePaint
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
 private val HPC_DEFAULT_POSTER_HEIGHT = 262.dp
@@ -45,9 +38,6 @@ private val HPC_DEFAULT_POSTER_SPACING = 13.5.dp
 private val HPC_DEFAULT_CAROUSEL_HEIGHT = 310.dp
 private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
 private val HPC_EXTRA_PUSH_DP = 16.dp
-private val HPC_GLOW_BLUR_RADIUS = 16.dp
-private val HPC_GLOW_STROKE_WIDTH = 8.dp
-private const val HPC_GLOW_ALPHA = 0.85f
 
 @Composable
 fun HorizontalPosterCarousel(
@@ -67,7 +57,6 @@ fun HorizontalPosterCarousel(
     if (itemCount <= 0) return
 
     val appColors = LocalAppColors.current
-    val activeGlowColor = appColors.accent
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -124,38 +113,9 @@ fun HorizontalPosterCarousel(
                             scaleY = s
                             alpha = a
                             translationX = sign * neighborFactor * extraPushPx
-                        }.drawBehind {
-                            if (isSelected) {
-                                val cornerRadiusPx = posterCornerRadius.toPx()
-                                val blurRadiusPx = HPC_GLOW_BLUR_RADIUS.toPx()
-                                val strokeWidthPx = HPC_GLOW_STROKE_WIDTH.toPx()
-                                val glowColorArgb = activeGlowColor.copy(alpha = HPC_GLOW_ALPHA).toArgb()
-
-                                drawIntoCanvas { canvas ->
-                                    val nativePaint =
-                                        NativePaint().apply {
-                                            isAntiAlias = true
-                                            color = glowColorArgb
-                                            style = NativePaint.Style.STROKE
-                                            strokeWidth = strokeWidthPx
-                                            maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
-                                        }
-                                    canvas.nativeCanvas.drawRoundRect(
-                                        0f,
-                                        0f,
-                                        size.width,
-                                        size.height,
-                                        cornerRadiusPx,
-                                        cornerRadiusPx,
-                                        nativePaint,
-                                    )
-                                }
-                            }
                         }.shadow(
                             elevation = if (isSelected) 20.dp else 4.dp,
                             shape = RoundedCornerShape(posterCornerRadius),
-                            ambientColor = if (isSelected) activeGlowColor else Color.Black,
-                            spotColor = if (isSelected) activeGlowColor else Color.Black,
                         ).clip(RoundedCornerShape(posterCornerRadius))
                         .background(resolvedCardBg)
                         .border(

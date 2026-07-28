@@ -45,7 +45,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Extracted game palettes MUST be persisted to disk (`SharedPreferences` under `gamefocus_palettes`) so dynamic colors render instantly (0ms) on cold app launch without waiting for background extraction.
 - Rendered app icon bitmaps MUST be cached to disk (`cacheDir/gamefocus_icons/${packageName}.png`) so first-time icon rendering decodes in ~1ms without blocking the UI thread.
 - The background MUST display a smooth animated 3-stop vertical gradient (`animatedPrimaryColor` -> `animatedSecondaryColor` -> `appBackground`) transitioning continuously as the user scrolls between games.
-- The focused game poster card MUST display a vibrant multi-layered 360-degree border glow in the active theme's accent color (`appColors.accent`) along with elevation depth shadow, while the launcher background gradient dynamically adapts to the extracted artwork primary color (`animatedPrimaryColor`).
+- The focused game poster card MUST display an elevation depth shadow (with accent border highlighting the active card), while the launcher background gradient dynamically adapts to the extracted artwork primary color (`animatedPrimaryColor`).
 
 ### FR-GF6: Dual-Display Target App Launching
 
