@@ -179,11 +179,12 @@ object InstalledAppsManager {
                 .filter { resolveInfo ->
                     resolveInfo.activityInfo.packageName != context.packageName
                 }.map { resolveInfo ->
-                    val label =
+                    val packageName = resolveInfo.activityInfo.packageName
+                    val rawLabel =
                         resolveInfo.activityInfo.applicationInfo
                             .loadLabel(packageManager)
                             .toString()
-                    val packageName = resolveInfo.activityInfo.packageName
+                    val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
                     val activityName = resolveInfo.activityInfo.name
                     val icon = resolveInfo.loadIcon(packageManager)
 
