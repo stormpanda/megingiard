@@ -77,7 +77,7 @@ Audit every line of code against §8 of `AGENTS.md`:
 
 - **Imports (§8.2)**: No star imports (`import foo.*`). No inline fully-qualified names in code bodies — all moved to top-level `import` statements.
 - **Constants (§8.3)**: Extract all magic numbers to named constants (`private const val`). File-scoped UI colors must use feature-prefixed `SCREAMING_SNAKE_CASE` (e.g., `GS_BG`, `SW_GAP`).
-- **Logging (§8.4)**: Zero calls to `android.util.Log`. All logging routed through `AppLog` with a file-scoped `private const val TAG`. Mandatory logging at lifecycle milestones, error branches, and state mutations. No continuous per-frame event logging.
+- **Logging (§8.4)**: Zero calls to `android.util.Log`. All logging routed through `AppLog` with a file-scoped `private const val TAG`. Mandatory logging at lifecycle milestones, error branches, and state mutations. No continuous per-frame event logging. **If an unused `TAG` constant is found in a file, logging MUST be added using `AppLog` (do NOT remove `TAG`) to fulfill logging coverage requirements.**
 - **Kotlin Features (§8.1)**: Use `enum.entries` (never `enum.values()`). Use `kotlin.math.min`/`max`. Avoid anonymous destructuring of `Triple` in lambdas.
 
 ---

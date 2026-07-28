@@ -99,6 +99,7 @@ private val FTL_TITLE_GAP = 25.dp
 private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
+private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 
 @Composable
 fun FocusTopLauncherScreen(
@@ -138,6 +139,8 @@ fun FocusTopLauncherScreen(
     LaunchedEffect(Unit) {
         AppPaletteExtractor.init(context)
     }
+
+    val uniqueLetters = remember(apps) { LetterNavigationHelper.getUniqueStartingLetters(apps) }
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
@@ -210,7 +213,6 @@ fun FocusTopLauncherScreen(
     // Handle Gamepad L1 step (previous starting letter in letter carousel)
     LaunchedEffect(prevLetterTrigger) {
         if (prevLetterTrigger > 0 && apps.isNotEmpty()) {
-            val uniqueLetters = LetterNavigationHelper.getUniqueStartingLetters(apps)
             if (uniqueLetters.isNotEmpty()) {
                 if (!isLetterOverlayActive) {
                     isLetterOverlayActive = true
@@ -218,7 +220,7 @@ fun FocusTopLauncherScreen(
                     val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
                     selectedLetterNavIndex = initialIndex
                 }
-                selectedLetterNavIndex = if (selectedLetterNavIndex > 0) selectedLetterNavIndex - 1 else uniqueLetters.size - 1
+                selectedLetterNavIndex = (selectedLetterNavIndex - 1).coerceAtLeast(0)
                 AppLog.d(
                     TAG,
                     "L1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
@@ -227,7 +229,7 @@ fun FocusTopLauncherScreen(
                 letterCommitJob?.cancel()
                 letterCommitJob =
                     scope.launch {
-                        delay(500L)
+                        delay(FTL_LETTER_NAV_DEBOUNCE_MS)
                         val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
                         if (targetLetter != null) {
                             val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
@@ -243,7 +245,6 @@ fun FocusTopLauncherScreen(
     // Handle Gamepad R1 step (next starting letter in letter carousel)
     LaunchedEffect(nextLetterTrigger) {
         if (nextLetterTrigger > 0 && apps.isNotEmpty()) {
-            val uniqueLetters = LetterNavigationHelper.getUniqueStartingLetters(apps)
             if (uniqueLetters.isNotEmpty()) {
                 if (!isLetterOverlayActive) {
                     isLetterOverlayActive = true
@@ -251,7 +252,7 @@ fun FocusTopLauncherScreen(
                     val initialIndex = if (currentLetter != null) uniqueLetters.indexOf(currentLetter).coerceAtLeast(0) else 0
                     selectedLetterNavIndex = initialIndex
                 }
-                selectedLetterNavIndex = (selectedLetterNavIndex + 1) % uniqueLetters.size
+                selectedLetterNavIndex = (selectedLetterNavIndex + 1).coerceAtMost(uniqueLetters.size - 1)
                 AppLog.d(
                     TAG,
                     "R1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
@@ -260,7 +261,7 @@ fun FocusTopLauncherScreen(
                 letterCommitJob?.cancel()
                 letterCommitJob =
                     scope.launch {
-                        delay(500L)
+                        delay(FTL_LETTER_NAV_DEBOUNCE_MS)
                         val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
                         if (targetLetter != null) {
                             val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
@@ -445,8 +446,6 @@ fun FocusTopLauncherScreen(
                                 Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
 
                                 // Focused App Title or Horizontal Letter Carousel Overlay
-                                val uniqueLetters = remember(apps) { LetterNavigationHelper.getUniqueStartingLetters(apps) }
-
                                 AnimatedContent(
                                     targetState = isLetterOverlayActive,
                                     transitionSpec = {
