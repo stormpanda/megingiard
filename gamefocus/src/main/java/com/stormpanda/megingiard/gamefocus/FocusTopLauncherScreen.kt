@@ -67,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
@@ -335,7 +336,7 @@ fun FocusTopLauncherScreen(
                                     posterWidth = FTL_POSTER_WIDTH,
                                     posterHeight = FTL_POSTER_HEIGHT,
                                     posterSpacing = FTL_POSTER_SPACING,
-                                    carouselHeight = 290.dp,
+                                    carouselHeight = 310.dp,
                                     posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                     cardBackgroundColor = { actualIndex, isSelected ->
                                         val appInfo = apps.getOrNull(actualIndex)
@@ -372,7 +373,10 @@ fun FocusTopLauncherScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(horizontal = 140.dp),
+                                        modifier =
+                                            Modifier
+                                                .zIndex(1f)
+                                                .padding(horizontal = 140.dp),
                                     )
                                 }
                             }

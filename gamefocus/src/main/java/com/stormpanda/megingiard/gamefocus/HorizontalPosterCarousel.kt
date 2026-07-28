@@ -1,5 +1,9 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.graphics.BlurMaskFilter
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,15 +26,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import android.graphics.Paint as NativePaint
 
 private val HPC_DEFAULT_POSTER_WIDTH = 175.dp
 private val HPC_DEFAULT_POSTER_HEIGHT = 262.dp
@@ -38,6 +48,12 @@ private val HPC_DEFAULT_POSTER_SPACING = 13.5.dp
 private val HPC_DEFAULT_CAROUSEL_HEIGHT = 310.dp
 private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
 private val HPC_EXTRA_PUSH_DP = 16.dp
+private val HPC_SELECTED_ELEVATION = 16.dp
+private val HPC_UNSELECTED_ELEVATION = 4.dp
+private val HPC_VIBRANT_SHADOW_BLUR = 16.dp
+private val HPC_VIBRANT_SHADOW_SPREAD = 2.dp
+private const val HPC_VIBRANT_SHADOW_ALPHA = 0.45f
+private const val HPC_SHADOW_FADE_DURATION_MS = 300
 
 @Composable
 fun HorizontalPosterCarousel(
@@ -77,6 +93,13 @@ fun HorizontalPosterCarousel(
         ) { page ->
             val actualIndex = Math.floorMod(page, itemCount)
             val isSelected = page == targetPage
+            val isSettledAndSelected = isSelected && !pagerState.isScrollInProgress && page == pagerState.settledPage
+
+            val shadowAlpha by animateFloatAsState(
+                targetValue = if (isSettledAndSelected) 1f else 0f,
+                animationSpec = tween(durationMillis = HPC_SHADOW_FADE_DURATION_MS, easing = FastOutSlowInEasing),
+                label = "PosterShadowFadeIn",
+            )
 
             val resolvedCardBg =
                 cardBackgroundColor?.invoke(actualIndex, isSelected)
@@ -113,9 +136,37 @@ fun HorizontalPosterCarousel(
                             scaleY = s
                             alpha = a
                             translationX = sign * neighborFactor * extraPushPx
+                        }.drawBehind {
+                            if (shadowAlpha > 0f) {
+                                val cornerRadiusPx = posterCornerRadius.toPx()
+                                val blurRadiusPx = HPC_VIBRANT_SHADOW_BLUR.toPx()
+                                val spreadPx = HPC_VIBRANT_SHADOW_SPREAD.toPx()
+                                val shadowColorArgb = appColors.accent.copy(alpha = HPC_VIBRANT_SHADOW_ALPHA * shadowAlpha).toArgb()
+
+                                drawIntoCanvas { canvas ->
+                                    val nativePaint =
+                                        NativePaint().apply {
+                                            isAntiAlias = true
+                                            color = shadowColorArgb
+                                            style = NativePaint.Style.FILL
+                                            maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                        }
+                                    canvas.nativeCanvas.drawRoundRect(
+                                        -spreadPx,
+                                        -spreadPx,
+                                        size.width + spreadPx,
+                                        size.height + spreadPx,
+                                        cornerRadiusPx + spreadPx,
+                                        cornerRadiusPx + spreadPx,
+                                        nativePaint,
+                                    )
+                                }
+                            }
                         }.shadow(
-                            elevation = if (isSelected) 20.dp else 4.dp,
+                            elevation = lerp(HPC_UNSELECTED_ELEVATION, HPC_SELECTED_ELEVATION, shadowAlpha),
                             shape = RoundedCornerShape(posterCornerRadius),
+                            ambientColor = if (shadowAlpha > 0f) appColors.accent.copy(alpha = shadowAlpha) else Color.Black,
+                            spotColor = if (shadowAlpha > 0f) appColors.accent.copy(alpha = shadowAlpha) else Color.Black,
                         ).clip(RoundedCornerShape(posterCornerRadius))
                         .background(resolvedCardBg)
                         .border(
