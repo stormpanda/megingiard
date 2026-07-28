@@ -56,6 +56,7 @@ fun HorizontalPosterCarousel(
     carouselHeight: Dp = HPC_DEFAULT_CAROUSEL_HEIGHT,
     posterCornerRadius: Dp = HPC_DEFAULT_CORNER_RADIUS,
     ambientGlowColor: Color = Color.Unspecified,
+    cardBackgroundColor: ((actualIndex: Int, isSelected: Boolean) -> Color)? = null,
     itemContent: @Composable (actualIndex: Int, isSelected: Boolean) -> Unit,
 ) {
     if (itemCount <= 0) return
@@ -82,6 +83,10 @@ fun HorizontalPosterCarousel(
         ) { page ->
             val actualIndex = Math.floorMod(page, itemCount)
             val isSelected = page == targetPage
+
+            val resolvedCardBg =
+                cardBackgroundColor?.invoke(actualIndex, isSelected)
+                    ?: if (isSelected) appColors.surfaceVariant else appColors.surface
 
             // Synchronized continuous page offset calculation using getOffsetDistanceInPages
             val rawOffset = pagerState.getOffsetDistanceInPages(page)
@@ -114,9 +119,8 @@ fun HorizontalPosterCarousel(
                             ambientColor = if (isSelected) activeGlowColor else Color.Black,
                             spotColor = if (isSelected) activeGlowColor else Color.Black,
                         ).clip(RoundedCornerShape(posterCornerRadius))
-                        .background(
-                            if (isSelected) appColors.surfaceVariant else appColors.surface,
-                        ).border(
+                        .background(resolvedCardBg)
+                        .border(
                             width = if (isSelected) 3.dp else 1.dp,
                             color = if (isSelected) appColors.accent else appColors.divider,
                             shape = RoundedCornerShape(posterCornerRadius),

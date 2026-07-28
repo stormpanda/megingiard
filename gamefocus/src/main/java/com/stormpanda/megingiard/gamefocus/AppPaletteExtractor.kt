@@ -20,11 +20,24 @@ private const val TAG = "AppPaletteExtractor"
 private const val PALETTE_CACHE_SIZE = 100
 private const val PALETTE_TARGET_AREA = 128 * 128
 private const val PALETTE_FILE_NAME = "gamefocus_palettes.txt"
+private const val CARD_BG_DARKEN_FACTOR = 0.35f
 
 data class ExtractedAppPalette(
     val primaryColor: Color,
     val secondaryColor: Color,
-)
+    val isExtracted: Boolean = true,
+) {
+    val darkenedPrimaryColor: Color
+        get() = primaryColor.darken(CARD_BG_DARKEN_FACTOR)
+}
+
+fun Color.darken(factor: Float = CARD_BG_DARKEN_FACTOR): Color {
+    if (this == Color.Unspecified) return Color.Unspecified
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(this.toArgb(), hsv)
+    hsv[2] = (hsv[2] * factor).coerceIn(0f, 1f)
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
 
 object AppPaletteExtractor {
     private val paletteCache = LruCache<String, ExtractedAppPalette>(PALETTE_CACHE_SIZE)
@@ -51,7 +64,7 @@ object AppPaletteExtractor {
                     val primaryInt = parts[1].toLongOrNull()?.toInt()
                     val secondaryInt = parts[2].toLongOrNull()?.toInt()
                     if (primaryInt != null && secondaryInt != null) {
-                        paletteCache.put(key, ExtractedAppPalette(Color(primaryInt), Color(secondaryInt)))
+                        paletteCache.put(key, ExtractedAppPalette(Color(primaryInt), Color(secondaryInt), isExtracted = true))
                         count++
                     }
                 }
@@ -186,6 +199,7 @@ object AppPaletteExtractor {
                 return ExtractedAppPalette(
                     primaryColor = Color(primaryInt),
                     secondaryColor = Color(secondaryInt),
+                    isExtracted = true,
                 )
             }
         } catch (e: Exception) {
@@ -200,6 +214,7 @@ object AppPaletteExtractor {
         return ExtractedAppPalette(
             primaryColor = defaultPrimary,
             secondaryColor = defaultSecondary,
+            isExtracted = false,
         )
     }
 

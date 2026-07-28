@@ -311,6 +311,24 @@ fun FocusTopLauncherScreen(
                                     carouselHeight = 290.dp,
                                     posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                     ambientGlowColor = animatedPrimaryColor,
+                                    cardBackgroundColor = { actualIndex, isSelected ->
+                                        val appInfo = apps.getOrNull(actualIndex)
+                                        if (appInfo != null) {
+                                            val palette =
+                                                AppPaletteExtractor.extractColors(
+                                                    appInfo,
+                                                    appColors.accent,
+                                                    appColors.appBackground,
+                                                )
+                                            if (palette.isExtracted) {
+                                                palette.darkenedPrimaryColor
+                                            } else {
+                                                if (isSelected) appColors.surfaceVariant else appColors.surface
+                                            }
+                                        } else {
+                                            if (isSelected) appColors.surfaceVariant else appColors.surface
+                                        }
+                                    },
                                 ) { actualIndex, _ ->
                                     val appInfo = apps[actualIndex]
                                     PosterCardContent(
