@@ -35,6 +35,7 @@ class MegingiardSettingsProvider : ContentProvider() {
 
     override fun onCreate(): Boolean {
         AppLog.i(TAG, "MegingiardSettingsProvider created")
+        context?.let { SettingsManager.init(it) }
         return true
     }
 
@@ -46,6 +47,7 @@ class MegingiardSettingsProvider : ContentProvider() {
         sortOrder: String?,
     ): Cursor? {
         val context = context ?: return null
+        SettingsManager.init(context)
         when (uri.path) {
             "/${MegingiardIpcContract.PATH_THEME}" -> {
                 val cursor =

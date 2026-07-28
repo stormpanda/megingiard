@@ -142,6 +142,10 @@ object SettingsManager {
                             ?: AppLog.Level.WARN
                     _logLevel.value = level
                     AppLog.level = level
+
+                    _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
+                    _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
+                    _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
                 }
