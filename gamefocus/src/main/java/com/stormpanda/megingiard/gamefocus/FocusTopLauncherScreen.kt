@@ -182,12 +182,15 @@ fun FocusTopLauncherScreen(
     var letterCommitJob by remember { mutableStateOf<Job?>(null) }
 
     // Dismiss letter overlay without action if user manually scrolls the pager
-    LaunchedEffect(activePagerState.isScrollInProgress) {
-        if (activePagerState.isScrollInProgress && isLetterOverlayActive) {
-            AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
-            letterCommitJob?.cancel()
-            isLetterOverlayActive = false
-        }
+    LaunchedEffect(Unit) {
+        snapshotFlow { activePagerState.isScrollInProgress }
+            .collectLatest { isScrolling ->
+                if (isScrolling && isLetterOverlayActive) {
+                    AppLog.i(TAG, "Pager scroll in progress while letter carousel active -> cancelling overlay without action")
+                    letterCommitJob?.cancel()
+                    isLetterOverlayActive = false
+                }
+            }
     }
 
     // Handle D-pad LEFT step with wrap-around

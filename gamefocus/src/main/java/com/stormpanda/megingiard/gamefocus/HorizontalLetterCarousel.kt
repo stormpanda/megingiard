@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +46,10 @@ fun HorizontalLetterCarousel(
     if (letters.isEmpty()) return
 
     val safeIndex = selectedIndex.coerceIn(0, letters.size - 1)
-    AppLog.d(TAG, "Rendering HorizontalLetterCarousel for selected index $safeIndex ('${letters.getOrNull(safeIndex)}')")
+
+    LaunchedEffect(safeIndex) {
+        AppLog.d(TAG, "Rendering HorizontalLetterCarousel for selected index $safeIndex ('${letters.getOrNull(safeIndex)}')")
+    }
 
     val itemShiftPx =
         remember(density) {

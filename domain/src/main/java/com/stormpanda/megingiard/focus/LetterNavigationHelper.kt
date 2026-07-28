@@ -35,6 +35,10 @@ object LetterNavigationHelper {
         return 0
     }
 
+    /**
+     * Legacy direct-skip helper: finds the index of the first application starting with a different letter
+     * after [currentIndex], wrapping around if necessary.
+     */
     fun findNextLetterAppIndex(
         apps: List<InstalledAppInfo>,
         currentIndex: Int,
@@ -73,6 +77,10 @@ object LetterNavigationHelper {
         return safeIndex
     }
 
+    /**
+     * Legacy direct-skip helper: finds the index of the first application starting with a different letter
+     * preceding [currentIndex] (or the start of current letter group), wrapping around if necessary.
+     */
     fun findPreviousLetterAppIndex(
         apps: List<InstalledAppInfo>,
         currentIndex: Int,
