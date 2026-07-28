@@ -99,7 +99,17 @@ fun HorizontalPosterCarousel(
                     Modifier
                         .size(posterWidth, posterHeight)
                         .graphicsLayer {
-                            val rawOffset = pagerState.getOffsetDistanceInPages(page)
+                            val pageCount = pagerState.pageCount
+                            val rawOffset =
+                                try {
+                                    if (pageCount > 0 && page in 0 until pageCount) {
+                                        pagerState.getOffsetDistanceInPages(page)
+                                    } else {
+                                        0f
+                                    }
+                                } catch (_: IllegalArgumentException) {
+                                    0f
+                                }
                             val pageOffset = rawOffset.absoluteValue
                             val s = (1.18f - (pageOffset * 0.33f)).coerceIn(0.85f, 1.18f)
                             val a = (1.0f - (pageOffset * 0.45f)).coerceIn(0.55f, 1.0f)

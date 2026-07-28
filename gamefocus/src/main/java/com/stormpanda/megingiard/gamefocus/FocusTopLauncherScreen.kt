@@ -160,8 +160,9 @@ fun FocusTopLauncherScreen(
                 0
             }
         if (apps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
-            AppLog.d(TAG, "Category switched to ${selectedCategory.name} -> scrolling to remembered index $targetIndex (package=$lastPkg)")
-            activePagerState.scrollToPage(targetIndex)
+            val safeIndex = targetIndex.coerceIn(0, apps.size - 1)
+            AppLog.d(TAG, "Category switched to ${selectedCategory.name} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
+            activePagerState.scrollToPage(safeIndex)
         }
     }
 
