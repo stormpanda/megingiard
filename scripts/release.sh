@@ -257,6 +257,8 @@ case "$1" in
 
         apk_path="app/release/Megingiard-v${release_version}.apk"
         checksum_path="app/release/Megingiard-v${release_version}-checksum-sha256.txt"
+        gf_apk_path="app/release/Megingiard-GameFocus-v${release_version}.apk"
+        gf_checksum_path="app/release/Megingiard-GameFocus-v${release_version}-checksum-sha256.txt"
 
         if [[ ! -f "$apk_path" || ! -f "$checksum_path" ]]; then
             log_error "Release artifacts not found. Please run 'scripts/release.sh build' first."
@@ -264,21 +266,25 @@ case "$1" in
         fi
 
         log_info "Creating GitHub Release Draft for version $release_version..."
-        
+
         # Verify gh CLI is installed
         if ! command -v gh >/dev/null 2>&1; then
             log_error "GitHub CLI 'gh' is not installed or not in PATH."
             exit 1
         fi
 
+        artifacts=("$apk_path" "$checksum_path")
+        if [[ -f "$gf_apk_path" && -f "$gf_checksum_path" ]]; then
+            artifacts+=("$gf_apk_path" "$gf_checksum_path")
+        fi
+
         gh release create "$release_version" \
             --draft \
             --title "Megingiard-v$release_version" \
             --notes-file "$changelog_file" \
-            "$apk_path" \
-            "$checksum_path"
+            "${artifacts[@]}"
 
-        log_success "Release draft Megingiard-v$release_version successfully uploaded with APK and checksum."
+        log_success "Release draft Megingiard-v$release_version successfully uploaded with APKs and checksums."
         ;;
 
     finish)
