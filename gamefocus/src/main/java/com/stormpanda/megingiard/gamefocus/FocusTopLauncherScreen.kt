@@ -76,6 +76,7 @@ import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
+import com.stormpanda.megingiard.ui.CutoutLetterButton
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -612,63 +613,27 @@ fun FocusTopLauncherScreen(
                                 .padding(end = 12.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextButton(
+                        CutoutLetterButton(
+                            letter = "A",
+                            text = stringResource(R.string.gamefocus_launch_top),
                             onClick = {
                                 if (currentApp != null) {
                                     onAppClickTop(currentApp)
                                 }
                             },
-                            interactionSource = noFocusInteractionSource,
-                            modifier = Modifier.focusProperties { canFocus = false },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CutoutLetterCircleIcon(
-                                    letter = "A",
-                                    size = 18.dp,
-                                    tint = appColors.onSurfaceSecondary,
-                                    cutoutColor = appColors.appBackground,
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.gamefocus_launch_top),
-                                    style =
-                                        MaterialTheme.typography.labelMedium.copy(
-                                            color = appColors.onSurfaceSecondary,
-                                            fontWeight = FontWeight.SemiBold,
-                                        ),
-                                )
-                            }
-                        }
+                        )
 
                         Spacer(modifier = Modifier.width(2.dp))
 
-                        TextButton(
+                        CutoutLetterButton(
+                            letter = "X",
+                            text = stringResource(R.string.gamefocus_launch_bottom),
                             onClick = {
                                 if (currentApp != null) {
                                     onAppClickBottom(currentApp)
                                 }
                             },
-                            interactionSource = noFocusInteractionSource,
-                            modifier = Modifier.focusProperties { canFocus = false },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                CutoutLetterCircleIcon(
-                                    letter = "X",
-                                    size = 18.dp,
-                                    tint = appColors.onSurfaceSecondary,
-                                    cutoutColor = appColors.appBackground,
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = stringResource(R.string.gamefocus_launch_bottom),
-                                    style =
-                                        MaterialTheme.typography.labelMedium.copy(
-                                            color = appColors.onSurfaceSecondary,
-                                            fontWeight = FontWeight.SemiBold,
-                                        ),
-                                )
-                            }
-                        }
+                        )
                     }
                 }
 

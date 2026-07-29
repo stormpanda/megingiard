@@ -3,29 +3,20 @@ package com.stormpanda.megingiard.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.gamefocus.R
-import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.delay
 
 data class ExpandableActionItem(
@@ -44,7 +35,6 @@ fun ExpandableActionsMenu(
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
-    val noFocusInteractionSource = remember { MutableInteractionSource() }
 
     val closeLabel = stringResource(R.string.gamefocus_option_close)
     val effectiveActions =
@@ -86,31 +76,11 @@ fun ExpandableActionsMenu(
     ) {
         // Collapsed Single Actions Button (Subdued look matching Cancel button, no fading)
         if (expansionFraction < 0.5f) {
-            TextButton(
+            CutoutSymbolButton(
+                symbolName = "menu",
+                text = stringResource(R.string.gamefocus_option_actions),
                 onClick = { onExpandedChange(true) },
-                interactionSource = noFocusInteractionSource,
-                modifier =
-                    Modifier
-                        .focusProperties { canFocus = false },
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CutoutSymbolCircleIcon(
-                        symbolName = "menu",
-                        size = 18.dp,
-                        tint = appColors.onSurfaceSecondary,
-                        cutoutColor = appColors.appBackground,
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.gamefocus_option_actions),
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(
-                                color = appColors.onSurfaceSecondary,
-                                fontWeight = FontWeight.SemiBold,
-                            ),
-                    )
-                }
-            }
+            )
         }
 
         // Expanded Actions Row (First/Close item has NO alpha fade; subsequent items fade in/out)
@@ -122,38 +92,20 @@ fun ExpandableActionsMenu(
                     val spreadOffsetPx = with(density) { (index * 24.dp.toPx()) * (1f - expansionFraction) }
                     val itemAlpha = if (index == 0) 1f else (expansionFraction * 2f - 1f).coerceIn(0f, 1f)
 
-                    TextButton(
+                    CutoutSymbolButton(
+                        symbolName = item.iconSymbol,
+                        text = item.label,
                         onClick = {
                             onExpandedChange(false)
                             item.onClick()
                         },
-                        interactionSource = noFocusInteractionSource,
                         modifier =
                             Modifier
-                                .focusProperties { canFocus = false }
                                 .graphicsLayer {
                                     translationX = -spreadOffsetPx
                                     alpha = itemAlpha
                                 }.padding(end = 2.dp),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CutoutSymbolCircleIcon(
-                                symbolName = item.iconSymbol,
-                                size = 18.dp,
-                                tint = appColors.onSurfaceSecondary,
-                                cutoutColor = appColors.appBackground,
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = item.label,
-                                style =
-                                    MaterialTheme.typography.labelMedium.copy(
-                                        color = appColors.onSurfaceSecondary,
-                                        fontWeight = FontWeight.SemiBold,
-                                    ),
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }

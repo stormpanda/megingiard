@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -73,6 +74,8 @@ import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
+import com.stormpanda.megingiard.ui.CutoutLetterButton
+import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -485,12 +488,11 @@ fun GameFocusArtworkDialog(
                         ),
                 )
 
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = stringResource(R.string.settings_cancel),
-                        color = appColors.onSurfaceSecondary,
-                    )
-                }
+                CutoutLetterButton(
+                    letter = "B",
+                    text = stringResource(R.string.settings_cancel),
+                    onClick = onDismiss,
+                )
             }
         }
     }
