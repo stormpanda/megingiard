@@ -24,7 +24,7 @@ enum class LibraryTab {
      */
     fun previous(): LibraryTab {
         val allEntries = entries
-        val prevOrdinal = Math.floorMod(ordinal - 1, allEntries.size)
+        val prevOrdinal = (ordinal - 1 + allEntries.size) % allEntries.size
         return allEntries[prevOrdinal]
     }
 
@@ -33,7 +33,7 @@ enum class LibraryTab {
      */
     fun next(): LibraryTab {
         val allEntries = entries
-        val nextOrdinal = Math.floorMod(ordinal + 1, allEntries.size)
+        val nextOrdinal = (ordinal + 1) % allEntries.size
         return allEntries[nextOrdinal]
     }
 }

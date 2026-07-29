@@ -49,13 +49,14 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.CornerRadius
@@ -64,6 +65,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -215,7 +217,7 @@ fun FocusLibraryScreen(
                     var focusedItemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                     var targetRect by remember { mutableStateOf<Rect?>(null) }
                     var isFirstPositioned by remember { mutableStateOf(false) }
-                    val visibleItemCoords = remember { mutableStateMapOf<Int, LayoutCoordinates>() }
+                    val visibleItemCoords = remember { mutableMapOf<Int, LayoutCoordinates>() }
 
                     LaunchedEffect(activeTab) {
                         targetRect = null
@@ -326,16 +328,6 @@ fun FocusLibraryScreen(
                                 animationSpec = borderAnimationSpec,
                                 label = "LibraryBorderAnimTop",
                             )
-                            val animWidth by animateFloatAsState(
-                                targetValue = currentRect.width,
-                                animationSpec = borderAnimationSpec,
-                                label = "LibraryBorderAnimWidth",
-                            )
-                            val animHeight by animateFloatAsState(
-                                targetValue = currentRect.height,
-                                animationSpec = borderAnimationSpec,
-                                label = "LibraryBorderAnimHeight",
-                            )
                             val borderAlpha by animateFloatAsState(
                                 targetValue = if (isFirstPositioned) 1f else 0f,
                                 animationSpec = tween(durationMillis = 150),
@@ -352,43 +344,46 @@ fun FocusLibraryScreen(
                                             scaleY = 1.05f
                                             alpha = borderAlpha
                                         }.size(
-                                            width = with(density) { animWidth.coerceAtLeast(1f).toDp() },
-                                            height = with(density) { animHeight.coerceAtLeast(1f).toDp() },
-                                        ).drawBehind {
-                                            if (borderAlpha > 0f) {
-                                                val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
-                                                val blurRadiusPx = 16.dp.toPx()
-                                                val spreadPx = 2.dp.toPx()
-                                                val shadowColorArgb = appColors.accent.copy(alpha = 0.45f * borderAlpha).toArgb()
+                                            width = with(density) { currentRect.width.coerceAtLeast(1f).toDp() },
+                                            height = with(density) { currentRect.height.coerceAtLeast(1f).toDp() },
+                                        ).drawWithCache {
+                                            val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
+                                            val blurRadiusPx = 16.dp.toPx()
+                                            val spreadPx = 2.dp.toPx()
+                                            val shadowColorArgb = appColors.accent.copy(alpha = 0.45f).toArgb()
 
-                                                val innerPath =
-                                                    Path().apply {
-                                                        addRoundRect(
-                                                            RoundRect(
-                                                                rect = Rect(0f, 0f, size.width, size.height),
-                                                                cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
-                                                            ),
-                                                        )
-                                                    }
+                                            val innerPath =
+                                                Path().apply {
+                                                    addRoundRect(
+                                                        RoundRect(
+                                                            rect = Rect(0f, 0f, size.width, size.height),
+                                                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
+                                                        ),
+                                                    )
+                                                }
 
-                                                clipPath(innerPath, clipOp = ClipOp.Difference) {
-                                                    drawIntoCanvas { canvas ->
-                                                        val nativePaint =
-                                                            NativePaint().apply {
-                                                                isAntiAlias = true
-                                                                color = shadowColorArgb
-                                                                style = NativePaint.Style.FILL
-                                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
-                                                            }
-                                                        canvas.nativeCanvas.drawRoundRect(
-                                                            -spreadPx,
-                                                            -spreadPx,
-                                                            size.width + spreadPx,
-                                                            size.height + spreadPx,
-                                                            cornerRadiusPx + spreadPx,
-                                                            cornerRadiusPx + spreadPx,
-                                                            nativePaint,
-                                                        )
+                                            val nativePaint =
+                                                NativePaint().apply {
+                                                    isAntiAlias = true
+                                                    color = shadowColorArgb
+                                                    style = NativePaint.Style.FILL
+                                                    maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                                }
+
+                                            onDrawBehind {
+                                                if (borderAlpha > 0f) {
+                                                    clipPath(innerPath, clipOp = ClipOp.Difference) {
+                                                        drawIntoCanvas { canvas ->
+                                                            canvas.nativeCanvas.drawRoundRect(
+                                                                -spreadPx,
+                                                                -spreadPx,
+                                                                size.width + spreadPx,
+                                                                size.height + spreadPx,
+                                                                cornerRadiusPx + spreadPx,
+                                                                cornerRadiusPx + spreadPx,
+                                                                nativePaint,
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -555,10 +550,14 @@ private fun LibraryGridItem(
     val appColors = LocalAppColors.current
     val context = LocalContext.current
 
-    val iconBitmap =
-        remember(appInfo.icon) {
-            FocusImageCache.getIconBitmap(context, appInfo)
+    val iconBitmap by produceState<ImageBitmap?>(
+        initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
+        key1 = appInfo.packageName,
+    ) {
+        if (value == null) {
+            value = FocusImageCache.getIconBitmapAsync(context, appInfo)
         }
+    }
 
     val palette =
         remember(appInfo.packageName, appInfo.coverPath) {
@@ -606,9 +605,10 @@ private fun LibraryGridItem(
                     .aspectRatio(1f),
             contentAlignment = Alignment.Center,
         ) {
-            if (iconBitmap != null) {
+            val currentBitmap = iconBitmap
+            if (currentBitmap != null) {
                 Image(
-                    bitmap = iconBitmap,
+                    bitmap = currentBitmap,
                     contentDescription = appInfo.label,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),

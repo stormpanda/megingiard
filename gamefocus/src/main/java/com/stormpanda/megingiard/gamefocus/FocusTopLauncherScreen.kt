@@ -84,10 +84,12 @@ import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
@@ -743,6 +745,62 @@ internal object FocusImageCache {
             coverCache.put(cacheKey, bitmap)
         }
         return bitmap
+    }
+
+    fun getCachedIconBitmap(packageName: String): ImageBitmap? = iconCache.get(packageName)
+
+    suspend fun getIconBitmapAsync(
+        context: Context,
+        appInfo: InstalledAppInfo,
+    ): ImageBitmap? {
+        val cacheKey = appInfo.packageName
+        val cached = iconCache.get(cacheKey)
+        if (cached != null) {
+            return cached
+        }
+
+        return withContext(Dispatchers.IO) {
+            val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+            val iconFile = File(iconsDir, "${appInfo.packageName}.png")
+            if (iconFile.exists() && iconFile.length() > 0) {
+                val startTime = System.currentTimeMillis()
+                val diskBitmap =
+                    try {
+                        BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
+                    } catch (e: Exception) {
+                        null
+                    }
+
+                if (diskBitmap != null) {
+                    val elapsed = System.currentTimeMillis() - startTime
+                    AppLog.d(TAG, "Loaded disk-cached icon PNG for ${appInfo.label} in ${elapsed}ms")
+                    iconCache.put(cacheKey, diskBitmap)
+                    return@withContext diskBitmap
+                }
+            }
+
+            val startTime = System.currentTimeMillis()
+            val bitmap = appInfo.icon?.toBitmapSafe()
+
+            val elapsed = System.currentTimeMillis() - startTime
+            AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
+
+            if (bitmap != null) {
+                iconCache.put(cacheKey, bitmap)
+                try {
+                    val androidBmp = appInfo.icon?.toAndroidBitmap()
+                    if (androidBmp != null) {
+                        FileOutputStream(iconFile).use { out ->
+                            androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
+                        }
+                        androidBmp.recycle()
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
+                }
+            }
+            bitmap
+        }
     }
 
     fun getIconBitmap(
