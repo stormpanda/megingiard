@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
-import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private const val TAG = "FocusLibraryScreen"
@@ -338,27 +337,5 @@ private fun LibraryGridItem(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
-
-        if (isFocused) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CutoutLetterCircleIcon(
-                    letter = "A",
-                    size = 14.dp,
-                    tint = appColors.accent,
-                    cutoutColor = appColors.appBackground,
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                CutoutLetterCircleIcon(
-                    letter = "X",
-                    size = 14.dp,
-                    tint = appColors.onSurfaceSecondary,
-                    cutoutColor = appColors.appBackground,
-                )
-            }
-        }
     }
 }
