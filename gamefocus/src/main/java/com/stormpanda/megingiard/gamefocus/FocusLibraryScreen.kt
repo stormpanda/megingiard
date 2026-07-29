@@ -61,6 +61,26 @@ private val FLS_GRID_SPACING = 12.dp
 private val FLS_TAB_HEIGHT = 42.dp
 private val FLS_FOCUS_BORDER_WIDTH = 3.dp
 
+private val LibraryTab.stringResId: Int
+    get() =
+        when (this) {
+            LibraryTab.ALL -> R.string.gamefocus_library_tab_all
+            LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
+            LibraryTab.GAMES -> R.string.gamefocus_library_tab_games
+        }
+
+@Composable
+private fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    return this
+        .focusProperties { canFocus = false }
+        .clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick,
+        )
+}
+
 @Composable
 fun FocusLibraryScreen(
     allApps: List<InstalledAppInfo>,
@@ -189,29 +209,19 @@ private fun LibraryHeaderBar(
             )
         }
 
-        // Tabs Row: All | Android Apps | Android Games
+        // Tabs Row
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LibraryTabItem(
-                label = stringResource(R.string.gamefocus_library_tab_all),
-                isSelected = selectedTab == LibraryTab.ALL,
-                isTabsRowFocused = isTabsRowFocused && selectedTab == LibraryTab.ALL,
-                onClick = { onTabSelected(LibraryTab.ALL) },
-            )
-            LibraryTabItem(
-                label = stringResource(R.string.gamefocus_library_tab_apps),
-                isSelected = selectedTab == LibraryTab.APPS,
-                isTabsRowFocused = isTabsRowFocused && selectedTab == LibraryTab.APPS,
-                onClick = { onTabSelected(LibraryTab.APPS) },
-            )
-            LibraryTabItem(
-                label = stringResource(R.string.gamefocus_library_tab_games),
-                isSelected = selectedTab == LibraryTab.GAMES,
-                isTabsRowFocused = isTabsRowFocused && selectedTab == LibraryTab.GAMES,
-                onClick = { onTabSelected(LibraryTab.GAMES) },
-            )
+            LibraryTab.entries.forEach { tab ->
+                LibraryTabItem(
+                    label = stringResource(tab.stringResId),
+                    isSelected = selectedTab == tab,
+                    isTabsRowFocused = isTabsRowFocused && selectedTab == tab,
+                    onClick = { onTabSelected(tab) },
+                )
+            }
         }
     }
 }
@@ -225,7 +235,6 @@ private fun LibraryTabItem(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val noFocusInteractionSource = remember { MutableInteractionSource() }
 
     val bgColor = if (isSelected) appColors.accent else appColors.surface
     val textColor = if (isSelected) appColors.appBackground else appColors.onSurface
@@ -241,12 +250,8 @@ private fun LibraryTabItem(
                     width = 2.dp,
                     color = borderColor,
                     shape = RoundedCornerShape(20.dp),
-                ).focusProperties { canFocus = false }
-                .clickable(
-                    interactionSource = noFocusInteractionSource,
-                    indication = null,
-                    onClick = onClick,
-                ).padding(horizontal = 18.dp),
+                ).noFocusClickable(onClick)
+                .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -270,7 +275,6 @@ private fun LibraryGridItem(
 ) {
     val appColors = LocalAppColors.current
     val context = LocalContext.current
-    val noFocusInteractionSource = remember { MutableInteractionSource() }
 
     val iconBitmap =
         remember(appInfo.icon) {
@@ -292,12 +296,8 @@ private fun LibraryGridItem(
                     width = FLS_FOCUS_BORDER_WIDTH,
                     color = borderColor,
                     shape = RoundedCornerShape(FLS_CORNER_RADIUS),
-                ).focusProperties { canFocus = false }
-                .clickable(
-                    interactionSource = noFocusInteractionSource,
-                    indication = null,
-                    onClick = onClickTop,
-                ).padding(10.dp),
+                ).noFocusClickable(onClickTop)
+                .padding(10.dp),
     ) {
         // Square Icon with Rounded Corners
         Box(
