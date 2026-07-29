@@ -80,6 +80,7 @@ import com.stormpanda.megingiard.ui.CutoutLetterButton
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -578,6 +579,7 @@ fun FocusTopLauncherScreen(
                         ExpandableActionsMenu(
                             isExpanded = isMainOptionsMenuExpanded,
                             onExpandedChange = onMainOptionsMenuExpandedChange,
+                            orientation = ExpandableMenuOrientation.VERTICAL,
                             actions =
                                 listOf(
                                     ExpandableActionItem(

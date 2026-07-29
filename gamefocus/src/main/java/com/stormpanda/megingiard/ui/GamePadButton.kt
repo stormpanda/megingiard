@@ -1,12 +1,16 @@
 package com.stormpanda.megingiard.ui
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -126,6 +130,7 @@ fun GamePadButtonAction(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
     iconSize: Dp = 18.dp,
     tint: Color = LocalAppColors.current.onSurfaceSecondary,
     cutoutColor: Color = LocalAppColors.current.appBackground,
@@ -133,13 +138,19 @@ fun GamePadButtonAction(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    TextButton(
+    Surface(
         onClick = onClick,
         enabled = enabled,
+        shape = CircleShape,
+        color = Color.Transparent,
+        contentColor = tint,
         interactionSource = interactionSource,
         modifier = modifier.focusProperties { canFocus = false },
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(contentPadding),
+        ) {
             GamePadButtonIcon(
                 button = button,
                 size = iconSize,
