@@ -3,7 +3,9 @@ package com.stormpanda.megingiard.gamefocus
 import android.graphics.BlurMaskFilter
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,7 +39,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,6 +91,8 @@ private val FLS_GRID_SPACING = 12.dp
 private val FLS_TAB_HEIGHT = 42.dp
 private val FLS_FOCUS_BORDER_WIDTH = 3.dp
 private val FLS_ROW_PEEK_OFFSET = 32.dp
+
+private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
 
 private val LibraryTab.stringResId: Int
     get() =
@@ -183,10 +189,12 @@ fun FocusLibraryScreen(
                 var focusedItemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 var targetRect by remember { mutableStateOf<Rect?>(null) }
                 var isFirstPositioned by remember { mutableStateOf(false) }
+                val visibleItemCoords = remember { mutableStateMapOf<Int, LayoutCoordinates>() }
 
                 LaunchedEffect(selectedTab) {
                     targetRect = null
                     isFirstPositioned = false
+                    visibleItemCoords.clear()
                     gridState.scrollToItem(0)
                 }
 
@@ -213,6 +221,14 @@ fun FocusLibraryScreen(
                     }
                 }
 
+                SideEffect {
+                    val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
+                    val parentCoords = gridContainerCoordinates
+                    if (currentFocusedCoords != null && parentCoords != null) {
+                        updateFocusedRect(currentFocusedCoords, parentCoords)
+                    }
+                }
+
                 Box(
                     modifier =
                         Modifier
@@ -220,7 +236,8 @@ fun FocusLibraryScreen(
                             .clipToBounds()
                             .onGloballyPositioned { coords ->
                                 gridContainerCoordinates = coords
-                                focusedItemCoordinates?.let { itemCoords ->
+                                val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
+                                currentFocusedCoords?.let { itemCoords ->
                                     updateFocusedRect(itemCoords, coords)
                                 }
                             },
@@ -251,6 +268,7 @@ fun FocusLibraryScreen(
                                 },
                                 modifier =
                                     Modifier.onGloballyPositioned { itemCoords ->
+                                        visibleItemCoords[index] = itemCoords
                                         if (isFocused) {
                                             focusedItemCoordinates = itemCoords
                                             gridContainerCoordinates?.let { parentCoords ->
@@ -266,24 +284,30 @@ fun FocusLibraryScreen(
                     if (targetRect != null) {
                         val currentRect = targetRect!!
 
+                        val borderAnimationSpec =
+                            spring<Float>(
+                                stiffness = FLS_FOCUS_BORDER_SPRING_STIFFNESS,
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                            )
+
                         val animLeft by animateFloatAsState(
                             targetValue = currentRect.left,
-                            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                            animationSpec = borderAnimationSpec,
                             label = "LibraryBorderAnimLeft",
                         )
                         val animTop by animateFloatAsState(
                             targetValue = currentRect.top,
-                            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                            animationSpec = borderAnimationSpec,
                             label = "LibraryBorderAnimTop",
                         )
                         val animWidth by animateFloatAsState(
                             targetValue = currentRect.width,
-                            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                            animationSpec = borderAnimationSpec,
                             label = "LibraryBorderAnimWidth",
                         )
                         val animHeight by animateFloatAsState(
                             targetValue = currentRect.height,
-                            animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                            animationSpec = borderAnimationSpec,
                             label = "LibraryBorderAnimHeight",
                         )
                         val borderAlpha by animateFloatAsState(
