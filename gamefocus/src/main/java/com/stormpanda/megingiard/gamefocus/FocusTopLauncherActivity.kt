@@ -144,6 +144,17 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onToggleFavorite = { appInfo ->
                                 InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
                             },
+                            onEditArtwork = { appInfo ->
+                                AppLog.i(TAG, "Opening artwork edit dialog for ${appInfo.label}")
+                                dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                                confirmDialogTriggerState.intValue = 0
+                                dialogL1TriggerState.intValue = 0
+                                dialogR1TriggerState.intValue = 0
+                                isOptionsMenuExpandedState.value = false
+                                dpadUpOptionsTriggerState.intValue = 0
+                                dpadRightOptionsTriggerState.intValue = 0
+                                editingAppInfoState.value = appInfo
+                            },
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName)
                             },
@@ -545,11 +556,28 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
         if (isMainOptionsMenuExpandedState.value) {
+            stopRepeat()
             val targetApp = focusedAppState.value
             return when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_UP -> {
                     if (targetApp != null) {
                         InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "D-pad RIGHT pressed while options menu expanded -> Editing artwork for ${targetApp.label}")
+                        dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                        confirmDialogTriggerState.intValue = 0
+                        dialogL1TriggerState.intValue = 0
+                        dialogR1TriggerState.intValue = 0
+                        isOptionsMenuExpandedState.value = false
+                        dpadUpOptionsTriggerState.intValue = 0
+                        dpadRightOptionsTriggerState.intValue = 0
+                        editingAppInfoState.value = targetApp
                     }
                     isMainOptionsMenuExpandedState.value = false
                     true
@@ -564,6 +592,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
+                KeyEvent.KEYCODE_BUTTON_Y,
                 KeyEvent.KEYCODE_BUTTON_SELECT,
                 KeyEvent.KEYCODE_MENU,
                 KeyEvent.KEYCODE_BACK,
@@ -581,10 +610,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_Y,
             KeyEvent.KEYCODE_BUTTON_SELECT,
             KeyEvent.KEYCODE_MENU,
             -> {
                 if (apps.isNotEmpty()) {
+                    stopRepeat()
                     isMainOptionsMenuExpandedState.value = true
                 }
                 return true
@@ -660,24 +691,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     nextLetterTriggerState.intValue++
                 }
                 return true
-            }
-
-            KeyEvent.KEYCODE_BUTTON_Y,
-            KeyEvent.KEYCODE_Y,
-            -> {
-                val targetApp = focusedAppState.value
-                if (targetApp != null) {
-                    AppLog.i(TAG, "Gamepad Y button pressed to edit artwork for: ${targetApp.label}")
-                    dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
-                    confirmDialogTriggerState.intValue = 0
-                    dialogL1TriggerState.intValue = 0
-                    dialogR1TriggerState.intValue = 0
-                    isOptionsMenuExpandedState.value = false
-                    dpadUpOptionsTriggerState.intValue = 0
-                    dpadRightOptionsTriggerState.intValue = 0
-                    editingAppInfoState.value = targetApp
-                    return true
-                }
             }
 
             KeyEvent.KEYCODE_BUTTON_R2 -> {
@@ -770,6 +783,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             if (isMainOptionsMenuExpandedState.value) {
+                stopRepeat()
                 val allApps = InstalledAppsManager.installedApps.value
                 val favorites = InstalledAppsManager.favorites.value
                 val lastUsed = InstalledAppsManager.lastUsed.value
@@ -787,6 +801,21 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val targetApp = focusedAppState.value
                     if (targetApp != null) {
                         InstalledAppsManager.toggleFavorite(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    return true
+                } else if (x > 0.5f) {
+                    val targetApp = focusedAppState.value
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Joystick RIGHT pressed while options menu expanded -> Edit artwork for ${targetApp.label}")
+                        dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
+                        confirmDialogTriggerState.intValue = 0
+                        dialogL1TriggerState.intValue = 0
+                        dialogR1TriggerState.intValue = 0
+                        isOptionsMenuExpandedState.value = false
+                        dpadUpOptionsTriggerState.intValue = 0
+                        dpadRightOptionsTriggerState.intValue = 0
+                        editingAppInfoState.value = targetApp
                     }
                     isMainOptionsMenuExpandedState.value = false
                     return true

@@ -17,6 +17,7 @@
     <string name="gamefocus_cat_last_used">Recently Used</string>
     <string name="gamefocus_option_add_favorite">Add to Favorites</string>
     <string name="gamefocus_option_remove_favorite">Remove from Favorites</string>
+    <string name="gamefocus_option_edit">Edit</string>
     <string name="gamefocus_option_app_info">App Info</string>
     <string name="gamefocus_option_close">Close</string>
     <string name="gamefocus_option_actions">Actions</string>

@@ -63,12 +63,13 @@ fun ExpandableActionsMenu(
             val closeItem =
                 ExpandableActionItem(
                     label = closeLabel,
-                    button = GamePadButton.SELECT,
+                    button = GamePadButton.BUTTON_Y,
                     onClick = { onExpandedChange(false) },
                 )
             val hasClose =
                 actions.any {
-                    it.button == GamePadButton.SELECT ||
+                    it.button == GamePadButton.BUTTON_Y ||
+                        it.button == GamePadButton.SELECT ||
                         it.label.equals(closeLabel, ignoreCase = true) ||
                         it.label.equals("Close", ignoreCase = true)
                 }
@@ -86,13 +87,15 @@ fun ExpandableActionsMenu(
                 } else {
                     val otherActions =
                         actions.filterNot {
-                            it.button == GamePadButton.SELECT ||
+                            it.button == GamePadButton.BUTTON_Y ||
+                                it.button == GamePadButton.SELECT ||
                                 it.label.equals(closeLabel, ignoreCase = true) ||
                                 it.label.equals("Close", ignoreCase = true)
                         }
                     val existingClose =
                         actions.firstOrNull {
-                            it.button == GamePadButton.SELECT ||
+                            it.button == GamePadButton.BUTTON_Y ||
+                                it.button == GamePadButton.SELECT ||
                                 it.label.equals(closeLabel, ignoreCase = true) ||
                                 it.label.equals("Close", ignoreCase = true)
                         } ?: closeItem
@@ -130,7 +133,7 @@ fun ExpandableActionsMenu(
             // Collapsed Single Actions Button (Subdued look matching Cancel button, no fading)
             if (expansionFraction < 0.5f) {
                 GamePadButtonAction(
-                    button = GamePadButton.SELECT,
+                    button = GamePadButton.BUTTON_Y,
                     text = stringResource(R.string.gamefocus_option_actions),
                     onClick = { onExpandedChange(true) },
                     contentPadding = contentPadding,
