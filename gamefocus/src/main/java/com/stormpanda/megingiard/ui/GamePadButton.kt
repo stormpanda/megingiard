@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import android.view.KeyEvent
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -37,21 +38,23 @@ sealed class GamePadButtonIconSpec {
 /**
  * Standard gamepad controls and their visual icon/letter representation mapping.
  */
-enum class GamePadButton {
-    BUTTON_A,
-    BUTTON_B,
-    BUTTON_X,
-    BUTTON_Y,
-    BUTTON_L1,
-    BUTTON_R1,
-    BUTTON_L2,
-    BUTTON_R2,
-    DPAD_UP,
-    DPAD_DOWN,
-    DPAD_LEFT,
-    DPAD_RIGHT,
-    SELECT,
-    START,
+enum class GamePadButton(
+    val keyCode: Int,
+) {
+    BUTTON_A(KeyEvent.KEYCODE_BUTTON_A),
+    BUTTON_B(KeyEvent.KEYCODE_BUTTON_B),
+    BUTTON_X(KeyEvent.KEYCODE_BUTTON_X),
+    BUTTON_Y(KeyEvent.KEYCODE_BUTTON_Y),
+    BUTTON_L1(KeyEvent.KEYCODE_BUTTON_L1),
+    BUTTON_R1(KeyEvent.KEYCODE_BUTTON_R1),
+    BUTTON_L2(KeyEvent.KEYCODE_BUTTON_L2),
+    BUTTON_R2(KeyEvent.KEYCODE_BUTTON_R2),
+    DPAD_UP(KeyEvent.KEYCODE_DPAD_UP),
+    DPAD_DOWN(KeyEvent.KEYCODE_DPAD_DOWN),
+    DPAD_LEFT(KeyEvent.KEYCODE_DPAD_LEFT),
+    DPAD_RIGHT(KeyEvent.KEYCODE_DPAD_RIGHT),
+    SELECT(KeyEvent.KEYCODE_BUTTON_SELECT),
+    START(KeyEvent.KEYCODE_BUTTON_START),
     ;
 
     /**

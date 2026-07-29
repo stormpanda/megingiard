@@ -30,6 +30,7 @@ import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.ui.AppDimens
+import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
 import com.stormpanda.megingiard.ui.colorSchemeFor
@@ -367,11 +368,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         true
                     }
 
-                    KeyEvent.KEYCODE_BUTTON_SELECT,
+                    GamePadButton.BUTTON_Y.keyCode,
                     KeyEvent.KEYCODE_MENU,
                     KeyEvent.KEYCODE_BACK,
                     KeyEvent.KEYCODE_ESCAPE,
-                    KeyEvent.KEYCODE_BUTTON_B,
+                    GamePadButton.BUTTON_B.keyCode,
                     -> {
                         AppLog.i(TAG, "Closing options menu")
                         isOptionsMenuExpandedState.value = false
@@ -387,10 +388,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             // Options menu is collapsed - handle artwork chooser dialog controls
             when (keyCode) {
-                KeyEvent.KEYCODE_BUTTON_SELECT,
+                GamePadButton.BUTTON_Y.keyCode,
                 KeyEvent.KEYCODE_MENU,
                 -> {
-                    AppLog.i(TAG, "Gamepad Select/Menu pressed -> Opening options menu")
+                    AppLog.i(TAG, "Gamepad Y/Menu pressed -> Opening options menu")
                     isOptionsMenuExpandedState.value = true
                     return true
                 }
@@ -592,12 +593,11 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_Y,
-                KeyEvent.KEYCODE_BUTTON_SELECT,
+                GamePadButton.BUTTON_Y.keyCode,
                 KeyEvent.KEYCODE_MENU,
                 KeyEvent.KEYCODE_BACK,
                 KeyEvent.KEYCODE_ESCAPE,
-                KeyEvent.KEYCODE_BUTTON_B,
+                GamePadButton.BUTTON_B.keyCode,
                 -> {
                     isMainOptionsMenuExpandedState.value = false
                     true
@@ -610,8 +610,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
 
         when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_Y,
-            KeyEvent.KEYCODE_BUTTON_SELECT,
+            GamePadButton.BUTTON_Y.keyCode,
             KeyEvent.KEYCODE_MENU,
             -> {
                 if (apps.isNotEmpty()) {
