@@ -376,22 +376,20 @@ private fun LibraryGridItem(
                 ).noFocusClickable(onClickTop)
                 .padding(10.dp),
     ) {
-        // Square Icon with Rounded Corners
+        // Square Icon
         Box(
             modifier =
                 Modifier
                     .size(FLS_ICON_SIZE)
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(appColors.surface),
+                    .aspectRatio(1f),
             contentAlignment = Alignment.Center,
         ) {
             if (iconBitmap != null) {
                 Image(
                     bitmap = iconBitmap,
                     contentDescription = appInfo.label,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
                 )
             } else {
                 Icon(
