@@ -570,8 +570,20 @@ fun FocusTopLauncherScreen(
                                 .padding(start = 24.dp, top = 16.dp),
                     )
 
-                    // Bottom-Left Main Actions Menu hovering over the gallery plane
+                    // Top-Right Library navigation button hovering over the gallery plane
                     val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_R2,
+                        text = stringResource(R.string.gamefocus_nav_library),
+                        enabled = isControlsEnabled,
+                        onClick = onOpenLibrary,
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(end = 12.dp, top = 12.dp),
+                    )
+
+                    // Bottom-Left Main Actions Menu hovering over the gallery plane
                     Box(
                         modifier =
                             Modifier
@@ -657,15 +669,6 @@ fun FocusTopLauncherScreen(
                                     onAppClickBottom(currentApp)
                                 }
                             },
-                        )
-
-                        Spacer(modifier = Modifier.width(2.dp))
-
-                        GamePadButtonAction(
-                            button = GamePadButton.BUTTON_R2,
-                            text = stringResource(R.string.gamefocus_nav_library),
-                            enabled = isBottomBarEnabled,
-                            onClick = onOpenLibrary,
                         )
                     }
                 }

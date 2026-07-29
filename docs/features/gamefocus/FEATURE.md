@@ -57,7 +57,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - The launcher layout MUST be divided into two distinct planes:
   - **Plane 1 (Full-Screen Gallery Plane):** A dedicated full-screen base layer (`Box` filling `fillMaxSize()`) housing the 2:3 poster carousel and focused app title, centered across the display.
-  - **Plane 2 (Hovering Controls Overlay Plane):** An overlay layer positioned on top of the gallery plane containing the category header (top-left), expandable actions menu (bottom-left), and subdued touch launch indicator buttons (bottom-right).
+  - **Plane 2 (Hovering Controls Overlay Plane):** An overlay layer positioned on top of the gallery plane containing the category header (top-left), library navigation button (top-right), expandable actions menu (bottom-left), and subdued touch launch indicator buttons (bottom-right).
 - The launcher MUST support interactive app categories: **Android Games** (detected games), **Android Apps** (non-game applications), **All Apps** (complete installed library), **Favorites**, and **Recently Used** (last 10 launched apps).
 - Categories MUST be switchable using Gamepad **D-pad UP** / **D-pad DOWN** or joystick vertical movement.
 - Switching between categories MUST restore the exact application last highlighted in that category (tracked by package name), or cleanly default to index 0 if the application is no longer in the list.
