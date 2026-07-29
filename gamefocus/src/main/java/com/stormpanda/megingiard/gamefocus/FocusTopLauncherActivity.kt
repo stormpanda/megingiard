@@ -169,6 +169,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onLibraryTabSelected = { librarySelectedTabState.value = it },
                             libraryFocusedIndex = libraryFocusedIndexState.intValue,
                             onLibraryFocusedIndexChange = { libraryFocusedIndexState.intValue = it },
+                            onOpenLibrary = { isLibraryOpenState.value = true },
                             onCloseLibrary = { isLibraryOpenState.value = false },
                         )
                     }

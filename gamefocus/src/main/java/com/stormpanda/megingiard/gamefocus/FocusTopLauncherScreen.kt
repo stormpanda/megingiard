@@ -143,6 +143,7 @@ fun FocusTopLauncherScreen(
     onLibraryTabSelected: (LibraryTab) -> Unit = {},
     libraryFocusedIndex: Int = 0,
     onLibraryFocusedIndexChange: (Int) -> Unit = {},
+    onOpenLibrary: () -> Unit = {},
     onCloseLibrary: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -635,6 +636,14 @@ fun FocusTopLauncherScreen(
                                     onAppClickBottom(currentApp)
                                 }
                             },
+                        )
+
+                        Spacer(modifier = Modifier.width(2.dp))
+
+                        GamePadButtonAction(
+                            button = GamePadButton.BUTTON_R2,
+                            text = stringResource(R.string.gamefocus_nav_library),
+                            onClick = onOpenLibrary,
                         )
                     }
                 }

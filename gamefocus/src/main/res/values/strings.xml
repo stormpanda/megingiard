@@ -39,5 +39,7 @@
     <string name="gamefocus_library_tab_apps">Android Apps</string>
     <string name="gamefocus_library_tab_games">Android Games</string>
     <string name="gamefocus_library_hint_close">Press R2 or B to close</string>
+    <string name="gamefocus_nav_gallery">Gallery</string>
+    <string name="gamefocus_nav_library">Library</string>
 </resources>
 

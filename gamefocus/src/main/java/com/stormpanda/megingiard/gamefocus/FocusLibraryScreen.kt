@@ -86,6 +86,7 @@ import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.GamePadButton
+import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.GamePadButtonIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
 import android.graphics.Paint as NativePaint
@@ -428,12 +429,11 @@ private fun LibraryHeaderBar(
             onTabSelected = onTabSelected,
         )
 
-        // Close hint subtitle / affordance
-        Text(
-            text = stringResource(R.string.gamefocus_library_hint_close),
-            style = MaterialTheme.typography.labelSmall,
-            color = appColors.onSurfaceSecondary.copy(alpha = 0.6f),
-            modifier = Modifier.noFocusClickable(onCloseRequested),
+        // Navigation affordance to return to Gallery via R2 button
+        GamePadButtonAction(
+            button = GamePadButton.BUTTON_R2,
+            text = stringResource(R.string.gamefocus_nav_gallery),
+            onClick = onCloseRequested,
         )
     }
 }
