@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,6 +69,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
@@ -84,6 +86,7 @@ private val FLS_GRID_PADDING = 16.dp
 private val FLS_GRID_SPACING = 12.dp
 private val FLS_TAB_HEIGHT = 42.dp
 private val FLS_FOCUS_BORDER_WIDTH = 3.dp
+private val FLS_ROW_PEEK_OFFSET = 32.dp
 
 private val LibraryTab.stringResId: Int
     get() =
@@ -92,6 +95,18 @@ private val LibraryTab.stringResId: Int
             LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
             LibraryTab.GAMES -> R.string.gamefocus_library_tab_games
         }
+
+private suspend fun scrollToFocusedItem(
+    gridState: LazyGridState,
+    targetIndex: Int,
+    columns: Int,
+    peekOffsetPx: Int,
+) {
+    val targetRow = targetIndex / columns
+    val firstItemOfRow = targetRow * columns
+    val scrollOffset = if (targetRow == 0) 0 else -peekOffsetPx
+    gridState.animateScrollToItem(index = firstItemOfRow, scrollOffset = scrollOffset)
+}
 
 @Composable
 private fun Modifier.noFocusClickable(onClick: () -> Unit): Modifier {
@@ -120,12 +135,14 @@ fun FocusLibraryScreen(
     val appColors = LocalAppColors.current
     val displayedApps = remember(allApps, selectedTab) { selectedTab.filterApps(allApps) }
     val gridState: LazyGridState = rememberLazyGridState()
+    val density = LocalDensity.current
+    val peekOffsetPx = with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() }
 
     LaunchedEffect(focusedIndex, displayedApps.size) {
         if (displayedApps.isNotEmpty() && focusedIndex >= 0) {
             val safeIndex = focusedIndex.coerceIn(0, displayedApps.size - 1)
             AppLog.d(TAG, "Library focused index changed to $safeIndex (total ${displayedApps.size})")
-            gridState.animateScrollToItem(safeIndex)
+            scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
         }
     }
 
@@ -162,7 +179,6 @@ fun FocusLibraryScreen(
                     )
                 }
             } else {
-                val density = LocalDensity.current
                 var gridContainerCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 var focusedItemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 var targetRect by remember { mutableStateOf<Rect?>(null) }
@@ -171,6 +187,7 @@ fun FocusLibraryScreen(
                 LaunchedEffect(selectedTab) {
                     targetRect = null
                     isFirstPositioned = false
+                    gridState.scrollToItem(0)
                 }
 
                 fun updateFocusedRect(
