@@ -76,13 +76,16 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 ### FR-GF9: Library View & R2 Slide Transition
 
-- Pressing Gamepad **R2** (`KEYCODE_BUTTON_R2` / `KEYCODE_R2`) on the launcher MUST toggle the **Library** view.
+- Pressing Gamepad **R2** (`KEYCODE_BUTTON_R2`) on the launcher MUST toggle the **Library** view.
 - Toggling the Library view MUST trigger a smooth horizontal slide transition across screens:
   - Opening: Main gallery slides out to the left while the Library slides in from the right.
   - Closing: Library slides out to the right while the main gallery slides in from the left.
 - The Library MUST display all installed applications and games in a scrollable condensed grid with square rounded-corner cards (`16.dp` corner radius).
 - The top of the Library MUST present static tabs: **All**, **Android Apps**, and **Android Games** (`LibraryTab`). Static tabs MUST reflect installed applications without dynamic filters (such as Recently Used or Favorites).
+- Highlighting an application in the Library grid MUST dynamically adapt the Library screen's background gradient to the extracted palette colors (`AppPaletteExtractor`) of the highlighted app icon after a ~200ms settlement delay.
+- The highlighted Library card MUST animate a vibrant accent blur glow (`BlurMaskFilter`) and depth shadow smoothly fading in (`animateFloatAsState`, 300ms) after focus settles.
 - Gamepad navigation inside the Library MUST support tab switching via **L1** / **R1**, grid cell selection via D-pad / Joystick, and dual-display launching (top display via **A**, bottom display via **X**). Pressing **R2**, **B**, or **BACK** MUST close the Library and return to the main gallery screen.
+
 
 ---
 

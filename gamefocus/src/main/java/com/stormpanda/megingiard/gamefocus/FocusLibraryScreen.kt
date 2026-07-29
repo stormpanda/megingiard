@@ -1,5 +1,10 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.graphics.BlurMaskFilter
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,13 +36,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -49,6 +61,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.ui.LocalAppColors
+import kotlinx.coroutines.delay
+import android.graphics.Paint as NativePaint
 
 private const val TAG = "FocusLibraryScreen"
 
@@ -275,22 +289,86 @@ private fun LibraryGridItem(
     val appColors = LocalAppColors.current
     val context = LocalContext.current
 
+    var isGlowActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isFocused) {
+        if (isFocused) {
+            delay(200L)
+            isGlowActive = true
+        } else {
+            isGlowActive = false
+        }
+    }
+
+    val shadowAlpha by animateFloatAsState(
+        targetValue = if (isFocused && isGlowActive) 1f else 0f,
+        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        label = "LibraryCardGlowFadeIn",
+    )
+
     val iconBitmap =
         remember(appInfo.icon) {
             FocusImageCache.getIconBitmap(context, appInfo)
         }
 
+    val palette =
+        remember(appInfo.packageName, appInfo.coverPath) {
+            AppPaletteExtractor.getCachedColorsOrNull(appInfo)
+        }
+
+    val targetCardBg =
+        if (isFocused && isGlowActive) {
+            if (palette != null && palette.isExtracted) {
+                palette.darkenedPrimaryColor
+            } else {
+                appColors.surfaceVariant
+            }
+        } else {
+            appColors.surface.copy(alpha = 0.5f)
+        }
+
+    val animatedCardBg by animateColorAsState(
+        targetValue = targetCardBg,
+        animationSpec = tween(durationMillis = 300),
+        label = "LibraryCardBgAnim",
+    )
+
     val cardScale = if (isFocused) 1.05f else 1.0f
     val borderColor = if (isFocused) appColors.accent else Color.Transparent
-    val cardBg = if (isFocused) appColors.surface.copy(alpha = 0.9f) else appColors.surface.copy(alpha = 0.5f)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier =
             modifier
                 .scale(cardScale)
-                .clip(RoundedCornerShape(FLS_CORNER_RADIUS))
-                .background(cardBg)
+                .drawBehind {
+                    if (shadowAlpha > 0f) {
+                        val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
+                        val blurRadiusPx = 16.dp.toPx()
+                        val spreadPx = 2.dp.toPx()
+                        val shadowColorArgb = appColors.accent.copy(alpha = 0.45f * shadowAlpha).toArgb()
+
+                        drawIntoCanvas { canvas ->
+                            val nativePaint =
+                                NativePaint().apply {
+                                    isAntiAlias = true
+                                    color = shadowColorArgb
+                                    style = NativePaint.Style.FILL
+                                    maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                }
+                            canvas.nativeCanvas.drawRoundRect(
+                                -spreadPx,
+                                -spreadPx,
+                                size.width + spreadPx,
+                                size.height + spreadPx,
+                                cornerRadiusPx + spreadPx,
+                                cornerRadiusPx + spreadPx,
+                                nativePaint,
+                            )
+                        }
+                    }
+                }.clip(RoundedCornerShape(FLS_CORNER_RADIUS))
+                .background(animatedCardBg)
                 .border(
                     width = FLS_FOCUS_BORDER_WIDTH,
                     color = borderColor,
