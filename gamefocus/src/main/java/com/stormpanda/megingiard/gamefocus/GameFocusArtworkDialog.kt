@@ -84,6 +84,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -639,6 +640,10 @@ private fun ArtworkOptionItem(
                 val stream = connection.getInputStream()
                 val decoded = BitmapFactory.decodeStream(stream)
                 stream.close()
+                if (!isActive) {
+                    decoded?.let { if (!it.isRecycled) it.recycle() }
+                    return@withContext
+                }
                 rawBitmap = decoded
                 withContext(Dispatchers.Main) {
                     bitmap = decoded?.asImageBitmap()

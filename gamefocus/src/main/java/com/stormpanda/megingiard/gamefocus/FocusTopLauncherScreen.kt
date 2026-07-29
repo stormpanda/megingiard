@@ -988,15 +988,21 @@ private fun PosterCardContent(
             FocusImageCache.getCoverBitmap(appInfo)
         }
 
-    val iconBitmap =
-        remember(appInfo.icon, coverBitmap) {
-            if (coverBitmap == null) FocusImageCache.getIconBitmap(context, appInfo) else null
+    val iconBitmap by produceState<ImageBitmap?>(
+        initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
+        key1 = appInfo.packageName,
+        key2 = coverBitmap == null,
+    ) {
+        if (coverBitmap == null && value == null) {
+            value = FocusImageCache.getIconBitmapAsync(context, appInfo)
         }
+    }
 
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
+        val currentIcon = iconBitmap
         if (coverBitmap != null) {
             Image(
                 bitmap = coverBitmap,
@@ -1004,9 +1010,9 @@ private fun PosterCardContent(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else if (iconBitmap != null) {
+        } else if (currentIcon != null) {
             Image(
-                bitmap = iconBitmap,
+                bitmap = currentIcon,
                 contentDescription = appInfo.label,
                 modifier =
                     Modifier

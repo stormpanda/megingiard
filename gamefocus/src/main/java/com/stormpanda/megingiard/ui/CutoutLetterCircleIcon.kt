@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+private const val TAG = "CutoutLetterCircleIcon"
 private const val ICON_DEFAULT_SIZE_DP = 18
 
 /**
