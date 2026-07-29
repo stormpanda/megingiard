@@ -1,7 +1,10 @@
 package com.stormpanda.megingiard.focus
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
+
+private const val TAG = "LibraryTabTest"
 
 class LibraryTabTest {
     private fun makeApp(
@@ -48,6 +51,13 @@ class LibraryTabTest {
         val result = LibraryTab.APPS.filterApps(apps)
         assertEquals(1, result.size)
         assertEquals("Tool App", result[0].label)
+    }
+
+    @Test
+    fun testFilterAppsEmptyList() {
+        assertTrue(LibraryTab.ALL.filterApps(emptyList()).isEmpty())
+        assertTrue(LibraryTab.APPS.filterApps(emptyList()).isEmpty())
+        assertTrue(LibraryTab.GAMES.filterApps(emptyList()).isEmpty())
     }
 
     @Test
