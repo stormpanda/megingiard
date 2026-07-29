@@ -199,6 +199,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onFocusedAppChanged = { focusedAppState.value = it },
                             onDismissEditingApp = { editingAppInfoState.value = null },
                             allApps = allApps,
+                            lastUsed = lastUsed,
                             isLibraryOpen = isLibraryOpenState.value,
                             librarySelectedTab = librarySelectedTabState.value,
                             onLibraryTabSelected = { librarySelectedTabState.value = it },
@@ -884,15 +885,32 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 stopRepeat()
                 val allApps = InstalledAppsManager.installedApps.value
                 val favorites = InstalledAppsManager.favorites.value
+                val hidden = InstalledAppsManager.hiddenApps.value
                 val lastUsed = InstalledAppsManager.lastUsed.value
                 val selectedCategory = selectedCategoryState.value
                 val apps =
                     when (selectedCategory) {
-                        GameFocusCategory.GAMES -> allApps.filter { it.isGame }
-                        GameFocusCategory.APPS -> allApps.filter { !it.isGame }
-                        GameFocusCategory.ALL_APPS -> allApps
-                        GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
-                        GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                        GameFocusCategory.GAMES -> {
+                            allApps.filter { it.isGame && !hidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.APPS -> {
+                            allApps.filter { !it.isGame && !hidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.ALL_APPS -> {
+                            allApps.filter { !hidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.FAVORITES -> {
+                            allApps.filter { favorites.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.LAST_USED -> {
+                            lastUsed
+                                .mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                                .filter { !hidden.contains(it.packageName) }
+                        }
                     }
 
                 if (y < -0.5f) {
