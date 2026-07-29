@@ -87,10 +87,14 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
+import com.stormpanda.megingiard.ui.ExpandableActionItem
+import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.ExpandableMenuOrientation
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.GamePadButtonIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.MaterialSymbol
 import android.graphics.Paint as NativePaint
 
 private const val TAG = "FocusLibraryScreen"
@@ -149,6 +153,14 @@ fun FocusLibraryScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
+    favoritesSet: Set<String> = emptySet(),
+    hiddenSet: Set<String> = emptySet(),
+    isOptionsMenuExpanded: Boolean = false,
+    onOptionsMenuExpandedChange: (Boolean) -> Unit = {},
+    onToggleFavorite: (InstalledAppInfo) -> Unit = {},
+    onToggleHidden: (InstalledAppInfo) -> Unit = {},
+    onEditArtwork: (InstalledAppInfo) -> Unit = {},
+    onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     enabled: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
@@ -285,9 +297,11 @@ fun FocusLibraryScreen(
                                 key = { _, app -> app.packageName },
                             ) { index, app ->
                                 val isFocused = (index == focusedIndex)
+                                val isHidden = hiddenSet.contains(app.packageName)
                                 LibraryGridItem(
                                     appInfo = app,
                                     isFocused = isFocused,
+                                    isHidden = isHidden,
                                     onClickTop = {
                                         onFocusedIndexChange(index)
                                         onAppClickTop(app)
@@ -397,6 +411,112 @@ fun FocusLibraryScreen(
                             )
                         }
                     }
+                }
+            }
+
+            // Bottom Bar containing Action Menu (lower left) and Launch indicators (lower right)
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 4.dp, top = 4.dp),
+            ) {
+                val activeApps = selectedTab.filterApps(allApps)
+                val focusedApp = activeApps.getOrNull(focusedIndex.coerceAtLeast(0))
+                val isCurrentFavorite = focusedApp != null && favoritesSet.contains(focusedApp.packageName)
+                val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp.packageName)
+
+                // Lower Left: Library Action Menu
+                Box(modifier = Modifier.align(Alignment.BottomStart)) {
+                    ExpandableActionsMenu(
+                        isExpanded = isOptionsMenuExpanded,
+                        onExpandedChange = onOptionsMenuExpandedChange,
+                        orientation = ExpandableMenuOrientation.VERTICAL,
+                        enabled = enabled,
+                        actions =
+                            listOf(
+                                ExpandableActionItem(
+                                    label =
+                                        if (isCurrentFavorite) {
+                                            stringResource(R.string.gamefocus_option_remove_favorite)
+                                        } else {
+                                            stringResource(R.string.gamefocus_option_add_favorite)
+                                        },
+                                    iconSymbol = "gamepad_up",
+                                    onClick = {
+                                        if (focusedApp != null) {
+                                            onToggleFavorite(focusedApp)
+                                            onOptionsMenuExpandedChange(false)
+                                        }
+                                    },
+                                ),
+                                ExpandableActionItem(
+                                    label = stringResource(R.string.gamefocus_option_edit),
+                                    iconSymbol = "gamepad_right",
+                                    onClick = {
+                                        if (focusedApp != null) {
+                                            onEditArtwork(focusedApp)
+                                            onOptionsMenuExpandedChange(false)
+                                        }
+                                    },
+                                ),
+                                ExpandableActionItem(
+                                    label = stringResource(R.string.gamefocus_option_app_info),
+                                    iconSymbol = "gamepad_down",
+                                    onClick = {
+                                        if (focusedApp != null) {
+                                            onOpenAppInfo(focusedApp)
+                                            onOptionsMenuExpandedChange(false)
+                                        }
+                                    },
+                                ),
+                                ExpandableActionItem(
+                                    label =
+                                        if (isCurrentHidden) {
+                                            stringResource(R.string.gamefocus_option_unhide)
+                                        } else {
+                                            stringResource(R.string.gamefocus_option_hide)
+                                        },
+                                    iconSymbol = "gamepad_left",
+                                    onClick = {
+                                        if (focusedApp != null) {
+                                            onToggleHidden(focusedApp)
+                                            onOptionsMenuExpandedChange(false)
+                                        }
+                                    },
+                                ),
+                            ),
+                    )
+                }
+
+                // Lower Right: Subdued touch launch buttons
+                Row(
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_A,
+                        text = stringResource(R.string.gamefocus_launch_top),
+                        enabled = enabled && !isOptionsMenuExpanded,
+                        onClick = {
+                            if (focusedApp != null) {
+                                onAppClickTop(focusedApp)
+                            }
+                        },
+                    )
+
+                    Spacer(modifier = Modifier.width(2.dp))
+
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_X,
+                        text = stringResource(R.string.gamefocus_launch_bottom),
+                        enabled = enabled && !isOptionsMenuExpanded,
+                        onClick = {
+                            if (focusedApp != null) {
+                                onAppClickBottom(focusedApp)
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -547,6 +667,7 @@ private fun InteractiveLibraryCategoryHeader(
 private fun LibraryGridItem(
     appInfo: InstalledAppInfo,
     isFocused: Boolean,
+    isHidden: Boolean = false,
     onClickTop: () -> Unit,
     onClickBottom: () -> Unit,
     modifier: Modifier = Modifier,
@@ -624,6 +745,22 @@ private fun LibraryGridItem(
                     tint = appColors.accent,
                     modifier = Modifier.size(36.dp),
                 )
+            }
+
+            if (isHidden) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(2.dp),
+                    contentAlignment = Alignment.TopEnd,
+                ) {
+                    MaterialSymbol(
+                        name = "visibility_off",
+                        size = 18.dp,
+                        tint = appColors.onSurfaceSecondary,
+                    )
+                }
             }
         }
 

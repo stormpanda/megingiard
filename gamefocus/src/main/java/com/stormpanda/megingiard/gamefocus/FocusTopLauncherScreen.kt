@@ -120,9 +120,11 @@ fun FocusTopLauncherScreen(
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
     selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
     favoritesSet: Set<String> = emptySet(),
+    hiddenSet: Set<String> = emptySet(),
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     onToggleFavorite: (InstalledAppInfo) -> Unit = {},
+    onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
@@ -147,6 +149,8 @@ fun FocusTopLauncherScreen(
     onLibraryTabSelected: (LibraryTab) -> Unit = {},
     libraryFocusedIndex: Int = 0,
     onLibraryFocusedIndexChange: (Int) -> Unit = {},
+    isLibraryOptionsMenuExpanded: Boolean = false,
+    onLibraryOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     onOpenLibrary: () -> Unit = {},
     onCloseLibrary: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -401,6 +405,14 @@ fun FocusTopLauncherScreen(
                     onTabSelected = onLibraryTabSelected,
                     focusedIndex = libraryFocusedIndex,
                     onFocusedIndexChange = onLibraryFocusedIndexChange,
+                    favoritesSet = favoritesSet,
+                    hiddenSet = hiddenSet,
+                    isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
+                    onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
+                    onToggleFavorite = onToggleFavorite,
+                    onToggleHidden = onToggleHidden,
+                    onEditArtwork = onEditArtwork,
+                    onOpenAppInfo = onOpenAppInfo,
                     onAppClickTop = onAppClickTop,
                     onAppClickBottom = onAppClickBottom,
                     onCloseRequested = onCloseLibrary,
@@ -591,6 +603,7 @@ fun FocusTopLauncherScreen(
                                 .padding(start = 12.dp, bottom = 4.dp),
                     ) {
                         val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+                        val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
                         ExpandableActionsMenu(
                             isExpanded = isMainOptionsMenuExpanded,
                             onExpandedChange = onMainOptionsMenuExpandedChange,
@@ -629,6 +642,21 @@ fun FocusTopLauncherScreen(
                                         onClick = {
                                             if (currentApp != null) {
                                                 onOpenAppInfo(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            }
+                                        },
+                                    ),
+                                    ExpandableActionItem(
+                                        label =
+                                            if (isCurrentHidden) {
+                                                stringResource(R.string.gamefocus_option_unhide)
+                                            } else {
+                                                stringResource(R.string.gamefocus_option_hide)
+                                            },
+                                        iconSymbol = "gamepad_left",
+                                        onClick = {
+                                            if (currentApp != null) {
+                                                onToggleHidden(currentApp)
                                                 onMainOptionsMenuExpandedChange(false)
                                             }
                                         },

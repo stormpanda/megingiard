@@ -92,6 +92,18 @@ class InstalledAppsManagerTest {
     }
 
     @Test
+    fun testToggleHidden_addsAndRemovesPackage() {
+        val context: Context = RuntimeEnvironment.getApplication()
+        val pkg = "com.test.hiddenapp"
+
+        InstalledAppsManager.toggleHidden(context, pkg)
+        assertTrue(InstalledAppsManager.hiddenApps.value.contains(pkg))
+
+        InstalledAppsManager.toggleHidden(context, pkg)
+        assertFalse(InstalledAppsManager.hiddenApps.value.contains(pkg))
+    }
+
+    @Test
     fun testRecordAppLaunch_prependsAndCapsAtMax() {
         val context: Context = RuntimeEnvironment.getApplication()
 
