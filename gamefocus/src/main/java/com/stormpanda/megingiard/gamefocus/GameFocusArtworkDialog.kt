@@ -78,6 +78,8 @@ import com.stormpanda.megingiard.ui.CutoutLetterButton
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.GamePadButton
+import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -488,8 +490,8 @@ fun GameFocusArtworkDialog(
                         ),
                 )
 
-                CutoutLetterButton(
-                    letter = "B",
+                GamePadButtonAction(
+                    button = GamePadButton.BUTTON_B,
                     text = stringResource(R.string.settings_cancel),
                     onClick = onDismiss,
                 )

@@ -80,6 +80,8 @@ import com.stormpanda.megingiard.ui.CutoutLetterButton
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.GamePadButton
+import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
 import kotlinx.coroutines.Job
@@ -613,8 +615,8 @@ fun FocusTopLauncherScreen(
                                 .padding(end = 12.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CutoutLetterButton(
-                            letter = "A",
+                        GamePadButtonAction(
+                            button = GamePadButton.BUTTON_A,
                             text = stringResource(R.string.gamefocus_launch_top),
                             onClick = {
                                 if (currentApp != null) {
@@ -625,8 +627,8 @@ fun FocusTopLauncherScreen(
 
                         Spacer(modifier = Modifier.width(2.dp))
 
-                        CutoutLetterButton(
-                            letter = "X",
+                        GamePadButtonAction(
+                            button = GamePadButton.BUTTON_X,
                             text = stringResource(R.string.gamefocus_launch_bottom),
                             onClick = {
                                 if (currentApp != null) {

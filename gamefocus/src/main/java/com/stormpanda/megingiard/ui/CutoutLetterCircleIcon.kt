@@ -5,8 +5,11 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,7 +30,8 @@ import androidx.compose.ui.unit.sp
 private const val ICON_DEFAULT_SIZE_DP = 18
 
 /**
- * Reusable Composable rendering a solid filled circle with a bold letter cutout (A, X, L1, R1, etc.)
+ * Reusable Composable rendering a solid filled circle (1 char) or pill shape (multi-char)
+ * with a bold letter cutout (A, X, SELECT, START, etc.).
  */
 @Composable
 fun CutoutLetterCircleIcon(
@@ -37,14 +41,25 @@ fun CutoutLetterCircleIcon(
     tint: Color = LocalAppColors.current.onSurfaceSecondary,
     cutoutColor: Color = LocalAppColors.current.appBackground,
 ) {
-    val fontSizeFactor = if (letter.length > 1) 0.48f else 0.65f
+    val isMultiChar = letter.length > 1
+    val fontSizeFactor =
+        if (letter.length > 3) {
+            0.48f
+        } else if (isMultiChar) {
+            0.54f
+        } else {
+            0.65f
+        }
+    val horizontalPadding = if (isMultiChar) (size.value * 0.35f).dp else 0.dp
 
     Box(
         modifier =
             modifier
-                .size(size)
+                .height(size)
+                .widthIn(min = size)
                 .clip(CircleShape)
-                .background(tint),
+                .background(tint)
+                .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -57,12 +72,13 @@ fun CutoutLetterCircleIcon(
                     lineHeight = (size.value * fontSizeFactor).sp,
                 ),
             textAlign = TextAlign.Center,
+            maxLines = 1,
         )
     }
 }
 
 /**
- * Reusable Composable rendering a solid filled circle with a Material Symbol cutout (menu, etc.)
+ * Reusable Composable rendering a standalone filled Material Symbol icon (replacing the outer cutout circle).
  */
 @Composable
 fun CutoutSymbolCircleIcon(
@@ -72,20 +88,13 @@ fun CutoutSymbolCircleIcon(
     tint: Color = LocalAppColors.current.onSurfaceSecondary,
     cutoutColor: Color = LocalAppColors.current.appBackground,
 ) {
-    Box(
-        modifier =
-            modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(tint),
-        contentAlignment = Alignment.Center,
-    ) {
-        MaterialSymbol(
-            name = symbolName,
-            size = (size.value * 0.7f).dp,
-            tint = cutoutColor,
-        )
-    }
+    MaterialSymbol(
+        name = symbolName,
+        size = size,
+        tint = tint,
+        filled = true,
+        modifier = modifier,
+    )
 }
 
 /**

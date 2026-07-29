@@ -21,7 +21,8 @@ import kotlinx.coroutines.delay
 
 data class ExpandableActionItem(
     val label: String,
-    val iconSymbol: String,
+    val iconSymbol: String = "menu",
+    val button: GamePadButton? = null,
     val onClick: () -> Unit,
 )
 
@@ -40,14 +41,15 @@ fun ExpandableActionsMenu(
     val effectiveActions =
         remember(actions, closeLabel) {
             if (actions.none {
-                    it.iconSymbol == "menu" || it.label.equals(closeLabel, ignoreCase = true) ||
+                    it.button == GamePadButton.SELECT ||
+                        it.label.equals(closeLabel, ignoreCase = true) ||
                         it.label.equals("Close", ignoreCase = true)
                 }
             ) {
                 listOf(
                     ExpandableActionItem(
                         label = closeLabel,
-                        iconSymbol = "menu",
+                        button = GamePadButton.SELECT,
                         onClick = { onExpandedChange(false) },
                     ),
                 ) + actions
@@ -76,8 +78,8 @@ fun ExpandableActionsMenu(
     ) {
         // Collapsed Single Actions Button (Subdued look matching Cancel button, no fading)
         if (expansionFraction < 0.5f) {
-            CutoutSymbolButton(
-                symbolName = "menu",
+            GamePadButtonAction(
+                button = GamePadButton.SELECT,
                 text = stringResource(R.string.gamefocus_option_actions),
                 onClick = { onExpandedChange(true) },
             )
@@ -92,20 +94,37 @@ fun ExpandableActionsMenu(
                     val spreadOffsetPx = with(density) { (index * 24.dp.toPx()) * (1f - expansionFraction) }
                     val itemAlpha = if (index == 0) 1f else (expansionFraction * 2f - 1f).coerceIn(0f, 1f)
 
-                    CutoutSymbolButton(
-                        symbolName = item.iconSymbol,
-                        text = item.label,
-                        onClick = {
-                            onExpandedChange(false)
-                            item.onClick()
-                        },
-                        modifier =
-                            Modifier
-                                .graphicsLayer {
-                                    translationX = -spreadOffsetPx
-                                    alpha = itemAlpha
-                                }.padding(end = 2.dp),
-                    )
+                    if (item.button != null) {
+                        GamePadButtonAction(
+                            button = item.button,
+                            text = item.label,
+                            onClick = {
+                                onExpandedChange(false)
+                                item.onClick()
+                            },
+                            modifier =
+                                Modifier
+                                    .graphicsLayer {
+                                        translationX = -spreadOffsetPx
+                                        alpha = itemAlpha
+                                    }.padding(end = 2.dp),
+                        )
+                    } else {
+                        CutoutSymbolButton(
+                            symbolName = item.iconSymbol,
+                            text = item.label,
+                            onClick = {
+                                onExpandedChange(false)
+                                item.onClick()
+                            },
+                            modifier =
+                                Modifier
+                                    .graphicsLayer {
+                                        translationX = -spreadOffsetPx
+                                        alpha = itemAlpha
+                                    }.padding(end = 2.dp),
+                        )
+                    }
                 }
             }
         }

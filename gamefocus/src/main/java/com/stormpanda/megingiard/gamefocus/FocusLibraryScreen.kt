@@ -85,6 +85,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
+import com.stormpanda.megingiard.ui.GamePadButton
+import com.stormpanda.megingiard.ui.GamePadButtonIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
 import android.graphics.Paint as NativePaint
 
@@ -450,9 +452,9 @@ private fun InteractiveLibraryCategoryHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // (L1) Cutout Letter Circle Icon
-        CutoutLetterCircleIcon(
-            letter = "L1",
+        // (L1) GamePad Button Icon
+        GamePadButtonIcon(
+            button = GamePadButton.BUTTON_L1,
             size = 20.dp,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
@@ -531,9 +533,9 @@ private fun InteractiveLibraryCategoryHeader(
             }
         }
 
-        // (R1) Cutout Letter Circle Icon
-        CutoutLetterCircleIcon(
-            letter = "R1",
+        // (R1) GamePad Button Icon
+        GamePadButtonIcon(
+            button = GamePadButton.BUTTON_R1,
             size = 20.dp,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
