@@ -106,12 +106,12 @@ fun GamePadButtonIcon(
         }
 
         is GamePadButtonIconSpec.Symbol -> {
-            MaterialSymbol(
-                name = spec.name,
+            CutoutSymbolCircleIcon(
+                symbolName = spec.name,
+                modifier = modifier,
                 size = size,
                 tint = tint,
-                filled = true,
-                modifier = modifier,
+                cutoutColor = cutoutColor,
             )
         }
     }

@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -91,13 +92,41 @@ fun CutoutSymbolCircleIcon(
     tint: Color = LocalAppColors.current.onSurfaceSecondary,
     cutoutColor: Color = LocalAppColors.current.appBackground,
 ) {
-    MaterialSymbol(
-        name = symbolName,
-        size = size,
-        tint = tint,
-        filled = true,
-        modifier = modifier,
-    )
+    val rotationDegrees =
+        when (symbolName.lowercase()) {
+            "gamepad_up" -> 90f
+            "gamepad_right" -> 180f
+            "gamepad_down" -> 270f
+            "gamepad_left" -> 0f
+            else -> null
+        }
+
+    if (rotationDegrees != null) {
+        Box(
+            modifier =
+                modifier
+                    .size(size)
+                    .clip(CircleShape)
+                    .background(tint),
+            contentAlignment = Alignment.Center,
+        ) {
+            MaterialSymbol(
+                name = "arrow_back_2",
+                size = (size.value * 0.65f).dp,
+                tint = cutoutColor,
+                filled = true,
+                modifier = Modifier.rotate(rotationDegrees),
+            )
+        }
+    } else {
+        MaterialSymbol(
+            name = symbolName,
+            size = size,
+            tint = tint,
+            filled = true,
+            modifier = modifier,
+        )
+    }
 }
 
 /**
