@@ -34,6 +34,11 @@
     <string name="steamgriddb_search_placeholder">Suchbegriff eingeben…</string>
     <string name="steamgriddb_preview_unavailable">Vorschau nicht verfügbar</string>
     <string name="steamgriddb_cd_artwork_option">SteamGridDB Grafik-Option</string>
+    <string name="steamgriddb_status_downloading">Cover-Motiv wird heruntergeladen…</string>
+    <string name="steamgriddb_status_searching">SteamGridDB wird durchsucht…</string>
+    <string name="steamgriddb_status_fetching">Cover-Motive werden geladen…</string>
+    <string name="gamefocus_option_change_search_term">Suchbegriff ändern</string>
+    <string name="gamefocus_option_use_app_icon">App-Icon verwenden</string>
 
     <string name="gamefocus_library_title">Bibliothek</string>
     <string name="gamefocus_library_tab_all">Alle</string>

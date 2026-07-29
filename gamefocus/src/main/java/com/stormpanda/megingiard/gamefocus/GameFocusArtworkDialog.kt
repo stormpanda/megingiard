@@ -413,9 +413,9 @@ fun GameFocusArtworkDialog(
                         Spacer(modifier = Modifier.height(10.dp))
                         val loadingStatusText =
                             when {
-                                selectingImage != null -> "Downloading artwork..."
-                                isSearchLoading -> "Searching SteamGridDB..."
-                                else -> "Fetching game covers..."
+                                selectingImage != null -> stringResource(R.string.steamgriddb_status_downloading)
+                                isSearchLoading -> stringResource(R.string.steamgriddb_status_searching)
+                                else -> stringResource(R.string.steamgriddb_status_fetching)
                             }
                         Text(
                             text = loadingStatusText,
@@ -479,12 +479,12 @@ fun GameFocusArtworkDialog(
                     actions =
                         listOf(
                             ExpandableActionItem(
-                                label = "Change Search Term",
+                                label = stringResource(R.string.gamefocus_option_change_search_term),
                                 iconSymbol = "gamepad_up",
                                 onClick = { isEditingQuery = true },
                             ),
                             ExpandableActionItem(
-                                label = "Use App Icon",
+                                label = stringResource(R.string.gamefocus_option_use_app_icon),
                                 iconSymbol = "gamepad_right",
                                 onClick = { useAppIcon() },
                             ),

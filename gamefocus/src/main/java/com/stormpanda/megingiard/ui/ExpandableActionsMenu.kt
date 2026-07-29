@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.gamefocus.R
 import kotlinx.coroutines.delay
 
@@ -104,8 +105,10 @@ fun ExpandableActionsMenu(
 
     // Auto dismiss timer after autoDismissMs when expanded
     LaunchedEffect(isExpanded) {
+        AppLog.d(TAG, "ExpandableActionsMenu isExpanded=$isExpanded (orientation=$orientation, actions=${effectiveActions.size})")
         if (isExpanded && autoDismissMs > 0) {
             delay(autoDismissMs)
+            AppLog.d(TAG, "ExpandableActionsMenu auto-dismiss timer fired after ${autoDismissMs}ms")
             onExpandedChange(false)
         }
     }

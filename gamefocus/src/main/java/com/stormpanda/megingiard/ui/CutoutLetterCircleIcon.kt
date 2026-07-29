@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "CutoutLetterCircleIcon"
 private const val ICON_DEFAULT_SIZE_DP = 18
@@ -148,9 +149,16 @@ fun CutoutLetterButton(
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val handleOnClick =
+        remember(letter, text, onClick) {
+            {
+                AppLog.d(TAG, "CutoutLetterButton clicked: letter='$letter', label='$text'")
+                onClick()
+            }
+        }
 
     TextButton(
-        onClick = onClick,
+        onClick = handleOnClick,
         enabled = enabled,
         interactionSource = interactionSource,
         modifier = modifier.focusProperties { canFocus = false },
@@ -192,10 +200,17 @@ fun CutoutSymbolButton(
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val handleOnClick =
+        remember(symbolName, text, onClick) {
+            {
+                AppLog.d(TAG, "CutoutSymbolButton clicked: symbol='$symbolName', label='$text'")
+                onClick()
+            }
+        }
 
     CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
         Surface(
-            onClick = onClick,
+            onClick = handleOnClick,
             enabled = enabled,
             shape = CircleShape,
             color = Color.Transparent,

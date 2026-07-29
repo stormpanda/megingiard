@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "GamePadButton"
 
@@ -146,10 +147,17 @@ fun GamePadButtonAction(
     enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val handleOnClick =
+        remember(button, text, onClick) {
+            {
+                AppLog.d(TAG, "GamePadButtonAction clicked: button=${button.name}, label='$text'")
+                onClick()
+            }
+        }
 
     CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
         Surface(
-            onClick = onClick,
+            onClick = handleOnClick,
             enabled = enabled,
             shape = CircleShape,
             color = Color.Transparent,
