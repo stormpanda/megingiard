@@ -18,6 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -148,7 +151,17 @@ fun GamePadButtonAction(
         color = Color.Transparent,
         contentColor = tint,
         interactionSource = interactionSource,
-        modifier = modifier.focusProperties { canFocus = false },
+        modifier =
+            modifier
+                .focusProperties { canFocus = false }
+                .onPreviewKeyEvent { event ->
+                    if (enabled && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.keyCode == button.keyCode) {
+                        onClick()
+                        true
+                    } else {
+                        false
+                    }
+                },
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

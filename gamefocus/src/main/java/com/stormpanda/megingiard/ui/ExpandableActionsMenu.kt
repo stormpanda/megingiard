@@ -54,6 +54,7 @@ fun ExpandableActionsMenu(
     modifier: Modifier = Modifier,
     orientation: ExpandableMenuOrientation = ExpandableMenuOrientation.HORIZONTAL,
     autoDismissMs: Long = EAM_DEFAULT_AUTO_DISMISS_MS,
+    enabled: Boolean = true,
 ) {
     val density = LocalDensity.current
 
@@ -137,6 +138,7 @@ fun ExpandableActionsMenu(
                     text = stringResource(R.string.gamefocus_option_actions),
                     onClick = { onExpandedChange(true) },
                     contentPadding = contentPadding,
+                    enabled = enabled,
                 )
             }
 
@@ -159,6 +161,7 @@ fun ExpandableActionsMenu(
                                         item.onClick()
                                     },
                                     contentPadding = contentPadding,
+                                    enabled = enabled,
                                     modifier =
                                         Modifier
                                             .graphicsLayer {
@@ -208,6 +211,7 @@ fun ExpandableActionsMenu(
                                         item.onClick()
                                     },
                                     contentPadding = contentPadding,
+                                    enabled = enabled,
                                     modifier =
                                         Modifier
                                             .graphicsLayer {

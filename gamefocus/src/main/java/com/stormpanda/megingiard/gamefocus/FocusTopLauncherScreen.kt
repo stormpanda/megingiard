@@ -404,6 +404,7 @@ fun FocusTopLauncherScreen(
                     onAppClickTop = onAppClickTop,
                     onAppClickBottom = onAppClickBottom,
                     onCloseRequested = onCloseLibrary,
+                    enabled = isLibraryOpen,
                 )
             } else {
                 Box(
@@ -570,6 +571,7 @@ fun FocusTopLauncherScreen(
                     )
 
                     // Bottom-Left Main Actions Menu hovering over the gallery plane
+                    val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
                     Box(
                         modifier =
                             Modifier
@@ -581,6 +583,7 @@ fun FocusTopLauncherScreen(
                             isExpanded = isMainOptionsMenuExpanded,
                             onExpandedChange = onMainOptionsMenuExpandedChange,
                             orientation = ExpandableMenuOrientation.VERTICAL,
+                            enabled = isControlsEnabled,
                             actions =
                                 listOf(
                                     ExpandableActionItem(
@@ -624,6 +627,7 @@ fun FocusTopLauncherScreen(
 
                     // Bottom-Right subdued touch buttons hovering over the gallery plane
                     val noFocusInteractionSource = remember { MutableInteractionSource() }
+                    val isBottomBarEnabled = isControlsEnabled && !isMainOptionsMenuExpanded
                     Row(
                         modifier =
                             Modifier
@@ -634,6 +638,7 @@ fun FocusTopLauncherScreen(
                         GamePadButtonAction(
                             button = GamePadButton.BUTTON_A,
                             text = stringResource(R.string.gamefocus_launch_top),
+                            enabled = isBottomBarEnabled,
                             onClick = {
                                 if (currentApp != null) {
                                     onAppClickTop(currentApp)
@@ -646,6 +651,7 @@ fun FocusTopLauncherScreen(
                         GamePadButtonAction(
                             button = GamePadButton.BUTTON_X,
                             text = stringResource(R.string.gamefocus_launch_bottom),
+                            enabled = isBottomBarEnabled,
                             onClick = {
                                 if (currentApp != null) {
                                     onAppClickBottom(currentApp)
@@ -658,6 +664,7 @@ fun FocusTopLauncherScreen(
                         GamePadButtonAction(
                             button = GamePadButton.BUTTON_R2,
                             text = stringResource(R.string.gamefocus_nav_library),
+                            enabled = isBottomBarEnabled,
                             onClick = onOpenLibrary,
                         )
                     }

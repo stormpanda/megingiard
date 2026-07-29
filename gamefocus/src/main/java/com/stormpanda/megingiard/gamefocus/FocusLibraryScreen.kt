@@ -149,6 +149,7 @@ fun FocusLibraryScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
@@ -172,6 +173,7 @@ fun FocusLibraryScreen(
                     onFocusedIndexChange(0)
                 },
                 onCloseRequested = onCloseRequested,
+                enabled = enabled,
             )
 
             // Scrollable Condensed App Grid with Horizontal Category Switch Animation
@@ -407,6 +409,7 @@ private fun LibraryHeaderBar(
     onTabSelected: (LibraryTab) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
 
@@ -429,6 +432,7 @@ private fun LibraryHeaderBar(
             button = GamePadButton.BUTTON_R2,
             text = stringResource(R.string.gamefocus_nav_gallery),
             onClick = onCloseRequested,
+            enabled = enabled,
         )
     }
 }
