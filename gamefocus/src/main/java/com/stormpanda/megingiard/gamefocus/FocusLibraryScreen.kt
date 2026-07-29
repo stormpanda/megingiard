@@ -1,12 +1,18 @@
 package com.stormpanda.megingiard.gamefocus
 
 import android.graphics.BlurMaskFilter
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -139,18 +145,8 @@ fun FocusLibraryScreen(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
-    val displayedApps = remember(allApps, selectedTab) { selectedTab.filterApps(allApps) }
-    val gridState: LazyGridState = rememberLazyGridState()
     val density = LocalDensity.current
     val peekOffsetPx = with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() }
-
-    LaunchedEffect(focusedIndex, displayedApps.size) {
-        if (displayedApps.isNotEmpty() && focusedIndex >= 0) {
-            val safeIndex = focusedIndex.coerceIn(0, displayedApps.size - 1)
-            AppLog.d(TAG, "Library focused index changed to $safeIndex (total ${displayedApps.size})")
-            scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
-        }
-    }
 
     Box(
         modifier =
@@ -172,206 +168,233 @@ fun FocusLibraryScreen(
                 onCloseRequested = onCloseRequested,
             )
 
-            // Scrollable Condensed App Grid
-            if (displayedApps.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.focus_launcher_no_apps),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = appColors.onSurfaceSecondary,
-                    )
-                }
-            } else {
-                var gridContainerCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                var focusedItemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                var targetRect by remember { mutableStateOf<Rect?>(null) }
-                var isFirstPositioned by remember { mutableStateOf(false) }
-                val visibleItemCoords = remember { mutableStateMapOf<Int, LayoutCoordinates>() }
+            // Scrollable Condensed App Grid with Horizontal Category Switch Animation
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    val isMovingNext = initialState.next() == targetState
+                    if (isMovingNext) {
+                        (slideInHorizontally { width -> width } + fadeIn())
+                            .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
+                    } else {
+                        (slideInHorizontally { width -> -width } + fadeIn())
+                            .togetherWith(slideOutHorizontally { width -> width } + fadeOut())
+                    }
+                },
+                label = "LibraryCategoryTransition",
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) { activeTab ->
+                val displayedApps = remember(allApps, activeTab) { activeTab.filterApps(allApps) }
+                val gridState: LazyGridState = rememberLazyGridState()
 
-                LaunchedEffect(selectedTab) {
-                    targetRect = null
-                    isFirstPositioned = false
-                    visibleItemCoords.clear()
-                    gridState.scrollToItem(0)
+                LaunchedEffect(focusedIndex, displayedApps.size) {
+                    if (displayedApps.isNotEmpty() && focusedIndex >= 0) {
+                        val safeIndex = focusedIndex.coerceIn(0, displayedApps.size - 1)
+                        AppLog.d(TAG, "Library focused index changed to $safeIndex (total ${displayedApps.size})")
+                        scrollToFocusedItem(gridState, safeIndex, FLS_GRID_COLUMNS, peekOffsetPx)
+                    }
                 }
 
-                fun updateFocusedRect(
-                    coords: LayoutCoordinates,
-                    parentCoords: LayoutCoordinates,
-                ) {
-                    if (coords.isAttached && parentCoords.isAttached) {
-                        val positionInParent = parentCoords.localPositionOf(coords, Offset.Zero)
-                        val size = coords.size
-                        val newRect =
-                            Rect(
-                                left = positionInParent.x,
-                                top = positionInParent.y,
-                                right = positionInParent.x + size.width,
-                                bottom = positionInParent.y + size.height,
-                            )
-                        if (targetRect != newRect) {
-                            targetRect = newRect
-                            if (!isFirstPositioned) {
-                                isFirstPositioned = true
+                if (displayedApps.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.focus_launcher_no_apps),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = appColors.onSurfaceSecondary,
+                        )
+                    }
+                } else {
+                    var gridContainerCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                    var focusedItemCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                    var targetRect by remember { mutableStateOf<Rect?>(null) }
+                    var isFirstPositioned by remember { mutableStateOf(false) }
+                    val visibleItemCoords = remember { mutableStateMapOf<Int, LayoutCoordinates>() }
+
+                    LaunchedEffect(activeTab) {
+                        targetRect = null
+                        isFirstPositioned = false
+                        visibleItemCoords.clear()
+                        gridState.scrollToItem(0)
+                    }
+
+                    fun updateFocusedRect(
+                        coords: LayoutCoordinates,
+                        parentCoords: LayoutCoordinates,
+                    ) {
+                        if (coords.isAttached && parentCoords.isAttached) {
+                            val positionInParent = parentCoords.localPositionOf(coords, Offset.Zero)
+                            val size = coords.size
+                            val newRect =
+                                Rect(
+                                    left = positionInParent.x,
+                                    top = positionInParent.y,
+                                    right = positionInParent.x + size.width,
+                                    bottom = positionInParent.y + size.height,
+                                )
+                            if (targetRect != newRect) {
+                                targetRect = newRect
+                                if (!isFirstPositioned) {
+                                    isFirstPositioned = true
+                                }
                             }
                         }
                     }
-                }
 
-                SideEffect {
-                    val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
-                    val parentCoords = gridContainerCoordinates
-                    if (currentFocusedCoords != null && parentCoords != null) {
-                        updateFocusedRect(currentFocusedCoords, parentCoords)
-                    }
-                }
-
-                Box(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .clipToBounds()
-                            .onGloballyPositioned { coords ->
-                                gridContainerCoordinates = coords
-                                val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
-                                currentFocusedCoords?.let { itemCoords ->
-                                    updateFocusedRect(itemCoords, coords)
-                                }
-                            },
-                ) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(FLS_GRID_COLUMNS),
-                        state = gridState,
-                        contentPadding = PaddingValues(FLS_GRID_PADDING),
-                        horizontalArrangement = Arrangement.spacedBy(FLS_GRID_SPACING),
-                        verticalArrangement = Arrangement.spacedBy(FLS_GRID_SPACING),
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        itemsIndexed(
-                            items = displayedApps,
-                            key = { _, app -> app.packageName },
-                        ) { index, app ->
-                            val isFocused = (index == focusedIndex)
-                            LibraryGridItem(
-                                appInfo = app,
-                                isFocused = isFocused,
-                                onClickTop = {
-                                    onFocusedIndexChange(index)
-                                    onAppClickTop(app)
-                                },
-                                onClickBottom = {
-                                    onFocusedIndexChange(index)
-                                    onAppClickBottom(app)
-                                },
-                                modifier =
-                                    Modifier.onGloballyPositioned { itemCoords ->
-                                        visibleItemCoords[index] = itemCoords
-                                        if (isFocused) {
-                                            focusedItemCoordinates = itemCoords
-                                            gridContainerCoordinates?.let { parentCoords ->
-                                                updateFocusedRect(itemCoords, parentCoords)
-                                            }
-                                        }
-                                    },
-                            )
+                    SideEffect {
+                        val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
+                        val parentCoords = gridContainerCoordinates
+                        if (currentFocusedCoords != null && parentCoords != null) {
+                            updateFocusedRect(currentFocusedCoords, parentCoords)
                         }
                     }
 
-                    // Smoothly Animated Moving Focus Indicator Overlay
-                    if (targetRect != null) {
-                        val currentRect = targetRect!!
-
-                        val borderAnimationSpec =
-                            spring<Float>(
-                                stiffness = FLS_FOCUS_BORDER_SPRING_STIFFNESS,
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                            )
-
-                        val animLeft by animateFloatAsState(
-                            targetValue = currentRect.left,
-                            animationSpec = borderAnimationSpec,
-                            label = "LibraryBorderAnimLeft",
-                        )
-                        val animTop by animateFloatAsState(
-                            targetValue = currentRect.top,
-                            animationSpec = borderAnimationSpec,
-                            label = "LibraryBorderAnimTop",
-                        )
-                        val animWidth by animateFloatAsState(
-                            targetValue = currentRect.width,
-                            animationSpec = borderAnimationSpec,
-                            label = "LibraryBorderAnimWidth",
-                        )
-                        val animHeight by animateFloatAsState(
-                            targetValue = currentRect.height,
-                            animationSpec = borderAnimationSpec,
-                            label = "LibraryBorderAnimHeight",
-                        )
-                        val borderAlpha by animateFloatAsState(
-                            targetValue = if (isFirstPositioned) 1f else 0f,
-                            animationSpec = tween(durationMillis = 150),
-                            label = "LibraryBorderAlpha",
-                        )
-
-                        Box(
-                            modifier =
-                                Modifier
-                                    .graphicsLayer {
-                                        translationX = animLeft
-                                        translationY = animTop
-                                        scaleX = 1.05f
-                                        scaleY = 1.05f
-                                        alpha = borderAlpha
-                                    }.size(
-                                        width = with(density) { animWidth.coerceAtLeast(1f).toDp() },
-                                        height = with(density) { animHeight.coerceAtLeast(1f).toDp() },
-                                    ).drawBehind {
-                                        if (borderAlpha > 0f) {
-                                            val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
-                                            val blurRadiusPx = 16.dp.toPx()
-                                            val spreadPx = 2.dp.toPx()
-                                            val shadowColorArgb = appColors.accent.copy(alpha = 0.45f * borderAlpha).toArgb()
-
-                                            val innerPath =
-                                                Path().apply {
-                                                    addRoundRect(
-                                                        RoundRect(
-                                                            rect = Rect(0f, 0f, size.width, size.height),
-                                                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
-                                                        ),
-                                                    )
-                                                }
-
-                                            clipPath(innerPath, clipOp = ClipOp.Difference) {
-                                                drawIntoCanvas { canvas ->
-                                                    val nativePaint =
-                                                        NativePaint().apply {
-                                                            isAntiAlias = true
-                                                            color = shadowColorArgb
-                                                            style = NativePaint.Style.FILL
-                                                            maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
-                                                        }
-                                                    canvas.nativeCanvas.drawRoundRect(
-                                                        -spreadPx,
-                                                        -spreadPx,
-                                                        size.width + spreadPx,
-                                                        size.height + spreadPx,
-                                                        cornerRadiusPx + spreadPx,
-                                                        cornerRadiusPx + spreadPx,
-                                                        nativePaint,
-                                                    )
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clipToBounds()
+                                .onGloballyPositioned { coords ->
+                                    gridContainerCoordinates = coords
+                                    val currentFocusedCoords = visibleItemCoords[focusedIndex] ?: focusedItemCoordinates
+                                    currentFocusedCoords?.let { itemCoords ->
+                                        updateFocusedRect(itemCoords, coords)
+                                    }
+                                },
+                    ) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(FLS_GRID_COLUMNS),
+                            state = gridState,
+                            contentPadding = PaddingValues(FLS_GRID_PADDING),
+                            horizontalArrangement = Arrangement.spacedBy(FLS_GRID_SPACING),
+                            verticalArrangement = Arrangement.spacedBy(FLS_GRID_SPACING),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            itemsIndexed(
+                                items = displayedApps,
+                                key = { _, app -> app.packageName },
+                            ) { index, app ->
+                                val isFocused = (index == focusedIndex)
+                                LibraryGridItem(
+                                    appInfo = app,
+                                    isFocused = isFocused,
+                                    onClickTop = {
+                                        onFocusedIndexChange(index)
+                                        onAppClickTop(app)
+                                    },
+                                    onClickBottom = {
+                                        onFocusedIndexChange(index)
+                                        onAppClickBottom(app)
+                                    },
+                                    modifier =
+                                        Modifier.onGloballyPositioned { itemCoords ->
+                                            visibleItemCoords[index] = itemCoords
+                                            if (isFocused) {
+                                                focusedItemCoordinates = itemCoords
+                                                gridContainerCoordinates?.let { parentCoords ->
+                                                    updateFocusedRect(itemCoords, parentCoords)
                                                 }
                                             }
-                                        }
-                                    }.border(
-                                        width = FLS_FOCUS_BORDER_WIDTH,
-                                        color = appColors.accent,
-                                        shape = RoundedCornerShape(FLS_CORNER_RADIUS),
-                                    ),
-                        )
+                                        },
+                                )
+                            }
+                        }
+
+                        // Smoothly Animated Moving Focus Indicator Overlay
+                        if (targetRect != null) {
+                            val currentRect = targetRect!!
+
+                            val borderAnimationSpec =
+                                spring<Float>(
+                                    stiffness = FLS_FOCUS_BORDER_SPRING_STIFFNESS,
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                )
+
+                            val animLeft by animateFloatAsState(
+                                targetValue = currentRect.left,
+                                animationSpec = borderAnimationSpec,
+                                label = "LibraryBorderAnimLeft",
+                            )
+                            val animTop by animateFloatAsState(
+                                targetValue = currentRect.top,
+                                animationSpec = borderAnimationSpec,
+                                label = "LibraryBorderAnimTop",
+                            )
+                            val animWidth by animateFloatAsState(
+                                targetValue = currentRect.width,
+                                animationSpec = borderAnimationSpec,
+                                label = "LibraryBorderAnimWidth",
+                            )
+                            val animHeight by animateFloatAsState(
+                                targetValue = currentRect.height,
+                                animationSpec = borderAnimationSpec,
+                                label = "LibraryBorderAnimHeight",
+                            )
+                            val borderAlpha by animateFloatAsState(
+                                targetValue = if (isFirstPositioned) 1f else 0f,
+                                animationSpec = tween(durationMillis = 150),
+                                label = "LibraryBorderAlpha",
+                            )
+
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .graphicsLayer {
+                                            translationX = animLeft
+                                            translationY = animTop
+                                            scaleX = 1.05f
+                                            scaleY = 1.05f
+                                            alpha = borderAlpha
+                                        }.size(
+                                            width = with(density) { animWidth.coerceAtLeast(1f).toDp() },
+                                            height = with(density) { animHeight.coerceAtLeast(1f).toDp() },
+                                        ).drawBehind {
+                                            if (borderAlpha > 0f) {
+                                                val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
+                                                val blurRadiusPx = 16.dp.toPx()
+                                                val spreadPx = 2.dp.toPx()
+                                                val shadowColorArgb = appColors.accent.copy(alpha = 0.45f * borderAlpha).toArgb()
+
+                                                val innerPath =
+                                                    Path().apply {
+                                                        addRoundRect(
+                                                            RoundRect(
+                                                                rect = Rect(0f, 0f, size.width, size.height),
+                                                                cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
+                                                            ),
+                                                        )
+                                                    }
+
+                                                clipPath(innerPath, clipOp = ClipOp.Difference) {
+                                                    drawIntoCanvas { canvas ->
+                                                        val nativePaint =
+                                                            NativePaint().apply {
+                                                                isAntiAlias = true
+                                                                color = shadowColorArgb
+                                                                style = NativePaint.Style.FILL
+                                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                                            }
+                                                        canvas.nativeCanvas.drawRoundRect(
+                                                            -spreadPx,
+                                                            -spreadPx,
+                                                            size.width + spreadPx,
+                                                            size.height + spreadPx,
+                                                            cornerRadiusPx + spreadPx,
+                                                            cornerRadiusPx + spreadPx,
+                                                            nativePaint,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }.border(
+                                            width = FLS_FOCUS_BORDER_WIDTH,
+                                            color = appColors.accent,
+                                            shape = RoundedCornerShape(FLS_CORNER_RADIUS),
+                                        ),
+                            )
+                        }
                     }
                 }
             }
