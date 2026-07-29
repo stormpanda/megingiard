@@ -85,8 +85,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Highlighting an application in the Library grid MUST dynamically adapt the Library screen's background gradient to the extracted palette colors (`AppPaletteExtractor`) of the highlighted app icon after a ~200ms settlement delay.
 - The highlighted Library card MUST animate a vibrant accent blur glow (`BlurMaskFilter`) and accent focus border smoothly gliding across grid items (`200ms` `animateFloatAsState` translation/size interpolation relative to grid bounds) as D-pad or joystick focus moves to the next application.
 - Gamepad D-pad / Joystick navigation inside the Library MUST be restricted strictly to grid items (0..N). Static tabs MUST be excluded from D-pad focus, and tab category switching MUST be handled exclusively via **L1** / **R1**.
-- Dual-display launching inside the Library MUST be triggered via **A** (top display) and **X** (bottom display). Pressing **R2**, **B**, or **BACK** MUST close the Library and return to the main gallery screen.
-
+- Dual-display launching inside the Library MUST be triggered via **A** (top display) and **X** (bottom display). Pressing **R2**, **B**, **BACK**, or **HOME** (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` / system HOME intent) MUST close sub-views/dialogs and return the user directly to the main gallery screen.
 
 ---
 
@@ -124,7 +123,4 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.
 - **AppPaletteExtractor:** Utility object in `gamefocus/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting the most vibrant primary and distinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
-- **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.
-istinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
-- **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
-- **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.
+- **Manifest Integration & Home Handling:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a `singleTask` system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters. Overrides `onNewIntent` and intercepts `KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` in `onKeyDown` to reset view state (`isLibraryOpenState`, `editingAppInfoState`, `isMainOptionsMenuExpandedState`) back to the main gallery when pressed anywhere outside the gallery.

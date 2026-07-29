@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -176,6 +177,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        AppLog.i(TAG, "onNewIntent received -> resetting view to main gallery")
+        resetToGallery()
+    }
+
     override fun onResume() {
         super.onResume()
         AppLog.d(TAG, "FocusTopLauncherActivity resumed, refreshing installed apps")
@@ -185,6 +192,25 @@ class FocusTopLauncherActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         stopRepeat()
+    }
+
+    private fun resetToGallery(): Boolean {
+        val wasNotInGallery =
+            isLibraryOpenState.value ||
+                editingAppInfoState.value != null ||
+                isMainOptionsMenuExpandedState.value ||
+                isOptionsMenuExpandedState.value
+
+        if (wasNotInGallery) {
+            AppLog.i(TAG, "Resetting view state to main gallery")
+            stopRepeat()
+            isLibraryOpenState.value = false
+            editingAppInfoState.value = null
+            isMainOptionsMenuExpandedState.value = false
+            isOptionsMenuExpandedState.value = false
+            return true
+        }
+        return false
     }
 
     private fun stepLibraryFocus(direction: ScrollDirection) {
@@ -305,6 +331,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            AppLog.i(TAG, "Home key pressed (keyCode=$keyCode) -> returning to main gallery")
+            resetToGallery()
+            return true
+        }
+
         if (editingAppInfoState.value != null) {
             // Strict Input Isolation: Traps all inputs while modal artwork dialog is open
             if (isOptionsMenuExpandedState.value) {
@@ -661,6 +693,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_HOME || keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            return true
+        }
+
         if (editingAppInfoState.value != null) {
             when (keyCode) {
                 KeyEvent.KEYCODE_DPAD_LEFT,
