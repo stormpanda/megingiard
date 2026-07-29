@@ -10,7 +10,9 @@
 
     <string name="gamefocus_launch_top">Oberer Bildschirm</string>
     <string name="gamefocus_launch_bottom">Unterer Bildschirm</string>
-    <string name="gamefocus_header_android_apps">Android Apps</string>
+    <string name="gamefocus_header_android_games">Android-Spiele</string>
+    <string name="gamefocus_header_android_apps">Android-Apps</string>
+    <string name="gamefocus_cat_all_apps">Alle Apps</string>
     <string name="gamefocus_cat_favorites">Favoriten</string>
     <string name="gamefocus_cat_last_used">Zuletzt verwendet</string>
     <string name="gamefocus_option_add_favorite">Zu Favoriten hinzufügen</string>
@@ -20,6 +22,8 @@
     <string name="gamefocus_option_actions">Aktionen</string>
     <string name="gamefocus_no_favorites">Keine Favoriten vorhanden</string>
     <string name="gamefocus_no_last_used">Keine kürzlich genutzten Apps</string>
+    <string name="gamefocus_no_games">Keine Android-Spiele gefunden</string>
+    <string name="gamefocus_no_apps_category">Keine Android-Apps gefunden</string>
 
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB Cover-Scraping erfordert einen API-Token. Bitte erstelle einen API-Schlüssel in deinen SteamGridDB-Einstellungen und trage ihn in Megingiards Einstellungen ein.</string>

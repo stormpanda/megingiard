@@ -53,7 +53,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val prevLetterTriggerState = mutableIntStateOf(0)
     private val nextLetterTriggerState = mutableIntStateOf(0)
 
-    private val selectedCategoryState = mutableStateOf(GameFocusCategory.ALL_APPS)
+    private val selectedCategoryState = mutableStateOf(GameFocusCategory.GAMES)
     private val isMainOptionsMenuExpandedState = mutableStateOf(false)
 
     private val isOptionsMenuExpandedState = mutableStateOf(false)
@@ -99,6 +99,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val displayedApps =
                 remember(allApps, favorites, lastUsed, selectedCategory) {
                     when (selectedCategory) {
+                        GameFocusCategory.GAMES -> allApps.filter { it.isGame }
+                        GameFocusCategory.APPS -> allApps.filter { !it.isGame }
                         GameFocusCategory.ALL_APPS -> allApps
                         GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
                         GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
@@ -343,6 +345,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val selectedCategory = selectedCategoryState.value
         val apps =
             when (selectedCategory) {
+                GameFocusCategory.GAMES -> allApps.filter { it.isGame }
+                GameFocusCategory.APPS -> allApps.filter { !it.isGame }
                 GameFocusCategory.ALL_APPS -> allApps
                 GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
                 GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
@@ -574,6 +578,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 val selectedCategory = selectedCategoryState.value
                 val apps =
                     when (selectedCategory) {
+                        GameFocusCategory.GAMES -> allApps.filter { it.isGame }
+                        GameFocusCategory.APPS -> allApps.filter { !it.isGame }
                         GameFocusCategory.ALL_APPS -> allApps
                         GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
                         GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }

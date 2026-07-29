@@ -22,6 +22,10 @@ class InstalledAppsManagerTest {
         assertEquals("Super Game", app.label)
         assertEquals("/tmp/cover.png", app.coverPath)
         assertNull(app.icon)
+        assertEquals(false, app.isGame)
+
+        val gameApp = app.copy(isGame = true)
+        assertEquals(true, gameApp.isGame)
     }
 
     @Test

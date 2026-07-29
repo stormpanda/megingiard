@@ -109,7 +109,7 @@ fun FocusTopLauncherScreen(
     onAppClickTop: (InstalledAppInfo) -> Unit = {},
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
-    selectedCategory: GameFocusCategory = GameFocusCategory.ALL_APPS,
+    selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
     favoritesSet: Set<String> = emptySet(),
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
@@ -150,12 +150,16 @@ fun FocusTopLauncherScreen(
         mutableStateOf<Map<GameFocusCategory, String>>(emptyMap())
     }
 
+    val gamesPagerState = rememberPagerState(initialPage = 0) { apps.size }
+    val appsPagerState = rememberPagerState(initialPage = 0) { apps.size }
     val allAppsPagerState = rememberPagerState(initialPage = 0) { apps.size }
     val favoritesPagerState = rememberPagerState(initialPage = 0) { apps.size }
     val lastUsedPagerState = rememberPagerState(initialPage = 0) { apps.size }
 
     val activePagerState =
         when (selectedCategory) {
+            GameFocusCategory.GAMES -> gamesPagerState
+            GameFocusCategory.APPS -> appsPagerState
             GameFocusCategory.ALL_APPS -> allAppsPagerState
             GameFocusCategory.FAVORITES -> favoritesPagerState
             GameFocusCategory.LAST_USED -> lastUsedPagerState
@@ -407,6 +411,8 @@ fun FocusTopLauncherScreen(
                                 Text(
                                     text =
                                         when (category) {
+                                            GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
+                                            GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
                                             GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
                                             GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
                                             else -> stringResource(R.string.focus_launcher_no_apps)
@@ -422,6 +428,8 @@ fun FocusTopLauncherScreen(
                                 // Carousel
                                 val categoryPagerState =
                                     when (category) {
+                                        GameFocusCategory.GAMES -> gamesPagerState
+                                        GameFocusCategory.APPS -> appsPagerState
                                         GameFocusCategory.ALL_APPS -> allAppsPagerState
                                         GameFocusCategory.FAVORITES -> favoritesPagerState
                                         GameFocusCategory.LAST_USED -> lastUsedPagerState

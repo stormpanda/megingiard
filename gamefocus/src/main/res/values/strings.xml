@@ -10,7 +10,9 @@
 
     <string name="gamefocus_launch_top">Top Screen</string>
     <string name="gamefocus_launch_bottom">Bottom Screen</string>
+    <string name="gamefocus_header_android_games">Android Games</string>
     <string name="gamefocus_header_android_apps">Android Apps</string>
+    <string name="gamefocus_cat_all_apps">All Apps</string>
     <string name="gamefocus_cat_favorites">Favorites</string>
     <string name="gamefocus_cat_last_used">Recently Used</string>
     <string name="gamefocus_option_add_favorite">Add to Favorites</string>
@@ -20,6 +22,8 @@
     <string name="gamefocus_option_actions">Actions</string>
     <string name="gamefocus_no_favorites">No Favorite Apps Added</string>
     <string name="gamefocus_no_last_used">No Recently Used Apps</string>
+    <string name="gamefocus_no_games">No Android Games Found</string>
+    <string name="gamefocus_no_apps_category">No Android Apps Found</string>
 
     <string name="steamgriddb_token_missing_title">API Token Required</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>

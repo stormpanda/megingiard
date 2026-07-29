@@ -4,6 +4,7 @@ import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.Uri
@@ -32,6 +33,8 @@ private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val DIR_COVERS = "gamefocus_covers"
 private const val MAX_RECENT_APPS = 10
+private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
+private const val INTENT_CATEGORY_APP_GAMES = "android.intent.category.APP_GAMES"
 
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -163,6 +166,22 @@ object InstalledAppsManager {
     }
 
     @Suppress("DEPRECATION")
+    fun isPackageAGame(
+        appInfo: ApplicationInfo,
+        gamePackagesFromIntent: Set<String> = emptySet(),
+    ): Boolean {
+        if (gamePackagesFromIntent.contains(appInfo.packageName)) {
+            return true
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (appInfo.category == ApplicationInfo.CATEGORY_GAME) {
+                return true
+            }
+        }
+        return (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+    }
+
+    @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         loadFavorites(context)
         loadLastUsed(context)
@@ -171,6 +190,15 @@ object InstalledAppsManager {
         val mainIntent =
             Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+
+        val gameIntent =
+            Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(INTENT_CATEGORY_GAME)
+            }
+        val appGamesIntent =
+            Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(INTENT_CATEGORY_APP_GAMES)
             }
 
         val resolveInfoList: List<ResolveInfo> =
@@ -183,6 +211,21 @@ object InstalledAppsManager {
                 packageManager.queryIntentActivities(mainIntent, 0)
             }
 
+        val gameResolveList: List<ResolveInfo> =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.queryIntentActivities(
+                    gameIntent,
+                    PackageManager.ResolveInfoFlags.of(0L),
+                ) +
+                    packageManager.queryIntentActivities(
+                        appGamesIntent,
+                        PackageManager.ResolveInfoFlags.of(0L),
+                    )
+            } else {
+                packageManager.queryIntentActivities(gameIntent, 0) + packageManager.queryIntentActivities(appGamesIntent, 0)
+            }
+        val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
+
         val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
 
         val apps =
@@ -191,13 +234,15 @@ object InstalledAppsManager {
                     resolveInfo.activityInfo.packageName != context.packageName
                 }.map { resolveInfo ->
                     val packageName = resolveInfo.activityInfo.packageName
+                    val appInfo = resolveInfo.activityInfo.applicationInfo
                     val rawLabel =
-                        resolveInfo.activityInfo.applicationInfo
+                        appInfo
                             .loadLabel(packageManager)
                             .toString()
                     val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
                     val activityName = resolveInfo.activityInfo.name
                     val icon = resolveInfo.loadIcon(packageManager)
+                    val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
                     val cachedCoverFile = File(coversDir, "$packageName.png")
                     val coverPath =
@@ -213,11 +258,13 @@ object InstalledAppsManager {
                         label = label,
                         icon = icon,
                         coverPath = coverPath,
+                        isGame = isGame,
                     )
                 }.sortedBy { it.label.lowercase() }
 
         _installedApps.value = apps
-        AppLog.d(TAG, "Loaded ${apps.size} installed apps for launcher browser")
+        val gameCount = apps.count { it.isGame }
+        AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
 
         // Trigger background SteamGridDB cover scraping if API key is configured
         triggerSteamGridDbScraping(context, coversDir)

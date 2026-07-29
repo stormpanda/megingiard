@@ -9,8 +9,10 @@ import com.stormpanda.megingiard.gamefocus.R
 enum class GameFocusCategory(
     @StringRes val stringResId: Int,
 ) {
+    GAMES(R.string.gamefocus_header_android_games),
+    APPS(R.string.gamefocus_header_android_apps),
+    ALL_APPS(R.string.gamefocus_cat_all_apps),
     FAVORITES(R.string.gamefocus_cat_favorites),
-    ALL_APPS(R.string.gamefocus_header_android_apps),
     LAST_USED(R.string.gamefocus_cat_last_used),
     ;
 

@@ -8,4 +8,5 @@ data class InstalledAppInfo(
     val label: String,
     val icon: Drawable? = null,
     val coverPath: String? = null,
+    val isGame: Boolean = false,
 )
