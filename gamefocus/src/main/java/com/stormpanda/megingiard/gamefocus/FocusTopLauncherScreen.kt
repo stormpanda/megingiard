@@ -11,7 +11,9 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
@@ -70,6 +72,7 @@ import androidx.compose.ui.zIndex
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LetterNavigationHelper
+import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -131,6 +134,13 @@ fun FocusTopLauncherScreen(
     dpadStepRightTrigger: Int = 0,
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
+    allApps: List<InstalledAppInfo> = emptyList(),
+    isLibraryOpen: Boolean = false,
+    librarySelectedTab: LibraryTab = LibraryTab.ALL,
+    onLibraryTabSelected: (LibraryTab) -> Unit = {},
+    libraryFocusedIndex: Int = 0,
+    onLibraryFocusedIndexChange: (Int) -> Unit = {},
+    onCloseLibrary: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -358,339 +368,371 @@ fun FocusTopLauncherScreen(
         modifier = modifier.fillMaxSize(),
         color = appColors.appBackground,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        drawRect(
-                            brush =
-                                Brush.verticalGradient(
-                                    colors =
-                                        listOf(
-                                            animatedPrimaryColor.copy(alpha = 0.35f),
-                                            animatedSecondaryColor.copy(alpha = 0.18f),
-                                            appColors.appBackground,
-                                        ),
-                                ),
+        AnimatedContent(
+            targetState = isLibraryOpen,
+            transitionSpec = {
+                if (targetState) {
+                    (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { it }) + fadeIn(animationSpec = tween(350)))
+                        .togetherWith(
+                            slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { -it }) + fadeOut(animationSpec = tween(350)),
                         )
-                    },
-        ) {
-            // Plane 1: Full-Screen Gallery & App Title Plane
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                AnimatedContent(
-                    targetState = selectedCategory,
-                    transitionSpec = {
-                        val isMovingDown = initialState.next() == targetState
-                        if (isMovingDown) {
-                            (slideInVertically { height -> height } + fadeIn())
-                                .togetherWith(slideOutVertically { height -> -height } + fadeOut())
-                        } else {
-                            (slideInVertically { height -> -height } + fadeIn())
-                                .togetherWith(slideOutVertically { height -> height } + fadeOut())
-                        }
-                    },
-                    label = "CarouselCategoryTransition",
-                    modifier = Modifier.fillMaxSize(),
-                ) { category ->
+                } else {
+                    (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { -it }) + fadeIn(animationSpec = tween(350)))
+                        .togetherWith(
+                            slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { it }) + fadeOut(animationSpec = tween(350)),
+                        )
+                }
+            },
+            label = "LibrarySlideTransition",
+            modifier = Modifier.fillMaxSize(),
+        ) { showLibrary ->
+            if (showLibrary) {
+                FocusLibraryScreen(
+                    allApps = allApps,
+                    selectedTab = librarySelectedTab,
+                    onTabSelected = onLibraryTabSelected,
+                    focusedIndex = libraryFocusedIndex,
+                    onFocusedIndexChange = onLibraryFocusedIndexChange,
+                    onAppClickTop = onAppClickTop,
+                    onAppClickBottom = onAppClickBottom,
+                    onCloseRequested = onCloseLibrary,
+                )
+            } else {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .drawBehind {
+                                drawRect(
+                                    brush =
+                                        Brush.verticalGradient(
+                                            colors =
+                                                listOf(
+                                                    animatedPrimaryColor.copy(alpha = 0.35f),
+                                                    animatedSecondaryColor.copy(alpha = 0.18f),
+                                                    appColors.appBackground,
+                                                ),
+                                        ),
+                                )
+                            },
+                ) {
+                    // Plane 1: Full-Screen Gallery & App Title Plane
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (apps.isEmpty()) {
+                        AnimatedContent(
+                            targetState = selectedCategory,
+                            transitionSpec = {
+                                val isMovingDown = initialState.next() == targetState
+                                if (isMovingDown) {
+                                    (slideInVertically { height -> height } + fadeIn())
+                                        .togetherWith(slideOutVertically { height -> -height } + fadeOut())
+                                } else {
+                                    (slideInVertically { height -> -height } + fadeIn())
+                                        .togetherWith(slideOutVertically { height -> height } + fadeOut())
+                                }
+                            },
+                            label = "CarouselCategoryTransition",
+                            modifier = Modifier.fillMaxSize(),
+                        ) { category ->
                             Box(
-                                modifier =
-                                    Modifier
-                                        .height(310.dp)
-                                        .fillMaxWidth(),
+                                modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    text =
-                                        when (category) {
-                                            GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
-                                            GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
-                                            GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
-                                            GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
-                                            else -> stringResource(R.string.focus_launcher_no_apps)
-                                        },
-                                    style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
-                                )
-                            }
-                        } else {
-                            Column(
-                                modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                // Carousel
-                                val categoryPagerState =
-                                    when (category) {
-                                        GameFocusCategory.GAMES -> gamesPagerState
-                                        GameFocusCategory.APPS -> appsPagerState
-                                        GameFocusCategory.ALL_APPS -> allAppsPagerState
-                                        GameFocusCategory.FAVORITES -> favoritesPagerState
-                                        GameFocusCategory.LAST_USED -> lastUsedPagerState
-                                    }
-                                HorizontalPosterCarousel(
-                                    itemCount = apps.size,
-                                    pagerState = categoryPagerState,
-                                    targetPage = categoryPagerState.targetPage,
-                                    onItemClick = { actualIndex ->
-                                        val appInfo = apps.getOrNull(actualIndex)
-                                        if (appInfo != null) onAppClick(appInfo)
-                                    },
-                                    posterWidth = FTL_POSTER_WIDTH,
-                                    posterHeight = FTL_POSTER_HEIGHT,
-                                    posterSpacing = FTL_POSTER_SPACING,
-                                    carouselHeight = 310.dp,
-                                    posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                                    cardBackgroundColor = { actualIndex, isSelected ->
-                                        val appInfo = apps.getOrNull(actualIndex)
-                                        if (appInfo != null) {
-                                            val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
-                                            if (palette != null && palette.isExtracted) {
-                                                palette.darkenedPrimaryColor
-                                            } else {
-                                                if (isSelected) appColors.surfaceVariant else appColors.surface
-                                            }
-                                        } else {
-                                            if (isSelected) appColors.surfaceVariant else appColors.surface
-                                        }
-                                    },
-                                ) { actualIndex, _ ->
-                                    val appInfo = apps[actualIndex]
-                                    PosterCardContent(
-                                        appInfo = appInfo,
-                                        isFavorite = favoritesSet.contains(appInfo.packageName),
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
-
-                                // Focused App Title or Horizontal Letter Carousel Overlay
-                                AnimatedContent(
-                                    targetState = isLetterOverlayActive,
-                                    transitionSpec = {
-                                        (slideInVertically { height -> height / 2 } + fadeIn())
-                                            .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
-                                    },
-                                    label = "TitleLetterCarouselTransition",
-                                    modifier =
-                                        Modifier
-                                            .zIndex(1f)
-                                            .padding(horizontal = 40.dp),
-                                ) { isOverlay ->
-                                    if (isOverlay && uniqueLetters.isNotEmpty()) {
-                                        HorizontalLetterCarousel(
-                                            letters = uniqueLetters,
-                                            selectedIndex = selectedLetterNavIndex,
+                                if (apps.isEmpty()) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .height(310.dp)
+                                                .fillMaxWidth(),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text =
+                                                when (category) {
+                                                    GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
+                                                    GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
+                                                    GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
+                                                    GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
+                                                    else -> stringResource(R.string.focus_launcher_no_apps)
+                                                },
+                                            style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
                                         )
-                                    } else {
-                                        if (currentApp != null) {
-                                            Text(
-                                                text = currentApp.label,
-                                                style =
-                                                    MaterialTheme.typography.headlineLarge.copy(
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        color = appColors.onSurface,
-                                                    ),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                textAlign = TextAlign.Center,
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        // Carousel
+                                        val categoryPagerState =
+                                            when (category) {
+                                                GameFocusCategory.GAMES -> gamesPagerState
+                                                GameFocusCategory.APPS -> appsPagerState
+                                                GameFocusCategory.ALL_APPS -> allAppsPagerState
+                                                GameFocusCategory.FAVORITES -> favoritesPagerState
+                                                GameFocusCategory.LAST_USED -> lastUsedPagerState
+                                            }
+                                        HorizontalPosterCarousel(
+                                            itemCount = apps.size,
+                                            pagerState = categoryPagerState,
+                                            targetPage = categoryPagerState.targetPage,
+                                            onItemClick = { actualIndex ->
+                                                val appInfo = apps.getOrNull(actualIndex)
+                                                if (appInfo != null) onAppClick(appInfo)
+                                            },
+                                            posterWidth = FTL_POSTER_WIDTH,
+                                            posterHeight = FTL_POSTER_HEIGHT,
+                                            posterSpacing = FTL_POSTER_SPACING,
+                                            carouselHeight = 310.dp,
+                                            posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                                            cardBackgroundColor = { actualIndex, isSelected ->
+                                                val appInfo = apps.getOrNull(actualIndex)
+                                                if (appInfo != null) {
+                                                    val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
+                                                    if (palette != null && palette.isExtracted) {
+                                                        palette.darkenedPrimaryColor
+                                                    } else {
+                                                        if (isSelected) appColors.surfaceVariant else appColors.surface
+                                                    }
+                                                } else {
+                                                    if (isSelected) appColors.surfaceVariant else appColors.surface
+                                                }
+                                            },
+                                        ) { actualIndex, _ ->
+                                            val appInfo = apps[actualIndex]
+                                            PosterCardContent(
+                                                appInfo = appInfo,
+                                                isFavorite = favoritesSet.contains(appInfo.packageName),
                                             )
                                         }
+
+                                        Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
+
+                                        // Focused App Title or Horizontal Letter Carousel Overlay
+                                        AnimatedContent(
+                                            targetState = isLetterOverlayActive,
+                                            transitionSpec = {
+                                                (slideInVertically { height -> height / 2 } + fadeIn())
+                                                    .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
+                                            },
+                                            label = "TitleLetterCarouselTransition",
+                                            modifier =
+                                                Modifier
+                                                    .zIndex(1f)
+                                                    .padding(horizontal = 40.dp),
+                                        ) { isOverlay ->
+                                            if (isOverlay && uniqueLetters.isNotEmpty()) {
+                                                HorizontalLetterCarousel(
+                                                    letters = uniqueLetters,
+                                                    selectedIndex = selectedLetterNavIndex,
+                                                )
+                                            } else {
+                                                if (currentApp != null) {
+                                                    Text(
+                                                        text = currentApp.label,
+                                                        style =
+                                                            MaterialTheme.typography.headlineLarge.copy(
+                                                                fontWeight = FontWeight.ExtraBold,
+                                                                color = appColors.onSurface,
+                                                            ),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        textAlign = TextAlign.Center,
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
 
-            // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
+                    // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
-            // Top-Left Category Header hovering over the gallery plane
-            InteractiveCategoryHeader(
-                selectedCategory = selectedCategory,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 24.dp, top = 16.dp),
-            )
+                    // Top-Left Category Header hovering over the gallery plane
+                    InteractiveCategoryHeader(
+                        selectedCategory = selectedCategory,
+                        modifier =
+                            Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 24.dp, top = 16.dp),
+                    )
 
-            // Bottom-Left Main Actions Menu hovering over the gallery plane
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 16.dp, bottom = 4.dp),
-            ) {
-                val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
-                ExpandableActionsMenu(
-                    isExpanded = isMainOptionsMenuExpanded,
-                    onExpandedChange = onMainOptionsMenuExpandedChange,
-                    actions =
-                        listOf(
-                            ExpandableActionItem(
-                                label =
-                                    if (isCurrentFavorite) {
-                                        stringResource(R.string.gamefocus_option_remove_favorite)
-                                    } else {
-                                        stringResource(R.string.gamefocus_option_add_favorite)
-                                    },
-                                iconSymbol = "gamepad_up",
-                                onClick = {
-                                    if (currentApp != null) {
-                                        onToggleFavorite(currentApp)
-                                        onMainOptionsMenuExpandedChange(false)
-                                    }
-                                },
-                            ),
-                            ExpandableActionItem(
-                                label = stringResource(R.string.gamefocus_option_app_info),
-                                iconSymbol = "gamepad_down",
-                                onClick = {
-                                    if (currentApp != null) {
-                                        onOpenAppInfo(currentApp)
-                                        onMainOptionsMenuExpandedChange(false)
-                                    }
-                                },
-                            ),
-                        ),
-                )
-            }
-
-            // Bottom-Right subdued touch buttons hovering over the gallery plane
-            val noFocusInteractionSource = remember { MutableInteractionSource() }
-            Row(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 12.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(
-                    onClick = {
-                        if (currentApp != null) {
-                            onAppClickTop(currentApp)
-                        }
-                    },
-                    interactionSource = noFocusInteractionSource,
-                    modifier = Modifier.focusProperties { canFocus = false },
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CutoutLetterCircleIcon(
-                            letter = "A",
-                            size = 18.dp,
-                            tint = appColors.onSurfaceSecondary,
-                            cutoutColor = appColors.appBackground,
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.gamefocus_launch_top),
-                            style =
-                                MaterialTheme.typography.labelMedium.copy(
-                                    color = appColors.onSurfaceSecondary,
-                                    fontWeight = FontWeight.SemiBold,
+                    // Bottom-Left Main Actions Menu hovering over the gallery plane
+                    Box(
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 16.dp, bottom = 4.dp),
+                    ) {
+                        val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+                        ExpandableActionsMenu(
+                            isExpanded = isMainOptionsMenuExpanded,
+                            onExpandedChange = onMainOptionsMenuExpandedChange,
+                            actions =
+                                listOf(
+                                    ExpandableActionItem(
+                                        label =
+                                            if (isCurrentFavorite) {
+                                                stringResource(R.string.gamefocus_option_remove_favorite)
+                                            } else {
+                                                stringResource(R.string.gamefocus_option_add_favorite)
+                                            },
+                                        iconSymbol = "gamepad_up",
+                                        onClick = {
+                                            if (currentApp != null) {
+                                                onToggleFavorite(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            }
+                                        },
+                                    ),
+                                    ExpandableActionItem(
+                                        label = stringResource(R.string.gamefocus_option_app_info),
+                                        iconSymbol = "gamepad_down",
+                                        onClick = {
+                                            if (currentApp != null) {
+                                                onOpenAppInfo(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            }
+                                        },
+                                    ),
                                 ),
+                        )
+                    }
+
+                    // Bottom-Right subdued touch buttons hovering over the gallery plane
+                    val noFocusInteractionSource = remember { MutableInteractionSource() }
+                    Row(
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 12.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                if (currentApp != null) {
+                                    onAppClickTop(currentApp)
+                                }
+                            },
+                            interactionSource = noFocusInteractionSource,
+                            modifier = Modifier.focusProperties { canFocus = false },
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CutoutLetterCircleIcon(
+                                    letter = "A",
+                                    size = 18.dp,
+                                    tint = appColors.onSurfaceSecondary,
+                                    cutoutColor = appColors.appBackground,
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.gamefocus_launch_top),
+                                    style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            color = appColors.onSurfaceSecondary,
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(2.dp))
+
+                        TextButton(
+                            onClick = {
+                                if (currentApp != null) {
+                                    onAppClickBottom(currentApp)
+                                }
+                            },
+                            interactionSource = noFocusInteractionSource,
+                            modifier = Modifier.focusProperties { canFocus = false },
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CutoutLetterCircleIcon(
+                                    letter = "X",
+                                    size = 18.dp,
+                                    tint = appColors.onSurfaceSecondary,
+                                    cutoutColor = appColors.appBackground,
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.gamefocus_launch_bottom),
+                                    style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            color = appColors.onSurfaceSecondary,
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Custom Megingiard Artwork Selection Modal Dialog
+                if (editingAppInfo != null) {
+                    if (apiKey.isBlank()) {
+                        showApiTokenMissingDialog = true
+                    } else {
+                        GameFocusArtworkDialog(
+                            appInfo = editingAppInfo,
+                            apiKey = apiKey,
+                            virtualIndex = dialogVirtualIndex,
+                            onVirtualIndexChange = onDialogVirtualIndexChange,
+                            confirmTrigger = confirmDialogTrigger,
+                            l1Trigger = dialogL1Trigger,
+                            r1Trigger = dialogR1Trigger,
+                            isOptionsMenuExpanded = isOptionsMenuExpanded,
+                            onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
+                            dpadUpTrigger = dpadUpTrigger,
+                            dpadRightTrigger = dpadRightTrigger,
+                            onDismiss = onDismissEditingApp,
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(2.dp))
-
-                TextButton(
-                    onClick = {
-                        if (currentApp != null) {
-                            onAppClickBottom(currentApp)
-                        }
-                    },
-                    interactionSource = noFocusInteractionSource,
-                    modifier = Modifier.focusProperties { canFocus = false },
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CutoutLetterCircleIcon(
-                            letter = "X",
-                            size = 18.dp,
-                            tint = appColors.onSurfaceSecondary,
-                            cutoutColor = appColors.appBackground,
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.gamefocus_launch_bottom),
-                            style =
-                                MaterialTheme.typography.labelMedium.copy(
-                                    color = appColors.onSurfaceSecondary,
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                        )
-                    }
-                }
-            }
-        }
-
-        // Custom Megingiard Artwork Selection Modal Dialog
-        if (editingAppInfo != null) {
-            if (apiKey.isBlank()) {
-                showApiTokenMissingDialog = true
-            } else {
-                GameFocusArtworkDialog(
-                    appInfo = editingAppInfo,
-                    apiKey = apiKey,
-                    virtualIndex = dialogVirtualIndex,
-                    onVirtualIndexChange = onDialogVirtualIndexChange,
-                    confirmTrigger = confirmDialogTrigger,
-                    l1Trigger = dialogL1Trigger,
-                    r1Trigger = dialogR1Trigger,
-                    isOptionsMenuExpanded = isOptionsMenuExpanded,
-                    onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
-                    dpadUpTrigger = dpadUpTrigger,
-                    dpadRightTrigger = dpadRightTrigger,
-                    onDismiss = onDismissEditingApp,
-                )
-            }
-        }
-
-        if (showApiTokenMissingDialog) {
-            AppAlertDialog(
-                onDismissRequest = {
-                    showApiTokenMissingDialog = false
-                    onDismissEditingApp()
-                },
-                title = {
-                    Text(
-                        text = stringResource(R.string.steamgriddb_token_missing_title),
-                        style = MaterialTheme.typography.titleLarge.copy(color = appColors.onSurface),
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(R.string.steamgriddb_token_missing_message),
-                        style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
+                if (showApiTokenMissingDialog) {
+                    AppAlertDialog(
+                        onDismissRequest = {
                             showApiTokenMissingDialog = false
                             onDismissEditingApp()
                         },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.steamgriddb_error_dismiss),
-                            color = appColors.accent,
-                        )
-                    }
-                },
-            )
+                        title = {
+                            Text(
+                                text = stringResource(R.string.steamgriddb_token_missing_title),
+                                style = MaterialTheme.typography.titleLarge.copy(color = appColors.onSurface),
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = stringResource(R.string.steamgriddb_token_missing_message),
+                                style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showApiTokenMissingDialog = false
+                                    onDismissEditingApp()
+                                },
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_error_dismiss),
+                                    color = appColors.accent,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
         }
     }
 }
 
-private object FocusImageCache {
+internal object FocusImageCache {
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
 

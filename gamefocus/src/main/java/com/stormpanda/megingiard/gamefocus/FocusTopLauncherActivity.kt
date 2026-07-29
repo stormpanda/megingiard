@@ -27,6 +27,7 @@ import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
@@ -61,6 +62,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val dpadRightOptionsTriggerState = mutableIntStateOf(0)
 
     private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
+
+    private val isLibraryOpenState = mutableStateOf(false)
+    private val librarySelectedTabState = mutableStateOf(LibraryTab.ALL)
+    private val libraryFocusedIndexState = mutableIntStateOf(0)
 
     private var currentDirection = ScrollDirection.NONE
     private var repeatJob: Job? = null
@@ -157,6 +162,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             dpadStepRightTrigger = dpadStepRightTriggerState.intValue,
                             onFocusedAppChanged = { focusedAppState.value = it },
                             onDismissEditingApp = { editingAppInfoState.value = null },
+                            allApps = allApps,
+                            isLibraryOpen = isLibraryOpenState.value,
+                            librarySelectedTab = librarySelectedTabState.value,
+                            onLibraryTabSelected = { librarySelectedTabState.value = it },
+                            libraryFocusedIndex = libraryFocusedIndexState.intValue,
+                            onLibraryFocusedIndexChange = { libraryFocusedIndexState.intValue = it },
+                            onCloseLibrary = { isLibraryOpenState.value = false },
                         )
                     }
                 }
@@ -338,6 +350,105 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
         }
 
+        // Library Navigation Mode
+        if (isLibraryOpenState.value) {
+            val allApps = InstalledAppsManager.installedApps.value
+            val currentTab = librarySelectedTabState.value
+            val filteredApps = currentTab.filterApps(allApps)
+
+            return when (keyCode) {
+                KeyEvent.KEYCODE_BUTTON_R2,
+                KeyEvent.KEYCODE_BACK,
+                KeyEvent.KEYCODE_ESCAPE,
+                KeyEvent.KEYCODE_BUTTON_B,
+                -> {
+                    AppLog.i(TAG, "Closing Library section")
+                    isLibraryOpenState.value = false
+                    true
+                }
+
+                KeyEvent.KEYCODE_BUTTON_L1 -> {
+                    val prevTab = currentTab.previous()
+                    AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.name}")
+                    librarySelectedTabState.value = prevTab
+                    libraryFocusedIndexState.intValue = 0
+                    true
+                }
+
+                KeyEvent.KEYCODE_BUTTON_R1 -> {
+                    val nextTab = currentTab.next()
+                    AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.name}")
+                    librarySelectedTabState.value = nextTab
+                    libraryFocusedIndexState.intValue = 0
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                -> {
+                    if (filteredApps.isNotEmpty()) {
+                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue - 1).coerceAtLeast(0)
+                    }
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_RIGHT,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+                -> {
+                    if (filteredApps.isNotEmpty()) {
+                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue + 1).coerceAtMost(filteredApps.size - 1)
+                    }
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+                -> {
+                    if (filteredApps.isNotEmpty()) {
+                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue - 4).coerceAtLeast(0)
+                    }
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
+                -> {
+                    if (filteredApps.isNotEmpty()) {
+                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue + 4).coerceAtMost(filteredApps.size - 1)
+                    }
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_BUTTON_A,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER,
+                -> {
+                    val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
+                        InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                    }
+                    true
+                }
+
+                KeyEvent.KEYCODE_BUTTON_X,
+                KeyEvent.KEYCODE_X,
+                -> {
+                    val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Library launch on bottom display: ${targetApp.label}")
+                        InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
+                    }
+                    true
+                }
+
+                else -> {
+                    true
+                }
+            }
+        }
+
         // Navigation when Main Launcher is active
         val allApps = InstalledAppsManager.installedApps.value
         val favorites = InstalledAppsManager.favorites.value
@@ -486,6 +597,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     editingAppInfoState.value = targetApp
                     return true
                 }
+            }
+
+            KeyEvent.KEYCODE_BUTTON_R2 -> {
+                AppLog.i(TAG, "Gamepad R2 pressed -> Opening Library section")
+                isLibraryOpenState.value = true
+                libraryFocusedIndexState.intValue = 0
+                return true
             }
         }
         return super.onKeyDown(keyCode, event)

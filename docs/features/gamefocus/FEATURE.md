@@ -69,10 +69,20 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - On-screen touch buttons (`ExpandableActionsMenu`, Top Screen A, Bottom Screen X) MUST have D-pad focusability disabled (`canFocus = false`) and focus indications removed to prevent buttons from taking D-pad or Joystick focus during launcher navigation.
 - Favorites (`filesDir/gamefocus_favorites.txt`) and Recently Used launch history (`filesDir/gamefocus_last_used.txt`) MUST be persisted to disk across application restarts.
 
-### FR-GF8: Coexistence
+#### FR-GF8: Coexistence
 
 - Megingiard Game Focus MUST have application ID `com.stormpanda.megingiard.gamefocus` (`.debug` for debug builds).
 - It MUST be installable alongside the standard Megingiard app without package or state conflicts.
+
+### FR-GF9: Library View & R2 Slide Transition
+
+- Pressing Gamepad **R2** (`KEYCODE_BUTTON_R2` / `KEYCODE_R2`) on the launcher MUST toggle the **Library** view.
+- Toggling the Library view MUST trigger a smooth horizontal slide transition across screens:
+  - Opening: Main gallery slides out to the left while the Library slides in from the right.
+  - Closing: Library slides out to the right while the main gallery slides in from the left.
+- The Library MUST display all installed applications and games in a scrollable condensed grid with square rounded-corner cards (`16.dp` corner radius).
+- The top of the Library MUST present static tabs: **All**, **Android Apps**, and **Android Games** (`LibraryTab`). Static tabs MUST reflect installed applications without dynamic filters (such as Recently Used or Favorites).
+- Gamepad navigation inside the Library MUST support tab switching via **L1** / **R1**, grid cell selection via D-pad / Joystick, and dual-display launching (top display via **A**, bottom display via **X**). Pressing **R2**, **B**, or **BACK** MUST close the Library and return to the main gallery screen.
 
 ---
 
@@ -84,6 +94,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                ┌───────────────────────────────────────────────┐
                │    Top Display (0): FocusTopLauncherActivity  │
                │   • FocusTopLauncherScreen (2:3 Poster Pager) │
+               │   • FocusLibraryScreen (Condensed Grid & Tabs)│
                │   • FocusImageCache (LruCache + Icon Disk PNG)│
                │   • AppPaletteExtractor (Palette + Disk Cache)│
                │   • ExpandableOptionsMenu (Subdued D-Pad UI)  │
@@ -93,7 +104,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                                       ▼
                ┌───────────────────────────────────────────────┐
                │         Primary App / Game Execution          │
-               └───────────────────────────────────────────────┘
+               └──────────────────────┴────────────────────────┘
 
                ┌───────────────────────────────────────────────┐
                │     Bottom Display (4): MainActivity          │
@@ -104,7 +115,12 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for primary `<application>` manifest labels (`ApplicationInfo.loadLabel`), classifying applications programmatically into games (`isGame = true`) or non-game apps (`isGame = false`) via `ApplicationInfo.category == ApplicationInfo.CATEGORY_GAME`, legacy `FLAG_IS_GAME`, and `Intent.CATEGORY_GAME` query results, managing local cover art disk caching, persistent scraped package tracking (`gamefocus_scraped_apps.txt`), and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient` with automated query sanitization (`cleanSearchQuery`).
+- **LibraryTab:** Enum in `:domain` (`LibraryTab.kt`) representing static library categories (`ALL`, `APPS`, `GAMES`), tab wrap-around navigation (`next()` / `previous()`), and app filtering (`filterApps`).
+- **FocusLibraryScreen:** Composable in `:gamefocus` (`FocusLibraryScreen.kt`) rendering static tabs and a condensed square rounded-corner grid layout for browsing and launching installed apps.
 - **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.
 - **AppPaletteExtractor:** Utility object in `gamefocus/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting the most vibrant primary and distinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
+- **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
+- **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.
+istinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
 - **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.
