@@ -130,7 +130,6 @@ fun FocusLibraryScreen(
             // Header Bar with Title, Subtitle, and Tabs
             LibraryHeaderBar(
                 selectedTab = selectedTab,
-                isTabsRowFocused = (focusedIndex == -1),
                 onTabSelected = { tab ->
                     AppLog.i(TAG, "Library tab clicked/selected: ${tab.name}")
                     onTabSelected(tab)
@@ -187,7 +186,6 @@ fun FocusLibraryScreen(
 @Composable
 private fun LibraryHeaderBar(
     selectedTab: LibraryTab,
-    isTabsRowFocused: Boolean,
     onTabSelected: (LibraryTab) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
@@ -231,7 +229,6 @@ private fun LibraryHeaderBar(
                 LibraryTabItem(
                     label = stringResource(tab.stringResId),
                     isSelected = selectedTab == tab,
-                    isTabsRowFocused = isTabsRowFocused && selectedTab == tab,
                     onClick = { onTabSelected(tab) },
                 )
             }
@@ -243,7 +240,6 @@ private fun LibraryHeaderBar(
 private fun LibraryTabItem(
     label: String,
     isSelected: Boolean,
-    isTabsRowFocused: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -251,7 +247,6 @@ private fun LibraryTabItem(
 
     val bgColor = if (isSelected) appColors.accent else appColors.surface
     val textColor = if (isSelected) appColors.appBackground else appColors.onSurface
-    val borderColor = if (isTabsRowFocused) appColors.onSurface else Color.Transparent
 
     Box(
         modifier =
@@ -259,11 +254,7 @@ private fun LibraryTabItem(
                 .height(FLS_TAB_HEIGHT)
                 .clip(RoundedCornerShape(20.dp))
                 .background(bgColor)
-                .border(
-                    width = 2.dp,
-                    color = borderColor,
-                    shape = RoundedCornerShape(20.dp),
-                ).noFocusClickable(onClick)
+                .noFocusClickable(onClick)
                 .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {

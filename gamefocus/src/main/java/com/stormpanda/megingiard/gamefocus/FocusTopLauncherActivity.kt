@@ -192,47 +192,29 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val currentTab = librarySelectedTabState.value
         val filteredApps = currentTab.filterApps(allApps)
         val total = filteredApps.size
-        val current = libraryFocusedIndexState.intValue
+        val current = libraryFocusedIndexState.intValue.coerceAtLeast(0)
 
         when (direction) {
             ScrollDirection.LEFT -> {
-                if (current == -1) {
-                    val prevTab = currentTab.previous()
-                    AppLog.i(TAG, "Library D-pad LEFT on tab header -> switching tab to ${prevTab.name}")
-                    librarySelectedTabState.value = prevTab
-                } else if (current > 0) {
+                if (current > 0) {
                     libraryFocusedIndexState.intValue = current - 1
                 }
             }
 
             ScrollDirection.RIGHT -> {
-                if (current == -1) {
-                    val nextTab = currentTab.next()
-                    AppLog.i(TAG, "Library D-pad RIGHT on tab header -> switching tab to ${nextTab.name}")
-                    librarySelectedTabState.value = nextTab
-                } else if (total > 0 && current < total - 1) {
+                if (total > 0 && current < total - 1) {
                     libraryFocusedIndexState.intValue = current + 1
                 }
             }
 
             ScrollDirection.UP -> {
-                if (current >= 0) {
-                    if (current >= FLS_GRID_COLUMNS) {
-                        libraryFocusedIndexState.intValue = current - FLS_GRID_COLUMNS
-                    } else {
-                        AppLog.i(TAG, "Library D-pad UP from top row -> focusing tab row (-1)")
-                        libraryFocusedIndexState.intValue = -1
-                    }
+                if (current >= FLS_GRID_COLUMNS) {
+                    libraryFocusedIndexState.intValue = current - FLS_GRID_COLUMNS
                 }
             }
 
             ScrollDirection.DOWN -> {
-                if (current == -1) {
-                    if (total > 0) {
-                        AppLog.i(TAG, "Library D-pad DOWN from tab row -> focusing first grid item (0)")
-                        libraryFocusedIndexState.intValue = 0
-                    }
-                } else if (total > 0) {
+                if (total > 0) {
                     if (current + FLS_GRID_COLUMNS < total) {
                         libraryFocusedIndexState.intValue = current + FLS_GRID_COLUMNS
                     } else if (current < total - 1) {
@@ -443,9 +425,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val prevTab = currentTab.previous()
                     AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.name}")
                     librarySelectedTabState.value = prevTab
-                    if (libraryFocusedIndexState.intValue >= 0) {
-                        libraryFocusedIndexState.intValue = 0
-                    }
+                    libraryFocusedIndexState.intValue = 0
                     true
                 }
 
@@ -453,9 +433,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val nextTab = currentTab.next()
                     AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.name}")
                     librarySelectedTabState.value = nextTab
-                    if (libraryFocusedIndexState.intValue >= 0) {
-                        libraryFocusedIndexState.intValue = 0
-                    }
+                    libraryFocusedIndexState.intValue = 0
                     true
                 }
 
@@ -492,16 +470,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 -> {
-                    if (libraryFocusedIndexState.intValue == -1) {
-                        val nextTab = currentTab.next()
-                        AppLog.i(TAG, "Library A pressed on tab header -> switching tab to ${nextTab.name}")
-                        librarySelectedTabState.value = nextTab
-                    } else {
-                        val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
-                        if (targetApp != null) {
-                            AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
-                            InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
-                        }
+                    val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
+                        InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
                     }
                     true
                 }
