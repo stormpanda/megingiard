@@ -57,7 +57,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - The launcher layout MUST be divided into two distinct planes:
   - **Plane 1 (Full-Screen Gallery Plane):** A dedicated full-screen base layer (`Box` filling `fillMaxSize()`) housing the 2:3 poster carousel and focused app title, centered across the display.
-  - **Plane 2 (Hovering Controls Overlay Plane):** An overlay layer positioned on top of the gallery plane containing the category header (top-left), expandable actions menu (bottom-left), and subdued touch launch indicator buttons (bottom-right).
+  - **Plane 2 (Hovering Controls Overlay Plane):** An overlay layer positioned on top of the gallery plane containing the category header (top-left), library navigation button (top-right), expandable actions menu (bottom-left), and subdued touch launch indicator buttons (bottom-right).
 - The launcher MUST support interactive app categories: **Android Games** (detected games), **Android Apps** (non-game applications), **All Apps** (complete installed library), **Favorites**, and **Recently Used** (last 10 launched apps).
 - Categories MUST be switchable using Gamepad **D-pad UP** / **D-pad DOWN** or joystick vertical movement.
 - Switching between categories MUST restore the exact application last highlighted in that category (tracked by package name), or cleanly default to index 0 if the application is no longer in the list.
@@ -65,14 +65,27 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - The category header MUST present a dense vertical rolling 3-item text column displaying the previous category (faded top, 0.35f alpha), active category (full opacity), and next category (faded bottom, 0.35f alpha). Switching categories MUST trigger a vertical rolling animation across all 3 category text lines in unison.
 - Upon switching categories, the poster carousel MUST slide and fade out in the opposite direction of the category switch (e.g. D-pad DOWN slides the carousel out to the top while the new carousel slides in from the bottom).
 - Apps marked as Favorites MUST display a `kid_star` Material Symbol icon in the **top-right corner** of their cover art rendered in theme accent color (`appColors.accent`).
-- Pressing **Select** / **Menu** (`KEYCODE_BUTTON_SELECT`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableActionsMenu` hovering at the bottom-left, displaying "Actions" when collapsed and expanding to show a non-fading "Close" action (`iconSymbol = "menu"`) and fading secondary actions (such as "Favorites" with `iconSymbol = "gamepad_up"` and "App Info" with `iconSymbol = "gamepad_down"` for opening Android native App Info).
+- Pressing **Button Y** / **Menu** (`KEYCODE_BUTTON_Y`, `KEYCODE_MENU`) on the launcher screen MUST open an `ExpandableActionsMenu` hovering at the bottom-left, displaying "Actions" when collapsed and expanding vertically (to the top) to show a non-fading "Close" action (`iconSymbol = "menu"`) at the lowest position (keeping the position of the "Actions" button) and fading secondary actions sorted from top to bottom ("Favorites" with `iconSymbol = "gamepad_up"`, "App Info" with `iconSymbol = "gamepad_down"`, then "Close").
 - On-screen touch buttons (`ExpandableActionsMenu`, Top Screen A, Bottom Screen X) MUST have D-pad focusability disabled (`canFocus = false`) and focus indications removed to prevent buttons from taking D-pad or Joystick focus during launcher navigation.
 - Favorites (`filesDir/gamefocus_favorites.txt`) and Recently Used launch history (`filesDir/gamefocus_last_used.txt`) MUST be persisted to disk across application restarts.
 
-### FR-GF8: Coexistence
+#### FR-GF8: Coexistence
 
 - Megingiard Game Focus MUST have application ID `com.stormpanda.megingiard.gamefocus` (`.debug` for debug builds).
 - It MUST be installable alongside the standard Megingiard app without package or state conflicts.
+
+### FR-GF9: Library View & R2 Slide Transition
+
+- Pressing Gamepad **R2** (`KEYCODE_BUTTON_R2`) on the launcher MUST toggle the **Library** view.
+- Toggling the Library view MUST trigger a smooth horizontal slide transition across screens:
+  - Opening: Main gallery slides out to the left while the Library slides in from the right.
+  - Closing: Library slides out to the right while the main gallery slides in from the left.
+- The Library MUST display all installed applications and games in a scrollable condensed grid with square rounded-corner cards (`16.dp` corner radius).
+- The top of the Library MUST present a horizontal 3D category reel (`InteractiveLibraryCategoryHeader`) flanked by `[L1]` and `[R1]` gamepad shoulder button badges, displaying the active and neighboring tabs: **All**, **Android Apps**, and **Android Games** (`LibraryTab`) with Y-axis 3D rotation (`±25°`), matching the typography and aesthetic of the launcher header while aligning directionally with L1/R1 controller inputs and horizontal grid sliding. Static tabs MUST reflect installed applications without dynamic filters (such as Recently Used or Favorites). Switching between tabs MUST animate the app grid horizontally (`AnimatedContent` with `slideInHorizontally` and `slideOutHorizontally` combined with `fadeIn`/`fadeOut`).
+- Highlighting an application in the Library grid MUST dynamically adapt the Library screen's background gradient to the extracted palette colors (`AppPaletteExtractor`) of the highlighted app icon after a ~200ms settlement delay.
+- The highlighted Library card MUST animate a vibrant accent blur glow (`BlurMaskFilter`) and accent focus border smoothly gliding across grid items (`200ms` `animateFloatAsState` translation/size interpolation relative to grid bounds) as D-pad or joystick focus moves to the next application.
+- Gamepad D-pad / Joystick navigation inside the Library MUST be restricted strictly to grid items (0..N). Static tabs MUST be excluded from D-pad focus, and tab category switching MUST be handled exclusively via **L1** / **R1**.
+- Dual-display launching inside the Library MUST be triggered via **A** (top display) and **X** (bottom display). Pressing **R2**, **B**, **BACK**, or **HOME** (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` / system HOME intent) MUST close sub-views/dialogs and return the user directly to the main gallery screen.
 
 ---
 
@@ -84,6 +97,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                ┌───────────────────────────────────────────────┐
                │    Top Display (0): FocusTopLauncherActivity  │
                │   • FocusTopLauncherScreen (2:3 Poster Pager) │
+               │   • FocusLibraryScreen (Condensed Grid & Tabs)│
                │   • FocusImageCache (LruCache + Icon Disk PNG)│
                │   • AppPaletteExtractor (Palette + Disk Cache)│
                │   • ExpandableOptionsMenu (Subdued D-Pad UI)  │
@@ -93,7 +107,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
                                       ▼
                ┌───────────────────────────────────────────────┐
                │         Primary App / Game Execution          │
-               └───────────────────────────────────────────────┘
+               └──────────────────────┴────────────────────────┘
 
                ┌───────────────────────────────────────────────┐
                │     Bottom Display (4): MainActivity          │
@@ -104,7 +118,9 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
 - **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for primary `<application>` manifest labels (`ApplicationInfo.loadLabel`), classifying applications programmatically into games (`isGame = true`) or non-game apps (`isGame = false`) via `ApplicationInfo.category == ApplicationInfo.CATEGORY_GAME`, legacy `FLAG_IS_GAME`, and `Intent.CATEGORY_GAME` query results, managing local cover art disk caching, persistent scraped package tracking (`gamefocus_scraped_apps.txt`), and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient` with automated query sanitization (`cleanSearchQuery`).
+- **LibraryTab:** Enum in `:domain` (`LibraryTab.kt`) representing static library categories (`ALL`, `APPS`, `GAMES`), tab wrap-around navigation (`next()` / `previous()`), and app filtering (`filterApps`).
+- **FocusLibraryScreen:** Composable in `:gamefocus` (`FocusLibraryScreen.kt`) rendering static tabs and a condensed square rounded-corner grid layout for browsing and launching installed apps.
 - **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.
 - **AppPaletteExtractor:** Utility object in `gamefocus/src/main/java/com/stormpanda/megingiard/gamefocus/AppPaletteExtractor.kt` extracting the most vibrant primary and distinct secondary colors via AndroidX `Palette` (ranking swatches by saturation & lightness score, enforcing distinct HSV separation, and generating hue-shifted vibrant fallbacks) with `LruCache` and `SharedPreferences` persistence (`gamefocus_palettes_v2`).
 - **FocusImageCache:** In-memory `LruCache` in `FocusTopLauncherScreen.kt` for poster cover bitmaps and converted icon PNGs stored under `cacheDir/gamefocus_icons/`.
-- **Manifest Integration:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters.
+- **Manifest Integration & Home Handling:** `gamefocus/src/main/AndroidManifest.xml` declares `FocusTopLauncherActivity` as a `singleTask` system launcher with `android.intent.category.HOME` and `android.intent.category.DEFAULT` intent filters. Overrides `onNewIntent` and intercepts `KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` in `onKeyDown` to reset view state (`isLibraryOpenState`, `editingAppInfoState`, `isMainOptionsMenuExpandedState`) back to the main gallery when pressed anywhere outside the gallery.

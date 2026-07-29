@@ -17,6 +17,7 @@
     <string name="gamefocus_cat_last_used">Zuletzt verwendet</string>
     <string name="gamefocus_option_add_favorite">Zu Favoriten hinzufügen</string>
     <string name="gamefocus_option_remove_favorite">Aus Favoriten entfernen</string>
+    <string name="gamefocus_option_edit">Bearbeiten</string>
     <string name="gamefocus_option_app_info">App-Info</string>
     <string name="gamefocus_option_close">Schließen</string>
     <string name="gamefocus_option_actions">Aktionen</string>
@@ -33,4 +34,18 @@
     <string name="steamgriddb_search_placeholder">Suchbegriff eingeben…</string>
     <string name="steamgriddb_preview_unavailable">Vorschau nicht verfügbar</string>
     <string name="steamgriddb_cd_artwork_option">SteamGridDB Grafik-Option</string>
+    <string name="steamgriddb_status_downloading">Cover-Motiv wird heruntergeladen…</string>
+    <string name="steamgriddb_status_searching">SteamGridDB wird durchsucht…</string>
+    <string name="steamgriddb_status_fetching">Cover-Motive werden geladen…</string>
+    <string name="gamefocus_option_change_search_term">Suchbegriff ändern</string>
+    <string name="gamefocus_option_use_app_icon">App-Icon verwenden</string>
+
+    <string name="gamefocus_library_title">Bibliothek</string>
+    <string name="gamefocus_library_tab_all">Alle</string>
+    <string name="gamefocus_library_tab_apps">Android-Apps</string>
+    <string name="gamefocus_library_tab_games">Android-Spiele</string>
+    <string name="gamefocus_library_hint_close">R2 oder B drücken zum Schließen</string>
+    <string name="gamefocus_nav_gallery">Galerie</string>
+    <string name="gamefocus_nav_library">Bibliothek</string>
 </resources>
+

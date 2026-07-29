@@ -53,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -73,12 +74,17 @@ import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
+import com.stormpanda.megingiard.ui.CutoutLetterButton
+import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
+import com.stormpanda.megingiard.ui.GamePadButton
+import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -407,9 +413,9 @@ fun GameFocusArtworkDialog(
                         Spacer(modifier = Modifier.height(10.dp))
                         val loadingStatusText =
                             when {
-                                selectingImage != null -> "Downloading artwork..."
-                                isSearchLoading -> "Searching SteamGridDB..."
-                                else -> "Fetching game covers..."
+                                selectingImage != null -> stringResource(R.string.steamgriddb_status_downloading)
+                                isSearchLoading -> stringResource(R.string.steamgriddb_status_searching)
+                                else -> stringResource(R.string.steamgriddb_status_fetching)
                             }
                         Text(
                             text = loadingStatusText,
@@ -473,24 +479,23 @@ fun GameFocusArtworkDialog(
                     actions =
                         listOf(
                             ExpandableActionItem(
-                                label = "Change Search Term",
+                                label = stringResource(R.string.gamefocus_option_change_search_term),
                                 iconSymbol = "gamepad_up",
                                 onClick = { isEditingQuery = true },
                             ),
                             ExpandableActionItem(
-                                label = "Use App Icon",
+                                label = stringResource(R.string.gamefocus_option_use_app_icon),
                                 iconSymbol = "gamepad_right",
                                 onClick = { useAppIcon() },
                             ),
                         ),
                 )
 
-                TextButton(onClick = onDismiss) {
-                    Text(
-                        text = stringResource(R.string.settings_cancel),
-                        color = appColors.onSurfaceSecondary,
-                    )
-                }
+                GamePadButtonAction(
+                    button = GamePadButton.BUTTON_B,
+                    text = stringResource(R.string.settings_cancel),
+                    onClick = onDismiss,
+                )
             }
         }
     }
@@ -635,6 +640,10 @@ private fun ArtworkOptionItem(
                 val stream = connection.getInputStream()
                 val decoded = BitmapFactory.decodeStream(stream)
                 stream.close()
+                if (!isActive) {
+                    decoded?.let { if (!it.isRecycled) it.recycle() }
+                    return@withContext
+                }
                 rawBitmap = decoded
                 withContext(Dispatchers.Main) {
                     bitmap = decoded?.asImageBitmap()

@@ -3,6 +3,8 @@ package com.stormpanda.megingiard.focus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+private const val TAG = "LetterNavigationHelperTest"
+
 class LetterNavigationHelperTest {
     private fun makeApp(label: String): InstalledAppInfo =
         InstalledAppInfo(
@@ -20,6 +22,14 @@ class LetterNavigationHelperTest {
         assertEquals('1', LetterNavigationHelper.getStartingLetter("[1942] Game"))
         assertEquals('#', LetterNavigationHelper.getStartingLetter(""))
         assertEquals('Z', LetterNavigationHelper.getStartingLetter("Zelda"))
+    }
+
+    @Test
+    fun testGetStartingLetter_specialAndAccentedCharacters() {
+        assertEquals('É', LetterNavigationHelper.getStartingLetter("Élité"))
+        assertEquals('1', LetterNavigationHelper.getStartingLetter("123 Game"))
+        assertEquals('S', LetterNavigationHelper.getStartingLetter("!Special Game"))
+        assertEquals('!', LetterNavigationHelper.getStartingLetter("!!!"))
     }
 
     @Test
