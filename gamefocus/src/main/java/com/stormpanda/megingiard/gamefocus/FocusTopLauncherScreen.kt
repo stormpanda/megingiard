@@ -262,12 +262,12 @@ fun FocusTopLauncherScreen(
             scope.launch {
                 delay(FTL_LETTER_NAV_DEBOUNCE_MS)
                 val targetLetter = uniqueLetters.getOrNull(selectedLetterNavIndex)
+                isLetterOverlayActive = false
                 if (targetLetter != null) {
                     val targetAppIndex = LetterNavigationHelper.findFirstIndexOfLetter(apps, targetLetter)
                     AppLog.i(TAG, "500ms debounce expired -> committing letter '$targetLetter' at index $targetAppIndex")
                     activePagerState.animateScrollToPage(targetAppIndex)
                 }
-                isLetterOverlayActive = false
             }
     }
 
