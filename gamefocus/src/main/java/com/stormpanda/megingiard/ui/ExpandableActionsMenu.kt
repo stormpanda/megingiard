@@ -94,10 +94,11 @@ fun ExpandableActionsMenu(
                         .focusProperties { canFocus = false },
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    MaterialSymbol(
-                        name = "menu",
+                    CutoutSymbolCircleIcon(
+                        symbolName = "menu",
                         size = 18.dp,
                         tint = appColors.onSurfaceSecondary,
+                        cutoutColor = appColors.appBackground,
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -136,10 +137,11 @@ fun ExpandableActionsMenu(
                                 }.padding(end = 2.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            MaterialSymbol(
-                                name = item.iconSymbol,
+                            CutoutSymbolCircleIcon(
+                                symbolName = item.iconSymbol,
                                 size = 18.dp,
                                 tint = appColors.onSurfaceSecondary,
+                                cutoutColor = appColors.appBackground,
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(

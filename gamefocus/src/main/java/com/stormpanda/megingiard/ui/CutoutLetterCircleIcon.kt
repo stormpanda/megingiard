@@ -20,11 +20,46 @@ import androidx.compose.ui.unit.sp
 private const val ICON_DEFAULT_SIZE_DP = 18
 
 /**
- * Reusable Composable rendering a solid filled circle with a bold letter cutout (A, X, etc.)
+ * Reusable Composable rendering a solid filled circle with a bold letter cutout (A, X, L1, R1, etc.)
  */
 @Composable
 fun CutoutLetterCircleIcon(
     letter: String,
+    modifier: Modifier = Modifier,
+    size: Dp = ICON_DEFAULT_SIZE_DP.dp,
+    tint: Color = LocalAppColors.current.onSurfaceSecondary,
+    cutoutColor: Color = LocalAppColors.current.appBackground,
+) {
+    val fontSizeFactor = if (letter.length > 1) 0.48f else 0.65f
+
+    Box(
+        modifier =
+            modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(tint),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = letter,
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontSize = (size.value * fontSizeFactor).sp,
+                    fontWeight = FontWeight.Black,
+                    color = cutoutColor,
+                    lineHeight = (size.value * fontSizeFactor).sp,
+                ),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/**
+ * Reusable Composable rendering a solid filled circle with a Material Symbol cutout (menu, etc.)
+ */
+@Composable
+fun CutoutSymbolCircleIcon(
+    symbolName: String,
     modifier: Modifier = Modifier,
     size: Dp = ICON_DEFAULT_SIZE_DP.dp,
     tint: Color = LocalAppColors.current.onSurfaceSecondary,
@@ -38,16 +73,10 @@ fun CutoutLetterCircleIcon(
                 .background(tint),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = letter,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = (size.value * 0.65f).sp,
-                    fontWeight = FontWeight.Black,
-                    color = cutoutColor,
-                    lineHeight = (size.value * 0.65f).sp,
-                ),
-            textAlign = TextAlign.Center,
+        MaterialSymbol(
+            name = symbolName,
+            size = (size.value * 0.7f).dp,
+            tint = cutoutColor,
         )
     }
 }

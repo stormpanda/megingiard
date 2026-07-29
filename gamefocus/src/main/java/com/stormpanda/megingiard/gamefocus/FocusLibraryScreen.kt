@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.LocalAppColors
 import android.graphics.Paint as NativePaint
 
@@ -94,7 +95,7 @@ private val FLS_CORNER_RADIUS = 16.dp
 private val FLS_ICON_SIZE = 64.dp
 private val FLS_GRID_PADDING = 16.dp
 private val FLS_GRID_SPACING = 12.dp
-private val FLS_TAB_HEIGHT = 42.dp
+private const val FLS_CATEGORY_ROLL_Y_ANGLE_DEG = 25f
 private val FLS_FOCUS_BORDER_WIDTH = 3.dp
 private val FLS_ROW_PEEK_OFFSET = 32.dp
 
@@ -415,75 +416,128 @@ private fun LibraryHeaderBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 14.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        // Title & Hint Subtitle
-        Column(
-            horizontalAlignment = Alignment.Start,
-        ) {
-            Text(
-                text = stringResource(R.string.gamefocus_library_title),
-                style =
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurface,
-                    ),
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = stringResource(R.string.gamefocus_library_hint_close),
-                style = MaterialTheme.typography.labelSmall,
-                color = appColors.onSurfaceSecondary.copy(alpha = 0.7f),
-            )
-        }
+        // Horizontal 3D Category Reel with L1/R1 Badges
+        InteractiveLibraryCategoryHeader(
+            selectedTab = selectedTab,
+            onTabSelected = onTabSelected,
+        )
 
-        // Tabs Row
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            LibraryTab.entries.forEach { tab ->
-                LibraryTabItem(
-                    label = stringResource(tab.stringResId),
-                    isSelected = selectedTab == tab,
-                    onClick = { onTabSelected(tab) },
-                )
-            }
-        }
+        // Close hint subtitle / affordance
+        Text(
+            text = stringResource(R.string.gamefocus_library_hint_close),
+            style = MaterialTheme.typography.labelSmall,
+            color = appColors.onSurfaceSecondary.copy(alpha = 0.6f),
+            modifier = Modifier.noFocusClickable(onCloseRequested),
+        )
     }
 }
 
 @Composable
-private fun LibraryTabItem(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
+private fun InteractiveLibraryCategoryHeader(
+    selectedTab: LibraryTab,
+    onTabSelected: (LibraryTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val density = LocalDensity.current
 
-    val bgColor = if (isSelected) appColors.accent else appColors.surface
-    val textColor = if (isSelected) appColors.appBackground else appColors.onSurface
-
-    Box(
-        modifier =
-            modifier
-                .height(FLS_TAB_HEIGHT)
-                .clip(RoundedCornerShape(20.dp))
-                .background(bgColor)
-                .noFocusClickable(onClick)
-                .padding(horizontal = 18.dp),
-        contentAlignment = Alignment.Center,
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = label,
-            style =
-                MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = textColor,
-                ),
+        // (L1) Cutout Letter Circle Icon
+        CutoutLetterCircleIcon(
+            letter = "L1",
+            size = 20.dp,
+            tint = appColors.onSurfaceSecondary,
+            cutoutColor = appColors.appBackground,
+            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous()) },
+        )
+
+        // Animated Horizontal 3D Reel
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = {
+                val isMovingNext = initialState.next() == targetState
+                if (isMovingNext) {
+                    (slideInHorizontally { width -> width / 3 } + fadeIn())
+                        .togetherWith(slideOutHorizontally { width -> -width / 3 } + fadeOut())
+                } else {
+                    (slideInHorizontally { width -> -width / 3 } + fadeIn())
+                        .togetherWith(slideOutHorizontally { width -> width / 3 } + fadeOut())
+                }
+            },
+            label = "LibraryHorizontalCategoryTransition",
+        ) { currentTab ->
+            val next1 = currentTab.next()
+            val next2 = next1.next()
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Active category (leftmost, center-front)
+                Text(
+                    text = stringResource(currentTab.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary,
+                        ),
+                    maxLines = 1,
+                    modifier = Modifier.noFocusClickable { onTabSelected(currentTab) },
+                )
+
+                // Next category 1 (middle, curved Y-axis roll)
+                Text(
+                    text = stringResource(next1.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary.copy(alpha = 0.45f),
+                        ),
+                    maxLines = 1,
+                    modifier =
+                        Modifier
+                            .noFocusClickable { onTabSelected(next1) }
+                            .graphicsLayer {
+                                rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * 0.7f
+                                cameraDistance = 16 * density.density
+                            },
+                )
+
+                // Next category 2 (rightmost, deeper Y-axis roll)
+                Text(
+                    text = stringResource(next2.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary.copy(alpha = 0.25f),
+                        ),
+                    maxLines = 1,
+                    modifier =
+                        Modifier
+                            .noFocusClickable { onTabSelected(next2) }
+                            .graphicsLayer {
+                                rotationY = FLS_CATEGORY_ROLL_Y_ANGLE_DEG * 1.4f
+                                cameraDistance = 16 * density.density
+                            },
+                )
+            }
+        }
+
+        // (R1) Cutout Letter Circle Icon
+        CutoutLetterCircleIcon(
+            letter = "R1",
+            size = 20.dp,
+            tint = appColors.onSurfaceSecondary,
+            cutoutColor = appColors.appBackground,
+            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next()) },
         )
     }
 }
