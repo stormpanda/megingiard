@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -174,6 +177,7 @@ fun CutoutLetterButton(
 /**
  * Reusable subdued TextButton containing a CutoutSymbolCircleIcon + label text.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CutoutSymbolButton(
     symbolName: String,
@@ -188,34 +192,36 @@ fun CutoutSymbolButton(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = CircleShape,
-        color = Color.Transparent,
-        contentColor = tint,
-        interactionSource = interactionSource,
-        modifier = modifier.focusProperties { canFocus = false },
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(contentPadding),
+    CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            shape = CircleShape,
+            color = Color.Transparent,
+            contentColor = tint,
+            interactionSource = interactionSource,
+            modifier = modifier.focusProperties { canFocus = false },
         ) {
-            CutoutSymbolCircleIcon(
-                symbolName = symbolName,
-                size = iconSize,
-                tint = tint,
-                cutoutColor = cutoutColor,
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = text,
-                style =
-                    MaterialTheme.typography.labelMedium.copy(
-                        color = tint,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(contentPadding),
+            ) {
+                CutoutSymbolCircleIcon(
+                    symbolName = symbolName,
+                    size = iconSize,
+                    tint = tint,
+                    cutoutColor = cutoutColor,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = text,
+                    style =
+                        MaterialTheme.typography.labelMedium.copy(
+                            color = tint,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                )
+            }
         }
     }
 }

@@ -10,10 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -29,7 +26,6 @@ import kotlinx.coroutines.delay
 private val EAM_HORIZONTAL_SPREAD_DP = 24.dp
 private val EAM_VERTICAL_SPREAD_DP = 10.dp
 private val EAM_ITEM_PADDING_DP = 2.dp
-private val EAM_VERTICAL_CONTENT_PADDING = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
 private const val EAM_ANIMATION_DURATION_MS = 280
 private const val EAM_DEFAULT_AUTO_DISMISS_MS = 5000L
 
@@ -45,7 +41,6 @@ enum class ExpandableMenuOrientation {
     VERTICAL,
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpandableActionsMenu(
     isExpanded: Boolean,
@@ -119,12 +114,7 @@ fun ExpandableActionsMenu(
         label = "expansionFraction",
     )
 
-    val contentPadding =
-        if (orientation == ExpandableMenuOrientation.VERTICAL) {
-            EAM_VERTICAL_CONTENT_PADDING
-        } else {
-            ButtonDefaults.TextButtonContentPadding
-        }
+    val contentPadding = ButtonDefaults.TextButtonContentPadding
 
     val menuContent = @Composable {
         Box(
@@ -243,11 +233,5 @@ fun ExpandableActionsMenu(
         }
     }
 
-    if (orientation == ExpandableMenuOrientation.VERTICAL) {
-        CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
-            menuContent()
-        }
-    } else {
-        menuContent()
-    }
+    menuContent()
 }

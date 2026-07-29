@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -130,6 +133,7 @@ fun GamePadButtonIcon(
  * @param text Label text accompanying the gamepad button icon.
  * @param onClick Triggered when the button is clicked.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GamePadButtonAction(
     button: GamePadButton,
@@ -144,44 +148,46 @@ fun GamePadButtonAction(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = CircleShape,
-        color = Color.Transparent,
-        contentColor = tint,
-        interactionSource = interactionSource,
-        modifier =
-            modifier
-                .focusProperties { canFocus = false }
-                .onPreviewKeyEvent { event ->
-                    if (enabled && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.keyCode == button.keyCode) {
-                        onClick()
-                        true
-                    } else {
-                        false
-                    }
-                },
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(contentPadding),
+    CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            shape = CircleShape,
+            color = Color.Transparent,
+            contentColor = tint,
+            interactionSource = interactionSource,
+            modifier =
+                modifier
+                    .focusProperties { canFocus = false }
+                    .onPreviewKeyEvent { event ->
+                        if (enabled && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.keyCode == button.keyCode) {
+                            onClick()
+                            true
+                        } else {
+                            false
+                        }
+                    },
         ) {
-            GamePadButtonIcon(
-                button = button,
-                size = iconSize,
-                tint = tint,
-                cutoutColor = cutoutColor,
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = text,
-                style =
-                    MaterialTheme.typography.labelMedium.copy(
-                        color = tint,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(contentPadding),
+            ) {
+                GamePadButtonIcon(
+                    button = button,
+                    size = iconSize,
+                    tint = tint,
+                    cutoutColor = cutoutColor,
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = text,
+                    style =
+                        MaterialTheme.typography.labelMedium.copy(
+                            color = tint,
+                            fontWeight = FontWeight.SemiBold,
+                        ),
+                )
+            }
         }
     }
 }

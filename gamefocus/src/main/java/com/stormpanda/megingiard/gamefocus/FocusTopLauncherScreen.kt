@@ -576,7 +576,7 @@ fun FocusTopLauncherScreen(
                         modifier =
                             Modifier
                                 .align(Alignment.BottomStart)
-                                .padding(start = 16.dp, bottom = 4.dp),
+                                .padding(start = 12.dp, bottom = 4.dp),
                     ) {
                         val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
                         ExpandableActionsMenu(
