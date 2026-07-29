@@ -83,7 +83,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - The Library MUST display all installed applications and games in a scrollable condensed grid with square rounded-corner cards (`16.dp` corner radius).
 - The top of the Library MUST present static tabs: **All**, **Android Apps**, and **Android Games** (`LibraryTab`). Static tabs MUST reflect installed applications without dynamic filters (such as Recently Used or Favorites).
 - Highlighting an application in the Library grid MUST dynamically adapt the Library screen's background gradient to the extracted palette colors (`AppPaletteExtractor`) of the highlighted app icon after a ~200ms settlement delay.
-- The highlighted Library card MUST animate a vibrant accent blur glow (`BlurMaskFilter`) and depth shadow smoothly fading in (`animateFloatAsState`, 300ms) after focus settles.
+- The highlighted Library card MUST animate a vibrant accent blur glow (`BlurMaskFilter`) and accent focus border smoothly gliding across grid items (`200ms` `animateFloatAsState` translation/size interpolation relative to grid bounds) as D-pad or joystick focus moves to the next application.
 - Gamepad D-pad / Joystick navigation inside the Library MUST be restricted strictly to grid items (0..N). Static tabs MUST be excluded from D-pad focus, and tab category switching MUST be handled exclusively via **L1** / **R1**.
 - Dual-display launching inside the Library MUST be triggered via **A** (top display) and **X** (bottom display). Pressing **R2**, **B**, or **BACK** MUST close the Library and return to the main gallery screen.
 
