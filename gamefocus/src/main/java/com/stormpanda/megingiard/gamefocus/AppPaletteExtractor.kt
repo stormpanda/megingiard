@@ -19,8 +19,64 @@ import java.io.File
 private const val TAG = "AppPaletteExtractor"
 private const val PALETTE_CACHE_SIZE = 100
 private const val PALETTE_TARGET_AREA = 128 * 128
-private const val PREFS_NAME = "gamefocus_palettes"
+private const val PREFS_NAME = "gamefocus_palettes_v2"
 private const val CARD_BG_DARKEN_FACTOR = 0.35f
+
+private const val VIBRANCY_LIGHTNESS_MIN = 0.15f
+private const val VIBRANCY_LIGHTNESS_MAX = 0.85f
+private const val MIN_VIBRANCY_SCORE_PRIMARY = 0.15f
+private const val MIN_VIBRANCY_SCORE_SECONDARY = 0.10f
+private const val DISTINCT_HUE_THRESHOLD_DEG = 20f
+private const val DISTINCT_SUM_DIFF_THRESHOLD = 0.35f
+private const val HUE_SHIFT_COMPLEMENTARY_DEG = 30f
+
+/**
+ * Calculates a vibrancy score (0.0 to 1.0) for a [Palette.Swatch].
+ * Higher saturation yields higher vibrancy, while extreme dark or light colors are penalized.
+ */
+private fun Palette.Swatch.vibrancyScore(): Float {
+    val saturation = hsl[1]
+    val lightness = hsl[2]
+    val lightnessFactor =
+        when {
+            lightness < VIBRANCY_LIGHTNESS_MIN -> (lightness / VIBRANCY_LIGHTNESS_MIN).coerceIn(0f, 1f)
+            lightness > VIBRANCY_LIGHTNESS_MAX -> ((1.0f - lightness) / (1.0f - VIBRANCY_LIGHTNESS_MAX)).coerceIn(0f, 1f)
+            else -> 1.0f
+        }
+    return saturation * lightnessFactor
+}
+
+/**
+ * Checks whether two ARGB colors are visually distinct in HSV space.
+ */
+private fun isDistinctColor(
+    color1: Int,
+    color2: Int,
+): Boolean {
+    val hsv1 = FloatArray(3)
+    val hsv2 = FloatArray(3)
+    android.graphics.Color.colorToHSV(color1, hsv1)
+    android.graphics.Color.colorToHSV(color2, hsv2)
+
+    val rawHueDiff = kotlin.math.abs(hsv1[0] - hsv2[0])
+    val hueDiff = kotlin.math.min(rawHueDiff, 360f - rawHueDiff)
+    val satDiff = kotlin.math.abs(hsv1[1] - hsv2[1])
+    val valDiff = kotlin.math.abs(hsv1[2] - hsv2[2])
+
+    return hueDiff >= DISTINCT_HUE_THRESHOLD_DEG || (satDiff + valDiff) >= DISTINCT_SUM_DIFF_THRESHOLD
+}
+
+/**
+ * Creates a complementary vibrant color derived from [baseColorInt] by shifting hue and enforcing saturation.
+ */
+private fun createComplementaryVibrant(baseColorInt: Int): Int {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(baseColorInt, hsv)
+    hsv[0] = (hsv[0] + HUE_SHIFT_COMPLEMENTARY_DEG) % 360f
+    hsv[1] = hsv[1].coerceAtLeast(0.6f)
+    hsv[2] = hsv[2].coerceIn(0.4f, 0.8f)
+    return android.graphics.Color.HSVToColor(hsv)
+}
 
 data class ExtractedAppPalette(
     val primaryColor: Color,
@@ -202,15 +258,38 @@ object AppPaletteExtractor {
                         .resizeBitmapArea(PALETTE_TARGET_AREA)
                         .generate()
 
-                val swatches = palette.swatches.sortedByDescending { it.population }
+                val swatches = palette.swatches
+                val sortedVibrantSwatches = swatches.sortedByDescending { it.vibrancyScore() }
+
+                val primarySwatch =
+                    sortedVibrantSwatches.firstOrNull { it.vibrancyScore() >= MIN_VIBRANCY_SCORE_PRIMARY }
+                        ?: palette.vibrantSwatch
+                        ?: palette.lightVibrantSwatch
+                        ?: palette.darkVibrantSwatch
+                        ?: sortedVibrantSwatches.firstOrNull()
 
                 val primaryInt =
-                    swatches.getOrNull(0)?.rgb
-                        ?: palette.getDominantColor(defaultPrimary.toArgb())
+                    primarySwatch?.rgb
+                        ?: palette.getVibrantColor(
+                            palette.getLightVibrantColor(
+                                palette.getDarkVibrantColor(
+                                    palette.getDominantColor(defaultPrimary.toArgb()),
+                                ),
+                            ),
+                        )
+
+                val secondarySwatch =
+                    sortedVibrantSwatches.firstOrNull { swatch ->
+                        swatch.vibrancyScore() >= MIN_VIBRANCY_SCORE_SECONDARY && isDistinctColor(swatch.rgb, primaryInt)
+                    } ?: listOfNotNull(
+                        palette.lightVibrantSwatch,
+                        palette.darkVibrantSwatch,
+                        palette.vibrantSwatch,
+                    ).firstOrNull { isDistinctColor(it.rgb, primaryInt) }
 
                 val secondaryInt =
-                    swatches.getOrNull(1)?.rgb
-                        ?: palette.getVibrantColor(palette.getMutedColor(primaryInt))
+                    secondarySwatch?.rgb
+                        ?: createComplementaryVibrant(primaryInt)
 
                 return ExtractedAppPalette(
                     primaryColor = Color(primaryInt),
