@@ -437,41 +437,6 @@ fun FocusLibraryScreen(
                             listOf(
                                 ExpandableActionItem(
                                     label =
-                                        if (isCurrentFavorite) {
-                                            stringResource(R.string.gamefocus_option_remove_favorite)
-                                        } else {
-                                            stringResource(R.string.gamefocus_option_add_favorite)
-                                        },
-                                    iconSymbol = "gamepad_up",
-                                    onClick = {
-                                        if (focusedApp != null) {
-                                            onToggleFavorite(focusedApp)
-                                            onOptionsMenuExpandedChange(false)
-                                        }
-                                    },
-                                ),
-                                ExpandableActionItem(
-                                    label = stringResource(R.string.gamefocus_option_edit),
-                                    iconSymbol = "gamepad_right",
-                                    onClick = {
-                                        if (focusedApp != null) {
-                                            onEditArtwork(focusedApp)
-                                            onOptionsMenuExpandedChange(false)
-                                        }
-                                    },
-                                ),
-                                ExpandableActionItem(
-                                    label = stringResource(R.string.gamefocus_option_app_info),
-                                    iconSymbol = "gamepad_down",
-                                    onClick = {
-                                        if (focusedApp != null) {
-                                            onOpenAppInfo(focusedApp)
-                                            onOptionsMenuExpandedChange(false)
-                                        }
-                                    },
-                                ),
-                                ExpandableActionItem(
-                                    label =
                                         if (isCurrentHidden) {
                                             stringResource(R.string.gamefocus_option_unhide)
                                         } else {

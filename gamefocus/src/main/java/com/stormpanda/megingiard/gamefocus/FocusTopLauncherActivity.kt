@@ -485,46 +485,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
             if (isLibraryOptionsMenuExpandedState.value) {
                 stopRepeat()
                 return when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_UP -> {
-                        if (focusedLibraryApp != null) {
-                            InstalledAppsManager.toggleFavorite(this, focusedLibraryApp.packageName)
-                        }
-                        isLibraryOptionsMenuExpandedState.value = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        if (focusedLibraryApp != null) {
-                            AppLog.i(
-                                TAG,
-                                "D-pad RIGHT pressed while Library options menu expanded -> Editing artwork for ${focusedLibraryApp.label}",
-                            )
-                            dialogVirtualIndexState.intValue = INITIAL_LOOP_OFFSET
-                            confirmDialogTriggerState.intValue = 0
-                            dialogL1TriggerState.intValue = 0
-                            dialogR1TriggerState.intValue = 0
-                            isOptionsMenuExpandedState.value = false
-                            dpadUpOptionsTriggerState.intValue = 0
-                            dpadRightOptionsTriggerState.intValue = 0
-                            editingAppInfoState.value = focusedLibraryApp
-                        }
-                        isLibraryOptionsMenuExpandedState.value = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_DOWN -> {
-                        if (focusedLibraryApp != null) {
-                            AppLog.i(
-                                TAG,
-                                "D-pad DOWN pressed while Library options menu expanded -> Opening native app info for ${focusedLibraryApp.label}",
-                            )
-                            InstalledAppsManager.openAppInfo(this, focusedLibraryApp.packageName)
-                        }
-                        isLibraryOptionsMenuExpandedState.value = false
-                        true
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                    -> {
                         if (focusedLibraryApp != null) {
                             AppLog.i(
                                 TAG,
@@ -961,6 +924,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         InstalledAppsManager.openAppInfo(this, targetApp.packageName)
                     }
                     isMainOptionsMenuExpandedState.value = false
+                    return true
+                } else if (x < -0.5f) {
+                    val targetApp = focusedAppState.value
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Joystick LEFT pressed while options menu expanded -> Toggling hidden for ${targetApp.label}")
+                        InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    return true
+                }
+                return true
+            }
+
+            if (isLibraryOptionsMenuExpandedState.value) {
+                stopRepeat()
+                if (x < -0.5f) {
+                    val allApps = InstalledAppsManager.installedApps.value
+                    val currentTab = librarySelectedTabState.value
+                    val filteredApps = currentTab.filterApps(allApps)
+                    val focusedLibraryApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                    if (focusedLibraryApp != null) {
+                        AppLog.i(
+                            TAG,
+                            "Joystick LEFT pressed while Library options menu expanded -> Toggling hidden for ${focusedLibraryApp.label}",
+                        )
+                        InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                    }
+                    isLibraryOptionsMenuExpandedState.value = false
                     return true
                 }
                 return true
