@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -51,9 +53,9 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 
 private const val TAG = "FocusLibraryScreen"
 
+internal const val FLS_GRID_COLUMNS = 6
 private val FLS_CORNER_RADIUS = 16.dp
 private val FLS_ICON_SIZE = 64.dp
-private val FLS_GRID_CELL_MIN_WIDTH = 110.dp
 private val FLS_GRID_PADDING = 16.dp
 private val FLS_GRID_SPACING = 12.dp
 private val FLS_TAB_HEIGHT = 42.dp
@@ -76,7 +78,7 @@ fun FocusLibraryScreen(
     val gridState: LazyGridState = rememberLazyGridState()
 
     LaunchedEffect(focusedIndex, displayedApps.size) {
-        if (displayedApps.isNotEmpty()) {
+        if (displayedApps.isNotEmpty() && focusedIndex >= 0) {
             val safeIndex = focusedIndex.coerceIn(0, displayedApps.size - 1)
             AppLog.d(TAG, "Library focused index changed to $safeIndex (total ${displayedApps.size})")
             gridState.animateScrollToItem(safeIndex)
@@ -95,6 +97,7 @@ fun FocusLibraryScreen(
             // Header Bar with Title, Subtitle, and Tabs
             LibraryHeaderBar(
                 selectedTab = selectedTab,
+                isTabsRowFocused = (focusedIndex == -1),
                 onTabSelected = { tab ->
                     AppLog.i(TAG, "Library tab clicked/selected: ${tab.name}")
                     onTabSelected(tab)
@@ -117,7 +120,7 @@ fun FocusLibraryScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = FLS_GRID_CELL_MIN_WIDTH),
+                    columns = GridCells.Fixed(FLS_GRID_COLUMNS),
                     state = gridState,
                     contentPadding = PaddingValues(FLS_GRID_PADDING),
                     horizontalArrangement = Arrangement.spacedBy(FLS_GRID_SPACING),
@@ -128,7 +131,7 @@ fun FocusLibraryScreen(
                         items = displayedApps,
                         key = { _, app -> app.packageName },
                     ) { index, app ->
-                        val isFocused = index == focusedIndex
+                        val isFocused = (index == focusedIndex)
                         LibraryGridItem(
                             appInfo = app,
                             isFocused = isFocused,
@@ -151,6 +154,7 @@ fun FocusLibraryScreen(
 @Composable
 private fun LibraryHeaderBar(
     selectedTab: LibraryTab,
+    isTabsRowFocused: Boolean,
     onTabSelected: (LibraryTab) -> Unit,
     onCloseRequested: () -> Unit,
     modifier: Modifier = Modifier,
@@ -193,16 +197,19 @@ private fun LibraryHeaderBar(
             LibraryTabItem(
                 label = stringResource(R.string.gamefocus_library_tab_all),
                 isSelected = selectedTab == LibraryTab.ALL,
+                isTabsRowFocused = isTabsRowFocused && selectedTab == LibraryTab.ALL,
                 onClick = { onTabSelected(LibraryTab.ALL) },
             )
             LibraryTabItem(
                 label = stringResource(R.string.gamefocus_library_tab_apps),
                 isSelected = selectedTab == LibraryTab.APPS,
+                isTabsRowFocused = isTabsRowFocused && selectedTab == LibraryTab.APPS,
                 onClick = { onTabSelected(LibraryTab.APPS) },
             )
             LibraryTabItem(
                 label = stringResource(R.string.gamefocus_library_tab_games),
                 isSelected = selectedTab == LibraryTab.GAMES,
+                isTabsRowFocused = isTabsRowFocused && selectedTab == LibraryTab.GAMES,
                 onClick = { onTabSelected(LibraryTab.GAMES) },
             )
         }
@@ -213,12 +220,16 @@ private fun LibraryHeaderBar(
 private fun LibraryTabItem(
     label: String,
     isSelected: Boolean,
+    isTabsRowFocused: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val noFocusInteractionSource = remember { MutableInteractionSource() }
+
     val bgColor = if (isSelected) appColors.accent else appColors.surface
     val textColor = if (isSelected) appColors.appBackground else appColors.onSurface
+    val borderColor = if (isTabsRowFocused) appColors.onSurface else Color.Transparent
 
     Box(
         modifier =
@@ -226,8 +237,16 @@ private fun LibraryTabItem(
                 .height(FLS_TAB_HEIGHT)
                 .clip(RoundedCornerShape(20.dp))
                 .background(bgColor)
-                .clickable { onClick() }
-                .padding(horizontal = 18.dp),
+                .border(
+                    width = 2.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(20.dp),
+                ).focusProperties { canFocus = false }
+                .clickable(
+                    interactionSource = noFocusInteractionSource,
+                    indication = null,
+                    onClick = onClick,
+                ).padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -251,6 +270,7 @@ private fun LibraryGridItem(
 ) {
     val appColors = LocalAppColors.current
     val context = LocalContext.current
+    val noFocusInteractionSource = remember { MutableInteractionSource() }
 
     val iconBitmap =
         remember(appInfo.icon) {
@@ -272,8 +292,12 @@ private fun LibraryGridItem(
                     width = FLS_FOCUS_BORDER_WIDTH,
                     color = borderColor,
                     shape = RoundedCornerShape(FLS_CORNER_RADIUS),
-                ).clickable { onClickTop() }
-                .padding(10.dp),
+                ).focusProperties { canFocus = false }
+                .clickable(
+                    interactionSource = noFocusInteractionSource,
+                    indication = null,
+                    onClick = onClickTop,
+                ).padding(10.dp),
     ) {
         // Square Icon with Rounded Corners
         Box(

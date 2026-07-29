@@ -44,7 +44,7 @@ private const val INITIAL_LOOP_OFFSET = 10_000
 private const val INITIAL_REPEAT_DELAY_MS = 300L
 private const val REPEAT_INTERVAL_MS = 100L
 
-private enum class ScrollDirection { NONE, LEFT, RIGHT }
+private enum class ScrollDirection { NONE, LEFT, RIGHT, UP, DOWN }
 
 class FocusTopLauncherActivity : ComponentActivity() {
     private val dialogVirtualIndexState = mutableIntStateOf(INITIAL_LOOP_OFFSET)
@@ -187,6 +187,64 @@ class FocusTopLauncherActivity : ComponentActivity() {
         stopRepeat()
     }
 
+    private fun stepLibraryFocus(direction: ScrollDirection) {
+        val allApps = InstalledAppsManager.installedApps.value
+        val currentTab = librarySelectedTabState.value
+        val filteredApps = currentTab.filterApps(allApps)
+        val total = filteredApps.size
+        val current = libraryFocusedIndexState.intValue
+
+        when (direction) {
+            ScrollDirection.LEFT -> {
+                if (current == -1) {
+                    val prevTab = currentTab.previous()
+                    AppLog.i(TAG, "Library D-pad LEFT on tab header -> switching tab to ${prevTab.name}")
+                    librarySelectedTabState.value = prevTab
+                } else if (current > 0) {
+                    libraryFocusedIndexState.intValue = current - 1
+                }
+            }
+
+            ScrollDirection.RIGHT -> {
+                if (current == -1) {
+                    val nextTab = currentTab.next()
+                    AppLog.i(TAG, "Library D-pad RIGHT on tab header -> switching tab to ${nextTab.name}")
+                    librarySelectedTabState.value = nextTab
+                } else if (total > 0 && current < total - 1) {
+                    libraryFocusedIndexState.intValue = current + 1
+                }
+            }
+
+            ScrollDirection.UP -> {
+                if (current >= 0) {
+                    if (current >= FLS_GRID_COLUMNS) {
+                        libraryFocusedIndexState.intValue = current - FLS_GRID_COLUMNS
+                    } else {
+                        AppLog.i(TAG, "Library D-pad UP from top row -> focusing tab row (-1)")
+                        libraryFocusedIndexState.intValue = -1
+                    }
+                }
+            }
+
+            ScrollDirection.DOWN -> {
+                if (current == -1) {
+                    if (total > 0) {
+                        AppLog.i(TAG, "Library D-pad DOWN from tab row -> focusing first grid item (0)")
+                        libraryFocusedIndexState.intValue = 0
+                    }
+                } else if (total > 0) {
+                    if (current + FLS_GRID_COLUMNS < total) {
+                        libraryFocusedIndexState.intValue = current + FLS_GRID_COLUMNS
+                    } else if (current < total - 1) {
+                        libraryFocusedIndexState.intValue = total - 1
+                    }
+                }
+            }
+
+            ScrollDirection.NONE -> {}
+        }
+    }
+
     private fun startRepeat(direction: ScrollDirection) {
         if (currentDirection == direction) return
 
@@ -194,6 +252,19 @@ class FocusTopLauncherActivity : ComponentActivity() {
         repeatJob?.cancel()
 
         if (direction == ScrollDirection.NONE) return
+
+        if (isLibraryOpenState.value) {
+            stepLibraryFocus(direction)
+            repeatJob =
+                lifecycleScope.launch {
+                    delay(INITIAL_REPEAT_DELAY_MS)
+                    while (isActive && currentDirection == direction) {
+                        stepLibraryFocus(direction)
+                        delay(REPEAT_INTERVAL_MS)
+                    }
+                }
+            return
+        }
 
         if (editingAppInfoState.value != null) {
             if (direction == ScrollDirection.LEFT) {
@@ -363,6 +434,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_BUTTON_B,
                 -> {
                     AppLog.i(TAG, "Closing Library section")
+                    stopRepeat()
                     isLibraryOpenState.value = false
                     true
                 }
@@ -371,7 +443,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val prevTab = currentTab.previous()
                     AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.name}")
                     librarySelectedTabState.value = prevTab
-                    libraryFocusedIndexState.intValue = 0
+                    if (libraryFocusedIndexState.intValue >= 0) {
+                        libraryFocusedIndexState.intValue = 0
+                    }
                     true
                 }
 
@@ -379,43 +453,37 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val nextTab = currentTab.next()
                     AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.name}")
                     librarySelectedTabState.value = nextTab
-                    libraryFocusedIndexState.intValue = 0
+                    if (libraryFocusedIndexState.intValue >= 0) {
+                        libraryFocusedIndexState.intValue = 0
+                    }
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_LEFT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
                 -> {
-                    if (filteredApps.isNotEmpty()) {
-                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue - 1).coerceAtLeast(0)
-                    }
+                    startRepeat(ScrollDirection.LEFT)
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_RIGHT,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
                 -> {
-                    if (filteredApps.isNotEmpty()) {
-                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue + 1).coerceAtMost(filteredApps.size - 1)
-                    }
+                    startRepeat(ScrollDirection.RIGHT)
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_UP,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
                 -> {
-                    if (filteredApps.isNotEmpty()) {
-                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue - 4).coerceAtLeast(0)
-                    }
+                    startRepeat(ScrollDirection.UP)
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_DOWN,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
                 -> {
-                    if (filteredApps.isNotEmpty()) {
-                        libraryFocusedIndexState.intValue = (libraryFocusedIndexState.intValue + 4).coerceAtMost(filteredApps.size - 1)
-                    }
+                    startRepeat(ScrollDirection.DOWN)
                     true
                 }
 
@@ -424,10 +492,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 -> {
-                    val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
-                        InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                    if (libraryFocusedIndexState.intValue == -1) {
+                        val nextTab = currentTab.next()
+                        AppLog.i(TAG, "Library A pressed on tab header -> switching tab to ${nextTab.name}")
+                        librarySelectedTabState.value = nextTab
+                    } else {
+                        val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
+                        if (targetApp != null) {
+                            AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
+                            InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                        }
                     }
                     true
                 }
@@ -435,10 +509,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_BUTTON_X,
                 KeyEvent.KEYCODE_X,
                 -> {
-                    val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
-                    if (targetApp != null) {
-                        AppLog.i(TAG, "Library launch on bottom display: ${targetApp.label}")
-                        InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
+                    if (libraryFocusedIndexState.intValue >= 0) {
+                        val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
+                        if (targetApp != null) {
+                            AppLog.i(TAG, "Library launch on bottom display: ${targetApp.label}")
+                            InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
+                        }
                     }
                     true
                 }
@@ -630,19 +706,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
-            -> {
-                if (currentDirection == ScrollDirection.LEFT) {
-                    stopRepeat()
-                }
-                return true
-            }
-
             KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
             -> {
-                if (currentDirection == ScrollDirection.RIGHT) {
-                    stopRepeat()
-                }
+                stopRepeat()
                 return true
             }
         }
@@ -718,6 +789,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     }
                     isMainOptionsMenuExpandedState.value = false
                     return true
+                }
+                return true
+            }
+
+            if (isLibraryOpenState.value) {
+                if (x < -0.5f) {
+                    startRepeat(ScrollDirection.LEFT)
+                    return true
+                } else if (x > 0.5f) {
+                    startRepeat(ScrollDirection.RIGHT)
+                    return true
+                } else if (y < -0.5f) {
+                    startRepeat(ScrollDirection.UP)
+                    return true
+                } else if (y > 0.5f) {
+                    startRepeat(ScrollDirection.DOWN)
+                    return true
+                } else {
+                    if (currentDirection != ScrollDirection.NONE) {
+                        stopRepeat()
+                    }
                 }
                 return true
             }
