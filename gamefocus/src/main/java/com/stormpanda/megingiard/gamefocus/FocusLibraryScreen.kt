@@ -47,9 +47,14 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
@@ -289,23 +294,35 @@ fun FocusLibraryScreen(
                                             val spreadPx = 2.dp.toPx()
                                             val shadowColorArgb = appColors.accent.copy(alpha = 0.45f * borderAlpha).toArgb()
 
-                                            drawIntoCanvas { canvas ->
-                                                val nativePaint =
-                                                    NativePaint().apply {
-                                                        isAntiAlias = true
-                                                        color = shadowColorArgb
-                                                        style = NativePaint.Style.FILL
-                                                        maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
-                                                    }
-                                                canvas.nativeCanvas.drawRoundRect(
-                                                    -spreadPx,
-                                                    -spreadPx,
-                                                    size.width + spreadPx,
-                                                    size.height + spreadPx,
-                                                    cornerRadiusPx + spreadPx,
-                                                    cornerRadiusPx + spreadPx,
-                                                    nativePaint,
-                                                )
+                                            val innerPath =
+                                                Path().apply {
+                                                    addRoundRect(
+                                                        RoundRect(
+                                                            rect = Rect(0f, 0f, size.width, size.height),
+                                                            cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
+                                                        ),
+                                                    )
+                                                }
+
+                                            clipPath(innerPath, clipOp = ClipOp.Difference) {
+                                                drawIntoCanvas { canvas ->
+                                                    val nativePaint =
+                                                        NativePaint().apply {
+                                                            isAntiAlias = true
+                                                            color = shadowColorArgb
+                                                            style = NativePaint.Style.FILL
+                                                            maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                                        }
+                                                    canvas.nativeCanvas.drawRoundRect(
+                                                        -spreadPx,
+                                                        -spreadPx,
+                                                        size.width + spreadPx,
+                                                        size.height + spreadPx,
+                                                        cornerRadiusPx + spreadPx,
+                                                        cornerRadiusPx + spreadPx,
+                                                        nativePaint,
+                                                    )
+                                                }
                                             }
                                         }
                                     }.border(
