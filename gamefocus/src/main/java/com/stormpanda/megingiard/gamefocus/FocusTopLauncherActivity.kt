@@ -396,34 +396,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     return true
                 }
 
-                KeyEvent.KEYCODE_DPAD_LEFT,
+                GamePadButton.DPAD_LEFT.keyCode,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
                 -> {
                     startRepeat(ScrollDirection.LEFT)
                     return true
                 }
 
-                KeyEvent.KEYCODE_DPAD_RIGHT,
+                GamePadButton.DPAD_RIGHT.keyCode,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
                 -> {
                     startRepeat(ScrollDirection.RIGHT)
                     return true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_L1 -> {
+                GamePadButton.BUTTON_L1.keyCode -> {
                     AppLog.i(TAG, "Gamepad L1 pressed inside artwork dialog")
                     dialogL1TriggerState.intValue++
                     return true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_R1 -> {
+                GamePadButton.BUTTON_R1.keyCode -> {
                     AppLog.i(TAG, "Gamepad R1 pressed inside artwork dialog")
                     dialogR1TriggerState.intValue++
                     return true
                 }
 
                 KeyEvent.KEYCODE_DPAD_CENTER,
-                KeyEvent.KEYCODE_BUTTON_A,
+                GamePadButton.BUTTON_A.keyCode,
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 -> {
@@ -434,7 +434,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                 KeyEvent.KEYCODE_BACK,
                 KeyEvent.KEYCODE_ESCAPE,
-                KeyEvent.KEYCODE_BUTTON_B,
+                GamePadButton.BUTTON_B.keyCode,
                 -> {
                     AppLog.i(TAG, "Gamepad back key pressed, closing artwork dialog")
                     editingAppInfoState.value = null
@@ -455,10 +455,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val filteredApps = currentTab.filterApps(allApps)
 
             return when (keyCode) {
-                KeyEvent.KEYCODE_BUTTON_R2,
+                GamePadButton.BUTTON_R2.keyCode,
                 KeyEvent.KEYCODE_BACK,
                 KeyEvent.KEYCODE_ESCAPE,
-                KeyEvent.KEYCODE_BUTTON_B,
+                GamePadButton.BUTTON_B.keyCode,
                 -> {
                     AppLog.i(TAG, "Closing Library section")
                     stopRepeat()
@@ -466,7 +466,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_L1 -> {
+                GamePadButton.BUTTON_L1.keyCode -> {
                     val prevTab = currentTab.previous()
                     AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.name}")
                     librarySelectedTabState.value = prevTab
@@ -474,7 +474,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_R1 -> {
+                GamePadButton.BUTTON_R1.keyCode -> {
                     val nextTab = currentTab.next()
                     AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.name}")
                     librarySelectedTabState.value = nextTab
@@ -482,28 +482,28 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_LEFT,
+                GamePadButton.DPAD_LEFT.keyCode,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
                 -> {
                     startRepeat(ScrollDirection.LEFT)
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_RIGHT,
+                GamePadButton.DPAD_RIGHT.keyCode,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_RIGHT,
                 -> {
                     startRepeat(ScrollDirection.RIGHT)
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_UP,
+                GamePadButton.DPAD_UP.keyCode,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
                 -> {
                     startRepeat(ScrollDirection.UP)
                     true
                 }
 
-                KeyEvent.KEYCODE_DPAD_DOWN,
+                GamePadButton.DPAD_DOWN.keyCode,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
                 -> {
                     startRepeat(ScrollDirection.DOWN)
@@ -511,7 +511,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
 
                 KeyEvent.KEYCODE_DPAD_CENTER,
-                KeyEvent.KEYCODE_BUTTON_A,
+                GamePadButton.BUTTON_A.keyCode,
                 KeyEvent.KEYCODE_ENTER,
                 KeyEvent.KEYCODE_NUMPAD_ENTER,
                 -> {
@@ -523,7 +523,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     true
                 }
 
-                KeyEvent.KEYCODE_BUTTON_X,
+                GamePadButton.BUTTON_X.keyCode,
                 KeyEvent.KEYCODE_X,
                 -> {
                     if (libraryFocusedIndexState.intValue >= 0) {
@@ -653,7 +653,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             }
 
             KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_BUTTON_A,
+            GamePadButton.BUTTON_A.keyCode,
             KeyEvent.KEYCODE_ENTER,
             KeyEvent.KEYCODE_NUMPAD_ENTER,
             -> {
@@ -665,7 +665,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
 
-            KeyEvent.KEYCODE_BUTTON_X,
+            GamePadButton.BUTTON_X.keyCode,
             KeyEvent.KEYCODE_X,
             -> {
                 val targetApp = focusedAppState.value
@@ -676,7 +676,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
             }
 
-            KeyEvent.KEYCODE_BUTTON_L1 -> {
+            GamePadButton.BUTTON_L1.keyCode -> {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad L1 pressed -> skipping to previous starting letter")
                     prevLetterTriggerState.intValue++
@@ -684,7 +684,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
-            KeyEvent.KEYCODE_BUTTON_R1 -> {
+            GamePadButton.BUTTON_R1.keyCode -> {
                 if (apps.isNotEmpty()) {
                     AppLog.i(TAG, "Gamepad R1 pressed -> skipping to next starting letter")
                     nextLetterTriggerState.intValue++
@@ -692,7 +692,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 return true
             }
 
-            KeyEvent.KEYCODE_BUTTON_R2 -> {
+            GamePadButton.BUTTON_R2.keyCode -> {
                 AppLog.i(TAG, "Gamepad R2 pressed -> Opening Library section")
                 isLibraryOpenState.value = true
                 libraryFocusedIndexState.intValue = 0
