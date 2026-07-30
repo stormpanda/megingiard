@@ -9,7 +9,7 @@ data class RomSystemDef(
     val extensions: Set<String>,
     val emulatorId: String,
     val retroArchCore: String? = null,
-    val retroArchCoreAlternative: String? = null,
+    val retroArchCoreAlternatives: Set<String> = emptySet(),
 )
 
 /**
@@ -23,7 +23,12 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("sfc", "smc", "snes"),
             emulatorId = "retroarch",
             retroArchCore = "bsnes_libretro_android.so",
-            retroArchCoreAlternative = "snes9x_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "snes9x_libretro_android.so",
+                    "snes9x_2010_libretro_android.so",
+                    "snes9x_2005_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "nes",
@@ -31,7 +36,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("nes"),
             emulatorId = "retroarch",
             retroArchCore = "mesen_libretro_android.so",
-            retroArchCoreAlternative = "nestopia_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "nestopia_libretro_android.so",
+                    "fceumm_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "gba",
@@ -39,7 +48,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("gba"),
             emulatorId = "retroarch",
             retroArchCore = "mgba_libretro_android.so",
-            retroArchCoreAlternative = "gpsp_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "gpsp_libretro_android.so",
+                    "vbam_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "gb",
@@ -47,7 +60,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("gb", "gbc"),
             emulatorId = "retroarch",
             retroArchCore = "sameboy_libretro_android.so",
-            retroArchCoreAlternative = "gambatte_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "gambatte_libretro_android.so",
+                    "gearboy_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "n64",
@@ -55,7 +72,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("n64", "z64", "v64"),
             emulatorId = "retroarch",
             retroArchCore = "mupen64plus_next_libretro_android.so",
-            retroArchCoreAlternative = "parallel_n64_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "parallel_n64_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "nds",
@@ -63,7 +83,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("nds"),
             emulatorId = "retroarch",
             retroArchCore = "melonds_libretro_android.so",
-            retroArchCoreAlternative = "desmume_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "desmume_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "virtualboy",
@@ -99,7 +122,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("sms", "gg"),
             emulatorId = "retroarch",
             retroArchCore = "genesis_plus_gx_libretro_android.so",
-            retroArchCoreAlternative = "gearsystem_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "gearsystem_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "genesis",
@@ -107,7 +133,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("md", "smd", "gen", "bin", "cue", "chd"),
             emulatorId = "retroarch",
             retroArchCore = "genesis_plus_gx_libretro_android.so",
-            retroArchCoreAlternative = "blastem_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "picodrive_libretro_android.so",
+                    "blastem_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "sega32x",
@@ -122,7 +152,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("cue", "bin", "chd"),
             emulatorId = "retroarch",
             retroArchCore = "beetle_saturn_libretro_android.so",
-            retroArchCoreAlternative = "yabause_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "yabause_libretro_android.so",
+                    "kronos_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "dreamcast",
@@ -137,7 +171,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("cue", "bin", "chd", "pbp"),
             emulatorId = "retroarch",
             retroArchCore = "beetle_psx_hw_libretro_android.so",
-            retroArchCoreAlternative = "swanstation_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "swanstation_libretro_android.so",
+                    "pcsx_rearmed_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "psp",
@@ -159,7 +197,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("zip", "7z"),
             emulatorId = "retroarch",
             retroArchCore = "fbneo_libretro_android.so",
-            retroArchCoreAlternative = "mame_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "mame_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "mame",
@@ -167,7 +208,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("zip", "7z"),
             emulatorId = "retroarch",
             retroArchCore = "mame_libretro_android.so",
-            retroArchCoreAlternative = "mame2003_plus_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "mame2003_plus_libretro_android.so",
+                    "mame2010_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "ngp",
@@ -175,7 +220,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("ngp", "ngc"),
             emulatorId = "retroarch",
             retroArchCore = "mednafen_ngp_libretro_android.so",
-            retroArchCoreAlternative = "race_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "race_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "atari2600",
@@ -183,7 +231,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("a26", "bin"),
             emulatorId = "retroarch",
             retroArchCore = "stella_libretro_android.so",
-            retroArchCoreAlternative = "stella2014_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "stella2014_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "atari5200",
@@ -191,7 +242,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("a52", "bin"),
             emulatorId = "retroarch",
             retroArchCore = "a5200_libretro_android.so",
-            retroArchCoreAlternative = "atari800_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "atari800_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "atari7800",
@@ -206,7 +260,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("lnx"),
             emulatorId = "retroarch",
             retroArchCore = "handy_libretro_android.so",
-            retroArchCoreAlternative = "mednafen_lynx_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "mednafen_lynx_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "jaguar",
@@ -221,7 +278,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("exe", "com", "bat", "conf"),
             emulatorId = "retroarch",
             retroArchCore = "dosbox_pure_libretro_android.so",
-            retroArchCoreAlternative = "dosbox_svn_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "dosbox_svn_libretro_android.so",
+                    "dosbox_core_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "msx",
@@ -229,7 +290,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("rom", "mx1", "mx2"),
             emulatorId = "retroarch",
             retroArchCore = "fmsx_libretro_android.so",
-            retroArchCoreAlternative = "bluemsx_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "bluemsx_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "c64",
@@ -237,7 +301,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("d64", "g64", "prg", "t64"),
             emulatorId = "retroarch",
             retroArchCore = "vice_x64sc_libretro_android.so",
-            retroArchCoreAlternative = "vice_x64_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "vice_x64_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "amiga",
@@ -259,7 +326,11 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("pce", "sgx", "cue"),
             emulatorId = "retroarch",
             retroArchCore = "mednafen_pce_fast_libretro_android.so",
-            retroArchCoreAlternative = "mednafen_pce_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "mednafen_pce_libretro_android.so",
+                    "supergrafx_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "pcfx",
@@ -274,7 +345,10 @@ val SUPPORTED_SYSTEMS =
             extensions = setOf("col", "bin"),
             emulatorId = "retroarch",
             retroArchCore = "gearcoleco_libretro_android.so",
-            retroArchCoreAlternative = "bluemsx_libretro_android.so",
+            retroArchCoreAlternatives =
+                setOf(
+                    "bluemsx_libretro_android.so",
+                ),
         ),
         RomSystemDef(
             id = "vectrex",
