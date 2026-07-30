@@ -59,7 +59,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -344,6 +346,14 @@ fun FocusTopLauncherScreen(
     var isLetterOverlayActive by remember { mutableStateOf(false) }
     var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
     val letterCommitJobRef = remember { JobRefHolder() }
+
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(categoryApps, isLibraryOpen) {
+        if (!isLibraryOpen && categoryApps.isNotEmpty()) {
+            focusRequester.requestFocus()
+        }
+    }
 
     // Dismiss letter overlay without action if user manually scrolls the pager
     LaunchedEffect(Unit) {
@@ -667,6 +677,7 @@ fun FocusTopLauncherScreen(
                                             HorizontalPosterCarousel(
                                                 itemCount = currentCategoryApps.size,
                                                 pagerState = categoryPagerState,
+                                                modifier = Modifier.focusRequester(focusRequester),
                                                 key = { page -> currentCategoryApps.getOrNull(page)?.packageName ?: page },
                                                 targetPage = categoryPagerState.targetPage,
                                                 onItemClick = { actualIndex ->
