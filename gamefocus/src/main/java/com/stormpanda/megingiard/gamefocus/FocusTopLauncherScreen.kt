@@ -81,6 +81,7 @@ import com.stormpanda.megingiard.focus.rom.CustomRomFolder
 import com.stormpanda.megingiard.focus.rom.RomManager
 import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.CutoutLetterButton
@@ -1178,10 +1179,10 @@ private fun InteractiveCategoryHeader(
         onSelectedIndexChange = { index ->
             val targetCategory = categories[index]
             if (targetCategory != selectedCategory) {
-                if (index < selectedIndex || (selectedIndex == 0 && index == categories.lastIndex)) {
-                    onCategoryUp()
-                } else {
+                if ((selectedIndex + 1).floorMod(categories.size) == index) {
                     onCategoryDown()
+                } else {
+                    onCategoryUp()
                 }
             }
         },

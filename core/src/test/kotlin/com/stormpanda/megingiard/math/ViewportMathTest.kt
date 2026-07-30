@@ -30,4 +30,15 @@ class ViewportMathTest {
         assertEquals(500f, maxTx, 0.001f)
         assertEquals(500f, maxTy, 0.001f)
     }
+
+    @Test
+    fun `floorMod wraps numbers correctly`() {
+        assertEquals(2, (-1).floorMod(3))
+        assertEquals(1, (-1).floorMod(2))
+        assertEquals(0, (-1).floorMod(1))
+        assertEquals(0, 0.floorMod(3))
+        assertEquals(1, 1.floorMod(3))
+        assertEquals(2, 2.floorMod(3))
+        assertEquals(0, 3.floorMod(3))
+    }
 }

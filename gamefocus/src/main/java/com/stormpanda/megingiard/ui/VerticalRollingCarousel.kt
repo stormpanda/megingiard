@@ -85,7 +85,7 @@ fun <T> VerticalRollingCarousel(
         AnimatedContent(
             targetState = selectedIndex,
             transitionSpec = {
-                val isMovingDown = targetState > initialState || (initialState == items.lastIndex && targetState == 0)
+                val isMovingDown = (initialState + 1).floorMod(items.size) == targetState
                 if (isMovingDown) {
                     (slideInVertically { height -> height / 3 } + fadeIn())
                         .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
