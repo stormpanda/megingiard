@@ -30,6 +30,7 @@ import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 
 private const val TAG = "RemoveRomFolderDialog"
 
@@ -71,47 +72,18 @@ fun RemoveRomFolderDialog(
             modifier = Modifier.padding(bottom = DIALOG_SPACING),
         )
 
-        LazyColumn(
+        VerticalRollingCarousel(
+            selectedIndex = selectedIndex,
+            items = romFolders,
+            onSelectedIndexChange = onSelectedIndexChange,
+            labelProvider = { folder ->
+                "${folder.systemName} (${folder.folderPath})"
+            },
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(max = DIALOG_LIST_MAX_HEIGHT),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            itemsIndexed(romFolders) { index, folder ->
-                val isFocused = index == selectedIndex
-                val rowBg = if (isFocused) appColors.accent.copy(alpha = 0.2f) else Color.Transparent
-                val rowBorderModifier =
-                    if (isFocused) {
-                        Modifier.border(1.dp, appColors.accent, RoundedCornerShape(DIALOG_CORNER_RADIUS))
-                    } else {
-                        Modifier
-                    }
-
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(DIALOG_CORNER_RADIUS))
-                            .background(rowBg)
-                            .then(rowBorderModifier)
-                            .clickable {
-                                onSelectedIndexChange(index)
-                                onSelectFolder(folder)
-                            }.padding(
-                                vertical = DIALOG_ITEM_PADDING_VERTICAL,
-                                horizontal = DIALOG_ITEM_PADDING_HORIZONTAL,
-                            ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "${folder.systemName} (${folder.folderPath})",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (isFocused) appColors.onSurface else appColors.onSurfaceSecondary,
-                    )
-                }
-            }
-        }
+                    .padding(vertical = DIALOG_SPACING),
+        )
 
         Spacer(modifier = Modifier.height(DIALOG_SPACING))
 

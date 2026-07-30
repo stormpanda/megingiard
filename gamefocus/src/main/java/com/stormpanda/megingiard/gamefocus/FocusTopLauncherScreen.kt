@@ -92,6 +92,7 @@ import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -1166,110 +1167,30 @@ private fun InteractiveCategoryHeader(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val appColors = LocalAppColors.current
-    val density = LocalDensity.current
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier,
-    ) {
-        // Up & Down Gamepad Action Buttons on the left of categories
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(end = 6.dp),
-        ) {
-            GamePadButtonAction(
-                button = GamePadButton.DPAD_UP,
-                text = "",
-                enabled = enabled,
-                onClick = onCategoryUp,
-                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            GamePadButtonAction(
-                button = GamePadButton.DPAD_DOWN,
-                text = "",
-                enabled = enabled,
-                onClick = onCategoryDown,
-                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
-            )
+    val selectedIndex =
+        remember(selectedCategory, categories) {
+            categories.indexOf(selectedCategory).coerceAtLeast(0)
         }
 
-        AnimatedContent(
-            targetState = selectedCategory,
-            transitionSpec = {
-                val isMovingDown = initialState.next(categories) == targetState
-                if (isMovingDown) {
-                    (slideInVertically { height -> height / 3 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
+    VerticalRollingCarousel(
+        selectedIndex = selectedIndex,
+        items = categories,
+        onSelectedIndexChange = { index ->
+            val targetCategory = categories[index]
+            if (targetCategory != selectedCategory) {
+                if (index < selectedIndex || (selectedIndex == 0 && index == categories.lastIndex)) {
+                    onCategoryUp()
                 } else {
-                    (slideInVertically { height -> -height / 3 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
+                    onCategoryDown()
                 }
-            },
-            label = "CategoryRollingTransition",
-        ) { currentCat ->
-            val currentPrev = currentCat.previous(categories)
-            val currentNext = currentCat.next(categories)
-
-            Column(
-                horizontalAlignment = Alignment.Start,
-            ) {
-                // Previous category (curved backward top for 3D roll illusion)
-                Text(
-                    text = getCategoryName(currentPrev),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                        Modifier
-                            .graphicsLayer {
-                                rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
-                                cameraDistance = 16 * density.density
-                            }.noFocusClickable(enabled = enabled) { onCategoryUp() },
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Active category (highlighted, center-front)
-                Text(
-                    text = getCategoryName(currentCat),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary,
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Next category (curved backward bottom for 3D roll illusion)
-                Text(
-                    text = getCategoryName(currentNext),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                        Modifier
-                            .graphicsLayer {
-                                rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
-                                cameraDistance = 16 * density.density
-                            }.noFocusClickable(enabled = enabled) { onCategoryDown() },
-                )
             }
-        }
-    }
+        },
+        labelProvider = { category ->
+            getCategoryName(category)
+        },
+        enabled = enabled,
+        modifier = modifier,
+    )
 }
 
 @Composable

@@ -37,6 +37,7 @@ import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 
 private const val TAG = "RomFolderCoreChooser"
 
@@ -162,72 +163,22 @@ fun RomFolderCoreChooserDialog(
                     listOf(null) + systemDef.retroArchCoreAlternatives
                 }
 
-            var selectedCore by remember { mutableStateOf<String?>(null) }
-
-            LaunchedEffect(selectedIndex, cores) {
-                if (cores.isNotEmpty()) {
-                    val safeIdx = selectedIndex.coerceIn(0, cores.lastIndex)
-                    selectedCore = cores[safeIdx]
-                }
-            }
-
-            LazyColumn(
+            VerticalRollingCarousel(
+                selectedIndex = selectedIndex,
+                items = cores,
+                onSelectedIndexChange = onSelectedIndexChange,
+                labelProvider = { core ->
+                    if (core == null) {
+                        stringResource(R.string.gamefocus_dialog_core_default, systemDef.retroArchCore ?: "")
+                    } else {
+                        core
+                    }
+                },
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .heightIn(max = DIALOG_MAX_HEIGHT),
-            ) {
-                itemsIndexed(cores) { index, core ->
-                    val displayName =
-                        if (core == null) {
-                            stringResource(R.string.gamefocus_dialog_core_default, systemDef.retroArchCore ?: "")
-                        } else {
-                            core
-                        }
-                    val isSelected = selectedCore == core
-                    val isFocused = index == selectedIndex
-
-                    val rowBg = if (isFocused) appColors.accent.copy(alpha = 0.2f) else Color.Transparent
-                    val rowBorderModifier =
-                        if (isFocused) {
-                            Modifier.border(1.dp, appColors.accent, RoundedCornerShape(8.dp))
-                        } else {
-                            Modifier
-                        }
-
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(rowBg)
-                                .then(rowBorderModifier)
-                                .clickable {
-                                    onSelectedIndexChange(index)
-                                }.padding(
-                                    vertical = DIALOG_ITEM_PADDING_VERTICAL,
-                                    horizontal = DIALOG_ITEM_PADDING_HORIZONTAL,
-                                ),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onSelectedIndexChange(index) },
-                            colors =
-                                RadioButtonDefaults.colors(
-                                    selectedColor = appColors.accent,
-                                    unselectedColor = appColors.onSurfaceSecondary,
-                                ),
-                        )
-                        Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))
-                        Text(
-                            text = displayName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isSelected || isFocused) appColors.onSurface else appColors.onSurfaceSecondary,
-                        )
-                    }
-                }
-            }
+                        .padding(vertical = DIALOG_INNER_SPACING),
+            )
 
             Spacer(modifier = Modifier.height(DIALOG_SPACING))
 
@@ -248,6 +199,7 @@ fun RomFolderCoreChooserDialog(
                     button = GamePadButton.BUTTON_A,
                     text = stringResource(R.string.gamefocus_dialog_core_save),
                     onClick = {
+                        val selectedCore = cores.getOrNull(selectedIndex.coerceIn(0, cores.lastIndex))
                         AppLog.i(TAG, "User confirmed RetroArch core assignment: '$selectedCore' for recognized system ${folder.systemId}")
                         onConfirm(selectedCore)
                     },

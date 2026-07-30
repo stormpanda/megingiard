@@ -427,6 +427,40 @@ class FocusTopLauncherActivity : ComponentActivity() {
         }
     }
 
+    private fun stepCoreChooserFocus(direction: ScrollDirection) {
+        val folder = newlyAddedFolderState.value ?: return
+        val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }
+        val hasCores = systemDef != null && systemDef.emulatorId == "retroarch"
+        val coreCount =
+            if (hasCores) {
+                1 + (systemDef?.retroArchCoreAlternatives?.size ?: 0)
+            } else {
+                0
+            }
+
+        if (hasCores && coreCount > 0) {
+            val current = coreChooserDialogSelectedIndexState.intValue
+            if (direction == ScrollDirection.UP) {
+                coreChooserDialogSelectedIndexState.intValue = (current - 1).floorMod(coreCount)
+            } else if (direction == ScrollDirection.DOWN) {
+                coreChooserDialogSelectedIndexState.intValue = (current + 1).floorMod(coreCount)
+            }
+        }
+    }
+
+    private fun stepRemoveRomFolderFocus(direction: ScrollDirection) {
+        val folders = RomManager.romFolders.value
+        val foldersCount = folders.size
+        if (foldersCount > 0) {
+            val current = removeRomFolderDialogSelectedIndexState.intValue
+            if (direction == ScrollDirection.UP) {
+                removeRomFolderDialogSelectedIndexState.intValue = (current - 1).floorMod(foldersCount)
+            } else if (direction == ScrollDirection.DOWN) {
+                removeRomFolderDialogSelectedIndexState.intValue = (current + 1).floorMod(foldersCount)
+            }
+        }
+    }
+
     private fun startRepeat(direction: ScrollDirection) {
         if (currentDirection == direction) return
 
@@ -434,6 +468,32 @@ class FocusTopLauncherActivity : ComponentActivity() {
         repeatJob?.cancel()
 
         if (direction == ScrollDirection.NONE) return
+
+        if (newlyAddedFolderState.value != null) {
+            stepCoreChooserFocus(direction)
+            repeatJob =
+                lifecycleScope.launch {
+                    delay(INITIAL_REPEAT_DELAY_MS)
+                    while (isActive && currentDirection == direction) {
+                        stepCoreChooserFocus(direction)
+                        delay(REPEAT_INTERVAL_MS)
+                    }
+                }
+            return
+        }
+
+        if (isRemoveRomFolderDialogOpenState.value) {
+            stepRemoveRomFolderFocus(direction)
+            repeatJob =
+                lifecycleScope.launch {
+                    delay(INITIAL_REPEAT_DELAY_MS)
+                    while (isActive && currentDirection == direction) {
+                        stepRemoveRomFolderFocus(direction)
+                        delay(REPEAT_INTERVAL_MS)
+                    }
+                }
+            return
+        }
 
         if (isLibraryOpenState.value) {
             stepLibraryFocus(direction)
@@ -526,22 +586,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_UP,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
                 -> {
-                    if (hasCores && coreCount > 0) {
-                        val current = coreChooserDialogSelectedIndexState.intValue
-                        coreChooserDialogSelectedIndexState.intValue = (current - 1).floorMod(coreCount)
-                        AppLog.d(TAG, "Core chooser index: ${coreChooserDialogSelectedIndexState.intValue}")
-                    }
+                    startRepeat(ScrollDirection.UP)
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_DOWN,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
                 -> {
-                    if (hasCores && coreCount > 0) {
-                        val current = coreChooserDialogSelectedIndexState.intValue
-                        coreChooserDialogSelectedIndexState.intValue = (current + 1).floorMod(coreCount)
-                        AppLog.d(TAG, "Core chooser index: ${coreChooserDialogSelectedIndexState.intValue}")
-                    }
+                    startRepeat(ScrollDirection.DOWN)
                     true
                 }
 
@@ -607,22 +659,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 KeyEvent.KEYCODE_DPAD_UP,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
                 -> {
-                    if (foldersCount > 0) {
-                        val current = removeRomFolderDialogSelectedIndexState.intValue
-                        removeRomFolderDialogSelectedIndexState.intValue = (current - 1).floorMod(foldersCount)
-                        AppLog.d(TAG, "Remove folder chooser index: ${removeRomFolderDialogSelectedIndexState.intValue}")
-                    }
+                    startRepeat(ScrollDirection.UP)
                     true
                 }
 
                 KeyEvent.KEYCODE_DPAD_DOWN,
                 KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
                 -> {
-                    if (foldersCount > 0) {
-                        val current = removeRomFolderDialogSelectedIndexState.intValue
-                        removeRomFolderDialogSelectedIndexState.intValue = (current + 1).floorMod(foldersCount)
-                        AppLog.d(TAG, "Remove folder chooser index: ${removeRomFolderDialogSelectedIndexState.intValue}")
-                    }
+                    startRepeat(ScrollDirection.DOWN)
                     true
                 }
 
@@ -1164,10 +1208,25 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val x = if (axisHatX != 0f) axisHatX else axisX
             val y = if (axisHatY != 0f) axisHatY else axisY
 
-            if (editingAppInfoState.value != null ||
-                newlyAddedFolderState.value != null ||
-                folderToRemoveState.value != null ||
+            if (newlyAddedFolderState.value != null ||
                 isRemoveRomFolderDialogOpenState.value
+            ) {
+                if (y < -0.5f) {
+                    startRepeat(ScrollDirection.UP)
+                    return true
+                } else if (y > 0.5f) {
+                    startRepeat(ScrollDirection.DOWN)
+                    return true
+                } else {
+                    if (currentDirection == ScrollDirection.UP || currentDirection == ScrollDirection.DOWN) {
+                        stopRepeat()
+                    }
+                }
+                return true
+            }
+
+            if (editingAppInfoState.value != null ||
+                folderToRemoveState.value != null
             ) {
                 if (editingAppInfoState.value != null && isOptionsMenuExpandedState.value) {
                     if (y < -0.5f) {
