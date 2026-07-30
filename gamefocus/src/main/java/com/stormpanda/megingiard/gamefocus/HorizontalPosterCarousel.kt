@@ -61,6 +61,7 @@ fun HorizontalPosterCarousel(
     pagerState: PagerState,
     onItemClick: (actualIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
+    key: ((page: Int) -> Any)? = null,
     targetPage: Int = pagerState.targetPage,
     posterWidth: Dp = HPC_DEFAULT_POSTER_WIDTH,
     posterHeight: Dp = HPC_DEFAULT_POSTER_HEIGHT,
@@ -86,6 +87,7 @@ fun HorizontalPosterCarousel(
 
         HorizontalPager(
             state = pagerState,
+            key = key,
             pageSize = PageSize.Fixed(posterWidth),
             pageSpacing = posterSpacing,
             contentPadding = PaddingValues(horizontal = horizontalPadding),
