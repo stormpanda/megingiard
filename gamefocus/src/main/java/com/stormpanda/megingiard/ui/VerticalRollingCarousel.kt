@@ -77,7 +77,7 @@ fun <T> VerticalRollingCarousel(
         label = "CarouselOffsetAnimation",
     )
 
-    val itemHeight = 32.dp
+    val itemHeight = 26.dp
     val totalHeight = itemHeight * visibleItemsCount
 
     Row(
@@ -117,53 +117,60 @@ fun <T> VerticalRollingCarousel(
             val itemHeightPx = with(density) { itemHeight.toPx() }
             val centerY = itemHeightPx * (visibleItemsCount / 2)
 
-            items.forEachIndexed { i, item ->
-                var diff = (i - animatedOffset) % items.size
-                if (diff > items.size / 2f) {
-                    diff -= items.size
-                } else if (diff < -items.size / 2f) {
-                    diff += items.size
-                }
+            val scaleDecay = if (visibleItemsCount == 3) 0.05f else 0.075f
+            val rotationMax = if (visibleItemsCount == 3) 35f else 22.5f
+            val alphaDecay = if (visibleItemsCount == 3) 0.65f else 0.375f
 
-                if (abs(diff) < (visibleItemsCount / 2f) + 1.2f) {
-                    val scaleVal = 1f - abs(diff) * 0.075f
-                    val rotationXVal = diff * 22.5f
-                    val alphaVal = (1f - abs(diff) * 0.35f).coerceIn(0f, 1f)
-                    val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
+            val halfVisible = visibleItemsCount / 2
+            val integerOffset = kotlin.math.floor(animatedOffset).toInt()
+            val fractionalOffset = (animatedOffset - integerOffset)
 
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(itemHeight)
-                                .graphicsLayer {
-                                    translationY = centerY + (diff * itemHeightPx)
-                                    scaleX = scaleVal
-                                    scaleY = scaleVal
-                                    rotationX = rotationXVal
-                                    alpha = alphaVal
-                                    transformOrigin = TransformOrigin(0f, pivotY)
-                                    cameraDistance = 16 * density.density
-                                }.clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    enabled = enabled,
-                                    onClick = {
-                                        onSelectedIndexChange(i)
-                                    },
-                                ),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        Text(
-                            text = labelProvider(item),
-                            style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (i == selectedIndex) appColors.onSurface else appColors.onSurfaceSecondary,
-                                ),
-                            maxLines = 1,
-                            textAlign = TextAlign.Start,
-                        )
+            for (s in -halfVisible - 1..halfVisible + 1) {
+                val itemIndex = (integerOffset + s).floorMod(items.size)
+                val item = items[itemIndex]
+                val diff = s.toFloat() - fractionalOffset
+
+                if (abs(diff) < (visibleItemsCount / 2f) + 0.2f) {
+                    androidx.compose.runtime.key(s) {
+                        val scaleVal = 1f - abs(diff) * scaleDecay
+                        val rotationXVal = diff * rotationMax
+                        val alphaVal = (1f - abs(diff) * alphaDecay).coerceIn(0f, 1f)
+                        val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
+
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(itemHeight)
+                                    .graphicsLayer {
+                                        translationY = centerY + (diff * itemHeightPx)
+                                        scaleX = scaleVal
+                                        scaleY = scaleVal
+                                        rotationX = rotationXVal
+                                        alpha = alphaVal
+                                        transformOrigin = TransformOrigin(0f, pivotY)
+                                        cameraDistance = 16 * density.density
+                                    }.clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        enabled = enabled,
+                                        onClick = {
+                                            onSelectedIndexChange(itemIndex)
+                                        },
+                                    ),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            Text(
+                                text = labelProvider(item),
+                                style =
+                                    MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (itemIndex == selectedIndex) appColors.onSurface else appColors.onSurfaceSecondary,
+                                    ),
+                                maxLines = 1,
+                                textAlign = TextAlign.Start,
+                            )
+                        }
                     }
                 }
             }
