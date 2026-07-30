@@ -128,6 +128,7 @@ fun GameFocusArtworkDialog(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectingImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
+    val currentGame = games.getOrNull(selectedGameIndex)
 
     val useAppIcon =
         remember(appInfo.packageName) {
@@ -228,7 +229,7 @@ fun GameFocusArtworkDialog(
     }
 
     val onConfirmSelection: (SteamGridDbImage) -> Unit =
-        remember(appInfo.packageName) {
+        remember(appInfo.packageName, currentGame) {
             { imageItem ->
                 if (selectingImage == null) {
                     selectingImage = imageItem
@@ -241,6 +242,27 @@ fun GameFocusArtworkDialog(
                                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
                                 tempFile.copyTo(targetFile, overwrite = true)
                                 tempFile.delete()
+
+                                // Scrape icon for ROMs
+                                if (appInfo.isRom && currentGame != null) {
+                                    try {
+                                        val iconsRes = SteamGridDbClient.fetchImages(currentGame.id, "icons", apiKey)
+                                        val iconUrl = iconsRes.getOrNull()?.firstOrNull()?.url
+                                        if (iconUrl != null) {
+                                            val tempIconRes = SteamGridDbClient.downloadImageToTempFile(iconUrl, context.cacheDir)
+                                            val tempIconFile = tempIconRes.getOrNull()
+                                            if (tempIconFile != null) {
+                                                val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                                                val targetIconFile = File(iconsDir, "${appInfo.packageName}.png")
+                                                tempIconFile.copyTo(targetIconFile, overwrite = true)
+                                                tempIconFile.delete()
+                                                AppLog.i(TAG, "Selected and updated icon for ROM: ${appInfo.packageName}")
+                                            }
+                                        }
+                                    } catch (iconEx: Exception) {
+                                        AppLog.w(TAG, "Failed to scrape icon for ROM: ${iconEx.message}")
+                                    }
+                                }
 
                                 AppPaletteExtractor.invalidatePalette(appInfo.packageName)
                                 InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath)

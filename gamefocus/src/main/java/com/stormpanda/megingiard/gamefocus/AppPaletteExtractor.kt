@@ -175,13 +175,20 @@ object AppPaletteExtractor {
 
     private fun getCacheKey(appInfo: InstalledAppInfo): String {
         val coverPath = appInfo.coverPath
-        return if (coverPath != null) {
+        if (coverPath != null) {
             val file = File(coverPath)
             val modTime = if (file.exists()) file.lastModified() else 0L
-            "${appInfo.packageName}:$coverPath:$modTime"
-        } else {
-            "${appInfo.packageName}:icon"
+            return "${appInfo.packageName}:$coverPath:$modTime"
         }
+        val context = appContext
+        if (context != null) {
+            val iconsDir = File(context.cacheDir, "gamefocus_icons")
+            val iconFile = File(iconsDir, "${appInfo.packageName}.png")
+            if (iconFile.exists()) {
+                return "${appInfo.packageName}:icon:${iconFile.lastModified()}"
+            }
+        }
+        return "${appInfo.packageName}:icon"
     }
 
     suspend fun extractColorsAsync(
@@ -248,6 +255,21 @@ object AppPaletteExtractor {
             val iconDrawable = appInfo.icon
             if (bitmap == null && iconDrawable != null) {
                 bitmap = iconDrawable.toAndroidBitmap()
+            }
+
+            if (bitmap == null) {
+                val context = appContext
+                if (context != null) {
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons")
+                    val iconFile = File(iconsDir, "${appInfo.packageName}.png")
+                    if (iconFile.exists() && iconFile.length() > 0) {
+                        try {
+                            bitmap = BitmapFactory.decodeFile(iconFile.absolutePath)
+                        } catch (_: Exception) {
+                            // Ignore
+                        }
+                    }
+                }
             }
 
             val targetBitmap = bitmap

@@ -390,18 +390,33 @@ object InstalledAppsManager {
         scope.launch {
             val scrapedSet = synchronized(scrapedPackages) { loadScrapedPackages(context).toSet() }
             val currentApps = installedApps.value
-            val missingCovers = currentApps.filter { it.coverPath == null && !scrapedSet.contains(it.packageName) }
+            val missingCovers =
+                currentApps.filter { app ->
+                    val coverFile = File(coversDir, "${app.packageName}.png")
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons")
+                    val iconFile = File(iconsDir, "${app.packageName}.png")
+
+                    val hasCover = coverFile.exists() && coverFile.length() > 0L
+                    val hasIcon = iconFile.exists() && iconFile.length() > 0L
+
+                    val isScraped = scrapedSet.contains(app.packageName)
+                    if (app.isRom) {
+                        !isScraped || !hasCover || !hasIcon
+                    } else {
+                        !isScraped || !hasCover
+                    }
+                }
             if (missingCovers.isEmpty()) {
-                AppLog.d(TAG, "No un-scraped apps missing cover art")
+                AppLog.d(TAG, "No un-scraped apps missing cover art or icon")
                 return@launch
             }
 
-            AppLog.i(TAG, "Starting background SteamGridDB cover scraping for ${missingCovers.size} apps")
+            AppLog.i(TAG, "Starting background SteamGridDB cover/icon scraping for ${missingCovers.size} apps")
 
             missingCovers.forEach { app ->
                 try {
                     val cleanedQuery = SteamGridDbClient.cleanSearchQuery(app.label)
-                    AppLog.d(TAG, "Scraping cover art for '${app.label}' (cleaned: '$cleanedQuery')")
+                    AppLog.d(TAG, "Scraping cover art/icon for '${app.label}' (cleaned: '$cleanedQuery')")
                     val searchResult = SteamGridDbClient.searchGames(cleanedQuery, apiKey)
                     if (searchResult.isFailure) {
                         AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry next startup")
@@ -414,22 +429,51 @@ object InstalledAppsManager {
                     val games = searchResult.getOrNull()
                     val gameId = games?.firstOrNull()?.id ?: return@forEach
 
-                    val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
-                    val images = imagesResult.getOrNull()
-                    val imageUrl = images?.firstOrNull()?.url ?: return@forEach
+                    // 1. Scrape cover if missing
+                    val coverFile = File(coversDir, "${app.packageName}.png")
+                    val hasCover = coverFile.exists() && coverFile.length() > 0L
+                    if (!hasCover) {
+                        val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
+                        val images = imagesResult.getOrNull()
+                        val imageUrl = images?.firstOrNull()?.url
+                        if (imageUrl != null) {
+                            val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
+                            val tempFile = tempResult.getOrNull()
+                            if (tempFile != null) {
+                                tempFile.copyTo(coverFile, overwrite = true)
+                                tempFile.delete()
+                                updateAppCover(app.packageName, coverFile.absolutePath)
+                                AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
+                            }
+                        }
+                    }
 
-                    val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
-                    val tempFile = tempResult.getOrNull() ?: return@forEach
-
-                    val targetFile = File(coversDir, "${app.packageName}.png")
-                    tempFile.copyTo(targetFile, overwrite = true)
-                    tempFile.delete()
-
-                    // Update in-memory state
-                    updateAppCover(app.packageName, targetFile.absolutePath)
-                    AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
+                    // 2. Scrape icon if ROM and icon is missing
+                    if (app.isRom) {
+                        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                        val iconFile = File(iconsDir, "${app.packageName}.png")
+                        val hasIcon = iconFile.exists() && iconFile.length() > 0L
+                        if (!hasIcon) {
+                            try {
+                                val iconsResult = SteamGridDbClient.fetchImages(gameId, "icons", apiKey)
+                                val icons = iconsResult.getOrNull()
+                                val iconUrl = icons?.firstOrNull()?.url
+                                if (iconUrl != null) {
+                                    val tempIconRes = SteamGridDbClient.downloadImageToTempFile(iconUrl, context.cacheDir)
+                                    val tempIconFile = tempIconRes.getOrNull()
+                                    if (tempIconFile != null) {
+                                        tempIconFile.copyTo(iconFile, overwrite = true)
+                                        tempIconFile.delete()
+                                        AppLog.i(TAG, "Successfully scraped SteamGridDB icon for ROM: ${app.label}")
+                                    }
+                                }
+                            } catch (iconEx: Exception) {
+                                AppLog.w(TAG, "Failed to scrape icon for ROM ${app.label}: ${iconEx.message}")
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to scrape cover for ${app.label}: ${e.message}")
+                    AppLog.w(TAG, "Failed to scrape for ${app.label}: ${e.message}")
                 }
             }
         }

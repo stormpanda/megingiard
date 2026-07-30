@@ -82,10 +82,12 @@ class RomManagerTest {
                     zos.closeEntry()
                 }
             }
-            val files =
-                arrayOf<DocumentFile>(
-                    DocumentFile.fromFile(zipFile),
-                )
+            val docFile = DocumentFile.fromFile(zipFile)
+            org.robolectric.Shadows.shadowOf(context.contentResolver).registerInputStream(
+                docFile.uri,
+                java.io.FileInputStream(zipFile),
+            )
+            val files = arrayOf<DocumentFile>(docFile)
             val systemId = RomManager.detectSystem(context, files)
             assertEquals("gba", systemId)
         } finally {

@@ -1278,19 +1278,30 @@ private fun PosterCardContent(
                 modifier = Modifier.fillMaxSize(),
             )
         } else if (appInfo.isRom) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(FTL_ICON_SIZE)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(appColors.surface),
-                contentAlignment = Alignment.Center,
-            ) {
-                MaterialSymbol(
-                    name = "sports_esports",
-                    size = 48.dp,
-                    tint = appColors.accent,
+            if (currentIcon != null) {
+                Image(
+                    bitmap = currentIcon,
+                    contentDescription = appInfo.label,
+                    modifier =
+                        Modifier
+                            .size(FTL_ICON_SIZE)
+                            .aspectRatio(1f),
                 )
+            } else {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(FTL_ICON_SIZE)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(appColors.surface),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MaterialSymbol(
+                        name = "sports_esports",
+                        size = 48.dp,
+                        tint = appColors.accent,
+                    )
+                }
             }
         } else if (currentIcon != null) {
             Image(

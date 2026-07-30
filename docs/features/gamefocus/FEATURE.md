@@ -29,6 +29,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Application labels MUST be resolved directly from `resolveInfo.activityInfo.applicationInfo.loadLabel(packageManager)` to utilize the primary full app title rather than activity-level launcher shortcuts.
 - Search queries for SteamGridDB MUST be sanitized prior to execution via `SteamGridDbClient.cleanSearchQuery()`, stripping parenthetical metadata (e.g. `(Android)`, `(USA)`), version tags (e.g. `v1.0.2`), and common noise words (e.g. `Mobile`, `Emulator`, `Edition`).
 - Scraped cover images MUST be cached locally in `cacheDir/gamefocus_covers/` to avoid repeated network requests.
+- For ROMs, both automatic background scraping and manual artwork selection MUST also scrape the game's icon from the "icons" subcategory on SteamGridDB (if available) and cache it locally in `cacheDir/gamefocus_icons/` to be used in the library and launcher fallback card views.
 - Automatic background scraping MUST record scraped packages in a persistent registry (`gamefocus_scraped_apps.txt`). Apps that have already been scraped or deliberately set to use app icons will NOT be re-scraped automatically on restart.
 
 ### FR-GF4: Gamepad Artwork Editor & Options Menu
@@ -101,7 +102,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
   - **RetroArchLauncher**: Resolves physical file paths and fires a targeted Android Intent (`com.retroarch` / `com.retroarch.aarch64` activity `RetroActivityFuture`) passing the target `ROM` path and the matching core `LIBRETRO` name.
   - **GameNativeLauncher**: Invokes PC games via launcher intent `app.gamenative.MainActivity` passing the parsed Steam App ID from `.steam` or `.lnk` files.
 - Selecting "Remove ROM Folder" in the Library Action Menu MUST display an `AppModalDialog` detailing added systems, followed by an `AppAlertDialog` confirmation overlay. Removing a folder immediately unregisters its scanned ROMs and dynamic category.
-- When cover artwork is absent for ROMs, the UI MUST render the `"sports_esports"` symbol ligature from the Material Symbols Rounded font as a fallback cover card.
+- When cover artwork is absent for ROMs, the UI MUST render the scraped game icon if available, falling back to the `"sports_esports"` symbol ligature from the Material Symbols Rounded font if no icon was scraped.
 
 ---
 
