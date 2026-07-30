@@ -94,15 +94,17 @@ class FocusTopLauncherActivity : ComponentActivity() {
             ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
             if (uri != null) {
-                when (val result = RomManager.addRomFolder(this, uri)) {
-                    is AddRomFolderResult.Success -> {
-                        newlyAddedFolderState.value = result.folder
-                    }
+                lifecycleScope.launch {
+                    when (val result = RomManager.addRomFolder(this@FocusTopLauncherActivity, uri)) {
+                        is AddRomFolderResult.Success -> {
+                            newlyAddedFolderState.value = result.folder
+                        }
 
-                    is AddRomFolderResult.Error -> {
-                        Toast
-                            .makeText(this, result.message, Toast.LENGTH_LONG)
-                            .show()
+                        is AddRomFolderResult.Error -> {
+                            Toast
+                                .makeText(this@FocusTopLauncherActivity, result.message, Toast.LENGTH_LONG)
+                                .show()
+                        }
                     }
                 }
             }

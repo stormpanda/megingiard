@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -81,57 +82,58 @@ object RomManager {
         }
     }
 
-    fun addRomFolder(
+    suspend fun addRomFolder(
         context: Context,
         uri: Uri,
-    ): AddRomFolderResult {
-        // 1. Take persistable URI permission
-        try {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
-        } catch (e: Exception) {
-            AppLog.w(TAG, "Failed to take persistable URI permission: ${e.message}")
+    ): AddRomFolderResult =
+        withContext(Dispatchers.IO) {
+            // 1. Take persistable URI permission
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to take persistable URI permission: ${e.message}")
+            }
+
+            // 2. Scan files to recognize system
+            val documentFile = DocumentFile.fromTreeUri(context, uri)
+            if (documentFile == null || !documentFile.exists()) {
+                AppLog.w(TAG, "Selected document tree does not exist")
+                return@withContext AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
+            }
+
+            val files = documentFile.listFiles()
+            val systemId = detectSystem(context, files)
+            if (systemId == null) {
+                AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
+                return@withContext AddRomFolderResult.Error("Could not automatically recognize any gaming system in this folder.")
+            }
+
+            val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }!!
+            val folderPath = documentFile.name ?: uri.path ?: "ROM Folder"
+
+            // 3. Prevent duplicate folders
+            val current = _romFolders.value.toMutableList()
+            if (current.any { it.uriString == uri.toString() }) {
+                return@withContext AddRomFolderResult.Error("This folder has already been added.")
+            }
+
+            val newFolder =
+                CustomRomFolder(
+                    uriString = uri.toString(),
+                    folderPath = folderPath,
+                    systemId = systemId,
+                    systemName = systemDef.displayName,
+                )
+            current.add(newFolder)
+            saveRomFolders(context, current)
+
+            // 4. Reload ROM apps
+            reloadRomApps(context)
+            AddRomFolderResult.Success(newFolder)
         }
-
-        // 2. Scan files to recognize system
-        val documentFile = DocumentFile.fromTreeUri(context, uri)
-        if (documentFile == null || !documentFile.exists()) {
-            AppLog.w(TAG, "Selected document tree does not exist")
-            return AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
-        }
-
-        val files = documentFile.listFiles()
-        val systemId = detectSystem(context, files)
-        if (systemId == null) {
-            AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
-            return AddRomFolderResult.Error("Could not automatically recognize any gaming system in this folder.")
-        }
-
-        val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }!!
-        val folderPath = documentFile.name ?: uri.path ?: "ROM Folder"
-
-        // 3. Prevent duplicate folders
-        val current = _romFolders.value.toMutableList()
-        if (current.any { it.uriString == uri.toString() }) {
-            return AddRomFolderResult.Error("This folder has already been added.")
-        }
-
-        val newFolder =
-            CustomRomFolder(
-                uriString = uri.toString(),
-                folderPath = folderPath,
-                systemId = systemId,
-                systemName = systemDef.displayName,
-            )
-        current.add(newFolder)
-        saveRomFolders(context, current)
-
-        // 4. Reload ROM apps
-        reloadRomApps(context)
-        return AddRomFolderResult.Success(newFolder)
-    }
 
     fun updateRomFolderCore(
         context: Context,
