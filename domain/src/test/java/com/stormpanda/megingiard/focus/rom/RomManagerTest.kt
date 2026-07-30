@@ -91,4 +91,36 @@ class RomManagerTest {
             zipFile.delete()
         }
     }
+
+    @Test
+    fun testUpdateRomFolderCore() {
+        val file = File(context.filesDir, "gamefocus_rom_folders.json")
+        file.writeText(
+            """
+            [
+                {"uriString":"content://com.android.providers.media.documents/tree/primary%3AEmulation%2FROMS%2Fsnes","folderPath":"snes","systemId":"snes","systemName":"SNES","retroArchCore":null}
+            ]
+            """.trimIndent(),
+        )
+        RomManager.loadRomFolders(context)
+
+        // Verify initial loaded folder has no custom core
+        var folder = RomManager.romFolders.value.first()
+        assertEquals("snes", folder.systemId)
+        assertNull(folder.retroArchCore)
+
+        // Update the core
+        RomManager.updateRomFolderCore(context, folder.uriString, "snes9x_libretro_android.so")
+
+        // Verify it was updated in state
+        folder = RomManager.romFolders.value.first()
+        assertEquals("snes9x_libretro_android.so", folder.retroArchCore)
+
+        // Verify it was persisted to disk
+        val diskContent = file.readText()
+        org.junit.Assert.assertTrue(diskContent.contains("snes9x_libretro_android.so"))
+
+        // Cleanup
+        file.delete()
+    }
 }

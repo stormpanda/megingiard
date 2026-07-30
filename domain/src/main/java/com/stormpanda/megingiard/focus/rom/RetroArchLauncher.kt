@@ -18,6 +18,7 @@ class RetroArchLauncher : RomLauncher {
         romPath: String,
         systemId: String,
         displayId: Int,
+        retroArchCore: String?,
     ): Boolean {
         val packageName = getRetroArchPackageName(context)
         if (packageName == null) {
@@ -26,7 +27,7 @@ class RetroArchLauncher : RomLauncher {
         }
 
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
-        val coreName = systemDef?.retroArchCore
+        val coreName = retroArchCore ?: systemDef?.retroArchCore
         if (coreName == null) {
             AppLog.e(TAG, "No RetroArch core defined for system: $systemId")
             return false

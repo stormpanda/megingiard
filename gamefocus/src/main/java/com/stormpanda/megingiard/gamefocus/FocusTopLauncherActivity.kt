@@ -30,6 +30,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.focus.rom.AddRomFolderResult
 import com.stormpanda.megingiard.focus.rom.CustomRomFolder
 import com.stormpanda.megingiard.focus.rom.RomManager
 import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
@@ -62,6 +63,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private val selectedCategoryState = mutableStateOf<GameFocusCategory>(GameFocusCategory.GAMES)
     private val isMainOptionsMenuExpandedState = mutableStateOf(false)
+    private val newlyAddedFolderState = mutableStateOf<CustomRomFolder?>(null)
 
     private val isOptionsMenuExpandedState = mutableStateOf(false)
     private val dpadUpOptionsTriggerState = mutableIntStateOf(0)
@@ -90,15 +92,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 .OpenDocumentTree(),
         ) { uri ->
             if (uri != null) {
-                val error = RomManager.addRomFolder(this, uri)
-                if (error != null) {
-                    android.widget.Toast
-                        .makeText(this, error, android.widget.Toast.LENGTH_LONG)
-                        .show()
-                } else {
-                    android.widget.Toast
-                        .makeText(this, "System recognized and folder added!", android.widget.Toast.LENGTH_SHORT)
-                        .show()
+                when (val result = RomManager.addRomFolder(this, uri)) {
+                    is AddRomFolderResult.Success -> {
+                        newlyAddedFolderState.value = result.folder
+                    }
+
+                    is AddRomFolderResult.Error -> {
+                        android.widget.Toast
+                            .makeText(this, result.message, android.widget.Toast.LENGTH_LONG)
+                            .show()
+                    }
                 }
             }
         }
@@ -295,6 +298,12 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             dpadStepRightTrigger = dpadStepRightTriggerState.intValue,
                             onFocusedAppChanged = { focusedAppState.value = it },
                             onDismissEditingApp = { editingAppInfoState.value = null },
+                            newlyAddedFolder = newlyAddedFolderState.value,
+                            onDismissNewlyAddedFolder = { newlyAddedFolderState.value = null },
+                            onConfirmNewlyAddedFolderCore = { folder, core ->
+                                RomManager.updateRomFolderCore(this, folder.uriString, core)
+                                newlyAddedFolderState.value = null
+                            },
                             allApps = allApps,
                             lastUsed = lastUsed,
                             isLibraryOpen = isLibraryOpenState.value,

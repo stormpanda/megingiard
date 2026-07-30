@@ -159,6 +159,9 @@ fun FocusTopLauncherScreen(
     dpadStepRightTrigger: Int = 0,
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
+    newlyAddedFolder: CustomRomFolder? = null,
+    onDismissNewlyAddedFolder: () -> Unit = {},
+    onConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit = { _, _ -> },
     allApps: List<InstalledAppInfo> = emptyList(),
     lastUsed: List<String> = emptyList(),
     isLibraryOpen: Boolean = false,
@@ -915,6 +918,14 @@ fun FocusTopLauncherScreen(
                                 )
                             }
                         },
+                    )
+                }
+
+                if (newlyAddedFolder != null) {
+                    RomFolderCoreChooserDialog(
+                        folder = newlyAddedFolder,
+                        onDismiss = onDismissNewlyAddedFolder,
+                        onConfirm = { core -> onConfirmNewlyAddedFolderCore(newlyAddedFolder, core) },
                     )
                 }
             }

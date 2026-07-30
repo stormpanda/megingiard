@@ -12,4 +12,5 @@ data class InstalledAppInfo(
     val isRom: Boolean = false,
     val romPath: String? = null,
     val systemId: String? = null,
+    val retroArchCore: String? = null,
 )

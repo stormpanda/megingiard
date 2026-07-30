@@ -25,7 +25,18 @@ data class CustomRomFolder(
     val folderPath: String,
     val systemId: String,
     val systemName: String,
+    val retroArchCore: String? = null,
 )
+
+sealed class AddRomFolderResult {
+    data class Success(
+        val folder: CustomRomFolder,
+    ) : AddRomFolderResult()
+
+    data class Error(
+        val message: String,
+    ) : AddRomFolderResult()
+}
 
 object RomManager {
     private const val TAG = "RomManager"
@@ -71,7 +82,7 @@ object RomManager {
     fun addRomFolder(
         context: Context,
         uri: Uri,
-    ): String? {
+    ): AddRomFolderResult {
         // 1. Take persistable URI permission
         try {
             context.contentResolver.takePersistableUriPermission(
@@ -86,14 +97,14 @@ object RomManager {
         val documentFile = DocumentFile.fromTreeUri(context, uri)
         if (documentFile == null || !documentFile.exists()) {
             AppLog.w(TAG, "Selected document tree does not exist")
-            return "Folder does not exist or is inaccessible."
+            return AddRomFolderResult.Error("Folder does not exist or is inaccessible.")
         }
 
         val files = documentFile.listFiles()
         val systemId = detectSystem(context, files)
         if (systemId == null) {
             AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
-            return "Could not automatically recognize any gaming system in this folder."
+            return AddRomFolderResult.Error("Could not automatically recognize any gaming system in this folder.")
         }
 
         val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }!!
@@ -102,7 +113,7 @@ object RomManager {
         // 3. Prevent duplicate folders
         val current = _romFolders.value.toMutableList()
         if (current.any { it.uriString == uri.toString() }) {
-            return "This folder has already been added."
+            return AddRomFolderResult.Error("This folder has already been added.")
         }
 
         val newFolder =
@@ -117,7 +128,24 @@ object RomManager {
 
         // 4. Reload ROM apps
         reloadRomApps(context)
-        return null // Success
+        return AddRomFolderResult.Success(newFolder)
+    }
+
+    fun updateRomFolderCore(
+        context: Context,
+        folderUri: String,
+        coreName: String?,
+    ) {
+        val current =
+            _romFolders.value.map { folder ->
+                if (folder.uriString == folderUri) {
+                    folder.copy(retroArchCore = coreName)
+                } else {
+                    folder
+                }
+            }
+        saveRomFolders(context, current)
+        reloadRomApps(context)
     }
 
     fun removeRomFolder(
@@ -189,6 +217,7 @@ object RomManager {
                                 isRom = true,
                                 romPath = romPath,
                                 systemId = folder.systemId,
+                                retroArchCore = folder.retroArchCore,
                             ),
                         )
                     }

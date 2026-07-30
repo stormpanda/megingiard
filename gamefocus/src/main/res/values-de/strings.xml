@@ -55,5 +55,14 @@
     <string name="gamefocus_dialog_remove_rom_folder_msg">Wähle einen ROM-Ordner aus, den du entfernen möchtest:</string>
     <string name="gamefocus_dialog_remove_confirm_title">Entfernen bestätigen</string>
     <string name="gamefocus_dialog_remove_confirm_msg">Bist du sicher, dass du das ROM-System \'%1$s\' entfernen möchtest? Die gescannten Spiele werden aus dem Launcher entfernt.</string>
+
+    <string name="gamefocus_dialog_system_recognized_title">System erkannt</string>
+    <string name="gamefocus_dialog_system_recognized_msg">Der Ordner wurde als System erkannt: %1$s.</string>
+    <string name="gamefocus_dialog_select_core_label">RetroArch-Core auswählen:</string>
+    <string name="gamefocus_dialog_core_default">Empfohlen (%1$s)</string>
+    <string name="gamefocus_dialog_core_save">Speichern</string>
+    <string name="gamefocus_dialog_core_native_msg">Dieses System verwendet native Emulation. Es wird kein RetroArch-Core benötigt.</string>
+    <string name="gamefocus_dialog_core_native_close">Schließen</string>
+    <string name="gamefocus_dialog_cancel">Abbrechen</string>
 </resources>
 

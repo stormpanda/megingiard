@@ -19,6 +19,7 @@ class GameNativeLauncher : RomLauncher {
         romPath: String,
         systemId: String,
         displayId: Int,
+        retroArchCore: String?,
     ): Boolean {
         val packageName = "app.gamenative"
         val pm = context.packageManager
