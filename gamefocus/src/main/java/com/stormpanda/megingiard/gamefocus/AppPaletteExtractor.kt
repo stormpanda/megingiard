@@ -182,13 +182,19 @@ object AppPaletteExtractor {
         }
         val context = appContext
         if (context != null) {
-            val iconsDir = File(context.cacheDir, "gamefocus_icons")
-            val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-            if (iconFile.exists()) {
-                return "${appInfo.packageName}:icon:${iconFile.lastModified()}"
+            val file =
+                if (appInfo.isRom) {
+                    val logosDir = File(context.cacheDir, "gamefocus_logos")
+                    File(logosDir, "${appInfo.packageName}.png")
+                } else {
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons")
+                    File(iconsDir, "${appInfo.packageName}.png")
+                }
+            if (file.exists()) {
+                return "${appInfo.packageName}:${if (appInfo.isRom) "logo" else "icon"}:${file.lastModified()}"
             }
         }
-        return "${appInfo.packageName}:icon"
+        return "${appInfo.packageName}:${if (appInfo.isRom) "logo" else "icon"}"
     }
 
     suspend fun extractColorsAsync(
@@ -260,11 +266,17 @@ object AppPaletteExtractor {
             if (bitmap == null) {
                 val context = appContext
                 if (context != null) {
-                    val iconsDir = File(context.cacheDir, "gamefocus_icons")
-                    val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-                    if (iconFile.exists() && iconFile.length() > 0) {
+                    val file =
+                        if (appInfo.isRom) {
+                            val logosDir = File(context.cacheDir, "gamefocus_logos")
+                            File(logosDir, "${appInfo.packageName}.png")
+                        } else {
+                            val iconsDir = File(context.cacheDir, "gamefocus_icons")
+                            File(iconsDir, "${appInfo.packageName}.png")
+                        }
+                    if (file.exists() && file.length() > 0) {
                         try {
-                            bitmap = BitmapFactory.decodeFile(iconFile.absolutePath)
+                            bitmap = BitmapFactory.decodeFile(file.absolutePath)
                         } catch (_: Exception) {
                             // Ignore
                         }

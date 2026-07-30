@@ -393,30 +393,30 @@ object InstalledAppsManager {
             val missingCovers =
                 currentApps.filter { app ->
                     val coverFile = File(coversDir, "${app.packageName}.png")
-                    val iconsDir = File(context.cacheDir, "gamefocus_icons")
-                    val iconFile = File(iconsDir, "${app.packageName}.png")
+                    val logosDir = File(context.cacheDir, "gamefocus_logos")
+                    val logoFile = File(logosDir, "${app.packageName}.png")
 
                     val hasCover = coverFile.exists() && coverFile.length() > 0L
-                    val hasIcon = iconFile.exists() && iconFile.length() > 0L
+                    val hasLogo = logoFile.exists() && logoFile.length() > 0L
 
                     val isScraped = scrapedSet.contains(app.packageName)
                     if (app.isRom) {
-                        !isScraped || !hasCover || !hasIcon
+                        !isScraped || !hasCover || !hasLogo
                     } else {
                         !isScraped || !hasCover
                     }
                 }
             if (missingCovers.isEmpty()) {
-                AppLog.d(TAG, "No un-scraped apps missing cover art or icon")
+                AppLog.d(TAG, "No un-scraped apps missing cover art or logo")
                 return@launch
             }
 
-            AppLog.i(TAG, "Starting background SteamGridDB cover/icon scraping for ${missingCovers.size} apps")
+            AppLog.i(TAG, "Starting background SteamGridDB cover/logo scraping for ${missingCovers.size} apps")
 
             missingCovers.forEach { app ->
                 try {
                     val cleanedQuery = SteamGridDbClient.cleanSearchQuery(app.label)
-                    AppLog.d(TAG, "Scraping cover art/icon for '${app.label}' (cleaned: '$cleanedQuery')")
+                    AppLog.d(TAG, "Scraping cover art/logo for '${app.label}' (cleaned: '$cleanedQuery')")
                     val searchResult = SteamGridDbClient.searchGames(cleanedQuery, apiKey)
                     if (searchResult.isFailure) {
                         AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry next startup")
@@ -448,27 +448,27 @@ object InstalledAppsManager {
                         }
                     }
 
-                    // 2. Scrape icon if ROM and icon is missing
+                    // 2. Scrape logo if ROM and logo is missing
                     if (app.isRom) {
-                        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                        val iconFile = File(iconsDir, "${app.packageName}.png")
-                        val hasIcon = iconFile.exists() && iconFile.length() > 0L
-                        if (!hasIcon) {
+                        val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                        val logoFile = File(logosDir, "${app.packageName}.png")
+                        val hasLogo = logoFile.exists() && logoFile.length() > 0L
+                        if (!hasLogo) {
                             try {
-                                val iconsResult = SteamGridDbClient.fetchImages(gameId, "icons", apiKey)
-                                val icons = iconsResult.getOrNull()
-                                val iconUrl = icons?.firstOrNull()?.url
-                                if (iconUrl != null) {
-                                    val tempIconRes = SteamGridDbClient.downloadImageToTempFile(iconUrl, context.cacheDir)
-                                    val tempIconFile = tempIconRes.getOrNull()
-                                    if (tempIconFile != null) {
-                                        tempIconFile.copyTo(iconFile, overwrite = true)
-                                        tempIconFile.delete()
-                                        AppLog.i(TAG, "Successfully scraped SteamGridDB icon for ROM: ${app.label}")
+                                val logosResult = SteamGridDbClient.fetchImages(gameId, "logos", apiKey)
+                                val logos = logosResult.getOrNull()
+                                val logoUrl = logos?.firstOrNull()?.url
+                                if (logoUrl != null) {
+                                    val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
+                                    val tempLogoFile = tempLogoRes.getOrNull()
+                                    if (tempLogoFile != null) {
+                                        tempLogoFile.copyTo(logoFile, overwrite = true)
+                                        tempLogoFile.delete()
+                                        AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
                                     }
                                 }
-                            } catch (iconEx: Exception) {
-                                AppLog.w(TAG, "Failed to scrape icon for ROM ${app.label}: ${iconEx.message}")
+                            } catch (logoEx: Exception) {
+                                AppLog.w(TAG, "Failed to scrape logo for ROM ${app.label}: ${logoEx.message}")
                             }
                         }
                     }

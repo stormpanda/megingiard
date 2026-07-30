@@ -987,20 +987,26 @@ internal object FocusImageCache {
         }
 
         return withContext(Dispatchers.IO) {
-            val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-            val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-            if (iconFile.exists() && iconFile.length() > 0) {
+            val file =
+                if (appInfo.isRom) {
+                    val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                    File(logosDir, "${appInfo.packageName}.png")
+                } else {
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                    File(iconsDir, "${appInfo.packageName}.png")
+                }
+            if (file.exists() && file.length() > 0) {
                 val startTime = System.currentTimeMillis()
                 val diskBitmap =
                     try {
-                        BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
+                        BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
                     } catch (e: Exception) {
                         null
                     }
 
                 if (diskBitmap != null) {
                     val elapsed = System.currentTimeMillis() - startTime
-                    AppLog.d(TAG, "Loaded disk-cached icon PNG for ${appInfo.label} in ${elapsed}ms")
+                    AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
                     iconCache.put(cacheKey, diskBitmap)
                     return@withContext diskBitmap
                 }
@@ -1017,6 +1023,8 @@ internal object FocusImageCache {
                 try {
                     val androidBmp = appInfo.icon?.toAndroidBitmap()
                     if (androidBmp != null) {
+                        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                        val iconFile = File(iconsDir, "${appInfo.packageName}.png")
                         FileOutputStream(iconFile).use { out ->
                             androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                         }
@@ -1040,20 +1048,26 @@ internal object FocusImageCache {
             return cached
         }
 
-        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-        val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-        if (iconFile.exists() && iconFile.length() > 0) {
+        val file =
+            if (appInfo.isRom) {
+                val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                File(logosDir, "${appInfo.packageName}.png")
+            } else {
+                val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                File(iconsDir, "${appInfo.packageName}.png")
+            }
+        if (file.exists() && file.length() > 0) {
             val startTime = System.currentTimeMillis()
             val diskBitmap =
                 try {
-                    BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
+                    BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
                 } catch (e: Exception) {
                     null
                 }
 
             if (diskBitmap != null) {
                 val elapsed = System.currentTimeMillis() - startTime
-                AppLog.d(TAG, "Loaded disk-cached icon PNG for ${appInfo.label} in ${elapsed}ms")
+                AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
                 iconCache.put(cacheKey, diskBitmap)
                 return diskBitmap
             }
@@ -1070,6 +1084,8 @@ internal object FocusImageCache {
             try {
                 val androidBmp = appInfo.icon?.toAndroidBitmap()
                 if (androidBmp != null) {
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                    val iconFile = File(iconsDir, "${appInfo.packageName}.png")
                     FileOutputStream(iconFile).use { out ->
                         androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                     }

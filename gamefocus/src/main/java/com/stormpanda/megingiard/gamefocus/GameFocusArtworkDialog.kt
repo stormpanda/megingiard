@@ -243,24 +243,24 @@ fun GameFocusArtworkDialog(
                                 tempFile.copyTo(targetFile, overwrite = true)
                                 tempFile.delete()
 
-                                // Scrape icon for ROMs
+                                // Scrape logo for ROMs
                                 if (appInfo.isRom && currentGame != null) {
                                     try {
-                                        val iconsRes = SteamGridDbClient.fetchImages(currentGame.id, "icons", apiKey)
-                                        val iconUrl = iconsRes.getOrNull()?.firstOrNull()?.url
-                                        if (iconUrl != null) {
-                                            val tempIconRes = SteamGridDbClient.downloadImageToTempFile(iconUrl, context.cacheDir)
-                                            val tempIconFile = tempIconRes.getOrNull()
-                                            if (tempIconFile != null) {
-                                                val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                                                val targetIconFile = File(iconsDir, "${appInfo.packageName}.png")
-                                                tempIconFile.copyTo(targetIconFile, overwrite = true)
-                                                tempIconFile.delete()
-                                                AppLog.i(TAG, "Selected and updated icon for ROM: ${appInfo.packageName}")
+                                        val logosRes = SteamGridDbClient.fetchImages(currentGame.id, "logos", apiKey)
+                                        val logoUrl = logosRes.getOrNull()?.firstOrNull()?.url
+                                        if (logoUrl != null) {
+                                            val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
+                                            val tempLogoFile = tempLogoRes.getOrNull()
+                                            if (tempLogoFile != null) {
+                                                val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                                                val targetLogoFile = File(logosDir, "${appInfo.packageName}.png")
+                                                tempLogoFile.copyTo(targetLogoFile, overwrite = true)
+                                                tempLogoFile.delete()
+                                                AppLog.i(TAG, "Selected and updated logo for ROM: ${appInfo.packageName}")
                                             }
                                         }
-                                    } catch (iconEx: Exception) {
-                                        AppLog.w(TAG, "Failed to scrape icon for ROM: ${iconEx.message}")
+                                    } catch (logoEx: Exception) {
+                                        AppLog.w(TAG, "Failed to scrape logo for ROM: ${logoEx.message}")
                                     }
                                 }
 
