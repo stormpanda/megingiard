@@ -1,14 +1,19 @@
 package com.stormpanda.megingiard.ui
 
+import android.graphics.BlurMaskFilter
+import android.graphics.LinearGradient
+import android.graphics.Shader
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,13 +21,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.gamefocus.R
 import kotlinx.coroutines.delay
+import android.graphics.Paint as NativePaint
 
 private const val TAG = "ExpandableActionsMenu"
 
@@ -54,6 +66,7 @@ fun ExpandableActionsMenu(
     autoDismissMs: Long = EAM_DEFAULT_AUTO_DISMISS_MS,
     enabled: Boolean = true,
 ) {
+    val appColors = LocalAppColors.current
     val density = LocalDensity.current
 
     val closeLabel = stringResource(R.string.gamefocus_option_close)
@@ -186,6 +199,44 @@ fun ExpandableActionsMenu(
                 } else {
                     Column(
                         horizontalAlignment = Alignment.Start,
+                        modifier =
+                            Modifier
+                                .drawBehind {
+                                    val fade = ((expansionFraction - 0.5f) * 2f).coerceIn(0f, 1f)
+                                    if (fade > 0f) {
+                                        val outsetPx = 24.dp.toPx()
+                                        val blurRadiusPx = 36.dp.toPx()
+                                        val cornerRadiusPx = 16.dp.toPx()
+
+                                        val paint =
+                                            NativePaint().apply {
+                                                isAntiAlias = true
+                                                shader =
+                                                    LinearGradient(
+                                                        0f,
+                                                        -outsetPx,
+                                                        0f,
+                                                        size.height + outsetPx,
+                                                        Color.Transparent.toArgb(),
+                                                        appColors.appBackground.copy(alpha = 0.85f * fade).toArgb(),
+                                                        Shader.TileMode.CLAMP,
+                                                    )
+                                                maskFilter = BlurMaskFilter(blurRadiusPx, BlurMaskFilter.Blur.NORMAL)
+                                            }
+
+                                        drawIntoCanvas { canvas ->
+                                            canvas.nativeCanvas.drawRoundRect(
+                                                -outsetPx,
+                                                -outsetPx,
+                                                size.width + outsetPx,
+                                                size.height + outsetPx,
+                                                cornerRadiusPx + outsetPx,
+                                                cornerRadiusPx + outsetPx,
+                                                paint,
+                                            )
+                                        }
+                                    }
+                                }.padding(horizontal = 8.dp, vertical = 8.dp),
                     ) {
                         effectiveActions.forEachIndexed { index, item ->
                             val distanceFromClose = effectiveActions.lastIndex - index

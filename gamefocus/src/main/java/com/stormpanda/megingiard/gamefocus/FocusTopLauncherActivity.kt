@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -68,6 +69,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val isLibraryOpenState = mutableStateOf(false)
     private val librarySelectedTabState = mutableStateOf(LibraryTab.ALL)
     private val libraryFocusedIndexState = mutableIntStateOf(0)
+    private val isLibraryOptionsMenuExpandedState = mutableStateOf(false)
 
     private var currentDirection = ScrollDirection.NONE
     private var repeatJob: Job? = null
@@ -75,6 +77,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val dpadLeftTriggerState = mutableIntStateOf(0)
     private val dpadStepRightTriggerState = mutableIntStateOf(0)
     private val focusedAppState = mutableStateOf<InstalledAppInfo?>(null)
+
+    private var frozenHiddenSetForInput: Set<String> = emptySet()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,17 +104,42 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             val allApps by InstalledAppsManager.installedApps.collectAsState()
             val favorites by InstalledAppsManager.favorites.collectAsState()
+            val hidden by InstalledAppsManager.hiddenApps.collectAsState()
             val lastUsed by InstalledAppsManager.lastUsed.collectAsState()
 
             val selectedCategory = selectedCategoryState.value
+            val isLibraryOpen = isLibraryOpenState.value
+
+            val frozenHidden = remember(allApps, selectedCategory, isLibraryOpen) { hidden }
+            SideEffect {
+                frozenHiddenSetForInput = frozenHidden
+            }
+
             val displayedApps =
-                remember(allApps, favorites, lastUsed, selectedCategory) {
+                remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory) {
                     when (selectedCategory) {
-                        GameFocusCategory.GAMES -> allApps.filter { it.isGame }
-                        GameFocusCategory.APPS -> allApps.filter { !it.isGame }
-                        GameFocusCategory.ALL_APPS -> allApps
-                        GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
-                        GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                        GameFocusCategory.GAMES -> {
+                            allApps.filter { it.isGame && !frozenHidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.APPS -> {
+                            allApps.filter { !it.isGame && !frozenHidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.ALL_APPS -> {
+                            allApps.filter { !frozenHidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.FAVORITES -> {
+                            allApps.filter { favorites.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.LAST_USED -> {
+                            lastUsed
+                                .mapNotNull { pkg ->
+                                    allApps.find { it.packageName == pkg }
+                                }.filter { !frozenHidden.contains(it.packageName) }
+                        }
                     }
                 }
 
@@ -139,11 +168,25 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
                             },
                             selectedCategory = selectedCategory,
+                            onCategoryUp = {
+                                val prevCategory = selectedCategoryState.value.previous()
+                                AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.name}")
+                                selectedCategoryState.value = prevCategory
+                            },
+                            onCategoryDown = {
+                                val nextCategory = selectedCategoryState.value.next()
+                                AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.name}")
+                                selectedCategoryState.value = nextCategory
+                            },
                             favoritesSet = favorites,
+                            hiddenSet = hidden,
                             isMainOptionsMenuExpanded = isMainOptionsMenuExpandedState.value,
                             onMainOptionsMenuExpandedChange = { isMainOptionsMenuExpandedState.value = it },
                             onToggleFavorite = { appInfo ->
                                 InstalledAppsManager.toggleFavorite(this, appInfo.packageName)
+                            },
+                            onToggleHidden = { appInfo ->
+                                InstalledAppsManager.toggleHidden(this, appInfo.packageName)
                             },
                             onEditArtwork = { appInfo ->
                                 AppLog.i(TAG, "Opening artwork edit dialog for ${appInfo.label}")
@@ -176,11 +219,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onFocusedAppChanged = { focusedAppState.value = it },
                             onDismissEditingApp = { editingAppInfoState.value = null },
                             allApps = allApps,
+                            lastUsed = lastUsed,
                             isLibraryOpen = isLibraryOpenState.value,
                             librarySelectedTab = librarySelectedTabState.value,
                             onLibraryTabSelected = { librarySelectedTabState.value = it },
                             libraryFocusedIndex = libraryFocusedIndexState.intValue,
                             onLibraryFocusedIndexChange = { libraryFocusedIndexState.intValue = it },
+                            isLibraryOptionsMenuExpanded = isLibraryOptionsMenuExpandedState.value,
+                            onLibraryOptionsMenuExpandedChange = { isLibraryOptionsMenuExpandedState.value = it },
                             onOpenLibrary = { isLibraryOpenState.value = true },
                             onCloseLibrary = { isLibraryOpenState.value = false },
                         )
@@ -212,7 +258,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             isLibraryOpenState.value ||
                 editingAppInfoState.value != null ||
                 isMainOptionsMenuExpandedState.value ||
-                isOptionsMenuExpandedState.value
+                isOptionsMenuExpandedState.value ||
+                isLibraryOptionsMenuExpandedState.value
 
         if (wasNotInGallery) {
             AppLog.i(TAG, "Resetting view state to main gallery")
@@ -221,6 +268,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             editingAppInfoState.value = null
             isMainOptionsMenuExpandedState.value = false
             isOptionsMenuExpandedState.value = false
+            isLibraryOptionsMenuExpandedState.value = false
             return true
         }
         return false
@@ -453,8 +501,53 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val allApps = InstalledAppsManager.installedApps.value
             val currentTab = librarySelectedTabState.value
             val filteredApps = currentTab.filterApps(allApps)
+            val focusedLibraryApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+
+            if (isLibraryOptionsMenuExpandedState.value) {
+                stopRepeat()
+                return when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_SYSTEM_NAVIGATION_LEFT,
+                    -> {
+                        if (focusedLibraryApp != null) {
+                            AppLog.i(
+                                TAG,
+                                "D-pad LEFT pressed while Library options menu expanded -> Toggling hidden state for ${focusedLibraryApp.label}",
+                            )
+                            InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                        }
+                        isLibraryOptionsMenuExpandedState.value = false
+                        true
+                    }
+
+                    GamePadButton.BUTTON_Y.keyCode,
+                    KeyEvent.KEYCODE_MENU,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    GamePadButton.BUTTON_B.keyCode,
+                    -> {
+                        AppLog.i(TAG, "Closing Library options menu")
+                        isLibraryOptionsMenuExpandedState.value = false
+                        true
+                    }
+
+                    else -> {
+                        true
+                    }
+                }
+            }
 
             return when (keyCode) {
+                GamePadButton.BUTTON_Y.keyCode,
+                KeyEvent.KEYCODE_MENU,
+                -> {
+                    if (focusedLibraryApp != null) {
+                        AppLog.i(TAG, "Gamepad Y/Menu pressed in Library -> Opening Library options menu for ${focusedLibraryApp.label}")
+                        isLibraryOptionsMenuExpandedState.value = true
+                    }
+                    true
+                }
+
                 GamePadButton.BUTTON_R2.keyCode,
                 KeyEvent.KEYCODE_BACK,
                 KeyEvent.KEYCODE_ESCAPE,
@@ -545,15 +638,33 @@ class FocusTopLauncherActivity : ComponentActivity() {
         // Navigation when Main Launcher is active
         val allApps = InstalledAppsManager.installedApps.value
         val favorites = InstalledAppsManager.favorites.value
+        val hidden = frozenHiddenSetForInput
         val lastUsed = InstalledAppsManager.lastUsed.value
         val selectedCategory = selectedCategoryState.value
         val apps =
             when (selectedCategory) {
-                GameFocusCategory.GAMES -> allApps.filter { it.isGame }
-                GameFocusCategory.APPS -> allApps.filter { !it.isGame }
-                GameFocusCategory.ALL_APPS -> allApps
-                GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
-                GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                GameFocusCategory.GAMES -> {
+                    allApps.filter { it.isGame && !hidden.contains(it.packageName) }
+                }
+
+                GameFocusCategory.APPS -> {
+                    allApps.filter { !it.isGame && !hidden.contains(it.packageName) }
+                }
+
+                GameFocusCategory.ALL_APPS -> {
+                    allApps.filter { !hidden.contains(it.packageName) }
+                }
+
+                GameFocusCategory.FAVORITES -> {
+                    allApps.filter { favorites.contains(it.packageName) }
+                }
+
+                GameFocusCategory.LAST_USED -> {
+                    lastUsed
+                        .mapNotNull { pkg ->
+                            allApps.find { it.packageName == pkg }
+                        }.filter { !hidden.contains(it.packageName) }
+                }
             }
 
         if (isMainOptionsMenuExpandedState.value) {
@@ -588,6 +699,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (targetApp != null) {
                         AppLog.i(TAG, "D-pad DOWN pressed while options menu expanded -> Opening native app info for ${targetApp.label}")
                         InstalledAppsManager.openAppInfo(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    true
+                }
+
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "D-pad LEFT pressed while options menu expanded -> Toggling hidden state for ${targetApp.label}")
+                        InstalledAppsManager.toggleHidden(this, targetApp.packageName)
                     }
                     isMainOptionsMenuExpandedState.value = false
                     true
@@ -785,15 +905,32 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 stopRepeat()
                 val allApps = InstalledAppsManager.installedApps.value
                 val favorites = InstalledAppsManager.favorites.value
+                val hidden = frozenHiddenSetForInput
                 val lastUsed = InstalledAppsManager.lastUsed.value
                 val selectedCategory = selectedCategoryState.value
                 val apps =
                     when (selectedCategory) {
-                        GameFocusCategory.GAMES -> allApps.filter { it.isGame }
-                        GameFocusCategory.APPS -> allApps.filter { !it.isGame }
-                        GameFocusCategory.ALL_APPS -> allApps
-                        GameFocusCategory.FAVORITES -> allApps.filter { favorites.contains(it.packageName) }
-                        GameFocusCategory.LAST_USED -> lastUsed.mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                        GameFocusCategory.GAMES -> {
+                            allApps.filter { it.isGame && !hidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.APPS -> {
+                            allApps.filter { !it.isGame && !hidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.ALL_APPS -> {
+                            allApps.filter { !hidden.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.FAVORITES -> {
+                            allApps.filter { favorites.contains(it.packageName) }
+                        }
+
+                        GameFocusCategory.LAST_USED -> {
+                            lastUsed
+                                .mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                                .filter { !hidden.contains(it.packageName) }
+                        }
                     }
 
                 if (y < -0.5f) {
@@ -825,6 +962,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         InstalledAppsManager.openAppInfo(this, targetApp.packageName)
                     }
                     isMainOptionsMenuExpandedState.value = false
+                    return true
+                } else if (x < -0.5f) {
+                    val targetApp = focusedAppState.value
+                    if (targetApp != null) {
+                        AppLog.i(TAG, "Joystick LEFT pressed while options menu expanded -> Toggling hidden for ${targetApp.label}")
+                        InstalledAppsManager.toggleHidden(this, targetApp.packageName)
+                    }
+                    isMainOptionsMenuExpandedState.value = false
+                    return true
+                }
+                return true
+            }
+
+            if (isLibraryOptionsMenuExpandedState.value) {
+                stopRepeat()
+                if (x < -0.5f) {
+                    val allApps = InstalledAppsManager.installedApps.value
+                    val currentTab = librarySelectedTabState.value
+                    val filteredApps = currentTab.filterApps(allApps)
+                    val focusedLibraryApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                    if (focusedLibraryApp != null) {
+                        AppLog.i(
+                            TAG,
+                            "Joystick LEFT pressed while Library options menu expanded -> Toggling hidden for ${focusedLibraryApp.label}",
+                        )
+                        InstalledAppsManager.toggleHidden(this, focusedLibraryApp.packageName)
+                    }
+                    isLibraryOptionsMenuExpandedState.value = false
                     return true
                 }
                 return true

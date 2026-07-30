@@ -175,15 +175,17 @@ fun GamePadButtonAction(
                     tint = tint,
                     cutoutColor = cutoutColor,
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = text,
-                    style =
-                        MaterialTheme.typography.labelMedium.copy(
-                            color = tint,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                )
+                if (text.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = text,
+                        style =
+                            MaterialTheme.typography.labelMedium.copy(
+                                color = tint,
+                                fontWeight = FontWeight.SemiBold,
+                            ),
+                    )
+                }
             }
         }
     }

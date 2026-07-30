@@ -48,12 +48,13 @@ private val HPC_DEFAULT_POSTER_SPACING = 13.5.dp
 private val HPC_DEFAULT_CAROUSEL_HEIGHT = 310.dp
 private val HPC_DEFAULT_CORNER_RADIUS = 16.dp
 private val HPC_EXTRA_PUSH_DP = 16.dp
-private val HPC_SELECTED_ELEVATION = 16.dp
-private val HPC_UNSELECTED_ELEVATION = 4.dp
 private val HPC_VIBRANT_SHADOW_BLUR = 16.dp
 private val HPC_VIBRANT_SHADOW_SPREAD = 2.dp
 private const val HPC_VIBRANT_SHADOW_ALPHA = 0.45f
 private const val HPC_SHADOW_FADE_DURATION_MS = 300
+private const val HPC_HIDDEN_ALPHA = 0.4f
+private const val HPC_VISIBLE_ALPHA = 1.0f
+private const val HPC_HIDE_ANIMATION_DURATION_MS = 300
 
 @Composable
 fun HorizontalPosterCarousel(
@@ -61,6 +62,7 @@ fun HorizontalPosterCarousel(
     pagerState: PagerState,
     onItemClick: (actualIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
+    key: ((page: Int) -> Any)? = null,
     targetPage: Int = pagerState.targetPage,
     posterWidth: Dp = HPC_DEFAULT_POSTER_WIDTH,
     posterHeight: Dp = HPC_DEFAULT_POSTER_HEIGHT,
@@ -68,6 +70,7 @@ fun HorizontalPosterCarousel(
     carouselHeight: Dp = HPC_DEFAULT_CAROUSEL_HEIGHT,
     posterCornerRadius: Dp = HPC_DEFAULT_CORNER_RADIUS,
     cardBackgroundColor: ((actualIndex: Int, isSelected: Boolean) -> Color)? = null,
+    isHidden: ((actualIndex: Int) -> Boolean)? = null,
     itemContent: @Composable (actualIndex: Int, isSelected: Boolean) -> Unit,
 ) {
     if (itemCount <= 0) return
@@ -86,6 +89,7 @@ fun HorizontalPosterCarousel(
 
         HorizontalPager(
             state = pagerState,
+            key = key,
             pageSize = PageSize.Fixed(posterWidth),
             pageSpacing = posterSpacing,
             contentPadding = PaddingValues(horizontal = horizontalPadding),
@@ -99,6 +103,13 @@ fun HorizontalPosterCarousel(
                 targetValue = if (isSettledAndSelected) 1f else 0f,
                 animationSpec = tween(durationMillis = HPC_SHADOW_FADE_DURATION_MS, easing = FastOutSlowInEasing),
                 label = "PosterShadowFadeIn",
+            )
+
+            val isCardHidden = isHidden?.invoke(actualIndex) ?: false
+            val cardHiddenAlpha by animateFloatAsState(
+                targetValue = if (isCardHidden) HPC_HIDDEN_ALPHA else HPC_VISIBLE_ALPHA,
+                animationSpec = tween(durationMillis = HPC_HIDE_ANIMATION_DURATION_MS),
+                label = "CarouselCardHiddenAlpha",
             )
 
             val resolvedCardBg =
@@ -162,13 +173,8 @@ fun HorizontalPosterCarousel(
                                     )
                                 }
                             }
-                        }.shadow(
-                            elevation = lerp(HPC_UNSELECTED_ELEVATION, HPC_SELECTED_ELEVATION, shadowAlpha),
-                            shape = RoundedCornerShape(posterCornerRadius),
-                            ambientColor = if (shadowAlpha > 0f) appColors.accent.copy(alpha = shadowAlpha) else Color.Black,
-                            spotColor = if (shadowAlpha > 0f) appColors.accent.copy(alpha = shadowAlpha) else Color.Black,
-                        ).clip(RoundedCornerShape(posterCornerRadius))
-                        .background(resolvedCardBg)
+                        }.clip(RoundedCornerShape(posterCornerRadius))
+                        .background(resolvedCardBg.copy(alpha = cardHiddenAlpha))
                         .border(
                             width = if (isSelected) 3.dp else 1.dp,
                             color = if (isSelected) appColors.accent else appColors.divider,
@@ -187,7 +193,14 @@ fun HorizontalPosterCarousel(
                         },
                 contentAlignment = Alignment.Center,
             ) {
-                itemContent(actualIndex, isSelected)
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = cardHiddenAlpha },
+                ) {
+                    itemContent(actualIndex, isSelected)
+                }
             }
         }
     }

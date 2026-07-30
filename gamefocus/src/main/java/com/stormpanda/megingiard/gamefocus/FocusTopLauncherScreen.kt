@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,10 +19,12 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -108,6 +111,10 @@ private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 
+private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
+private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
+private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
+
 private class JobRefHolder(
     var job: Job? = null,
 )
@@ -119,10 +126,14 @@ fun FocusTopLauncherScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
     selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
+    onCategoryUp: () -> Unit = {},
+    onCategoryDown: () -> Unit = {},
     favoritesSet: Set<String> = emptySet(),
+    hiddenSet: Set<String> = emptySet(),
     isMainOptionsMenuExpanded: Boolean = false,
     onMainOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     onToggleFavorite: (InstalledAppInfo) -> Unit = {},
+    onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
@@ -142,11 +153,14 @@ fun FocusTopLauncherScreen(
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
     allApps: List<InstalledAppInfo> = emptyList(),
+    lastUsed: List<String> = emptyList(),
     isLibraryOpen: Boolean = false,
     librarySelectedTab: LibraryTab = LibraryTab.ALL,
     onLibraryTabSelected: (LibraryTab) -> Unit = {},
     libraryFocusedIndex: Int = 0,
     onLibraryFocusedIndexChange: (Int) -> Unit = {},
+    isLibraryOptionsMenuExpanded: Boolean = false,
+    onLibraryOptionsMenuExpandedChange: (Boolean) -> Unit = {},
     onOpenLibrary: () -> Unit = {},
     onCloseLibrary: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -160,7 +174,31 @@ fun FocusTopLauncherScreen(
         AppPaletteExtractor.init(context)
     }
 
-    val uniqueLetters = remember(apps) { LetterNavigationHelper.getUniqueStartingLetters(apps) }
+    val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
+
+    val gamesApps = remember(allApps, frozenHiddenSet) { allApps.filter { it.isGame && !frozenHiddenSet.contains(it.packageName) } }
+    val appsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !it.isGame && !frozenHiddenSet.contains(it.packageName) } }
+    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !frozenHiddenSet.contains(it.packageName) } }
+    val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
+    val lastUsedApps =
+        remember(allApps, frozenHiddenSet, lastUsed) {
+            lastUsed
+                .mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
+                .filter { !frozenHiddenSet.contains(it.packageName) }
+        }
+
+    fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
+        when (cat) {
+            GameFocusCategory.GAMES -> gamesApps
+            GameFocusCategory.APPS -> appsApps
+            GameFocusCategory.ALL_APPS -> allAppsApps
+            GameFocusCategory.FAVORITES -> favoritesApps
+            GameFocusCategory.LAST_USED -> lastUsedApps
+        }
+
+    val categoryApps = getAppsForCategory(selectedCategory)
+
+    val uniqueLetters = remember(categoryApps) { LetterNavigationHelper.getUniqueStartingLetters(categoryApps) }
 
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
 
@@ -168,11 +206,11 @@ fun FocusTopLauncherScreen(
         mutableStateOf<Map<GameFocusCategory, String>>(emptyMap())
     }
 
-    val gamesPagerState = rememberPagerState(initialPage = 0) { apps.size }
-    val appsPagerState = rememberPagerState(initialPage = 0) { apps.size }
-    val allAppsPagerState = rememberPagerState(initialPage = 0) { apps.size }
-    val favoritesPagerState = rememberPagerState(initialPage = 0) { apps.size }
-    val lastUsedPagerState = rememberPagerState(initialPage = 0) { apps.size }
+    val gamesPagerState = rememberPagerState(initialPage = 0) { gamesApps.size }
+    val appsPagerState = rememberPagerState(initialPage = 0) { appsApps.size }
+    val allAppsPagerState = rememberPagerState(initialPage = 0) { allAppsApps.size }
+    val favoritesPagerState = rememberPagerState(initialPage = 0) { favoritesApps.size }
+    val lastUsedPagerState = rememberPagerState(initialPage = 0) { lastUsedApps.size }
 
     val activePagerState =
         when (selectedCategory) {
@@ -183,18 +221,26 @@ fun FocusTopLauncherScreen(
             GameFocusCategory.LAST_USED -> lastUsedPagerState
         }
 
+    // Clamp active pager state if list shrinks (e.g. app hidden)
+    LaunchedEffect(categoryApps) {
+        if (categoryApps.isNotEmpty() && activePagerState.currentPage >= categoryApps.size) {
+            val safeIndex = (categoryApps.size - 1).coerceAtLeast(0)
+            activePagerState.scrollToPage(safeIndex)
+        }
+    }
+
     // Sync active pager state with package memory when category changes
     LaunchedEffect(selectedCategory) {
         val lastPkg = lastHighlightedPackages[selectedCategory]
         val targetIndex =
             if (lastPkg != null) {
-                val found = apps.indexOfFirst { it.packageName == lastPkg }
+                val found = categoryApps.indexOfFirst { it.packageName == lastPkg }
                 if (found >= 0) found else 0
             } else {
                 0
             }
-        if (apps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
-            val safeIndex = targetIndex.coerceIn(0, apps.size - 1)
+        if (categoryApps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
+            val safeIndex = targetIndex.coerceIn(0, categoryApps.size - 1)
             AppLog.d(TAG, "Category switched to ${selectedCategory.name} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
             activePagerState.scrollToPage(safeIndex)
         }
@@ -219,13 +265,13 @@ fun FocusTopLauncherScreen(
 
     // Handle D-pad LEFT step with wrap-around
     LaunchedEffect(dpadLeftTrigger) {
-        if (dpadLeftTrigger > 0 && apps.isNotEmpty()) {
+        if (dpadLeftTrigger > 0 && categoryApps.isNotEmpty()) {
             if (isLetterOverlayActive) {
                 AppLog.i(TAG, "D-pad LEFT pressed while letter carousel active -> cancelling overlay without action")
                 letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
-                val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else apps.size - 1
+                val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else categoryApps.size - 1
                 AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
                 activePagerState.animateScrollToPage(prevIndex)
             }
@@ -234,13 +280,13 @@ fun FocusTopLauncherScreen(
 
     // Handle D-pad RIGHT step with wrap-around
     LaunchedEffect(dpadStepRightTrigger) {
-        if (dpadStepRightTrigger > 0 && apps.isNotEmpty()) {
+        if (dpadStepRightTrigger > 0 && categoryApps.isNotEmpty()) {
             if (isLetterOverlayActive) {
                 AppLog.i(TAG, "D-pad RIGHT pressed while letter carousel active -> cancelling overlay without action")
                 letterCommitJobRef.job?.cancel()
                 isLetterOverlayActive = false
             } else {
-                val nextIndex = if (activePagerState.currentPage < apps.size - 1) activePagerState.currentPage + 1 else 0
+                val nextIndex = if (activePagerState.currentPage < categoryApps.size - 1) activePagerState.currentPage + 1 else 0
                 AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
                 activePagerState.animateScrollToPage(nextIndex)
             }
@@ -248,8 +294,8 @@ fun FocusTopLauncherScreen(
     }
 
     val currentApp =
-        remember(activePagerState.currentPage, apps) {
-            apps.getOrNull(activePagerState.currentPage)
+        remember(activePagerState.currentPage, categoryApps) {
+            categoryApps.getOrNull(activePagerState.currentPage.coerceIn(0, (categoryApps.size - 1).coerceAtLeast(0)))
         }
 
     // Reset letter overlay on category switch or dialog edit
@@ -401,6 +447,14 @@ fun FocusTopLauncherScreen(
                     onTabSelected = onLibraryTabSelected,
                     focusedIndex = libraryFocusedIndex,
                     onFocusedIndexChange = onLibraryFocusedIndexChange,
+                    favoritesSet = favoritesSet,
+                    hiddenSet = hiddenSet,
+                    isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
+                    onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
+                    onToggleFavorite = onToggleFavorite,
+                    onToggleHidden = onToggleHidden,
+                    onEditArtwork = onEditArtwork,
+                    onOpenAppInfo = onOpenAppInfo,
                     onAppClickTop = onAppClickTop,
                     onAppClickBottom = onAppClickBottom,
                     onCloseRequested = onCloseLibrary,
@@ -445,11 +499,12 @@ fun FocusTopLauncherScreen(
                             label = "CarouselCategoryTransition",
                             modifier = Modifier.fillMaxSize(),
                         ) { category ->
+                            val currentCategoryApps = getAppsForCategory(category)
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                if (apps.isEmpty()) {
+                                if (currentCategoryApps.isEmpty()) {
                                     Box(
                                         modifier =
                                             Modifier
@@ -484,11 +539,12 @@ fun FocusTopLauncherScreen(
                                                 GameFocusCategory.LAST_USED -> lastUsedPagerState
                                             }
                                         HorizontalPosterCarousel(
-                                            itemCount = apps.size,
+                                            itemCount = currentCategoryApps.size,
                                             pagerState = categoryPagerState,
+                                            key = { page -> currentCategoryApps.getOrNull(page)?.packageName ?: page },
                                             targetPage = categoryPagerState.targetPage,
                                             onItemClick = { actualIndex ->
-                                                val appInfo = apps.getOrNull(actualIndex)
+                                                val appInfo = currentCategoryApps.getOrNull(actualIndex)
                                                 if (appInfo != null) onAppClick(appInfo)
                                             },
                                             posterWidth = FTL_POSTER_WIDTH,
@@ -497,7 +553,7 @@ fun FocusTopLauncherScreen(
                                             carouselHeight = 310.dp,
                                             posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                             cardBackgroundColor = { actualIndex, isSelected ->
-                                                val appInfo = apps.getOrNull(actualIndex)
+                                                val appInfo = currentCategoryApps.getOrNull(actualIndex)
                                                 if (appInfo != null) {
                                                     val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
                                                     if (palette != null && palette.isExtracted) {
@@ -509,11 +565,17 @@ fun FocusTopLauncherScreen(
                                                     if (isSelected) appColors.surfaceVariant else appColors.surface
                                                 }
                                             },
+                                            isHidden = { actualIndex ->
+                                                currentCategoryApps.getOrNull(actualIndex)?.let {
+                                                    hiddenSet.contains(it.packageName)
+                                                } ?: false
+                                            },
                                         ) { actualIndex, _ ->
-                                            val appInfo = apps[actualIndex]
+                                            val appInfo = currentCategoryApps[actualIndex]
                                             PosterCardContent(
                                                 appInfo = appInfo,
                                                 isFavorite = favoritesSet.contains(appInfo.packageName),
+                                                isHidden = hiddenSet.contains(appInfo.packageName),
                                             )
                                         }
 
@@ -561,17 +623,21 @@ fun FocusTopLauncherScreen(
 
                     // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
+                    // Top-Right Library navigation button hovering over the gallery plane
+                    val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
+
                     // Top-Left Category Header hovering over the gallery plane
                     InteractiveCategoryHeader(
                         selectedCategory = selectedCategory,
+                        onCategoryUp = onCategoryUp,
+                        onCategoryDown = onCategoryDown,
+                        enabled = isControlsEnabled,
                         modifier =
                             Modifier
                                 .align(Alignment.TopStart)
                                 .padding(start = 24.dp, top = 16.dp),
                     )
 
-                    // Top-Right Library navigation button hovering over the gallery plane
-                    val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
                     GamePadButtonAction(
                         button = GamePadButton.BUTTON_R2,
                         text = stringResource(R.string.gamefocus_nav_library),
@@ -591,6 +657,7 @@ fun FocusTopLauncherScreen(
                                 .padding(start = 12.dp, bottom = 4.dp),
                     ) {
                         val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+                        val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
                         ExpandableActionsMenu(
                             isExpanded = isMainOptionsMenuExpanded,
                             onExpandedChange = onMainOptionsMenuExpandedChange,
@@ -629,6 +696,21 @@ fun FocusTopLauncherScreen(
                                         onClick = {
                                             if (currentApp != null) {
                                                 onOpenAppInfo(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            }
+                                        },
+                                    ),
+                                    ExpandableActionItem(
+                                        label =
+                                            if (isCurrentHidden) {
+                                                stringResource(R.string.gamefocus_option_unhide)
+                                            } else {
+                                                stringResource(R.string.gamefocus_option_hide)
+                                            },
+                                        iconSymbol = "gamepad_left",
+                                        onClick = {
+                                            if (currentApp != null) {
+                                                onToggleHidden(currentApp)
                                                 onMainOptionsMenuExpandedChange(false)
                                             }
                                         },
@@ -893,83 +975,131 @@ internal object FocusImageCache {
 }
 
 @Composable
+private fun Modifier.noFocusClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    return this
+        .focusProperties { canFocus = false }
+        .clickable(
+            enabled = enabled,
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick,
+        )
+}
+
+@Composable
 private fun InteractiveCategoryHeader(
     selectedCategory: GameFocusCategory,
+    onCategoryUp: () -> Unit = {},
+    onCategoryDown: () -> Unit = {},
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
 
-    AnimatedContent(
-        targetState = selectedCategory,
-        transitionSpec = {
-            val isMovingDown = initialState.next() == targetState
-            if (isMovingDown) {
-                (slideInVertically { height -> height / 3 } + fadeIn())
-                    .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
-            } else {
-                (slideInVertically { height -> -height / 3 } + fadeIn())
-                    .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
-            }
-        },
-        label = "CategoryRollingTransition",
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
-    ) { currentCat ->
-        val currentPrev = currentCat.previous()
-        val currentNext = currentCat.next()
-
+    ) {
+        // Up & Down Gamepad Action Buttons on the left of categories
         Column(
-            horizontalAlignment = Alignment.Start,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(end = 6.dp),
         ) {
-            // Previous category (curved backward top for 3D roll illusion)
-            Text(
-                text = stringResource(currentPrev.stringResId),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                    ),
-                maxLines = 1,
-                textAlign = TextAlign.Start,
-                modifier =
-                    Modifier.graphicsLayer {
-                        rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
-                        cameraDistance = 16 * density.density
-                    },
+            GamePadButtonAction(
+                button = GamePadButton.DPAD_UP,
+                text = "",
+                enabled = enabled,
+                onClick = onCategoryUp,
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
             )
-
             Spacer(modifier = Modifier.height(2.dp))
-
-            // Active category (highlighted, center-front)
-            Text(
-                text = stringResource(currentCat.stringResId),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurfaceSecondary,
-                    ),
-                maxLines = 1,
-                textAlign = TextAlign.Start,
+            GamePadButtonAction(
+                button = GamePadButton.DPAD_DOWN,
+                text = "",
+                enabled = enabled,
+                onClick = onCategoryDown,
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
             )
+        }
 
-            Spacer(modifier = Modifier.height(2.dp))
+        AnimatedContent(
+            targetState = selectedCategory,
+            transitionSpec = {
+                val isMovingDown = initialState.next() == targetState
+                if (isMovingDown) {
+                    (slideInVertically { height -> height / 3 } + fadeIn())
+                        .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
+                } else {
+                    (slideInVertically { height -> -height / 3 } + fadeIn())
+                        .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
+                }
+            },
+            label = "CategoryRollingTransition",
+        ) { currentCat ->
+            val currentPrev = currentCat.previous()
+            val currentNext = currentCat.next()
 
-            // Next category (curved backward bottom for 3D roll illusion)
-            Text(
-                text = stringResource(currentNext.stringResId),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                    ),
-                maxLines = 1,
-                textAlign = TextAlign.Start,
-                modifier =
-                    Modifier.graphicsLayer {
-                        rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
-                        cameraDistance = 16 * density.density
-                    },
-            )
+            Column(
+                horizontalAlignment = Alignment.Start,
+            ) {
+                // Previous category (curved backward top for 3D roll illusion)
+                Text(
+                    text = stringResource(currentPrev.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                        ),
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                        Modifier
+                            .graphicsLayer {
+                                rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
+                                cameraDistance = 16 * density.density
+                            }.noFocusClickable(enabled = enabled) { onCategoryUp() },
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Active category (highlighted, center-front)
+                Text(
+                    text = stringResource(currentCat.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary,
+                        ),
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Next category (curved backward bottom for 3D roll illusion)
+                Text(
+                    text = stringResource(currentNext.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                        ),
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                        Modifier
+                            .graphicsLayer {
+                                rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
+                                cameraDistance = 16 * density.density
+                            }.noFocusClickable(enabled = enabled) { onCategoryDown() },
+                )
+            }
         }
     }
 }
@@ -978,6 +1108,7 @@ private fun InteractiveCategoryHeader(
 private fun PosterCardContent(
     appInfo: InstalledAppInfo,
     isFavorite: Boolean = false,
+    isHidden: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -997,6 +1128,12 @@ private fun PosterCardContent(
             value = FocusImageCache.getIconBitmapAsync(context, appInfo)
         }
     }
+
+    val visibilityOffAlpha by animateFloatAsState(
+        targetValue = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA,
+        animationSpec = tween(durationMillis = FTL_HIDE_ANIMATION_DURATION_MS),
+        label = "LauncherVisibilityOffAlpha",
+    )
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -1049,6 +1186,23 @@ private fun PosterCardContent(
                     name = "kid_star",
                     size = 22.dp,
                     tint = appColors.accent,
+                )
+            }
+        }
+
+        if (visibilityOffAlpha > 0f) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(10.dp)
+                        .graphicsLayer { alpha = visibilityOffAlpha },
+                contentAlignment = Alignment.TopStart,
+            ) {
+                MaterialSymbol(
+                    name = "visibility_off",
+                    size = 22.dp,
+                    tint = appColors.onSurfaceSecondary,
                 )
             }
         }

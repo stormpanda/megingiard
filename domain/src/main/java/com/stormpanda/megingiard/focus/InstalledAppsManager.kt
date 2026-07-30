@@ -29,6 +29,7 @@ import java.io.File
 
 private const val TAG = "InstalledAppsManager"
 private const val FILE_FAVORITES = "gamefocus_favorites.txt"
+private const val FILE_HIDDEN = "gamefocus_hidden.txt"
 private const val FILE_LAST_USED = "gamefocus_last_used.txt"
 private const val FILE_SCRAPED_APPS = "gamefocus_scraped_apps.txt"
 private const val DIR_COVERS = "gamefocus_covers"
@@ -49,6 +50,9 @@ object InstalledAppsManager {
 
     private val _favorites = MutableStateFlow<Set<String>>(emptySet())
     val favorites: StateFlow<Set<String>> = _favorites.asStateFlow()
+
+    private val _hiddenApps = MutableStateFlow<Set<String>>(emptySet())
+    val hiddenApps: StateFlow<Set<String>> = _hiddenApps.asStateFlow()
 
     private val _lastUsed = MutableStateFlow<List<String>>(emptyList())
     val lastUsed: StateFlow<List<String>> = _lastUsed.asStateFlow()
@@ -89,6 +93,45 @@ object InstalledAppsManager {
             file.writeText(current.joinToString("\n"))
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
+        }
+    }
+
+    private fun loadHidden(context: Context) {
+        val file = File(context.filesDir, FILE_HIDDEN)
+        if (file.exists()) {
+            try {
+                val set =
+                    file
+                        .readLines()
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .toSet()
+                _hiddenApps.value = set
+                AppLog.d(TAG, "Loaded ${set.size} hidden apps from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load hidden apps file: ${e.message}")
+            }
+        }
+    }
+
+    fun toggleHidden(
+        context: Context,
+        packageName: String,
+    ) {
+        val current = _hiddenApps.value.toMutableSet()
+        if (current.contains(packageName)) {
+            current.remove(packageName)
+            AppLog.i(TAG, "Removed $packageName from hidden apps")
+        } else {
+            current.add(packageName)
+            AppLog.i(TAG, "Added $packageName to hidden apps")
+        }
+        _hiddenApps.value = current
+        try {
+            val file = File(context.filesDir, FILE_HIDDEN)
+            file.writeText(current.joinToString("\n"))
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to persist hidden apps: ${e.message}", e)
         }
     }
 
@@ -184,6 +227,7 @@ object InstalledAppsManager {
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
         loadFavorites(context)
+        loadHidden(context)
         loadLastUsed(context)
 
         val packageManager = context.packageManager
