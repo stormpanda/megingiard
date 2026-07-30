@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -160,12 +161,15 @@ fun <T> VerticalRollingCarousel(
                                     ),
                             contentAlignment = Alignment.CenterStart,
                         ) {
+                            val colorFraction = (1f - abs(diff)).coerceIn(0f, 1f)
+                            val textColor = lerp(appColors.onSurfaceSecondary, appColors.onSurface, colorFraction)
+
                             Text(
                                 text = labelProvider(item),
                                 style =
                                     MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = if (itemIndex == selectedIndex) appColors.onSurface else appColors.onSurfaceSecondary,
+                                        color = textColor,
                                     ),
                                 maxLines = 1,
                                 textAlign = TextAlign.Start,
