@@ -110,6 +110,12 @@ private val FLS_ROW_PEEK_OFFSET = 32.dp
 
 private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
 
+private const val FLS_HIDDEN_CARD_ALPHA = 0.4f
+private const val FLS_VISIBLE_CARD_ALPHA = 1.0f
+private const val FLS_HIDDEN_BADGE_ALPHA = 1.0f
+private const val FLS_VISIBLE_BADGE_ALPHA = 0.0f
+private const val FLS_HIDE_ANIMATION_DURATION_MS = 300
+
 private val LibraryTab.stringResId: Int
     get() =
         when (this) {
@@ -677,69 +683,88 @@ private fun LibraryGridItem(
         label = "LibraryCardScaleAnim",
     )
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    val cardAlpha by animateFloatAsState(
+        targetValue = if (isHidden) FLS_HIDDEN_CARD_ALPHA else FLS_VISIBLE_CARD_ALPHA,
+        animationSpec = tween(durationMillis = FLS_HIDE_ANIMATION_DURATION_MS),
+        label = "LibraryCardHiddenAlpha",
+    )
+
+    val visibilityOffAlpha by animateFloatAsState(
+        targetValue = if (isHidden) FLS_HIDDEN_BADGE_ALPHA else FLS_VISIBLE_BADGE_ALPHA,
+        animationSpec = tween(durationMillis = FLS_HIDE_ANIMATION_DURATION_MS),
+        label = "LibraryVisibilityOffAlpha",
+    )
+
+    Box(
         modifier =
             modifier
                 .scale(cardScale)
+                .graphicsLayer { alpha = cardAlpha }
                 .clip(RoundedCornerShape(FLS_CORNER_RADIUS))
                 .background(animatedCardBg)
-                .noFocusClickable(onClickTop)
-                .padding(10.dp),
+                .noFocusClickable(onClickTop),
     ) {
-        // Square Icon
-        Box(
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier =
                 Modifier
-                    .size(FLS_ICON_SIZE)
-                    .aspectRatio(1f),
-            contentAlignment = Alignment.Center,
+                    .padding(10.dp)
+                    .fillMaxWidth(),
         ) {
-            val currentBitmap = iconBitmap
-            if (currentBitmap != null) {
-                Image(
-                    bitmap = currentBitmap,
-                    contentDescription = appInfo.label,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Apps,
-                    contentDescription = appInfo.label,
-                    tint = appColors.accent,
-                    modifier = Modifier.size(36.dp),
-                )
-            }
-
-            if (isHidden) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(2.dp),
-                    contentAlignment = Alignment.TopEnd,
-                ) {
-                    MaterialSymbol(
-                        name = "visibility_off",
-                        size = 18.dp,
-                        tint = appColors.onSurfaceSecondary,
+            // Square Icon
+            Box(
+                modifier =
+                    Modifier
+                        .size(FLS_ICON_SIZE)
+                        .aspectRatio(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                val currentBitmap = iconBitmap
+                if (currentBitmap != null) {
+                    Image(
+                        bitmap = currentBitmap,
+                        contentDescription = appInfo.label,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Apps,
+                        contentDescription = appInfo.label,
+                        tint = appColors.accent,
+                        modifier = Modifier.size(36.dp),
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // App Label
+            Text(
+                text = appInfo.label,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                color = if (isFocused) appColors.onSurface else appColors.onSurfaceSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // App Label
-        Text(
-            text = appInfo.label,
-            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-            color = if (isFocused) appColors.onSurface else appColors.onSurfaceSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (visibilityOffAlpha > 0f) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .graphicsLayer { alpha = visibilityOffAlpha },
+            ) {
+                MaterialSymbol(
+                    name = "visibility_off",
+                    size = 18.dp,
+                    tint = appColors.onSurfaceSecondary,
+                )
+            }
+        }
     }
 }
