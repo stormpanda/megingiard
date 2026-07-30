@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -110,6 +111,10 @@ private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
 private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 
+private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
+private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
+private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
+
 private class JobRefHolder(
     var job: Job? = null,
 )
@@ -169,15 +174,17 @@ fun FocusTopLauncherScreen(
         AppPaletteExtractor.init(context)
     }
 
-    val gamesApps = remember(allApps, hiddenSet) { allApps.filter { it.isGame && !hiddenSet.contains(it.packageName) } }
-    val appsApps = remember(allApps, hiddenSet) { allApps.filter { !it.isGame && !hiddenSet.contains(it.packageName) } }
-    val allAppsApps = remember(allApps, hiddenSet) { allApps.filter { !hiddenSet.contains(it.packageName) } }
+    val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
+
+    val gamesApps = remember(allApps, frozenHiddenSet) { allApps.filter { it.isGame && !frozenHiddenSet.contains(it.packageName) } }
+    val appsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !it.isGame && !frozenHiddenSet.contains(it.packageName) } }
+    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !frozenHiddenSet.contains(it.packageName) } }
     val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
     val lastUsedApps =
-        remember(allApps, hiddenSet, lastUsed) {
+        remember(allApps, frozenHiddenSet, lastUsed) {
             lastUsed
                 .mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
-                .filter { !hiddenSet.contains(it.packageName) }
+                .filter { !frozenHiddenSet.contains(it.packageName) }
         }
 
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
@@ -558,11 +565,17 @@ fun FocusTopLauncherScreen(
                                                     if (isSelected) appColors.surfaceVariant else appColors.surface
                                                 }
                                             },
+                                            isHidden = { actualIndex ->
+                                                currentCategoryApps.getOrNull(actualIndex)?.let {
+                                                    hiddenSet.contains(it.packageName)
+                                                } ?: false
+                                            },
                                         ) { actualIndex, _ ->
                                             val appInfo = currentCategoryApps[actualIndex]
                                             PosterCardContent(
                                                 appInfo = appInfo,
                                                 isFavorite = favoritesSet.contains(appInfo.packageName),
+                                                isHidden = hiddenSet.contains(appInfo.packageName),
                                             )
                                         }
 
@@ -1095,6 +1108,7 @@ private fun InteractiveCategoryHeader(
 private fun PosterCardContent(
     appInfo: InstalledAppInfo,
     isFavorite: Boolean = false,
+    isHidden: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -1114,6 +1128,12 @@ private fun PosterCardContent(
             value = FocusImageCache.getIconBitmapAsync(context, appInfo)
         }
     }
+
+    val visibilityOffAlpha by animateFloatAsState(
+        targetValue = if (isHidden) FTL_HIDDEN_BADGE_ALPHA else FTL_VISIBLE_BADGE_ALPHA,
+        animationSpec = tween(durationMillis = FTL_HIDE_ANIMATION_DURATION_MS),
+        label = "LauncherVisibilityOffAlpha",
+    )
 
     Box(
         modifier = modifier.fillMaxSize(),
@@ -1166,6 +1186,23 @@ private fun PosterCardContent(
                     name = "kid_star",
                     size = 22.dp,
                     tint = appColors.accent,
+                )
+            }
+        }
+
+        if (visibilityOffAlpha > 0f) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(10.dp)
+                        .graphicsLayer { alpha = visibilityOffAlpha },
+                contentAlignment = Alignment.TopStart,
+            ) {
+                MaterialSymbol(
+                    name = "visibility_off",
+                    size = 22.dp,
+                    tint = appColors.onSurfaceSecondary,
                 )
             }
         }

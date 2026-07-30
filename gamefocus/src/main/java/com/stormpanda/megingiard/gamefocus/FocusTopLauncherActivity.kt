@@ -14,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -77,6 +78,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val dpadStepRightTriggerState = mutableIntStateOf(0)
     private val focusedAppState = mutableStateOf<InstalledAppInfo?>(null)
 
+    private var frozenHiddenSetForInput: Set<String> = emptySet()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -105,19 +108,26 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val lastUsed by InstalledAppsManager.lastUsed.collectAsState()
 
             val selectedCategory = selectedCategoryState.value
+            val isLibraryOpen = isLibraryOpenState.value
+
+            val frozenHidden = remember(allApps, selectedCategory, isLibraryOpen) { hidden }
+            SideEffect {
+                frozenHiddenSetForInput = frozenHidden
+            }
+
             val displayedApps =
-                remember(allApps, favorites, hidden, lastUsed, selectedCategory) {
+                remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory) {
                     when (selectedCategory) {
                         GameFocusCategory.GAMES -> {
-                            allApps.filter { it.isGame && !hidden.contains(it.packageName) }
+                            allApps.filter { it.isGame && !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.APPS -> {
-                            allApps.filter { !it.isGame && !hidden.contains(it.packageName) }
+                            allApps.filter { !it.isGame && !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !hidden.contains(it.packageName) }
+                            allApps.filter { !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {
@@ -128,7 +138,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             lastUsed
                                 .mapNotNull { pkg ->
                                     allApps.find { it.packageName == pkg }
-                                }.filter { !hidden.contains(it.packageName) }
+                                }.filter { !frozenHidden.contains(it.packageName) }
                         }
                     }
                 }
@@ -628,7 +638,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
         // Navigation when Main Launcher is active
         val allApps = InstalledAppsManager.installedApps.value
         val favorites = InstalledAppsManager.favorites.value
-        val hidden = InstalledAppsManager.hiddenApps.value
+        val hidden = frozenHiddenSetForInput
         val lastUsed = InstalledAppsManager.lastUsed.value
         val selectedCategory = selectedCategoryState.value
         val apps =
@@ -895,7 +905,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 stopRepeat()
                 val allApps = InstalledAppsManager.installedApps.value
                 val favorites = InstalledAppsManager.favorites.value
-                val hidden = InstalledAppsManager.hiddenApps.value
+                val hidden = frozenHiddenSetForInput
                 val lastUsed = InstalledAppsManager.lastUsed.value
                 val selectedCategory = selectedCategoryState.value
                 val apps =
