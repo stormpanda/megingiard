@@ -62,12 +62,13 @@ class LibraryTabTest {
 
     @Test
     fun testTabNavigationOrder() {
-        assertEquals(LibraryTab.APPS, LibraryTab.ALL.next())
-        assertEquals(LibraryTab.GAMES, LibraryTab.APPS.next())
-        assertEquals(LibraryTab.ALL, LibraryTab.GAMES.next())
+        val tabs = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES)
+        assertEquals(LibraryTab.APPS, LibraryTab.ALL.next(tabs))
+        assertEquals(LibraryTab.GAMES, LibraryTab.APPS.next(tabs))
+        assertEquals(LibraryTab.ALL, LibraryTab.GAMES.next(tabs))
 
-        assertEquals(LibraryTab.GAMES, LibraryTab.ALL.previous())
-        assertEquals(LibraryTab.ALL, LibraryTab.APPS.previous())
-        assertEquals(LibraryTab.APPS, LibraryTab.GAMES.previous())
+        assertEquals(LibraryTab.GAMES, LibraryTab.ALL.previous(tabs))
+        assertEquals(LibraryTab.ALL, LibraryTab.APPS.previous(tabs))
+        assertEquals(LibraryTab.APPS, LibraryTab.GAMES.previous(tabs))
     }
 }

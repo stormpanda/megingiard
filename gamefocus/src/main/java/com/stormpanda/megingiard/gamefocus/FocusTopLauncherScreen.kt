@@ -77,6 +77,9 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LetterNavigationHelper
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.focus.rom.CustomRomFolder
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -139,7 +142,7 @@ fun FocusTopLauncherScreen(
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
     onAddRomFolder: () -> Unit = {},
-    onRemoveRomFolder: (com.stormpanda.megingiard.focus.rom.CustomRomFolder) -> Unit = {},
+    onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
@@ -180,6 +183,20 @@ fun FocusTopLauncherScreen(
 
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
 
+    val romFolders by RomManager.romFolders.collectAsState()
+
+    val libraryTabs =
+        remember(romFolders) {
+            listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES) +
+                romFolders.map { folder ->
+                    LibraryTab.RomSystem(
+                        id = "rom_${folder.systemId}",
+                        systemId = folder.systemId,
+                        displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
+                    )
+                }
+        }
+
     val gamesApps =
         remember(allApps, frozenHiddenSet) {
             allApps.filter {
@@ -194,7 +211,7 @@ fun FocusTopLauncherScreen(
                     !frozenHiddenSet.contains(it.packageName)
             }
         }
-    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !it.isRom && !frozenHiddenSet.contains(it.packageName) } }
+    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !frozenHiddenSet.contains(it.packageName) } }
     val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
     val lastUsedApps =
         remember(allApps, frozenHiddenSet, lastUsed) {
@@ -520,6 +537,7 @@ fun FocusTopLauncherScreen(
                     onAppClickBottom = onAppClickBottom,
                     onCloseRequested = onCloseLibrary,
                     enabled = isLibraryOpen,
+                    tabs = libraryTabs,
                 )
             } else {
                 Box(

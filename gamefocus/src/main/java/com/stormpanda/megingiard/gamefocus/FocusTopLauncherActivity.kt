@@ -32,6 +32,7 @@ import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.focus.LibraryTab
 import com.stormpanda.megingiard.focus.rom.CustomRomFolder
 import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -69,7 +70,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
 
     private val isLibraryOpenState = mutableStateOf(false)
-    private val librarySelectedTabState = mutableStateOf(LibraryTab.ALL)
+    private val librarySelectedTabState = mutableStateOf<LibraryTab>(LibraryTab.ALL)
+    private var activeLibraryTabs: List<LibraryTab> = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES)
     private val libraryFocusedIndexState = mutableIntStateOf(0)
     private val isLibraryOptionsMenuExpandedState = mutableStateOf(false)
 
@@ -144,8 +146,21 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         }
                 }
 
+            val libraryTabs =
+                remember(customRomFolders) {
+                    listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES) +
+                        customRomFolders.map { folder ->
+                            LibraryTab.RomSystem(
+                                id = "rom_${folder.systemId}",
+                                systemId = folder.systemId,
+                                displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
+                            )
+                        }
+                }
+
             SideEffect {
                 activeCategories = categories
+                activeLibraryTabs = libraryTabs
             }
 
             val selectedCategory = selectedCategoryState.value
@@ -154,6 +169,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
             SideEffect {
                 if (!categories.contains(selectedCategory)) {
                     selectedCategoryState.value = GameFocusCategory.GAMES
+                }
+                if (!libraryTabs.contains(librarySelectedTabState.value)) {
+                    librarySelectedTabState.value = LibraryTab.ALL
                 }
             }
 
@@ -174,7 +192,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         }
 
                         GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !it.isRom && !frozenHidden.contains(it.packageName) }
+                            allApps.filter { !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {
@@ -619,16 +637,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
 
                 GamePadButton.BUTTON_L1.keyCode -> {
-                    val prevTab = currentTab.previous()
-                    AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.name}")
+                    val prevTab = currentTab.previous(activeLibraryTabs)
+                    AppLog.i(TAG, "Library L1 pressed -> switching tab to ${prevTab.id}")
                     librarySelectedTabState.value = prevTab
                     libraryFocusedIndexState.intValue = 0
                     true
                 }
 
                 GamePadButton.BUTTON_R1.keyCode -> {
-                    val nextTab = currentTab.next()
-                    AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.name}")
+                    val nextTab = currentTab.next(activeLibraryTabs)
+                    AppLog.i(TAG, "Library R1 pressed -> switching tab to ${nextTab.id}")
                     librarySelectedTabState.value = nextTab
                     libraryFocusedIndexState.intValue = 0
                     true
@@ -711,7 +729,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 }
 
                 GameFocusCategory.ALL_APPS -> {
-                    allApps.filter { !it.isRom && !hidden.contains(it.packageName) }
+                    allApps.filter { !hidden.contains(it.packageName) }
                 }
 
                 GameFocusCategory.FAVORITES -> {
@@ -982,7 +1000,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         }
 
                         GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !it.isRom && !hidden.contains(it.packageName) }
+                            allApps.filter { !hidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {

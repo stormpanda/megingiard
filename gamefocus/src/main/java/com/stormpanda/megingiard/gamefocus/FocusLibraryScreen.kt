@@ -136,6 +136,7 @@ private val LibraryTab.stringResId: Int
             LibraryTab.ALL -> R.string.gamefocus_library_tab_all
             LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
             LibraryTab.GAMES -> R.string.gamefocus_library_tab_games
+            is LibraryTab.RomSystem -> 0
         }
 
 private suspend fun scrollToFocusedItem(
@@ -184,6 +185,7 @@ fun FocusLibraryScreen(
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
+    tabs: List<LibraryTab> = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES),
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
@@ -203,7 +205,7 @@ fun FocusLibraryScreen(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next() == targetState
+                val isMovingNext = initialState.next(tabs) == targetState
                 if (isMovingNext) {
                     (slideInHorizontally { width -> width } + fadeIn())
                         .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
@@ -453,12 +455,13 @@ fun FocusLibraryScreen(
         LibraryHeaderBar(
             selectedTab = selectedTab,
             onTabSelected = { tab ->
-                AppLog.i(TAG, "Library tab clicked/selected: ${tab.name}")
+                AppLog.i(TAG, "Library tab clicked/selected: ${tab.id}")
                 onTabSelected(tab)
                 onFocusedIndexChange(0)
             },
             onCloseRequested = onCloseRequested,
             enabled = enabled,
+            tabs = tabs,
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
@@ -648,6 +651,7 @@ private fun LibraryHeaderBar(
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
     onCloseRequested: () -> Unit,
+    tabs: List<LibraryTab>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -665,6 +669,7 @@ private fun LibraryHeaderBar(
         InteractiveLibraryCategoryHeader(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
+            tabs = tabs,
         )
 
         // Navigation affordance to return to Gallery via R2 button
@@ -678,9 +683,17 @@ private fun LibraryHeaderBar(
 }
 
 @Composable
+private fun getTabName(tab: LibraryTab): String =
+    when (tab) {
+        is LibraryTab.RomSystem -> tab.displayName
+        else -> stringResource(tab.stringResId)
+    }
+
+@Composable
 private fun InteractiveLibraryCategoryHeader(
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
+    tabs: List<LibraryTab>,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -697,14 +710,14 @@ private fun InteractiveLibraryCategoryHeader(
             size = 20.dp,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
-            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous()) },
+            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous(tabs)) },
         )
 
         // Animated Horizontal 3D Reel
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next() == targetState
+                val isMovingNext = initialState.next(tabs) == targetState
                 if (isMovingNext) {
                     (slideInHorizontally { width -> width / 3 } + fadeIn())
                         .togetherWith(slideOutHorizontally { width -> -width / 3 } + fadeOut())
@@ -715,8 +728,8 @@ private fun InteractiveLibraryCategoryHeader(
             },
             label = "LibraryHorizontalCategoryTransition",
         ) { currentTab ->
-            val next1 = currentTab.next()
-            val next2 = next1.next()
+            val next1 = currentTab.next(tabs)
+            val next2 = next1.next(tabs)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -724,7 +737,7 @@ private fun InteractiveLibraryCategoryHeader(
             ) {
                 // Active category (leftmost, center-front)
                 Text(
-                    text = stringResource(currentTab.stringResId),
+                    text = getTabName(currentTab),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -736,7 +749,7 @@ private fun InteractiveLibraryCategoryHeader(
 
                 // Next category 1 (middle, curved Y-axis roll)
                 Text(
-                    text = stringResource(next1.stringResId),
+                    text = getTabName(next1),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -754,7 +767,7 @@ private fun InteractiveLibraryCategoryHeader(
 
                 // Next category 2 (rightmost, deeper Y-axis roll)
                 Text(
-                    text = stringResource(next2.stringResId),
+                    text = getTabName(next2),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -778,7 +791,7 @@ private fun InteractiveLibraryCategoryHeader(
             size = 20.dp,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
-            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next()) },
+            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next(tabs)) },
         )
     }
 }
