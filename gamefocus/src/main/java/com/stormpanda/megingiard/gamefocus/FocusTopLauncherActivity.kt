@@ -1292,6 +1292,20 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     }
                     isLibraryOptionsMenuExpandedState.value = false
                     return true
+                } else if (y < -0.5f) {
+                    AppLog.i(TAG, "Joystick UP pressed while Library options menu expanded -> Adding ROM folder")
+                    openDocumentTreeLauncher.launch(null)
+                    isLibraryOptionsMenuExpandedState.value = false
+                    return true
+                } else if (y > 0.5f) {
+                    val folders = RomManager.romFolders.value
+                    if (folders.isNotEmpty()) {
+                        AppLog.i(TAG, "Joystick DOWN pressed while Library options menu expanded -> Manage ROM folders")
+                        removeRomFolderDialogSelectedIndexState.intValue = 0
+                        isRemoveRomFolderDialogOpenState.value = true
+                    }
+                    isLibraryOptionsMenuExpandedState.value = false
+                    return true
                 }
                 return true
             }
