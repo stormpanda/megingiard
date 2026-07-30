@@ -63,6 +63,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -107,8 +108,10 @@ private val FLS_GRID_SPACING = 12.dp
 private const val FLS_CATEGORY_ROLL_Y_ANGLE_DEG = 25f
 private val FLS_FOCUS_BORDER_WIDTH = 3.dp
 private val FLS_ROW_PEEK_OFFSET = 32.dp
-private val FLS_GRID_CONTENT_PADDING_TOP = 80.dp
-private val FLS_GRID_CONTENT_PADDING_BOTTOM = 64.dp
+private val FLS_GRID_CONTENT_PADDING_TOP = 112.dp
+private val FLS_GRID_CONTENT_PADDING_BOTTOM = 112.dp
+private val FLS_BOTTOM_GRADIENT_HEIGHT = 96.dp
+private val FLS_TOP_GRADIENT_HEIGHT = 112.dp
 
 private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
 
@@ -413,6 +416,24 @@ fun FocusLibraryScreen(
             }
         }
 
+        // Top edge shadow overlay to improve header readability
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(FLS_TOP_GRADIENT_HEIGHT)
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                0.0f to appColors.appBackground,
+                                0.2f to appColors.appBackground,
+                                0.5f to appColors.appBackground.copy(alpha = 0.8f),
+                                1.0f to Color.Transparent,
+                            ),
+                    ),
+        )
+
         // Header Bar with Title, Subtitle, and Tabs hovering over the grid
         LibraryHeaderBar(
             selectedTab = selectedTab,
@@ -430,6 +451,24 @@ fun FocusLibraryScreen(
         val focusedApp = activeApps.getOrNull(focusedIndex.coerceAtLeast(0))
         val isCurrentFavorite = focusedApp != null && favoritesSet.contains(focusedApp.packageName)
         val isCurrentHidden = focusedApp != null && hiddenSet.contains(focusedApp.packageName)
+
+        // Bottom edge shadow overlay to improve button readability
+        Box(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(FLS_BOTTOM_GRADIENT_HEIGHT)
+                    .background(
+                        brush =
+                            Brush.verticalGradient(
+                                0.0f to Color.Transparent,
+                                0.5f to appColors.appBackground.copy(alpha = 0.8f),
+                                0.8f to appColors.appBackground,
+                                1.0f to appColors.appBackground,
+                            ),
+                    ),
+        )
 
         // Bottom Bar containing Action Menu (lower left) and Launch indicators (lower right) hovering over the grid
         Box(
