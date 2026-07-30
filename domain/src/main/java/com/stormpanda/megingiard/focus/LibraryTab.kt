@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.focus
 
+import com.stormpanda.megingiard.math.floorMod
+
 /**
  * Tabs available in the Megingiard Game Focus Library view.
  */
@@ -41,7 +43,7 @@ sealed class LibraryTab {
     fun previous(tabs: List<LibraryTab>): LibraryTab {
         val idx = tabs.indexOf(this)
         if (idx == -1) return tabs.firstOrNull() ?: ALL
-        val prevIdx = Math.floorMod(idx - 1, tabs.size)
+        val prevIdx = (idx - 1).floorMod(tabs.size)
         return tabs[prevIdx]
     }
 
@@ -51,7 +53,7 @@ sealed class LibraryTab {
     fun next(tabs: List<LibraryTab>): LibraryTab {
         val idx = tabs.indexOf(this)
         if (idx == -1) return tabs.firstOrNull() ?: ALL
-        val nextIdx = Math.floorMod(idx + 1, tabs.size)
+        val nextIdx = (idx + 1).floorMod(tabs.size)
         return tabs[nextIdx]
     }
 }

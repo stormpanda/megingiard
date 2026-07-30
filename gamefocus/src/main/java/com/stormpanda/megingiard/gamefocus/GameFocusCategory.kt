@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.gamefocus
 
 import androidx.annotation.StringRes
 import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.math.floorMod
 
 /**
  * Categories available in Megingiard Game Focus launcher.
@@ -53,14 +54,14 @@ sealed class GameFocusCategory {
     fun previous(categories: List<GameFocusCategory>): GameFocusCategory {
         val idx = categories.indexOf(this)
         if (idx == -1) return categories.firstOrNull() ?: GAMES
-        val prevIdx = Math.floorMod(idx - 1, categories.size)
+        val prevIdx = (idx - 1).floorMod(categories.size)
         return categories[prevIdx]
     }
 
     fun next(categories: List<GameFocusCategory>): GameFocusCategory {
         val idx = categories.indexOf(this)
         if (idx == -1) return categories.firstOrNull() ?: GAMES
-        val nextIdx = Math.floorMod(idx + 1, categories.size)
+        val nextIdx = (idx + 1).floorMod(categories.size)
         return categories[nextIdx]
     }
 }

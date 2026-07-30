@@ -5,9 +5,11 @@ import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +36,7 @@ import com.stormpanda.megingiard.focus.rom.AddRomFolderResult
 import com.stormpanda.megingiard.focus.rom.CustomRomFolder
 import com.stormpanda.megingiard.focus.rom.RomManager
 import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -88,8 +91,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private val openDocumentTreeLauncher =
         registerForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts
-                .OpenDocumentTree(),
+            ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
             if (uri != null) {
                 when (val result = RomManager.addRomFolder(this, uri)) {
@@ -98,8 +100,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     }
 
                     is AddRomFolderResult.Error -> {
-                        android.widget.Toast
-                            .makeText(this, result.message, android.widget.Toast.LENGTH_LONG)
+                        Toast
+                            .makeText(this, result.message, Toast.LENGTH_LONG)
                             .show()
                     }
                 }
@@ -126,7 +128,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val remoteThemeState by MegingiardThemeClient
                 .observeTheme(
                     this,
-                ).collectAsState(initial = Pair(com.stormpanda.megingiard.settings.ThemeMode.DARK, null))
+                ).collectAsState(initial = Pair(ThemeMode.DARK, null))
             val (themeMode, userAccent) = remoteThemeState
             val appColors = paletteFor(themeMode, userAccent)
 

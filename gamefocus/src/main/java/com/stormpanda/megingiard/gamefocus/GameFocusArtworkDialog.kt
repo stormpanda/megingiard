@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
@@ -193,13 +194,13 @@ fun GameFocusArtworkDialog(
     // Handle L1 and R1 triggers to switch selected game
     LaunchedEffect(l1Trigger) {
         if (l1Trigger > 0 && games.isNotEmpty()) {
-            selectedGameIndex = Math.floorMod(selectedGameIndex - 1, games.size)
+            selectedGameIndex = (selectedGameIndex - 1).floorMod(games.size)
         }
     }
 
     LaunchedEffect(r1Trigger) {
         if (r1Trigger > 0 && games.isNotEmpty()) {
-            selectedGameIndex = Math.floorMod(selectedGameIndex + 1, games.size)
+            selectedGameIndex = (selectedGameIndex + 1).floorMod(games.size)
         }
     }
 
@@ -283,7 +284,7 @@ fun GameFocusArtworkDialog(
 
     LaunchedEffect(confirmTrigger) {
         if (confirmTrigger > 0 && images.isNotEmpty()) {
-            val selectedIndex = Math.floorMod(virtualIndex, images.size)
+            val selectedIndex = virtualIndex.floorMod(images.size)
             images.getOrNull(selectedIndex)?.let { imageItem ->
                 onConfirmSelection(imageItem)
             }

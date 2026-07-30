@@ -17,6 +17,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.zip.ZipInputStream
 import kotlin.math.absoluteValue
 
 @Serializable
@@ -282,7 +283,7 @@ object RomManager {
                 zipPeeks++
                 try {
                     context.contentResolver.openInputStream(file.uri)?.use { fis ->
-                        java.util.zip.ZipInputStream(fis).use { zis ->
+                        ZipInputStream(fis).use { zis ->
                             val entry = zis.nextEntry
                             if (entry != null) {
                                 val innerExt = entry.name.substringAfterLast('.', "").lowercase()

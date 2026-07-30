@@ -15,6 +15,9 @@ import com.stormpanda.megingiard.focus.InstalledAppInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.math.abs
+import kotlin.math.min
+import android.graphics.Color as AndroidColor
 
 private const val TAG = "AppPaletteExtractor"
 private const val PALETTE_CACHE_SIZE = 100
@@ -55,13 +58,13 @@ private fun isDistinctColor(
 ): Boolean {
     val hsv1 = FloatArray(3)
     val hsv2 = FloatArray(3)
-    android.graphics.Color.colorToHSV(color1, hsv1)
-    android.graphics.Color.colorToHSV(color2, hsv2)
+    AndroidColor.colorToHSV(color1, hsv1)
+    AndroidColor.colorToHSV(color2, hsv2)
 
-    val rawHueDiff = kotlin.math.abs(hsv1[0] - hsv2[0])
-    val hueDiff = kotlin.math.min(rawHueDiff, 360f - rawHueDiff)
-    val satDiff = kotlin.math.abs(hsv1[1] - hsv2[1])
-    val valDiff = kotlin.math.abs(hsv1[2] - hsv2[2])
+    val rawHueDiff = abs(hsv1[0] - hsv2[0])
+    val hueDiff = min(rawHueDiff, 360f - rawHueDiff)
+    val satDiff = abs(hsv1[1] - hsv2[1])
+    val valDiff = abs(hsv1[2] - hsv2[2])
 
     return hueDiff >= DISTINCT_HUE_THRESHOLD_DEG || (satDiff + valDiff) >= DISTINCT_SUM_DIFF_THRESHOLD
 }
@@ -71,11 +74,11 @@ private fun isDistinctColor(
  */
 private fun createComplementaryVibrant(baseColorInt: Int): Int {
     val hsv = FloatArray(3)
-    android.graphics.Color.colorToHSV(baseColorInt, hsv)
+    AndroidColor.colorToHSV(baseColorInt, hsv)
     hsv[0] = (hsv[0] + HUE_SHIFT_COMPLEMENTARY_DEG) % 360f
     hsv[1] = hsv[1].coerceAtLeast(0.6f)
     hsv[2] = hsv[2].coerceIn(0.4f, 0.8f)
-    return android.graphics.Color.HSVToColor(hsv)
+    return AndroidColor.HSVToColor(hsv)
 }
 
 data class ExtractedAppPalette(
@@ -90,9 +93,9 @@ data class ExtractedAppPalette(
 fun Color.darken(factor: Float = CARD_BG_DARKEN_FACTOR): Color {
     if (this == Color.Unspecified) return Color.Unspecified
     val hsv = FloatArray(3)
-    android.graphics.Color.colorToHSV(this.toArgb(), hsv)
+    AndroidColor.colorToHSV(this.toArgb(), hsv)
     hsv[2] = (hsv[2] * factor).coerceIn(0f, 1f)
-    return Color(android.graphics.Color.HSVToColor(hsv))
+    return Color(AndroidColor.HSVToColor(hsv))
 }
 
 object AppPaletteExtractor {

@@ -5,12 +5,15 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
+import java.io.FileInputStream
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -83,9 +86,9 @@ class RomManagerTest {
                 }
             }
             val docFile = DocumentFile.fromFile(zipFile)
-            org.robolectric.Shadows.shadowOf(context.contentResolver).registerInputStream(
+            shadowOf(context.contentResolver).registerInputStream(
                 docFile.uri,
-                java.io.FileInputStream(zipFile),
+                FileInputStream(zipFile),
             )
             val files = arrayOf<DocumentFile>(docFile)
             val systemId = RomManager.detectSystem(context, files)
@@ -121,7 +124,7 @@ class RomManagerTest {
 
         // Verify it was persisted to disk
         val diskContent = file.readText()
-        org.junit.Assert.assertTrue(diskContent.contains("snes9x_libretro_android.so"))
+        assertTrue(diskContent.contains("snes9x_libretro_android.so"))
 
         // Cleanup
         file.delete()
