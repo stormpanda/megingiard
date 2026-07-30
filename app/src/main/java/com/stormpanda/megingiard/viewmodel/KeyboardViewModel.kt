@@ -207,11 +207,13 @@ class KeyboardViewModel(
             keycode: Int,
             autoModifiers: List<Int> = emptyList(),
         ) {
-            val mods = mutableListOf<Int>()
-            if (isUpper) {
-                mods.add(LinuxKeycodes.KEY_LEFTSHIFT)
-            }
-            mods.addAll(autoModifiers)
+            val mods =
+                buildList {
+                    if (isUpper) {
+                        add(LinuxKeycodes.KEY_LEFTSHIFT)
+                    }
+                    addAll(autoModifiers)
+                }
 
             mods.forEach { KeyInjector.keyDown(it) }
             KeyInjector.keyDown(keycode)

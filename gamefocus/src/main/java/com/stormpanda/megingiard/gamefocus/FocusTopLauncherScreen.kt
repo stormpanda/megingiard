@@ -770,62 +770,62 @@ fun FocusTopLauncherScreen(
                             val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
                             val actions =
                                 remember(currentApp, isCurrentFavorite, isCurrentHidden) {
-                                    val list = mutableListOf<ExpandableActionItem>()
-                                    if (currentApp != null) {
-                                        list.add(
-                                            ExpandableActionItem(
-                                                label =
-                                                    if (isCurrentFavorite) {
-                                                        context.getString(R.string.gamefocus_option_remove_favorite)
-                                                    } else {
-                                                        context.getString(R.string.gamefocus_option_add_favorite)
-                                                    },
-                                                iconSymbol = "gamepad_up",
-                                                onClick = {
-                                                    onToggleFavorite(currentApp)
-                                                    onMainOptionsMenuExpandedChange(false)
-                                                },
-                                            ),
-                                        )
-                                        list.add(
-                                            ExpandableActionItem(
-                                                label = context.getString(R.string.gamefocus_option_edit),
-                                                iconSymbol = "gamepad_right",
-                                                onClick = {
-                                                    onEditArtwork(currentApp)
-                                                    onMainOptionsMenuExpandedChange(false)
-                                                },
-                                            ),
-                                        )
-                                        if (!currentApp.isRom) {
-                                            list.add(
+                                    buildList {
+                                        if (currentApp != null) {
+                                            add(
                                                 ExpandableActionItem(
-                                                    label = context.getString(R.string.gamefocus_option_app_info),
-                                                    iconSymbol = "gamepad_down",
+                                                    label =
+                                                        if (isCurrentFavorite) {
+                                                            context.getString(R.string.gamefocus_option_remove_favorite)
+                                                        } else {
+                                                            context.getString(R.string.gamefocus_option_add_favorite)
+                                                        },
+                                                    iconSymbol = "gamepad_up",
                                                     onClick = {
-                                                        onOpenAppInfo(currentApp)
+                                                        onToggleFavorite(currentApp)
+                                                        onMainOptionsMenuExpandedChange(false)
+                                                    },
+                                                ),
+                                            )
+                                            add(
+                                                ExpandableActionItem(
+                                                    label = context.getString(R.string.gamefocus_option_edit),
+                                                    iconSymbol = "gamepad_right",
+                                                    onClick = {
+                                                        onEditArtwork(currentApp)
+                                                        onMainOptionsMenuExpandedChange(false)
+                                                    },
+                                                ),
+                                            )
+                                            if (!currentApp.isRom) {
+                                                add(
+                                                    ExpandableActionItem(
+                                                        label = context.getString(R.string.gamefocus_option_app_info),
+                                                        iconSymbol = "gamepad_down",
+                                                        onClick = {
+                                                            onOpenAppInfo(currentApp)
+                                                            onMainOptionsMenuExpandedChange(false)
+                                                        },
+                                                    ),
+                                                )
+                                            }
+                                            add(
+                                                ExpandableActionItem(
+                                                    label =
+                                                        if (isCurrentHidden) {
+                                                            context.getString(R.string.gamefocus_option_unhide)
+                                                        } else {
+                                                            context.getString(R.string.gamefocus_option_hide)
+                                                        },
+                                                    iconSymbol = "gamepad_left",
+                                                    onClick = {
+                                                        onToggleHidden(currentApp)
                                                         onMainOptionsMenuExpandedChange(false)
                                                     },
                                                 ),
                                             )
                                         }
-                                        list.add(
-                                            ExpandableActionItem(
-                                                label =
-                                                    if (isCurrentHidden) {
-                                                        context.getString(R.string.gamefocus_option_unhide)
-                                                    } else {
-                                                        context.getString(R.string.gamefocus_option_hide)
-                                                    },
-                                                iconSymbol = "gamepad_left",
-                                                onClick = {
-                                                    onToggleHidden(currentApp)
-                                                    onMainOptionsMenuExpandedChange(false)
-                                                },
-                                            ),
-                                        )
                                     }
-                                    list
                                 }
                             ExpandableActionsMenu(
                                 isExpanded = isMainOptionsMenuExpanded,

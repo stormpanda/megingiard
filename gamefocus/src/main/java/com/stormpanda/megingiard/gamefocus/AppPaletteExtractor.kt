@@ -149,10 +149,7 @@ object AppPaletteExtractor {
 
     fun invalidatePalette(packageName: String) {
         val context = appContext
-        val keysToRemove = mutableListOf<String>()
-        paletteCache.snapshot().keys.forEach { key ->
-            if (key.startsWith("$packageName:")) keysToRemove.add(key)
-        }
+        val keysToRemove = paletteCache.snapshot().keys.filter { it.startsWith("$packageName:") }
         keysToRemove.forEach { paletteCache.remove(it) }
 
         if (context != null) {

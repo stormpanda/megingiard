@@ -173,58 +173,59 @@ object RomManager {
 
     fun reloadRomApps(context: Context) {
         scope.launch {
-            val allRomApps = mutableListOf<InstalledAppInfo>()
             val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+            val allRomApps =
+                buildList {
+                    for (folder in _romFolders.value) {
+                        val uri = Uri.parse(folder.uriString)
+                        val documentFile = DocumentFile.fromTreeUri(context, uri) ?: continue
+                        if (!documentFile.exists()) continue
 
-            for (folder in _romFolders.value) {
-                val uri = Uri.parse(folder.uriString)
-                val documentFile = DocumentFile.fromTreeUri(context, uri) ?: continue
-                if (!documentFile.exists()) continue
+                        val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
 
-                val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
+                        val files = documentFile.listFiles()
+                        val isConsoleSystem = folder.systemId != "pc"
+                        for (file in files) {
+                            if (file.isDirectory) continue
+                            val name = file.name ?: continue
+                            val ext = name.substringAfterLast('.', "").lowercase()
+                            val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
+                            if (isMatch) {
+                                val label = name.substringBeforeLast('.')
+                                val romUriStr = file.uri.toString()
+                                val romPath = getPhysicalPath(file.uri) ?: romUriStr
 
-                val files = documentFile.listFiles()
-                val isConsoleSystem = folder.systemId != "pc"
-                for (file in files) {
-                    if (file.isDirectory) continue
-                    val name = file.name ?: continue
-                    val ext = name.substringAfterLast('.', "").lowercase()
-                    val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
-                    if (isMatch) {
-                        val label = name.substringBeforeLast('.')
-                        val romUriStr = file.uri.toString()
-                        val romPath = getPhysicalPath(file.uri) ?: romUriStr
+                                val pseudoPackageName =
+                                    "rom.${folder.systemId}." +
+                                        name.substringBeforeLast('.').replace(Regex("[^a-zA-Z0-9_]"), "_") +
+                                        "_" + romUriStr.hashCode().absoluteValue
 
-                        val pseudoPackageName =
-                            "rom.${folder.systemId}." +
-                                name.substringBeforeLast('.').replace(Regex("[^a-zA-Z0-9_]"), "_") +
-                                "_" + romUriStr.hashCode().absoluteValue
+                                val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
+                                val coverPath =
+                                    if (cachedCoverFile.exists() && cachedCoverFile.length() > 0) {
+                                        cachedCoverFile.absolutePath
+                                    } else {
+                                        null
+                                    }
 
-                        val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
-                        val coverPath =
-                            if (cachedCoverFile.exists() && cachedCoverFile.length() > 0) {
-                                cachedCoverFile.absolutePath
-                            } else {
-                                null
+                                add(
+                                    InstalledAppInfo(
+                                        packageName = pseudoPackageName,
+                                        activityName = "",
+                                        label = label,
+                                        icon = null,
+                                        coverPath = coverPath,
+                                        isGame = true,
+                                        isRom = true,
+                                        romPath = romPath,
+                                        systemId = folder.systemId,
+                                        retroArchCore = folder.retroArchCore,
+                                    ),
+                                )
                             }
-
-                        allRomApps.add(
-                            InstalledAppInfo(
-                                packageName = pseudoPackageName,
-                                activityName = "",
-                                label = label,
-                                icon = null,
-                                coverPath = coverPath,
-                                isGame = true,
-                                isRom = true,
-                                romPath = romPath,
-                                systemId = folder.systemId,
-                                retroArchCore = folder.retroArchCore,
-                            ),
-                        )
+                        }
                     }
                 }
-            }
 
             _romApps.value = allRomApps.sortedBy { it.label.lowercase() }
             AppLog.d(TAG, "Scanned and loaded ${_romApps.value.size} ROMs across ${_romFolders.value.size} folders")

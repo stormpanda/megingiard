@@ -509,47 +509,47 @@ fun FocusLibraryScreen(
             Box(modifier = Modifier.align(Alignment.BottomStart)) {
                 val actions =
                     remember(focusedApp, isCurrentHidden, romFolders) {
-                        val list = mutableListOf<ExpandableActionItem>()
-                        if (focusedApp != null) {
-                            list.add(
-                                ExpandableActionItem(
-                                    label =
-                                        if (isCurrentHidden) {
-                                            context.getString(R.string.gamefocus_option_unhide)
-                                        } else {
-                                            context.getString(R.string.gamefocus_option_hide)
+                        buildList {
+                            if (focusedApp != null) {
+                                add(
+                                    ExpandableActionItem(
+                                        label =
+                                            if (isCurrentHidden) {
+                                                context.getString(R.string.gamefocus_option_unhide)
+                                            } else {
+                                                context.getString(R.string.gamefocus_option_hide)
+                                            },
+                                        iconSymbol = "gamepad_left",
+                                        onClick = {
+                                            onToggleHidden(focusedApp)
+                                            onOptionsMenuExpandedChange(false)
                                         },
-                                    iconSymbol = "gamepad_left",
-                                    onClick = {
-                                        onToggleHidden(focusedApp)
-                                        onOptionsMenuExpandedChange(false)
-                                    },
-                                ),
-                            )
-                        }
-                        list.add(
-                            ExpandableActionItem(
-                                label = context.getString(R.string.gamefocus_option_add_rom_folder),
-                                iconSymbol = "folder_open",
-                                onClick = {
-                                    onAddRomFolder()
-                                    onOptionsMenuExpandedChange(false)
-                                },
-                            ),
-                        )
-                        if (romFolders.isNotEmpty()) {
-                            list.add(
+                                    ),
+                                )
+                            }
+                            add(
                                 ExpandableActionItem(
-                                    label = context.getString(R.string.gamefocus_option_manage_rom_folders),
-                                    iconSymbol = "delete",
+                                    label = context.getString(R.string.gamefocus_option_add_rom_folder),
+                                    iconSymbol = "folder_open",
                                     onClick = {
-                                        showRemoveRomFolderDialog = true
+                                        onAddRomFolder()
                                         onOptionsMenuExpandedChange(false)
                                     },
                                 ),
                             )
+                            if (romFolders.isNotEmpty()) {
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_manage_rom_folders),
+                                        iconSymbol = "delete",
+                                        onClick = {
+                                            showRemoveRomFolderDialog = true
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            }
                         }
-                        list
                     }
                 ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,

@@ -162,71 +162,69 @@ object KeyboardState {
      *
      * Returns the list of keycodes that need KEY_UP injection.
      */
-    fun releaseStickyModifiers(layout: List<List<KeyDef>>): List<Int> {
-        val keycodes = mutableListOf<Int>()
-        for (row in layout) {
-            for (key in row) {
-                if (key.type == KeyType.MODIFIER) {
-                    if (key.id == "caps") continue
-                    val flow = _modifiers[key.id] ?: continue
-                    if (flow.value == ModifierState.STICKY) {
-                        flow.value = ModifierState.INACTIVE
-                        if (key.linuxKeycode != 0) keycodes += key.linuxKeycode
+    fun releaseStickyModifiers(layout: List<List<KeyDef>>): List<Int> =
+        buildList {
+            for (row in layout) {
+                for (key in row) {
+                    if (key.type == KeyType.MODIFIER) {
+                        if (key.id == "caps") continue
+                        val flow = _modifiers[key.id] ?: continue
+                        if (flow.value == ModifierState.STICKY) {
+                            flow.value = ModifierState.INACTIVE
+                            if (key.linuxKeycode != 0) add(key.linuxKeycode)
+                        }
                     }
                 }
             }
-        }
-        val toolbarMods =
-            listOf(
-                Triple("ctrl", LinuxKeycodes.KEY_LEFTCTRL, "ctrl"),
-                Triple("alt", LinuxKeycodes.KEY_LEFTALT, "alt"),
-                Triple("altgr", LinuxKeycodes.KEY_RIGHTALT, "ralt"),
-            )
-        for ((id, code, modKey) in toolbarMods) {
-            val flow = _modifiers[id] ?: _modifiers[modKey] ?: continue
-            if (flow.value == ModifierState.STICKY) {
-                flow.value = ModifierState.INACTIVE
-                keycodes += code
+            val toolbarMods =
+                listOf(
+                    Triple("ctrl", LinuxKeycodes.KEY_LEFTCTRL, "ctrl"),
+                    Triple("alt", LinuxKeycodes.KEY_LEFTALT, "alt"),
+                    Triple("altgr", LinuxKeycodes.KEY_RIGHTALT, "ralt"),
+                )
+            for ((id, code, modKey) in toolbarMods) {
+                val flow = _modifiers[id] ?: _modifiers[modKey] ?: continue
+                if (flow.value == ModifierState.STICKY) {
+                    flow.value = ModifierState.INACTIVE
+                    add(code)
+                }
             }
+            if (isNotEmpty()) AppLog.d(TAG, "releaseStickyModifiers: $this")
         }
-        if (keycodes.isNotEmpty()) AppLog.d(TAG, "releaseStickyModifiers: $keycodes")
-        return keycodes
-    }
 
-    fun activeModifierKeycodes(layout: List<List<KeyDef>>): List<Int> {
-        val keycodes = mutableListOf<Int>()
-        for (row in layout) {
-            for (key in row) {
-                if (key.type == KeyType.MODIFIER) {
-                    if (key.id == "caps") continue
-                    val state = _modifiers[key.id]?.value ?: ModifierState.INACTIVE
-                    if (state != ModifierState.INACTIVE && key.linuxKeycode != 0) {
-                        keycodes += key.linuxKeycode
+    fun activeModifierKeycodes(layout: List<List<KeyDef>>): List<Int> =
+        buildList {
+            for (row in layout) {
+                for (key in row) {
+                    if (key.type == KeyType.MODIFIER) {
+                        if (key.id == "caps") continue
+                        val state = _modifiers[key.id]?.value ?: ModifierState.INACTIVE
+                        if (state != ModifierState.INACTIVE && key.linuxKeycode != 0) {
+                            add(key.linuxKeycode)
+                        }
                     }
                 }
             }
-        }
-        val capsState = _modifiers["caps"]?.value ?: ModifierState.INACTIVE
-        if (capsState != ModifierState.INACTIVE) {
-            if (LinuxKeycodes.KEY_LEFTSHIFT !in keycodes) {
-                keycodes += LinuxKeycodes.KEY_LEFTSHIFT
+            val capsState = _modifiers["caps"]?.value ?: ModifierState.INACTIVE
+            if (capsState != ModifierState.INACTIVE) {
+                if (LinuxKeycodes.KEY_LEFTSHIFT !in this) {
+                    add(LinuxKeycodes.KEY_LEFTSHIFT)
+                }
+            }
+            val toolbarMods =
+                listOf(
+                    "ctrl" to LinuxKeycodes.KEY_LEFTCTRL,
+                    "alt" to LinuxKeycodes.KEY_LEFTALT,
+                    "altgr" to LinuxKeycodes.KEY_RIGHTALT,
+                    "ralt" to LinuxKeycodes.KEY_RIGHTALT,
+                )
+            for ((id, code) in toolbarMods) {
+                val state = _modifiers[id]?.value ?: ModifierState.INACTIVE
+                if (state != ModifierState.INACTIVE && code !in this) {
+                    add(code)
+                }
             }
         }
-        val toolbarMods =
-            listOf(
-                "ctrl" to LinuxKeycodes.KEY_LEFTCTRL,
-                "alt" to LinuxKeycodes.KEY_LEFTALT,
-                "altgr" to LinuxKeycodes.KEY_RIGHTALT,
-                "ralt" to LinuxKeycodes.KEY_RIGHTALT,
-            )
-        for ((id, code) in toolbarMods) {
-            val state = _modifiers[id]?.value ?: ModifierState.INACTIVE
-            if (state != ModifierState.INACTIVE && code !in keycodes) {
-                keycodes += code
-            }
-        }
-        return keycodes
-    }
 
     /** Returns the keycodes of all active modifiers, filtering out Shift for non-letter keys if not held. */
     fun activeModifierKeycodesFor(
@@ -249,25 +247,27 @@ object KeyboardState {
     /** Resets all modifier states to [ModifierState.INACTIVE]. Called on screen exit. */
     fun reset() {
         AppLog.d(TAG, "reset modifier states")
-        val activeCodes = mutableListOf<Int>()
-        _modifiers.forEach { (id, flow) ->
-            if (flow.value != ModifierState.INACTIVE) {
-                val code =
-                    when (id) {
-                        "lshift" -> LinuxKeycodes.KEY_LEFTSHIFT
-                        "rshift" -> LinuxKeycodes.KEY_RIGHTSHIFT
-                        "caps" -> LinuxKeycodes.KEY_LEFTSHIFT
-                        "ctrl" -> LinuxKeycodes.KEY_LEFTCTRL
-                        "alt" -> LinuxKeycodes.KEY_LEFTALT
-                        "altgr", "ralt" -> LinuxKeycodes.KEY_RIGHTALT
-                        "meta" -> LinuxKeycodes.KEY_LEFTMETA
-                        else -> 0
+        val activeCodes =
+            buildList {
+                _modifiers.forEach { (id, flow) ->
+                    if (flow.value != ModifierState.INACTIVE) {
+                        val code =
+                            when (id) {
+                                "lshift" -> LinuxKeycodes.KEY_LEFTSHIFT
+                                "rshift" -> LinuxKeycodes.KEY_RIGHTSHIFT
+                                "caps" -> LinuxKeycodes.KEY_LEFTSHIFT
+                                "ctrl" -> LinuxKeycodes.KEY_LEFTCTRL
+                                "alt" -> LinuxKeycodes.KEY_LEFTALT
+                                "altgr", "ralt" -> LinuxKeycodes.KEY_RIGHTALT
+                                "meta" -> LinuxKeycodes.KEY_LEFTMETA
+                                else -> 0
+                            }
+                        if (code != 0 && code !in this) {
+                            add(code)
+                        }
                     }
-                if (code != 0 && code !in activeCodes) {
-                    activeCodes.add(code)
                 }
             }
-        }
         _modifiers.values.forEach { it.value = ModifierState.INACTIVE }
         touchDownTimes.clear()
         if (activeCodes.isNotEmpty()) {

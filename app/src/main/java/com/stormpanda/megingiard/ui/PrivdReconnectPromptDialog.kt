@@ -96,15 +96,11 @@ fun PrivdReconnectPromptDialog(
         remember {
             val isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
             val isPrivdRunning = PrivdManager.state.value == PrivdState.RUNNING
-            val list = mutableListOf<OnboardingStepId>()
-            if (!isAccessibilityActive) {
-                list.add(OnboardingStepId.ACCESSIBILITY)
-            }
-            if (!isPrivdRunning) {
-                list.add(OnboardingStepId.PRIVILEGED)
-            }
-            list.add(OnboardingStepId.FINISHED)
-            list
+            listOfNotNull(
+                if (!isAccessibilityActive) OnboardingStepId.ACCESSIBILITY else null,
+                if (!isPrivdRunning) OnboardingStepId.PRIVILEGED else null,
+                OnboardingStepId.FINISHED,
+            )
         }
 
     var activeStepIndex by remember { mutableStateOf(0) }

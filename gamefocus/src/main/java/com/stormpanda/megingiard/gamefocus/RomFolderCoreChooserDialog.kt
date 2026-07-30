@@ -131,14 +131,7 @@ fun RomFolderCoreChooserDialog(
 
             val cores =
                 remember(systemDef) {
-                    val list = mutableListOf<String?>()
-                    // Default option
-                    list.add(null)
-                    // Add alternative cores if they exist
-                    systemDef.retroArchCoreAlternatives.forEach { alt ->
-                        list.add(alt)
-                    }
-                    list
+                    listOf(null) + systemDef.retroArchCoreAlternatives
                 }
 
             var selectedCore by remember { mutableStateOf<String?>(null) }
