@@ -47,7 +47,7 @@ sealed class GameFocusCategory {
     }
 
     companion object {
-        val builtIns: List<GameFocusCategory> = listOf(GAMES, APPS, ALL_APPS, FAVORITES, LAST_USED)
+        val builtIns: List<GameFocusCategory> get() = listOf(GAMES, APPS, ALL_APPS, FAVORITES, LAST_USED)
     }
 
     fun previous(categories: List<GameFocusCategory>): GameFocusCategory {
