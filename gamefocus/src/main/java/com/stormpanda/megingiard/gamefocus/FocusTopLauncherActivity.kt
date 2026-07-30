@@ -536,6 +536,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
         } else if (direction == ScrollDirection.RIGHT) {
             dpadStepRightTriggerState.intValue++
             AppLog.d(TAG, "Incremented dpadStepRightTriggerState to ${dpadStepRightTriggerState.intValue}")
+        } else if (direction == ScrollDirection.UP) {
+            val prevCategory = selectedCategoryState.value.previous(activeCategories)
+            AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.id}")
+            selectedCategoryState.value = prevCategory
+        } else if (direction == ScrollDirection.DOWN) {
+            val nextCategory = selectedCategoryState.value.next(activeCategories)
+            AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.id}")
+            selectedCategoryState.value = nextCategory
         }
 
         repeatJob =
@@ -548,6 +556,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     } else if (direction == ScrollDirection.RIGHT) {
                         dpadStepRightTriggerState.intValue++
                         AppLog.d(TAG, "Repeat tick: dpadStepRightTriggerState = ${dpadStepRightTriggerState.intValue}")
+                    } else if (direction == ScrollDirection.UP) {
+                        val prevCategory = selectedCategoryState.value.previous(activeCategories)
+                        AppLog.i(TAG, "Category UP repeat tick -> switching launcher category to ${prevCategory.id}")
+                        selectedCategoryState.value = prevCategory
+                    } else if (direction == ScrollDirection.DOWN) {
+                        val nextCategory = selectedCategoryState.value.next(activeCategories)
+                        AppLog.i(TAG, "Category DOWN repeat tick -> switching launcher category to ${nextCategory.id}")
+                        selectedCategoryState.value = nextCategory
                     }
                     delay(REPEAT_INTERVAL_MS)
                 }
@@ -1072,18 +1088,14 @@ class FocusTopLauncherActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
             -> {
-                val prevCategory = selectedCategoryState.value.previous(activeCategories)
-                AppLog.i(TAG, "D-pad UP pressed -> switching launcher category to ${prevCategory.id}")
-                selectedCategoryState.value = prevCategory
+                startRepeat(ScrollDirection.UP)
                 return true
             }
 
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
             -> {
-                val nextCategory = selectedCategoryState.value.next(activeCategories)
-                AppLog.i(TAG, "D-pad DOWN pressed -> switching launcher category to ${nextCategory.id}")
-                selectedCategoryState.value = nextCategory
+                startRepeat(ScrollDirection.DOWN)
                 return true
             }
 
