@@ -81,6 +81,7 @@ fun RemoveRomFolderDialog(
             labelProvider = { folder ->
                 "${folder.systemName} (${folder.folderPath})"
             },
+            visibleItemsCount = 5,
             modifier =
                 Modifier
                     .fillMaxWidth()

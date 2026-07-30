@@ -175,6 +175,7 @@ fun RomFolderCoreChooserDialog(
                         core
                     }
                 },
+                visibleItemsCount = 5,
                 modifier =
                     Modifier
                         .fillMaxWidth()

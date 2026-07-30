@@ -38,6 +38,7 @@ fun <T> VerticalRollingCarousel(
     onSelectedIndexChange: (Int) -> Unit,
     labelProvider: @Composable (T) -> String,
     modifier: Modifier = Modifier,
+    visibleItemsCount: Int = 3,
     enabled: Boolean = true,
 ) {
     if (items.isEmpty()) return
@@ -52,6 +53,16 @@ fun <T> VerticalRollingCarousel(
 
     val onStepDown = {
         val nextIndex = (selectedIndex + 1).floorMod(items.size)
+        onSelectedIndexChange(nextIndex)
+    }
+
+    val onStepUpDouble = {
+        val nextIndex = (selectedIndex - 2).floorMod(items.size)
+        onSelectedIndexChange(nextIndex)
+    }
+
+    val onStepDownDouble = {
+        val nextIndex = (selectedIndex + 2).floorMod(items.size)
         onSelectedIndexChange(nextIndex)
     }
 
@@ -96,16 +107,48 @@ fun <T> VerticalRollingCarousel(
             },
             label = "VerticalRollingCarouselTransition",
         ) { currentIndex ->
+            val prevPrevIndex = (currentIndex - 2).floorMod(items.size)
             val prevIndex = (currentIndex - 1).floorMod(items.size)
             val nextIndex = (currentIndex + 1).floorMod(items.size)
+            val nextNextIndex = (currentIndex + 2).floorMod(items.size)
 
             val currentItem = items[currentIndex]
             val prevItem = items[prevIndex]
             val nextItem = items[nextIndex]
+            val prevPrevItem = items[prevPrevIndex]
+            val nextNextItem = items[nextNextIndex]
 
             Column(
                 horizontalAlignment = Alignment.Start,
             ) {
+                if (visibleItemsCount == 5) {
+                    Text(
+                        text = labelProvider(prevPrevItem),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = appColors.onSurfaceSecondary.copy(alpha = 0.15f),
+                            ),
+                        maxLines = 1,
+                        textAlign = TextAlign.Start,
+                        modifier =
+                            Modifier
+                                .graphicsLayer {
+                                    rotationX = -CAROUSEL_ROLL_ANGLE_DEG * 1.5f
+                                    scaleX = 0.85f
+                                    scaleY = 0.85f
+                                    cameraDistance = 16 * density.density
+                                }.focusProperties { canFocus = false }
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    enabled = enabled,
+                                    onClick = onStepUpDouble,
+                                ),
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
                 // Previous item (curved backward top for 3D roll illusion)
                 Text(
                     text = labelProvider(prevItem),
@@ -169,6 +212,34 @@ fun <T> VerticalRollingCarousel(
                                 onClick = onStepDown,
                             ),
                 )
+
+                if (visibleItemsCount == 5) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = labelProvider(nextNextItem),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = appColors.onSurfaceSecondary.copy(alpha = 0.15f),
+                            ),
+                        maxLines = 1,
+                        textAlign = TextAlign.Start,
+                        modifier =
+                            Modifier
+                                .graphicsLayer {
+                                    rotationX = CAROUSEL_ROLL_ANGLE_DEG * 1.5f
+                                    scaleX = 0.85f
+                                    scaleY = 0.85f
+                                    cameraDistance = 16 * density.density
+                                }.focusProperties { canFocus = false }
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    enabled = enabled,
+                                    onClick = onStepDownDouble,
+                                ),
+                    )
+                }
             }
         }
     }
