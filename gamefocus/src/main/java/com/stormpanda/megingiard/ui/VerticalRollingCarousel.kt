@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -151,7 +152,8 @@ fun <T> VerticalRollingCarousel(
                                         alpha = alphaVal
                                         transformOrigin = TransformOrigin(0f, pivotY)
                                         cameraDistance = 16 * density.density
-                                    }.clickable(
+                                    }.focusProperties { canFocus = false }
+                                    .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         enabled = enabled,
