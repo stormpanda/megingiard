@@ -39,6 +39,7 @@ private val DIALOG_ITEM_PADDING_HORIZONTAL = 12.dp
 private val DIALOG_SPACING = 12.dp
 private val DIALOG_LIST_MAX_HEIGHT = 200.dp
 private val DIALOG_CORNER_RADIUS = 8.dp
+private val DIALOG_INNER_SPACING = 8.dp
 
 @Composable
 fun RemoveRomFolderDialog(
@@ -57,6 +58,7 @@ fun RemoveRomFolderDialog(
 
     AppModalDialog(
         onDismiss = onDismiss,
+        widthFraction = 0.45f,
         modifier = modifier,
     ) {
         Text(
@@ -89,15 +91,9 @@ fun RemoveRomFolderDialog(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GamePadButtonAction(
-                button = GamePadButton.BUTTON_B,
-                text = stringResource(R.string.settings_cancel),
-                onClick = onDismiss,
-            )
-
             if (romFolders.isNotEmpty()) {
                 GamePadButtonAction(
                     button = GamePadButton.BUTTON_A,
@@ -108,7 +104,13 @@ fun RemoveRomFolderDialog(
                         }
                     },
                 )
+                Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))
             }
+            GamePadButtonAction(
+                button = GamePadButton.BUTTON_B,
+                text = stringResource(R.string.settings_cancel),
+                onClick = onDismiss,
+            )
         }
     }
 }

@@ -90,6 +90,7 @@ fun RomFolderCoreChooserDialog(
             AppLog.d(TAG, "Dialog dismissed by scrim tap")
             onDismiss()
         },
+        widthFraction = 0.45f,
         modifier = modifier,
     ) {
         if (systemDef == null) {
@@ -184,17 +185,9 @@ fun RomFolderCoreChooserDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GamePadButtonAction(
-                    button = GamePadButton.BUTTON_B,
-                    text = stringResource(R.string.gamefocus_dialog_cancel),
-                    onClick = {
-                        AppLog.d(TAG, "User cancelled core assignment dialog")
-                        onDismiss()
-                    },
-                )
                 GamePadButtonAction(
                     button = GamePadButton.BUTTON_A,
                     text = stringResource(R.string.gamefocus_dialog_core_save),
@@ -202,6 +195,15 @@ fun RomFolderCoreChooserDialog(
                         val selectedCore = cores.getOrNull(selectedIndex.coerceIn(0, cores.lastIndex))
                         AppLog.i(TAG, "User confirmed RetroArch core assignment: '$selectedCore' for recognized system ${folder.systemId}")
                         onConfirm(selectedCore)
+                    },
+                )
+                Spacer(modifier = Modifier.width(DIALOG_INNER_SPACING))
+                GamePadButtonAction(
+                    button = GamePadButton.BUTTON_B,
+                    text = stringResource(R.string.gamefocus_dialog_cancel),
+                    onClick = {
+                        AppLog.d(TAG, "User cancelled core assignment dialog")
+                        onDismiss()
                     },
                 )
             }
