@@ -63,7 +63,7 @@ class RomManagerTest {
         val files =
             arrayOf<DocumentFile>(
                 DocumentFile.fromFile(File("Cyberpunk.steam")),
-                DocumentFile.fromFile(File("Portal.lnk")),
+                DocumentFile.fromFile(File("Portal.steamappid")),
             )
         val systemId = RomManager.detectSystem(context, files)
         assertEquals("pc", systemId)
@@ -72,7 +72,7 @@ class RomManagerTest {
     @Test
     fun testDetectSystem_zippedGba() {
         val tempDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
-        val zipFile = File(tempDir, "test_game.zip")
+        val zipFile = File.createTempFile("test_game", ".zip", tempDir)
         try {
             java.io.FileOutputStream(zipFile).use { fos ->
                 java.util.zip.ZipOutputStream(fos).use { zos ->

@@ -68,7 +68,7 @@ class GameNativeLauncher : RomLauncher {
         val nameWithoutExt = file.nameWithoutExtension
         nameWithoutExt.toIntOrNull()?.let { return it }
 
-        // 2. Try reading file content (e.g., if .steam or .lnk contains just the app ID)
+        // 2. Try reading file content (e.g., if .steam or .steamappid contains just the app ID)
         try {
             val content = file.readText().trim()
             content.toIntOrNull()?.let { return it }

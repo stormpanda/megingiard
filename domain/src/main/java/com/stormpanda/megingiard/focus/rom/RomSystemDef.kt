@@ -381,7 +381,7 @@ val SUPPORTED_SYSTEMS =
         RomSystemDef(
             id = "pc",
             displayName = "PC",
-            extensions = setOf("exe", "lnk", "desktop", "steam"),
+            extensions = setOf("steam", "steamappid"),
             emulatorId = "gamenative",
         ),
     )
