@@ -166,6 +166,15 @@ fun FocusTopLauncherScreen(
     newlyAddedFolder: CustomRomFolder? = null,
     onDismissNewlyAddedFolder: () -> Unit = {},
     onConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit = { _, _ -> },
+    coreChooserDialogSelectedIndex: Int = 0,
+    onCoreChooserDialogSelectedIndexChange: (Int) -> Unit = {},
+    confirmCoreChooserTrigger: Int = 0,
+    isRemoveRomFolderDialogOpen: Boolean = false,
+    onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit = {},
+    removeRomFolderDialogSelectedIndex: Int = 0,
+    onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit = {},
+    folderToRemove: CustomRomFolder? = null,
+    onFolderToRemoveChange: (CustomRomFolder?) -> Unit = {},
     allApps: List<InstalledAppInfo> = emptyList(),
     lastUsed: List<String> = emptyList(),
     isLibraryOpen: Boolean = false,
@@ -548,6 +557,12 @@ fun FocusTopLauncherScreen(
                         onCloseRequested = onCloseLibrary,
                         enabled = isLibraryOpen,
                         tabs = libraryTabs,
+                        isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
+                        onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
+                        removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
+                        onRemoveRomFolderDialogSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
+                        folderToRemove = folderToRemove,
+                        onFolderToRemoveChange = onFolderToRemoveChange,
                     )
                 } else {
                     Box(
@@ -934,6 +949,9 @@ fun FocusTopLauncherScreen(
         if (newlyAddedFolder != null) {
             RomFolderCoreChooserDialog(
                 folder = newlyAddedFolder,
+                selectedIndex = coreChooserDialogSelectedIndex,
+                onSelectedIndexChange = onCoreChooserDialogSelectedIndexChange,
+                confirmTrigger = confirmCoreChooserTrigger,
                 onDismiss = onDismissNewlyAddedFolder,
                 onConfirm = { core -> onConfirmNewlyAddedFolderCore(newlyAddedFolder, core) },
             )

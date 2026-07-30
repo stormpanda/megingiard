@@ -195,13 +195,17 @@ fun FocusLibraryScreen(
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
     tabs: List<LibraryTab> = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES),
+    isRemoveRomFolderDialogOpen: Boolean = false,
+    onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit = {},
+    removeRomFolderDialogSelectedIndex: Int = 0,
+    onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit = {},
+    folderToRemove: CustomRomFolder? = null,
+    onFolderToRemoveChange: (CustomRomFolder?) -> Unit = {},
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
     val romFolders by RomManager.romFolders.collectAsState()
-    var showRemoveRomFolderDialog by remember { mutableStateOf(false) }
-    var folderToRemove by remember { mutableStateOf<CustomRomFolder?>(null) }
     val peekOffsetPx = with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() }
 
     Box(
@@ -530,7 +534,7 @@ fun FocusLibraryScreen(
                             add(
                                 ExpandableActionItem(
                                     label = context.getString(R.string.gamefocus_option_add_rom_folder),
-                                    iconSymbol = "folder_open",
+                                    iconSymbol = "gamepad_up",
                                     onClick = {
                                         onAddRomFolder()
                                         onOptionsMenuExpandedChange(false)
@@ -541,9 +545,9 @@ fun FocusLibraryScreen(
                                 add(
                                     ExpandableActionItem(
                                         label = context.getString(R.string.gamefocus_option_manage_rom_folders),
-                                        iconSymbol = "delete",
+                                        iconSymbol = "gamepad_down",
                                         onClick = {
-                                            showRemoveRomFolderDialog = true
+                                            onRemoveRomFolderDialogOpenChange(true)
                                             onOptionsMenuExpandedChange(false)
                                         },
                                     ),
@@ -591,62 +595,38 @@ fun FocusLibraryScreen(
             }
         }
 
-        if (showRemoveRomFolderDialog) {
-            AppModalDialog(
-                onDismiss = { showRemoveRomFolderDialog = false },
-            ) {
-                Text(
-                    text = stringResource(R.string.gamefocus_dialog_remove_rom_folder_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = appColors.onSurface,
-                    modifier = Modifier.padding(bottom = FLS_DIALOG_PADDING_BOTTOM_LARGE),
-                )
-                Text(
-                    text = stringResource(R.string.gamefocus_dialog_remove_rom_folder_msg),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = appColors.onSurfaceSecondary,
-                    modifier = Modifier.padding(bottom = FLS_DIALOG_PADDING_BOTTOM_SMALL),
-                )
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = FLS_DIALOG_LIST_MAX_HEIGHT),
-                ) {
-                    items(romFolders) { folder ->
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        folderToRemove = folder
-                                        showRemoveRomFolderDialog = false
-                                    }.padding(vertical = FLS_DIALOG_ROW_PADDING_VERTICAL, horizontal = FLS_DIALOG_ROW_PADDING_HORIZONTAL),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "${folder.systemName} (${folder.folderPath})",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = appColors.onSurface,
-                            )
-                        }
-                    }
-                }
-            }
+        if (isRemoveRomFolderDialogOpen) {
+            RemoveRomFolderDialog(
+                romFolders = romFolders,
+                selectedIndex = removeRomFolderDialogSelectedIndex,
+                onSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
+                onDismiss = { onRemoveRomFolderDialogOpenChange(false) },
+                onSelectFolder = { folder ->
+                    onFolderToRemoveChange(folder)
+                    onRemoveRomFolderDialogOpenChange(false)
+                },
+            )
         }
 
         folderToRemove?.let { folder ->
             AppAlertDialog(
-                onDismissRequest = { folderToRemove = null },
+                onDismissRequest = { onFolderToRemoveChange(null) },
                 confirmButton = {
-                    TextButton(onClick = {
-                        onRemoveRomFolder(folder)
-                        folderToRemove = null
-                    }) {
-                        Text(stringResource(R.string.gamefocus_option_manage_rom_folders))
-                    }
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_A,
+                        text = stringResource(R.string.gamefocus_option_manage_rom_folders),
+                        onClick = {
+                            onRemoveRomFolder(folder)
+                            onFolderToRemoveChange(null)
+                        },
+                    )
                 },
                 dismissButton = {
-                    TextButton(onClick = { folderToRemove = null }) {
-                        Text(stringResource(R.string.settings_cancel))
-                    }
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_B,
+                        text = stringResource(R.string.settings_cancel),
+                        onClick = { onFolderToRemoveChange(null) },
+                    )
                 },
                 title = { Text(stringResource(R.string.gamefocus_dialog_remove_confirm_title)) },
                 text = { Text(stringResource(R.string.gamefocus_dialog_remove_confirm_msg, folder.systemName)) },
