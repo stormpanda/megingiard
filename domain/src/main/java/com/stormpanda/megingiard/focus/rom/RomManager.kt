@@ -90,8 +90,7 @@ object RomManager {
         }
 
         val files = documentFile.listFiles()
-        val filenames = files.mapNotNull { it.name }
-        val systemId = detectSystem(filenames)
+        val systemId = detectSystem(context, files)
         if (systemId == null) {
             AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
             return "Could not automatically recognize any gaming system in this folder."
@@ -155,11 +154,13 @@ object RomManager {
                 val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
 
                 val files = documentFile.listFiles()
+                val isConsoleSystem = folder.systemId != "pc"
                 for (file in files) {
                     if (file.isDirectory) continue
                     val name = file.name ?: continue
                     val ext = name.substringAfterLast('.', "").lowercase()
-                    if (systemDef.extensions.contains(ext)) {
+                    val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
+                    if (isMatch) {
                         val label = name.substringBeforeLast('.')
                         val romUriStr = file.uri.toString()
                         val romPath = getPhysicalPath(file.uri) ?: romUriStr
@@ -238,10 +239,33 @@ object RomManager {
         return null
     }
 
-    internal fun detectSystem(filenames: List<String>): String? {
+    internal fun detectSystem(
+        context: Context,
+        files: Array<DocumentFile>,
+    ): String? {
         val extensionCounts = mutableMapOf<String, Int>()
-        for (name in filenames) {
-            val ext = name.substringAfterLast('.', "").lowercase()
+        var zipPeeks = 0
+        for (file in files) {
+            val name = file.name ?: continue
+            var ext = name.substringAfterLast('.', "").lowercase()
+            if (ext == "zip" && zipPeeks < 10) {
+                zipPeeks++
+                try {
+                    context.contentResolver.openInputStream(file.uri)?.use { fis ->
+                        java.util.zip.ZipInputStream(fis).use { zis ->
+                            val entry = zis.nextEntry
+                            if (entry != null) {
+                                val innerExt = entry.name.substringAfterLast('.', "").lowercase()
+                                if (innerExt.isNotEmpty()) {
+                                    ext = innerExt
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to peek inside zip file $name: ${e.message}")
+                }
+            }
             if (ext.isNotEmpty()) {
                 extensionCounts[ext] = (extensionCounts[ext] ?: 0) + 1
             }
