@@ -14,6 +14,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
@@ -77,9 +80,9 @@ class RomManagerTest {
         val tempDir = File(System.getProperty("java.io.tmpdir") ?: "/tmp")
         val zipFile = File.createTempFile("test_game", ".zip", tempDir)
         try {
-            java.io.FileOutputStream(zipFile).use { fos ->
-                java.util.zip.ZipOutputStream(fos).use { zos ->
-                    val entry = java.util.zip.ZipEntry("game.gba")
+            FileOutputStream(zipFile).use { fos ->
+                ZipOutputStream(fos).use { zos ->
+                    val entry = ZipEntry("game.gba")
                     zos.putNextEntry(entry)
                     zos.write(byteArrayOf(0))
                     zos.closeEntry()

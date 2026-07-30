@@ -122,6 +122,15 @@ private val FLS_GRID_CONTENT_PADDING_BOTTOM = 112.dp
 private val FLS_BOTTOM_GRADIENT_HEIGHT = 96.dp
 private val FLS_TOP_GRADIENT_HEIGHT = 112.dp
 
+private val FLS_DIALOG_PADDING_BOTTOM_LARGE = 12.dp
+private val FLS_DIALOG_PADDING_BOTTOM_SMALL = 8.dp
+private val FLS_DIALOG_LIST_MAX_HEIGHT = 200.dp
+private val FLS_DIALOG_ROW_PADDING_VERTICAL = 10.dp
+private val FLS_DIALOG_ROW_PADDING_HORIZONTAL = 4.dp
+private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FLS_FALLBACK_ICON_SIZE = 36.dp
+private val FLS_LABEL_GAP = 6.dp
+
 private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
 
 private const val FLS_HIDDEN_CARD_ALPHA = 0.4f
@@ -590,16 +599,16 @@ fun FocusLibraryScreen(
                     text = stringResource(R.string.gamefocus_dialog_remove_rom_folder_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = appColors.onSurface,
-                    modifier = Modifier.padding(bottom = 12.dp),
+                    modifier = Modifier.padding(bottom = FLS_DIALOG_PADDING_BOTTOM_LARGE),
                 )
                 Text(
                     text = stringResource(R.string.gamefocus_dialog_remove_rom_folder_msg),
                     style = MaterialTheme.typography.bodyMedium,
                     color = appColors.onSurfaceSecondary,
-                    modifier = Modifier.padding(bottom = 8.dp),
+                    modifier = Modifier.padding(bottom = FLS_DIALOG_PADDING_BOTTOM_SMALL),
                 )
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = FLS_DIALOG_LIST_MAX_HEIGHT),
                 ) {
                     items(romFolders) { folder ->
                         Row(
@@ -609,7 +618,7 @@ fun FocusLibraryScreen(
                                     .clickable {
                                         folderToRemove = folder
                                         showRemoveRomFolderDialog = false
-                                    }.padding(vertical = 10.dp, horizontal = 4.dp),
+                                    }.padding(vertical = FLS_DIALOG_ROW_PADDING_VERTICAL, horizontal = FLS_DIALOG_ROW_PADDING_HORIZONTAL),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
@@ -887,12 +896,12 @@ private fun LibraryGridItem(
                         bitmap = currentBitmap,
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)),
                     )
                 } else if (appInfo.isRom) {
                     MaterialSymbol(
                         name = "sports_esports",
-                        size = 36.dp,
+                        size = FLS_FALLBACK_ICON_SIZE,
                         tint = appColors.accent,
                     )
                 } else {
@@ -900,12 +909,12 @@ private fun LibraryGridItem(
                         imageVector = Icons.Default.Apps,
                         contentDescription = appInfo.label,
                         tint = appColors.accent,
-                        modifier = Modifier.size(36.dp),
+                        modifier = Modifier.size(FLS_FALLBACK_ICON_SIZE),
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(FLS_LABEL_GAP))
 
             // App Label
             Text(

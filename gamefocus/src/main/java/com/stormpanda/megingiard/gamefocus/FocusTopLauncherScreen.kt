@@ -110,6 +110,10 @@ private val FTL_POSTER_SPACING = 12.dp
 private val FTL_ICON_SIZE = 72.dp
 private val FTL_GALLERY_TOP_OFFSET = 10.dp
 private val FTL_TITLE_GAP = 25.dp
+private val FTL_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FTL_FALLBACK_ICON_SIZE = 48.dp
+private val FTL_BADGE_PADDING = 10.dp
+private val FTL_BADGE_ICON_SIZE = 22.dp
 private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
@@ -1308,13 +1312,13 @@ private fun PosterCardContent(
                     modifier =
                         Modifier
                             .size(FTL_ICON_SIZE)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS))
                             .background(appColors.surface),
                     contentAlignment = Alignment.Center,
                 ) {
                     MaterialSymbol(
                         name = "sports_esports",
-                        size = 48.dp,
+                        size = FTL_FALLBACK_ICON_SIZE,
                         tint = appColors.accent,
                     )
                 }
@@ -1333,7 +1337,7 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .size(FTL_ICON_SIZE)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS))
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1341,7 +1345,7 @@ private fun PosterCardContent(
                     imageVector = Icons.Default.Apps,
                     contentDescription = appInfo.label,
                     tint = appColors.accent,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(FTL_FALLBACK_ICON_SIZE),
                 )
             }
         }
@@ -1351,12 +1355,12 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(10.dp),
+                        .padding(FTL_BADGE_PADDING),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 MaterialSymbol(
                     name = "kid_star",
-                    size = 22.dp,
+                    size = FTL_BADGE_ICON_SIZE,
                     tint = appColors.accent,
                 )
             }
@@ -1367,13 +1371,13 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(10.dp)
+                        .padding(FTL_BADGE_PADDING)
                         .graphicsLayer { alpha = visibilityOffAlpha },
                 contentAlignment = Alignment.TopStart,
             ) {
                 MaterialSymbol(
                     name = "visibility_off",
-                    size = 22.dp,
+                    size = FTL_BADGE_ICON_SIZE,
                     tint = appColors.onSurfaceSecondary,
                 )
             }

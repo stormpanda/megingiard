@@ -42,6 +42,7 @@ sealed class AddRomFolderResult {
 object RomManager {
     private const val TAG = "RomManager"
     private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
+    private const val MAX_ZIP_PEEKS = 10
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -279,7 +280,7 @@ object RomManager {
         for (file in files) {
             val name = file.name ?: continue
             var ext = name.substringAfterLast('.', "").lowercase()
-            if (ext == "zip" && zipPeeks < 10) {
+            if (ext == "zip" && zipPeeks < MAX_ZIP_PEEKS) {
                 zipPeeks++
                 try {
                     context.contentResolver.openInputStream(file.uri)?.use { fis ->
