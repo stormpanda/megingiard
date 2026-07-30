@@ -12,6 +12,9 @@ import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.focus.rom.RomLauncherRegistry
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
@@ -22,8 +25,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -40,8 +46,14 @@ private const val INTENT_CATEGORY_APP_GAMES = "android.intent.category.APP_GAMES
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _installedApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
-    val installedApps: StateFlow<List<InstalledAppInfo>> = _installedApps.asStateFlow()
+    private val _installedAndroidApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
+    val installedApps: StateFlow<List<InstalledAppInfo>> =
+        combine(
+            _installedAndroidApps,
+            RomManager.romApps,
+        ) { androidApps, romApps ->
+            (androidApps + romApps).sortedBy { it.label.lowercase() }
+        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val scrapedPackages = HashSet<String>()
 
@@ -226,6 +238,9 @@ object InstalledAppsManager {
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
+        RomManager.loadRomFolders(context)
+        RomManager.reloadRomApps(context)
+
         loadFavorites(context)
         loadHidden(context)
         loadLastUsed(context)
@@ -306,7 +321,7 @@ object InstalledAppsManager {
                     )
                 }.sortedBy { it.label.lowercase() }
 
-        _installedApps.value = apps
+        _installedAndroidApps.value = apps
         val gameCount = apps.count { it.isGame }
         AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
 
@@ -318,8 +333,12 @@ object InstalledAppsManager {
         packageName: String,
         coverPath: String?,
     ) {
-        _installedApps.value =
-            _installedApps.value.map { item ->
+        if (packageName.startsWith("rom.")) {
+            RomManager.updateRomCover(packageName, coverPath)
+            return
+        }
+        _installedAndroidApps.value =
+            _installedAndroidApps.value.map { item ->
                 if (item.packageName == packageName) {
                     item.copy(coverPath = coverPath)
                 } else {
@@ -370,7 +389,7 @@ object InstalledAppsManager {
 
         scope.launch {
             val scrapedSet = synchronized(scrapedPackages) { loadScrapedPackages(context).toSet() }
-            val currentApps = _installedApps.value
+            val currentApps = installedApps.value
             val missingCovers = currentApps.filter { it.coverPath == null && !scrapedSet.contains(it.packageName) }
             if (missingCovers.isEmpty()) {
                 AppLog.d(TAG, "No un-scraped apps missing cover art")
@@ -434,8 +453,20 @@ object InstalledAppsManager {
         context: Context,
         appInfo: InstalledAppInfo,
         displayId: Int,
-    ): Boolean =
-        try {
+    ): Boolean {
+        if (appInfo.isRom) {
+            val systemId = appInfo.systemId ?: return false
+            val romPath = appInfo.romPath ?: return false
+            val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId } ?: return false
+            val launcher = RomLauncherRegistry.getLauncher(systemDef.emulatorId) ?: return false
+            val success = launcher.launchGame(context, romPath, systemId, displayId)
+            if (success) {
+                recordAppLaunch(context, appInfo.packageName)
+            }
+            return success
+        }
+
+        return try {
             val intent =
                 Intent(Intent.ACTION_MAIN).apply {
                     addCategory(Intent.CATEGORY_LAUNCHER)
@@ -454,6 +485,7 @@ object InstalledAppsManager {
             AppLog.e(TAG, "Failed to launch app ${appInfo.label} on display $displayId: ${e.message}", e)
             false
         }
+    }
 
     fun openAppInfo(
         context: Context,

@@ -90,6 +90,17 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Gamepad D-pad / Joystick navigation inside the Library MUST be restricted strictly to grid items (0..N). Static tabs MUST be excluded from D-pad focus, and tab category switching MUST be handled exclusively via **L1** / **R1**.
 - Dual-display launching inside the Library MUST be triggered via **A** (top display) and **X** (bottom display). Pressing **R2**, **B**, **BACK**, or **HOME** (`KEYCODE_HOME` / `KEYCODE_BUTTON_MODE` / system HOME intent) MUST close sub-views/dialogs and return the user directly to the main gallery screen.
 
+### FR-GF10: ROM & Emulator Launching
+
+- Game Focus MUST support dynamic ROM scanning and custom emulator launching.
+- Users can choose to "Add ROM Folder" via the Library Action Menu. Choosing a folder via Android's Storage Access Framework (SAF) tree directory picker MUST automatically scan files and detect the emulator/system type (e.g. SNES, NES, GBA, GB, N64, Sega Genesis, or PC games) by analyzing file extensions.
+- Recognized systems MUST dynamically expand the launcher's category list as rolling category options (e.g., "SNES", "NES", "GBA", "Genesis") after the standard built-ins.
+- Starting a dynamic ROM game MUST invoke the appropriate launcher:
+  - **RetroArchLauncher**: Resolves physical file paths and fires a targeted Android Intent (`com.retroarch` / `com.retroarch.aarch64` activity `RetroActivityFuture`) passing the target `ROM` path and the matching core `LIBRETRO` name.
+  - **GameNativeLauncher**: Invokes PC games via launcher intent `app.gamenative.MainActivity` passing the parsed Steam App ID from `.steam` or `.lnk` files.
+- Selecting "Remove ROM Folder" in the Library Action Menu MUST display an `AppModalDialog` detailing added systems, followed by an `AppAlertDialog` confirmation overlay. Removing a folder immediately unregisters its scanned ROMs and dynamic category.
+- When cover artwork is absent for ROMs, the UI MUST render the `"sports_esports"` symbol ligature from the Material Symbols Rounded font as a fallback cover card.
+
 ---
 
 ## Technical Implementation
@@ -120,7 +131,9 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 
 - **Standalone App Module:** Configured in `gamefocus/build.gradle.kts` as a standalone Android application (`com.stormpanda.megingiard.gamefocus`).
 - **ContentProvider Inter-Process Theme Syncing:** Megingiard (`:app`) hosts `MegingiardThemeProvider` (`content://com.stormpanda.megingiard.provider/theme`). Game Focus queries this URI on launch via `MegingiardThemeClient` and attaches a `ContentObserver` for real-time theme and accent color synchronization across process boundaries. If Megingiard is absent, Game Focus safely defaults to `ThemeMode.DARK`.
-- **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for primary `<application>` manifest labels (`ApplicationInfo.loadLabel`), classifying applications programmatically into games (`isGame = true`) or non-game apps (`isGame = false`) via `ApplicationInfo.category == ApplicationInfo.CATEGORY_GAME`, legacy `FLAG_IS_GAME`, and `Intent.CATEGORY_GAME` query results, managing local cover art disk caching, persistent scraped package tracking (`gamefocus_scraped_apps.txt`), persistent favorites (`gamefocus_favorites.txt`), persistent hidden packages (`gamefocus_hidden.txt`), and asynchronously scraping SteamGridDB artwork via `SteamGridDbClient` with automated query sanitization (`cleanSearchQuery`).
+- **InstalledAppsManager:** Singleton in `:domain` querying `PackageManager` for native apps, combined with ROM items loaded via `RomManager`. Intercepts launch requests in `launchAppOnDisplay` to delegate ROM launches to the registry instead of launching package intents directly.
+- **RomManager:** Singleton manager in `:domain` (`RomManager.kt`) saving/loading selected tree URIs to `gamefocus_rom_folders.json`, detecting systems based on extension frequency (mapping `snes`, `gba`, `genesis`, etc.), scanning files via Storage Access Framework (`DocumentFile`), translating `content://` URIs to physical absolute paths (e.g. `/storage/emulated/0/...`), and publishing scanned ROMs as a `romApps` StateFlow merged directly into `InstalledAppsManager.installedApps` with pseudo package names (formatted as `"rom.${systemId}.${fileNameWithoutExtension}_${romUriHashCode}"`) to leverage existing favorites, hidden, and last used states.
+- **RomLauncher & Registry:** Registry singleton (`RomLauncherRegistry.kt`) housing the extensible `RomLauncher` api, mapping emulator ids to specific implementations: `RetroArchLauncher` (resolving absolute paths and firing target activities with `ROM` and `LIBRETRO` parameters) and `GameNativeLauncher` (launching PC games via `app_id` extra parameters).
 - **LibraryTab:** Enum in `:domain` (`LibraryTab.kt`) representing static library categories (`ALL`, `APPS`, `GAMES`), tab wrap-around navigation (`next()` / `previous()`), and app filtering (`filterApps`).
 - **FocusLibraryScreen:** Composable in `:gamefocus` (`FocusLibraryScreen.kt`) rendering static tabs, condensed square rounded-corner grid layout with hidden app `visibility_off` badges, and a lower-left `ExpandableActionsMenu` for browsing, hiding/unhiding, editing, and launching installed apps.
 - **LetterNavigationHelper:** Platform-free helper in `:domain` (`LetterNavigationHelper.kt`) providing starting letter extraction (`getStartingLetter`) and index calculation for forward (R1) and backward (L1) letter skipping across installed app lists with wrap-around support.

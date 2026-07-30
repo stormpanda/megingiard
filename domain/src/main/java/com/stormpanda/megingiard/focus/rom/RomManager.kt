@@ -1,0 +1,266 @@
+package com.stormpanda.megingiard.focus.rom
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
+import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.focus.InstalledAppInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.File
+import kotlin.math.absoluteValue
+
+@Serializable
+data class CustomRomFolder(
+    val uriString: String,
+    val folderPath: String,
+    val systemId: String,
+    val systemName: String,
+)
+
+object RomManager {
+    private const val TAG = "RomManager"
+    private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private val _romFolders = MutableStateFlow<List<CustomRomFolder>>(emptyList())
+    val romFolders: StateFlow<List<CustomRomFolder>> = _romFolders.asStateFlow()
+
+    private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
+    val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
+
+    fun loadRomFolders(context: Context) {
+        val file = File(context.filesDir, FILE_ROM_FOLDERS)
+        if (file.exists()) {
+            try {
+                val content = file.readText()
+                val folders = Json.decodeFromString<List<CustomRomFolder>>(content)
+                _romFolders.value = folders
+                AppLog.d(TAG, "Loaded ${folders.size} ROM folders from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load ROM folders: ${e.message}")
+            }
+        }
+    }
+
+    private fun saveRomFolders(
+        context: Context,
+        folders: List<CustomRomFolder>,
+    ) {
+        _romFolders.value = folders
+        try {
+            val file = File(context.filesDir, FILE_ROM_FOLDERS)
+            val content = Json.encodeToString(folders)
+            file.writeText(content)
+            AppLog.d(TAG, "Saved ${folders.size} ROM folders to disk")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save ROM folders: ${e.message}", e)
+        }
+    }
+
+    fun addRomFolder(
+        context: Context,
+        uri: Uri,
+    ): String? {
+        // 1. Take persistable URI permission
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Failed to take persistable URI permission: ${e.message}")
+        }
+
+        // 2. Scan files to recognize system
+        val documentFile = DocumentFile.fromTreeUri(context, uri)
+        if (documentFile == null || !documentFile.exists()) {
+            AppLog.w(TAG, "Selected document tree does not exist")
+            return "Folder does not exist or is inaccessible."
+        }
+
+        val files = documentFile.listFiles()
+        val filenames = files.mapNotNull { it.name }
+        val systemId = detectSystem(filenames)
+        if (systemId == null) {
+            AppLog.w(TAG, "Could not automatically recognize any gaming system in folder")
+            return "Could not automatically recognize any gaming system in this folder."
+        }
+
+        val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }!!
+        val folderPath = documentFile.name ?: uri.path ?: "ROM Folder"
+
+        // 3. Prevent duplicate folders
+        val current = _romFolders.value.toMutableList()
+        if (current.any { it.uriString == uri.toString() }) {
+            return "This folder has already been added."
+        }
+
+        val newFolder =
+            CustomRomFolder(
+                uriString = uri.toString(),
+                folderPath = folderPath,
+                systemId = systemId,
+                systemName = systemDef.displayName,
+            )
+        current.add(newFolder)
+        saveRomFolders(context, current)
+
+        // 4. Reload ROM apps
+        reloadRomApps(context)
+        return null // Success
+    }
+
+    fun removeRomFolder(
+        context: Context,
+        folder: CustomRomFolder,
+    ) {
+        val current = _romFolders.value.toMutableList()
+        current.removeAll { it.uriString == folder.uriString }
+        saveRomFolders(context, current)
+
+        // Release persistable URI permission if possible
+        try {
+            context.contentResolver.releasePersistableUriPermission(
+                Uri.parse(folder.uriString),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        } catch (e: Exception) {
+            // Ignore
+        }
+
+        reloadRomApps(context)
+    }
+
+    fun reloadRomApps(context: Context) {
+        scope.launch {
+            val allRomApps = mutableListOf<InstalledAppInfo>()
+            val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+
+            for (folder in _romFolders.value) {
+                val uri = Uri.parse(folder.uriString)
+                val documentFile = DocumentFile.fromTreeUri(context, uri) ?: continue
+                if (!documentFile.exists()) continue
+
+                val systemDef = SUPPORTED_SYSTEMS.find { it.id == folder.systemId } ?: continue
+
+                val files = documentFile.listFiles()
+                for (file in files) {
+                    if (file.isDirectory) continue
+                    val name = file.name ?: continue
+                    val ext = name.substringAfterLast('.', "").lowercase()
+                    if (systemDef.extensions.contains(ext)) {
+                        val label = name.substringBeforeLast('.')
+                        val romUriStr = file.uri.toString()
+                        val romPath = getPhysicalPath(file.uri) ?: romUriStr
+
+                        val pseudoPackageName =
+                            "rom.${folder.systemId}." +
+                                name.substringBeforeLast('.').replace(Regex("[^a-zA-Z0-9_]"), "_") +
+                                "_" + romUriStr.hashCode().absoluteValue
+
+                        val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
+                        val coverPath =
+                            if (cachedCoverFile.exists() && cachedCoverFile.length() > 0) {
+                                cachedCoverFile.absolutePath
+                            } else {
+                                null
+                            }
+
+                        allRomApps.add(
+                            InstalledAppInfo(
+                                packageName = pseudoPackageName,
+                                activityName = "",
+                                label = label,
+                                icon = null,
+                                coverPath = coverPath,
+                                isGame = true,
+                                isRom = true,
+                                romPath = romPath,
+                                systemId = folder.systemId,
+                            ),
+                        )
+                    }
+                }
+            }
+
+            _romApps.value = allRomApps.sortedBy { it.label.lowercase() }
+            AppLog.d(TAG, "Scanned and loaded ${_romApps.value.size} ROMs across ${_romFolders.value.size} folders")
+        }
+    }
+
+    fun updateRomCover(
+        packageName: String,
+        coverPath: String?,
+    ) {
+        _romApps.value =
+            _romApps.value.map { item ->
+                if (item.packageName == packageName) {
+                    item.copy(coverPath = coverPath)
+                } else {
+                    item
+                }
+            }
+        AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
+    }
+
+    private fun getPhysicalPath(uri: Uri): String? {
+        val decodedUri = Uri.decode(uri.toString())
+        val primaryIndex = decodedUri.lastIndexOf("primary:")
+        if (primaryIndex != -1) {
+            val relPath = decodedUri.substring(primaryIndex + "primary:".length)
+            return "/storage/emulated/0/$relPath"
+        }
+
+        // Handle external SD card
+        val docId =
+            if (decodedUri.contains("/document/")) {
+                decodedUri.substringAfterLast("/document/").substringAfter(":")
+            } else {
+                decodedUri.substringAfterLast("/tree/").substringAfter(":")
+            }
+
+        val volumeId = decodedUri.substringBefore(":", "").substringAfterLast("/")
+        if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}"))) {
+            return "/storage/$volumeId/$docId"
+        }
+
+        return null
+    }
+
+    internal fun detectSystem(filenames: List<String>): String? {
+        val extensionCounts = mutableMapOf<String, Int>()
+        for (name in filenames) {
+            val ext = name.substringAfterLast('.', "").lowercase()
+            if (ext.isNotEmpty()) {
+                extensionCounts[ext] = (extensionCounts[ext] ?: 0) + 1
+            }
+        }
+
+        var bestSystemId: String? = null
+        var maxMatchCount = 0
+
+        for (system in SUPPORTED_SYSTEMS) {
+            var matchCount = 0
+            for (ext in system.extensions) {
+                matchCount += extensionCounts[ext] ?: 0
+            }
+            if (matchCount > maxMatchCount) {
+                maxMatchCount = matchCount
+                bestSystemId = system.id
+            }
+        }
+
+        return bestSystemId
+    }
+}

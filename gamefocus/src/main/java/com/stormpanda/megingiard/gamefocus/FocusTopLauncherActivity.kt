@@ -30,6 +30,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.focus.rom.CustomRomFolder
+import com.stormpanda.megingiard.focus.rom.RomManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -57,7 +59,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val prevLetterTriggerState = mutableIntStateOf(0)
     private val nextLetterTriggerState = mutableIntStateOf(0)
 
-    private val selectedCategoryState = mutableStateOf(GameFocusCategory.GAMES)
+    private val selectedCategoryState = mutableStateOf<GameFocusCategory>(GameFocusCategory.GAMES)
     private val isMainOptionsMenuExpandedState = mutableStateOf(false)
 
     private val isOptionsMenuExpandedState = mutableStateOf(false)
@@ -77,6 +79,27 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val dpadLeftTriggerState = mutableIntStateOf(0)
     private val dpadStepRightTriggerState = mutableIntStateOf(0)
     private val focusedAppState = mutableStateOf<InstalledAppInfo?>(null)
+
+    private var activeCategories: List<GameFocusCategory> = GameFocusCategory.builtIns
+
+    private val openDocumentTreeLauncher =
+        registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts
+                .OpenDocumentTree(),
+        ) { uri ->
+            if (uri != null) {
+                val error = RomManager.addRomFolder(this, uri)
+                if (error != null) {
+                    android.widget.Toast
+                        .makeText(this, error, android.widget.Toast.LENGTH_LONG)
+                        .show()
+                } else {
+                    android.widget.Toast
+                        .makeText(this, "System recognized and folder added!", android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
 
     private var frozenHiddenSetForInput: Set<String> = emptySet()
 
@@ -106,9 +129,33 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val favorites by InstalledAppsManager.favorites.collectAsState()
             val hidden by InstalledAppsManager.hiddenApps.collectAsState()
             val lastUsed by InstalledAppsManager.lastUsed.collectAsState()
+            val customRomFolders by RomManager.romFolders.collectAsState()
+
+            val categories =
+                remember(customRomFolders) {
+                    GameFocusCategory.builtIns +
+                        customRomFolders.map { folder ->
+                            GameFocusCategory.RomSystem(
+                                id = "rom_${folder.systemId}_${folder.uriString.hashCode()}",
+                                systemId = folder.systemId,
+                                displayName = folder.systemName,
+                                folderUri = folder.uriString,
+                            )
+                        }
+                }
+
+            SideEffect {
+                activeCategories = categories
+            }
 
             val selectedCategory = selectedCategoryState.value
             val isLibraryOpen = isLibraryOpenState.value
+
+            SideEffect {
+                if (!categories.contains(selectedCategory)) {
+                    selectedCategoryState.value = GameFocusCategory.GAMES
+                }
+            }
 
             val frozenHidden = remember(allApps, selectedCategory, isLibraryOpen) { hidden }
             SideEffect {
@@ -119,15 +166,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 remember(allApps, favorites, frozenHidden, lastUsed, selectedCategory) {
                     when (selectedCategory) {
                         GameFocusCategory.GAMES -> {
-                            allApps.filter { it.isGame && !frozenHidden.contains(it.packageName) }
+                            allApps.filter { it.isGame && !it.isRom && !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.APPS -> {
-                            allApps.filter { !it.isGame && !frozenHidden.contains(it.packageName) }
+                            allApps.filter { !it.isGame && !it.isRom && !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !frozenHidden.contains(it.packageName) }
+                            allApps.filter { !it.isRom && !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {
@@ -139,6 +186,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 .mapNotNull { pkg ->
                                     allApps.find { it.packageName == pkg }
                                 }.filter { !frozenHidden.contains(it.packageName) }
+                        }
+
+                        is GameFocusCategory.RomSystem -> {
+                            allApps.filter {
+                                it.isRom && it.systemId == selectedCategory.systemId &&
+                                    !frozenHidden.contains(
+                                        it.packageName,
+                                    )
+                            }
                         }
                     }
                 }
@@ -168,14 +224,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
                             },
                             selectedCategory = selectedCategory,
+                            categories = categories,
                             onCategoryUp = {
-                                val prevCategory = selectedCategoryState.value.previous()
-                                AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.name}")
+                                val prevCategory = selectedCategoryState.value.previous(categories)
+                                AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.id}")
                                 selectedCategoryState.value = prevCategory
                             },
                             onCategoryDown = {
-                                val nextCategory = selectedCategoryState.value.next()
-                                AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.name}")
+                                val nextCategory = selectedCategoryState.value.next(categories)
+                                AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.id}")
                                 selectedCategoryState.value = nextCategory
                             },
                             favoritesSet = favorites,
@@ -202,6 +259,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             onOpenAppInfo = { appInfo ->
                                 InstalledAppsManager.openAppInfo(this, appInfo.packageName)
                             },
+                            onAddRomFolder = { openDocumentTreeLauncher.launch(null) },
+                            onRemoveRomFolder = { folder -> RomManager.removeRomFolder(this, folder) },
                             editingAppInfo = editingApp,
                             dialogVirtualIndex = dialogVirtualIndexState.intValue,
                             onDialogVirtualIndexChange = { dialogVirtualIndexState.intValue = it },
@@ -644,15 +703,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
         val apps =
             when (selectedCategory) {
                 GameFocusCategory.GAMES -> {
-                    allApps.filter { it.isGame && !hidden.contains(it.packageName) }
+                    allApps.filter { it.isGame && !it.isRom && !hidden.contains(it.packageName) }
                 }
 
                 GameFocusCategory.APPS -> {
-                    allApps.filter { !it.isGame && !hidden.contains(it.packageName) }
+                    allApps.filter { !it.isGame && !it.isRom && !hidden.contains(it.packageName) }
                 }
 
                 GameFocusCategory.ALL_APPS -> {
-                    allApps.filter { !hidden.contains(it.packageName) }
+                    allApps.filter { !it.isRom && !hidden.contains(it.packageName) }
                 }
 
                 GameFocusCategory.FAVORITES -> {
@@ -664,6 +723,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         .mapNotNull { pkg ->
                             allApps.find { it.packageName == pkg }
                         }.filter { !hidden.contains(it.packageName) }
+                }
+
+                is GameFocusCategory.RomSystem -> {
+                    allApps.filter { it.isRom && it.systemId == selectedCategory.systemId && !hidden.contains(it.packageName) }
                 }
             }
 
@@ -743,8 +806,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_UP,
             -> {
-                val prevCategory = selectedCategoryState.value.previous()
-                AppLog.i(TAG, "D-pad UP pressed -> switching launcher category to ${prevCategory.name}")
+                val prevCategory = selectedCategoryState.value.previous(activeCategories)
+                AppLog.i(TAG, "D-pad UP pressed -> switching launcher category to ${prevCategory.id}")
                 selectedCategoryState.value = prevCategory
                 return true
             }
@@ -752,8 +815,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_SYSTEM_NAVIGATION_DOWN,
             -> {
-                val nextCategory = selectedCategoryState.value.next()
-                AppLog.i(TAG, "D-pad DOWN pressed -> switching launcher category to ${nextCategory.name}")
+                val nextCategory = selectedCategoryState.value.next(activeCategories)
+                AppLog.i(TAG, "D-pad DOWN pressed -> switching launcher category to ${nextCategory.id}")
                 selectedCategoryState.value = nextCategory
                 return true
             }
@@ -911,15 +974,15 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 val apps =
                     when (selectedCategory) {
                         GameFocusCategory.GAMES -> {
-                            allApps.filter { it.isGame && !hidden.contains(it.packageName) }
+                            allApps.filter { it.isGame && !it.isRom && !hidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.APPS -> {
-                            allApps.filter { !it.isGame && !hidden.contains(it.packageName) }
+                            allApps.filter { !it.isGame && !it.isRom && !hidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !hidden.contains(it.packageName) }
+                            allApps.filter { !it.isRom && !hidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {
@@ -930,6 +993,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             lastUsed
                                 .mapNotNull { pkg -> allApps.find { it.packageName == pkg } }
                                 .filter { !hidden.contains(it.packageName) }
+                        }
+
+                        is GameFocusCategory.RomSystem -> {
+                            allApps.filter { it.isRom && it.systemId == selectedCategory.systemId && !hidden.contains(it.packageName) }
                         }
                     }
 

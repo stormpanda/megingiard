@@ -49,5 +49,11 @@
     <string name="gamefocus_library_hint_close">R2 oder B drücken zum Schließen</string>
     <string name="gamefocus_nav_gallery">Galerie</string>
     <string name="gamefocus_nav_library">Bibliothek</string>
+    <string name="gamefocus_option_add_rom_folder">ROM-Ordner hinzufügen</string>
+    <string name="gamefocus_option_manage_rom_folders">ROM-Ordner entfernen</string>
+    <string name="gamefocus_dialog_remove_rom_folder_title">ROM-Ordner entfernen</string>
+    <string name="gamefocus_dialog_remove_rom_folder_msg">Wähle einen ROM-Ordner aus, den du entfernen möchtest:</string>
+    <string name="gamefocus_dialog_remove_confirm_title">Entfernen bestätigen</string>
+    <string name="gamefocus_dialog_remove_confirm_msg">Bist du sicher, dass du das ROM-System \'%1$s\' entfernen möchtest? Die gescannten Spiele werden aus dem Launcher entfernt.</string>
 </resources>
 

@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -126,6 +127,7 @@ fun FocusTopLauncherScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
     selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
+    categories: List<GameFocusCategory> = GameFocusCategory.builtIns,
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
     favoritesSet: Set<String> = emptySet(),
@@ -136,6 +138,8 @@ fun FocusTopLauncherScreen(
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onAddRomFolder: () -> Unit = {},
+    onRemoveRomFolder: (com.stormpanda.megingiard.focus.rom.CustomRomFolder) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
@@ -176,9 +180,21 @@ fun FocusTopLauncherScreen(
 
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
 
-    val gamesApps = remember(allApps, frozenHiddenSet) { allApps.filter { it.isGame && !frozenHiddenSet.contains(it.packageName) } }
-    val appsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !it.isGame && !frozenHiddenSet.contains(it.packageName) } }
-    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !frozenHiddenSet.contains(it.packageName) } }
+    val gamesApps =
+        remember(allApps, frozenHiddenSet) {
+            allApps.filter {
+                it.isGame && !it.isRom &&
+                    !frozenHiddenSet.contains(it.packageName)
+            }
+        }
+    val appsApps =
+        remember(allApps, frozenHiddenSet) {
+            allApps.filter {
+                !it.isGame && !it.isRom &&
+                    !frozenHiddenSet.contains(it.packageName)
+            }
+        }
+    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !it.isRom && !frozenHiddenSet.contains(it.packageName) } }
     val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
     val lastUsedApps =
         remember(allApps, frozenHiddenSet, lastUsed) {
@@ -189,11 +205,32 @@ fun FocusTopLauncherScreen(
 
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
         when (cat) {
-            GameFocusCategory.GAMES -> gamesApps
-            GameFocusCategory.APPS -> appsApps
-            GameFocusCategory.ALL_APPS -> allAppsApps
-            GameFocusCategory.FAVORITES -> favoritesApps
-            GameFocusCategory.LAST_USED -> lastUsedApps
+            GameFocusCategory.GAMES -> {
+                gamesApps
+            }
+
+            GameFocusCategory.APPS -> {
+                appsApps
+            }
+
+            GameFocusCategory.ALL_APPS -> {
+                allAppsApps
+            }
+
+            GameFocusCategory.FAVORITES -> {
+                favoritesApps
+            }
+
+            GameFocusCategory.LAST_USED -> {
+                lastUsedApps
+            }
+
+            is GameFocusCategory.RomSystem -> {
+                allApps.filter {
+                    it.isRom && it.systemId == cat.systemId &&
+                        !frozenHiddenSet.contains(it.packageName)
+                }
+            }
         }
 
     val categoryApps = getAppsForCategory(selectedCategory)
@@ -212,13 +249,35 @@ fun FocusTopLauncherScreen(
     val favoritesPagerState = rememberPagerState(initialPage = 0) { favoritesApps.size }
     val lastUsedPagerState = rememberPagerState(initialPage = 0) { lastUsedApps.size }
 
+    val romPagerStates = remember { mutableMapOf<String, PagerState>() }
+
     val activePagerState =
         when (selectedCategory) {
-            GameFocusCategory.GAMES -> gamesPagerState
-            GameFocusCategory.APPS -> appsPagerState
-            GameFocusCategory.ALL_APPS -> allAppsPagerState
-            GameFocusCategory.FAVORITES -> favoritesPagerState
-            GameFocusCategory.LAST_USED -> lastUsedPagerState
+            GameFocusCategory.GAMES -> {
+                gamesPagerState
+            }
+
+            GameFocusCategory.APPS -> {
+                appsPagerState
+            }
+
+            GameFocusCategory.ALL_APPS -> {
+                allAppsPagerState
+            }
+
+            GameFocusCategory.FAVORITES -> {
+                favoritesPagerState
+            }
+
+            GameFocusCategory.LAST_USED -> {
+                lastUsedPagerState
+            }
+
+            is GameFocusCategory.RomSystem -> {
+                romPagerStates.getOrPut(selectedCategory.id) {
+                    RomPagerState(0, 0f) { categoryApps.size }
+                }
+            }
         }
 
     // Clamp active pager state if list shrinks (e.g. app hidden)
@@ -241,7 +300,7 @@ fun FocusTopLauncherScreen(
             }
         if (categoryApps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
             val safeIndex = targetIndex.coerceIn(0, categoryApps.size - 1)
-            AppLog.d(TAG, "Category switched to ${selectedCategory.name} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
+            AppLog.d(TAG, "Category switched to ${selectedCategory.id} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
             activePagerState.scrollToPage(safeIndex)
         }
     }
@@ -272,7 +331,7 @@ fun FocusTopLauncherScreen(
                 isLetterOverlayActive = false
             } else {
                 val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else categoryApps.size - 1
-                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
+                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage} -> target=$prevIndex")
                 activePagerState.animateScrollToPage(prevIndex)
             }
         }
@@ -287,7 +346,7 @@ fun FocusTopLauncherScreen(
                 isLetterOverlayActive = false
             } else {
                 val nextIndex = if (activePagerState.currentPage < categoryApps.size - 1) activePagerState.currentPage + 1 else 0
-                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
+                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage} -> target=$nextIndex")
                 activePagerState.animateScrollToPage(nextIndex)
             }
         }
@@ -332,7 +391,7 @@ fun FocusTopLauncherScreen(
                 selectedLetterNavIndex = (selectedLetterNavIndex - 1).coerceAtLeast(0)
                 AppLog.d(
                     TAG,
-                    "L1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                    "L1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
                 scheduleLetterCommit()
             }
@@ -352,7 +411,7 @@ fun FocusTopLauncherScreen(
                 selectedLetterNavIndex = (selectedLetterNavIndex + 1).coerceAtMost(uniqueLetters.size - 1)
                 AppLog.d(
                     TAG,
-                    "R1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                    "R1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
                 scheduleLetterCommit()
             }
@@ -364,7 +423,7 @@ fun FocusTopLauncherScreen(
         onFocusedAppChanged(currentApp)
         if (currentApp != null) {
             lastHighlightedPackages = lastHighlightedPackages + (selectedCategory to currentApp.packageName)
-            AppLog.d(TAG, "Focused game changed for ${selectedCategory.name}: package=${currentApp.packageName}, label=${currentApp.label}")
+            AppLog.d(TAG, "Focused game changed for ${selectedCategory.id}: package=${currentApp.packageName}, label=${currentApp.label}")
         }
     }
 
@@ -455,6 +514,8 @@ fun FocusTopLauncherScreen(
                     onToggleHidden = onToggleHidden,
                     onEditArtwork = onEditArtwork,
                     onOpenAppInfo = onOpenAppInfo,
+                    onAddRomFolder = onAddRomFolder,
+                    onRemoveRomFolder = onRemoveRomFolder,
                     onAppClickTop = onAppClickTop,
                     onAppClickBottom = onAppClickBottom,
                     onCloseRequested = onCloseLibrary,
@@ -487,7 +548,7 @@ fun FocusTopLauncherScreen(
                         AnimatedContent(
                             targetState = selectedCategory,
                             transitionSpec = {
-                                val isMovingDown = initialState.next() == targetState
+                                val isMovingDown = initialState.next(categories) == targetState
                                 if (isMovingDown) {
                                     (slideInVertically { height -> height } + fadeIn())
                                         .togetherWith(slideOutVertically { height -> -height } + fadeOut())
@@ -532,11 +593,31 @@ fun FocusTopLauncherScreen(
                                         // Carousel
                                         val categoryPagerState =
                                             when (category) {
-                                                GameFocusCategory.GAMES -> gamesPagerState
-                                                GameFocusCategory.APPS -> appsPagerState
-                                                GameFocusCategory.ALL_APPS -> allAppsPagerState
-                                                GameFocusCategory.FAVORITES -> favoritesPagerState
-                                                GameFocusCategory.LAST_USED -> lastUsedPagerState
+                                                GameFocusCategory.GAMES -> {
+                                                    gamesPagerState
+                                                }
+
+                                                GameFocusCategory.APPS -> {
+                                                    appsPagerState
+                                                }
+
+                                                GameFocusCategory.ALL_APPS -> {
+                                                    allAppsPagerState
+                                                }
+
+                                                GameFocusCategory.FAVORITES -> {
+                                                    favoritesPagerState
+                                                }
+
+                                                GameFocusCategory.LAST_USED -> {
+                                                    lastUsedPagerState
+                                                }
+
+                                                is GameFocusCategory.RomSystem -> {
+                                                    romPagerStates.getOrPut(category.id) {
+                                                        RomPagerState(0, 0f) { currentCategoryApps.size }
+                                                    }
+                                                }
                                             }
                                         HorizontalPosterCarousel(
                                             itemCount = currentCategoryApps.size,
@@ -629,6 +710,7 @@ fun FocusTopLauncherScreen(
                     // Top-Left Category Header hovering over the gallery plane
                     InteractiveCategoryHeader(
                         selectedCategory = selectedCategory,
+                        categories = categories,
                         onCategoryUp = onCategoryUp,
                         onCategoryDown = onCategoryDown,
                         enabled = isControlsEnabled,
@@ -658,64 +740,71 @@ fun FocusTopLauncherScreen(
                     ) {
                         val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
                         val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
+                        val actions =
+                            remember(currentApp, isCurrentFavorite, isCurrentHidden) {
+                                val list = mutableListOf<ExpandableActionItem>()
+                                if (currentApp != null) {
+                                    list.add(
+                                        ExpandableActionItem(
+                                            label =
+                                                if (isCurrentFavorite) {
+                                                    context.getString(R.string.gamefocus_option_remove_favorite)
+                                                } else {
+                                                    context.getString(R.string.gamefocus_option_add_favorite)
+                                                },
+                                            iconSymbol = "gamepad_up",
+                                            onClick = {
+                                                onToggleFavorite(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                    list.add(
+                                        ExpandableActionItem(
+                                            label = context.getString(R.string.gamefocus_option_edit),
+                                            iconSymbol = "gamepad_right",
+                                            onClick = {
+                                                onEditArtwork(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                    if (!currentApp.isRom) {
+                                        list.add(
+                                            ExpandableActionItem(
+                                                label = context.getString(R.string.gamefocus_option_app_info),
+                                                iconSymbol = "gamepad_down",
+                                                onClick = {
+                                                    onOpenAppInfo(currentApp)
+                                                    onMainOptionsMenuExpandedChange(false)
+                                                },
+                                            ),
+                                        )
+                                    }
+                                    list.add(
+                                        ExpandableActionItem(
+                                            label =
+                                                if (isCurrentHidden) {
+                                                    context.getString(R.string.gamefocus_option_unhide)
+                                                } else {
+                                                    context.getString(R.string.gamefocus_option_hide)
+                                                },
+                                            iconSymbol = "gamepad_left",
+                                            onClick = {
+                                                onToggleHidden(currentApp)
+                                                onMainOptionsMenuExpandedChange(false)
+                                            },
+                                        ),
+                                    )
+                                }
+                                list
+                            }
                         ExpandableActionsMenu(
                             isExpanded = isMainOptionsMenuExpanded,
                             onExpandedChange = onMainOptionsMenuExpandedChange,
                             orientation = ExpandableMenuOrientation.VERTICAL,
                             enabled = isControlsEnabled,
-                            actions =
-                                listOf(
-                                    ExpandableActionItem(
-                                        label =
-                                            if (isCurrentFavorite) {
-                                                stringResource(R.string.gamefocus_option_remove_favorite)
-                                            } else {
-                                                stringResource(R.string.gamefocus_option_add_favorite)
-                                            },
-                                        iconSymbol = "gamepad_up",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onToggleFavorite(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                    ExpandableActionItem(
-                                        label = stringResource(R.string.gamefocus_option_edit),
-                                        iconSymbol = "gamepad_right",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onEditArtwork(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                    ExpandableActionItem(
-                                        label = stringResource(R.string.gamefocus_option_app_info),
-                                        iconSymbol = "gamepad_down",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onOpenAppInfo(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                    ExpandableActionItem(
-                                        label =
-                                            if (isCurrentHidden) {
-                                                stringResource(R.string.gamefocus_option_unhide)
-                                            } else {
-                                                stringResource(R.string.gamefocus_option_hide)
-                                            },
-                                        iconSymbol = "gamepad_left",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onToggleHidden(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                ),
+                            actions = actions,
                         )
                     }
 
@@ -991,8 +1080,16 @@ private fun Modifier.noFocusClickable(
 }
 
 @Composable
+private fun getCategoryName(category: GameFocusCategory): String =
+    when (category) {
+        is GameFocusCategory.RomSystem -> category.displayName
+        else -> stringResource(category.stringResId)
+    }
+
+@Composable
 private fun InteractiveCategoryHeader(
     selectedCategory: GameFocusCategory,
+    categories: List<GameFocusCategory>,
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
     enabled: Boolean = true,
@@ -1031,7 +1128,7 @@ private fun InteractiveCategoryHeader(
         AnimatedContent(
             targetState = selectedCategory,
             transitionSpec = {
-                val isMovingDown = initialState.next() == targetState
+                val isMovingDown = initialState.next(categories) == targetState
                 if (isMovingDown) {
                     (slideInVertically { height -> height / 3 } + fadeIn())
                         .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
@@ -1042,15 +1139,15 @@ private fun InteractiveCategoryHeader(
             },
             label = "CategoryRollingTransition",
         ) { currentCat ->
-            val currentPrev = currentCat.previous()
-            val currentNext = currentCat.next()
+            val currentPrev = currentCat.previous(categories)
+            val currentNext = currentCat.next(categories)
 
             Column(
                 horizontalAlignment = Alignment.Start,
             ) {
                 // Previous category (curved backward top for 3D roll illusion)
                 Text(
-                    text = stringResource(currentPrev.stringResId),
+                    text = getCategoryName(currentPrev),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -1070,7 +1167,7 @@ private fun InteractiveCategoryHeader(
 
                 // Active category (highlighted, center-front)
                 Text(
-                    text = stringResource(currentCat.stringResId),
+                    text = getCategoryName(currentCat),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -1084,7 +1181,7 @@ private fun InteractiveCategoryHeader(
 
                 // Next category (curved backward bottom for 3D roll illusion)
                 Text(
-                    text = stringResource(currentNext.stringResId),
+                    text = getCategoryName(currentNext),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -1147,6 +1244,21 @@ private fun PosterCardContent(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+        } else if (appInfo.isRom) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(FTL_ICON_SIZE)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(appColors.surface),
+                contentAlignment = Alignment.Center,
+            ) {
+                MaterialSymbol(
+                    name = "sports_esports",
+                    size = 48.dp,
+                    tint = appColors.accent,
+                )
+            }
         } else if (currentIcon != null) {
             Image(
                 bitmap = currentIcon,
@@ -1221,3 +1333,12 @@ private fun Drawable.toBitmapSafe(): ImageBitmap? =
     } catch (e: Exception) {
         null
     }
+
+class RomPagerState(
+    initialPage: Int = 0,
+    initialPageOffsetFraction: Float = 0f,
+    private val pageCountProvider: () -> Int,
+) : androidx.compose.foundation.pager.PagerState(initialPage, initialPageOffsetFraction) {
+    override val pageCount: Int
+        get() = pageCountProvider()
+}

@@ -9,4 +9,7 @@ data class InstalledAppInfo(
     val icon: Drawable? = null,
     val coverPath: String? = null,
     val isGame: Boolean = false,
+    val isRom: Boolean = false,
+    val romPath: String? = null,
+    val systemId: String? = null,
 )

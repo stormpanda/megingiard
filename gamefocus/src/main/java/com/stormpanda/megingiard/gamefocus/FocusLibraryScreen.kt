@@ -29,23 +29,28 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,6 +92,10 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.focus.rom.CustomRomFolder
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.ui.AppAlertDialog
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -172,10 +181,16 @@ fun FocusLibraryScreen(
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onAddRomFolder: () -> Unit = {},
+    onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
+    val context = LocalContext.current
+    val romFolders by RomManager.romFolders.collectAsState()
+    var showRemoveRomFolderDialog by remember { mutableStateOf(false) }
+    var folderToRemove by remember { mutableStateOf<CustomRomFolder?>(null) }
     val peekOffsetPx = with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() }
 
     Box(
@@ -480,29 +495,56 @@ fun FocusLibraryScreen(
         ) {
             // Lower Left: Library Action Menu
             Box(modifier = Modifier.align(Alignment.BottomStart)) {
+                val actions =
+                    remember(focusedApp, isCurrentHidden, romFolders) {
+                        val list = mutableListOf<ExpandableActionItem>()
+                        if (focusedApp != null) {
+                            list.add(
+                                ExpandableActionItem(
+                                    label =
+                                        if (isCurrentHidden) {
+                                            context.getString(R.string.gamefocus_option_unhide)
+                                        } else {
+                                            context.getString(R.string.gamefocus_option_hide)
+                                        },
+                                    iconSymbol = "gamepad_left",
+                                    onClick = {
+                                        onToggleHidden(focusedApp)
+                                        onOptionsMenuExpandedChange(false)
+                                    },
+                                ),
+                            )
+                        }
+                        list.add(
+                            ExpandableActionItem(
+                                label = context.getString(R.string.gamefocus_option_add_rom_folder),
+                                iconSymbol = "folder_open",
+                                onClick = {
+                                    onAddRomFolder()
+                                    onOptionsMenuExpandedChange(false)
+                                },
+                            ),
+                        )
+                        if (romFolders.isNotEmpty()) {
+                            list.add(
+                                ExpandableActionItem(
+                                    label = context.getString(R.string.gamefocus_option_manage_rom_folders),
+                                    iconSymbol = "delete",
+                                    onClick = {
+                                        showRemoveRomFolderDialog = true
+                                        onOptionsMenuExpandedChange(false)
+                                    },
+                                ),
+                            )
+                        }
+                        list
+                    }
                 ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,
                     onExpandedChange = onOptionsMenuExpandedChange,
                     orientation = ExpandableMenuOrientation.VERTICAL,
                     enabled = enabled,
-                    actions =
-                        listOf(
-                            ExpandableActionItem(
-                                label =
-                                    if (isCurrentHidden) {
-                                        stringResource(R.string.gamefocus_option_unhide)
-                                    } else {
-                                        stringResource(R.string.gamefocus_option_hide)
-                                    },
-                                iconSymbol = "gamepad_left",
-                                onClick = {
-                                    if (focusedApp != null) {
-                                        onToggleHidden(focusedApp)
-                                        onOptionsMenuExpandedChange(false)
-                                    }
-                                },
-                            ),
-                        ),
+                    actions = actions,
                 )
             }
 
@@ -535,6 +577,68 @@ fun FocusLibraryScreen(
                     },
                 )
             }
+        }
+
+        if (showRemoveRomFolderDialog) {
+            AppModalDialog(
+                onDismiss = { showRemoveRomFolderDialog = false },
+            ) {
+                Text(
+                    text = stringResource(R.string.gamefocus_dialog_remove_rom_folder_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = appColors.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                Text(
+                    text = stringResource(R.string.gamefocus_dialog_remove_rom_folder_msg),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = appColors.onSurfaceSecondary,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp),
+                ) {
+                    items(romFolders) { folder ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        folderToRemove = folder
+                                        showRemoveRomFolderDialog = false
+                                    }.padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "${folder.systemName} (${folder.folderPath})",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = appColors.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        folderToRemove?.let { folder ->
+            AppAlertDialog(
+                onDismissRequest = { folderToRemove = null },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onRemoveRomFolder(folder)
+                        folderToRemove = null
+                    }) {
+                        Text(stringResource(R.string.gamefocus_option_manage_rom_folders))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { folderToRemove = null }) {
+                        Text(stringResource(R.string.settings_cancel))
+                    }
+                },
+                title = { Text(stringResource(R.string.gamefocus_dialog_remove_confirm_title)) },
+                text = { Text(stringResource(R.string.gamefocus_dialog_remove_confirm_msg, folder.systemName)) },
+            )
         }
     }
 }
@@ -771,6 +875,12 @@ private fun LibraryGridItem(
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+                    )
+                } else if (appInfo.isRom) {
+                    MaterialSymbol(
+                        name = "sports_esports",
+                        size = 36.dp,
+                        tint = appColors.accent,
                     )
                 } else {
                     Icon(
