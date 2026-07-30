@@ -158,6 +158,16 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                 InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
                             },
                             selectedCategory = selectedCategory,
+                            onCategoryUp = {
+                                val prevCategory = selectedCategoryState.value.previous()
+                                AppLog.i(TAG, "Category UP button clicked -> switching launcher category to ${prevCategory.name}")
+                                selectedCategoryState.value = prevCategory
+                            },
+                            onCategoryDown = {
+                                val nextCategory = selectedCategoryState.value.next()
+                                AppLog.i(TAG, "Category DOWN button clicked -> switching launcher category to ${nextCategory.name}")
+                                selectedCategoryState.value = nextCategory
+                            },
                             favoritesSet = favorites,
                             hiddenSet = hidden,
                             isMainOptionsMenuExpanded = isMainOptionsMenuExpandedState.value,

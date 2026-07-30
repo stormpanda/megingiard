@@ -18,10 +18,12 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -119,6 +121,8 @@ fun FocusTopLauncherScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
     selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
+    onCategoryUp: () -> Unit = {},
+    onCategoryDown: () -> Unit = {},
     favoritesSet: Set<String> = emptySet(),
     hiddenSet: Set<String> = emptySet(),
     isMainOptionsMenuExpanded: Boolean = false,
@@ -606,17 +610,21 @@ fun FocusTopLauncherScreen(
 
                     // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
+                    // Top-Right Library navigation button hovering over the gallery plane
+                    val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
+
                     // Top-Left Category Header hovering over the gallery plane
                     InteractiveCategoryHeader(
                         selectedCategory = selectedCategory,
+                        onCategoryUp = onCategoryUp,
+                        onCategoryDown = onCategoryDown,
+                        enabled = isControlsEnabled,
                         modifier =
                             Modifier
                                 .align(Alignment.TopStart)
                                 .padding(start = 24.dp, top = 16.dp),
                     )
 
-                    // Top-Right Library navigation button hovering over the gallery plane
-                    val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
                     GamePadButtonAction(
                         button = GamePadButton.BUTTON_R2,
                         text = stringResource(R.string.gamefocus_nav_library),
@@ -954,83 +962,131 @@ internal object FocusImageCache {
 }
 
 @Composable
+private fun Modifier.noFocusClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    return this
+        .focusProperties { canFocus = false }
+        .clickable(
+            enabled = enabled,
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick,
+        )
+}
+
+@Composable
 private fun InteractiveCategoryHeader(
     selectedCategory: GameFocusCategory,
+    onCategoryUp: () -> Unit = {},
+    onCategoryDown: () -> Unit = {},
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
 
-    AnimatedContent(
-        targetState = selectedCategory,
-        transitionSpec = {
-            val isMovingDown = initialState.next() == targetState
-            if (isMovingDown) {
-                (slideInVertically { height -> height / 3 } + fadeIn())
-                    .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
-            } else {
-                (slideInVertically { height -> -height / 3 } + fadeIn())
-                    .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
-            }
-        },
-        label = "CategoryRollingTransition",
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
-    ) { currentCat ->
-        val currentPrev = currentCat.previous()
-        val currentNext = currentCat.next()
-
+    ) {
+        // Up & Down Gamepad Action Buttons on the left of categories
         Column(
-            horizontalAlignment = Alignment.Start,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(end = 6.dp),
         ) {
-            // Previous category (curved backward top for 3D roll illusion)
-            Text(
-                text = stringResource(currentPrev.stringResId),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                    ),
-                maxLines = 1,
-                textAlign = TextAlign.Start,
-                modifier =
-                    Modifier.graphicsLayer {
-                        rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
-                        cameraDistance = 16 * density.density
-                    },
+            GamePadButtonAction(
+                button = GamePadButton.DPAD_UP,
+                text = "",
+                enabled = enabled,
+                onClick = onCategoryUp,
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
             )
-
             Spacer(modifier = Modifier.height(2.dp))
-
-            // Active category (highlighted, center-front)
-            Text(
-                text = stringResource(currentCat.stringResId),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurfaceSecondary,
-                    ),
-                maxLines = 1,
-                textAlign = TextAlign.Start,
+            GamePadButtonAction(
+                button = GamePadButton.DPAD_DOWN,
+                text = "",
+                enabled = enabled,
+                onClick = onCategoryDown,
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
             )
+        }
 
-            Spacer(modifier = Modifier.height(2.dp))
+        AnimatedContent(
+            targetState = selectedCategory,
+            transitionSpec = {
+                val isMovingDown = initialState.next() == targetState
+                if (isMovingDown) {
+                    (slideInVertically { height -> height / 3 } + fadeIn())
+                        .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
+                } else {
+                    (slideInVertically { height -> -height / 3 } + fadeIn())
+                        .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
+                }
+            },
+            label = "CategoryRollingTransition",
+        ) { currentCat ->
+            val currentPrev = currentCat.previous()
+            val currentNext = currentCat.next()
 
-            // Next category (curved backward bottom for 3D roll illusion)
-            Text(
-                text = stringResource(currentNext.stringResId),
-                style =
-                    MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                    ),
-                maxLines = 1,
-                textAlign = TextAlign.Start,
-                modifier =
-                    Modifier.graphicsLayer {
-                        rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
-                        cameraDistance = 16 * density.density
-                    },
-            )
+            Column(
+                horizontalAlignment = Alignment.Start,
+            ) {
+                // Previous category (curved backward top for 3D roll illusion)
+                Text(
+                    text = stringResource(currentPrev.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                        ),
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                        Modifier
+                            .graphicsLayer {
+                                rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
+                                cameraDistance = 16 * density.density
+                            }.noFocusClickable(enabled = enabled) { onCategoryUp() },
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Active category (highlighted, center-front)
+                Text(
+                    text = stringResource(currentCat.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary,
+                        ),
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Next category (curved backward bottom for 3D roll illusion)
+                Text(
+                    text = stringResource(currentNext.stringResId),
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
+                        ),
+                    maxLines = 1,
+                    textAlign = TextAlign.Start,
+                    modifier =
+                        Modifier
+                            .graphicsLayer {
+                                rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
+                                cameraDistance = 16 * density.density
+                            }.noFocusClickable(enabled = enabled) { onCategoryDown() },
+                )
+            }
         }
     }
 }
