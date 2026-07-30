@@ -1,33 +1,35 @@
 package com.stormpanda.megingiard.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.math.floorMod
+import kotlin.math.abs
 
 private const val CAROUSEL_ROLL_ANGLE_DEG = 35f
 
@@ -56,15 +58,27 @@ fun <T> VerticalRollingCarousel(
         onSelectedIndexChange(nextIndex)
     }
 
-    val onStepUpDouble = {
-        val nextIndex = (selectedIndex - 2).floorMod(items.size)
-        onSelectedIndexChange(nextIndex)
+    val targetOffsetState = remember { mutableStateOf(selectedIndex.toFloat()) }
+
+    LaunchedEffect(selectedIndex) {
+        val currentTarget = targetOffsetState.value
+        var delta = (selectedIndex - currentTarget) % items.size
+        if (delta > items.size / 2f) {
+            delta -= items.size
+        } else if (delta < -items.size / 2f) {
+            delta += items.size
+        }
+        targetOffsetState.value = currentTarget + delta
     }
 
-    val onStepDownDouble = {
-        val nextIndex = (selectedIndex + 2).floorMod(items.size)
-        onSelectedIndexChange(nextIndex)
-    }
+    val animatedOffset by animateFloatAsState(
+        targetValue = targetOffsetState.value,
+        animationSpec = tween(durationMillis = 200),
+        label = "CarouselOffsetAnimation",
+    )
+
+    val itemHeight = 32.dp
+    val totalHeight = itemHeight * visibleItemsCount
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -93,152 +107,64 @@ fun <T> VerticalRollingCarousel(
             )
         }
 
-        AnimatedContent(
-            targetState = selectedIndex,
-            transitionSpec = {
-                val isMovingDown = (initialState + 1).floorMod(items.size) == targetState
-                if (isMovingDown) {
-                    (slideInVertically { height -> height / 3 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
-                } else {
-                    (slideInVertically { height -> -height / 3 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
+        Box(
+            modifier =
+                Modifier
+                    .height(totalHeight)
+                    .weight(1f),
+            contentAlignment = Alignment.TopStart,
+        ) {
+            val itemHeightPx = with(density) { itemHeight.toPx() }
+            val centerY = itemHeightPx * (visibleItemsCount / 2)
+
+            items.forEachIndexed { i, item ->
+                var diff = (i - animatedOffset) % items.size
+                if (diff > items.size / 2f) {
+                    diff -= items.size
+                } else if (diff < -items.size / 2f) {
+                    diff += items.size
                 }
-            },
-            label = "VerticalRollingCarouselTransition",
-        ) { currentIndex ->
-            val prevPrevIndex = (currentIndex - 2).floorMod(items.size)
-            val prevIndex = (currentIndex - 1).floorMod(items.size)
-            val nextIndex = (currentIndex + 1).floorMod(items.size)
-            val nextNextIndex = (currentIndex + 2).floorMod(items.size)
 
-            val currentItem = items[currentIndex]
-            val prevItem = items[prevIndex]
-            val nextItem = items[nextIndex]
-            val prevPrevItem = items[prevPrevIndex]
-            val nextNextItem = items[nextNextIndex]
+                if (abs(diff) < (visibleItemsCount / 2f) + 1.2f) {
+                    val scaleVal = 1f - abs(diff) * 0.075f
+                    val rotationXVal = diff * 22.5f
+                    val alphaVal = (1f - abs(diff) * 0.35f).coerceIn(0f, 1f)
+                    val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
 
-            Column(
-                horizontalAlignment = Alignment.Start,
-            ) {
-                if (visibleItemsCount == 5) {
-                    Text(
-                        text = labelProvider(prevPrevItem),
-                        style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = appColors.onSurfaceSecondary.copy(alpha = 0.15f),
-                            ),
-                        maxLines = 1,
-                        textAlign = TextAlign.Start,
+                    Box(
                         modifier =
                             Modifier
+                                .fillMaxWidth()
+                                .height(itemHeight)
                                 .graphicsLayer {
-                                    rotationX = -CAROUSEL_ROLL_ANGLE_DEG * 1.5f
-                                    scaleX = 0.85f
-                                    scaleY = 0.85f
+                                    translationY = centerY + (diff * itemHeightPx)
+                                    scaleX = scaleVal
+                                    scaleY = scaleVal
+                                    rotationX = rotationXVal
+                                    alpha = alphaVal
+                                    transformOrigin = TransformOrigin(0f, pivotY)
                                     cameraDistance = 16 * density.density
-                                }.focusProperties { canFocus = false }
-                                .clickable(
+                                }.clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
                                     enabled = enabled,
-                                    onClick = onStepUpDouble,
+                                    onClick = {
+                                        onSelectedIndexChange(i)
+                                    },
                                 ),
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
-
-                // Previous item (curved backward top for 3D roll illusion)
-                Text(
-                    text = labelProvider(prevItem),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                        Modifier
-                            .graphicsLayer {
-                                rotationX = -CAROUSEL_ROLL_ANGLE_DEG
-                                cameraDistance = 16 * density.density
-                            }.focusProperties { canFocus = false }
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                enabled = enabled,
-                                onClick = onStepUp,
-                            ),
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Active item (highlighted, center-front)
-                Text(
-                    text = labelProvider(currentItem),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurface,
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Next item (curved backward bottom for 3D roll illusion)
-                Text(
-                    text = labelProvider(nextItem),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                        Modifier
-                            .graphicsLayer {
-                                rotationX = CAROUSEL_ROLL_ANGLE_DEG
-                                cameraDistance = 16 * density.density
-                            }.focusProperties { canFocus = false }
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                enabled = enabled,
-                                onClick = onStepDown,
-                            ),
-                )
-
-                if (visibleItemsCount == 5) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = labelProvider(nextNextItem),
-                        style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = appColors.onSurfaceSecondary.copy(alpha = 0.15f),
-                            ),
-                        maxLines = 1,
-                        textAlign = TextAlign.Start,
-                        modifier =
-                            Modifier
-                                .graphicsLayer {
-                                    rotationX = CAROUSEL_ROLL_ANGLE_DEG * 1.5f
-                                    scaleX = 0.85f
-                                    scaleY = 0.85f
-                                    cameraDistance = 16 * density.density
-                                }.focusProperties { canFocus = false }
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    enabled = enabled,
-                                    onClick = onStepDownDouble,
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = labelProvider(item),
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (i == selectedIndex) appColors.onSurface else appColors.onSurfaceSecondary,
                                 ),
-                    )
+                            maxLines = 1,
+                            textAlign = TextAlign.Start,
+                        )
+                    }
                 }
             }
         }
