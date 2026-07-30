@@ -244,7 +244,7 @@ object RomManager {
         AppLog.i(TAG, "Updated in-memory ROM cover path for $packageName to $coverPath")
     }
 
-    private fun getPhysicalPath(uri: Uri): String? {
+    internal fun getPhysicalPath(uri: Uri): String? {
         val decodedUri = Uri.decode(uri.toString())
         val primaryIndex = decodedUri.lastIndexOf("primary:")
         if (primaryIndex != -1) {
@@ -253,15 +253,16 @@ object RomManager {
         }
 
         // Handle external SD card
-        val docId =
+        val pathSegment =
             if (decodedUri.contains("/document/")) {
-                decodedUri.substringAfterLast("/document/").substringAfter(":")
+                decodedUri.substringAfterLast("/document/")
             } else {
-                decodedUri.substringAfterLast("/tree/").substringAfter(":")
+                decodedUri.substringAfterLast("/tree/")
             }
 
-        val volumeId = decodedUri.substringBefore(":", "").substringAfterLast("/")
+        val volumeId = pathSegment.substringBefore(":", "")
         if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}"))) {
+            val docId = pathSegment.substringAfter(":")
             return "/storage/$volumeId/$docId"
         }
 

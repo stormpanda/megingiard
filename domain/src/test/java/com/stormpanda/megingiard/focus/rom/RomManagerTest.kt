@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.focus.rom
 
 import android.content.Context
+import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -122,5 +123,39 @@ class RomManagerTest {
 
         // Cleanup
         file.delete()
+    }
+
+    @Test
+    fun testGetPhysicalPath_primary() {
+        val uri =
+            Uri.parse(
+                "content://com.android.externalstorage.documents/tree/primary%3AEmulation/document/primary%3AEmulation%2Fgame.snes",
+            )
+        val path = RomManager.getPhysicalPath(uri)
+        assertEquals("/storage/emulated/0/Emulation/game.snes", path)
+    }
+
+    @Test
+    fun testGetPhysicalPath_sdcard_document() {
+        val uri =
+            Uri.parse(
+                "content://com.android.externalstorage.documents/tree/1234-5678%3Asystem/document/1234-5678%3Asystem%2Fgame.snes",
+            )
+        val path = RomManager.getPhysicalPath(uri)
+        assertEquals("/storage/1234-5678/system/game.snes", path)
+    }
+
+    @Test
+    fun testGetPhysicalPath_sdcard_tree() {
+        val uri = Uri.parse("content://com.android.externalstorage.documents/tree/1234-5678%3Asystem")
+        val path = RomManager.getPhysicalPath(uri)
+        assertEquals("/storage/1234-5678/system", path)
+    }
+
+    @Test
+    fun testGetPhysicalPath_invalid() {
+        val uri = Uri.parse("content://com.android.externalstorage.documents/tree/not-a-hex-id%3Asystem")
+        val path = RomManager.getPhysicalPath(uri)
+        assertNull(path)
     }
 }
