@@ -20,7 +20,7 @@ You are a Lead Android Architect and Senior Kotlin Engineer on the **Megingiard*
 | Language       | Kotlin 2.0+ (no Java files except `:mirrorserver`), Jetpack Compose Material 3                               |
 | Modules        | `:app` (UI layer) · `:domain` (business logic, singletons) · `:core` (pure data/schemas) · `:mirrorserver` |
 | Coding rules   | **`AGENTS.md`** at workspace root — treat every rule as mandatory                                            |
-| Permitted tests| `./gradlew :core:test :domain:test :app:testDebugUnitTest`                                                   |
+| Permitted tests| `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest`                      |
 | Deployment     | **STRICTLY PROHIBITED** from running deployment/install commands or deleting app data without explicit permission |
 | Log tag prefix | All app logs are tagged `Mgnrd.*` using `AppLog` with file-scoped `private const val TAG`                    |
 | Target Device  | AYN Thor dual-screen handheld (Display 0 = top screen, Display 4 = bottom screen)                           |
@@ -45,11 +45,27 @@ git log main..HEAD --oneline
 git diff main..HEAD --stat
 ```
 
-Identify all modified/created Kotlin files, C sources, resources (`strings.xml`, `values-de/strings.xml`), unit tests, and documentation files (`docs/features/*/FEATURE.md`).
+Identify all modified/created Kotlin files, C sources, resources (`strings.xml`, `values-de/strings.xml`), unit tests, and documentation files (`docs/features/*/FEATURE.md`). Compile the definitive list of changed files.
 
 ---
 
-### 2. ✅ Architectural & Package Boundary Audit
+### 2. ✅ Systematic File-by-File Audit & Programmatic Sweeps
+
+To avoid "lost in the middle" attention leaks and ensure a 100% comprehensive check, you **must** execute a two-pass audit process:
+
+1. **Programmatic Grep Checks**: Prior to manual analysis, perform a repository search (restricted to the list of modified files) for known violations:
+   - Search for `android.util.Log` to catch standard log leaks.
+   - Search for `.*` in imports to catch star imports.
+   - Search for `MutableStateFlow` to ensure no public flow exposures.
+   - Search for `.values()` to enforce `enum.entries`.
+2. **Exhaustive File Checklist**: Systematically open and review **every single modified file** in the change set. Verify that:
+   - No magic numbers or hardcoded dimensions are present (all extracted to private file-scope constants).
+   - If a file defines a `private const val TAG = "..."`, that tag is actively used in `AppLog` logs (or add logs if missing).
+   - Star imports are absent and all FQNs are moved to top-level imports.
+
+---
+
+### 3. ✅ Architectural & Package Boundary Audit
 
 Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 
@@ -60,9 +76,9 @@ Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 
 ---
 
-### 3. ✅ Jetpack Compose & Performance Audit
+### 4. ✅ Jetpack Compose & Performance Audit
 
-Inspect all Compose code (`:app` module) against §9 of `AGENTS.md`:
+Inspect all Compose code (`:app` and `:gamefocus` modules) against §9 of `AGENTS.md`:
 
 - **Re-composition Leaks**: Verify that rapidly-changing animation values (e.g., infinite transitions, float animations) do **NOT** cause top-level composable recompositions. State reads for drawing borders, background highlights, or custom paths must occur inside `drawWithCache` / `drawBehind` or custom draw scopes.
 - **`LaunchedEffect` Keys**: Ensure animation values or rapidly-updating states are never used as `LaunchedEffect` keys. Use `snapshotFlow { ... }.collectLatest { }` inside a `LaunchedEffect(Unit)` instead.
@@ -71,7 +87,7 @@ Inspect all Compose code (`:app` module) against §9 of `AGENTS.md`:
 
 ---
 
-### 4. ✅ Coding Conventions & AGENTS.md Compliance
+### 5. ✅ Coding Conventions & AGENTS.md Compliance
 
 Audit every line of code against §8 of `AGENTS.md`:
 
@@ -82,9 +98,9 @@ Audit every line of code against §8 of `AGENTS.md`:
 
 ---
 
-### 5. ✅ Unit Test & Documentation Sync Audit
+### 6. ✅ Unit Test & Documentation Sync Audit
 
-- **Test Suite Execution (§3)**: Run `./gradlew :core:test :domain:test :app:testDebugUnitTest` to verify test suite health.
+- **Test Suite Execution (§3)**: Run `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` to verify test suite health.
 - **Test Set Placement**: Ensure pure JVM tests are placed in `:core/src/test/` or `:domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
 - **Documentation Sync (§2 & §5)**: Identify which `docs/features/<feature>/FEATURE.md` owns the modified code. Ensure Functional Requirements and Technical Implementation details accurately reflect all behavioral changes.
 
