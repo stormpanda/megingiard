@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.focusProperties
@@ -870,11 +871,14 @@ private fun LibraryGridItem(
     Box(
         modifier =
             modifier
-                .scale(cardScale)
-                .graphicsLayer { alpha = cardAlpha }
-                .clip(RoundedCornerShape(FLS_CORNER_RADIUS))
-                .background(animatedCardBg)
-                .noFocusClickable(onClickTop),
+                .graphicsLayer {
+                    scaleX = cardScale
+                    scaleY = cardScale
+                    alpha = cardAlpha
+                }.clip(RoundedCornerShape(FLS_CORNER_RADIUS))
+                .drawBehind {
+                    drawRect(animatedCardBg)
+                }.noFocusClickable(onClickTop),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
@@ -174,8 +175,13 @@ fun HorizontalPosterCarousel(
                                     )
                                 }
                             }
+                            // Draw background here to avoid recomposing on cardHiddenAlpha changes
+                            val cornerRadiusPx = posterCornerRadius.toPx()
+                            drawRoundRect(
+                                color = resolvedCardBg.copy(alpha = cardHiddenAlpha),
+                                cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx),
+                            )
                         }.clip(RoundedCornerShape(posterCornerRadius))
-                        .background(resolvedCardBg.copy(alpha = cardHiddenAlpha))
                         .border(
                             width = if (isSelected) 3.dp else 1.dp,
                             color = if (isSelected) appColors.accent else appColors.divider,

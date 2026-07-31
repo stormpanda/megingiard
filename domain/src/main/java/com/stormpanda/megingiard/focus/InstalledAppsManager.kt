@@ -101,11 +101,13 @@ object InstalledAppsManager {
             AppLog.i(TAG, "Added $packageName to favorites")
         }
         _favorites.value = current
-        try {
-            val file = File(context.filesDir, FILE_FAVORITES)
-            file.writeText(current.joinToString("\n"))
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
+        scope.launch {
+            try {
+                val file = File(context.filesDir, FILE_FAVORITES)
+                file.writeText(current.joinToString("\n"))
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to persist favorites: ${e.message}", e)
+            }
         }
     }
 
@@ -140,11 +142,13 @@ object InstalledAppsManager {
             AppLog.i(TAG, "Added $packageName to hidden apps")
         }
         _hiddenApps.value = current
-        try {
-            val file = File(context.filesDir, FILE_HIDDEN)
-            file.writeText(current.joinToString("\n"))
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to persist hidden apps: ${e.message}", e)
+        scope.launch {
+            try {
+                val file = File(context.filesDir, FILE_HIDDEN)
+                file.writeText(current.joinToString("\n"))
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to persist hidden apps: ${e.message}", e)
+            }
         }
     }
 
@@ -175,12 +179,14 @@ object InstalledAppsManager {
         list.add(0, packageName)
         val trimmed = list.take(MAX_RECENT_APPS)
         _lastUsed.value = trimmed
-        try {
-            val file = File(context.filesDir, FILE_LAST_USED)
-            file.writeText(trimmed.joinToString("\n"))
-            AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
-        } catch (e: Exception) {
-            AppLog.e(TAG, "Failed to persist last used apps: ${e.message}", e)
+        scope.launch {
+            try {
+                val file = File(context.filesDir, FILE_LAST_USED)
+                file.writeText(trimmed.joinToString("\n"))
+                AppLog.i(TAG, "Recorded launch for $packageName (recent count=${trimmed.size})")
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Failed to persist last used apps: ${e.message}", e)
+            }
         }
     }
 
@@ -207,15 +213,21 @@ object InstalledAppsManager {
         context: Context,
         packageName: String,
     ) {
-        synchronized(scrapedPackages) {
-            loadScrapedPackages(context)
-            if (scrapedPackages.add(packageName)) {
-                try {
-                    val file = File(context.filesDir, FILE_SCRAPED_APPS)
-                    file.writeText(scrapedPackages.joinToString("\n"))
-                    AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to persist scraped packages file: ${e.message}", e)
+        val needsWrite =
+            synchronized(scrapedPackages) {
+                loadScrapedPackages(context)
+                scrapedPackages.add(packageName)
+            }
+        if (needsWrite) {
+            scope.launch {
+                synchronized(scrapedPackages) {
+                    try {
+                        val file = File(context.filesDir, FILE_SCRAPED_APPS)
+                        file.writeText(scrapedPackages.joinToString("\n"))
+                        AppLog.i(TAG, "Persisted $packageName to scraped packages registry")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to persist scraped packages file: ${e.message}", e)
+                    }
                 }
             }
         }

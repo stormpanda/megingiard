@@ -1089,30 +1089,31 @@ internal object FocusImageCache {
                 }
             }
 
-            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
+            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName) ?: return@withContext null
             val startTime = System.currentTimeMillis()
-            val bitmap = iconDrawable?.toBitmapSafe()
+            val androidBmp = iconDrawable.toAndroidBitmap() ?: return@withContext null
 
             val elapsed = System.currentTimeMillis() - startTime
             AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
 
-            if (bitmap != null) {
-                iconCache.put(cacheKey, bitmap)
-                try {
-                    val androidBmp = iconDrawable?.toAndroidBitmap()
-                    if (androidBmp != null) {
-                        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                        val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-                        FileOutputStream(iconFile).use { out ->
-                            androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
-                        }
-                        androidBmp.recycle()
+            val imageBitmap = androidBmp.asImageBitmap()
+            iconCache.put(cacheKey, imageBitmap)
+
+            try {
+                val fileDir =
+                    if (appInfo.isRom) {
+                        File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                    } else {
+                        File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
                     }
-                } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
+                val iconFile = File(fileDir, "${appInfo.packageName}.png")
+                FileOutputStream(iconFile).use { out ->
+                    androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                 }
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
             }
-            bitmap
+            imageBitmap
         }
     }
 
@@ -1326,19 +1327,6 @@ private fun PosterCardContent(
         }
     }
 }
-
-private fun Drawable.toBitmapSafe(): ImageBitmap? =
-    try {
-        val w = intrinsicWidth.coerceAtLeast(1)
-        val h = intrinsicHeight.coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        setBounds(0, 0, canvas.width, canvas.height)
-        draw(canvas)
-        bitmap.asImageBitmap()
-    } catch (e: Exception) {
-        null
-    }
 
 class RomPagerState(
     initialPage: Int = 0,
