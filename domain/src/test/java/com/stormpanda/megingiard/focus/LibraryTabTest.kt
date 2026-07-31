@@ -71,4 +71,26 @@ class LibraryTabTest {
         assertEquals(LibraryTab.ALL, LibraryTab.APPS.previous(tabs))
         assertEquals(LibraryTab.APPS, LibraryTab.GAMES.previous(tabs))
     }
+
+    @Test
+    fun testFilterAppsRomSystemOnly() {
+        val romSnes =
+            InstalledAppInfo(
+                packageName = "rom.snes.super_mario",
+                activityName = "",
+                label = "Super Mario World",
+                isGame = true,
+                isRom = true,
+                romPath = "/storage/emulated/0/Roms/snes/smw.sfc",
+                systemId = "snes",
+            )
+        val game = makeApp("Game One", isGame = true)
+        val apps = listOf(romSnes, game)
+
+        val snesTab = LibraryTab.RomSystem(id = "ROM_snes", systemId = "snes", displayName = "SNES")
+        val result = snesTab.filterApps(apps)
+
+        assertEquals(1, result.size)
+        assertEquals("Super Mario World", result[0].label)
+    }
 }
