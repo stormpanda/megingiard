@@ -43,6 +43,7 @@ sealed class AddRomFolderResult {
 object RomManager {
     private const val TAG = "RomManager"
     private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
+    private const val FILE_ROM_CLEANED_NAMES = "gamefocus_rom_names.json"
     private const val MAX_ZIP_PEEKS = 10
     private val SD_CARD_VOLUME_REGEX = Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}")
 
@@ -53,6 +54,8 @@ object RomManager {
 
     private val _romApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
     val romApps: StateFlow<List<InstalledAppInfo>> = _romApps.asStateFlow()
+
+    private val _romCleanedNames = mutableMapOf<String, String>()
 
     fun loadRomFolders(context: Context) {
         val file = File(context.filesDir, FILE_ROM_FOLDERS)
@@ -65,6 +68,35 @@ object RomManager {
             } catch (e: Exception) {
                 AppLog.w(TAG, "Failed to load ROM folders: ${e.message}")
             }
+        }
+
+        val namesFile = File(context.filesDir, FILE_ROM_CLEANED_NAMES)
+        if (namesFile.exists()) {
+            try {
+                val content = namesFile.readText()
+                val map = Json.decodeFromString<Map<String, String>>(content)
+                synchronized(_romCleanedNames) {
+                    _romCleanedNames.clear()
+                    _romCleanedNames.putAll(map)
+                }
+                AppLog.d(TAG, "Loaded ${map.size} cleaned ROM names from disk")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to load cleaned ROM names: ${e.message}")
+            }
+        }
+    }
+
+    private fun saveRomCleanedNames(context: Context) {
+        try {
+            val file = File(context.filesDir, FILE_ROM_CLEANED_NAMES)
+            val content =
+                synchronized(_romCleanedNames) {
+                    Json.encodeToString(_romCleanedNames)
+                }
+            file.writeText(content)
+            AppLog.d(TAG, "Saved cleaned ROM names to disk")
+        } catch (e: Exception) {
+            AppLog.e(TAG, "Failed to save cleaned ROM names: ${e.message}", e)
         }
     }
 
@@ -161,6 +193,23 @@ object RomManager {
         current.removeAll { it.uriString == folder.uriString }
         saveRomFolders(context, current)
 
+        val namesChanged =
+            synchronized(_romCleanedNames) {
+                val keysToRemove =
+                    _romCleanedNames.keys.filter { romUriStr ->
+                        romUriStr.startsWith(folder.uriString) || romUriStr.contains(folder.uriString)
+                    }
+                if (keysToRemove.isNotEmpty()) {
+                    keysToRemove.forEach { _romCleanedNames.remove(it) }
+                    true
+                } else {
+                    false
+                }
+            }
+        if (namesChanged) {
+            saveRomCleanedNames(context)
+        }
+
         // Release persistable URI permission if possible
         try {
             context.contentResolver.releasePersistableUriPermission(
@@ -177,6 +226,7 @@ object RomManager {
     fun reloadRomApps(context: Context) {
         scope.launch {
             val coversDir = File(context.cacheDir, "gamefocus_covers").apply { mkdirs() }
+            var namesChanged = false
             val allRomApps =
                 buildList {
                     for (folder in _romFolders.value) {
@@ -194,13 +244,26 @@ object RomManager {
                             val ext = name.substringAfterLast('.', "").lowercase()
                             val isMatch = systemDef.extensions.contains(ext) || (isConsoleSystem && ext == "zip")
                             if (isMatch) {
-                                val label = name.substringBeforeLast('.')
+                                val rawLabel = name.substringBeforeLast('.')
                                 val romUriStr = file.uri.toString()
                                 val romPath = getPhysicalPath(file.uri) ?: romUriStr
 
+                                val label =
+                                    synchronized(_romCleanedNames) {
+                                        val existing = _romCleanedNames[romUriStr]
+                                        if (existing != null) {
+                                            existing
+                                        } else {
+                                            val cleaned = cleanRomName(rawLabel)
+                                            _romCleanedNames[romUriStr] = cleaned
+                                            namesChanged = true
+                                            cleaned
+                                        }
+                                    }
+
                                 val pseudoPackageName =
                                     "rom.${folder.systemId}." +
-                                        name.substringBeforeLast('.').replace(Regex("[^a-zA-Z0-9_]"), "_") +
+                                        rawLabel.replace(Regex("[^a-zA-Z0-9_]"), "_") +
                                         "_" + romUriStr.hashCode().absoluteValue
 
                                 val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
@@ -229,6 +292,9 @@ object RomManager {
 
             _romApps.value = allRomApps.sortedBy { it.label.lowercase() }
             AppLog.d(TAG, "Scanned and loaded ${_romApps.value.size} ROMs across ${_romFolders.value.size} folders")
+            if (namesChanged) {
+                saveRomCleanedNames(context)
+            }
         }
     }
 
