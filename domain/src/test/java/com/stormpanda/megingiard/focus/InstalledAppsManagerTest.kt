@@ -25,7 +25,6 @@ class InstalledAppsManagerTest {
                 packageName = "com.example.game",
                 activityName = "com.example.game.MainActivity",
                 label = "Super Game",
-                icon = null,
                 coverPath = "/tmp/cover.png",
             )
 
@@ -33,7 +32,6 @@ class InstalledAppsManagerTest {
         assertEquals("com.example.game.MainActivity", app.activityName)
         assertEquals("Super Game", app.label)
         assertEquals("/tmp/cover.png", app.coverPath)
-        assertNull(app.icon)
         assertEquals(false, app.isGame)
 
         val gameApp = app.copy(isGame = true)

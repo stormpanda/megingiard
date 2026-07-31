@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
@@ -95,7 +96,7 @@ fun HorizontalPosterCarousel(
             contentPadding = PaddingValues(horizontal = horizontalPadding),
             modifier = Modifier.fillMaxSize(),
         ) { page ->
-            val actualIndex = Math.floorMod(page, itemCount)
+            val actualIndex = page.floorMod(itemCount)
             val isSelected = page == targetPage
             val isSettledAndSelected = isSelected && !pagerState.isScrollInProgress && page == pagerState.settledPage
 

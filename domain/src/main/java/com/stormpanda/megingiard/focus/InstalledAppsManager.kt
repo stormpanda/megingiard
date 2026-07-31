@@ -12,6 +12,9 @@ import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.focus.rom.RomLauncherRegistry
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
@@ -22,8 +25,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -36,12 +42,19 @@ private const val DIR_COVERS = "gamefocus_covers"
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
 private const val INTENT_CATEGORY_APP_GAMES = "android.intent.category.APP_GAMES"
+private const val THOR_SECONDARY_DISPLAY_FALLBACK_ID = 4
 
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private val _installedApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
-    val installedApps: StateFlow<List<InstalledAppInfo>> = _installedApps.asStateFlow()
+    private val _installedAndroidApps = MutableStateFlow<List<InstalledAppInfo>>(emptyList())
+    val installedApps: StateFlow<List<InstalledAppInfo>> =
+        combine(
+            _installedAndroidApps,
+            RomManager.romApps,
+        ) { androidApps, romApps ->
+            (androidApps + romApps).sortedBy { it.label.lowercase() }
+        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val scrapedPackages = HashSet<String>()
 
@@ -226,6 +239,9 @@ object InstalledAppsManager {
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
+        RomManager.loadRomFolders(context)
+        RomManager.reloadRomApps(context)
+
         loadFavorites(context)
         loadHidden(context)
         loadLastUsed(context)
@@ -285,7 +301,6 @@ object InstalledAppsManager {
                             .toString()
                     val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
                     val activityName = resolveInfo.activityInfo.name
-                    val icon = resolveInfo.loadIcon(packageManager)
                     val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
                     val cachedCoverFile = File(coversDir, "$packageName.png")
@@ -300,13 +315,12 @@ object InstalledAppsManager {
                         packageName = packageName,
                         activityName = activityName,
                         label = label,
-                        icon = icon,
                         coverPath = coverPath,
                         isGame = isGame,
                     )
                 }.sortedBy { it.label.lowercase() }
 
-        _installedApps.value = apps
+        _installedAndroidApps.value = apps
         val gameCount = apps.count { it.isGame }
         AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
 
@@ -318,8 +332,12 @@ object InstalledAppsManager {
         packageName: String,
         coverPath: String?,
     ) {
-        _installedApps.value =
-            _installedApps.value.map { item ->
+        if (packageName.startsWith("rom.")) {
+            RomManager.updateRomCover(packageName, coverPath)
+            return
+        }
+        _installedAndroidApps.value =
+            _installedAndroidApps.value.map { item ->
                 if (item.packageName == packageName) {
                     item.copy(coverPath = coverPath)
                 } else {
@@ -370,19 +388,34 @@ object InstalledAppsManager {
 
         scope.launch {
             val scrapedSet = synchronized(scrapedPackages) { loadScrapedPackages(context).toSet() }
-            val currentApps = _installedApps.value
-            val missingCovers = currentApps.filter { it.coverPath == null && !scrapedSet.contains(it.packageName) }
+            val currentApps = installedApps.value
+            val missingCovers =
+                currentApps.filter { app ->
+                    val coverFile = File(coversDir, "${app.packageName}.png")
+                    val logosDir = File(context.cacheDir, "gamefocus_logos")
+                    val logoFile = File(logosDir, "${app.packageName}.png")
+
+                    val hasCover = coverFile.exists() && coverFile.length() > 0L
+                    val hasLogo = logoFile.exists() && logoFile.length() > 0L
+
+                    val isScraped = scrapedSet.contains(app.packageName)
+                    if (app.isRom) {
+                        !isScraped || !hasCover || !hasLogo
+                    } else {
+                        !isScraped || !hasCover
+                    }
+                }
             if (missingCovers.isEmpty()) {
-                AppLog.d(TAG, "No un-scraped apps missing cover art")
+                AppLog.d(TAG, "No un-scraped apps missing cover art or logo")
                 return@launch
             }
 
-            AppLog.i(TAG, "Starting background SteamGridDB cover scraping for ${missingCovers.size} apps")
+            AppLog.i(TAG, "Starting background SteamGridDB cover/logo scraping for ${missingCovers.size} apps")
 
             missingCovers.forEach { app ->
                 try {
                     val cleanedQuery = SteamGridDbClient.cleanSearchQuery(app.label)
-                    AppLog.d(TAG, "Scraping cover art for '${app.label}' (cleaned: '$cleanedQuery')")
+                    AppLog.d(TAG, "Scraping cover art/logo for '${app.label}' (cleaned: '$cleanedQuery')")
                     val searchResult = SteamGridDbClient.searchGames(cleanedQuery, apiKey)
                     if (searchResult.isFailure) {
                         AppLog.w(TAG, "Network error searching SteamGridDB for ${app.label}, will retry next startup")
@@ -395,22 +428,51 @@ object InstalledAppsManager {
                     val games = searchResult.getOrNull()
                     val gameId = games?.firstOrNull()?.id ?: return@forEach
 
-                    val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
-                    val images = imagesResult.getOrNull()
-                    val imageUrl = images?.firstOrNull()?.url ?: return@forEach
+                    // 1. Scrape cover if missing
+                    val coverFile = File(coversDir, "${app.packageName}.png")
+                    val hasCover = coverFile.exists() && coverFile.length() > 0L
+                    if (!hasCover) {
+                        val imagesResult = SteamGridDbClient.fetchImages(gameId, "grids", apiKey)
+                        val images = imagesResult.getOrNull()
+                        val imageUrl = images?.firstOrNull()?.url
+                        if (imageUrl != null) {
+                            val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
+                            val tempFile = tempResult.getOrNull()
+                            if (tempFile != null) {
+                                tempFile.copyTo(coverFile, overwrite = true)
+                                tempFile.delete()
+                                updateAppCover(app.packageName, coverFile.absolutePath)
+                                AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
+                            }
+                        }
+                    }
 
-                    val tempResult = SteamGridDbClient.downloadImageToTempFile(imageUrl, context.cacheDir)
-                    val tempFile = tempResult.getOrNull() ?: return@forEach
-
-                    val targetFile = File(coversDir, "${app.packageName}.png")
-                    tempFile.copyTo(targetFile, overwrite = true)
-                    tempFile.delete()
-
-                    // Update in-memory state
-                    updateAppCover(app.packageName, targetFile.absolutePath)
-                    AppLog.i(TAG, "Successfully scraped SteamGridDB cover for ${app.label}")
+                    // 2. Scrape logo if ROM and logo is missing
+                    if (app.isRom) {
+                        val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                        val logoFile = File(logosDir, "${app.packageName}.png")
+                        val hasLogo = logoFile.exists() && logoFile.length() > 0L
+                        if (!hasLogo) {
+                            try {
+                                val logosResult = SteamGridDbClient.fetchImages(gameId, "logos", apiKey)
+                                val logos = logosResult.getOrNull()
+                                val logoUrl = logos?.firstOrNull()?.url
+                                if (logoUrl != null) {
+                                    val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
+                                    val tempLogoFile = tempLogoRes.getOrNull()
+                                    if (tempLogoFile != null) {
+                                        tempLogoFile.copyTo(logoFile, overwrite = true)
+                                        tempLogoFile.delete()
+                                        AppLog.i(TAG, "Successfully scraped SteamGridDB logo for ROM: ${app.label}")
+                                    }
+                                }
+                            } catch (logoEx: Exception) {
+                                AppLog.w(TAG, "Failed to scrape logo for ROM ${app.label}: ${logoEx.message}")
+                            }
+                        }
+                    }
                 } catch (e: Exception) {
-                    AppLog.w(TAG, "Failed to scrape cover for ${app.label}: ${e.message}")
+                    AppLog.w(TAG, "Failed to scrape for ${app.label}: ${e.message}")
                 }
             }
         }
@@ -426,7 +488,7 @@ object InstalledAppsManager {
         appInfo: InstalledAppInfo,
     ): Boolean {
         val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
-        val displayId = secondaryDisplay?.displayId ?: 4 // Fallback to secondary display ID 4 on AYN Thor
+        val displayId = secondaryDisplay?.displayId ?: THOR_SECONDARY_DISPLAY_FALLBACK_ID // Fallback to secondary display ID 4 on AYN Thor
         return launchAppOnDisplay(context, appInfo, displayId)
     }
 
@@ -434,8 +496,20 @@ object InstalledAppsManager {
         context: Context,
         appInfo: InstalledAppInfo,
         displayId: Int,
-    ): Boolean =
-        try {
+    ): Boolean {
+        if (appInfo.isRom) {
+            val systemId = appInfo.systemId ?: return false
+            val romPath = appInfo.romPath ?: return false
+            val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId } ?: return false
+            val launcher = RomLauncherRegistry.getLauncher(systemDef.emulatorId) ?: return false
+            val success = launcher.launchGame(context, romPath, systemId, displayId, appInfo.retroArchCore)
+            if (success) {
+                recordAppLaunch(context, appInfo.packageName)
+            }
+            return success
+        }
+
+        return try {
             val intent =
                 Intent(Intent.ACTION_MAIN).apply {
                     addCategory(Intent.CATEGORY_LAUNCHER)
@@ -454,6 +528,7 @@ object InstalledAppsManager {
             AppLog.e(TAG, "Failed to launch app ${appInfo.label} on display $displayId: ${e.message}", e)
             false
         }
+    }
 
     fun openAppInfo(
         context: Context,

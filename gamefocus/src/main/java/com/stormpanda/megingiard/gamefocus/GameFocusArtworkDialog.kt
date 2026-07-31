@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.InstalledAppsManager
 import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
@@ -128,6 +129,7 @@ fun GameFocusArtworkDialog(
     var images by remember { mutableStateOf<List<SteamGridDbImage>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var selectingImage by remember { mutableStateOf<SteamGridDbImage?>(null) }
+    val currentGame = games.getOrNull(selectedGameIndex)
 
     val useAppIcon =
         remember(appInfo.packageName) {
@@ -192,13 +194,13 @@ fun GameFocusArtworkDialog(
     // Handle L1 and R1 triggers to switch selected game
     LaunchedEffect(l1Trigger) {
         if (l1Trigger > 0 && games.isNotEmpty()) {
-            selectedGameIndex = Math.floorMod(selectedGameIndex - 1, games.size)
+            selectedGameIndex = (selectedGameIndex - 1).floorMod(games.size)
         }
     }
 
     LaunchedEffect(r1Trigger) {
         if (r1Trigger > 0 && games.isNotEmpty()) {
-            selectedGameIndex = Math.floorMod(selectedGameIndex + 1, games.size)
+            selectedGameIndex = (selectedGameIndex + 1).floorMod(games.size)
         }
     }
 
@@ -228,7 +230,7 @@ fun GameFocusArtworkDialog(
     }
 
     val onConfirmSelection: (SteamGridDbImage) -> Unit =
-        remember(appInfo.packageName) {
+        remember(appInfo.packageName, currentGame) {
             { imageItem ->
                 if (selectingImage == null) {
                     selectingImage = imageItem
@@ -241,6 +243,27 @@ fun GameFocusArtworkDialog(
                                 val targetFile = File(coversDir, "${appInfo.packageName}.png")
                                 tempFile.copyTo(targetFile, overwrite = true)
                                 tempFile.delete()
+
+                                // Scrape logo for ROMs
+                                if (appInfo.isRom && currentGame != null) {
+                                    try {
+                                        val logosRes = SteamGridDbClient.fetchImages(currentGame.id, "logos", apiKey)
+                                        val logoUrl = logosRes.getOrNull()?.firstOrNull()?.url
+                                        if (logoUrl != null) {
+                                            val tempLogoRes = SteamGridDbClient.downloadImageToTempFile(logoUrl, context.cacheDir)
+                                            val tempLogoFile = tempLogoRes.getOrNull()
+                                            if (tempLogoFile != null) {
+                                                val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                                                val targetLogoFile = File(logosDir, "${appInfo.packageName}.png")
+                                                tempLogoFile.copyTo(targetLogoFile, overwrite = true)
+                                                tempLogoFile.delete()
+                                                AppLog.i(TAG, "Selected and updated logo for ROM: ${appInfo.packageName}")
+                                            }
+                                        }
+                                    } catch (logoEx: Exception) {
+                                        AppLog.w(TAG, "Failed to scrape logo for ROM: ${logoEx.message}")
+                                    }
+                                }
 
                                 AppPaletteExtractor.invalidatePalette(appInfo.packageName)
                                 InstalledAppsManager.updateAppCover(appInfo.packageName, targetFile.absolutePath)
@@ -261,7 +284,7 @@ fun GameFocusArtworkDialog(
 
     LaunchedEffect(confirmTrigger) {
         if (confirmTrigger > 0 && images.isNotEmpty()) {
-            val selectedIndex = Math.floorMod(virtualIndex, images.size)
+            val selectedIndex = virtualIndex.floorMod(images.size)
             images.getOrNull(selectedIndex)?.let { imageItem ->
                 onConfirmSelection(imageItem)
             }

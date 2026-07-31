@@ -77,6 +77,9 @@ private val PRD_DIALOG_PADDING_HORIZONTAL = 20.dp
 private val PRD_DIALOG_PADDING_TOP = 20.dp
 private val PRD_DIALOG_PADDING_BOTTOM = 16.dp
 private const val PRD_SCRIM_ALPHA = 0.55f
+private const val PRD_POLL_DELAY_MS = 1000L
+private val PRD_DIALOG_MARGIN = 16.dp
+private val PRD_BUTTON_SPACING = 8.dp
 
 /**
  * Reconnect dialog for Privileged Mode.
@@ -96,15 +99,11 @@ fun PrivdReconnectPromptDialog(
         remember {
             val isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
             val isPrivdRunning = PrivdManager.state.value == PrivdState.RUNNING
-            val list = mutableListOf<OnboardingStepId>()
-            if (!isAccessibilityActive) {
-                list.add(OnboardingStepId.ACCESSIBILITY)
-            }
-            if (!isPrivdRunning) {
-                list.add(OnboardingStepId.PRIVILEGED)
-            }
-            list.add(OnboardingStepId.FINISHED)
-            list
+            listOfNotNull(
+                if (!isAccessibilityActive) OnboardingStepId.ACCESSIBILITY else null,
+                if (!isPrivdRunning) OnboardingStepId.PRIVILEGED else null,
+                OnboardingStepId.FINISHED,
+            )
         }
 
     var activeStepIndex by remember { mutableStateOf(0) }
@@ -150,7 +149,7 @@ fun PrivdReconnectPromptDialog(
                 if (active != isAccessibilityActive) {
                     isAccessibilityActive = active
                 }
-                delay(1000L)
+                delay(PRD_POLL_DELAY_MS)
             }
         }
     }
@@ -175,7 +174,7 @@ fun PrivdReconnectPromptDialog(
                 isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
                 isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                 isDevicePaired = PrivdBootstrapper.hasCredentials(context)
-                delay(1000L)
+                delay(PRD_POLL_DELAY_MS)
             }
         }
     }
@@ -228,7 +227,7 @@ fun PrivdReconnectPromptDialog(
             modifier =
                 Modifier
                     .widthIn(max = PRD_DIALOG_MAX_WIDTH)
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = PRD_DIALOG_MARGIN)
                     .animateContentSize(
                         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                         alignment = Alignment.Center,
@@ -256,7 +255,7 @@ fun PrivdReconnectPromptDialog(
                 activeStepIndex = activeStepIndex,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(PRD_DIALOG_MARGIN))
 
             // Step Content Host
             AnimatedContent(
@@ -306,7 +305,7 @@ fun PrivdReconnectPromptDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(PRD_DIALOG_MARGIN))
 
             // Footer Navigation Controls
             Row(
@@ -317,7 +316,7 @@ fun PrivdReconnectPromptDialog(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(PRD_BUTTON_SPACING),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (currentStepState.id == OnboardingStepId.PRIVILEGED) {

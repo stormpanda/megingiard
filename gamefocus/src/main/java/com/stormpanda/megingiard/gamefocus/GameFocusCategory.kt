@@ -2,29 +2,66 @@ package com.stormpanda.megingiard.gamefocus
 
 import androidx.annotation.StringRes
 import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.math.floorMod
 
 /**
  * Categories available in Megingiard Game Focus launcher.
  */
-enum class GameFocusCategory(
-    @StringRes val stringResId: Int,
-) {
-    GAMES(R.string.gamefocus_header_android_games),
-    APPS(R.string.gamefocus_header_android_apps),
-    ALL_APPS(R.string.gamefocus_cat_all_apps),
-    FAVORITES(R.string.gamefocus_cat_favorites),
-    LAST_USED(R.string.gamefocus_cat_last_used),
-    ;
+sealed class GameFocusCategory {
+    abstract val id: String
 
-    fun previous(): GameFocusCategory {
-        val entries = entries
-        val prevOrdinal = Math.floorMod(ordinal - 1, entries.size)
-        return entries[prevOrdinal]
+    @get:StringRes abstract val stringResId: Int
+    open val displayName: String? = null
+
+    object GAMES : GameFocusCategory() {
+        override val id = "GAMES"
+        override val stringResId = R.string.gamefocus_header_android_games
     }
 
-    fun next(): GameFocusCategory {
-        val entries = entries
-        val nextOrdinal = Math.floorMod(ordinal + 1, entries.size)
-        return entries[nextOrdinal]
+    object APPS : GameFocusCategory() {
+        override val id = "APPS"
+        override val stringResId = R.string.gamefocus_header_android_apps
+    }
+
+    object ALL_APPS : GameFocusCategory() {
+        override val id = "ALL_APPS"
+        override val stringResId = R.string.gamefocus_cat_all_apps
+    }
+
+    object FAVORITES : GameFocusCategory() {
+        override val id = "FAVORITES"
+        override val stringResId = R.string.gamefocus_cat_favorites
+    }
+
+    object LAST_USED : GameFocusCategory() {
+        override val id = "LAST_USED"
+        override val stringResId = R.string.gamefocus_cat_last_used
+    }
+
+    data class RomSystem(
+        override val id: String,
+        val systemId: String,
+        override val displayName: String,
+        val folderUri: String,
+    ) : GameFocusCategory() {
+        override val stringResId = 0
+    }
+
+    companion object {
+        val builtIns: List<GameFocusCategory> get() = listOf(GAMES, APPS, ALL_APPS, FAVORITES, LAST_USED)
+    }
+
+    fun previous(categories: List<GameFocusCategory>): GameFocusCategory {
+        val idx = categories.indexOf(this)
+        if (idx == -1) return categories.firstOrNull() ?: GAMES
+        val prevIdx = (idx - 1).floorMod(categories.size)
+        return categories[prevIdx]
+    }
+
+    fun next(categories: List<GameFocusCategory>): GameFocusCategory {
+        val idx = categories.indexOf(this)
+        if (idx == -1) return categories.firstOrNull() ?: GAMES
+        val nextIdx = (idx + 1).floorMod(categories.size)
+        return categories[nextIdx]
     }
 }

@@ -49,5 +49,22 @@
     <string name="gamefocus_library_hint_close">Press R2 or B to close</string>
     <string name="gamefocus_nav_gallery">Gallery</string>
     <string name="gamefocus_nav_library">Library</string>
+    <string name="gamefocus_option_add_rom_folder">Add ROM Folder</string>
+    <string name="gamefocus_option_manage_rom_folders">Remove ROM Folder</string>
+    <string name="gamefocus_dialog_remove_rom_folder_title">Remove ROM Folder</string>
+    <string name="gamefocus_dialog_remove_rom_folder_msg">Select a ROM folder/system to remove:</string>
+    <string name="gamefocus_dialog_remove_confirm_title">Confirm Removal</string>
+    <string name="gamefocus_dialog_remove_confirm_msg">Are you sure you want to remove the ROM system \'%1$s\'? Scanned games will be removed from the launcher.</string>
+
+    <string name="gamefocus_dialog_system_recognized_title">System Recognized</string>
+    <string name="gamefocus_dialog_system_recognized_msg">The folder was recognized as system: %1$s.</string>
+    <string name="gamefocus_dialog_select_core_label">Select RetroArch Core:</string>
+    <string name="gamefocus_dialog_core_default">Recommended (%1$s)</string>
+    <string name="gamefocus_dialog_core_save">Save</string>
+    <string name="gamefocus_dialog_core_native_msg">This system uses native emulation. No RetroArch core is needed.</string>
+    <string name="gamefocus_dialog_core_native_close">Close</string>
+    <string name="gamefocus_dialog_cancel">Cancel</string>
+    <string name="gamefocus_dialog_select">Select</string>
+    <string name="gamefocus_dialog_unknown_system">Unknown System</string>
 </resources>
 

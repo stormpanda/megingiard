@@ -29,23 +29,28 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -87,6 +92,10 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.focus.rom.CustomRomFolder
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.ui.AppAlertDialog
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
 import com.stormpanda.megingiard.ui.ExpandableActionItem
 import com.stormpanda.megingiard.ui.ExpandableActionsMenu
@@ -113,6 +122,29 @@ private val FLS_GRID_CONTENT_PADDING_BOTTOM = 112.dp
 private val FLS_BOTTOM_GRADIENT_HEIGHT = 96.dp
 private val FLS_TOP_GRADIENT_HEIGHT = 112.dp
 
+private val FLS_DIALOG_PADDING_BOTTOM_LARGE = 12.dp
+private val FLS_DIALOG_PADDING_BOTTOM_SMALL = 8.dp
+private val FLS_DIALOG_LIST_MAX_HEIGHT = 200.dp
+private val FLS_DIALOG_ROW_PADDING_VERTICAL = 10.dp
+private val FLS_DIALOG_ROW_PADDING_HORIZONTAL = 4.dp
+private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FLS_FALLBACK_ICON_SIZE = 36.dp
+private val FLS_LABEL_GAP = 6.dp
+private val FLS_SHADOW_BLUR_RADIUS = 16.dp
+private val FLS_SHADOW_SPREAD = 2.dp
+private const val FLS_SHADOW_ALPHA = 0.45f
+private val FLS_BOTTOM_BAR_PADDING_HORIZONTAL = 12.dp
+private val FLS_BOTTOM_BAR_PADDING_VERTICAL = 4.dp
+private val FLS_BUTTON_GAP_SMALL = 2.dp
+private val FLS_HEADER_PADDING_HORIZONTAL = 24.dp
+private val FLS_HEADER_PADDING_VERTICAL = 12.dp
+private val FLS_HEADER_SPACING_SMALL = 8.dp
+private val FLS_L1R1_ICON_SIZE = 20.dp
+private val FLS_HEADER_SPACING_MEDIUM = 16.dp
+private val FLS_CARD_INNER_PADDING = 10.dp
+private val FLS_BADGE_PADDING = 8.dp
+private val FLS_BADGE_ICON_SIZE = 18.dp
+
 private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
 
 private const val FLS_HIDDEN_CARD_ALPHA = 0.4f
@@ -127,6 +159,7 @@ private val LibraryTab.stringResId: Int
             LibraryTab.ALL -> R.string.gamefocus_library_tab_all
             LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
             LibraryTab.GAMES -> R.string.gamefocus_library_tab_games
+            is LibraryTab.RomSystem -> 0
         }
 
 private suspend fun scrollToFocusedItem(
@@ -172,10 +205,21 @@ fun FocusLibraryScreen(
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onAddRomFolder: () -> Unit = {},
+    onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
+    tabs: List<LibraryTab> = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES),
+    isRemoveRomFolderDialogOpen: Boolean = false,
+    onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit = {},
+    removeRomFolderDialogSelectedIndex: Int = 0,
+    onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit = {},
+    folderToRemove: CustomRomFolder? = null,
+    onFolderToRemoveChange: (CustomRomFolder?) -> Unit = {},
 ) {
     val appColors = LocalAppColors.current
     val density = LocalDensity.current
+    val context = LocalContext.current
+    val romFolders by RomManager.romFolders.collectAsState()
     val peekOffsetPx = with(density) { FLS_ROW_PEEK_OFFSET.roundToPx() }
 
     Box(
@@ -188,7 +232,7 @@ fun FocusLibraryScreen(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next() == targetState
+                val isMovingNext = initialState.next(tabs) == targetState
                 if (isMovingNext) {
                     (slideInHorizontally { width -> width } + fadeIn())
                         .togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
@@ -366,9 +410,9 @@ fun FocusLibraryScreen(
                                         height = with(density) { currentRect.height.coerceAtLeast(1f).toDp() },
                                     ).drawWithCache {
                                         val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
-                                        val blurRadiusPx = 16.dp.toPx()
-                                        val spreadPx = 2.dp.toPx()
-                                        val shadowColorArgb = appColors.accent.copy(alpha = 0.45f).toArgb()
+                                        val blurRadiusPx = FLS_SHADOW_BLUR_RADIUS.toPx()
+                                        val spreadPx = FLS_SHADOW_SPREAD.toPx()
+                                        val shadowColorArgb = appColors.accent.copy(alpha = FLS_SHADOW_ALPHA).toArgb()
 
                                         val innerPath =
                                             Path().apply {
@@ -438,12 +482,13 @@ fun FocusLibraryScreen(
         LibraryHeaderBar(
             selectedTab = selectedTab,
             onTabSelected = { tab ->
-                AppLog.i(TAG, "Library tab clicked/selected: ${tab.name}")
+                AppLog.i(TAG, "Library tab clicked/selected: ${tab.id}")
                 onTabSelected(tab)
                 onFocusedIndexChange(0)
             },
             onCloseRequested = onCloseRequested,
             enabled = enabled,
+            tabs = tabs,
             modifier = Modifier.align(Alignment.TopCenter),
         )
 
@@ -476,33 +521,65 @@ fun FocusLibraryScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 4.dp, top = 4.dp),
+                    .padding(
+                        start = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
+                        end = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
+                        bottom = FLS_BOTTOM_BAR_PADDING_VERTICAL,
+                        top = FLS_BOTTOM_BAR_PADDING_VERTICAL,
+                    ),
         ) {
             // Lower Left: Library Action Menu
             Box(modifier = Modifier.align(Alignment.BottomStart)) {
+                val actions =
+                    remember(focusedApp, isCurrentHidden, romFolders) {
+                        buildList {
+                            if (focusedApp != null) {
+                                add(
+                                    ExpandableActionItem(
+                                        label =
+                                            if (isCurrentHidden) {
+                                                context.getString(R.string.gamefocus_option_unhide)
+                                            } else {
+                                                context.getString(R.string.gamefocus_option_hide)
+                                            },
+                                        iconSymbol = "gamepad_left",
+                                        onClick = {
+                                            onToggleHidden(focusedApp)
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            }
+                            add(
+                                ExpandableActionItem(
+                                    label = context.getString(R.string.gamefocus_option_add_rom_folder),
+                                    iconSymbol = "gamepad_up",
+                                    onClick = {
+                                        onAddRomFolder()
+                                        onOptionsMenuExpandedChange(false)
+                                    },
+                                ),
+                            )
+                            if (romFolders.isNotEmpty()) {
+                                add(
+                                    ExpandableActionItem(
+                                        label = context.getString(R.string.gamefocus_option_manage_rom_folders),
+                                        iconSymbol = "gamepad_down",
+                                        onClick = {
+                                            onRemoveRomFolderDialogOpenChange(true)
+                                            onOptionsMenuExpandedChange(false)
+                                        },
+                                    ),
+                                )
+                            }
+                        }
+                    }
                 ExpandableActionsMenu(
                     isExpanded = isOptionsMenuExpanded,
                     onExpandedChange = onOptionsMenuExpandedChange,
                     orientation = ExpandableMenuOrientation.VERTICAL,
                     enabled = enabled,
-                    actions =
-                        listOf(
-                            ExpandableActionItem(
-                                label =
-                                    if (isCurrentHidden) {
-                                        stringResource(R.string.gamefocus_option_unhide)
-                                    } else {
-                                        stringResource(R.string.gamefocus_option_hide)
-                                    },
-                                iconSymbol = "gamepad_left",
-                                onClick = {
-                                    if (focusedApp != null) {
-                                        onToggleHidden(focusedApp)
-                                        onOptionsMenuExpandedChange(false)
-                                    }
-                                },
-                            ),
-                        ),
+                    actions = actions,
                 )
             }
 
@@ -522,7 +599,7 @@ fun FocusLibraryScreen(
                     },
                 )
 
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(FLS_BUTTON_GAP_SMALL))
 
                 GamePadButtonAction(
                     button = GamePadButton.BUTTON_X,
@@ -536,6 +613,44 @@ fun FocusLibraryScreen(
                 )
             }
         }
+
+        if (isRemoveRomFolderDialogOpen) {
+            RemoveRomFolderDialog(
+                romFolders = romFolders,
+                selectedIndex = removeRomFolderDialogSelectedIndex,
+                onSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
+                onDismiss = { onRemoveRomFolderDialogOpenChange(false) },
+                onSelectFolder = { folder ->
+                    onFolderToRemoveChange(folder)
+                    onRemoveRomFolderDialogOpenChange(false)
+                },
+            )
+        }
+
+        folderToRemove?.let { folder ->
+            AppAlertDialog(
+                onDismissRequest = { onFolderToRemoveChange(null) },
+                confirmButton = {
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_A,
+                        text = stringResource(R.string.gamefocus_option_manage_rom_folders),
+                        onClick = {
+                            onRemoveRomFolder(folder)
+                            onFolderToRemoveChange(null)
+                        },
+                    )
+                },
+                dismissButton = {
+                    GamePadButtonAction(
+                        button = GamePadButton.BUTTON_B,
+                        text = stringResource(R.string.settings_cancel),
+                        onClick = { onFolderToRemoveChange(null) },
+                    )
+                },
+                title = { Text(stringResource(R.string.gamefocus_dialog_remove_confirm_title)) },
+                text = { Text(stringResource(R.string.gamefocus_dialog_remove_confirm_msg, folder.systemName)) },
+            )
+        }
     }
 }
 
@@ -544,6 +659,7 @@ private fun LibraryHeaderBar(
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
     onCloseRequested: () -> Unit,
+    tabs: List<LibraryTab>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -553,7 +669,7 @@ private fun LibraryHeaderBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = FLS_HEADER_PADDING_HORIZONTAL, vertical = FLS_HEADER_PADDING_VERTICAL),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -561,6 +677,7 @@ private fun LibraryHeaderBar(
         InteractiveLibraryCategoryHeader(
             selectedTab = selectedTab,
             onTabSelected = onTabSelected,
+            tabs = tabs,
         )
 
         // Navigation affordance to return to Gallery via R2 button
@@ -574,9 +691,17 @@ private fun LibraryHeaderBar(
 }
 
 @Composable
+private fun getTabName(tab: LibraryTab): String =
+    when (tab) {
+        is LibraryTab.RomSystem -> tab.displayName
+        else -> stringResource(tab.stringResId)
+    }
+
+@Composable
 private fun InteractiveLibraryCategoryHeader(
     selectedTab: LibraryTab,
     onTabSelected: (LibraryTab) -> Unit,
+    tabs: List<LibraryTab>,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -585,22 +710,22 @@ private fun InteractiveLibraryCategoryHeader(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(FLS_HEADER_SPACING_SMALL),
     ) {
         // (L1) GamePad Button Icon
         GamePadButtonIcon(
             button = GamePadButton.BUTTON_L1,
-            size = 20.dp,
+            size = FLS_L1R1_ICON_SIZE,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
-            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous()) },
+            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous(tabs)) },
         )
 
         // Animated Horizontal 3D Reel
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = {
-                val isMovingNext = initialState.next() == targetState
+                val isMovingNext = initialState.next(tabs) == targetState
                 if (isMovingNext) {
                     (slideInHorizontally { width -> width / 3 } + fadeIn())
                         .togetherWith(slideOutHorizontally { width -> -width / 3 } + fadeOut())
@@ -611,16 +736,16 @@ private fun InteractiveLibraryCategoryHeader(
             },
             label = "LibraryHorizontalCategoryTransition",
         ) { currentTab ->
-            val next1 = currentTab.next()
-            val next2 = next1.next()
+            val next1 = currentTab.next(tabs)
+            val next2 = next1.next(tabs)
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(FLS_HEADER_SPACING_MEDIUM),
             ) {
                 // Active category (leftmost, center-front)
                 Text(
-                    text = stringResource(currentTab.stringResId),
+                    text = getTabName(currentTab),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -632,7 +757,7 @@ private fun InteractiveLibraryCategoryHeader(
 
                 // Next category 1 (middle, curved Y-axis roll)
                 Text(
-                    text = stringResource(next1.stringResId),
+                    text = getTabName(next1),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -650,7 +775,7 @@ private fun InteractiveLibraryCategoryHeader(
 
                 // Next category 2 (rightmost, deeper Y-axis roll)
                 Text(
-                    text = stringResource(next2.stringResId),
+                    text = getTabName(next2),
                     style =
                         MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
@@ -671,10 +796,10 @@ private fun InteractiveLibraryCategoryHeader(
         // (R1) GamePad Button Icon
         GamePadButtonIcon(
             button = GamePadButton.BUTTON_R1,
-            size = 20.dp,
+            size = FLS_L1R1_ICON_SIZE,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
-            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next()) },
+            modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next(tabs)) },
         )
     }
 }
@@ -753,7 +878,7 @@ private fun LibraryGridItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier =
                 Modifier
-                    .padding(10.dp)
+                    .padding(FLS_CARD_INNER_PADDING)
                     .fillMaxWidth(),
         ) {
             // Square Icon
@@ -770,19 +895,25 @@ private fun LibraryGridItem(
                         bitmap = currentBitmap,
                         contentDescription = appInfo.label,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
+                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(FLS_ROM_ICON_CORNER_RADIUS)),
+                    )
+                } else if (appInfo.isRom) {
+                    MaterialSymbol(
+                        name = "sports_esports",
+                        size = FLS_FALLBACK_ICON_SIZE,
+                        tint = appColors.accent,
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Apps,
                         contentDescription = appInfo.label,
                         tint = appColors.accent,
-                        modifier = Modifier.size(36.dp),
+                        modifier = Modifier.size(FLS_FALLBACK_ICON_SIZE),
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(FLS_LABEL_GAP))
 
             // App Label
             Text(
@@ -801,12 +932,12 @@ private fun LibraryGridItem(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                        .padding(FLS_BADGE_PADDING)
                         .graphicsLayer { alpha = visibilityOffAlpha },
             ) {
                 MaterialSymbol(
                     name = "visibility_off",
-                    size = 18.dp,
+                    size = FLS_BADGE_ICON_SIZE,
                     tint = appColors.onSurfaceSecondary,
                 )
             }

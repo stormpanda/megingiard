@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -34,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -58,7 +60,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -76,7 +80,11 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.focus.InstalledAppInfo
 import com.stormpanda.megingiard.focus.LetterNavigationHelper
 import com.stormpanda.megingiard.focus.LibraryTab
+import com.stormpanda.megingiard.focus.rom.CustomRomFolder
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.gamefocus.R
+import com.stormpanda.megingiard.math.floorMod
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.CutoutLetterButton
@@ -88,6 +96,7 @@ import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MaterialSymbol
+import com.stormpanda.megingiard.ui.VerticalRollingCarousel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -106,6 +115,10 @@ private val FTL_POSTER_SPACING = 12.dp
 private val FTL_ICON_SIZE = 72.dp
 private val FTL_GALLERY_TOP_OFFSET = 10.dp
 private val FTL_TITLE_GAP = 25.dp
+private val FTL_ROM_ICON_CORNER_RADIUS = 14.dp
+private val FTL_FALLBACK_ICON_SIZE = 48.dp
+private val FTL_BADGE_PADDING = 10.dp
+private val FTL_BADGE_ICON_SIZE = 22.dp
 private const val FTL_CATEGORY_ROLL_ANGLE_DEG = 35f
 private const val FTL_BACKGROUND_COLOR_DEBOUNCE_MS = 220L
 private const val FTL_BACKGROUND_COLOR_ANIM_MS = 500
@@ -114,6 +127,17 @@ private const val FTL_LETTER_NAV_DEBOUNCE_MS = 500L
 private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
+
+private val FTL_CAROUSEL_HEIGHT = 310.dp
+private val FTL_LETTER_NAV_PADDING = 40.dp
+private val FTL_CATEGORY_HEADER_PADDING_START = 24.dp
+private val FTL_CATEGORY_HEADER_PADDING_TOP = 16.dp
+private val FTL_NAV_PADDING_END = 12.dp
+private val FTL_NAV_PADDING_TOP = 12.dp
+private val FTL_BOTTOM_BAR_PADDING_START = 12.dp
+private val FTL_BOTTOM_BAR_PADDING_END = 12.dp
+private val FTL_BOTTOM_BAR_PADDING_BOTTOM = 4.dp
+private val FTL_BUTTON_GAP = 2.dp
 
 private class JobRefHolder(
     var job: Job? = null,
@@ -126,6 +150,7 @@ fun FocusTopLauncherScreen(
     onAppClickBottom: (InstalledAppInfo) -> Unit = {},
     onAppClick: (InstalledAppInfo) -> Unit = onAppClickTop,
     selectedCategory: GameFocusCategory = GameFocusCategory.GAMES,
+    categories: List<GameFocusCategory> = GameFocusCategory.builtIns,
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
     favoritesSet: Set<String> = emptySet(),
@@ -136,6 +161,8 @@ fun FocusTopLauncherScreen(
     onToggleHidden: (InstalledAppInfo) -> Unit = {},
     onEditArtwork: (InstalledAppInfo) -> Unit = {},
     onOpenAppInfo: (InstalledAppInfo) -> Unit = {},
+    onAddRomFolder: () -> Unit = {},
+    onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     editingAppInfo: InstalledAppInfo? = null,
     dialogVirtualIndex: Int = 10_000,
     onDialogVirtualIndexChange: (Int) -> Unit = {},
@@ -152,6 +179,18 @@ fun FocusTopLauncherScreen(
     dpadStepRightTrigger: Int = 0,
     onFocusedAppChanged: (InstalledAppInfo?) -> Unit = {},
     onDismissEditingApp: () -> Unit = {},
+    newlyAddedFolder: CustomRomFolder? = null,
+    onDismissNewlyAddedFolder: () -> Unit = {},
+    onConfirmNewlyAddedFolderCore: (CustomRomFolder, String?) -> Unit = { _, _ -> },
+    coreChooserDialogSelectedIndex: Int = 0,
+    onCoreChooserDialogSelectedIndexChange: (Int) -> Unit = {},
+    confirmCoreChooserTrigger: Int = 0,
+    isRemoveRomFolderDialogOpen: Boolean = false,
+    onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit = {},
+    removeRomFolderDialogSelectedIndex: Int = 0,
+    onRemoveRomFolderDialogSelectedIndexChange: (Int) -> Unit = {},
+    folderToRemove: CustomRomFolder? = null,
+    onFolderToRemoveChange: (CustomRomFolder?) -> Unit = {},
     allApps: List<InstalledAppInfo> = emptyList(),
     lastUsed: List<String> = emptyList(),
     isLibraryOpen: Boolean = false,
@@ -176,8 +215,34 @@ fun FocusTopLauncherScreen(
 
     val frozenHiddenSet = remember(allApps, selectedCategory, isLibraryOpen) { hiddenSet.toSet() }
 
-    val gamesApps = remember(allApps, frozenHiddenSet) { allApps.filter { it.isGame && !frozenHiddenSet.contains(it.packageName) } }
-    val appsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !it.isGame && !frozenHiddenSet.contains(it.packageName) } }
+    val romFolders by RomManager.romFolders.collectAsState()
+
+    val libraryTabs =
+        remember(romFolders) {
+            listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES) +
+                romFolders.map { folder ->
+                    LibraryTab.RomSystem(
+                        id = "rom_${folder.systemId}",
+                        systemId = folder.systemId,
+                        displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
+                    )
+                }
+        }
+
+    val gamesApps =
+        remember(allApps, frozenHiddenSet) {
+            allApps.filter {
+                it.isGame && !it.isRom &&
+                    !frozenHiddenSet.contains(it.packageName)
+            }
+        }
+    val appsApps =
+        remember(allApps, frozenHiddenSet) {
+            allApps.filter {
+                !it.isGame && !it.isRom &&
+                    !frozenHiddenSet.contains(it.packageName)
+            }
+        }
     val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !frozenHiddenSet.contains(it.packageName) } }
     val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
     val lastUsedApps =
@@ -189,11 +254,32 @@ fun FocusTopLauncherScreen(
 
     fun getAppsForCategory(cat: GameFocusCategory): List<InstalledAppInfo> =
         when (cat) {
-            GameFocusCategory.GAMES -> gamesApps
-            GameFocusCategory.APPS -> appsApps
-            GameFocusCategory.ALL_APPS -> allAppsApps
-            GameFocusCategory.FAVORITES -> favoritesApps
-            GameFocusCategory.LAST_USED -> lastUsedApps
+            GameFocusCategory.GAMES -> {
+                gamesApps
+            }
+
+            GameFocusCategory.APPS -> {
+                appsApps
+            }
+
+            GameFocusCategory.ALL_APPS -> {
+                allAppsApps
+            }
+
+            GameFocusCategory.FAVORITES -> {
+                favoritesApps
+            }
+
+            GameFocusCategory.LAST_USED -> {
+                lastUsedApps
+            }
+
+            is GameFocusCategory.RomSystem -> {
+                allApps.filter {
+                    it.isRom && it.systemId == cat.systemId &&
+                        !frozenHiddenSet.contains(it.packageName)
+                }
+            }
         }
 
     val categoryApps = getAppsForCategory(selectedCategory)
@@ -212,13 +298,35 @@ fun FocusTopLauncherScreen(
     val favoritesPagerState = rememberPagerState(initialPage = 0) { favoritesApps.size }
     val lastUsedPagerState = rememberPagerState(initialPage = 0) { lastUsedApps.size }
 
+    val romPagerStates = remember { mutableMapOf<String, PagerState>() }
+
     val activePagerState =
         when (selectedCategory) {
-            GameFocusCategory.GAMES -> gamesPagerState
-            GameFocusCategory.APPS -> appsPagerState
-            GameFocusCategory.ALL_APPS -> allAppsPagerState
-            GameFocusCategory.FAVORITES -> favoritesPagerState
-            GameFocusCategory.LAST_USED -> lastUsedPagerState
+            GameFocusCategory.GAMES -> {
+                gamesPagerState
+            }
+
+            GameFocusCategory.APPS -> {
+                appsPagerState
+            }
+
+            GameFocusCategory.ALL_APPS -> {
+                allAppsPagerState
+            }
+
+            GameFocusCategory.FAVORITES -> {
+                favoritesPagerState
+            }
+
+            GameFocusCategory.LAST_USED -> {
+                lastUsedPagerState
+            }
+
+            is GameFocusCategory.RomSystem -> {
+                romPagerStates.getOrPut(selectedCategory.id) {
+                    RomPagerState(0, 0f) { categoryApps.size }
+                }
+            }
         }
 
     // Clamp active pager state if list shrinks (e.g. app hidden)
@@ -241,7 +349,7 @@ fun FocusTopLauncherScreen(
             }
         if (categoryApps.isNotEmpty() && activePagerState.currentPage != targetIndex) {
             val safeIndex = targetIndex.coerceIn(0, categoryApps.size - 1)
-            AppLog.d(TAG, "Category switched to ${selectedCategory.name} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
+            AppLog.d(TAG, "Category switched to ${selectedCategory.id} -> scrolling to remembered index $safeIndex (package=$lastPkg)")
             activePagerState.scrollToPage(safeIndex)
         }
     }
@@ -250,6 +358,14 @@ fun FocusTopLauncherScreen(
     var isLetterOverlayActive by remember { mutableStateOf(false) }
     var selectedLetterNavIndex by remember { mutableIntStateOf(0) }
     val letterCommitJobRef = remember { JobRefHolder() }
+
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(categoryApps, isLibraryOpen) {
+        if (!isLibraryOpen && categoryApps.isNotEmpty()) {
+            focusRequester.requestFocus()
+        }
+    }
 
     // Dismiss letter overlay without action if user manually scrolls the pager
     LaunchedEffect(Unit) {
@@ -272,7 +388,7 @@ fun FocusTopLauncherScreen(
                 isLetterOverlayActive = false
             } else {
                 val prevIndex = if (activePagerState.currentPage > 0) activePagerState.currentPage - 1 else categoryApps.size - 1
-                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$prevIndex")
+                AppLog.d(TAG, "D-pad LEFT step for ${selectedCategory.id}: current=${activePagerState.currentPage} -> target=$prevIndex")
                 activePagerState.animateScrollToPage(prevIndex)
             }
         }
@@ -287,7 +403,7 @@ fun FocusTopLauncherScreen(
                 isLetterOverlayActive = false
             } else {
                 val nextIndex = if (activePagerState.currentPage < categoryApps.size - 1) activePagerState.currentPage + 1 else 0
-                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.name}: current=${activePagerState.currentPage} -> target=$nextIndex")
+                AppLog.d(TAG, "D-pad RIGHT step for ${selectedCategory.id}: current=${activePagerState.currentPage} -> target=$nextIndex")
                 activePagerState.animateScrollToPage(nextIndex)
             }
         }
@@ -332,7 +448,7 @@ fun FocusTopLauncherScreen(
                 selectedLetterNavIndex = (selectedLetterNavIndex - 1).coerceAtLeast(0)
                 AppLog.d(
                     TAG,
-                    "L1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                    "L1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
                 scheduleLetterCommit()
             }
@@ -352,7 +468,7 @@ fun FocusTopLauncherScreen(
                 selectedLetterNavIndex = (selectedLetterNavIndex + 1).coerceAtMost(uniqueLetters.size - 1)
                 AppLog.d(
                     TAG,
-                    "R1 letter carousel step for ${selectedCategory.name}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
+                    "R1 letter carousel step for ${selectedCategory.id}: selected index=$selectedLetterNavIndex ('${uniqueLetters[selectedLetterNavIndex]}')",
                 )
                 scheduleLetterCommit()
             }
@@ -364,7 +480,7 @@ fun FocusTopLauncherScreen(
         onFocusedAppChanged(currentApp)
         if (currentApp != null) {
             lastHighlightedPackages = lastHighlightedPackages + (selectedCategory to currentApp.packageName)
-            AppLog.d(TAG, "Focused game changed for ${selectedCategory.name}: package=${currentApp.packageName}, label=${currentApp.label}")
+            AppLog.d(TAG, "Focused game changed for ${selectedCategory.id}: package=${currentApp.packageName}, label=${currentApp.label}")
         }
     }
 
@@ -422,196 +538,230 @@ fun FocusTopLauncherScreen(
         modifier = modifier.fillMaxSize(),
         color = appColors.appBackground,
     ) {
-        AnimatedContent(
-            targetState = isLibraryOpen,
-            transitionSpec = {
-                if (targetState) {
-                    (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { it }) + fadeIn(animationSpec = tween(350)))
-                        .togetherWith(
-                            slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { -it }) + fadeOut(animationSpec = tween(350)),
-                        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            AnimatedContent(
+                targetState = isLibraryOpen,
+                transitionSpec = {
+                    if (targetState) {
+                        (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { it }) + fadeIn(animationSpec = tween(350)))
+                            .togetherWith(
+                                slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { -it }) +
+                                    fadeOut(animationSpec = tween(350)),
+                            )
+                    } else {
+                        (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { -it }) + fadeIn(animationSpec = tween(350)))
+                            .togetherWith(
+                                slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { it }) +
+                                    fadeOut(animationSpec = tween(350)),
+                            )
+                    }
+                },
+                label = "LibrarySlideTransition",
+                modifier = Modifier.fillMaxSize(),
+            ) { showLibrary ->
+                if (showLibrary) {
+                    FocusLibraryScreen(
+                        allApps = allApps,
+                        selectedTab = librarySelectedTab,
+                        onTabSelected = onLibraryTabSelected,
+                        focusedIndex = libraryFocusedIndex,
+                        onFocusedIndexChange = onLibraryFocusedIndexChange,
+                        favoritesSet = favoritesSet,
+                        hiddenSet = hiddenSet,
+                        isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
+                        onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
+                        onToggleFavorite = onToggleFavorite,
+                        onToggleHidden = onToggleHidden,
+                        onEditArtwork = onEditArtwork,
+                        onOpenAppInfo = onOpenAppInfo,
+                        onAddRomFolder = onAddRomFolder,
+                        onRemoveRomFolder = onRemoveRomFolder,
+                        onAppClickTop = onAppClickTop,
+                        onAppClickBottom = onAppClickBottom,
+                        onCloseRequested = onCloseLibrary,
+                        enabled = isLibraryOpen,
+                        tabs = libraryTabs,
+                        isRemoveRomFolderDialogOpen = isRemoveRomFolderDialogOpen,
+                        onRemoveRomFolderDialogOpenChange = onRemoveRomFolderDialogOpenChange,
+                        removeRomFolderDialogSelectedIndex = removeRomFolderDialogSelectedIndex,
+                        onRemoveRomFolderDialogSelectedIndexChange = onRemoveRomFolderDialogSelectedIndexChange,
+                        folderToRemove = folderToRemove,
+                        onFolderToRemoveChange = onFolderToRemoveChange,
+                    )
                 } else {
-                    (slideInHorizontally(animationSpec = tween(350), initialOffsetX = { -it }) + fadeIn(animationSpec = tween(350)))
-                        .togetherWith(
-                            slideOutHorizontally(animationSpec = tween(350), targetOffsetX = { it }) + fadeOut(animationSpec = tween(350)),
-                        )
-                }
-            },
-            label = "LibrarySlideTransition",
-            modifier = Modifier.fillMaxSize(),
-        ) { showLibrary ->
-            if (showLibrary) {
-                FocusLibraryScreen(
-                    allApps = allApps,
-                    selectedTab = librarySelectedTab,
-                    onTabSelected = onLibraryTabSelected,
-                    focusedIndex = libraryFocusedIndex,
-                    onFocusedIndexChange = onLibraryFocusedIndexChange,
-                    favoritesSet = favoritesSet,
-                    hiddenSet = hiddenSet,
-                    isOptionsMenuExpanded = isLibraryOptionsMenuExpanded,
-                    onOptionsMenuExpandedChange = onLibraryOptionsMenuExpandedChange,
-                    onToggleFavorite = onToggleFavorite,
-                    onToggleHidden = onToggleHidden,
-                    onEditArtwork = onEditArtwork,
-                    onOpenAppInfo = onOpenAppInfo,
-                    onAppClickTop = onAppClickTop,
-                    onAppClickBottom = onAppClickBottom,
-                    onCloseRequested = onCloseLibrary,
-                    enabled = isLibraryOpen,
-                )
-            } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .drawBehind {
-                                drawRect(
-                                    brush =
-                                        Brush.verticalGradient(
-                                            colors =
-                                                listOf(
-                                                    animatedPrimaryColor.copy(alpha = 0.35f),
-                                                    animatedSecondaryColor.copy(alpha = 0.18f),
-                                                    appColors.appBackground,
-                                                ),
-                                        ),
-                                )
-                            },
-                ) {
-                    // Plane 1: Full-Screen Gallery & App Title Plane
                     Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .drawBehind {
+                                    drawRect(
+                                        brush =
+                                            Brush.verticalGradient(
+                                                colors =
+                                                    listOf(
+                                                        animatedPrimaryColor.copy(alpha = 0.35f),
+                                                        animatedSecondaryColor.copy(alpha = 0.18f),
+                                                        appColors.appBackground,
+                                                    ),
+                                            ),
+                                    )
+                                },
                     ) {
-                        AnimatedContent(
-                            targetState = selectedCategory,
-                            transitionSpec = {
-                                val isMovingDown = initialState.next() == targetState
-                                if (isMovingDown) {
-                                    (slideInVertically { height -> height } + fadeIn())
-                                        .togetherWith(slideOutVertically { height -> -height } + fadeOut())
-                                } else {
-                                    (slideInVertically { height -> -height } + fadeIn())
-                                        .togetherWith(slideOutVertically { height -> height } + fadeOut())
-                                }
-                            },
-                            label = "CarouselCategoryTransition",
+                        // Plane 1: Full-Screen Gallery & App Title Plane
+                        Box(
                             modifier = Modifier.fillMaxSize(),
-                        ) { category ->
-                            val currentCategoryApps = getAppsForCategory(category)
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (currentCategoryApps.isEmpty()) {
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .height(310.dp)
-                                                .fillMaxWidth(),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            text =
-                                                when (category) {
-                                                    GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
-                                                    GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
-                                                    GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
-                                                    GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
-                                                    else -> stringResource(R.string.focus_launcher_no_apps)
-                                                },
-                                            style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
-                                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            AnimatedContent(
+                                targetState = selectedCategory,
+                                transitionSpec = {
+                                    val isMovingDown = initialState.next(categories) == targetState
+                                    if (isMovingDown) {
+                                        (slideInVertically { height -> height } + fadeIn())
+                                            .togetherWith(slideOutVertically { height -> -height } + fadeOut())
+                                    } else {
+                                        (slideInVertically { height -> -height } + fadeIn())
+                                            .togetherWith(slideOutVertically { height -> height } + fadeOut())
                                     }
-                                } else {
-                                    Column(
-                                        modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        // Carousel
-                                        val categoryPagerState =
-                                            when (category) {
-                                                GameFocusCategory.GAMES -> gamesPagerState
-                                                GameFocusCategory.APPS -> appsPagerState
-                                                GameFocusCategory.ALL_APPS -> allAppsPagerState
-                                                GameFocusCategory.FAVORITES -> favoritesPagerState
-                                                GameFocusCategory.LAST_USED -> lastUsedPagerState
-                                            }
-                                        HorizontalPosterCarousel(
-                                            itemCount = currentCategoryApps.size,
-                                            pagerState = categoryPagerState,
-                                            key = { page -> currentCategoryApps.getOrNull(page)?.packageName ?: page },
-                                            targetPage = categoryPagerState.targetPage,
-                                            onItemClick = { actualIndex ->
-                                                val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                if (appInfo != null) onAppClick(appInfo)
-                                            },
-                                            posterWidth = FTL_POSTER_WIDTH,
-                                            posterHeight = FTL_POSTER_HEIGHT,
-                                            posterSpacing = FTL_POSTER_SPACING,
-                                            carouselHeight = 310.dp,
-                                            posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
-                                            cardBackgroundColor = { actualIndex, isSelected ->
-                                                val appInfo = currentCategoryApps.getOrNull(actualIndex)
-                                                if (appInfo != null) {
-                                                    val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
-                                                    if (palette != null && palette.isExtracted) {
-                                                        palette.darkenedPrimaryColor
+                                },
+                                label = "CarouselCategoryTransition",
+                                modifier = Modifier.fillMaxSize(),
+                            ) { category ->
+                                val currentCategoryApps = getAppsForCategory(category)
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (currentCategoryApps.isEmpty()) {
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .height(FTL_CAROUSEL_HEIGHT)
+                                                    .fillMaxWidth(),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                text =
+                                                    when (category) {
+                                                        GameFocusCategory.GAMES -> stringResource(R.string.gamefocus_no_games)
+                                                        GameFocusCategory.APPS -> stringResource(R.string.gamefocus_no_apps_category)
+                                                        GameFocusCategory.FAVORITES -> stringResource(R.string.gamefocus_no_favorites)
+                                                        GameFocusCategory.LAST_USED -> stringResource(R.string.gamefocus_no_last_used)
+                                                        else -> stringResource(R.string.focus_launcher_no_apps)
+                                                    },
+                                                style = MaterialTheme.typography.titleMedium.copy(color = appColors.onSurfaceSecondary),
+                                            )
+                                        }
+                                    } else {
+                                        Column(
+                                            modifier = Modifier.padding(top = FTL_GALLERY_TOP_OFFSET),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                        ) {
+                                            // Carousel
+                                            val categoryPagerState =
+                                                when (category) {
+                                                    GameFocusCategory.GAMES -> {
+                                                        gamesPagerState
+                                                    }
+
+                                                    GameFocusCategory.APPS -> {
+                                                        appsPagerState
+                                                    }
+
+                                                    GameFocusCategory.ALL_APPS -> {
+                                                        allAppsPagerState
+                                                    }
+
+                                                    GameFocusCategory.FAVORITES -> {
+                                                        favoritesPagerState
+                                                    }
+
+                                                    GameFocusCategory.LAST_USED -> {
+                                                        lastUsedPagerState
+                                                    }
+
+                                                    is GameFocusCategory.RomSystem -> {
+                                                        romPagerStates.getOrPut(category.id) {
+                                                            RomPagerState(0, 0f) { currentCategoryApps.size }
+                                                        }
+                                                    }
+                                                }
+                                            HorizontalPosterCarousel(
+                                                itemCount = currentCategoryApps.size,
+                                                pagerState = categoryPagerState,
+                                                modifier = Modifier.focusRequester(focusRequester),
+                                                key = { page -> currentCategoryApps.getOrNull(page)?.packageName ?: page },
+                                                targetPage = categoryPagerState.targetPage,
+                                                onItemClick = { actualIndex ->
+                                                    val appInfo = currentCategoryApps.getOrNull(actualIndex)
+                                                    if (appInfo != null) onAppClick(appInfo)
+                                                },
+                                                posterWidth = FTL_POSTER_WIDTH,
+                                                posterHeight = FTL_POSTER_HEIGHT,
+                                                posterSpacing = FTL_POSTER_SPACING,
+                                                carouselHeight = FTL_CAROUSEL_HEIGHT,
+                                                posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
+                                                cardBackgroundColor = { actualIndex, isSelected ->
+                                                    val appInfo = currentCategoryApps.getOrNull(actualIndex)
+                                                    if (appInfo != null) {
+                                                        val palette = AppPaletteExtractor.getCachedColorsOrNull(appInfo)
+                                                        if (palette != null && palette.isExtracted) {
+                                                            palette.darkenedPrimaryColor
+                                                        } else {
+                                                            if (isSelected) appColors.surfaceVariant else appColors.surface
+                                                        }
                                                     } else {
                                                         if (isSelected) appColors.surfaceVariant else appColors.surface
                                                     }
-                                                } else {
-                                                    if (isSelected) appColors.surfaceVariant else appColors.surface
-                                                }
-                                            },
-                                            isHidden = { actualIndex ->
-                                                currentCategoryApps.getOrNull(actualIndex)?.let {
-                                                    hiddenSet.contains(it.packageName)
-                                                } ?: false
-                                            },
-                                        ) { actualIndex, _ ->
-                                            val appInfo = currentCategoryApps[actualIndex]
-                                            PosterCardContent(
-                                                appInfo = appInfo,
-                                                isFavorite = favoritesSet.contains(appInfo.packageName),
-                                                isHidden = hiddenSet.contains(appInfo.packageName),
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
-
-                                        // Focused App Title or Horizontal Letter Carousel Overlay
-                                        AnimatedContent(
-                                            targetState = isLetterOverlayActive,
-                                            transitionSpec = {
-                                                (slideInVertically { height -> height / 2 } + fadeIn())
-                                                    .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
-                                            },
-                                            label = "TitleLetterCarouselTransition",
-                                            modifier =
-                                                Modifier
-                                                    .zIndex(1f)
-                                                    .padding(horizontal = 40.dp),
-                                        ) { isOverlay ->
-                                            if (isOverlay && uniqueLetters.isNotEmpty()) {
-                                                HorizontalLetterCarousel(
-                                                    letters = uniqueLetters,
-                                                    selectedIndex = selectedLetterNavIndex,
+                                                },
+                                                isHidden = { actualIndex ->
+                                                    currentCategoryApps.getOrNull(actualIndex)?.let {
+                                                        hiddenSet.contains(it.packageName)
+                                                    } ?: false
+                                                },
+                                            ) { actualIndex, _ ->
+                                                val appInfo = currentCategoryApps[actualIndex]
+                                                PosterCardContent(
+                                                    appInfo = appInfo,
+                                                    isFavorite = favoritesSet.contains(appInfo.packageName),
+                                                    isHidden = hiddenSet.contains(appInfo.packageName),
                                                 )
-                                            } else {
-                                                if (currentApp != null) {
-                                                    Text(
-                                                        text = currentApp.label,
-                                                        style =
-                                                            MaterialTheme.typography.headlineLarge.copy(
-                                                                fontWeight = FontWeight.ExtraBold,
-                                                                color = appColors.onSurface,
-                                                            ),
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                        textAlign = TextAlign.Center,
+                                            }
+
+                                            Spacer(modifier = Modifier.height(FTL_TITLE_GAP))
+
+                                            // Focused App Title or Horizontal Letter Carousel Overlay
+                                            AnimatedContent(
+                                                targetState = isLetterOverlayActive,
+                                                transitionSpec = {
+                                                    (slideInVertically { height -> height / 2 } + fadeIn())
+                                                        .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
+                                                },
+                                                label = "TitleLetterCarouselTransition",
+                                                modifier =
+                                                    Modifier
+                                                        .zIndex(1f)
+                                                        .padding(horizontal = FTL_LETTER_NAV_PADDING),
+                                            ) { isOverlay ->
+                                                if (isOverlay && uniqueLetters.isNotEmpty()) {
+                                                    HorizontalLetterCarousel(
+                                                        letters = uniqueLetters,
+                                                        selectedIndex = selectedLetterNavIndex,
                                                     )
+                                                } else {
+                                                    if (currentApp != null) {
+                                                        Text(
+                                                            text = currentApp.label,
+                                                            style =
+                                                                MaterialTheme.typography.headlineLarge.copy(
+                                                                    fontWeight = FontWeight.ExtraBold,
+                                                                    color = appColors.onSurface,
+                                                                ),
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                            textAlign = TextAlign.Center,
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -619,198 +769,217 @@ fun FocusTopLauncherScreen(
                                 }
                             }
                         }
-                    }
 
-                    // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
+                        // Plane 2: Hovering Controls Layer (Categories, Actions, Touch Launch Buttons)
 
-                    // Top-Right Library navigation button hovering over the gallery plane
-                    val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
+                        // Top-Right Library navigation button hovering over the gallery plane
+                        val isControlsEnabled = editingAppInfo == null && !isLibraryOpen
 
-                    // Top-Left Category Header hovering over the gallery plane
-                    InteractiveCategoryHeader(
-                        selectedCategory = selectedCategory,
-                        onCategoryUp = onCategoryUp,
-                        onCategoryDown = onCategoryDown,
-                        enabled = isControlsEnabled,
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopStart)
-                                .padding(start = 24.dp, top = 16.dp),
-                    )
-
-                    GamePadButtonAction(
-                        button = GamePadButton.BUTTON_R2,
-                        text = stringResource(R.string.gamefocus_nav_library),
-                        enabled = isControlsEnabled,
-                        onClick = onOpenLibrary,
-                        modifier =
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(end = 12.dp, top = 12.dp),
-                    )
-
-                    // Bottom-Left Main Actions Menu hovering over the gallery plane
-                    Box(
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(start = 12.dp, bottom = 4.dp),
-                    ) {
-                        val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
-                        val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
-                        ExpandableActionsMenu(
-                            isExpanded = isMainOptionsMenuExpanded,
-                            onExpandedChange = onMainOptionsMenuExpandedChange,
-                            orientation = ExpandableMenuOrientation.VERTICAL,
+                        // Top-Left Category Header hovering over the gallery plane
+                        InteractiveCategoryHeader(
+                            selectedCategory = selectedCategory,
+                            categories = categories,
+                            onCategoryUp = onCategoryUp,
+                            onCategoryDown = onCategoryDown,
                             enabled = isControlsEnabled,
-                            actions =
-                                listOf(
-                                    ExpandableActionItem(
-                                        label =
-                                            if (isCurrentFavorite) {
-                                                stringResource(R.string.gamefocus_option_remove_favorite)
-                                            } else {
-                                                stringResource(R.string.gamefocus_option_add_favorite)
-                                            },
-                                        iconSymbol = "gamepad_up",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onToggleFavorite(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                    ExpandableActionItem(
-                                        label = stringResource(R.string.gamefocus_option_edit),
-                                        iconSymbol = "gamepad_right",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onEditArtwork(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                    ExpandableActionItem(
-                                        label = stringResource(R.string.gamefocus_option_app_info),
-                                        iconSymbol = "gamepad_down",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onOpenAppInfo(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                    ExpandableActionItem(
-                                        label =
-                                            if (isCurrentHidden) {
-                                                stringResource(R.string.gamefocus_option_unhide)
-                                            } else {
-                                                stringResource(R.string.gamefocus_option_hide)
-                                            },
-                                        iconSymbol = "gamepad_left",
-                                        onClick = {
-                                            if (currentApp != null) {
-                                                onToggleHidden(currentApp)
-                                                onMainOptionsMenuExpandedChange(false)
-                                            }
-                                        },
-                                    ),
-                                ),
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(start = FTL_CATEGORY_HEADER_PADDING_START, top = FTL_CATEGORY_HEADER_PADDING_TOP),
                         )
-                    }
-
-                    // Bottom-Right subdued touch buttons hovering over the gallery plane
-                    val noFocusInteractionSource = remember { MutableInteractionSource() }
-                    val isBottomBarEnabled = isControlsEnabled && !isMainOptionsMenuExpanded
-                    Row(
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 12.dp, bottom = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        GamePadButtonAction(
-                            button = GamePadButton.BUTTON_A,
-                            text = stringResource(R.string.gamefocus_launch_top),
-                            enabled = isBottomBarEnabled,
-                            onClick = {
-                                if (currentApp != null) {
-                                    onAppClickTop(currentApp)
-                                }
-                            },
-                        )
-
-                        Spacer(modifier = Modifier.width(2.dp))
 
                         GamePadButtonAction(
-                            button = GamePadButton.BUTTON_X,
-                            text = stringResource(R.string.gamefocus_launch_bottom),
-                            enabled = isBottomBarEnabled,
-                            onClick = {
-                                if (currentApp != null) {
-                                    onAppClickBottom(currentApp)
+                            button = GamePadButton.BUTTON_R2,
+                            text = stringResource(R.string.gamefocus_nav_library),
+                            enabled = isControlsEnabled,
+                            onClick = onOpenLibrary,
+                            modifier =
+                                Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(end = FTL_NAV_PADDING_END, top = FTL_NAV_PADDING_TOP),
+                        )
+
+                        // Bottom-Left Main Actions Menu hovering over the gallery plane
+                        Box(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(start = FTL_BOTTOM_BAR_PADDING_START, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
+                        ) {
+                            val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
+                            val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
+                            val actions =
+                                remember(currentApp, isCurrentFavorite, isCurrentHidden) {
+                                    buildList {
+                                        if (currentApp != null) {
+                                            add(
+                                                ExpandableActionItem(
+                                                    label =
+                                                        if (isCurrentFavorite) {
+                                                            context.getString(R.string.gamefocus_option_remove_favorite)
+                                                        } else {
+                                                            context.getString(R.string.gamefocus_option_add_favorite)
+                                                        },
+                                                    iconSymbol = "gamepad_up",
+                                                    onClick = {
+                                                        onToggleFavorite(currentApp)
+                                                        onMainOptionsMenuExpandedChange(false)
+                                                    },
+                                                ),
+                                            )
+                                            add(
+                                                ExpandableActionItem(
+                                                    label = context.getString(R.string.gamefocus_option_edit),
+                                                    iconSymbol = "gamepad_right",
+                                                    onClick = {
+                                                        onEditArtwork(currentApp)
+                                                        onMainOptionsMenuExpandedChange(false)
+                                                    },
+                                                ),
+                                            )
+                                            if (!currentApp.isRom) {
+                                                add(
+                                                    ExpandableActionItem(
+                                                        label = context.getString(R.string.gamefocus_option_app_info),
+                                                        iconSymbol = "gamepad_down",
+                                                        onClick = {
+                                                            onOpenAppInfo(currentApp)
+                                                            onMainOptionsMenuExpandedChange(false)
+                                                        },
+                                                    ),
+                                                )
+                                            }
+                                            add(
+                                                ExpandableActionItem(
+                                                    label =
+                                                        if (isCurrentHidden) {
+                                                            context.getString(R.string.gamefocus_option_unhide)
+                                                        } else {
+                                                            context.getString(R.string.gamefocus_option_hide)
+                                                        },
+                                                    iconSymbol = "gamepad_left",
+                                                    onClick = {
+                                                        onToggleHidden(currentApp)
+                                                        onMainOptionsMenuExpandedChange(false)
+                                                    },
+                                                ),
+                                            )
+                                        }
+                                    }
                                 }
-                            },
-                        )
-                    }
-                }
-
-                // Custom Megingiard Artwork Selection Modal Dialog
-                if (editingAppInfo != null) {
-                    if (apiKey.isBlank()) {
-                        showApiTokenMissingDialog = true
-                    } else {
-                        GameFocusArtworkDialog(
-                            appInfo = editingAppInfo,
-                            apiKey = apiKey,
-                            virtualIndex = dialogVirtualIndex,
-                            onVirtualIndexChange = onDialogVirtualIndexChange,
-                            confirmTrigger = confirmDialogTrigger,
-                            l1Trigger = dialogL1Trigger,
-                            r1Trigger = dialogR1Trigger,
-                            isOptionsMenuExpanded = isOptionsMenuExpanded,
-                            onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
-                            dpadUpTrigger = dpadUpTrigger,
-                            dpadRightTrigger = dpadRightTrigger,
-                            onDismiss = onDismissEditingApp,
-                        )
-                    }
-                }
-
-                if (showApiTokenMissingDialog) {
-                    AppAlertDialog(
-                        onDismissRequest = {
-                            showApiTokenMissingDialog = false
-                            onDismissEditingApp()
-                        },
-                        title = {
-                            Text(
-                                text = stringResource(R.string.steamgriddb_token_missing_title),
-                                style = MaterialTheme.typography.titleLarge.copy(color = appColors.onSurface),
+                            ExpandableActionsMenu(
+                                isExpanded = isMainOptionsMenuExpanded,
+                                onExpandedChange = onMainOptionsMenuExpandedChange,
+                                orientation = ExpandableMenuOrientation.VERTICAL,
+                                enabled = isControlsEnabled,
+                                actions = actions,
                             )
-                        },
-                        text = {
-                            Text(
-                                text = stringResource(R.string.steamgriddb_token_missing_message),
-                                style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(
+                        }
+
+                        // Bottom-Right subdued touch buttons hovering over the gallery plane
+                        val noFocusInteractionSource = remember { MutableInteractionSource() }
+                        val isBottomBarEnabled = isControlsEnabled && !isMainOptionsMenuExpanded
+                        Row(
+                            modifier =
+                                Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            GamePadButtonAction(
+                                button = GamePadButton.BUTTON_A,
+                                text = stringResource(R.string.gamefocus_launch_top),
+                                enabled = isBottomBarEnabled,
                                 onClick = {
-                                    showApiTokenMissingDialog = false
-                                    onDismissEditingApp()
+                                    if (currentApp != null) {
+                                        onAppClickTop(currentApp)
+                                    }
                                 },
-                            ) {
+                            )
+
+                            Spacer(modifier = Modifier.width(FTL_BUTTON_GAP))
+
+                            GamePadButtonAction(
+                                button = GamePadButton.BUTTON_X,
+                                text = stringResource(R.string.gamefocus_launch_bottom),
+                                enabled = isBottomBarEnabled,
+                                onClick = {
+                                    if (currentApp != null) {
+                                        onAppClickBottom(currentApp)
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    // Custom Megingiard Artwork Selection Modal Dialog
+                    if (editingAppInfo != null) {
+                        if (apiKey.isBlank()) {
+                            showApiTokenMissingDialog = true
+                        } else {
+                            GameFocusArtworkDialog(
+                                appInfo = editingAppInfo,
+                                apiKey = apiKey,
+                                virtualIndex = dialogVirtualIndex,
+                                onVirtualIndexChange = onDialogVirtualIndexChange,
+                                confirmTrigger = confirmDialogTrigger,
+                                l1Trigger = dialogL1Trigger,
+                                r1Trigger = dialogR1Trigger,
+                                isOptionsMenuExpanded = isOptionsMenuExpanded,
+                                onOptionsMenuExpandedChange = onOptionsMenuExpandedChange,
+                                dpadUpTrigger = dpadUpTrigger,
+                                dpadRightTrigger = dpadRightTrigger,
+                                onDismiss = onDismissEditingApp,
+                            )
+                        }
+                    }
+
+                    if (showApiTokenMissingDialog) {
+                        AppAlertDialog(
+                            onDismissRequest = {
+                                showApiTokenMissingDialog = false
+                                onDismissEditingApp()
+                            },
+                            title = {
                                 Text(
-                                    text = stringResource(R.string.steamgriddb_error_dismiss),
-                                    color = appColors.accent,
+                                    text = stringResource(R.string.steamgriddb_token_missing_title),
+                                    style = MaterialTheme.typography.titleLarge.copy(color = appColors.onSurface),
                                 )
-                            }
-                        },
-                    )
+                            },
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.steamgriddb_token_missing_message),
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = appColors.onSurfaceSecondary),
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showApiTokenMissingDialog = false
+                                        onDismissEditingApp()
+                                    },
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.steamgriddb_error_dismiss),
+                                        color = appColors.accent,
+                                    )
+                                }
+                            },
+                        )
+                    }
                 }
             }
+        }
+
+        if (newlyAddedFolder != null) {
+            RomFolderCoreChooserDialog(
+                folder = newlyAddedFolder,
+                selectedIndex = coreChooserDialogSelectedIndex,
+                onSelectedIndexChange = onCoreChooserDialogSelectedIndexChange,
+                confirmTrigger = confirmCoreChooserTrigger,
+                onDismiss = onDismissNewlyAddedFolder,
+                onConfirm = { core -> onConfirmNewlyAddedFolderCore(newlyAddedFolder, core) },
+            )
         }
     }
 }
@@ -818,6 +987,28 @@ fun FocusTopLauncherScreen(
 internal object FocusImageCache {
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
+
+    fun getAppIcon(
+        context: Context,
+        packageName: String,
+        activityName: String?,
+    ): Drawable? {
+        val pm = context.packageManager
+        return try {
+            if (!activityName.isNullOrBlank()) {
+                val componentName = ComponentName(packageName, activityName)
+                pm.getActivityIcon(componentName)
+            } else {
+                pm.getApplicationIcon(packageName)
+            }
+        } catch (e: Exception) {
+            try {
+                pm.getApplicationIcon(packageName)
+            } catch (e2: Exception) {
+                null
+            }
+        }
+    }
 
     fun getCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
         val path = appInfo.coverPath ?: return null
@@ -865,27 +1056,34 @@ internal object FocusImageCache {
         }
 
         return withContext(Dispatchers.IO) {
-            val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-            val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-            if (iconFile.exists() && iconFile.length() > 0) {
+            val file =
+                if (appInfo.isRom) {
+                    val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                    File(logosDir, "${appInfo.packageName}.png")
+                } else {
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                    File(iconsDir, "${appInfo.packageName}.png")
+                }
+            if (file.exists() && file.length() > 0) {
                 val startTime = System.currentTimeMillis()
                 val diskBitmap =
                     try {
-                        BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
+                        BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
                     } catch (e: Exception) {
                         null
                     }
 
                 if (diskBitmap != null) {
                     val elapsed = System.currentTimeMillis() - startTime
-                    AppLog.d(TAG, "Loaded disk-cached icon PNG for ${appInfo.label} in ${elapsed}ms")
+                    AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
                     iconCache.put(cacheKey, diskBitmap)
                     return@withContext diskBitmap
                 }
             }
 
+            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
             val startTime = System.currentTimeMillis()
-            val bitmap = appInfo.icon?.toBitmapSafe()
+            val bitmap = iconDrawable?.toBitmapSafe()
 
             val elapsed = System.currentTimeMillis() - startTime
             AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
@@ -893,8 +1091,10 @@ internal object FocusImageCache {
             if (bitmap != null) {
                 iconCache.put(cacheKey, bitmap)
                 try {
-                    val androidBmp = appInfo.icon?.toAndroidBitmap()
+                    val androidBmp = iconDrawable?.toAndroidBitmap()
                     if (androidBmp != null) {
+                        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                        val iconFile = File(iconsDir, "${appInfo.packageName}.png")
                         FileOutputStream(iconFile).use { out ->
                             androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                         }
@@ -918,27 +1118,34 @@ internal object FocusImageCache {
             return cached
         }
 
-        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-        val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-        if (iconFile.exists() && iconFile.length() > 0) {
+        val file =
+            if (appInfo.isRom) {
+                val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
+                File(logosDir, "${appInfo.packageName}.png")
+            } else {
+                val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                File(iconsDir, "${appInfo.packageName}.png")
+            }
+        if (file.exists() && file.length() > 0) {
             val startTime = System.currentTimeMillis()
             val diskBitmap =
                 try {
-                    BitmapFactory.decodeFile(iconFile.absolutePath)?.asImageBitmap()
+                    BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
                 } catch (e: Exception) {
                     null
                 }
 
             if (diskBitmap != null) {
                 val elapsed = System.currentTimeMillis() - startTime
-                AppLog.d(TAG, "Loaded disk-cached icon PNG for ${appInfo.label} in ${elapsed}ms")
+                AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
                 iconCache.put(cacheKey, diskBitmap)
                 return diskBitmap
             }
         }
 
+        val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
         val startTime = System.currentTimeMillis()
-        val bitmap = appInfo.icon?.toBitmapSafe()
+        val bitmap = iconDrawable?.toBitmapSafe()
 
         val elapsed = System.currentTimeMillis() - startTime
         AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
@@ -946,8 +1153,10 @@ internal object FocusImageCache {
         if (bitmap != null) {
             iconCache.put(cacheKey, bitmap)
             try {
-                val androidBmp = appInfo.icon?.toAndroidBitmap()
+                val androidBmp = iconDrawable?.toAndroidBitmap()
                 if (androidBmp != null) {
+                    val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+                    val iconFile = File(iconsDir, "${appInfo.packageName}.png")
                     FileOutputStream(iconFile).use { out ->
                         androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
                     }
@@ -991,117 +1200,45 @@ private fun Modifier.noFocusClickable(
 }
 
 @Composable
+private fun getCategoryName(category: GameFocusCategory): String =
+    when (category) {
+        is GameFocusCategory.RomSystem -> category.displayName
+        else -> stringResource(category.stringResId)
+    }
+
+@Composable
 private fun InteractiveCategoryHeader(
     selectedCategory: GameFocusCategory,
+    categories: List<GameFocusCategory>,
     onCategoryUp: () -> Unit = {},
     onCategoryDown: () -> Unit = {},
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val appColors = LocalAppColors.current
-    val density = LocalDensity.current
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier,
-    ) {
-        // Up & Down Gamepad Action Buttons on the left of categories
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(end = 6.dp),
-        ) {
-            GamePadButtonAction(
-                button = GamePadButton.DPAD_UP,
-                text = "",
-                enabled = enabled,
-                onClick = onCategoryUp,
-                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            GamePadButtonAction(
-                button = GamePadButton.DPAD_DOWN,
-                text = "",
-                enabled = enabled,
-                onClick = onCategoryDown,
-                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
-            )
+    val selectedIndex =
+        remember(selectedCategory, categories) {
+            categories.indexOf(selectedCategory).coerceAtLeast(0)
         }
 
-        AnimatedContent(
-            targetState = selectedCategory,
-            transitionSpec = {
-                val isMovingDown = initialState.next() == targetState
-                if (isMovingDown) {
-                    (slideInVertically { height -> height / 3 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> -height / 3 } + fadeOut())
+    VerticalRollingCarousel(
+        selectedIndex = selectedIndex,
+        items = categories,
+        onSelectedIndexChange = { index ->
+            val targetCategory = categories[index]
+            if (targetCategory != selectedCategory) {
+                if ((selectedIndex + 1).floorMod(categories.size) == index) {
+                    onCategoryDown()
                 } else {
-                    (slideInVertically { height -> -height / 3 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> height / 3 } + fadeOut())
+                    onCategoryUp()
                 }
-            },
-            label = "CategoryRollingTransition",
-        ) { currentCat ->
-            val currentPrev = currentCat.previous()
-            val currentNext = currentCat.next()
-
-            Column(
-                horizontalAlignment = Alignment.Start,
-            ) {
-                // Previous category (curved backward top for 3D roll illusion)
-                Text(
-                    text = stringResource(currentPrev.stringResId),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                        Modifier
-                            .graphicsLayer {
-                                rotationX = -FTL_CATEGORY_ROLL_ANGLE_DEG
-                                cameraDistance = 16 * density.density
-                            }.noFocusClickable(enabled = enabled) { onCategoryUp() },
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Active category (highlighted, center-front)
-                Text(
-                    text = stringResource(currentCat.stringResId),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary,
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Next category (curved backward bottom for 3D roll illusion)
-                Text(
-                    text = stringResource(currentNext.stringResId),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = appColors.onSurfaceSecondary.copy(alpha = 0.35f),
-                        ),
-                    maxLines = 1,
-                    textAlign = TextAlign.Start,
-                    modifier =
-                        Modifier
-                            .graphicsLayer {
-                                rotationX = FTL_CATEGORY_ROLL_ANGLE_DEG
-                                cameraDistance = 16 * density.density
-                            }.noFocusClickable(enabled = enabled) { onCategoryDown() },
-                )
             }
-        }
-    }
+        },
+        labelProvider = { category ->
+            getCategoryName(category)
+        },
+        enabled = enabled,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1147,6 +1284,32 @@ private fun PosterCardContent(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+        } else if (appInfo.isRom) {
+            if (currentIcon != null) {
+                Image(
+                    bitmap = currentIcon,
+                    contentDescription = appInfo.label,
+                    modifier =
+                        Modifier
+                            .size(FTL_ICON_SIZE)
+                            .aspectRatio(1f),
+                )
+            } else {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(FTL_ICON_SIZE)
+                            .clip(RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS))
+                            .background(appColors.surface),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MaterialSymbol(
+                        name = "sports_esports",
+                        size = FTL_FALLBACK_ICON_SIZE,
+                        tint = appColors.accent,
+                    )
+                }
+            }
         } else if (currentIcon != null) {
             Image(
                 bitmap = currentIcon,
@@ -1161,7 +1324,7 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .size(FTL_ICON_SIZE)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(FTL_ROM_ICON_CORNER_RADIUS))
                         .background(appColors.surface),
                 contentAlignment = Alignment.Center,
             ) {
@@ -1169,7 +1332,7 @@ private fun PosterCardContent(
                     imageVector = Icons.Default.Apps,
                     contentDescription = appInfo.label,
                     tint = appColors.accent,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(FTL_FALLBACK_ICON_SIZE),
                 )
             }
         }
@@ -1179,12 +1342,12 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(10.dp),
+                        .padding(FTL_BADGE_PADDING),
                 contentAlignment = Alignment.TopEnd,
             ) {
                 MaterialSymbol(
                     name = "kid_star",
-                    size = 22.dp,
+                    size = FTL_BADGE_ICON_SIZE,
                     tint = appColors.accent,
                 )
             }
@@ -1195,13 +1358,13 @@ private fun PosterCardContent(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(10.dp)
+                        .padding(FTL_BADGE_PADDING)
                         .graphicsLayer { alpha = visibilityOffAlpha },
                 contentAlignment = Alignment.TopStart,
             ) {
                 MaterialSymbol(
                     name = "visibility_off",
-                    size = 22.dp,
+                    size = FTL_BADGE_ICON_SIZE,
                     tint = appColors.onSurfaceSecondary,
                 )
             }
@@ -1221,3 +1384,12 @@ private fun Drawable.toBitmapSafe(): ImageBitmap? =
     } catch (e: Exception) {
         null
     }
+
+class RomPagerState(
+    initialPage: Int = 0,
+    initialPageOffsetFraction: Float = 0f,
+    private val pageCountProvider: () -> Int,
+) : PagerState(initialPage, initialPageOffsetFraction) {
+    override val pageCount: Int
+        get() = pageCountProvider()
+}

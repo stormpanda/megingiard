@@ -50,3 +50,13 @@ object ViewportMath {
         return Pair(maxTx, maxTy)
     }
 }
+
+/**
+ * Calculates the floor modulo of an integer.
+ * Equivalent to java.lang.Math.floorMod, avoiding platform-specific java.lang.Math dependency.
+ */
+fun Int.floorMod(other: Int): Int {
+    if (other == 0) return this
+    val r = this % other
+    return if ((r xor other) < 0 && r != 0) r + other else r
+}

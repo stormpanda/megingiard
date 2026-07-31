@@ -49,5 +49,22 @@
     <string name="gamefocus_library_hint_close">R2 oder B drücken zum Schließen</string>
     <string name="gamefocus_nav_gallery">Galerie</string>
     <string name="gamefocus_nav_library">Bibliothek</string>
+    <string name="gamefocus_option_add_rom_folder">ROM-Ordner hinzufügen</string>
+    <string name="gamefocus_option_manage_rom_folders">ROM-Ordner entfernen</string>
+    <string name="gamefocus_dialog_remove_rom_folder_title">ROM-Ordner entfernen</string>
+    <string name="gamefocus_dialog_remove_rom_folder_msg">Wähle einen ROM-Ordner aus, den du entfernen möchtest:</string>
+    <string name="gamefocus_dialog_remove_confirm_title">Entfernen bestätigen</string>
+    <string name="gamefocus_dialog_remove_confirm_msg">Bist du sicher, dass du das ROM-System \'%1$s\' entfernen möchtest? Die gescannten Spiele werden aus dem Launcher entfernt.</string>
+
+    <string name="gamefocus_dialog_system_recognized_title">System erkannt</string>
+    <string name="gamefocus_dialog_system_recognized_msg">Der Ordner wurde als System erkannt: %1$s.</string>
+    <string name="gamefocus_dialog_select_core_label">RetroArch-Core auswählen:</string>
+    <string name="gamefocus_dialog_core_default">Empfohlen (%1$s)</string>
+    <string name="gamefocus_dialog_core_save">Speichern</string>
+    <string name="gamefocus_dialog_core_native_msg">Dieses System verwendet native Emulation. Es wird kein RetroArch-Core benötigt.</string>
+    <string name="gamefocus_dialog_core_native_close">Schließen</string>
+    <string name="gamefocus_dialog_cancel">Abbrechen</string>
+    <string name="gamefocus_dialog_select">Auswählen</string>
+    <string name="gamefocus_dialog_unknown_system">Unbekanntes System</string>
 </resources>
 

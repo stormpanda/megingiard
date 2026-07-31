@@ -7,48 +7,50 @@ import org.junit.Test
 private const val TAG = "GameFocusCategoryTest"
 
 class GameFocusCategoryTest {
+    private val categories = GameFocusCategory.builtIns
+
     @Test
     fun testNext_wrapsAroundFromLastToFirst() {
-        var category = GameFocusCategory.GAMES
-        category = category.next()
+        var category: GameFocusCategory = GameFocusCategory.GAMES
+        category = category.next(categories)
         assertEquals(GameFocusCategory.APPS, category)
 
-        category = category.next()
+        category = category.next(categories)
         assertEquals(GameFocusCategory.ALL_APPS, category)
 
-        category = category.next()
+        category = category.next(categories)
         assertEquals(GameFocusCategory.FAVORITES, category)
 
-        category = category.next()
+        category = category.next(categories)
         assertEquals(GameFocusCategory.LAST_USED, category)
 
-        category = category.next()
+        category = category.next(categories)
         assertEquals(GameFocusCategory.GAMES, category)
     }
 
     @Test
     fun testPrevious_wrapsAroundFromFirstToLast() {
-        var category = GameFocusCategory.GAMES
-        category = category.previous()
+        var category: GameFocusCategory = GameFocusCategory.GAMES
+        category = category.previous(categories)
         assertEquals(GameFocusCategory.LAST_USED, category)
 
-        category = category.previous()
+        category = category.previous(categories)
         assertEquals(GameFocusCategory.FAVORITES, category)
 
-        category = category.previous()
+        category = category.previous(categories)
         assertEquals(GameFocusCategory.ALL_APPS, category)
 
-        category = category.previous()
+        category = category.previous(categories)
         assertEquals(GameFocusCategory.APPS, category)
 
-        category = category.previous()
+        category = category.previous(categories)
         assertEquals(GameFocusCategory.GAMES, category)
     }
 
     @Test
     fun testAllEntriesHaveValidStringResId() {
-        GameFocusCategory.entries.forEach { entry ->
-            assertNotEquals("Res ID for ${entry.name} should be non-zero", 0, entry.stringResId)
+        categories.forEach { entry ->
+            assertNotEquals("Res ID for ${entry.id} should be non-zero", 0, entry.stringResId)
         }
     }
 }
