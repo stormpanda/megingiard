@@ -1185,6 +1185,13 @@ Open Settings to create a layout.</string>
     <string name="integration_home_hovered_game">Hovered Game/App</string>
     <string name="integration_home_no_game_hovered">None</string>
     <string name="integration_home_no_profile_active">No Profile Active</string>
+    <string name="integration_home_profile_config_title">Profile Configuration</string>
+    <string name="integration_home_linked_profile">Linked Profile</string>
+    <string name="integration_home_edit_layout">Edit Layout</string>
+    <string name="integration_home_no_profile_assigned">No profile configured for this app yet.</string>
+    <string name="integration_home_create_profile">Create Profile</string>
+    <string name="integration_home_link_existing">Link Existing</string>
+    <string name="integration_home_no_unassigned_profiles">No unassigned profiles</string>
     <string name="integration_home_status_title">Status Panel</string>
     <string name="integration_home_status_privd">Privileged Daemon</string>
     <string name="integration_home_status_mirror">Screen Mirroring</string>

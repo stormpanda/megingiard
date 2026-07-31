@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -13,8 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Airplay
@@ -25,10 +28,15 @@ import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,9 +60,13 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import java.util.UUID
 
 private const val TAG = "IntegrationHomeScreen"
 
@@ -116,7 +128,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Top Header Row (Clock on Left, Battery on Right)
+        // Top Header Row (Clock on Left, Battery on Right) - FIXED
         Row(
             modifier =
                 Modifier
@@ -166,86 +178,284 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Connected Client Card
-        InfoCard(
-            title = stringResource(R.string.integration_home_connected_client),
-            value = if (isClientActive) clientPackage ?: "Unknown" else "None",
-            icon = Icons.Rounded.Link,
-            colors = colors,
-            isHighlight = isClientActive,
-            isMonospace = true,
-        )
-
-        // Hovered Game/App Card (only when gamefocus is active)
-        val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
-        if (isGameFocus) {
-            InfoCard(
-                title = stringResource(R.string.integration_home_hovered_game),
-                value = hoveredAppLabel ?: stringResource(R.string.integration_home_no_game_hovered),
-                icon = Icons.Rounded.TouchApp,
-                colors = colors,
-                isHighlight = hoveredAppLabel != null,
-            )
-        }
-
-        // Active Profile Card
-        InfoCard(
-            title = stringResource(R.string.integration_home_active_profile),
-            value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),
-            icon = Icons.Rounded.Gamepad,
-            colors = colors,
-            isHighlight = activeProfile != null,
-        )
-
-        // Status Panel Card
-        Card(
+        // Scrollable cards list
+        Column(
             modifier =
                 Modifier
+                    .weight(1f)
                     .fillMaxWidth()
-                    .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
-            shape = IH_CARD_SHAPE,
-            colors = CardDefaults.cardColors(containerColor = colors.surface),
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                modifier = Modifier.padding(IH_PADDING_CARD),
-                verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
+            // 1. Hovered Game/App Card (only when gamefocus is active) - VERY TOP
+            val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+            if (isGameFocus) {
+                InfoCard(
+                    title = stringResource(R.string.integration_home_hovered_game),
+                    value = hoveredAppLabel ?: stringResource(R.string.integration_home_no_game_hovered),
+                    icon = Icons.Rounded.TouchApp,
+                    colors = colors,
+                    isHighlight = hoveredAppLabel != null,
+                )
+            }
+
+            // 2. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
+            val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
+            if (isGameFocus && hoveredPackage != null) {
+                val profiles by MacroPadState.profiles.collectAsState()
+                val associatedProfile =
+                    remember(profiles, hoveredPackage) {
+                        profiles.find { it.associatedPackage == hoveredPackage }
+                    }
+                ProfileConfigCard(
+                    hoveredPackage = hoveredPackage!!,
+                    hoveredLabel = hoveredAppLabel,
+                    associatedProfile = associatedProfile,
+                    profiles = profiles,
+                    colors = colors,
+                )
+            }
+
+            // 3. Active Profile Card
+            InfoCard(
+                title = stringResource(R.string.integration_home_active_profile),
+                value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),
+                icon = Icons.Rounded.Gamepad,
+                colors = colors,
+                isHighlight = activeProfile != null,
+            )
+
+            // 4. Status Panel Card
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
+                shape = IH_CARD_SHAPE,
+                colors = CardDefaults.cardColors(containerColor = colors.surface),
             ) {
+                Column(
+                    modifier = Modifier.padding(IH_PADDING_CARD),
+                    verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
+                ) {
+                    Text(
+                        text = stringResource(R.string.integration_home_status_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = colors.onSurfaceSecondary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+
+                    // Privileged Daemon Row
+                    StatusRow(
+                        label = stringResource(R.string.integration_home_status_privd),
+                        icon = Icons.Rounded.LockOpen,
+                        isActive = privdState == PrivdState.RUNNING,
+                        activeLabel = stringResource(R.string.integration_home_status_running),
+                        inactiveLabel = stringResource(R.string.integration_home_status_stopped),
+                        colors = colors,
+                    )
+
+                    // Mirror Session Row
+                    StatusRow(
+                        label = stringResource(R.string.integration_home_status_mirror),
+                        icon = Icons.Rounded.Airplay,
+                        isActive = isCapturing,
+                        activeLabel = stringResource(R.string.integration_home_status_active),
+                        inactiveLabel = stringResource(R.string.integration_home_status_inactive),
+                        colors = colors,
+                    )
+
+                    // Accessibility Service Row
+                    StatusRow(
+                        label = stringResource(R.string.integration_home_status_accessibility),
+                        icon = Icons.Rounded.Accessibility,
+                        isActive = isAccessibilityActive,
+                        activeLabel = stringResource(R.string.integration_home_status_active),
+                        inactiveLabel = stringResource(R.string.integration_home_status_inactive),
+                        colors = colors,
+                    )
+                }
+            }
+
+            // 5. Connected Client Card - VERY BOTTOM
+            InfoCard(
+                title = stringResource(R.string.integration_home_connected_client),
+                value = if (isClientActive) clientPackage ?: "Unknown" else "None",
+                icon = Icons.Rounded.Link,
+                colors = colors,
+                isHighlight = isClientActive,
+                isMonospace = true,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProfileConfigCard(
+    hoveredPackage: String,
+    hoveredLabel: String?,
+    associatedProfile: PadProfile?,
+    profiles: List<PadProfile>,
+    colors: AppColors,
+) {
+    var expandedDropdown by remember { mutableStateOf(false) }
+    val unassignedProfiles =
+        remember(profiles) {
+            profiles.filter { it.associatedPackage == null }
+        }
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
+        shape = IH_CARD_SHAPE,
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
+    ) {
+        Column(
+            modifier = Modifier.padding(IH_PADDING_CARD),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.integration_home_profile_config_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.onSurfaceSecondary,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            if (associatedProfile != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.integration_home_linked_profile),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.onSurfaceSecondary,
+                        )
+                        Text(
+                            text = associatedProfile.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colors.accent,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            MacroPadState.setActiveProfileId(associatedProfile.id)
+                            AppStateManager.setEditorActive(true)
+                        },
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent,
+                            ),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(text = stringResource(R.string.integration_home_edit_layout))
+                    }
+                }
+            } else {
                 Text(
-                    text = stringResource(R.string.integration_home_status_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.onSurfaceSecondary,
-                    fontWeight = FontWeight.SemiBold,
+                    text = stringResource(R.string.integration_home_no_profile_assigned),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurface,
                 )
 
-                // Privileged Daemon Row
-                StatusRow(
-                    label = stringResource(R.string.integration_home_status_privd),
-                    icon = Icons.Rounded.LockOpen,
-                    isActive = privdState == PrivdState.RUNNING,
-                    activeLabel = stringResource(R.string.integration_home_status_running),
-                    inactiveLabel = stringResource(R.string.integration_home_status_stopped),
-                    colors = colors,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(
+                        onClick = {
+                            val newProfileId = UUID.randomUUID().toString()
+                            val defaultLayoutId = UUID.randomUUID().toString()
+                            val newProfile =
+                                PadProfile(
+                                    id = newProfileId,
+                                    name = hoveredLabel ?: "New Profile",
+                                    associatedPackage = hoveredPackage,
+                                    layouts =
+                                        listOf(
+                                            PadLayout(
+                                                id = defaultLayoutId,
+                                                name = "Default",
+                                                mirrorCutouts = listOf(ScreenCutout.createDefault()),
+                                            ),
+                                        ),
+                                    activeLayoutId = defaultLayoutId,
+                                )
+                            MacroPadState.addProfile(newProfile)
+                            MacroPadState.setActiveProfileId(newProfileId)
+                            AppStateManager.setEditorActive(true)
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent,
+                            ),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.integration_home_create_profile),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
 
-                // Mirror Session Row
-                StatusRow(
-                    label = stringResource(R.string.integration_home_status_mirror),
-                    icon = Icons.Rounded.Airplay,
-                    isActive = isCapturing,
-                    activeLabel = stringResource(R.string.integration_home_status_active),
-                    inactiveLabel = stringResource(R.string.integration_home_status_inactive),
-                    colors = colors,
-                )
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { expandedDropdown = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, colors.controlOverlayBorder),
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = colors.onSurface,
+                                ),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.integration_home_link_existing),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
 
-                // Accessibility Service Row
-                StatusRow(
-                    label = stringResource(R.string.integration_home_status_accessibility),
-                    icon = Icons.Rounded.Accessibility,
-                    isActive = isAccessibilityActive,
-                    activeLabel = stringResource(R.string.integration_home_status_active),
-                    inactiveLabel = stringResource(R.string.integration_home_status_inactive),
-                    colors = colors,
-                )
+                        DropdownMenu(
+                            expanded = expandedDropdown,
+                            onDismissRequest = { expandedDropdown = false },
+                            modifier = Modifier.background(colors.surface),
+                        ) {
+                            if (unassignedProfiles.isEmpty()) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = stringResource(R.string.integration_home_no_unassigned_profiles),
+                                            color = colors.onSurfaceSecondary,
+                                        )
+                                    },
+                                    onClick = { expandedDropdown = false },
+                                )
+                            } else {
+                                unassignedProfiles.forEach { profile ->
+                                    DropdownMenuItem(
+                                        text = { Text(profile.name, color = colors.onSurface) },
+                                        onClick = {
+                                            expandedDropdown = false
+                                            val updatedProfile = profile.copy(associatedPackage = hoveredPackage)
+                                            MacroPadState.updateProfile(updatedProfile)
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

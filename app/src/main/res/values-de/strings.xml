@@ -1192,6 +1192,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_hovered_game">Fokussiertes Spiel/App</string>
     <string name="integration_home_no_game_hovered">Keines</string>
     <string name="integration_home_no_profile_active">Kein Profil aktiv</string>
+    <string name="integration_home_profile_config_title">Profil-Konfiguration</string>
+    <string name="integration_home_linked_profile">Verknüpftes Profil</string>
+    <string name="integration_home_edit_layout">Layout bearbeiten</string>
+    <string name="integration_home_no_profile_assigned">Noch kein Profil für diese App konfiguriert.</string>
+    <string name="integration_home_create_profile">Profil erstellen</string>
+    <string name="integration_home_link_existing">Bestehendes verknüpfen</string>
+    <string name="integration_home_no_unassigned_profiles">Keine unzugewiesenen Profile</string>
     <string name="integration_home_status_title">Status-Anzeige</string>
     <string name="integration_home_status_privd">Privilegierter Daemon</string>
     <string name="integration_home_status_mirror">Bildschirm-Spiegelung</string>
