@@ -34,6 +34,8 @@ object MegingiardSettingsClient {
         focusedRomPath: String? = null,
         hoveredPackage: String? = null,
         hoveredLabel: String? = null,
+        hoveredPrimaryColor: Int? = null,
+        hoveredSecondaryColor: Int? = null,
     ) {
         val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}")
         val extras =
@@ -45,6 +47,12 @@ object MegingiardSettingsClient {
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH, focusedRomPath)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, hoveredPackage)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, hoveredLabel)
+                if (hoveredPrimaryColor != null) {
+                    putInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR, hoveredPrimaryColor)
+                }
+                if (hoveredSecondaryColor != null) {
+                    putInt(MegingiardIpcContract.COLUMN_HOVERED_SECONDARY_COLOR, hoveredSecondaryColor)
+                }
             }
         try {
             AppLog.d(TAG, "updateClientState: isActive=$isActive, pkg=$focusedPackage, hovered=$hoveredLabel")

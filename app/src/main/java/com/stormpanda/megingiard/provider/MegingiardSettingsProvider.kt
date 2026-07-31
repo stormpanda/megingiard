@@ -162,12 +162,27 @@ class MegingiardSettingsProvider : ContentProvider() {
                 val hoveredPackage = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE)
                 val hoveredLabel = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_LABEL)
 
+                val hoveredPrimary =
+                    if (extras.containsKey(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR)) {
+                        extras.getInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR)
+                    } else {
+                        null
+                    }
+                val hoveredSecondary =
+                    if (extras.containsKey(MegingiardIpcContract.COLUMN_HOVERED_SECONDARY_COLOR)) {
+                        extras.getInt(MegingiardIpcContract.COLUMN_HOVERED_SECONDARY_COLOR)
+                    } else {
+                        null
+                    }
+
                 AppStateManager.setExternalClientState(
                     isActive = isActive,
                     packageName = clientPackage,
                     focusedApp = focusedPackage,
                     hoveredPackage = hoveredPackage,
                     hoveredLabel = hoveredLabel,
+                    hoveredPrimaryColor = hoveredPrimary,
+                    hoveredSecondaryColor = hoveredSecondary,
                 )
 
                 if (focusedPackage != null) {

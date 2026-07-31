@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -309,12 +310,21 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                     LaunchedEffect(currentHoveredApp) {
                         if (launchedPackage == null) {
+                            val palette =
+                                currentHoveredApp?.let { app ->
+                                    AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
+                                }
+                            val primaryArgb = palette?.primaryColor?.toArgb()
+                            val secondaryArgb = palette?.secondaryColor?.toArgb()
+
                             MegingiardSettingsClient.updateClientState(
                                 context = this@FocusTopLauncherActivity,
                                 isActive = true,
                                 focusedPackage = null,
                                 hoveredPackage = currentHoveredApp?.packageName,
                                 hoveredLabel = currentHoveredApp?.label,
+                                hoveredPrimaryColor = primaryArgb,
+                                hoveredSecondaryColor = secondaryArgb,
                             )
                         }
                     }

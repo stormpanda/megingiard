@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -49,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -97,6 +100,39 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isAccessibilityActive by AppStateManager.isAccessibilityActive.collectAsState()
 
+    val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
+    val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
+
+    val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+
+    val targetPrimary =
+        remember(isGameFocus, hoveredPrimaryColor) {
+            if (isGameFocus && hoveredPrimaryColor != null) {
+                Color(hoveredPrimaryColor!!).copy(alpha = 0.15f)
+            } else {
+                colors.appBackground
+            }
+        }
+    val targetSecondary =
+        remember(isGameFocus, hoveredSecondaryColor) {
+            if (isGameFocus && hoveredSecondaryColor != null) {
+                Color(hoveredSecondaryColor!!).copy(alpha = 0.05f)
+            } else {
+                colors.appBackground
+            }
+        }
+
+    val animatedPrimary by animateColorAsState(
+        targetValue = targetPrimary,
+        animationSpec = tween(durationMillis = 800),
+        label = "ambientPrimary",
+    )
+    val animatedSecondary by animateColorAsState(
+        targetValue = targetSecondary,
+        animationSpec = tween(durationMillis = 800),
+        label = "ambientSecondary",
+    )
+
     val batteryState = rememberBatteryState()
     var timeText by remember { mutableStateOf("") }
 
@@ -124,8 +160,14 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .fillMaxSize()
-                .background(colors.appBackground)
-                .padding(IH_PADDING_SCREEN),
+                .drawBehind {
+                    drawRect(
+                        brush =
+                            Brush.radialGradient(
+                                colors = listOf(animatedPrimary, animatedSecondary, colors.appBackground),
+                            ),
+                    )
+                }.padding(IH_PADDING_SCREEN),
         verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

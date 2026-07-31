@@ -88,6 +88,8 @@ class MegingiardSettingsProviderTest {
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, "com.my.game")
                 putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, "com.my.hover")
                 putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, "Hovered Game")
+                putInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR, 0xFF112233.toInt())
+                putInt(MegingiardIpcContract.COLUMN_HOVERED_SECONDARY_COLOR, 0xFF445566.toInt())
             }
 
         val result = contentResolver.call(uri, "updateClientState", null, extras)
@@ -100,6 +102,8 @@ class MegingiardSettingsProviderTest {
         assertEquals("com.my.game", AppStateManager.focusedAppPackageName.value)
         assertEquals("com.my.hover", AppStateManager.hoveredAppPackageName.value)
         assertEquals("Hovered Game", AppStateManager.hoveredAppLabel.value)
+        assertEquals(0xFF112233.toInt(), AppStateManager.hoveredAppPrimaryColor.value)
+        assertEquals(0xFF445566.toInt(), AppStateManager.hoveredAppSecondaryColor.value)
     }
 
     @Test
