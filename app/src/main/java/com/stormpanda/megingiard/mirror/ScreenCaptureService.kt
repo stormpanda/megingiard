@@ -36,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
@@ -273,6 +274,21 @@ class ScreenCaptureService : Service() {
                         }
                     }
                     ScreenCaptureManager.consumeScreenshotRequest()
+                }
+            }
+        }
+
+        scope.launch {
+            combine(
+                AppStateManager.isExternalClientActive,
+                AppStateManager.focusedAppPackageName,
+                MacroPadState.activeProfile,
+            ) { active, focused, profile ->
+                active && (focused == null || profile?.associatedPackage != focused)
+            }.collect { showIntegrationHome ->
+                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
+                    AppLog.i(TAG, "Companion Home screen became active -> stopping screen capture to conserve resources")
+                    stopSelf()
                 }
             }
         }
@@ -641,17 +657,25 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
 
+        val isExternalClientActive = AppStateManager.isExternalClientActive.value
+        val focusedAppPackageName = AppStateManager.focusedAppPackageName.value
+        val activeProfile = MacroPadState.activeProfile.value
+        val showIntegrationHome =
+            isExternalClientActive &&
+                (focusedAppPackageName == null || activeProfile?.associatedPackage != focusedAppPackageName)
+
         val shouldShow =
             capturing && validScreen &&
                 !filePickerOpen && !editorActive &&
                 (!ambientActive || ambientPreviewActive) &&
                 !userLeaving &&
                 !recordingRequested &&
-                !isPrivdPromptActive
+                !isPrivdPromptActive &&
+                !showIntegrationHome
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
         )
         return shouldShow
     }
