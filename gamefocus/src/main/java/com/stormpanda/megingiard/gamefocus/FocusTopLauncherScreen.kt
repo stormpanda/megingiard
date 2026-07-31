@@ -1012,35 +1012,43 @@ internal object FocusImageCache {
 
     fun getCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
         val path = appInfo.coverPath ?: return null
-        val file = File(path)
-        if (!file.exists() || file.length() == 0L) return null
+        val cacheKey = "$path:${appInfo.coverLastModified}"
+        return coverCache.get(cacheKey)
+    }
 
-        val cacheKey = "$path:${file.lastModified()}"
+    suspend fun getCoverBitmapAsync(appInfo: InstalledAppInfo): ImageBitmap? {
+        val path = appInfo.coverPath ?: return null
+        val cacheKey = "$path:${appInfo.coverLastModified}"
         val cached = coverCache.get(cacheKey)
         if (cached != null) {
             return cached
         }
 
-        val startTime = System.currentTimeMillis()
-        val bitmap =
-            try {
-                val options =
-                    BitmapFactory.Options().apply {
-                        inSampleSize = 2 // Downsample 2x for poster display (saves 4x memory and decodes faster)
-                    }
-                BitmapFactory.decodeFile(path, options)?.asImageBitmap()
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to decode cover file $path: ${e.message}")
-                null
+        return withContext(Dispatchers.IO) {
+            val file = File(path)
+            if (!file.exists() || file.length() == 0L) return@withContext null
+
+            val startTime = System.currentTimeMillis()
+            val bitmap =
+                try {
+                    val options =
+                        BitmapFactory.Options().apply {
+                            inSampleSize = 2 // Downsample 2x for poster display (saves 4x memory and decodes faster)
+                        }
+                    BitmapFactory.decodeFile(path, options)?.asImageBitmap()
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "Failed to decode cover file $path: ${e.message}")
+                    null
+                }
+
+            val elapsed = System.currentTimeMillis() - startTime
+            AppLog.d(TAG, "Decoded poster card cover for ${appInfo.label} in ${elapsed}ms")
+
+            if (bitmap != null) {
+                coverCache.put(cacheKey, bitmap)
             }
-
-        val elapsed = System.currentTimeMillis() - startTime
-        AppLog.d(TAG, "Decoded poster card cover for ${appInfo.label} in ${elapsed}ms")
-
-        if (bitmap != null) {
-            coverCache.put(cacheKey, bitmap)
+            bitmap
         }
-        return bitmap
     }
 
     fun getCachedIconBitmap(packageName: String): ImageBitmap? = iconCache.get(packageName)
@@ -1106,67 +1114,6 @@ internal object FocusImageCache {
             }
             bitmap
         }
-    }
-
-    fun getIconBitmap(
-        context: Context,
-        appInfo: InstalledAppInfo,
-    ): ImageBitmap? {
-        val cacheKey = appInfo.packageName
-        val cached = iconCache.get(cacheKey)
-        if (cached != null) {
-            return cached
-        }
-
-        val file =
-            if (appInfo.isRom) {
-                val logosDir = File(context.cacheDir, "gamefocus_logos").apply { mkdirs() }
-                File(logosDir, "${appInfo.packageName}.png")
-            } else {
-                val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                File(iconsDir, "${appInfo.packageName}.png")
-            }
-        if (file.exists() && file.length() > 0) {
-            val startTime = System.currentTimeMillis()
-            val diskBitmap =
-                try {
-                    BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
-                } catch (e: Exception) {
-                    null
-                }
-
-            if (diskBitmap != null) {
-                val elapsed = System.currentTimeMillis() - startTime
-                AppLog.d(TAG, "Loaded disk-cached ${if (appInfo.isRom) "logo" else "icon"} PNG for ${appInfo.label} in ${elapsed}ms")
-                iconCache.put(cacheKey, diskBitmap)
-                return diskBitmap
-            }
-        }
-
-        val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
-        val startTime = System.currentTimeMillis()
-        val bitmap = iconDrawable?.toBitmapSafe()
-
-        val elapsed = System.currentTimeMillis() - startTime
-        AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
-
-        if (bitmap != null) {
-            iconCache.put(cacheKey, bitmap)
-            try {
-                val androidBmp = iconDrawable?.toAndroidBitmap()
-                if (androidBmp != null) {
-                    val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
-                    val iconFile = File(iconsDir, "${appInfo.packageName}.png")
-                    FileOutputStream(iconFile).use { out ->
-                        androidBmp.compress(Bitmap.CompressFormat.PNG, 90, out)
-                    }
-                    androidBmp.recycle()
-                }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "Failed to cache icon PNG for ${appInfo.label}: ${e.message}")
-            }
-        }
-        return bitmap
     }
 
     private fun Drawable.toAndroidBitmap(): Bitmap? =
@@ -1251,16 +1198,23 @@ private fun PosterCardContent(
     val appColors = LocalAppColors.current
     val context = LocalContext.current
 
-    val coverBitmap =
-        remember(appInfo.coverPath, appInfo.coverPath?.let { File(it).lastModified() }) {
-            FocusImageCache.getCoverBitmap(appInfo)
+    val coverBitmap by produceState<ImageBitmap?>(
+        initialValue = FocusImageCache.getCoverBitmap(appInfo),
+        key1 = appInfo.packageName,
+        key2 = appInfo.coverLastModified,
+    ) {
+        value = FocusImageCache.getCoverBitmap(appInfo)
+        if (appInfo.coverPath != null && value == null) {
+            value = FocusImageCache.getCoverBitmapAsync(appInfo)
         }
+    }
 
     val iconBitmap by produceState<ImageBitmap?>(
         initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
         key1 = appInfo.packageName,
-        key2 = coverBitmap == null,
+        key2 = appInfo.coverLastModified,
     ) {
+        value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
         if (coverBitmap == null && value == null) {
             value = FocusImageCache.getIconBitmapAsync(context, appInfo)
         }
@@ -1276,10 +1230,11 @@ private fun PosterCardContent(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
+        val currentCover = coverBitmap
         val currentIcon = iconBitmap
-        if (coverBitmap != null) {
+        if (currentCover != null) {
             Image(
-                bitmap = coverBitmap,
+                bitmap = currentCover,
                 contentDescription = appInfo.label,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

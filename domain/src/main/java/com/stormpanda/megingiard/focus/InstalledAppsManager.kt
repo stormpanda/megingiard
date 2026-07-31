@@ -239,93 +239,93 @@ object InstalledAppsManager {
 
     @Suppress("DEPRECATION")
     fun loadInstalledApps(context: Context) {
-        RomManager.loadRomFolders(context)
-        RomManager.reloadRomApps(context)
+        scope.launch {
+            RomManager.loadRomFolders(context)
+            RomManager.reloadRomApps(context)
 
-        loadFavorites(context)
-        loadHidden(context)
-        loadLastUsed(context)
+            loadFavorites(context)
+            loadHidden(context)
+            loadLastUsed(context)
 
-        val packageManager = context.packageManager
-        val mainIntent =
-            Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
+            val packageManager = context.packageManager
+            val mainIntent =
+                Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
 
-        val gameIntent =
-            Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(INTENT_CATEGORY_GAME)
-            }
-        val appGamesIntent =
-            Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(INTENT_CATEGORY_APP_GAMES)
-            }
+            val gameIntent =
+                Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(INTENT_CATEGORY_GAME)
+                }
+            val appGamesIntent =
+                Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(INTENT_CATEGORY_APP_GAMES)
+                }
 
-        val resolveInfoList: List<ResolveInfo> =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.queryIntentActivities(
-                    mainIntent,
-                    PackageManager.ResolveInfoFlags.of(0L),
-                )
-            } else {
-                packageManager.queryIntentActivities(mainIntent, 0)
-            }
-
-        val gameResolveList: List<ResolveInfo> =
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.queryIntentActivities(
-                    gameIntent,
-                    PackageManager.ResolveInfoFlags.of(0L),
-                ) +
+            val resolveInfoList: List<ResolveInfo> =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     packageManager.queryIntentActivities(
-                        appGamesIntent,
+                        mainIntent,
                         PackageManager.ResolveInfoFlags.of(0L),
                     )
-            } else {
-                packageManager.queryIntentActivities(gameIntent, 0) + packageManager.queryIntentActivities(appGamesIntent, 0)
-            }
-        val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
+                } else {
+                    packageManager.queryIntentActivities(mainIntent, 0)
+                }
 
-        val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
+            val gameResolveList: List<ResolveInfo> =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.queryIntentActivities(
+                        gameIntent,
+                        PackageManager.ResolveInfoFlags.of(0L),
+                    ) +
+                        packageManager.queryIntentActivities(
+                            appGamesIntent,
+                            PackageManager.ResolveInfoFlags.of(0L),
+                        )
+                } else {
+                    packageManager.queryIntentActivities(gameIntent, 0) + packageManager.queryIntentActivities(appGamesIntent, 0)
+                }
+            val gamePackagesFromIntent = gameResolveList.map { it.activityInfo.packageName }.toSet()
 
-        val apps =
-            resolveInfoList
-                .filter { resolveInfo ->
-                    resolveInfo.activityInfo.packageName != context.packageName
-                }.map { resolveInfo ->
-                    val packageName = resolveInfo.activityInfo.packageName
-                    val appInfo = resolveInfo.activityInfo.applicationInfo
-                    val rawLabel =
-                        appInfo
-                            .loadLabel(packageManager)
-                            .toString()
-                    val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
-                    val activityName = resolveInfo.activityInfo.name
-                    val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
+            val coversDir = File(context.cacheDir, DIR_COVERS).apply { mkdirs() }
 
-                    val cachedCoverFile = File(coversDir, "$packageName.png")
-                    val coverPath =
-                        if (cachedCoverFile.exists() && cachedCoverFile.length() > 0) {
-                            cachedCoverFile.absolutePath
-                        } else {
-                            null
-                        }
+            val apps =
+                resolveInfoList
+                    .filter { resolveInfo ->
+                        resolveInfo.activityInfo.packageName != context.packageName
+                    }.map { resolveInfo ->
+                        val packageName = resolveInfo.activityInfo.packageName
+                        val appInfo = resolveInfo.activityInfo.applicationInfo
+                        val rawLabel =
+                            appInfo
+                                .loadLabel(packageManager)
+                                .toString()
+                        val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
+                        val activityName = resolveInfo.activityInfo.name
+                        val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
-                    InstalledAppInfo(
-                        packageName = packageName,
-                        activityName = activityName,
-                        label = label,
-                        coverPath = coverPath,
-                        isGame = isGame,
-                    )
-                }.sortedBy { it.label.lowercase() }
+                        val cachedCoverFile = File(coversDir, "$packageName.png")
+                        val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
+                        val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
+                        val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
 
-        _installedAndroidApps.value = apps
-        val gameCount = apps.count { it.isGame }
-        AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
+                        InstalledAppInfo(
+                            packageName = packageName,
+                            activityName = activityName,
+                            label = label,
+                            coverPath = coverPath,
+                            isGame = isGame,
+                            coverLastModified = coverLastModified,
+                        )
+                    }.sortedBy { it.label.lowercase() }
 
-        // Trigger background SteamGridDB cover scraping if API key is configured
-        triggerSteamGridDbScraping(context, coversDir)
+            _installedAndroidApps.value = apps
+            val gameCount = apps.count { it.isGame }
+            AppLog.d(TAG, "Loaded ${apps.size} installed apps ($gameCount games, ${apps.size - gameCount} apps) for launcher browser")
+
+            // Trigger background SteamGridDB cover scraping if API key is configured
+            triggerSteamGridDbScraping(context, coversDir)
+        }
     }
 
     fun updateAppCover(
@@ -339,7 +339,10 @@ object InstalledAppsManager {
         _installedAndroidApps.value =
             _installedAndroidApps.value.map { item ->
                 if (item.packageName == packageName) {
-                    item.copy(coverPath = coverPath)
+                    item.copy(
+                        coverPath = coverPath,
+                        coverLastModified = System.currentTimeMillis(),
+                    )
                 } else {
                     item
                 }

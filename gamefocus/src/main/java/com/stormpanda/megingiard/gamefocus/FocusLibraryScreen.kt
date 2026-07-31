@@ -819,14 +819,16 @@ private fun LibraryGridItem(
     val iconBitmap by produceState<ImageBitmap?>(
         initialValue = FocusImageCache.getCachedIconBitmap(appInfo.packageName),
         key1 = appInfo.packageName,
+        key2 = appInfo.coverLastModified,
     ) {
+        value = FocusImageCache.getCachedIconBitmap(appInfo.packageName)
         if (value == null) {
             value = FocusImageCache.getIconBitmapAsync(context, appInfo)
         }
     }
 
     val palette =
-        remember(appInfo.packageName, appInfo.coverPath) {
+        remember(appInfo.packageName, appInfo.coverPath, appInfo.coverLastModified) {
             AppPaletteExtractor.getCachedColorsOrNull(appInfo)
         }
 

@@ -204,12 +204,9 @@ object RomManager {
                                         "_" + romUriStr.hashCode().absoluteValue
 
                                 val cachedCoverFile = File(coversDir, "$pseudoPackageName.png")
-                                val coverPath =
-                                    if (cachedCoverFile.exists() && cachedCoverFile.length() > 0) {
-                                        cachedCoverFile.absolutePath
-                                    } else {
-                                        null
-                                    }
+                                val hasCover = cachedCoverFile.exists() && cachedCoverFile.length() > 0
+                                val coverPath = if (hasCover) cachedCoverFile.absolutePath else null
+                                val coverLastModified = if (hasCover) cachedCoverFile.lastModified() else 0L
 
                                 add(
                                     InstalledAppInfo(
@@ -222,6 +219,7 @@ object RomManager {
                                         romPath = romPath,
                                         systemId = folder.systemId,
                                         retroArchCore = folder.retroArchCore,
+                                        coverLastModified = coverLastModified,
                                     ),
                                 )
                             }
@@ -241,7 +239,10 @@ object RomManager {
         _romApps.value =
             _romApps.value.map { item ->
                 if (item.packageName == packageName) {
-                    item.copy(coverPath = coverPath)
+                    item.copy(
+                        coverPath = coverPath,
+                        coverLastModified = System.currentTimeMillis(),
+                    )
                 } else {
                     item
                 }
