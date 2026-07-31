@@ -19,6 +19,7 @@ private const val TAG = "KeyboardState"
 enum class ModifierState { INACTIVE, STICKY, HELD }
 
 private const val MODIFIER_HOLD_THRESHOLD_MS = 300L
+private const val FULL_LAYOUT_ROWS_COUNT = 6
 
 /**
  * Tracks the [ModifierState] for every known modifier key.
@@ -233,7 +234,7 @@ object KeyboardState {
     ): List<Int> {
         val keycodes = activeModifierKeycodes(layout)
         val isLetter = key.label.length == 1 && key.label[0].isLetter()
-        val isFullLayout = layout.size == 6
+        val isFullLayout = layout.size == FULL_LAYOUT_ROWS_COUNT
         if (!isFullLayout && !isLetter) {
             val lshiftHeld = _modifiers["lshift"]?.value == ModifierState.HELD
             val rshiftHeld = _modifiers["rshift"]?.value == ModifierState.HELD

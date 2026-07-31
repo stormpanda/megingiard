@@ -42,6 +42,7 @@ private const val DIR_COVERS = "gamefocus_covers"
 private const val MAX_RECENT_APPS = 10
 private const val INTENT_CATEGORY_GAME = "android.intent.category.GAME"
 private const val INTENT_CATEGORY_APP_GAMES = "android.intent.category.APP_GAMES"
+private const val THOR_SECONDARY_DISPLAY_FALLBACK_ID = 4
 
 object InstalledAppsManager {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -487,7 +488,7 @@ object InstalledAppsManager {
         appInfo: InstalledAppInfo,
     ): Boolean {
         val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
-        val displayId = secondaryDisplay?.displayId ?: 4 // Fallback to secondary display ID 4 on AYN Thor
+        val displayId = secondaryDisplay?.displayId ?: THOR_SECONDARY_DISPLAY_FALLBACK_ID // Fallback to secondary display ID 4 on AYN Thor
         return launchAppOnDisplay(context, appInfo, displayId)
     }
 

@@ -4,6 +4,9 @@ import java.time.LocalDate
 
 private val FILENAME_UNSAFE = Regex("[^A-Za-z0-9]")
 private val VERSION_SAFE = Regex("[^A-Za-z0-9.\\-]")
+private const val AUTHOR_MAX_LENGTH = 20
+private const val DESCRIPTION_MAX_LENGTH = 30
+private const val PROFILE_NAME_MAX_LENGTH = 30
 
 /**
  * Builds the suggested filename for a full app backup export.
@@ -17,10 +20,10 @@ fun buildExportFilename(metadata: ExportMetadata): String {
             add("v$versionClean")
             add(LocalDate.now().toString())
             metadata.author?.takeIf { it.isNotBlank() }?.let { raw ->
-                add(raw.trim().take(20).replace(FILENAME_UNSAFE, "_"))
+                add(raw.trim().take(AUTHOR_MAX_LENGTH).replace(FILENAME_UNSAFE, "_"))
             }
             metadata.description?.takeIf { it.isNotBlank() }?.let { raw ->
-                add(raw.trim().take(30).replace(FILENAME_UNSAFE, "_"))
+                add(raw.trim().take(DESCRIPTION_MAX_LENGTH).replace(FILENAME_UNSAFE, "_"))
             }
         }
     return parts.joinToString("_") + ".mgrd"
@@ -41,10 +44,10 @@ fun buildProfileExportFilename(
             add("v$versionClean")
             add(LocalDate.now().toString())
             profileName.trim().takeIf { it.isNotBlank() }?.let { raw ->
-                add(raw.take(30).replace(FILENAME_UNSAFE, "_"))
+                add(raw.take(PROFILE_NAME_MAX_LENGTH).replace(FILENAME_UNSAFE, "_"))
             }
             metadata.author?.takeIf { it.isNotBlank() }?.let { raw ->
-                add(raw.trim().take(20).replace(FILENAME_UNSAFE, "_"))
+                add(raw.trim().take(AUTHOR_MAX_LENGTH).replace(FILENAME_UNSAFE, "_"))
             }
         }
     return parts.joinToString("_") + ".mgrd"

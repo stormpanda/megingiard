@@ -130,6 +130,20 @@ private val FLS_DIALOG_ROW_PADDING_HORIZONTAL = 4.dp
 private val FLS_ROM_ICON_CORNER_RADIUS = 14.dp
 private val FLS_FALLBACK_ICON_SIZE = 36.dp
 private val FLS_LABEL_GAP = 6.dp
+private val FLS_SHADOW_BLUR_RADIUS = 16.dp
+private val FLS_SHADOW_SPREAD = 2.dp
+private const val FLS_SHADOW_ALPHA = 0.45f
+private val FLS_BOTTOM_BAR_PADDING_HORIZONTAL = 12.dp
+private val FLS_BOTTOM_BAR_PADDING_VERTICAL = 4.dp
+private val FLS_BUTTON_GAP_SMALL = 2.dp
+private val FLS_HEADER_PADDING_HORIZONTAL = 24.dp
+private val FLS_HEADER_PADDING_VERTICAL = 12.dp
+private val FLS_HEADER_SPACING_SMALL = 8.dp
+private val FLS_L1R1_ICON_SIZE = 20.dp
+private val FLS_HEADER_SPACING_MEDIUM = 16.dp
+private val FLS_CARD_INNER_PADDING = 10.dp
+private val FLS_BADGE_PADDING = 8.dp
+private val FLS_BADGE_ICON_SIZE = 18.dp
 
 private const val FLS_FOCUS_BORDER_SPRING_STIFFNESS = 1800f
 
@@ -396,9 +410,9 @@ fun FocusLibraryScreen(
                                         height = with(density) { currentRect.height.coerceAtLeast(1f).toDp() },
                                     ).drawWithCache {
                                         val cornerRadiusPx = FLS_CORNER_RADIUS.toPx()
-                                        val blurRadiusPx = 16.dp.toPx()
-                                        val spreadPx = 2.dp.toPx()
-                                        val shadowColorArgb = appColors.accent.copy(alpha = 0.45f).toArgb()
+                                        val blurRadiusPx = FLS_SHADOW_BLUR_RADIUS.toPx()
+                                        val spreadPx = FLS_SHADOW_SPREAD.toPx()
+                                        val shadowColorArgb = appColors.accent.copy(alpha = FLS_SHADOW_ALPHA).toArgb()
 
                                         val innerPath =
                                             Path().apply {
@@ -507,7 +521,12 @@ fun FocusLibraryScreen(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 4.dp, top = 4.dp),
+                    .padding(
+                        start = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
+                        end = FLS_BOTTOM_BAR_PADDING_HORIZONTAL,
+                        bottom = FLS_BOTTOM_BAR_PADDING_VERTICAL,
+                        top = FLS_BOTTOM_BAR_PADDING_VERTICAL,
+                    ),
         ) {
             // Lower Left: Library Action Menu
             Box(modifier = Modifier.align(Alignment.BottomStart)) {
@@ -580,7 +599,7 @@ fun FocusLibraryScreen(
                     },
                 )
 
-                Spacer(modifier = Modifier.width(2.dp))
+                Spacer(modifier = Modifier.width(FLS_BUTTON_GAP_SMALL))
 
                 GamePadButtonAction(
                     button = GamePadButton.BUTTON_X,
@@ -650,7 +669,7 @@ private fun LibraryHeaderBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = FLS_HEADER_PADDING_HORIZONTAL, vertical = FLS_HEADER_PADDING_VERTICAL),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -691,12 +710,12 @@ private fun InteractiveLibraryCategoryHeader(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(FLS_HEADER_SPACING_SMALL),
     ) {
         // (L1) GamePad Button Icon
         GamePadButtonIcon(
             button = GamePadButton.BUTTON_L1,
-            size = 20.dp,
+            size = FLS_L1R1_ICON_SIZE,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
             modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.previous(tabs)) },
@@ -722,7 +741,7 @@ private fun InteractiveLibraryCategoryHeader(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(FLS_HEADER_SPACING_MEDIUM),
             ) {
                 // Active category (leftmost, center-front)
                 Text(
@@ -777,7 +796,7 @@ private fun InteractiveLibraryCategoryHeader(
         // (R1) GamePad Button Icon
         GamePadButtonIcon(
             button = GamePadButton.BUTTON_R1,
-            size = 20.dp,
+            size = FLS_L1R1_ICON_SIZE,
             tint = appColors.onSurfaceSecondary,
             cutoutColor = appColors.appBackground,
             modifier = Modifier.noFocusClickable { onTabSelected(selectedTab.next(tabs)) },
@@ -859,7 +878,7 @@ private fun LibraryGridItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier =
                 Modifier
-                    .padding(10.dp)
+                    .padding(FLS_CARD_INNER_PADDING)
                     .fillMaxWidth(),
         ) {
             // Square Icon
@@ -913,12 +932,12 @@ private fun LibraryGridItem(
                 modifier =
                     Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp)
+                        .padding(FLS_BADGE_PADDING)
                         .graphicsLayer { alpha = visibilityOffAlpha },
             ) {
                 MaterialSymbol(
                     name = "visibility_off",
-                    size = 18.dp,
+                    size = FLS_BADGE_ICON_SIZE,
                     tint = appColors.onSurfaceSecondary,
                 )
             }

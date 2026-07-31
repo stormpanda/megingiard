@@ -9,6 +9,11 @@ import com.stormpanda.megingiard.AppLog
 import java.io.File
 
 private const val TAG = "GameNativeLauncher"
+private const val GAMENATIVE_PACKAGE = "app.gamenative"
+private const val GAMENATIVE_MAIN_ACTIVITY = "app.gamenative.MainActivity"
+private const val GAMENATIVE_LAUNCH_ACTION = "app.gamenative.LAUNCH_GAME"
+private const val GAMENATIVE_EXTRA_APP_ID = "app_id"
+private const val GAMENATIVE_EXTRA_ROM = "ROM"
 
 class GameNativeLauncher : RomLauncher {
     override val id: String = "gamenative"
@@ -21,12 +26,12 @@ class GameNativeLauncher : RomLauncher {
         displayId: Int,
         retroArchCore: String?,
     ): Boolean {
-        val packageName = "app.gamenative"
+        val packageName = GAMENATIVE_PACKAGE
         val pm = context.packageManager
         try {
             pm.getPackageInfo(packageName, 0)
         } catch (e: PackageManager.NameNotFoundException) {
-            AppLog.e(TAG, "GameNative is not installed (checked app.gamenative)")
+            AppLog.e(TAG, "GameNative is not installed (checked $packageName)")
             return false
         }
 
@@ -37,14 +42,14 @@ class GameNativeLauncher : RomLauncher {
         return try {
             val intent =
                 Intent().apply {
-                    component = ComponentName(packageName, "app.gamenative.MainActivity")
+                    component = ComponentName(packageName, GAMENATIVE_MAIN_ACTIVITY)
                     if (appId != null) {
-                        action = "app.gamenative.LAUNCH_GAME"
-                        putExtra("app_id", appId)
+                        action = GAMENATIVE_LAUNCH_ACTION
+                        putExtra(GAMENATIVE_EXTRA_APP_ID, appId)
                     } else {
                         action = Intent.ACTION_MAIN
                         addCategory(Intent.CATEGORY_LAUNCHER)
-                        putExtra("ROM", romPath)
+                        putExtra(GAMENATIVE_EXTRA_ROM, romPath)
                     }
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 }

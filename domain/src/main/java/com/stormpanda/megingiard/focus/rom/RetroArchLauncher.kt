@@ -8,6 +8,9 @@ import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "RetroArchLauncher"
+private const val RETROARCH_MAIN_ACTIVITY = "com.retroarch.browser.retroactivity.RetroActivityFuture"
+private const val RETROARCH_EXTRA_ROM = "ROM"
+private const val RETROARCH_EXTRA_LIBRETRO = "LIBRETRO"
 
 class RetroArchLauncher : RomLauncher {
     override val id: String = "retroarch"
@@ -39,10 +42,10 @@ class RetroArchLauncher : RomLauncher {
         return try {
             val intent =
                 Intent(Intent.ACTION_MAIN).apply {
-                    component = ComponentName(packageName, "com.retroarch.browser.retroactivity.RetroActivityFuture")
+                    component = ComponentName(packageName, RETROARCH_MAIN_ACTIVITY)
                     addCategory(Intent.CATEGORY_LAUNCHER)
-                    putExtra("ROM", romPath)
-                    putExtra("LIBRETRO", corePath)
+                    putExtra(RETROARCH_EXTRA_ROM, romPath)
+                    putExtra(RETROARCH_EXTRA_LIBRETRO, corePath)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 }
             val options =
