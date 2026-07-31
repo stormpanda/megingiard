@@ -81,6 +81,8 @@ Verify strict adherence to module dependencies (§6 of `AGENTS.md`):
 Inspect all Compose code (`:app` and `:gamefocus` modules) against §9 of `AGENTS.md`:
 
 - **Re-composition Leaks**: Verify that rapidly-changing animation values (e.g., infinite transitions, float animations) do **NOT** cause top-level composable recompositions. State reads for drawing borders, background highlights, or custom paths must occur inside `drawWithCache` / `drawBehind` or custom draw scopes.
+  - *Modifier Check:* Audit for color, alpha, or scale state reads inside static modifiers (e.g. `.background(animatedColor)`, `.scale(animatedScale)`). Recommend refactoring to `.drawBehind { drawRect(animatedColor) }` or `.graphicsLayer { scaleX = animatedScale; scaleY = animatedScale }` to bypass composition.
+  - *Main Thread Blockers:* Ensure click/callback handlers never trigger synchronous file operations (e.g. `file.writeText()`, `file.delete()`) directly on the main UI thread. All disk I/O must be offloaded to `Dispatchers.IO`.
 - **`LaunchedEffect` Keys**: Ensure animation values or rapidly-updating states are never used as `LaunchedEffect` keys. Use `snapshotFlow { ... }.collectLatest { }` inside a `LaunchedEffect(Unit)` instead.
 - **Bitmap & Graphics Lifecycle (§7.3)**: Verify `ScreenCaptureManager` bitmap recycling contracts. Ensure hardware buffers (`HardwareBuffer`, `PixelCopy`) are safely closed in `try ... finally` or `.use {}` blocks.
 - **Accessibility & Localization**: Ensure all `Icon` instances have explicit `contentDescription` (string resource or `null`). All visible UI strings must exist in both `strings.xml` and `values-de/strings.xml`.
@@ -103,6 +105,7 @@ Audit every line of code against §8 of `AGENTS.md`:
 - **Test Suite Execution (§3)**: Run `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` to verify test suite health.
 - **Test Set Placement**: Ensure pure JVM tests are placed in `:core/src/test/` or `:domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
 - **Documentation Sync (§2 & §5)**: Identify which `docs/features/<feature>/FEATURE.md` owns the modified code. Ensure Functional Requirements and Technical Implementation details accurately reflect all behavioral changes.
+  - *Requirements Discrepancy:* If the codebase diverges from requirements, evaluate whether the implementation is correct and the *documentation* should be updated, rather than assuming code is wrong.
 
 ---
 
