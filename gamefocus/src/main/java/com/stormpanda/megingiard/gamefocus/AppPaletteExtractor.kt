@@ -258,11 +258,6 @@ object AppPaletteExtractor {
                 }
             }
 
-            val iconDrawable = appInfo.icon
-            if (bitmap == null && iconDrawable != null) {
-                bitmap = iconDrawable.toAndroidBitmap()
-            }
-
             if (bitmap == null) {
                 val context = appContext
                 if (context != null) {
@@ -280,6 +275,16 @@ object AppPaletteExtractor {
                         } catch (_: Exception) {
                             // Ignore
                         }
+                    }
+                }
+            }
+
+            if (bitmap == null) {
+                val context = appContext
+                if (context != null) {
+                    val iconDrawable = FocusImageCache.getAppIcon(context, appInfo.packageName, appInfo.activityName)
+                    if (iconDrawable != null) {
+                        bitmap = iconDrawable.toAndroidBitmap()
                     }
                 }
             }

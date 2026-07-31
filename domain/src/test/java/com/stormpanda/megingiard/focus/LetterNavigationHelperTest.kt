@@ -11,7 +11,6 @@ class LetterNavigationHelperTest {
             packageName = "com.test.${label.lowercase().replace(" ", "")}",
             activityName = "MainActivity",
             label = label,
-            icon = null,
             coverPath = null,
         )
 

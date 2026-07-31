@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
+import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -976,6 +977,28 @@ internal object FocusImageCache {
     private val coverCache = LruCache<String, ImageBitmap>(80)
     private val iconCache = LruCache<String, ImageBitmap>(80)
 
+    fun getAppIcon(
+        context: Context,
+        packageName: String,
+        activityName: String?,
+    ): Drawable? {
+        val pm = context.packageManager
+        return try {
+            if (!activityName.isNullOrBlank()) {
+                val componentName = ComponentName(packageName, activityName)
+                pm.getActivityIcon(componentName)
+            } else {
+                pm.getApplicationIcon(packageName)
+            }
+        } catch (e: Exception) {
+            try {
+                pm.getApplicationIcon(packageName)
+            } catch (e2: Exception) {
+                null
+            }
+        }
+    }
+
     fun getCoverBitmap(appInfo: InstalledAppInfo): ImageBitmap? {
         val path = appInfo.coverPath ?: return null
         val file = File(path)
@@ -1047,8 +1070,9 @@ internal object FocusImageCache {
                 }
             }
 
+            val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
             val startTime = System.currentTimeMillis()
-            val bitmap = appInfo.icon?.toBitmapSafe()
+            val bitmap = iconDrawable?.toBitmapSafe()
 
             val elapsed = System.currentTimeMillis() - startTime
             AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
@@ -1056,7 +1080,7 @@ internal object FocusImageCache {
             if (bitmap != null) {
                 iconCache.put(cacheKey, bitmap)
                 try {
-                    val androidBmp = appInfo.icon?.toAndroidBitmap()
+                    val androidBmp = iconDrawable?.toAndroidBitmap()
                     if (androidBmp != null) {
                         val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
                         val iconFile = File(iconsDir, "${appInfo.packageName}.png")
@@ -1108,8 +1132,9 @@ internal object FocusImageCache {
             }
         }
 
+        val iconDrawable = getAppIcon(context, appInfo.packageName, appInfo.activityName)
         val startTime = System.currentTimeMillis()
-        val bitmap = appInfo.icon?.toBitmapSafe()
+        val bitmap = iconDrawable?.toBitmapSafe()
 
         val elapsed = System.currentTimeMillis() - startTime
         AppLog.d(TAG, "Converted app icon for ${appInfo.label} in ${elapsed}ms")
@@ -1117,7 +1142,7 @@ internal object FocusImageCache {
         if (bitmap != null) {
             iconCache.put(cacheKey, bitmap)
             try {
-                val androidBmp = appInfo.icon?.toAndroidBitmap()
+                val androidBmp = iconDrawable?.toAndroidBitmap()
                 if (androidBmp != null) {
                     val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
                     val iconFile = File(iconsDir, "${appInfo.packageName}.png")

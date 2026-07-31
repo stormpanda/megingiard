@@ -19,7 +19,6 @@ class FocusImageCacheTest {
                 packageName = "com.test.app",
                 activityName = "MainActivity",
                 label = "Test App",
-                icon = null,
                 coverPath = null,
             )
 
@@ -33,7 +32,6 @@ class FocusImageCacheTest {
                 packageName = "com.test.app",
                 activityName = "MainActivity",
                 label = "Test App",
-                icon = null,
                 coverPath = "/tmp/non_existent_file_12345.png",
             )
 

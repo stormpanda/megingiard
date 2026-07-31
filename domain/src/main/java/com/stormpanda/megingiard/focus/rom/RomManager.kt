@@ -44,6 +44,7 @@ object RomManager {
     private const val TAG = "RomManager"
     private const val FILE_ROM_FOLDERS = "gamefocus_rom_folders.json"
     private const val MAX_ZIP_PEEKS = 10
+    private val SD_CARD_VOLUME_REGEX = Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}")
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -215,7 +216,6 @@ object RomManager {
                                         packageName = pseudoPackageName,
                                         activityName = "",
                                         label = label,
-                                        icon = null,
                                         coverPath = coverPath,
                                         isGame = true,
                                         isRom = true,
@@ -266,7 +266,7 @@ object RomManager {
             }
 
         val volumeId = pathSegment.substringBefore(":", "")
-        if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(Regex("[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}"))) {
+        if (volumeId.isNotEmpty() && volumeId != "primary" && volumeId.matches(SD_CARD_VOLUME_REGEX)) {
             val docId = pathSegment.substringAfter(":")
             return "/storage/$volumeId/$docId"
         }

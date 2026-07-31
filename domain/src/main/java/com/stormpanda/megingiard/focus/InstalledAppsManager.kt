@@ -300,7 +300,6 @@ object InstalledAppsManager {
                             .toString()
                     val label = PackageAliasMapper.getTitleForPackage(packageName, rawLabel)
                     val activityName = resolveInfo.activityInfo.name
-                    val icon = resolveInfo.loadIcon(packageManager)
                     val isGame = isPackageAGame(appInfo, gamePackagesFromIntent)
 
                     val cachedCoverFile = File(coversDir, "$packageName.png")
@@ -315,7 +314,6 @@ object InstalledAppsManager {
                         packageName = packageName,
                         activityName = activityName,
                         label = label,
-                        icon = icon,
                         coverPath = coverPath,
                         isGame = isGame,
                     )

@@ -13,6 +13,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
+import java.io.FileOutputStream
 import android.graphics.Color as AndroidColor
 
 private const val TAG = "AppPaletteExtractorTest"
@@ -36,14 +38,19 @@ class AppPaletteExtractorTest {
             }
         }
 
-        val iconDrawable = android.graphics.drawable.BitmapDrawable(null, bitmap)
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        AppPaletteExtractor.init(context)
+        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+        val iconFile = File(iconsDir, "com.test.vibrantapp.png")
+        FileOutputStream(iconFile).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
 
         val appInfo =
             InstalledAppInfo(
                 packageName = "com.test.vibrantapp",
                 activityName = "com.test.vibrantapp.MainActivity",
                 label = "Vibrant Test App",
-                icon = iconDrawable,
             )
 
         val defaultPrimary = Color.Gray
@@ -93,14 +100,19 @@ class AppPaletteExtractorTest {
         val width = 50
         val height = 50
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val iconDrawable = android.graphics.drawable.BitmapDrawable(null, bitmap)
+        val context = org.robolectric.RuntimeEnvironment.getApplication()
+        AppPaletteExtractor.init(context)
+        val iconsDir = File(context.cacheDir, "gamefocus_icons").apply { mkdirs() }
+        val iconFile = File(iconsDir, "com.test.cacheapp.png")
+        FileOutputStream(iconFile).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
 
         val appInfo =
             InstalledAppInfo(
                 packageName = "com.test.cacheapp",
                 activityName = "MainActivity",
                 label = "Cache Test App",
-                icon = iconDrawable,
             )
 
         AppPaletteExtractor.extractColors(appInfo, Color.Red, Color.Blue)
@@ -119,7 +131,6 @@ class AppPaletteExtractorTest {
                 packageName = "com.test.noimage",
                 activityName = "MainActivity",
                 label = "No Image App",
-                icon = null,
                 coverPath = null,
             )
 
