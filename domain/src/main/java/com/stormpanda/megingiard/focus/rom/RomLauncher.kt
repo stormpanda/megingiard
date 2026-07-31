@@ -2,6 +2,8 @@ package com.stormpanda.megingiard.focus.rom
 
 import android.content.Context
 
+private const val TAG = "RomLauncher"
+
 /**
  * Interface for starting a game ROM via a specific emulator/application.
  */

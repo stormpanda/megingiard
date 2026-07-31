@@ -64,5 +64,7 @@
     <string name="gamefocus_dialog_core_native_msg">Dieses System verwendet native Emulation. Es wird kein RetroArch-Core benötigt.</string>
     <string name="gamefocus_dialog_core_native_close">Schließen</string>
     <string name="gamefocus_dialog_cancel">Abbrechen</string>
+    <string name="gamefocus_dialog_select">Auswählen</string>
+    <string name="gamefocus_dialog_unknown_system">Unbekanntes System</string>
 </resources>
 

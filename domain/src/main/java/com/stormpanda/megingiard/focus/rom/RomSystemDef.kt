@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.focus.rom
 
+private const val TAG = "RomSystemDef"
+
 /**
  * Definition of a gaming system supported for ROM browsing.
  */

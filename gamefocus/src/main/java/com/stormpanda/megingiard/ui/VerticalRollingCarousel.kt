@@ -138,58 +138,58 @@ fun <T> VerticalRollingCarousel(
                 remember {
                     derivedStateOf { animatedOffset - kotlin.math.floor(animatedOffset) }
                 }
-            val fractionalOffset = fractionalOffsetState.value
 
             for (s in -halfVisible - 1..halfVisible + 1) {
-                val itemIndex = (integerOffset + s).floorMod(items.size)
-                val item = items[itemIndex]
-                val diff = s.toFloat() - fractionalOffset
+                androidx.compose.runtime.key(s) {
+                    val itemIndex = (integerOffset + s).floorMod(items.size)
+                    val item = items[itemIndex]
 
-                if (abs(diff) < (visibleItemsCount / 2f) + 0.2f) {
-                    androidx.compose.runtime.key(s) {
-                        val scaleVal = 1f - abs(diff) * scaleDecay
-                        val rotationXVal = diff * rotationMax
-                        val alphaVal = (1f - abs(diff) * alphaDecay).coerceIn(0f, 1f)
-                        val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(itemHeight)
+                                .graphicsLayer {
+                                    val currentFraction = fractionalOffsetState.value
+                                    val diff = s.toFloat() - currentFraction
+                                    val scaleVal = 1f - abs(diff) * scaleDecay
+                                    val rotationXVal = diff * rotationMax
+                                    val alphaVal = (1f - abs(diff) * alphaDecay).coerceIn(0f, 1f)
+                                    val pivotY = (0.5f - diff * 0.5f).coerceIn(0f, 1f)
 
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(itemHeight)
-                                    .graphicsLayer {
-                                        translationY = centerY + (diff * itemHeightPx)
-                                        scaleX = scaleVal
-                                        scaleY = scaleVal
-                                        rotationX = rotationXVal
-                                        alpha = alphaVal
-                                        transformOrigin = TransformOrigin(0f, pivotY)
-                                        cameraDistance = 16 * density.density
-                                    }.focusProperties { canFocus = false }
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        enabled = enabled,
-                                        onClick = {
-                                            onSelectedIndexChange(itemIndex)
-                                        },
-                                    ),
-                            contentAlignment = Alignment.CenterStart,
-                        ) {
-                            val colorFraction = (1f - abs(diff)).coerceIn(0f, 1f)
-                            val textColor = lerp(appColors.onSurfaceSecondary, appColors.onSurface, colorFraction)
+                                    translationY = centerY + (diff * itemHeightPx)
+                                    scaleX = scaleVal
+                                    scaleY = scaleVal
+                                    rotationX = rotationXVal
+                                    alpha = alphaVal
+                                    transformOrigin = TransformOrigin(0f, pivotY)
+                                    cameraDistance = 16 * density.density
+                                }.focusProperties { canFocus = false }
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    enabled = enabled,
+                                    onClick = {
+                                        onSelectedIndexChange(itemIndex)
+                                    },
+                                ),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        val currentFraction = fractionalOffsetState.value
+                        val diff = s.toFloat() - currentFraction
+                        val colorFraction = (1f - abs(diff)).coerceIn(0f, 1f)
+                        val textColor = lerp(appColors.onSurfaceSecondary, appColors.onSurface, colorFraction)
 
-                            Text(
-                                text = labelProvider(item),
-                                style =
-                                    MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = textColor,
-                                    ),
-                                maxLines = 1,
-                                textAlign = TextAlign.Start,
-                            )
-                        }
+                        Text(
+                            text = labelProvider(item),
+                            style =
+                                MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = textColor,
+                                ),
+                            maxLines = 1,
+                            textAlign = TextAlign.Start,
+                        )
                     }
                 }
             }

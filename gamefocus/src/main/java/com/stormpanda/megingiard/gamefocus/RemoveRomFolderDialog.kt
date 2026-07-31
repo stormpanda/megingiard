@@ -98,7 +98,7 @@ fun RemoveRomFolderDialog(
             if (romFolders.isNotEmpty()) {
                 GamePadButtonAction(
                     button = GamePadButton.BUTTON_A,
-                    text = "Select",
+                    text = stringResource(R.string.gamefocus_dialog_select),
                     onClick = {
                         romFolders.getOrNull(selectedIndex)?.let {
                             onSelectFolder(it)

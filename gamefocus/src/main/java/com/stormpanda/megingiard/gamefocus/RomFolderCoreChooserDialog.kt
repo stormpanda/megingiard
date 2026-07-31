@@ -95,7 +95,7 @@ fun RomFolderCoreChooserDialog(
     ) {
         if (systemDef == null) {
             Text(
-                text = "Unknown System",
+                text = stringResource(R.string.gamefocus_dialog_unknown_system),
                 style = MaterialTheme.typography.titleMedium,
                 color = appColors.onSurface,
             )
@@ -106,7 +106,7 @@ fun RomFolderCoreChooserDialog(
             ) {
                 GamePadButtonAction(
                     button = GamePadButton.BUTTON_A,
-                    text = "Close",
+                    text = stringResource(R.string.gamefocus_dialog_core_native_close),
                     onClick = {
                         AppLog.d(TAG, "Dismissing due to unknown system definition")
                         onDismiss()

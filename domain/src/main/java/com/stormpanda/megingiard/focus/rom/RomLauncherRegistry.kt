@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.focus.rom
 
+private const val TAG = "RomLauncherRegistry"
+
 /**
  * Singleton registry for ROM launchers.
  */
