@@ -128,6 +128,17 @@ private const val FTL_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FTL_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FTL_HIDE_ANIMATION_DURATION_MS = 300
 
+private val FTL_CAROUSEL_HEIGHT = 310.dp
+private val FTL_LETTER_NAV_PADDING = 40.dp
+private val FTL_CATEGORY_HEADER_PADDING_START = 24.dp
+private val FTL_CATEGORY_HEADER_PADDING_TOP = 16.dp
+private val FTL_NAV_PADDING_END = 12.dp
+private val FTL_NAV_PADDING_TOP = 12.dp
+private val FTL_BOTTOM_BAR_PADDING_START = 12.dp
+private val FTL_BOTTOM_BAR_PADDING_END = 12.dp
+private val FTL_BOTTOM_BAR_PADDING_BOTTOM = 4.dp
+private val FTL_BUTTON_GAP = 2.dp
+
 private class JobRefHolder(
     var job: Job? = null,
 )
@@ -625,7 +636,7 @@ fun FocusTopLauncherScreen(
                                         Box(
                                             modifier =
                                                 Modifier
-                                                    .height(310.dp)
+                                                    .height(FTL_CAROUSEL_HEIGHT)
                                                     .fillMaxWidth(),
                                             contentAlignment = Alignment.Center,
                                         ) {
@@ -688,7 +699,7 @@ fun FocusTopLauncherScreen(
                                                 posterWidth = FTL_POSTER_WIDTH,
                                                 posterHeight = FTL_POSTER_HEIGHT,
                                                 posterSpacing = FTL_POSTER_SPACING,
-                                                carouselHeight = 310.dp,
+                                                carouselHeight = FTL_CAROUSEL_HEIGHT,
                                                 posterCornerRadius = FTL_POSTER_CORNER_RADIUS,
                                                 cardBackgroundColor = { actualIndex, isSelected ->
                                                     val appInfo = currentCategoryApps.getOrNull(actualIndex)
@@ -730,7 +741,7 @@ fun FocusTopLauncherScreen(
                                                 modifier =
                                                     Modifier
                                                         .zIndex(1f)
-                                                        .padding(horizontal = 40.dp),
+                                                        .padding(horizontal = FTL_LETTER_NAV_PADDING),
                                             ) { isOverlay ->
                                                 if (isOverlay && uniqueLetters.isNotEmpty()) {
                                                     HorizontalLetterCarousel(
@@ -774,7 +785,7 @@ fun FocusTopLauncherScreen(
                             modifier =
                                 Modifier
                                     .align(Alignment.TopStart)
-                                    .padding(start = 24.dp, top = 16.dp),
+                                    .padding(start = FTL_CATEGORY_HEADER_PADDING_START, top = FTL_CATEGORY_HEADER_PADDING_TOP),
                         )
 
                         GamePadButtonAction(
@@ -785,7 +796,7 @@ fun FocusTopLauncherScreen(
                             modifier =
                                 Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(end = 12.dp, top = 12.dp),
+                                    .padding(end = FTL_NAV_PADDING_END, top = FTL_NAV_PADDING_TOP),
                         )
 
                         // Bottom-Left Main Actions Menu hovering over the gallery plane
@@ -793,7 +804,7 @@ fun FocusTopLauncherScreen(
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomStart)
-                                    .padding(start = 12.dp, bottom = 4.dp),
+                                    .padding(start = FTL_BOTTOM_BAR_PADDING_START, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
                         ) {
                             val isCurrentFavorite = currentApp != null && favoritesSet.contains(currentApp.packageName)
                             val isCurrentHidden = currentApp != null && hiddenSet.contains(currentApp.packageName)
@@ -872,7 +883,7 @@ fun FocusTopLauncherScreen(
                             modifier =
                                 Modifier
                                     .align(Alignment.BottomEnd)
-                                    .padding(end = 12.dp, bottom = 4.dp),
+                                    .padding(end = FTL_BOTTOM_BAR_PADDING_END, bottom = FTL_BOTTOM_BAR_PADDING_BOTTOM),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             GamePadButtonAction(
@@ -886,7 +897,7 @@ fun FocusTopLauncherScreen(
                                 },
                             )
 
-                            Spacer(modifier = Modifier.width(2.dp))
+                            Spacer(modifier = Modifier.width(FTL_BUTTON_GAP))
 
                             GamePadButtonAction(
                                 button = GamePadButton.BUTTON_X,
