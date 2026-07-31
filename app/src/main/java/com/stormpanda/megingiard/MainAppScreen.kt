@@ -79,6 +79,7 @@ import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -118,6 +119,8 @@ fun MainAppScreen() {
 
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val isExternalClientActive by AppStateManager.isExternalClientActive.collectAsState()
+    val activeProfile by MacroPadState.activeProfile.collectAsState()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
 
     val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
@@ -368,7 +371,11 @@ fun MainAppScreen() {
                     },
         ) {
             // Render either dynamic companion Home screen or MacroPad base screen
-            if (isExternalClientActive) {
+            val showIntegrationHome =
+                isExternalClientActive &&
+                    (focusedAppPackageName == null || activeProfile?.associatedPackage != focusedAppPackageName)
+
+            if (showIntegrationHome) {
                 IntegrationHomeScreen()
             } else {
                 MacroPadScreen()

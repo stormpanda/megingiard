@@ -14,8 +14,10 @@ The Megingiard Integration API exposes a standardized, robust, and backwards-com
 
 - The API MUST support state reporting from integration clients.
 - When an integration client is active in the foreground, Megingiard MUST transition its user interface to display the `IntegrationHomeScreen` companion screen instead of defaulting to the MacroPad grid.
+- **Exception**: If the active integration client reports that a specific package or game is focused AND there is a custom control layout (profile) associated with that package, Megingiard MUST display the game's custom control layout (`MacroPadScreen`) instead of the companion home screen.
 - When the active integration client reports that a specific package or game is focused, Megingiard MUST attempt to automatically switch its active control profile to the layout associated with that package.
 - State reporting MUST update `AppStateManager` singleton states reactively.
+
 
 ### FR-IA2: Profile Discovery (Read)
 
