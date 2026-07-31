@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -140,7 +141,7 @@ fun <T> VerticalRollingCarousel(
                 }
 
             for (s in -halfVisible - 1..halfVisible + 1) {
-                androidx.compose.runtime.key(s) {
+                key(s) {
                     val itemIndex = (integerOffset + s).floorMod(items.size)
                     val item = items[itemIndex]
 
