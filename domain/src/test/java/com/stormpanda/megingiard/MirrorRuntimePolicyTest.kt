@@ -289,4 +289,40 @@ class MirrorRuntimePolicyTest {
             ),
         )
     }
+
+    @Test
+    fun `stops mirroring when showIntegrationHome is true while capturing`() {
+        val decision =
+            decideMirrorRuntimeAction(
+                MirrorRuntimePolicyState(
+                    promptInFlight = false,
+                    isOnValidScreen = true,
+                    isCapturing = true,
+                    layoutId = LAYOUT_A,
+                    layoutWantsMirror = true,
+                    autoStartSuppressed = false,
+                    showIntegrationHome = true,
+                ),
+            )
+
+        assertEquals(MirrorRuntimeAction.STOP, decision)
+    }
+
+    @Test
+    fun `does not start mirroring when showIntegrationHome is true even if layout wants mirror`() {
+        val decision =
+            decideMirrorRuntimeAction(
+                MirrorRuntimePolicyState(
+                    promptInFlight = false,
+                    isOnValidScreen = true,
+                    isCapturing = false,
+                    layoutId = LAYOUT_A,
+                    layoutWantsMirror = true,
+                    autoStartSuppressed = false,
+                    showIntegrationHome = true,
+                ),
+            )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
 }

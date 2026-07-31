@@ -16,7 +16,9 @@ The Megingiard Integration API exposes a standardized, robust, and backwards-com
 - When an integration client is active in the foreground, Megingiard MUST transition its user interface to display the `IntegrationHomeScreen` companion screen instead of defaulting to the MacroPad grid.
 - **Exception**: If the active integration client reports that a specific package or game is focused AND there is a custom control layout (profile) associated with that package, Megingiard MUST display the game's custom control layout (`MacroPadScreen`) instead of the companion home screen.
 - When the active integration client reports that a specific package or game is focused, Megingiard MUST attempt to automatically switch its active control profile to the layout associated with that package.
+- **Mirroring Resource Gating**: To conserve battery and CPU resources on the handheld device, Megingiard MUST automatically stop active screen mirroring when the companion home screen is active. Mirroring MUST automatically restart/resume (if auto-start is configured for the layout) when the user transitions back to a game layout.
 - State reporting MUST update `AppStateManager` singleton states reactively.
+
 
 
 ### FR-IA2: Profile Discovery (Read)
