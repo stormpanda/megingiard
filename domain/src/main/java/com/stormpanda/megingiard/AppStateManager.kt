@@ -101,6 +101,28 @@ object AppStateManager {
         _shutOffRequested.value = false
     }
 
+    // ── Integration Client State ──────────────────────────────────────────────
+
+    private val _isExternalClientActive = MutableStateFlow(false)
+    val isExternalClientActive: StateFlow<Boolean> = _isExternalClientActive.asStateFlow()
+
+    private val _externalClientPackage = MutableStateFlow<String?>(null)
+    val externalClientPackage: StateFlow<String?> = _externalClientPackage.asStateFlow()
+
+    private val _focusedAppPackageName = MutableStateFlow<String?>(null)
+    val focusedAppPackageName: StateFlow<String?> = _focusedAppPackageName.asStateFlow()
+
+    fun setExternalClientState(
+        isActive: Boolean,
+        packageName: String?,
+        focusedApp: String?,
+    ) {
+        AppLog.d(TAG, "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp")
+        _isExternalClientActive.value = isActive
+        _externalClientPackage.value = packageName
+        _focusedAppPackageName.value = focusedApp
+    }
+
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed

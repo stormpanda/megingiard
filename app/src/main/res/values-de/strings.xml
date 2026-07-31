@@ -1185,5 +1185,18 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_export_include_backgrounds">Hintergrundbilder einschließen</string>
     <string name="config_import_section_background_images">Hintergrundbilder (%1$d)</string>
 
-
+    <!-- Megingiard Integration API / Home Screen -->
+    <string name="integration_home_title">Megingiard Begleiter</string>
+    <string name="integration_home_connected_client">Verbundener Client</string>
+    <string name="integration_home_active_profile">Aktives Profil</string>
+    <string name="integration_home_no_profile_active">Kein Profil aktiv</string>
+    <string name="integration_home_status_title">Status-Anzeige</string>
+    <string name="integration_home_status_privd">Privilegierter Daemon</string>
+    <string name="integration_home_status_mirror">Bildschirm-Spiegelung</string>
+    <string name="integration_home_status_accessibility">Barrierefreiheitsdienst</string>
+    <string name="integration_home_status_active">AKTIV</string>
+    <string name="integration_home_status_inactive">INAKTIV</string>
+    <string name="integration_home_status_running">LÄUFT</string>
+    <string name="integration_home_status_stopped">GESTOPPT</string>
 </resources>
+

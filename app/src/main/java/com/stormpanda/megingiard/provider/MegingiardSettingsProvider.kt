@@ -6,8 +6,12 @@ import android.content.Context
 import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
+import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
+import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.settings.SettingsManager
 
 private const val TAG = "MegingiardSettingsProvider"
@@ -87,6 +91,29 @@ class MegingiardSettingsProvider : ContentProvider() {
                 )
                 return cursor
             }
+
+            "/${MegingiardIpcContract.PATH_PROFILES}" -> {
+                val cursor =
+                    MatrixCursor(
+                        arrayOf(
+                            MegingiardIpcContract.COLUMN_PROFILE_ID,
+                            MegingiardIpcContract.COLUMN_PROFILE_NAME,
+                            MegingiardIpcContract.COLUMN_ASSOCIATED_PACKAGE,
+                        ),
+                    )
+                MacroPadState.profiles.value.forEach { profile ->
+                    cursor.addRow(
+                        arrayOf(
+                            profile.id,
+                            profile.name,
+                            profile.associatedPackage ?: "",
+                        ),
+                    )
+                }
+                cursor.setNotificationUri(context.contentResolver, MegingiardIpcContract.PROFILES_URI)
+                AppLog.d(TAG, "Profiles queried: count=${MacroPadState.profiles.value.size}")
+                return cursor
+            }
         }
         return null
     }
@@ -95,6 +122,7 @@ class MegingiardSettingsProvider : ContentProvider() {
         when (uri.path) {
             "/${MegingiardIpcContract.PATH_THEME}" -> "vnd.android.cursor.item/vnd.com.stormpanda.megingiard.theme"
             "/${MegingiardIpcContract.PATH_SETTINGS}" -> "vnd.android.cursor.item/vnd.com.stormpanda.megingiard.settings"
+            "/${MegingiardIpcContract.PATH_PROFILES}" -> "vnd.android.cursor.dir/vnd.com.stormpanda.megingiard.profile"
             else -> null
         }
 
@@ -115,4 +143,56 @@ class MegingiardSettingsProvider : ContentProvider() {
         selection: String?,
         selectionArgs: Array<out String>?,
     ): Int = 0
+
+    override fun call(
+        method: String,
+        arg: String?,
+        extras: Bundle?,
+    ): Bundle? {
+        val context = context ?: return null
+        if (method == "updateClientState" && extras != null) {
+            try {
+                val apiVersion = extras.getInt(MegingiardIpcContract.COLUMN_API_VERSION, 1)
+                AppLog.i(TAG, "updateClientState received with API version: $apiVersion")
+
+                val clientPackage = extras.getString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE)
+                val isActive = extras.getBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, false)
+                val focusedPackage = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE)
+                val romPath = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH)
+
+                AppStateManager.setExternalClientState(
+                    isActive = isActive,
+                    packageName = clientPackage,
+                    focusedApp = focusedPackage,
+                )
+
+                if (focusedPackage != null) {
+                    AutoSwitchCoordinator.onPackageChanged(focusedPackage)
+                }
+
+                // Notify observers
+                context.contentResolver.notifyChange(MegingiardIpcContract.CLIENT_STATE_URI, null)
+
+                val result =
+                    Bundle().apply {
+                        putBoolean("success", true)
+                        putInt(MegingiardIpcContract.COLUMN_API_VERSION, 1) // highest supported version
+                    }
+                if (apiVersion > 1) {
+                    result.putString(
+                        "warning",
+                        "Requested API version $apiVersion is higher than supported (1). Used fallback compatibility mode.",
+                    )
+                }
+                return result
+            } catch (e: Exception) {
+                AppLog.e(TAG, "Error handling updateClientState call", e)
+                return Bundle().apply {
+                    putBoolean("success", false)
+                    putString("error", e.message)
+                }
+            }
+        }
+        return super.call(method, arg, extras)
+    }
 }

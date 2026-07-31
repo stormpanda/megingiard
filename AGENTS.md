@@ -36,7 +36,9 @@
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/gamefocus/FEATURE.md`       | Megingiard Game Focus — dual-screen top launcher & bottom companion build variant        |
 | `docs/features/help/FEATURE.md`            | In-App Help Tutorials — shared HelpModal infrastructure and per-screen content composables |
+| `docs/features/integration-api/FEATURE.md` | Megingiard Integration API — dynamic client connection, state sharing, and profile query   |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
+
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
 | `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |
 | `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |

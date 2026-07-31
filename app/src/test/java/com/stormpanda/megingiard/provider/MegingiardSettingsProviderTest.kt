@@ -1,0 +1,119 @@
+package com.stormpanda.megingiard.provider
+
+import android.content.ContentResolver
+import android.database.Cursor
+import android.net.Uri
+import android.os.Bundle
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
+import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.PadProfile
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import java.util.UUID
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
+class MegingiardSettingsProviderTest {
+    private lateinit var contentResolver: ContentResolver
+
+    @Before
+    fun setUp() {
+        val info =
+            android.content.pm.ProviderInfo().apply {
+                authority = MegingiardIpcContract.AUTHORITY
+            }
+        Robolectric.buildContentProvider(MegingiardSettingsProvider::class.java).create(info)
+        contentResolver = RuntimeEnvironment.getApplication().contentResolver
+    }
+
+    @Test
+    fun `query profiles returns configured profiles cursor`() {
+        val profileId = UUID.randomUUID().toString()
+        val layoutId = UUID.randomUUID().toString()
+        val testProfile =
+            PadProfile(
+                id = profileId,
+                name = "Test Integration Profile",
+                layouts = listOf(PadLayout(id = layoutId, name = "Layout 1")),
+                activeLayoutId = layoutId,
+                associatedPackage = "com.test.targetapp",
+            )
+        MacroPadState.loadFrom(listOf(testProfile), profileId)
+
+        val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}/profiles")
+        val cursor: Cursor? = contentResolver.query(uri, null, null, null, null)
+
+        assertNotNull(cursor)
+        val activeProfiles = MacroPadState.profiles.value
+        assertTrue("Expected profiles to not be empty", activeProfiles.isNotEmpty())
+
+        cursor!!.use {
+            var index = 0
+            while (it.moveToNext()) {
+                val profile = activeProfiles[index++]
+                val idIndex = it.getColumnIndexOrThrow(MegingiardIpcContract.COLUMN_PROFILE_ID)
+                val nameIndex = it.getColumnIndexOrThrow(MegingiardIpcContract.COLUMN_PROFILE_NAME)
+                val pkgIndex = it.getColumnIndexOrThrow(MegingiardIpcContract.COLUMN_ASSOCIATED_PACKAGE)
+
+                assertEquals(profile.id, it.getString(idIndex))
+                assertEquals(profile.name, it.getString(nameIndex))
+                assertEquals(profile.associatedPackage ?: "", it.getString(pkgIndex))
+            }
+            assertEquals("Cursor row count did not match profiles list size", activeProfiles.size, index)
+        }
+    }
+
+    @Test
+    fun `call updateClientState updates AppStateManager state flow`() {
+        val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}")
+
+        AppStateManager.setExternalClientState(false, null, null)
+
+        val extras =
+            Bundle().apply {
+                putInt(MegingiardIpcContract.COLUMN_API_VERSION, 1)
+                putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, "com.my.launcher")
+                putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, true)
+                putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, "com.my.game")
+            }
+
+        val result = contentResolver.call(uri, "updateClientState", null, extras)
+        assertNotNull(result)
+        assertTrue(result!!.getBoolean("success"))
+        assertEquals(1, result.getInt(MegingiardIpcContract.COLUMN_API_VERSION))
+
+        assertTrue(AppStateManager.isExternalClientActive.value)
+        assertEquals("com.my.launcher", AppStateManager.externalClientPackage.value)
+        assertEquals("com.my.game", AppStateManager.focusedAppPackageName.value)
+    }
+
+    @Test
+    fun `call updateClientState with higher version returns fallback and warning`() {
+        val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}")
+
+        val extras =
+            Bundle().apply {
+                putInt(MegingiardIpcContract.COLUMN_API_VERSION, 5)
+                putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, "com.my.launcher")
+                putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, true)
+            }
+
+        val result = contentResolver.call(uri, "updateClientState", null, extras)
+        assertNotNull(result)
+        assertTrue(result!!.getBoolean("success"))
+        assertEquals(1, result.getInt(MegingiardIpcContract.COLUMN_API_VERSION))
+        assertTrue(result.containsKey("warning"))
+        assertTrue(result.getString("warning")!!.contains("compatibility mode"))
+    }
+}

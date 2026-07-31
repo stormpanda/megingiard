@@ -270,4 +270,36 @@ class AppStateManagerTest {
             // Cleanup
             AppStateManager.setAccessibilityActive(true)
         }
+
+    @Test
+    fun `setting external client state updates AppStateManager correctly`() =
+        runTest {
+            // Verify default/initial state
+            assertFalse(AppStateManager.isExternalClientActive.value)
+            assertEquals(null, AppStateManager.externalClientPackage.value)
+            assertEquals(null, AppStateManager.focusedAppPackageName.value)
+
+            // Update client state
+            AppStateManager.setExternalClientState(
+                isActive = true,
+                packageName = "com.test.launcher",
+                focusedApp = "com.test.game",
+            )
+
+            // Verify updated values
+            assertTrue(AppStateManager.isExternalClientActive.value)
+            assertEquals("com.test.launcher", AppStateManager.externalClientPackage.value)
+            assertEquals("com.test.game", AppStateManager.focusedAppPackageName.value)
+
+            // Reset client state
+            AppStateManager.setExternalClientState(
+                isActive = false,
+                packageName = null,
+                focusedApp = null,
+            )
+
+            assertFalse(AppStateManager.isExternalClientActive.value)
+            assertEquals(null, AppStateManager.externalClientPackage.value)
+            assertEquals(null, AppStateManager.focusedAppPackageName.value)
+        }
 }

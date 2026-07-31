@@ -1178,5 +1178,18 @@ Open Settings to create a layout.</string>
     <string name="config_export_include_backgrounds">Include background images</string>
     <string name="config_import_section_background_images">Background images (%1$d)</string>
 
-
+    <!-- Megingiard Integration API / Home Screen -->
+    <string name="integration_home_title">Megingiard Companion</string>
+    <string name="integration_home_connected_client">Connected Client</string>
+    <string name="integration_home_active_profile">Active Control Profile</string>
+    <string name="integration_home_no_profile_active">No Profile Active</string>
+    <string name="integration_home_status_title">Status Panel</string>
+    <string name="integration_home_status_privd">Privileged Daemon</string>
+    <string name="integration_home_status_mirror">Screen Mirroring</string>
+    <string name="integration_home_status_accessibility">Accessibility Service</string>
+    <string name="integration_home_status_active">ACTIVE</string>
+    <string name="integration_home_status_inactive">INACTIVE</string>
+    <string name="integration_home_status_running">RUNNING</string>
+    <string name="integration_home_status_stopped">STOPPED</string>
 </resources>
+
