@@ -15,6 +15,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -72,6 +73,7 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -153,6 +155,7 @@ private const val FLS_VISIBLE_CARD_ALPHA = 1.0f
 private const val FLS_HIDDEN_BADGE_ALPHA = 1.0f
 private const val FLS_VISIBLE_BADGE_ALPHA = 0.0f
 private const val FLS_HIDE_ANIMATION_DURATION_MS = 300
+private const val FLS_MARQUEE_INITIAL_DELAY_MS = 500
 
 private val LibraryTab.stringResId: Int
     get() =
@@ -926,9 +929,24 @@ private fun LibraryGridItem(
                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                 color = if (isFocused) appColors.onSurface else appColors.onSurfaceSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isFocused) {
+                                Modifier
+                                    .graphicsLayer {
+                                        compositingStrategy = CompositingStrategy.Offscreen
+                                    }.basicMarquee(
+                                        iterations = Int.MAX_VALUE,
+                                        initialDelayMillis = FLS_MARQUEE_INITIAL_DELAY_MS,
+                                    )
+                            } else {
+                                Modifier
+                            },
+                        ),
             )
         }
 
