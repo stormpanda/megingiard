@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -132,8 +133,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         Row(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = IH_SPACING_SECTION),
+                    .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -178,115 +178,159 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Scrollable cards list
-        Column(
+        val scrollState = rememberScrollState()
+        val canScrollUp = scrollState.value > 0
+        val canScrollDown = scrollState.value < scrollState.maxValue
+
+        // Scrollable container with edge fade indicators
+        Box(
             modifier =
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                    .fillMaxWidth(),
         ) {
-            // 1. Hovered Game/App Card (only when gamefocus is active) - VERY TOP
-            val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
-            if (isGameFocus) {
-                InfoCard(
-                    title = stringResource(R.string.integration_home_hovered_game),
-                    value = hoveredAppLabel ?: stringResource(R.string.integration_home_no_game_hovered),
-                    icon = Icons.Rounded.TouchApp,
-                    colors = colors,
-                    isHighlight = hoveredAppLabel != null,
-                )
-            }
-
-            // 2. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
-            val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
-            if (isGameFocus && hoveredPackage != null) {
-                val profiles by MacroPadState.profiles.collectAsState()
-                val associatedProfile =
-                    remember(profiles, hoveredPackage) {
-                        profiles.find { it.associatedPackage == hoveredPackage }
-                    }
-                ProfileConfigCard(
-                    hoveredPackage = hoveredPackage!!,
-                    hoveredLabel = hoveredAppLabel,
-                    associatedProfile = associatedProfile,
-                    profiles = profiles,
-                    colors = colors,
-                )
-            }
-
-            // 3. Active Profile Card
-            InfoCard(
-                title = stringResource(R.string.integration_home_active_profile),
-                value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),
-                icon = Icons.Rounded.Gamepad,
-                colors = colors,
-                isHighlight = activeProfile != null,
-            )
-
-            // 4. Status Panel Card
-            Card(
+            Column(
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
-                shape = IH_CARD_SHAPE,
-                colors = CardDefaults.cardColors(containerColor = colors.surface),
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(
-                    modifier = Modifier.padding(IH_PADDING_CARD),
-                    verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
-                ) {
-                    Text(
-                        text = stringResource(R.string.integration_home_status_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = colors.onSurfaceSecondary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-
-                    // Privileged Daemon Row
-                    StatusRow(
-                        label = stringResource(R.string.integration_home_status_privd),
-                        icon = Icons.Rounded.LockOpen,
-                        isActive = privdState == PrivdState.RUNNING,
-                        activeLabel = stringResource(R.string.integration_home_status_running),
-                        inactiveLabel = stringResource(R.string.integration_home_status_stopped),
+                // 1. Hovered Game/App Card (only when gamefocus is active) - VERY TOP
+                val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+                if (isGameFocus) {
+                    InfoCard(
+                        title = stringResource(R.string.integration_home_hovered_game),
+                        value = hoveredAppLabel ?: stringResource(R.string.integration_home_no_game_hovered),
+                        icon = Icons.Rounded.TouchApp,
                         colors = colors,
+                        isHighlight = hoveredAppLabel != null,
                     )
+                }
 
-                    // Mirror Session Row
-                    StatusRow(
-                        label = stringResource(R.string.integration_home_status_mirror),
-                        icon = Icons.Rounded.Airplay,
-                        isActive = isCapturing,
-                        activeLabel = stringResource(R.string.integration_home_status_active),
-                        inactiveLabel = stringResource(R.string.integration_home_status_inactive),
-                        colors = colors,
-                    )
-
-                    // Accessibility Service Row
-                    StatusRow(
-                        label = stringResource(R.string.integration_home_status_accessibility),
-                        icon = Icons.Rounded.Accessibility,
-                        isActive = isAccessibilityActive,
-                        activeLabel = stringResource(R.string.integration_home_status_active),
-                        inactiveLabel = stringResource(R.string.integration_home_status_inactive),
+                // 2. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
+                val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
+                if (isGameFocus && hoveredPackage != null) {
+                    val profiles by MacroPadState.profiles.collectAsState()
+                    val associatedProfile =
+                        remember(profiles, hoveredPackage) {
+                            profiles.find { it.associatedPackage == hoveredPackage }
+                        }
+                    ProfileConfigCard(
+                        hoveredPackage = hoveredPackage!!,
+                        hoveredLabel = hoveredAppLabel,
+                        associatedProfile = associatedProfile,
+                        profiles = profiles,
                         colors = colors,
                     )
                 }
+
+                // 3. Active Profile Card
+                InfoCard(
+                    title = stringResource(R.string.integration_home_active_profile),
+                    value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),
+                    icon = Icons.Rounded.Gamepad,
+                    colors = colors,
+                    isHighlight = activeProfile != null,
+                )
+
+                // 4. Status Panel Card
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
+                    shape = IH_CARD_SHAPE,
+                    colors = CardDefaults.cardColors(containerColor = colors.surface),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(IH_PADDING_CARD),
+                        verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.integration_home_status_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = colors.onSurfaceSecondary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+
+                        // Privileged Daemon Row
+                        StatusRow(
+                            label = stringResource(R.string.integration_home_status_privd),
+                            icon = Icons.Rounded.LockOpen,
+                            isActive = privdState == PrivdState.RUNNING,
+                            activeLabel = stringResource(R.string.integration_home_status_running),
+                            inactiveLabel = stringResource(R.string.integration_home_status_stopped),
+                            colors = colors,
+                        )
+
+                        // Mirror Session Row
+                        StatusRow(
+                            label = stringResource(R.string.integration_home_status_mirror),
+                            icon = Icons.Rounded.Airplay,
+                            isActive = isCapturing,
+                            activeLabel = stringResource(R.string.integration_home_status_active),
+                            inactiveLabel = stringResource(R.string.integration_home_status_inactive),
+                            colors = colors,
+                        )
+
+                        // Accessibility Service Row
+                        StatusRow(
+                            label = stringResource(R.string.integration_home_status_accessibility),
+                            icon = Icons.Rounded.Accessibility,
+                            isActive = isAccessibilityActive,
+                            activeLabel = stringResource(R.string.integration_home_status_active),
+                            inactiveLabel = stringResource(R.string.integration_home_status_inactive),
+                            colors = colors,
+                        )
+                    }
+                }
+
+                // 5. Connected Client Card - VERY BOTTOM
+                InfoCard(
+                    title = stringResource(R.string.integration_home_connected_client),
+                    value = if (isClientActive) clientPackage ?: "Unknown" else "None",
+                    icon = Icons.Rounded.Link,
+                    colors = colors,
+                    isHighlight = isClientActive,
+                    isMonospace = true,
+                )
             }
 
-            // 5. Connected Client Card - VERY BOTTOM
-            InfoCard(
-                title = stringResource(R.string.integration_home_connected_client),
-                value = if (isClientActive) clientPackage ?: "Unknown" else "None",
-                icon = Icons.Rounded.Link,
-                colors = colors,
-                isHighlight = isClientActive,
-                isMonospace = true,
-            )
+            // Top fade indicator
+            if (canScrollUp) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .background(
+                                brush =
+                                    Brush.verticalGradient(
+                                        colors = listOf(colors.appBackground, Color.Transparent),
+                                    ),
+                            ),
+                )
+            }
+
+            // Bottom fade indicator
+            if (canScrollDown) {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .background(
+                                brush =
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, colors.appBackground),
+                                    ),
+                            ),
+                )
+            }
         }
     }
 }
