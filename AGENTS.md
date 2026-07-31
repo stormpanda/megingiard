@@ -111,7 +111,7 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :core:test :domain:test` and report the result.
+> 3. **Run all tests** via `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` and report the result.
 >    This, along with sandbox compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
@@ -122,8 +122,11 @@
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
 
+> **Auto Code Review policy:** After completing any implementation (feature, bug fix, or refactor) and before proposing the final commit message, the agent **must** run a complete code review pass on all modified files following the instructions in the `megingiard-code-review` skill (specifically executing the systematic file-by-file audit checklist and programmatic grep checks) and report any findings or perform the fixes directly.
+
 Before marking a task as done, verify:
 
+- [ ] A complete code review pass was executed on all modified files following the `megingiard-code-review` workflow
 - [ ] No `MutableStateFlow` exposed outside its owning singleton
 - [ ] No FQN references inline — all moved to imports
 - [ ] No magic numbers — all extracted to named constants
