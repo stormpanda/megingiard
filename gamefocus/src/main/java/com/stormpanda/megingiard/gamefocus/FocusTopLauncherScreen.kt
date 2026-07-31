@@ -1353,7 +1353,7 @@ class RomPagerState(
     initialPage: Int = 0,
     initialPageOffsetFraction: Float = 0f,
     private val pageCountProvider: () -> Int,
-) : androidx.compose.foundation.pager.PagerState(initialPage, initialPageOffsetFraction) {
+) : PagerState(initialPage, initialPageOffsetFraction) {
     override val pageCount: Int
         get() = pageCountProvider()
 }
