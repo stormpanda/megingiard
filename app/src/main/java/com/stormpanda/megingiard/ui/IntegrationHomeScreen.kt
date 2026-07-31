@@ -18,9 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Accessibility
 import androidx.compose.material.icons.rounded.Airplay
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -28,8 +32,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -58,6 +67,10 @@ private val IH_SPACING_STATUS = 8.dp
 private val IH_STATUS_DOT_SIZE = 12.dp
 private val IH_STATUS_ICON_SIZE = 24.dp
 
+private const val IH_BATTERY_LOW_THRESHOLD = 20
+private val IH_BATTERY_ICON_SIZE = 22.dp
+private val IH_BATTERY_SPACING = 6.dp
+
 @Composable
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
@@ -65,10 +78,27 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val clientPackage by AppStateManager.externalClientPackage.collectAsState()
     val isClientActive by AppStateManager.isExternalClientActive.collectAsState()
     val activeProfile by MacroPadState.activeProfile.collectAsState()
+    val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsState()
 
     val privdState by PrivdManager.state.collectAsState()
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isAccessibilityActive by AppStateManager.isAccessibilityActive.collectAsState()
+
+    val batteryState = rememberBatteryState()
+    var timeText by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        val formatter =
+            java.time.format.DateTimeFormatter
+                .ofPattern("HH:mm")
+        while (true) {
+            timeText =
+                java.time.LocalDateTime
+                    .now()
+                    .format(formatter)
+            kotlinx.coroutines.delay(1000)
+        }
+    }
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "IntegrationHomeScreen: ON_START")
@@ -86,14 +116,55 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Title Header
-        Text(
-            text = stringResource(R.string.integration_home_title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = colors.onSurface,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = IH_SPACING_SECTION),
-        )
+        // Top Header Row (Clock on Left, Battery on Right)
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = IH_SPACING_SECTION),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Clock (Upper Left)
+            Text(
+                text = timeText,
+                style = MaterialTheme.typography.titleLarge,
+                color = colors.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
+
+            // Battery Indicator (Upper Right)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(IH_BATTERY_SPACING),
+            ) {
+                val batteryIcon =
+                    when {
+                        batteryState.isCharging -> Icons.Rounded.BatteryChargingFull
+                        batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD -> Icons.Rounded.BatteryAlert
+                        else -> Icons.Rounded.BatteryFull
+                    }
+                Icon(
+                    imageVector = batteryIcon,
+                    contentDescription = null,
+                    tint =
+                        if (batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD &&
+                            !batteryState.isCharging
+                        ) {
+                            Color.Red
+                        } else {
+                            colors.onSurface
+                        },
+                    modifier = Modifier.size(IH_BATTERY_ICON_SIZE),
+                )
+                Text(
+                    text = "${batteryState.percentage}%",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.onSurface,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
 
         // Connected Client Card
         InfoCard(
@@ -104,6 +175,18 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             isHighlight = isClientActive,
             isMonospace = true,
         )
+
+        // Hovered Game/App Card (only when gamefocus is active)
+        val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
+        if (isGameFocus) {
+            InfoCard(
+                title = stringResource(R.string.integration_home_hovered_game),
+                value = hoveredAppLabel ?: stringResource(R.string.integration_home_no_game_hovered),
+                icon = Icons.Rounded.TouchApp,
+                colors = colors,
+                isHighlight = hoveredAppLabel != null,
+            )
+        }
 
         // Active Profile Card
         InfoCard(
@@ -166,6 +249,53 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+private data class BatteryState(
+    val percentage: Int,
+    val isCharging: Boolean,
+)
+
+@Composable
+private fun rememberBatteryState(): BatteryState {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var batteryState by remember { mutableStateOf(BatteryState(100, false)) }
+
+    DisposableEffect(context) {
+        val receiver =
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(
+                    context: android.content.Context,
+                    intent: android.content.Intent,
+                ) {
+                    val level = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = intent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1)
+                    val status = intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1)
+                    val isCharging =
+                        status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                            status == android.os.BatteryManager.BATTERY_STATUS_FULL
+
+                    val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
+                    batteryState = BatteryState(pct, isCharging)
+                }
+            }
+        val filter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+        val stickyIntent = context.registerReceiver(receiver, filter)
+        if (stickyIntent != null) {
+            val level = stickyIntent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)
+            val scale = stickyIntent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1)
+            val status = stickyIntent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1)
+            val isCharging =
+                status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == android.os.BatteryManager.BATTERY_STATUS_FULL
+            val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
+            batteryState = BatteryState(pct, isCharging)
+        }
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+    return batteryState
 }
 
 @Composable

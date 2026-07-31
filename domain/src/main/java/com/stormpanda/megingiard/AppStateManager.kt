@@ -112,15 +112,28 @@ object AppStateManager {
     private val _focusedAppPackageName = MutableStateFlow<String?>(null)
     val focusedAppPackageName: StateFlow<String?> = _focusedAppPackageName.asStateFlow()
 
+    private val _hoveredAppPackageName = MutableStateFlow<String?>(null)
+    val hoveredAppPackageName: StateFlow<String?> = _hoveredAppPackageName.asStateFlow()
+
+    private val _hoveredAppLabel = MutableStateFlow<String?>(null)
+    val hoveredAppLabel: StateFlow<String?> = _hoveredAppLabel.asStateFlow()
+
     fun setExternalClientState(
         isActive: Boolean,
         packageName: String?,
         focusedApp: String?,
+        hoveredPackage: String? = null,
+        hoveredLabel: String? = null,
     ) {
-        AppLog.d(TAG, "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp")
+        AppLog.d(
+            TAG,
+            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp hovered=$hoveredLabel ($hoveredPackage)",
+        )
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
         _focusedAppPackageName.value = focusedApp
+        _hoveredAppPackageName.value = hoveredPackage
+        _hoveredAppLabel.value = hoveredLabel
     }
 
     fun setActivityResumed(resumed: Boolean) {

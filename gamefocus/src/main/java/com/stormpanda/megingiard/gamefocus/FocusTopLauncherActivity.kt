@@ -291,6 +291,34 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     LocalAppColors provides appColors,
                     LocalAppDimens provides AppDimens(),
                 ) {
+                    val currentHoveredApp =
+                        remember(
+                            isLibraryOpenState.value,
+                            focusedAppState.value,
+                            libraryFocusedIndexState.intValue,
+                            librarySelectedTabState.value,
+                            allApps,
+                        ) {
+                            if (isLibraryOpenState.value) {
+                                val activeApps = librarySelectedTabState.value.filterApps(allApps)
+                                activeApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                            } else {
+                                focusedAppState.value
+                            }
+                        }
+
+                    LaunchedEffect(currentHoveredApp) {
+                        if (launchedPackage == null) {
+                            MegingiardSettingsClient.updateClientState(
+                                context = this@FocusTopLauncherActivity,
+                                isActive = true,
+                                focusedPackage = null,
+                                hoveredPackage = currentHoveredApp?.packageName,
+                                hoveredLabel = currentHoveredApp?.label,
+                            )
+                        }
+                    }
+
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = appColors.appBackground,

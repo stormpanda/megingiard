@@ -13,6 +13,7 @@ The Megingiard Integration API exposes a standardized, robust, and backwards-com
 ### FR-IA1: State Reporting (Write)
 
 - The API MUST support state reporting from integration clients.
+- The API MUST support hovered game/app reporting. When gamefocus is active, the currently hovered app or game in gamefocus MUST be tracked and displayed in a dedicated info card on the companion home screen.
 - When an integration client is active in the foreground, Megingiard MUST transition its user interface to display the `IntegrationHomeScreen` companion screen instead of defaulting to the MacroPad grid.
 - **Exception**: If the active integration client reports that a specific package or game is focused AND there is a custom control layout (profile) associated with that package, Megingiard MUST display the game's custom control layout (`MacroPadScreen`) instead of the companion home screen.
 - When the active integration client reports that a specific package or game is focused, Megingiard MUST attempt to automatically switch its active control profile to the layout associated with that package.
@@ -48,16 +49,24 @@ The Megingiard Integration API exposes a standardized, robust, and backwards-com
         │                                │
         │ ContentResolver.call()         │ ContentResolver.query()
         │ (method = "updateClientState") │ (uri = "/profiles")
-        ▼                                ▼
+        │                                ▼
+        ▼                         ┌──────────────┐
+ ┌──────────────┐                 │  /profiles   │
+ │updateClientSt│                 └──────────────┘
+ └──────┬───────┘
+        │
+        ▼
  ┌───────────────────────────────────────────────┐
  │           MegingiardSettingsProvider          │
- └──────────────────────┬────────────────────────┘
-                        │
-                        ▼
+ └──────┬────────────────────────────────────────┘
+        │
+        ▼
  ┌───────────────────────────────────────────────┐
  │               AppStateManager (State)         │
  │                         &                     │
  │          AutoSwitchCoordinator (Profile)      │
+ │                         &                     │
+ │           IntegrationHomeScreen (UI)          │
  └───────────────────────────────────────────────┘
 ```
 
@@ -75,6 +84,8 @@ val extras = Bundle().apply {
     putBoolean("is_active", true)
     putString("focused_package", "org.retroarch")
     putString("focused_rom_path", "/path/to/game.sfc")
+    putString("hovered_package", "com.android.settings")
+    putString("hovered_label", "Settings")
 }
 val result = context.contentResolver.call(uri, "updateClientState", null, extras)
 val isSuccess = result?.getBoolean("success", false) ?: false

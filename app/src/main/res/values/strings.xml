@@ -1182,6 +1182,8 @@ Open Settings to create a layout.</string>
     <string name="integration_home_title">Megingiard Companion</string>
     <string name="integration_home_connected_client">Connected Client</string>
     <string name="integration_home_active_profile">Active Control Profile</string>
+    <string name="integration_home_hovered_game">Hovered Game/App</string>
+    <string name="integration_home_no_game_hovered">None</string>
     <string name="integration_home_no_profile_active">No Profile Active</string>
     <string name="integration_home_status_title">Status Panel</string>
     <string name="integration_home_status_privd">Privileged Daemon</string>

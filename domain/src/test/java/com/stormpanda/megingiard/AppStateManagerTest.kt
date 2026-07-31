@@ -278,28 +278,38 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.isExternalClientActive.value)
             assertEquals(null, AppStateManager.externalClientPackage.value)
             assertEquals(null, AppStateManager.focusedAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppLabel.value)
 
             // Update client state
             AppStateManager.setExternalClientState(
                 isActive = true,
                 packageName = "com.test.launcher",
                 focusedApp = "com.test.game",
+                hoveredPackage = "com.test.hover",
+                hoveredLabel = "Hovered Game",
             )
 
             // Verify updated values
             assertTrue(AppStateManager.isExternalClientActive.value)
             assertEquals("com.test.launcher", AppStateManager.externalClientPackage.value)
             assertEquals("com.test.game", AppStateManager.focusedAppPackageName.value)
+            assertEquals("com.test.hover", AppStateManager.hoveredAppPackageName.value)
+            assertEquals("Hovered Game", AppStateManager.hoveredAppLabel.value)
 
             // Reset client state
             AppStateManager.setExternalClientState(
                 isActive = false,
                 packageName = null,
                 focusedApp = null,
+                hoveredPackage = null,
+                hoveredLabel = null,
             )
 
             assertFalse(AppStateManager.isExternalClientActive.value)
             assertEquals(null, AppStateManager.externalClientPackage.value)
             assertEquals(null, AppStateManager.focusedAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppLabel.value)
         }
 }

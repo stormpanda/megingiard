@@ -159,11 +159,15 @@ class MegingiardSettingsProvider : ContentProvider() {
                 val isActive = extras.getBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, false)
                 val focusedPackage = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE)
                 val romPath = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH)
+                val hoveredPackage = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE)
+                val hoveredLabel = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_LABEL)
 
                 AppStateManager.setExternalClientState(
                     isActive = isActive,
                     packageName = clientPackage,
                     focusedApp = focusedPackage,
+                    hoveredPackage = hoveredPackage,
+                    hoveredLabel = hoveredLabel,
                 )
 
                 if (focusedPackage != null) {

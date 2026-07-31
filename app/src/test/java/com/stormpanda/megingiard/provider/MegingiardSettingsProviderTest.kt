@@ -86,6 +86,8 @@ class MegingiardSettingsProviderTest {
                 putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, "com.my.launcher")
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, true)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, "com.my.game")
+                putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, "com.my.hover")
+                putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, "Hovered Game")
             }
 
         val result = contentResolver.call(uri, "updateClientState", null, extras)
@@ -96,6 +98,8 @@ class MegingiardSettingsProviderTest {
         assertTrue(AppStateManager.isExternalClientActive.value)
         assertEquals("com.my.launcher", AppStateManager.externalClientPackage.value)
         assertEquals("com.my.game", AppStateManager.focusedAppPackageName.value)
+        assertEquals("com.my.hover", AppStateManager.hoveredAppPackageName.value)
+        assertEquals("Hovered Game", AppStateManager.hoveredAppLabel.value)
     }
 
     @Test

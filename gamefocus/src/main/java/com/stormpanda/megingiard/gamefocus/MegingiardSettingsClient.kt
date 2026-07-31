@@ -32,6 +32,8 @@ object MegingiardSettingsClient {
         isActive: Boolean,
         focusedPackage: String? = null,
         focusedRomPath: String? = null,
+        hoveredPackage: String? = null,
+        hoveredLabel: String? = null,
     ) {
         val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}")
         val extras =
@@ -41,9 +43,11 @@ object MegingiardSettingsClient {
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, isActive)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, focusedPackage)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH, focusedRomPath)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, hoveredPackage)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, hoveredLabel)
             }
         try {
-            AppLog.d(TAG, "updateClientState: isActive=$isActive, pkg=$focusedPackage")
+            AppLog.d(TAG, "updateClientState: isActive=$isActive, pkg=$focusedPackage, hovered=$hoveredLabel")
             context.contentResolver.call(uri, "updateClientState", null, extras)
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to update integration client state", e)

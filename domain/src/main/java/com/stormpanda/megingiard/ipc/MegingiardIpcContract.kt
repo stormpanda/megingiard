@@ -25,6 +25,10 @@ object MegingiardIpcContract {
     const val COLUMN_IS_ACTIVE = "is_active"
     const val COLUMN_FOCUSED_PACKAGE = "focused_package"
     const val COLUMN_FOCUSED_ROM_PATH = "focused_rom_path"
+    const val COLUMN_HOVERED_PACKAGE = "hovered_package"
+    const val COLUMN_HOVERED_LABEL = "hovered_label"
+
+    const val GAMEFOCUS_PACKAGE = "com.stormpanda.megingiard.gamefocus"
 
     // Profiles columns
     const val COLUMN_PROFILE_ID = "profile_id"
