@@ -8,10 +8,6 @@ import com.stormpanda.megingiard.math.floorMod
 sealed class LibraryTab {
     abstract val id: String
 
-    object ALL : LibraryTab() {
-        override val id = "ALL"
-    }
-
     object APPS : LibraryTab() {
         override val id = "APPS"
     }
@@ -31,7 +27,6 @@ sealed class LibraryTab {
      */
     fun filterApps(apps: List<InstalledAppInfo>): List<InstalledAppInfo> =
         when (this) {
-            ALL -> apps
             APPS -> apps.filter { !it.isGame && !it.isRom }
             GAMES -> apps.filter { it.isGame && !it.isRom }
             is RomSystem -> apps.filter { it.isRom && it.systemId == this.systemId }
@@ -42,7 +37,7 @@ sealed class LibraryTab {
      */
     fun previous(tabs: List<LibraryTab>): LibraryTab {
         val idx = tabs.indexOf(this)
-        if (idx == -1) return tabs.firstOrNull() ?: ALL
+        if (idx == -1) return tabs.firstOrNull() ?: GAMES
         val prevIdx = (idx - 1).floorMod(tabs.size)
         return tabs[prevIdx]
     }
@@ -52,7 +47,7 @@ sealed class LibraryTab {
      */
     fun next(tabs: List<LibraryTab>): LibraryTab {
         val idx = tabs.indexOf(this)
-        if (idx == -1) return tabs.firstOrNull() ?: ALL
+        if (idx == -1) return tabs.firstOrNull() ?: GAMES
         val nextIdx = (idx + 1).floorMod(tabs.size)
         return tabs[nextIdx]
     }

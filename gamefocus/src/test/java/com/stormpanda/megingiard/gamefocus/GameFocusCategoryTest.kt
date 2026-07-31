@@ -16,13 +16,10 @@ class GameFocusCategoryTest {
         assertEquals(GameFocusCategory.APPS, category)
 
         category = category.next(categories)
-        assertEquals(GameFocusCategory.ALL_APPS, category)
+        assertEquals(GameFocusCategory.LAST_USED, category)
 
         category = category.next(categories)
         assertEquals(GameFocusCategory.FAVORITES, category)
-
-        category = category.next(categories)
-        assertEquals(GameFocusCategory.LAST_USED, category)
 
         category = category.next(categories)
         assertEquals(GameFocusCategory.GAMES, category)
@@ -32,13 +29,10 @@ class GameFocusCategoryTest {
     fun testPrevious_wrapsAroundFromFirstToLast() {
         var category: GameFocusCategory = GameFocusCategory.GAMES
         category = category.previous(categories)
-        assertEquals(GameFocusCategory.LAST_USED, category)
-
-        category = category.previous(categories)
         assertEquals(GameFocusCategory.FAVORITES, category)
 
         category = category.previous(categories)
-        assertEquals(GameFocusCategory.ALL_APPS, category)
+        assertEquals(GameFocusCategory.LAST_USED, category)
 
         category = category.previous(categories)
         assertEquals(GameFocusCategory.APPS, category)

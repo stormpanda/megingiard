@@ -23,11 +23,6 @@ sealed class GameFocusCategory {
         override val stringResId = R.string.gamefocus_header_android_apps
     }
 
-    object ALL_APPS : GameFocusCategory() {
-        override val id = "ALL_APPS"
-        override val stringResId = R.string.gamefocus_cat_all_apps
-    }
-
     object FAVORITES : GameFocusCategory() {
         override val id = "FAVORITES"
         override val stringResId = R.string.gamefocus_cat_favorites
@@ -48,19 +43,19 @@ sealed class GameFocusCategory {
     }
 
     companion object {
-        val builtIns: List<GameFocusCategory> get() = listOf(GAMES, APPS, ALL_APPS, FAVORITES, LAST_USED)
+        val builtIns: List<GameFocusCategory> get() = listOf(LAST_USED, FAVORITES, GAMES, APPS)
     }
 
     fun previous(categories: List<GameFocusCategory>): GameFocusCategory {
         val idx = categories.indexOf(this)
-        if (idx == -1) return categories.firstOrNull() ?: GAMES
+        if (idx == -1) return categories.firstOrNull() ?: LAST_USED
         val prevIdx = (idx - 1).floorMod(categories.size)
         return categories[prevIdx]
     }
 
     fun next(categories: List<GameFocusCategory>): GameFocusCategory {
         val idx = categories.indexOf(this)
-        if (idx == -1) return categories.firstOrNull() ?: GAMES
+        if (idx == -1) return categories.firstOrNull() ?: LAST_USED
         val nextIdx = (idx + 1).floorMod(categories.size)
         return categories[nextIdx]
     }

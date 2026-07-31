@@ -20,55 +20,19 @@ class LibraryTabTest {
         )
 
     @Test
-    fun testFilterAppsAll() {
-        val game = makeApp("Game One", isGame = true)
-        val app = makeApp("Tool App", isGame = false)
-        val apps = listOf(game, app)
-
-        val result = LibraryTab.ALL.filterApps(apps)
-        assertEquals(2, result.size)
-        assertEquals(listOf(game, app), result)
-    }
-
-    @Test
-    fun testFilterAppsGamesOnly() {
-        val game = makeApp("Game One", isGame = true)
-        val app = makeApp("Tool App", isGame = false)
-        val apps = listOf(game, app)
-
-        val result = LibraryTab.GAMES.filterApps(apps)
-        assertEquals(1, result.size)
-        assertEquals("Game One", result[0].label)
-    }
-
-    @Test
-    fun testFilterAppsAppsOnly() {
-        val game = makeApp("Game One", isGame = true)
-        val app = makeApp("Tool App", isGame = false)
-        val apps = listOf(game, app)
-
-        val result = LibraryTab.APPS.filterApps(apps)
-        assertEquals(1, result.size)
-        assertEquals("Tool App", result[0].label)
-    }
-
-    @Test
     fun testFilterAppsEmptyList() {
-        assertTrue(LibraryTab.ALL.filterApps(emptyList()).isEmpty())
         assertTrue(LibraryTab.APPS.filterApps(emptyList()).isEmpty())
         assertTrue(LibraryTab.GAMES.filterApps(emptyList()).isEmpty())
     }
 
     @Test
     fun testTabNavigationOrder() {
-        val tabs = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES)
-        assertEquals(LibraryTab.APPS, LibraryTab.ALL.next(tabs))
+        val tabs = listOf(LibraryTab.GAMES, LibraryTab.APPS)
+        assertEquals(LibraryTab.APPS, LibraryTab.GAMES.next(tabs))
         assertEquals(LibraryTab.GAMES, LibraryTab.APPS.next(tabs))
-        assertEquals(LibraryTab.ALL, LibraryTab.GAMES.next(tabs))
 
-        assertEquals(LibraryTab.GAMES, LibraryTab.ALL.previous(tabs))
-        assertEquals(LibraryTab.ALL, LibraryTab.APPS.previous(tabs))
         assertEquals(LibraryTab.APPS, LibraryTab.GAMES.previous(tabs))
+        assertEquals(LibraryTab.GAMES, LibraryTab.APPS.previous(tabs))
     }
 
     @Test

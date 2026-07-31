@@ -157,9 +157,8 @@ private const val FLS_HIDE_ANIMATION_DURATION_MS = 300
 private val LibraryTab.stringResId: Int
     get() =
         when (this) {
-            LibraryTab.ALL -> R.string.gamefocus_library_tab_all
-            LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
             LibraryTab.GAMES -> R.string.gamefocus_library_tab_games
+            LibraryTab.APPS -> R.string.gamefocus_library_tab_apps
             is LibraryTab.RomSystem -> 0
         }
 
@@ -209,7 +208,7 @@ fun FocusLibraryScreen(
     onAddRomFolder: () -> Unit = {},
     onRemoveRomFolder: (CustomRomFolder) -> Unit = {},
     enabled: Boolean = true,
-    tabs: List<LibraryTab> = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES),
+    tabs: List<LibraryTab> = listOf(LibraryTab.GAMES, LibraryTab.APPS),
     isRemoveRomFolderDialogOpen: Boolean = false,
     onRemoveRomFolderDialogOpenChange: (Boolean) -> Unit = {},
     removeRomFolderDialogSelectedIndex: Int = 0,

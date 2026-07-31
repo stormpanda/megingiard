@@ -194,7 +194,7 @@ fun FocusTopLauncherScreen(
     allApps: List<InstalledAppInfo> = emptyList(),
     lastUsed: List<String> = emptyList(),
     isLibraryOpen: Boolean = false,
-    librarySelectedTab: LibraryTab = LibraryTab.ALL,
+    librarySelectedTab: LibraryTab = LibraryTab.GAMES,
     onLibraryTabSelected: (LibraryTab) -> Unit = {},
     libraryFocusedIndex: Int = 0,
     onLibraryFocusedIndexChange: (Int) -> Unit = {},
@@ -219,14 +219,15 @@ fun FocusTopLauncherScreen(
 
     val libraryTabs =
         remember(romFolders) {
-            listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES) +
-                romFolders.map { folder ->
-                    LibraryTab.RomSystem(
-                        id = "rom_${folder.systemId}",
-                        systemId = folder.systemId,
-                        displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
-                    )
-                }
+            listOf(LibraryTab.GAMES, LibraryTab.APPS) +
+                romFolders
+                    .map { folder ->
+                        LibraryTab.RomSystem(
+                            id = "rom_${folder.systemId}",
+                            systemId = folder.systemId,
+                            displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
+                        )
+                    }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
         }
 
     val gamesApps =
@@ -243,7 +244,6 @@ fun FocusTopLauncherScreen(
                     !frozenHiddenSet.contains(it.packageName)
             }
         }
-    val allAppsApps = remember(allApps, frozenHiddenSet) { allApps.filter { !frozenHiddenSet.contains(it.packageName) } }
     val favoritesApps = remember(allApps, favoritesSet) { allApps.filter { favoritesSet.contains(it.packageName) } }
     val lastUsedApps =
         remember(allApps, frozenHiddenSet, lastUsed) {
@@ -260,10 +260,6 @@ fun FocusTopLauncherScreen(
 
             GameFocusCategory.APPS -> {
                 appsApps
-            }
-
-            GameFocusCategory.ALL_APPS -> {
-                allAppsApps
             }
 
             GameFocusCategory.FAVORITES -> {
@@ -294,7 +290,6 @@ fun FocusTopLauncherScreen(
 
     val gamesPagerState = rememberPagerState(initialPage = 0) { gamesApps.size }
     val appsPagerState = rememberPagerState(initialPage = 0) { appsApps.size }
-    val allAppsPagerState = rememberPagerState(initialPage = 0) { allAppsApps.size }
     val favoritesPagerState = rememberPagerState(initialPage = 0) { favoritesApps.size }
     val lastUsedPagerState = rememberPagerState(initialPage = 0) { lastUsedApps.size }
 
@@ -308,10 +303,6 @@ fun FocusTopLauncherScreen(
 
             GameFocusCategory.APPS -> {
                 appsPagerState
-            }
-
-            GameFocusCategory.ALL_APPS -> {
-                allAppsPagerState
             }
 
             GameFocusCategory.FAVORITES -> {
@@ -666,10 +657,6 @@ fun FocusTopLauncherScreen(
 
                                                     GameFocusCategory.APPS -> {
                                                         appsPagerState
-                                                    }
-
-                                                    GameFocusCategory.ALL_APPS -> {
-                                                        allAppsPagerState
                                                     }
 
                                                     GameFocusCategory.FAVORITES -> {

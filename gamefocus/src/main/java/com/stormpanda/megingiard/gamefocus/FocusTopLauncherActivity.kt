@@ -15,6 +15,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
@@ -65,7 +67,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val prevLetterTriggerState = mutableIntStateOf(0)
     private val nextLetterTriggerState = mutableIntStateOf(0)
 
-    private val selectedCategoryState = mutableStateOf<GameFocusCategory>(GameFocusCategory.GAMES)
+    private val selectedCategoryState = mutableStateOf<GameFocusCategory>(GameFocusCategory.LAST_USED)
     private val isMainOptionsMenuExpandedState = mutableStateOf(false)
     private val newlyAddedFolderState = mutableStateOf<CustomRomFolder?>(null)
     private val isRemoveRomFolderDialogOpenState = mutableStateOf(false)
@@ -81,8 +83,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val editingAppInfoState = mutableStateOf<InstalledAppInfo?>(null)
 
     private val isLibraryOpenState = mutableStateOf(false)
-    private val librarySelectedTabState = mutableStateOf<LibraryTab>(LibraryTab.ALL)
-    private var activeLibraryTabs: List<LibraryTab> = listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES)
+    private val librarySelectedTabState = mutableStateOf<LibraryTab>(LibraryTab.GAMES)
+    private var activeLibraryTabs: List<LibraryTab> = listOf(LibraryTab.GAMES, LibraryTab.APPS)
     private val libraryFocusedIndexState = mutableIntStateOf(0)
     private val isLibraryOptionsMenuExpandedState = mutableStateOf(false)
 
@@ -151,26 +153,28 @@ class FocusTopLauncherActivity : ComponentActivity() {
             val categories =
                 remember(customRomFolders) {
                     GameFocusCategory.builtIns +
-                        customRomFolders.map { folder ->
-                            GameFocusCategory.RomSystem(
-                                id = "rom_${folder.systemId}_${folder.uriString.hashCode()}",
-                                systemId = folder.systemId,
-                                displayName = folder.systemName,
-                                folderUri = folder.uriString,
-                            )
-                        }
+                        customRomFolders
+                            .map { folder ->
+                                GameFocusCategory.RomSystem(
+                                    id = "rom_${folder.systemId}_${folder.uriString.hashCode()}",
+                                    systemId = folder.systemId,
+                                    displayName = folder.systemName,
+                                    folderUri = folder.uriString,
+                                )
+                            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
                 }
 
             val libraryTabs =
                 remember(customRomFolders) {
-                    listOf(LibraryTab.ALL, LibraryTab.APPS, LibraryTab.GAMES) +
-                        customRomFolders.map { folder ->
-                            LibraryTab.RomSystem(
-                                id = "rom_${folder.systemId}",
-                                systemId = folder.systemId,
-                                displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
-                            )
-                        }
+                    listOf(LibraryTab.GAMES, LibraryTab.APPS) +
+                        customRomFolders
+                            .map { folder ->
+                                LibraryTab.RomSystem(
+                                    id = "rom_${folder.systemId}",
+                                    systemId = folder.systemId,
+                                    displayName = SUPPORTED_SYSTEMS.find { it.id == folder.systemId }?.displayName ?: folder.systemName,
+                                )
+                            }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName })
                 }
 
             SideEffect {
@@ -183,10 +187,58 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
             SideEffect {
                 if (!categories.contains(selectedCategory)) {
-                    selectedCategoryState.value = GameFocusCategory.GAMES
+                    selectedCategoryState.value = GameFocusCategory.LAST_USED
                 }
                 if (!libraryTabs.contains(librarySelectedTabState.value)) {
-                    librarySelectedTabState.value = LibraryTab.ALL
+                    librarySelectedTabState.value = LibraryTab.GAMES
+                }
+            }
+
+            var hasSetStartupCategory by remember { mutableStateOf(false) }
+            val currentHidden = hidden
+
+            LaunchedEffect(categories, allApps, favorites, lastUsed, currentHidden) {
+                if (!hasSetStartupCategory && allApps.isNotEmpty()) {
+                    val startupCat =
+                        categories.firstOrNull { cat ->
+                            val appsForCat =
+                                when (cat) {
+                                    GameFocusCategory.LAST_USED -> {
+                                        lastUsed
+                                            .mapNotNull { pkg ->
+                                                allApps.find { it.packageName == pkg }
+                                            }.filter { !currentHidden.contains(it.packageName) }
+                                    }
+
+                                    GameFocusCategory.FAVORITES -> {
+                                        allApps.filter { favorites.contains(it.packageName) }
+                                    }
+
+                                    GameFocusCategory.GAMES -> {
+                                        allApps.filter { it.isGame && !it.isRom && !currentHidden.contains(it.packageName) }
+                                    }
+
+                                    GameFocusCategory.APPS -> {
+                                        allApps.filter { !it.isGame && !it.isRom && !currentHidden.contains(it.packageName) }
+                                    }
+
+                                    is GameFocusCategory.RomSystem -> {
+                                        allApps.filter {
+                                            it.isRom && it.systemId == cat.systemId &&
+                                                !currentHidden.contains(it.packageName)
+                                        }
+                                    }
+
+                                    else -> {
+                                        emptyList()
+                                    }
+                                }
+                            appsForCat.isNotEmpty()
+                        }
+                    if (startupCat != null) {
+                        selectedCategoryState.value = startupCat
+                        hasSetStartupCategory = true
+                    }
                 }
             }
 
@@ -204,10 +256,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                         GameFocusCategory.APPS -> {
                             allApps.filter { !it.isGame && !it.isRom && !frozenHidden.contains(it.packageName) }
-                        }
-
-                        GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !frozenHidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {
@@ -992,10 +1040,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     allApps.filter { !it.isGame && !it.isRom && !hidden.contains(it.packageName) }
                 }
 
-                GameFocusCategory.ALL_APPS -> {
-                    allApps.filter { !hidden.contains(it.packageName) }
-                }
-
                 GameFocusCategory.FAVORITES -> {
                     allApps.filter { favorites.contains(it.packageName) }
                 }
@@ -1284,10 +1328,6 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
                         GameFocusCategory.APPS -> {
                             allApps.filter { !it.isGame && !it.isRom && !hidden.contains(it.packageName) }
-                        }
-
-                        GameFocusCategory.ALL_APPS -> {
-                            allApps.filter { !hidden.contains(it.packageName) }
                         }
 
                         GameFocusCategory.FAVORITES -> {
