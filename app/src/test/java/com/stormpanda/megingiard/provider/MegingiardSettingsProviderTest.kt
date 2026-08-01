@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.provider
 
 import android.content.ContentResolver
+import android.content.pm.ProviderInfo
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
@@ -30,7 +31,7 @@ class MegingiardSettingsProviderTest {
     @Before
     fun setUp() {
         val info =
-            android.content.pm.ProviderInfo().apply {
+            ProviderInfo().apply {
                 authority = MegingiardIpcContract.AUTHORITY
             }
         Robolectric.buildContentProvider(MegingiardSettingsProvider::class.java).create(info)

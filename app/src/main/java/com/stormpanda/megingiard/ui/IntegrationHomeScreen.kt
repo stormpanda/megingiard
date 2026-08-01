@@ -1,5 +1,10 @@
 package com.stormpanda.megingiard.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -55,6 +60,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +76,9 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
+import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 private const val TAG = "IntegrationHomeScreen"
@@ -86,6 +95,20 @@ private val IH_STATUS_ICON_SIZE = 24.dp
 private const val IH_BATTERY_LOW_THRESHOLD = 20
 private val IH_BATTERY_ICON_SIZE = 22.dp
 private val IH_BATTERY_SPACING = 6.dp
+
+private const val IH_AMBIENT_PRIMARY_ALPHA = 0.35f
+private const val IH_AMBIENT_SECONDARY_ALPHA = 0.18f
+private const val IH_COLOR_TRANSITION_DURATION_MS = 800
+private const val IH_CLOCK_UPDATE_INTERVAL_MS = 1000L
+private const val IH_BATTERY_MAX = 100
+
+private val IH_BORDER_WIDTH = 1.dp
+private val IH_BUTTON_CORNER_RADIUS = 8.dp
+private val IH_STATUS_ICON_BG_SIZE = 48.dp
+private val IH_SCROLL_FADE_HEIGHT = 16.dp
+private const val IH_HIGHLIGHT_ALPHA = 0.15f
+private const val IH_INACTIVE_DOT_ALPHA = 0.4f
+private val IH_BUTTON_SPACING = 8.dp
 
 @Composable
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
@@ -108,7 +131,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val targetPrimary =
         remember(isGameFocus, hoveredPrimaryColor) {
             if (isGameFocus && hoveredPrimaryColor != null) {
-                Color(hoveredPrimaryColor!!).copy(alpha = 0.35f)
+                Color(hoveredPrimaryColor!!).copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             } else {
                 colors.appBackground
             }
@@ -116,7 +139,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val targetSecondary =
         remember(isGameFocus, hoveredSecondaryColor) {
             if (isGameFocus && hoveredSecondaryColor != null) {
-                Color(hoveredSecondaryColor!!).copy(alpha = 0.18f)
+                Color(hoveredSecondaryColor!!).copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             } else {
                 colors.appBackground
             }
@@ -124,12 +147,12 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val animatedPrimary by animateColorAsState(
         targetValue = targetPrimary,
-        animationSpec = tween(durationMillis = 800),
+        animationSpec = tween(durationMillis = IH_COLOR_TRANSITION_DURATION_MS),
         label = "ambientPrimary",
     )
     val animatedSecondary by animateColorAsState(
         targetValue = targetSecondary,
-        animationSpec = tween(durationMillis = 800),
+        animationSpec = tween(durationMillis = IH_COLOR_TRANSITION_DURATION_MS),
         label = "ambientSecondary",
     )
 
@@ -137,15 +160,10 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     var timeText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        val formatter =
-            java.time.format.DateTimeFormatter
-                .ofPattern("HH:mm")
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
         while (true) {
-            timeText =
-                java.time.LocalDateTime
-                    .now()
-                    .format(formatter)
-            kotlinx.coroutines.delay(1000)
+            timeText = LocalDateTime.now().format(formatter)
+            delay(IH_CLOCK_UPDATE_INTERVAL_MS)
         }
     }
 
@@ -282,7 +300,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
+                            .border(IH_BORDER_WIDTH, colors.controlOverlayBorder, IH_CARD_SHAPE),
                     shape = IH_CARD_SHAPE,
                     colors = CardDefaults.cardColors(containerColor = colors.surface),
                 ) {
@@ -347,7 +365,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .height(16.dp)
+                            .height(IH_SCROLL_FADE_HEIGHT)
                             .background(
                                 brush =
                                     Brush.verticalGradient(
@@ -364,7 +382,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .height(16.dp)
+                            .height(IH_SCROLL_FADE_HEIGHT)
                             .background(
                                 brush =
                                     Brush.verticalGradient(
@@ -395,13 +413,13 @@ private fun ProfileConfigCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
+                .border(IH_BORDER_WIDTH, colors.controlOverlayBorder, IH_CARD_SHAPE),
         shape = IH_CARD_SHAPE,
         colors = CardDefaults.cardColors(containerColor = colors.surface),
     ) {
         Column(
             modifier = Modifier.padding(IH_PADDING_CARD),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
         ) {
             Text(
                 text = stringResource(R.string.integration_home_profile_config_title),
@@ -440,7 +458,7 @@ private fun ProfileConfigCard(
                                 containerColor = colors.accent,
                                 contentColor = colors.onAccent,
                             ),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                     ) {
                         Text(text = stringResource(R.string.integration_home_edit_layout))
                     }
@@ -454,7 +472,7 @@ private fun ProfileConfigCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING),
                 ) {
                     Button(
                         onClick = {
@@ -485,7 +503,7 @@ private fun ProfileConfigCard(
                                 containerColor = colors.accent,
                                 contentColor = colors.onAccent,
                             ),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                     ) {
                         Text(
                             text = stringResource(R.string.integration_home_create_profile),
@@ -498,12 +516,12 @@ private fun ProfileConfigCard(
                         OutlinedButton(
                             onClick = { expandedDropdown = true },
                             modifier = Modifier.fillMaxWidth(),
-                            border = BorderStroke(1.dp, colors.controlOverlayBorder),
+                            border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
                             colors =
                                 ButtonDefaults.outlinedButtonColors(
                                     contentColor = colors.onSurface,
                                 ),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                         ) {
                             Text(
                                 text = stringResource(R.string.integration_home_link_existing),
@@ -554,37 +572,37 @@ private data class BatteryState(
 
 @Composable
 private fun rememberBatteryState(): BatteryState {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var batteryState by remember { mutableStateOf(BatteryState(100, false)) }
+    val context = LocalContext.current
+    var batteryState by remember { mutableStateOf(BatteryState(IH_BATTERY_MAX, false)) }
 
     DisposableEffect(context) {
         val receiver =
-            object : android.content.BroadcastReceiver() {
+            object : BroadcastReceiver() {
                 override fun onReceive(
-                    context: android.content.Context,
-                    intent: android.content.Intent,
+                    context: Context,
+                    intent: Intent,
                 ) {
-                    val level = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)
-                    val scale = intent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1)
-                    val status = intent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1)
+                    val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                    val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                     val isCharging =
-                        status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
-                            status == android.os.BatteryManager.BATTERY_STATUS_FULL
+                        status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                            status == BatteryManager.BATTERY_STATUS_FULL
 
-                    val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
+                    val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
                     batteryState = BatteryState(pct, isCharging)
                 }
             }
-        val filter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         val stickyIntent = context.registerReceiver(receiver, filter)
         if (stickyIntent != null) {
-            val level = stickyIntent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)
-            val scale = stickyIntent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1)
-            val status = stickyIntent.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1)
+            val level = stickyIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = stickyIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            val status = stickyIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
             val isCharging =
-                status == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
-                    status == android.os.BatteryManager.BATTERY_STATUS_FULL
-            val pct = if (level >= 0 && scale > 0) (level * 100 / scale) else 100
+                status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+            val pct = if (level >= 0 && scale > 0) (level * IH_BATTERY_MAX / scale) else IH_BATTERY_MAX
             batteryState = BatteryState(pct, isCharging)
         }
         onDispose {
@@ -607,7 +625,7 @@ private fun InfoCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(1.dp, colors.controlOverlayBorder, IH_CARD_SHAPE),
+                .border(IH_BORDER_WIDTH, colors.controlOverlayBorder, IH_CARD_SHAPE),
         shape = IH_CARD_SHAPE,
         colors = CardDefaults.cardColors(containerColor = colors.surface),
     ) {
@@ -619,9 +637,9 @@ private fun InfoCard(
             Box(
                 modifier =
                     Modifier
-                        .size(48.dp)
+                        .size(IH_STATUS_ICON_BG_SIZE)
                         .clip(CircleShape)
-                        .background(if (isHighlight) colors.accent.copy(alpha = 0.15f) else colors.controlOverlay),
+                        .background(if (isHighlight) colors.accent.copy(alpha = IH_HIGHLIGHT_ALPHA) else colors.controlOverlay),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -694,7 +712,7 @@ private fun StatusRow(
                     Modifier
                         .size(IH_STATUS_DOT_SIZE)
                         .clip(CircleShape)
-                        .background(if (isActive) Color.Green else colors.onSurfaceSecondary.copy(alpha = 0.4f)),
+                        .background(if (isActive) Color.Green else colors.onSurfaceSecondary.copy(alpha = IH_INACTIVE_DOT_ALPHA)),
             )
             Text(
                 text = if (isActive) activeLabel else inactiveLabel,
