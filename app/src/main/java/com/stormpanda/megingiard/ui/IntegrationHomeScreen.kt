@@ -108,7 +108,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val targetPrimary =
         remember(isGameFocus, hoveredPrimaryColor) {
             if (isGameFocus && hoveredPrimaryColor != null) {
-                Color(hoveredPrimaryColor!!).copy(alpha = 0.15f)
+                Color(hoveredPrimaryColor!!).copy(alpha = 0.35f)
             } else {
                 colors.appBackground
             }
@@ -116,7 +116,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val targetSecondary =
         remember(isGameFocus, hoveredSecondaryColor) {
             if (isGameFocus && hoveredSecondaryColor != null) {
-                Color(hoveredSecondaryColor!!).copy(alpha = 0.05f)
+                Color(hoveredSecondaryColor!!).copy(alpha = 0.18f)
             } else {
                 colors.appBackground
             }
@@ -163,8 +163,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 .drawBehind {
                     drawRect(
                         brush =
-                            Brush.radialGradient(
-                                colors = listOf(animatedPrimary, animatedSecondary, colors.appBackground),
+                            Brush.verticalGradient(
+                                colors = listOf(colors.appBackground, animatedSecondary, animatedPrimary),
                             ),
                     )
                 }.padding(IH_PADDING_SCREEN),
@@ -368,7 +368,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             .background(
                                 brush =
                                     Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, colors.appBackground),
+                                        colors = listOf(Color.Transparent, animatedPrimary),
                                     ),
                             ),
                 )
