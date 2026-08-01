@@ -101,8 +101,8 @@ private const val IH_BATTERY_LOW_THRESHOLD = 20
 private val IH_BATTERY_ICON_SIZE = 22.dp
 private val IH_BATTERY_SPACING = 6.dp
 
-private const val IH_AMBIENT_PRIMARY_ALPHA = 0.35f
-private const val IH_AMBIENT_SECONDARY_ALPHA = 0.18f
+private const val IH_AMBIENT_PRIMARY_ALPHA = 0.20f
+private const val IH_AMBIENT_SECONDARY_ALPHA = 0.10f
 private const val IH_COLOR_TRANSITION_DURATION_MS = 800
 private const val IH_CLOCK_UPDATE_INTERVAL_MS = 1000L
 private const val IH_BATTERY_MAX = 100

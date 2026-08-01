@@ -590,8 +590,8 @@ fun FocusTopLauncherScreen(
                                             Brush.verticalGradient(
                                                 colors =
                                                     listOf(
-                                                        animatedPrimaryColor.copy(alpha = 0.35f),
-                                                        animatedSecondaryColor.copy(alpha = 0.18f),
+                                                        animatedPrimaryColor.copy(alpha = 0.20f),
+                                                        animatedSecondaryColor.copy(alpha = 0.10f),
                                                         appColors.appBackground,
                                                     ),
                                             ),
