@@ -40,7 +40,10 @@ object MegingiardSettingsClient {
         val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}")
         val extras =
             Bundle().apply {
-                putInt(MegingiardIpcContract.COLUMN_API_VERSION, 1)
+                putInt(
+                    MegingiardIpcContract.COLUMN_API_VERSION,
+                    MegingiardIpcContract.DEFAULT_API_VERSION,
+                )
                 putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, context.packageName)
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, isActive)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, focusedPackage)

@@ -151,7 +151,11 @@ class MegingiardSettingsProvider : ContentProvider() {
         val context = context ?: return null
         if (method == "updateClientState" && extras != null) {
             try {
-                val apiVersion = extras.getInt(MegingiardIpcContract.COLUMN_API_VERSION, 1)
+                val apiVersion =
+                    extras.getInt(
+                        MegingiardIpcContract.COLUMN_API_VERSION,
+                        MegingiardIpcContract.DEFAULT_API_VERSION,
+                    )
                 AppLog.i(TAG, "updateClientState received with API version: $apiVersion")
 
                 val clientPackage = extras.getString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE)
@@ -194,12 +198,15 @@ class MegingiardSettingsProvider : ContentProvider() {
                 val result =
                     Bundle().apply {
                         putBoolean("success", true)
-                        putInt(MegingiardIpcContract.COLUMN_API_VERSION, 1) // highest supported version
+                        putInt(
+                            MegingiardIpcContract.COLUMN_API_VERSION,
+                            MegingiardIpcContract.DEFAULT_API_VERSION,
+                        ) // highest supported version
                     }
-                if (apiVersion > 1) {
+                if (apiVersion > MegingiardIpcContract.DEFAULT_API_VERSION) {
                     result.putString(
                         "warning",
-                        "Requested API version $apiVersion is higher than supported (1). Used fallback compatibility mode.",
+                        "Requested API version $apiVersion is higher than supported (${MegingiardIpcContract.DEFAULT_API_VERSION}). Used fallback compatibility mode.",
                     )
                 }
                 return result

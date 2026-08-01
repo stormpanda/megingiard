@@ -529,7 +529,6 @@ class MainActivity : ComponentActivity() {
                         showIntegrationHome = showIntegrationHome,
                     )
                 }.combine(privdMirrorConnectingFlow) { policy, connecting ->
-
                     policy.copy(privdMirrorConnecting = connecting)
                 }.distinctUntilChanged()
                     .collect { policy ->

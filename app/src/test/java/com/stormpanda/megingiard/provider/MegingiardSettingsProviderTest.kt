@@ -83,7 +83,10 @@ class MegingiardSettingsProviderTest {
 
         val extras =
             Bundle().apply {
-                putInt(MegingiardIpcContract.COLUMN_API_VERSION, 1)
+                putInt(
+                    MegingiardIpcContract.COLUMN_API_VERSION,
+                    MegingiardIpcContract.DEFAULT_API_VERSION,
+                )
                 putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, "com.my.launcher")
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, true)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, "com.my.game")
@@ -96,7 +99,10 @@ class MegingiardSettingsProviderTest {
         val result = contentResolver.call(uri, "updateClientState", null, extras)
         assertNotNull(result)
         assertTrue(result!!.getBoolean("success"))
-        assertEquals(1, result.getInt(MegingiardIpcContract.COLUMN_API_VERSION))
+        assertEquals(
+            MegingiardIpcContract.DEFAULT_API_VERSION,
+            result.getInt(MegingiardIpcContract.COLUMN_API_VERSION),
+        )
 
         assertTrue(AppStateManager.isExternalClientActive.value)
         assertEquals("com.my.launcher", AppStateManager.externalClientPackage.value)
@@ -121,7 +127,10 @@ class MegingiardSettingsProviderTest {
         val result = contentResolver.call(uri, "updateClientState", null, extras)
         assertNotNull(result)
         assertTrue(result!!.getBoolean("success"))
-        assertEquals(1, result.getInt(MegingiardIpcContract.COLUMN_API_VERSION))
+        assertEquals(
+            MegingiardIpcContract.DEFAULT_API_VERSION,
+            result.getInt(MegingiardIpcContract.COLUMN_API_VERSION),
+        )
         assertTrue(result.containsKey("warning"))
         assertTrue(result.getString("warning")!!.contains("compatibility mode"))
     }

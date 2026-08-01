@@ -21,6 +21,7 @@ object MegingiardIpcContract {
 
     // Client State columns
     const val COLUMN_API_VERSION = "api_version"
+    const val DEFAULT_API_VERSION = 1
     const val COLUMN_CLIENT_PACKAGE = "client_package"
     const val COLUMN_IS_ACTIVE = "is_active"
     const val COLUMN_FOCUSED_PACKAGE = "focused_package"
