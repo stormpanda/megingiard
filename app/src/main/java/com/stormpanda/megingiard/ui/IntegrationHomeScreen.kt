@@ -110,6 +110,9 @@ private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private const val IH_INACTIVE_DOT_ALPHA = 0.4f
 private val IH_BUTTON_SPACING = 8.dp
 
+private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
+private val IH_STATUS_ACTIVE_COLOR = Color(0xFF81C784)
+
 @Composable
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val colors = LocalAppColors.current
@@ -125,6 +128,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
     val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
+    val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -223,7 +227,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         if (batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD &&
                             !batteryState.isCharging
                         ) {
-                            Color.Red
+                            IH_BATTERY_LOW_COLOR
                         } else {
                             colors.onSurface
                         },
@@ -270,7 +274,6 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 }
 
                 // 2. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
-                val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
                 if (isGameFocus && hoveredPackage != null) {
                     val profiles by MacroPadState.profiles.collectAsState()
                     val associatedProfile =
@@ -383,12 +386,14 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                             .height(IH_SCROLL_FADE_HEIGHT)
-                            .background(
-                                brush =
-                                    Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, animatedPrimary),
-                                    ),
-                            ),
+                            .drawBehind {
+                                drawRect(
+                                    brush =
+                                        Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, animatedPrimary),
+                                        ),
+                                )
+                            },
                 )
             }
         }
@@ -712,7 +717,9 @@ private fun StatusRow(
                     Modifier
                         .size(IH_STATUS_DOT_SIZE)
                         .clip(CircleShape)
-                        .background(if (isActive) Color.Green else colors.onSurfaceSecondary.copy(alpha = IH_INACTIVE_DOT_ALPHA)),
+                        .background(
+                            if (isActive) IH_STATUS_ACTIVE_COLOR else colors.onSurfaceSecondary.copy(alpha = IH_INACTIVE_DOT_ALPHA),
+                        ),
             )
             Text(
                 text = if (isActive) activeLabel else inactiveLabel,

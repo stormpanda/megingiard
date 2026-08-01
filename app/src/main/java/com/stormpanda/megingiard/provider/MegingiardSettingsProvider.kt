@@ -51,7 +51,6 @@ class MegingiardSettingsProvider : ContentProvider() {
         sortOrder: String?,
     ): Cursor? {
         val context = context ?: return null
-        SettingsManager.init(context)
         when (uri.path) {
             "/${MegingiardIpcContract.PATH_THEME}" -> {
                 val cursor =
