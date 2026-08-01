@@ -98,6 +98,7 @@ class FocusTopLauncherActivity : ComponentActivity() {
 
     private var activeCategories: List<GameFocusCategory> = GameFocusCategory.builtIns
     private var launchedPackage: String? = null
+    private val isResumedState = mutableStateOf(false)
 
     private val openDocumentTreeLauncher =
         registerForActivityResult(
@@ -308,8 +309,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             }
                         }
 
-                    LaunchedEffect(currentHoveredApp) {
-                        if (launchedPackage == null) {
+                    LaunchedEffect(currentHoveredApp, isResumedState.value) {
+                        if (isResumedState.value && launchedPackage == null) {
                             val palette =
                                 currentHoveredApp?.let { app ->
                                     AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
@@ -453,12 +454,13 @@ class FocusTopLauncherActivity : ComponentActivity() {
         AppLog.d(TAG, "FocusTopLauncherActivity resumed, refreshing installed apps")
         InstalledAppsManager.loadInstalledApps(this)
         launchedPackage = null
-        MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = null)
+        isResumedState.value = true
     }
 
     override fun onPause() {
         super.onPause()
         stopRepeat()
+        isResumedState.value = false
     }
 
     override fun onStop() {
