@@ -125,6 +125,17 @@ private val OW_STEPPER_DOT_SIZE = 24.dp
 
 private const val OW_SCRIM_ALPHA = 0.55f
 
+private val OW_WARNING_CORNER_RADIUS = 12.dp
+private val OW_WARNING_BORDER_WIDTH = 1.dp
+private val OW_WARNING_PADDING = 12.dp
+private val OW_WARNING_SPACED_BY_SMALL = 8.dp
+private val OW_WARNING_ICON_SIZE = 20.dp
+private val OW_WARNING_SPACED_BY_MEDIUM = 16.dp
+private val OW_BUTTON_ICON_SIZE = 18.dp
+private val OW_BUTTON_SPACED_BY = 8.dp
+private const val OW_WARNING_ALPHA_BG = 0.12f
+private const val OW_WARNING_ALPHA_BORDER = 0.5f
+
 /**
  * Root host dialog for the multi-step onboarding wizard.
  * Renders header stepper indicator, step-specific content, and footer navigation buttons.
@@ -837,17 +848,20 @@ fun PrivilegedStepContent(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .padding(12.dp),
+                            .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
+                            .border(
+                                OW_WARNING_BORDER_WIDTH,
+                                colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
+                                RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
+                            ).padding(OW_WARNING_PADDING),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Warning,
                         contentDescription = null,
                         tint = colors.error,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(OW_WARNING_ICON_SIZE),
                     )
                     Text(
                         text = stringResource(R.string.onboarding_privd_wifi_warning),
@@ -861,24 +875,27 @@ fun PrivilegedStepContent(
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_MEDIUM),
                 ) {
                     val errorRes = errorStringResource(lastError)
                     Row(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                                .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .padding(12.dp),
+                                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
+                                .border(
+                                    OW_WARNING_BORDER_WIDTH,
+                                    colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
+                                    RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
+                                ).padding(OW_WARNING_PADDING),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Warning,
                             contentDescription = null,
                             tint = colors.error,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(OW_WARNING_ICON_SIZE),
                         )
                         Text(
                             text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
@@ -899,9 +916,9 @@ fun PrivilegedStepContent(
                             imageVector = Icons.Rounded.AutoFixHigh,
                             contentDescription = null,
                             tint = colors.actionColorSystem,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(OW_BUTTON_ICON_SIZE),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(OW_BUTTON_SPACED_BY))
                         Text(
                             text = stringResource(R.string.privd_action_retry),
                             color = colors.actionColorSystem,

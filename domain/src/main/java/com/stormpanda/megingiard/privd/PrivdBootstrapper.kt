@@ -41,6 +41,7 @@ private const val VERIFY_RETRY_DELAY_MS = 300L
 private const val SYNC_SERVICE = "sync:"
 private const val SYNC_SEND = "SEND"
 private const val GETPROP_TIMEOUT_MS = 2_000L
+private const val NSD_DISCOVERY_TIMEOUT_MS = 3_000L
 private const val PORT_READ_RETRY_COUNT = 5
 private const val PORT_READ_RETRY_DELAY_MS = 200L
 private const val SYNC_DATA = "DATA"
@@ -367,7 +368,7 @@ object PrivdBootstrapper {
     @Suppress("DEPRECATION")
     private fun discoverAdbTlsPortWithNsd(
         context: Context,
-        timeoutMs: Long = 3000L,
+        timeoutMs: Long = NSD_DISCOVERY_TIMEOUT_MS,
     ): Int {
         val nsdManager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager ?: return 0
         val deferredPort = CompletableDeferred<Int>()

@@ -45,6 +45,7 @@ import java.util.Locale
 private const val TAG = "MegingiardAccessService"
 private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
 private const val AUTO_TOGGLE_STEP_DELAY_MS = 350L
+private const val AUTO_SETUP_WARMUP_DELAY_MS = 400L
 
 private enum class AutoSetupTargetStage {
     STAGE_B_WIRELESS_DEBUG,
@@ -907,7 +908,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
             scope.launch(Dispatchers.Main) {
                 AppLog.d(TAG, "launchSettingsScreenWarmedUp: Warming up Settings task stack with general settings")
                 launchSettingsScreen(context, Settings.ACTION_SETTINGS, displayOptions)
-                delay(400)
+                delay(AUTO_SETUP_WARMUP_DELAY_MS)
                 AppLog.d(TAG, "launchSettingsScreenWarmedUp: Launching target Settings deep-link: $targetAction")
                 launchSettingsScreen(context, targetAction, displayOptions)
                 onDone()
