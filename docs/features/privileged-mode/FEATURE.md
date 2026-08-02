@@ -235,7 +235,7 @@ To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` expose
 
 `GlobalSettingsViewModel` delegates these checks to domain singletons:
 1. **Credentials Presence:** `PrivdBootstrapper.hasCredentials(context)` verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
-2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive(context)` reads the system property `service.adb.tls.port` via `readAdbTlsConnectPort(context)` and falls back to local Network Service Discovery (mDNS) port discovery to check if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
+2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive(context)` queries the system global setting `adb_wifi_enabled` first. If enabled, it returns `true`; otherwise, it falls back to reading the system property `service.adb.tls.port` via `readAdbTlsConnectPort(context)` and local Network Service Discovery (mDNS) port lookup to check if Wireless Debugging is active (port > 0).
 
 The results are presented to the user as clear, localized guidance messages in the settings card:
 - **Running:** "Privileged Mode is active and running."

@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.privd
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.provider.Settings
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
@@ -310,9 +311,18 @@ object PrivdBootstrapper {
     fun clearCredentials(context: Context) = PrivdAdbConnectionManager.clearCredentials(context)
 
     /**
-     * Returns true if the device's ADB Wireless-Debugging service is enabled and returning a port.
+     * Returns true if the device's ADB Wireless-Debugging service is enabled and active.
      */
-    fun isWirelessDebuggingActive(context: Context): Boolean = readAdbTlsConnectPort(context) > 0
+    fun isWirelessDebuggingActive(context: Context): Boolean {
+        val toggleEnabled =
+            try {
+                Settings.Global.getInt(context.contentResolver, "adb_wifi_enabled", 0) != 0
+            } catch (e: Exception) {
+                false
+            }
+        if (toggleEnabled) return true
+        return readAdbTlsConnectPort(context) > 0
+    }
 
     /**
      * Reads the ADB Wireless-Debugging TLS connect port from the system property
