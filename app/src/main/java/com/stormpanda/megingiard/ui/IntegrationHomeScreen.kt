@@ -375,7 +375,14 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         // 5. Connected Client Card - VERY BOTTOM
                         InfoCard(
                             title = stringResource(R.string.integration_home_connected_client),
-                            value = if (isClientActive) clientPackage ?: "Unknown" else "None",
+                            value =
+                                if (isClientActive) {
+                                    clientPackage ?: stringResource(
+                                        R.string.integration_home_unknown,
+                                    )
+                                } else {
+                                    stringResource(R.string.integration_home_none)
+                                },
                             icon = Icons.Rounded.Link,
                             colors = colors,
                             isHighlight = isClientActive,
@@ -441,6 +448,7 @@ private fun ProfileConfigCard(
     profiles: List<PadProfile>,
     colors: AppColors,
 ) {
+    val context = LocalContext.current
     var expandedDropdown by remember { mutableStateOf(false) }
     val unassignedProfiles =
         remember(profiles) {
@@ -519,13 +527,13 @@ private fun ProfileConfigCard(
                             val newProfile =
                                 PadProfile(
                                     id = newProfileId,
-                                    name = hoveredLabel ?: "New Profile",
+                                    name = hoveredLabel ?: context.getString(R.string.integration_home_new_profile),
                                     associatedPackage = hoveredPackage,
                                     layouts =
                                         listOf(
                                             PadLayout(
                                                 id = defaultLayoutId,
-                                                name = "Default",
+                                                name = context.getString(R.string.integration_home_default_layout),
                                                 mirrorCutouts = listOf(ScreenCutout.createDefault()),
                                             ),
                                         ),

@@ -1200,5 +1200,9 @@ Open Settings to create a layout.</string>
     <string name="integration_home_status_inactive">INACTIVE</string>
     <string name="integration_home_status_running">RUNNING</string>
     <string name="integration_home_status_stopped">STOPPED</string>
+    <string name="integration_home_unknown">Unknown</string>
+    <string name="integration_home_none">None</string>
+    <string name="integration_home_new_profile">New Profile</string>
+    <string name="integration_home_default_layout">Default</string>
 </resources>
 
