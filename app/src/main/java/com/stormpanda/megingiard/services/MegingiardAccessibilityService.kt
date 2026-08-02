@@ -47,6 +47,7 @@ private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
 private const val AUTO_TOGGLE_STEP_DELAY_MS = 350L
 private const val AUTO_SETUP_WARMUP_DELAY_MS = 400L
 private const val DEV_MODE_CLICK_COUNT = 7
+private const val POST_PAIRING_STABILIZATION_DELAY_MS = 1500L
 
 private enum class AutoSetupTargetStage {
     STAGE_B_WIRELESS_DEBUG,
@@ -59,6 +60,7 @@ private enum class AutoToggleStage {
     TOGGLE_WIRELESS_DEBUG,
     CLICK_PAIR_DIALOG,
     SCAN_PAIRING_CODE_AND_PAIR,
+    POST_PAIRING_STABILIZATION,
 }
 
 /**
@@ -149,6 +151,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     "startAutoToggleLoop: Starting deep-link based auto-toggle loop in stage $autoToggleStage using language '${config.languageCode}'",
                 )
                 var attempts = 0
+                var lastStage = autoToggleStage
                 val context = applicationContext
                 val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
@@ -283,24 +286,65 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             TAG,
                                             "startAutoToggleLoop: Auto-discovered pairing params port=$portInt, code=$codeStr. Triggering PrivdBootstrapper.pair()",
                                         )
-                                        serviceScope.launch(Dispatchers.IO) {
-                                            val ok = PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
-                                            if (ok) {
-                                                AppLog.i(
-                                                    TAG,
-                                                    "startAutoToggleLoop: Pairing succeeded! Connecting daemon via PrivdManager.connect()",
-                                                )
-                                                PrivdManager.connect(context)
+                                        val ok =
+                                            withContext(Dispatchers.IO) {
+                                                PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
                                             }
+                                        if (ok) {
+                                            AppLog.i(
+                                                TAG,
+                                                "startAutoToggleLoop: Pairing succeeded! Transitioning to POST_PAIRING_STABILIZATION",
+                                            )
+                                            autoToggleStage = AutoToggleStage.POST_PAIRING_STABILIZATION
+                                        } else {
+                                            AppLog.w(TAG, "startAutoToggleLoop: Pairing failed.")
                                             _isAutoSetupActive = false
+                                            break
                                         }
-                                        break
                                     }
+                                }
+                            }
+
+                            AutoToggleStage.POST_PAIRING_STABILIZATION -> {
+                                val allText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                if (!PrivdPairScreenTextScanner.hasPairingCode(allText)) {
+                                    AppLog.i(
+                                        TAG,
+                                        "startAutoToggleLoop: Pairing dialog dismissed. Waiting 1.5s for adbd key stabilization...",
+                                    )
+                                    delay(POST_PAIRING_STABILIZATION_DELAY_MS) // Wait for adbd to write & reload keys
+
+                                    // Rescan the main Wireless Debugging screen for the connect port
+                                    val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                    val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                    if (connectPort > 0) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Scanned connect port after pairing: $connectPort")
+                                        PrivdBootstrapper.setScreenConnectPort(connectPort)
+                                    } else {
+                                        AppLog.w(TAG, "startAutoToggleLoop: Failed to scan connect port after pairing.")
+                                    }
+
+                                    // Attempt connection
+                                    AppLog.i(TAG, "startAutoToggleLoop: Connecting daemon via PrivdManager.connect()")
+                                    val connected =
+                                        withContext(Dispatchers.IO) {
+                                            PrivdManager.connect(context)
+                                        }
+                                    AppLog.i(TAG, "startAutoToggleLoop: Connection after pairing result: $connected")
+                                    _isAutoSetupActive = false
+                                    break
+                                } else {
+                                    AppLog.d(TAG, "startAutoToggleLoop: Waiting for pairing dialog to dismiss...")
                                 }
                             }
                         }
                     }
-                    attempts++
+                    if (autoToggleStage != lastStage) {
+                        attempts = 0
+                        lastStage = autoToggleStage
+                    } else {
+                        attempts++
+                    }
                     delay(AUTO_TOGGLE_STEP_DELAY_MS)
                 }
                 if (_isAutoSetupActive) {

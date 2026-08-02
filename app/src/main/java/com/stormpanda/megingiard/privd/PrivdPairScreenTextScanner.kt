@@ -81,4 +81,12 @@ object PrivdPairScreenTextScanner {
         AppLog.d(TAG, "parseConnectPortFromText -> port=$port")
         return port
     }
+
+    /**
+     * Returns true if the text contains a 6-digit pairing code.
+     */
+    fun hasPairingCode(text: String): Boolean {
+        if (text.isBlank()) return false
+        return PAIRING_CODE_REGEX.containsMatchIn(text)
+    }
 }

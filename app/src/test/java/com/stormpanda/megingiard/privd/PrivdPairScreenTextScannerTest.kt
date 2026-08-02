@@ -123,4 +123,25 @@ class PrivdPairScreenTextScannerTest {
         val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
         assertEquals(41235, port)
     }
+
+    @Test
+    fun hasPairingCode_detectsPresenceOfPairingCode() {
+        val sampleTextWithCode =
+            """
+            Wi-Fi pairing code
+            722106
+            IP address & Port
+            192.168.178.35:35283
+            """.trimIndent()
+        val sampleTextWithoutCode =
+            """
+            Wireless debugging
+            IP address & Port
+            192.168.178.35:41235
+            """.trimIndent()
+
+        assertTrue(PrivdPairScreenTextScanner.hasPairingCode(sampleTextWithCode))
+        assertFalse(PrivdPairScreenTextScanner.hasPairingCode(sampleTextWithoutCode))
+        assertFalse(PrivdPairScreenTextScanner.hasPairingCode(""))
+    }
 }

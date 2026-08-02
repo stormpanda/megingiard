@@ -71,6 +71,7 @@ import com.stormpanda.megingiard.ui.AppMagicalButton
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
+import kotlinx.coroutines.delay
 
 private const val TAG = "PrivdSetupWizard"
 private const val SW_SCRIM_ALPHA = 0.5f
@@ -82,6 +83,7 @@ private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
 private val SW_AUTOFILL_ICON_SIZE = 18.dp
 private val SW_DONE_PADDING_BOTTOM = 16.dp
+private const val SW_STABILIZATION_DELAY_MS = 1500L
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -578,6 +580,7 @@ private fun StepBootstrap(
 ) {
     LaunchedEffect(Unit) {
         if (!busy) {
+            delay(SW_STABILIZATION_DELAY_MS) // Wait for settings pairing dialog to dismiss & connect port to be scanned
             onStart()
         }
     }
