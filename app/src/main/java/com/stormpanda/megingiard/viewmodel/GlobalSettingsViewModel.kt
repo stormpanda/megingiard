@@ -171,7 +171,7 @@ class GlobalSettingsViewModel : ViewModel() {
         val appContext = context.applicationContext
         viewModelScope.launch(Dispatchers.IO) {
             _hasCredentials.value = PrivdBootstrapper.hasCredentials(appContext)
-            _isWirelessDebuggingActive.value = PrivdBootstrapper.isWirelessDebuggingActive()
+            _isWirelessDebuggingActive.value = PrivdBootstrapper.isWirelessDebuggingActive(appContext)
             AppLog.d(
                 TAG,
                 "checkPrivilegedModeStatus: hasCredentials=${_hasCredentials.value} isWirelessDebuggingActive=${_isWirelessDebuggingActive.value}",

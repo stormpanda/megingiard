@@ -45,6 +45,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -93,6 +94,7 @@ import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
@@ -611,6 +613,7 @@ fun PrivilegedStepContent(
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
+    val lastError by PrivdManager.lastError.collectAsState()
     val systemLocale =
         remember {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -749,7 +752,11 @@ fun PrivilegedStepContent(
                     if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
                         pairingStatus == ChecklistStatus.DONE
                     ) {
-                        if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                        when (privdState) {
+                            PrivdState.RUNNING -> ChecklistStatus.DONE
+                            PrivdState.FAILED -> ChecklistStatus.FAILED
+                            else -> ChecklistStatus.ACTIVE
+                        }
                     } else {
                         ChecklistStatus.PENDING
                     }
@@ -830,6 +837,58 @@ fun PrivilegedStepContent(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            } else if (privdState == PrivdState.FAILED) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    val errorRes = errorStringResource(lastError)
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Warning,
+                            contentDescription = null,
+                            tint = colors.error,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                            color = colors.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    AppMagicalButton(
+                        onClick = {
+                            hasAutoSetupBeenStarted = true
+                            onStartAutoSetup()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoFixHigh,
+                            contentDescription = null,
+                            tint = colors.actionColorSystem,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.privd_action_retry),
+                            color = colors.actionColorSystem,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
             } else {
                 AppMagicalButton(
                     onClick = {
@@ -856,7 +915,7 @@ fun PrivilegedStepContent(
     }
 }
 
-private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
+private enum class ChecklistStatus { PENDING, ACTIVE, DONE, FAILED }
 
 @Composable
 private fun PrivdChecklistRow(
@@ -894,6 +953,15 @@ private fun PrivdChecklistRow(
                     modifier = Modifier.size(20.dp),
                 )
             }
+
+            ChecklistStatus.FAILED -> {
+                Icon(
+                    imageVector = Icons.Rounded.Cancel,
+                    contentDescription = null,
+                    tint = colors.error,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
         Text(
             text = label,
@@ -902,6 +970,7 @@ private fun PrivdChecklistRow(
                     ChecklistStatus.DONE -> colors.onSurface
                     ChecklistStatus.ACTIVE -> colors.onSurface
                     ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+                    ChecklistStatus.FAILED -> colors.error
                 },
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -1107,3 +1176,15 @@ fun AccessibilityStepContent(
         }
     }
 }
+
+private fun errorStringResource(error: PrivdError?): Int? =
+    when (error) {
+        PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
+        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
+        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
+        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
+        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
+        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
+        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
+        null -> null
+    }

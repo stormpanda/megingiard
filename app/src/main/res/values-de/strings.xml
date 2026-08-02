@@ -320,6 +320,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_action_show_wizard">Einrichten…</string>
     <string name="privd_action_test_autotoggle">Auto-Toggle testen</string>
     <string name="privd_action_auto_setup">Auto-Einrichtung</string>
+    <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
     <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>
     <string name="privd_toast_all_set">Alles bereit! Privilegiierter Modus ist einsatzbereit.</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>

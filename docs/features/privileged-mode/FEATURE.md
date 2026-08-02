@@ -220,7 +220,7 @@ PrivdManager.state.collect { state ->
 When `PrivdManager.connect(context)` is invoked:
 1. It first attempts a direct local abstract Unix socket connection via `PrivdClient.connect()`.
 2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
-3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port, connects to the local ADB server, pushes and spawns the daemon, and connects the socket.
+3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using NSD fallback if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
 
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the
@@ -235,7 +235,7 @@ To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` expose
 
 `GlobalSettingsViewModel` delegates these checks to domain singletons:
 1. **Credentials Presence:** `PrivdBootstrapper.hasCredentials(context)` verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
-2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive()` reads the system property `service.adb.tls.port` via `readAdbTlsConnectPort()` to check if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
+2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive(context)` reads the system property `service.adb.tls.port` via `readAdbTlsConnectPort(context)` and falls back to local Network Service Discovery (mDNS) port discovery to check if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
 
 The results are presented to the user as clear, localized guidance messages in the settings card:
 - **Running:** "Privileged Mode is active and running."
