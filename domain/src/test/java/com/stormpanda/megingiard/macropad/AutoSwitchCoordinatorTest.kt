@@ -131,6 +131,12 @@ class AutoSwitchCoordinatorTest {
 
         // Then it is ignored and foreground app state remains null
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When game assistant focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.gameassistant")
+
+        // Then it is ignored and foreground app state remains null
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
     }
 

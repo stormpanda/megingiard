@@ -9,7 +9,12 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "AutoSwitchCoordinator"
 private const val APP_PACKAGE_SELF = "com.stormpanda.megingiard"
-private val IGNORED_PACKAGES = setOf("com.android.systemui", "android")
+private val IGNORED_PACKAGES =
+    setOf(
+        "com.android.systemui",
+        "android",
+        "com.odin.gameassistant",
+    )
 
 private val ROM_CONTAINER_PACKAGES =
     setOf(
