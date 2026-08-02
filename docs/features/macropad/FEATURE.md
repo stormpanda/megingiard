@@ -426,6 +426,8 @@ When Background Display is enabled and `ScreenCaptureService` is capturing:
    - The coordinator (an `object` singleton in `:domain`) normalizes the package name.
    - It performs the self-exclusion check: if the package name is `"com.stormpanda.megingiard"`, it ignores it.
    - It performs the transient package check: package transitions matching `IGNORED_PACKAGES` (`com.android.systemui`, `android`) are ignored so system UI focus shifts do not corrupt active foreground mappings.
+   - **Focus Collision Guard**: If an integration client (like GameNative) is active and has reported a focused game, any incoming package events matching the launcher client's own package name are ignored. This prevents launcher window transitions from overriding the active game profile.
+   - **Auto-Deactivation Fallback**: If an integration client is active, but the focused package changes to something other than the client package, the reported game package, or ignored system packages (e.g., the user switched to Google Chrome), the coordinator automatically deactivates the integration client state in `AppStateManager`.
    - If `SettingsManager.autoSwitchProfiles.value` is true, it searches for a profile in `MacroPadState.profiles` where `it.associatedPackage` matches the package name (case-insensitive).
    - If a matching profile is found, and it is not already active, `MacroPadState.setActiveProfileId()` is invoked to switch the active profile immediately.
 3. **DataStore Settings Integration**:

@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,36 @@ object AutoSwitchCoordinator {
         if (normalized in IGNORED_PACKAGES) {
             AppLog.d(TAG, "onPackageChanged: Ignoring system/transient package ($normalized)")
             return
+        }
+
+        val clientActive = AppStateManager.isExternalClientActive.value
+        val clientPackage = AppStateManager.externalClientPackage.value
+        val focusedGame = AppStateManager.focusedAppPackageName.value
+
+        // 1. Focus Collision Guard: Ignore client focus event if client-reported game is running
+        if (clientActive && normalized == clientPackage && focusedGame != null && focusedGame != normalized) {
+            AppLog.d(
+                TAG,
+                "onPackageChanged: Ignoring client package '$normalized' because focused game '$focusedGame' is currently running",
+            )
+            return
+        }
+
+        // 2. Auto-Deactivation Fallback: Deactivate integration state if switching to unrelated app
+        if (clientActive && normalized != clientPackage && normalized != focusedGame) {
+            AppLog.i(
+                TAG,
+                "onPackageChanged: User switched focus away from launcher client '$clientPackage' and game '$focusedGame' to '$normalized'. Deactivating integration state.",
+            )
+            AppStateManager.setExternalClientState(
+                isActive = false,
+                packageName = null,
+                focusedApp = null,
+                hoveredPackage = null,
+                hoveredLabel = null,
+                hoveredPrimaryColor = null,
+                hoveredSecondaryColor = null,
+            )
         }
 
         if (_foregroundApp.value == normalized) {
