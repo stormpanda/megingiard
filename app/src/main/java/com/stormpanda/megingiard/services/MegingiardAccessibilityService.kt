@@ -193,33 +193,37 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                             AutoToggleStage.TOGGLE_WIRELESS_DEBUG -> {
                                 val isWirelessOn = isWirelessDebuggingActive(context)
-                                val hasLocalCreds = isDevicePaired(context)
-                                val isPairedOnScreen = isMegingiardInPairedDevices(rootNode)
+                                val hasLocalCreds = PrivdBootstrapper.hasCredentials(context)
 
                                 val isSubScreen = isWirelessDebuggingSubScreen(rootNode, config.wirelessDebuggingQueryAndKeyword)
 
                                 if (isSubScreen) {
                                     if (isWirelessOn) {
-                                        if (hasLocalCreds && !isPairedOnScreen) {
-                                            AppLog.w(
+                                        if (hasLocalCreds) {
+                                            AppLog.i(
                                                 TAG,
-                                                "startAutoToggleLoop: Stored credentials present but Megingiard not listed in system paired devices! Clearing stale credentials.",
+                                                "startAutoToggleLoop: Wireless Debugging active and stored credentials exist. Attempting connection first...",
                                             )
-                                            PrivdBootstrapper.clearCredentials(context)
-                                        }
-
-                                        val paired = isDevicePaired(context) && isPairedOnScreen
-                                        if (paired) {
-                                            AppLog.i(TAG, "startAutoToggleLoop: Wireless Debugging active and paired, connecting daemon")
-                                            serviceScope.launch(Dispatchers.IO) {
-                                                PrivdManager.connect(context)
+                                            val ok =
+                                                withContext(Dispatchers.IO) {
+                                                    PrivdManager.connect(context)
+                                                }
+                                            if (ok) {
+                                                AppLog.i(TAG, "startAutoToggleLoop: Connection succeeded using stored credentials!")
                                                 _isAutoSetupActive = false
+                                                break
+                                            } else {
+                                                AppLog.w(
+                                                    TAG,
+                                                    "startAutoToggleLoop: Connection/bootstrap failed with stored credentials. Clearing credentials and falling back to pairing code.",
+                                                )
+                                                PrivdBootstrapper.clearCredentials(context)
+                                                autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
                                             }
-                                            break
                                         } else {
                                             AppLog.i(
                                                 TAG,
-                                                "startAutoToggleLoop: Wireless Debugging active but unpaired, advancing to CLICK_PAIR_DIALOG",
+                                                "startAutoToggleLoop: Wireless Debugging active but unpaired (no credentials), advancing to CLICK_PAIR_DIALOG",
                                             )
                                             autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
                                         }
@@ -721,8 +725,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 false
             }
 
-        fun isDevicePaired(context: Context): Boolean =
-            PrivdBootstrapper.hasCredentials(context) && PrivdManager.state.value != PrivdState.FAILED
+        fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
 
         fun dismissNotificationShade(): Boolean {
             val inst = instance ?: return false
