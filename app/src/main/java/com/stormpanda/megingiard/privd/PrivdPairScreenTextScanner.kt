@@ -46,24 +46,7 @@ object PrivdPairScreenTextScanner {
         // Priority A: IP:PORT format (e.g. 192.168.178.35:35283 -> 35283)
         var pairingPort = IP_PORT_REGEX.find(text)?.groupValues?.get(1)
 
-        // Priority B: Port explicitly after "IP address & Port", "IP-Adresse & Port", "Port", etc.
-        if (pairingPort == null) {
-            val keywords =
-                (config?.explicitPortKeywords ?: emptyList()) +
-                    listOf(
-                        "port",
-                        "ip address & port",
-                        "address & port",
-                        "ip-adresse & port",
-                        "ip-adresse und port",
-                        "adresse & port",
-                    )
-            val keywordsPattern = keywords.distinct().joinToString("|") { Regex.escape(it) }
-            val explicitPortRegex = Regex("""(?i)(?:$keywordsPattern)[:\s]*(\d{4,5})\b""")
-            pairingPort = explicitPortRegex.find(text)?.groupValues?.get(1)
-        }
-
-        // Priority C: Standalone 5-digit number
+        // Priority B: Standalone 5-digit number (independent of system language)
         if (pairingPort == null) {
             pairingPort =
                 FIVE_DIGIT_PORT_REGEX
