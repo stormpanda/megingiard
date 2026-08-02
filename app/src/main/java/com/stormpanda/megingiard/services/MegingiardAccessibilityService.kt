@@ -767,6 +767,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
         private var autoTogglePendingTimestamp = 0L
         private const val AUTO_TOGGLE_TIMEOUT_MS = 15000L
 
+        val isAutoSetupActive: Boolean
+            get() = autoTogglePendingTimestamp != 0L && (System.currentTimeMillis() - autoTogglePendingTimestamp <= AUTO_TOGGLE_TIMEOUT_MS)
+
         /**
          * Returns true if the service instance is active and connected.
          */

@@ -186,6 +186,7 @@ fun OnboardingWizardDialog(
     var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
     var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
     var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
+    var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
 
     LaunchedEffect(isPrivilegedStep) {
         if (isPrivilegedStep) {
@@ -196,6 +197,7 @@ fun OnboardingWizardDialog(
                 isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
                 isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                 isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
                 delay(1000L)
             }
         }
@@ -306,6 +308,7 @@ fun OnboardingWizardDialog(
                                 isDevicePaired = isDevicePaired,
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
+                                isAutoSetupActive = isAutoSetupActive,
                             )
                         }
 
@@ -607,6 +610,7 @@ fun PrivilegedStepContent(
     isDevicePaired: Boolean,
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
+    isAutoSetupActive: Boolean = false,
     titleText: String = stringResource(R.string.onboarding_privd_title),
     descText: String = stringResource(R.string.onboarding_privd_desc),
     buttonText: String = stringResource(R.string.onboarding_privd_auto_setup),
@@ -753,9 +757,17 @@ fun PrivilegedStepContent(
                         pairingStatus == ChecklistStatus.DONE
                     ) {
                         when (privdState) {
-                            PrivdState.RUNNING -> ChecklistStatus.DONE
-                            PrivdState.FAILED -> ChecklistStatus.FAILED
-                            else -> ChecklistStatus.ACTIVE
+                            PrivdState.RUNNING -> {
+                                ChecklistStatus.DONE
+                            }
+
+                            PrivdState.FAILED -> {
+                                if (isAutoSetupActive) ChecklistStatus.ACTIVE else ChecklistStatus.FAILED
+                            }
+
+                            else -> {
+                                ChecklistStatus.ACTIVE
+                            }
                         }
                     } else {
                         ChecklistStatus.PENDING
@@ -837,7 +849,7 @@ fun PrivilegedStepContent(
                         modifier = Modifier.weight(1f),
                     )
                 }
-            } else if (privdState == PrivdState.FAILED) {
+            } else if (privdState == PrivdState.FAILED && !isAutoSetupActive) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
