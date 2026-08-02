@@ -111,7 +111,9 @@ private const val IH_BATTERY_MAX = 100
 private val IH_BORDER_WIDTH = 1.dp
 private val IH_BUTTON_CORNER_RADIUS = 8.dp
 private val IH_STATUS_ICON_BG_SIZE = 48.dp
-private val IH_SCROLL_FADE_HEIGHT = 16.dp
+private val IH_SCROLL_FADE_TOP_HEIGHT = 24.dp
+private val IH_SCROLL_FADE_BOTTOM_HEIGHT = 42.dp
+private const val IH_SCROLL_FADE_BOTTOM_ALPHA = 0.7f
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private const val IH_INACTIVE_DOT_ALPHA = 0.4f
 private val IH_BUTTON_SPACING = 8.dp
@@ -402,7 +404,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .height(IH_SCROLL_FADE_HEIGHT)
+                            .height(IH_SCROLL_FADE_TOP_HEIGHT)
                             .background(
                                 brush =
                                     Brush.verticalGradient(
@@ -418,26 +420,17 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .height(IH_SCROLL_FADE_HEIGHT)
+                        .height(IH_SCROLL_FADE_BOTTOM_HEIGHT)
                         .drawBehind {
                             drawRect(
                                 brush =
                                     Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, Color.Black),
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = IH_SCROLL_FADE_BOTTOM_ALPHA)),
                                     ),
                             )
                         },
             )
         }
-
-        // Bottom area (halfed distance, black)
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(IH_PADDING_BOTTOM)
-                    .background(Color.Black),
-        )
     }
 }
 
