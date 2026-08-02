@@ -357,6 +357,10 @@ private fun StepPair(
         autoFillScanning = true
 
         val nodeText = MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)
+        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(nodeText)
+        if (connectPort > 0) {
+            PrivdBootstrapper.setScreenConnectPort(connectPort)
+        }
         val nodeResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(nodeText)
         autoFillScanning = false
 

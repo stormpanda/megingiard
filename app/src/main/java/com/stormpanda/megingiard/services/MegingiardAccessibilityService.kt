@@ -200,6 +200,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                                 if (isSubScreen) {
                                     if (isWirelessOn) {
+                                        val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                        if (connectPort > 0) {
+                                            PrivdBootstrapper.setScreenConnectPort(connectPort)
+                                        }
+
                                         if (hasLocalCreds) {
                                             AppLog.i(
                                                 TAG,
@@ -249,6 +255,12 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
 
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
+                                val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                if (connectPort > 0) {
+                                    PrivdBootstrapper.setScreenConnectPort(connectPort)
+                                }
+
                                 val clickedPair = findAndClickPairDialog(rootNode, config.pairDeviceKeywords)
                                 if (clickedPair) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row, advancing to SCAN_PAIRING_CODE_AND_PAIR")

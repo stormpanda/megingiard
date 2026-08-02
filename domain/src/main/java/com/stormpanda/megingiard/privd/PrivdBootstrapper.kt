@@ -44,6 +44,8 @@ private const val GETPROP_TIMEOUT_MS = 2_000L
 private const val NSD_DISCOVERY_TIMEOUT_MS = 3_000L
 private const val PORT_READ_RETRY_COUNT = 5
 private const val PORT_READ_RETRY_DELAY_MS = 200L
+private const val ADB_CONNECT_RETRY_COUNT = 3
+private const val ADB_CONNECT_RETRY_DELAY_MS = 500L
 private const val SYNC_DATA = "DATA"
 private const val SYNC_DONE = "DONE"
 private const val SYNC_OKAY = "OKAY"
@@ -98,6 +100,18 @@ enum class BootstrapStage {
 object PrivdBootstrapper {
     private val _stage = MutableStateFlow(BootstrapStage.IDLE)
     val stage: StateFlow<BootstrapStage> = _stage.asStateFlow()
+
+    @Volatile
+    private var screenConnectPort: Int = 0
+
+    fun setScreenConnectPort(port: Int) {
+        AppLog.d(TAG, "setScreenConnectPort($port)")
+        screenConnectPort = port
+    }
+
+    fun clearScreenConnectPort() {
+        screenConnectPort = 0
+    }
 
     /**
      * Pair with the device's ADB pairing service. Blocking — call on `Dispatchers.IO`.
@@ -154,6 +168,7 @@ object PrivdBootstrapper {
         host: String,
     ): Boolean {
         val connectPort = readAdbTlsConnectPortWithRetry(context)
+        clearScreenConnectPort() // Clean up any cached port after the read attempt
         if (connectPort <= 0) {
             AppLog.w(TAG, "bootstrapAndConnect: wireless debugging port not available (port=$connectPort) — is Wireless Debugging enabled?")
             PrivdManager.reportBootstrapFailure(PrivdError.ADB_CONNECT_FAILED)
@@ -166,15 +181,25 @@ object PrivdBootstrapper {
         _stage.value = BootstrapStage.CONNECTING_ADB
         val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
         var connected = false
-        for (h in hosts) {
-            try {
-                AppLog.d(TAG, "Attempting ADB connect to $h:$connectPort")
-                if (mgr.connect(h, connectPort)) {
-                    connected = true
+        for (attempt in 1..ADB_CONNECT_RETRY_COUNT) {
+            for (h in hosts) {
+                try {
+                    AppLog.d(TAG, "Attempting ADB connect to $h:$connectPort (attempt $attempt/$ADB_CONNECT_RETRY_COUNT)")
+                    if (mgr.connect(h, connectPort)) {
+                        connected = true
+                        break
+                    }
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "connect($h:$connectPort) failed (attempt $attempt): $e")
+                }
+            }
+            if (connected) break
+            if (attempt < ADB_CONNECT_RETRY_COUNT) {
+                try {
+                    Thread.sleep(ADB_CONNECT_RETRY_DELAY_MS)
+                } catch (_: InterruptedException) {
                     break
                 }
-            } catch (e: Exception) {
-                AppLog.w(TAG, "connect($h:$connectPort) failed: $e")
             }
         }
         if (!connected) {
@@ -273,6 +298,7 @@ object PrivdBootstrapper {
      */
     fun resetStage() {
         _stage.value = BootstrapStage.IDLE
+        clearScreenConnectPort()
     }
 
     // -------------------------------------------------------------------------
@@ -282,6 +308,13 @@ object PrivdBootstrapper {
     private fun readAdbTlsConnectPortWithRetry(context: Context): Int {
         val port = readAdbTlsConnectPort()
         if (port > 0) return port
+
+        val scannedPort = screenConnectPort
+        screenConnectPort = 0 // Clear immediately upon consumption
+        if (scannedPort > 0) {
+            AppLog.i(TAG, "getprop returned 0, attempting screen-scanned connect port fallback: $scannedPort")
+            return scannedPort
+        }
 
         AppLog.i(TAG, "getprop service.adb.tls.port returned 0, attempting NSD discovery fallback...")
         val nsdPort = discoverAdbTlsPortWithNsd(context)

@@ -75,4 +75,27 @@ object PrivdPairScreenTextScanner {
         AppLog.d(TAG, "parsePairingInfoFromText -> code=$pairingCode, port=$pairingPort (textLength=${text.length})")
         return PrivdPairScreenTextResult(port = pairingPort, code = pairingCode)
     }
+
+    /**
+     * Parses raw text from the main Wireless Debugging screen to extract the
+     * 5-digit connect port (IP:PORT format). Returns 0 if not found.
+     */
+    fun parseConnectPortFromText(
+        text: String,
+        config: AutoSetupLanguageConfig? = null,
+    ): Int {
+        if (text.isBlank()) return 0
+
+        // If the text contains a 6-digit pairing code, it's the pairing dialog,
+        // so the IP:PORT is the pairing port, not the connect port.
+        if (PAIRING_CODE_REGEX.containsMatchIn(text)) {
+            AppLog.d(TAG, "parseConnectPortFromText: text contains a pairing code, skipping connect port extraction")
+            return 0
+        }
+
+        val portStr = IP_PORT_REGEX.find(text)?.groupValues?.get(1)
+        val port = portStr?.toIntOrNull() ?: 0
+        AppLog.d(TAG, "parseConnectPortFromText -> port=$port")
+        return port
+    }
 }
