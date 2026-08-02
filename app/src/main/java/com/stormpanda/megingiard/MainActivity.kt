@@ -277,6 +277,14 @@ class MainActivity : ComponentActivity() {
             MegingiardSettingsProvider.notifySettingsChanged(this)
         }
 
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                MacroPadState.profiles.collect {
+                    MegingiardSettingsProvider.notifyProfilesChanged(this@MainActivity)
+                }
+            }
+        }
+
         val hasCreds =
             File(noBackupFilesDir, "privd_adb_key.bin").exists() &&
                 File(noBackupFilesDir, "privd_adb_cert.bin").exists()

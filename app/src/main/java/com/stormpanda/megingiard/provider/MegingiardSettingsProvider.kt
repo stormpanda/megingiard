@@ -35,6 +35,15 @@ class MegingiardSettingsProvider : ContentProvider() {
                 AppLog.w(TAG, "Failed to notify settings change: ${e.message}")
             }
         }
+
+        fun notifyProfilesChanged(context: Context) {
+            try {
+                context.contentResolver.notifyChange(MegingiardIpcContract.PROFILES_URI, null)
+                AppLog.d(TAG, "Notified profiles change on ${MegingiardIpcContract.PROFILES_URI}")
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Failed to notify profiles change: ${e.message}")
+            }
+        }
     }
 
     override fun onCreate(): Boolean {

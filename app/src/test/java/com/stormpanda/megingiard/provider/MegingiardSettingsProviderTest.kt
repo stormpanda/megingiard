@@ -2,9 +2,12 @@ package com.stormpanda.megingiard.provider
 
 import android.content.ContentResolver
 import android.content.pm.ProviderInfo
+import android.database.ContentObserver
 import android.database.Cursor
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -133,5 +136,31 @@ class MegingiardSettingsProviderTest {
         )
         assertTrue(result.containsKey("warning"))
         assertTrue(result.getString("warning")!!.contains("compatibility mode"))
+    }
+
+    @Test
+    fun `notifyProfilesChanged triggers content observer notification`() {
+        var notified = false
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(
+                    selfChange: Boolean,
+                    uri: Uri?,
+                ) {
+                    if (uri == MegingiardIpcContract.PROFILES_URI) {
+                        notified = true
+                    }
+                }
+            }
+
+        contentResolver.registerContentObserver(MegingiardIpcContract.PROFILES_URI, false, observer)
+        try {
+            MegingiardSettingsProvider.notifyProfilesChanged(RuntimeEnvironment.getApplication())
+            org.robolectric.shadows.ShadowLooper
+                .idleMainLooper()
+            assertTrue("Expected ContentObserver to be notified of profiles change", notified)
+        } finally {
+            contentResolver.unregisterContentObserver(observer)
+        }
     }
 }
