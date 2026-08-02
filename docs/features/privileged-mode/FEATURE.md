@@ -190,8 +190,13 @@ Flow:
 The RSA key (PKCS#8) and X.509 certificate are persisted as raw bytes in
 `noBackupFilesDir/privd_adb_key.bin` and `noBackupFilesDir/privd_adb_cert.bin`
 (using `Context.noBackupFilesDir` to exclude them from Auto Backup / device-to-device
-transfer). They are generated once via `android.sun.security.x509.*` (SHA512withRSA,
-~30-year validity, CN=Megingiard) and reused on every subsequent pair / connect.
+transfer). To prevent trust database collisions in the system `adbd` daemon when
+re-pairing, the device name is generated with a random 4-character suffix (e.g.
+`Megingiard-abcd`) and stored in `privd_device_name.txt`. This unique name is used
+as the CN in the self-signed X.509 certificate (SHA512withRSA, ~30-year validity).
+On credential regeneration or deletion, the `libadb-android` library's static
+`SslUtils.sslContext` cache is cleared via reflection to ensure the new certificate
+and private key are loaded successfully by subsequent TLS connections.
 
 Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`

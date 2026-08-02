@@ -83,7 +83,20 @@ internal class PrivdAdbConnectionManager private constructor(
             PrivdPairKey.delete(context)
             runCatching { instance?.disconnect() }
             instance = null
+            flushLibaDBCache()
             AppLog.i("PrivdAdbConnMgr", "clearCredentials: ADB key, cert & name credentials deleted")
+        }
+
+        fun flushLibaDBCache() {
+            runCatching {
+                val clazz = Class.forName("io.github.muntashirakon.adb.SslUtils")
+                val field = clazz.getDeclaredField("sslContext")
+                field.isAccessible = true
+                field.set(null, null)
+                AppLog.i(TAG, "flushLibaDBCache: Successfully cleared libadb SslUtils sslContext cache")
+            }.onFailure { e ->
+                AppLog.w(TAG, "flushLibaDBCache: Failed to clear libadb SslUtils sslContext cache: $e")
+            }
         }
 
         @Synchronized
@@ -128,6 +141,7 @@ internal class PrivdAdbConnectionManager private constructor(
             certFile: File,
             nameFile: File,
         ): Pair<Pair<PrivateKey, Certificate>, String> {
+            flushLibaDBCache()
             val suffix =
                 java.util.UUID
                     .randomUUID()
