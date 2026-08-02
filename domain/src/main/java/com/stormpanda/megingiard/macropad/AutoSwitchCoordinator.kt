@@ -11,6 +11,66 @@ private const val TAG = "AutoSwitchCoordinator"
 private const val APP_PACKAGE_SELF = "com.stormpanda.megingiard"
 private val IGNORED_PACKAGES = setOf("com.android.systemui", "android")
 
+private val ROM_CONTAINER_PACKAGES =
+    setOf(
+        // PC / Windows Containers
+        "app.gamenative",
+        "com.winlator",
+        "com.winlator.vanilla",
+        "com.winlator.ludashi",
+        "com.youstone.mobox",
+        "com.eltechs.ed",
+        "com.eltechs.ed.crv5",
+        // RetroArch (Multi-system) & Frontends
+        "com.retroarch",
+        "com.retroarch.aarch64",
+        "org.retroarch",
+        "com.swordfish.lemuroid",
+        // Nintendo Switch
+        "org.yuzu.yuzu_emu",
+        "org.yuzu.yuzu_emu.ea",
+        "org.suyu.suyu_emu",
+        "org.sudachi.sudachi_emu",
+        "dev.eden.eden_emulator",
+        "dev.eden.eden_nightly",
+        "dev.legacy.eden_emulator",
+        // Nintendo 3DS / DS / N64 / GameBoy / NES / SNES
+        "org.citra.citra_emu",
+        "org.citra.citra_emu.canary",
+        "com.citra.emu",
+        "io.github.lime3ds.lime3ds",
+        "com.dsemu.drastic",
+        "me.magnum.melonds",
+        "org.mupen64plusae.v3.fzurita",
+        "com.fastemulator.gba",
+        "com.fastemulator.gbafree",
+        "com.fastemulator.gbc",
+        "com.fastemulator.gbcfree",
+        "it.dbtecno.pizzaboygba",
+        "it.dbtecno.pizzaboygbafree",
+        "it.dbtecno.pizzaboygbapro",
+        "it.dbtecno.pizzaboygbc",
+        "it.dbtecno.pizzaboygbcfree",
+        "it.dbtecno.pizzaboygbcpro",
+        "com.johnemulators.johnness",
+        "com.johnemulators.johngbac",
+        // PlayStation (PS1 / PS2 / PSP)
+        "xyz.aethersx2.android",
+        "ru.aethersx2.android",
+        "com.tahlrex.aethersx2",
+        "link.carsonli.aethersx2",
+        "com.github.stenzek.duckstation",
+        "com.epsxe.epsxe",
+        "com.emulator.fpse",
+        "org.ppsspp.ppsspp",
+        "org.ppsspp.ppssppgold",
+        // Nintendo GameCube / Wii
+        "org.dolphinemu.dolphinemu",
+        // Sega / Dreamcast
+        "com.reios.flycast",
+        "io.recompiled.redream",
+    )
+
 /**
  * Coordinates automatic profile switching when foreground application changes are detected.
  *
@@ -47,7 +107,16 @@ object AutoSwitchCoordinator {
             return
         }
 
-        // 2. Auto-Deactivation Fallback: Deactivate integration state if switching to unrelated app
+        // 2. Emulator/Container Focus Guard: Ignore container package focus events if a ROM game is running
+        if (clientActive && focusedGame != null && focusedGame.startsWith("rom.") && normalized in ROM_CONTAINER_PACKAGES) {
+            AppLog.d(
+                TAG,
+                "onPackageChanged: Ignoring ROM container package '$normalized' because ROM game '$focusedGame' is currently running",
+            )
+            return
+        }
+
+        // 3. Auto-Deactivation Fallback: Deactivate integration state if switching to unrelated app
         if (clientActive && normalized != clientPackage && normalized != focusedGame) {
             AppLog.i(
                 TAG,
