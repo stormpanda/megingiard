@@ -91,8 +91,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun handleAutoToggleEvent(event: AccessibilityEvent) {
-        val pendingTime = autoTogglePendingTimestamp
-        if (pendingTime == 0L || System.currentTimeMillis() - pendingTime > AUTO_TOGGLE_TIMEOUT_MS) {
+        if (!_isAutoSetupActive) {
             return
         }
         val packageName = event.packageName?.toString() ?: return
@@ -151,7 +150,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 val context = applicationContext
                 val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
-                while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && autoTogglePendingTimestamp != 0L) {
+                while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && _isAutoSetupActive) {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
                         val clickedAllow = findAndClickAllowDialogButton(rootNode, config.allowButtonKeywords)
@@ -212,7 +211,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                         val paired = isDevicePaired(context) && isPairedOnScreen
                                         if (paired) {
                                             AppLog.i(TAG, "startAutoToggleLoop: Wireless Debugging active and paired, connecting daemon")
-                                            autoTogglePendingTimestamp = 0L
+                                            _isAutoSetupActive = false
                                             serviceScope.launch(Dispatchers.IO) {
                                                 PrivdManager.connect(context)
                                             }
@@ -276,7 +275,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                                 PrivdManager.connect(context)
                                             }
                                         }
-                                        autoTogglePendingTimestamp = 0L
+                                        _isAutoSetupActive = false
                                         break
                                     }
                                 }
@@ -286,9 +285,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                     attempts++
                     delay(AUTO_TOGGLE_STEP_DELAY_MS)
                 }
-                if (autoTogglePendingTimestamp != 0L) {
+                if (_isAutoSetupActive) {
                     AppLog.w(TAG, "startAutoToggleLoop: Timed out in stage $autoToggleStage after $AUTO_TOGGLE_MAX_ATTEMPTS attempts")
-                    autoTogglePendingTimestamp = 0L
+                    _isAutoSetupActive = false
                 }
             }
     }
@@ -679,11 +678,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     companion object {
         private var instance: MegingiardAccessibilityService? = null
-        private var autoTogglePendingTimestamp = 0L
-        private const val AUTO_TOGGLE_TIMEOUT_MS = 15000L
+        private var _isAutoSetupActive = false
 
         val isAutoSetupActive: Boolean
-            get() = autoTogglePendingTimestamp != 0L && (System.currentTimeMillis() - autoTogglePendingTimestamp <= AUTO_TOGGLE_TIMEOUT_MS)
+            get() = _isAutoSetupActive
 
         /**
          * Returns true if the service instance is active and connected.
@@ -808,7 +806,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             withContext(Dispatchers.Main) {
                                 inst.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
                                 inst.autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
-                                autoTogglePendingTimestamp = System.currentTimeMillis()
+                                _isAutoSetupActive = true
                                 launchSettingsScreenWarmedUp(
                                     context,
                                     Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS,
@@ -843,7 +841,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
             inst.autoSetupTargetStage = targetStage
             inst.autoToggleStage = initialStage
-            autoTogglePendingTimestamp = System.currentTimeMillis()
+            _isAutoSetupActive = true
 
             val actionToLaunch =
                 when (initialStage) {
