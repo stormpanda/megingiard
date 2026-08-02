@@ -806,11 +806,17 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 "startMultiStageAutoSetup: Connect/bootstrap failed despite saved credentials. Falling back to Stage C (Pairing).",
                             )
                             withContext(Dispatchers.Main) {
-                                instance?.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
-                                instance?.autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
+                                inst.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
+                                inst.autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
                                 autoTogglePendingTimestamp = System.currentTimeMillis()
-                                instance?.startAutoToggleLoop()
-                                launchSettingsScreen(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, displayOptions)
+                                launchSettingsScreenWarmedUp(
+                                    context,
+                                    Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS,
+                                    displayOptions,
+                                    inst.serviceScope,
+                                ) {
+                                    inst.startAutoToggleLoop()
+                                }
                             }
                         }
                     }
@@ -839,8 +845,6 @@ class MegingiardAccessibilityService : AccessibilityService() {
             inst.autoToggleStage = initialStage
             autoTogglePendingTimestamp = System.currentTimeMillis()
 
-            inst.startAutoToggleLoop()
-
             val actionToLaunch =
                 when (initialStage) {
                     AutoToggleStage.ACTIVATE_DEV_MODE -> Settings.ACTION_DEVICE_INFO_SETTINGS
@@ -850,7 +854,16 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 }
 
             if (actionToLaunch != null) {
-                launchSettingsScreen(context, actionToLaunch, displayOptions)
+                launchSettingsScreenWarmedUp(
+                    context,
+                    actionToLaunch,
+                    displayOptions,
+                    inst.serviceScope,
+                ) {
+                    inst.startAutoToggleLoop()
+                }
+            } else {
+                inst.startAutoToggleLoop()
             }
         }
 
@@ -876,6 +889,23 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 }
             }
             AppLog.e(TAG, "launchSettingsScreen: All settings intents failed to launch.")
+        }
+
+        private fun launchSettingsScreenWarmedUp(
+            context: Context,
+            targetAction: String,
+            displayOptions: Bundle,
+            scope: CoroutineScope,
+            onDone: () -> Unit,
+        ) {
+            scope.launch(Dispatchers.Main) {
+                AppLog.d(TAG, "launchSettingsScreenWarmedUp: Warming up Settings task stack with general settings")
+                launchSettingsScreen(context, Settings.ACTION_SETTINGS, displayOptions)
+                delay(400)
+                AppLog.d(TAG, "launchSettingsScreenWarmedUp: Launching target Settings deep-link: $targetAction")
+                launchSettingsScreen(context, targetAction, displayOptions)
+                onDone()
+            }
         }
 
         /**
