@@ -46,6 +46,7 @@ private const val TAG = "MegingiardAccessService"
 private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
 private const val AUTO_TOGGLE_STEP_DELAY_MS = 350L
 private const val AUTO_SETUP_WARMUP_DELAY_MS = 400L
+private const val DEV_MODE_CLICK_COUNT = 7
 
 private enum class AutoSetupTargetStage {
     STAGE_B_WIRELESS_DEBUG,
@@ -488,8 +489,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
                 if (matches) {
                     val clickable = findClickableAncestorOrSelf(node) ?: node
-                    AppLog.i(TAG, "findAndClickBuildNumber: Found build number row ('$text'), clicking 7 times")
-                    for (k in 0..6) {
+                    AppLog.i(TAG, "findAndClickBuildNumber: Found build number row ('$text'), clicking $DEV_MODE_CLICK_COUNT times")
+                    repeat(DEV_MODE_CLICK_COUNT) {
                         clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     }
                     return true

@@ -88,7 +88,6 @@ private val PRD_BUTTON_SPACING = 8.dp
  */
 @Composable
 fun PrivdReconnectPromptDialog(
-    onConnect: () -> Unit,
     onSkip: () -> Unit,
     onDone: () -> Unit,
 ) {

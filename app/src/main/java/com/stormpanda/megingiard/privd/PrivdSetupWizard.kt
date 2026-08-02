@@ -6,12 +6,6 @@ import android.content.Intent
 import android.provider.Settings
 import android.view.Display
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,6 +40,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -68,6 +64,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppMagicalButton
@@ -84,6 +81,7 @@ private val SW_GAP = 12.dp
 private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
 private val SW_AUTOFILL_ICON_SIZE = 18.dp
+private val SW_DONE_PADDING_BOTTOM = 16.dp
 
 /**
  * On-device Wireless-Debugging bootstrap wizard for Privileged Mode.
@@ -129,7 +127,20 @@ internal fun PrivdSetupWizardDialog(
         )
     val focusManager = LocalFocusManager.current
 
+    LaunchedEffect(Unit) {
+        AppLog.d(TAG, "PrivdSetupWizardDialog: wizard opened")
+    }
+
+    LaunchedEffect(step) {
+        AppLog.d(TAG, "PrivdSetupWizardDialog: step changed to $step")
+    }
+
+    LaunchedEffect(stage) {
+        AppLog.d(TAG, "PrivdSetupWizardDialog: bootstrap stage changed to $stage")
+    }
+
     BackHandler(onBack = {
+        AppLog.i(TAG, "PrivdSetupWizardDialog: Back handler triggered, resetting and dismissing")
         viewModel.privdResetBootstrapStage()
         onDismiss()
     })
@@ -153,6 +164,7 @@ internal fun PrivdSetupWizardDialog(
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = {
+                AppLog.i(TAG, "PrivdSetupWizardDialog: Close button clicked, resetting and dismissing")
                 viewModel.privdResetBootstrapStage()
                 onDismiss()
             }) {
@@ -213,7 +225,10 @@ internal fun PrivdSetupWizardDialog(
                             }
                         }
                     },
-                    onNext = { step = 1 },
+                    onNext = {
+                        AppLog.i(TAG, "PrivdSetupWizardDialog: Advancing to step 1")
+                        step = 1
+                    },
                 )
             }
 
@@ -229,9 +244,11 @@ internal fun PrivdSetupWizardDialog(
                     onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
                     onSubmit = {
                         val portInt = pairPort.toIntOrNull() ?: return@StepPair
+                        AppLog.i(TAG, "PrivdSetupWizardDialog: Submitting pairing with port=$portInt")
                         pairBusy = true
                         pairError = false
                         viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
+                            AppLog.i(TAG, "PrivdSetupWizardDialog: Pairing result ok=$ok")
                             pairBusy = false
                             if (ok) {
                                 step = 2
@@ -248,18 +265,24 @@ internal fun PrivdSetupWizardDialog(
                     stage = stage,
                     busy = bootstrapBusy,
                     onStart = {
+                        AppLog.i(TAG, "PrivdSetupWizardDialog: Starting bootstrap process")
                         bootstrapBusy = true
                         viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
+                            AppLog.i(TAG, "PrivdSetupWizardDialog: Bootstrap process finished, ok=$ok")
                             bootstrapBusy = false
                             if (ok) step = 3
                         }
                     },
-                    onBack = { step = 1 },
+                    onBack = {
+                        AppLog.i(TAG, "PrivdSetupWizardDialog: Going back to step 1 (Pairing)")
+                        step = 1
+                    },
                 )
             }
 
             3 -> {
                 StepDone(onClose = {
+                    AppLog.i(TAG, "PrivdSetupWizardDialog: Wizard finished successfully, resetting stage and dismissing")
                     viewModel.privdResetBootstrapStage()
                     onDismiss()
                 })
@@ -334,8 +357,8 @@ private fun StepPair(
     code: String,
     busy: Boolean,
     error: Boolean,
-    fieldColors: androidx.compose.material3.TextFieldColors,
-    focusManager: androidx.compose.ui.focus.FocusManager,
+    fieldColors: TextFieldColors,
+    focusManager: FocusManager,
     onPairPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -348,9 +371,11 @@ private fun StepPair(
 
     fun performAutoFillScan() {
         if (autoFillScanning || busy) return
+        AppLog.i(TAG, "performAutoFillScan: Triggering screen scan")
         autoFillMessage = null
         autoFillSuccess = false
         if (!MegingiardAccessibilityService.isEnabled(context)) {
+            AppLog.w(TAG, "performAutoFillScan: Autofill failed, accessibility service disabled")
             autoFillMessage = context.getString(R.string.privd_wizard_autofill_accessibility_disabled)
             return
         }
@@ -359,6 +384,7 @@ private fun StepPair(
         val nodeText = MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)
         val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(nodeText)
         if (connectPort > 0) {
+            AppLog.i(TAG, "performAutoFillScan: Set screen-scanned connect port fallback: $connectPort")
             PrivdBootstrapper.setScreenConnectPort(connectPort)
         }
         val nodeResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(nodeText)
@@ -367,14 +393,17 @@ private fun StepPair(
         if (nodeResult.isComplete) {
             val detectedPort = nodeResult.port ?: ""
             val detectedCode = nodeResult.code ?: ""
+            AppLog.i(TAG, "performAutoFillScan: Scan succeeded. Detected port=$detectedPort, codeLen=${detectedCode.length}")
             onPairPortChange(detectedPort)
             onCodeChange(detectedCode)
             autoFillSuccess = true
             autoFillMessage = context.getString(R.string.privd_wizard_autofill_success)
             if (detectedPort.length == 5 && detectedCode.length == 6) {
+                AppLog.i(TAG, "performAutoFillScan: Automatic submit triggered after successful scan")
                 onSubmit()
             }
         } else {
+            AppLog.w(TAG, "performAutoFillScan: Scan finished. Pairing info not found on screen.")
             autoFillMessage = context.getString(R.string.privd_wizard_autofill_not_found)
         }
     }
@@ -608,7 +637,7 @@ private fun StepDone(onClose: () -> Unit) {
         text = stringResource(R.string.privd_wizard_step4_done),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(bottom = 16.dp),
+        modifier = Modifier.padding(bottom = SW_DONE_PADDING_BOTTOM),
     )
     Button(onClick = onClose) {
         Text(stringResource(R.string.privd_wizard_close))

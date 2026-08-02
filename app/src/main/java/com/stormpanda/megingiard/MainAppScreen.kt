@@ -550,11 +550,6 @@ fun MainAppScreen() {
 
         if (showPromptDialog && !isWizardActive) {
             PrivdReconnectPromptDialog(
-                onConnect = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        PrivdManager.connect(context)
-                    }
-                },
                 onSkip = {
                     val active = MegingiardAccessibilityService.isEnabled(context)
                     AppStateManager.setAccessibilityActive(active)

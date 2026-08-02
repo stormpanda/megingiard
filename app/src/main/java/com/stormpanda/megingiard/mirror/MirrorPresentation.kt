@@ -839,15 +839,9 @@ class MirrorPresentation(
                                 }
 
                                 val isPrivdPromptActive by AppStateManager.isPrivdPromptActive.collectAsState()
-                                val dialogScope = rememberCoroutineScope()
 
                                 if (isPrivdPromptActive && !isWizardActive) {
                                     PrivdReconnectPromptDialog(
-                                        onConnect = {
-                                            dialogScope.launch(Dispatchers.IO) {
-                                                PrivdManager.connect(context)
-                                            }
-                                        },
                                         onSkip = {
                                             val active = MegingiardAccessibilityService.isEnabled(context)
                                             AppStateManager.setAccessibilityActive(active)
