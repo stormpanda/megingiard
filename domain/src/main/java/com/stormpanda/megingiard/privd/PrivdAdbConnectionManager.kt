@@ -77,6 +77,7 @@ internal class PrivdAdbConnectionManager private constructor(
             if (keyFile.exists()) keyFile.delete()
             if (certFile.exists()) certFile.delete()
             PrivdPairKey.delete(context)
+            runCatching { instance?.disconnect() }
             instance = null
             AppLog.i("PrivdAdbConnMgr", "clearCredentials: ADB key & cert credentials deleted")
         }

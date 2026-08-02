@@ -128,6 +128,7 @@ object PrivdBootstrapper {
         _stage.value = BootstrapStage.PAIRING
         return try {
             val mgr = PrivdAdbConnectionManager.getInstance(context)
+            disconnectQuietly(mgr)
             val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
             var ok = false
             for (h in hosts) {
@@ -177,6 +178,7 @@ object PrivdBootstrapper {
         AppLog.i(TAG, "bootstrapAndConnect(host=$host connectPort=$connectPort)")
         PrivdManager.reportBootstrapStart()
         val mgr = PrivdAdbConnectionManager.getInstance(context)
+        disconnectQuietly(mgr)
         // Connect directly to adbd — mDNS self-discovery is unreliable on-device.
         _stage.value = BootstrapStage.CONNECTING_ADB
         val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
