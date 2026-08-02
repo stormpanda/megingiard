@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -96,6 +97,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
     private val focusedAppState = mutableStateOf<InstalledAppInfo?>(null)
 
     private var activeCategories: List<GameFocusCategory> = GameFocusCategory.builtIns
+    private var launchedTopScreenPackage: String? = null
+    private val isResumedState = mutableStateOf(false)
+    private val isStartedState = mutableStateOf(false)
 
     private val openDocumentTreeLauncher =
         registerForActivityResult(
@@ -143,6 +147,10 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 ).collectAsState(initial = Pair(ThemeMode.DARK, null))
             val (themeMode, userAccent) = remoteThemeState
             val appColors = paletteFor(themeMode, userAccent)
+
+            val themeUpdateTrigger by MegingiardThemeClient
+                .observeThemeUpdates(this)
+                .collectAsState(initial = 0)
 
             val allApps by InstalledAppsManager.installedApps.collectAsState()
             val favorites by InstalledAppsManager.favorites.collectAsState()
@@ -290,6 +298,43 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     LocalAppColors provides appColors,
                     LocalAppDimens provides AppDimens(),
                 ) {
+                    val currentHoveredApp =
+                        remember(
+                            isLibraryOpenState.value,
+                            focusedAppState.value,
+                            libraryFocusedIndexState.intValue,
+                            librarySelectedTabState.value,
+                            allApps,
+                        ) {
+                            if (isLibraryOpenState.value) {
+                                val activeApps = librarySelectedTabState.value.filterApps(allApps)
+                                activeApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
+                            } else {
+                                focusedAppState.value
+                            }
+                        }
+
+                    LaunchedEffect(currentHoveredApp, isStartedState.value, themeUpdateTrigger) {
+                        if (isStartedState.value && launchedTopScreenPackage == null) {
+                            val palette =
+                                currentHoveredApp?.let { app ->
+                                    AppPaletteExtractor.extractColorsAsync(app, appColors.accent, appColors.appBackground)
+                                }
+                            val primaryArgb = palette?.primaryColor?.toArgb()
+                            val secondaryArgb = palette?.secondaryColor?.toArgb()
+
+                            MegingiardSettingsClient.updateClientState(
+                                context = this@FocusTopLauncherActivity,
+                                isActive = true,
+                                focusedPackage = null,
+                                hoveredPackage = currentHoveredApp?.packageName,
+                                hoveredLabel = currentHoveredApp?.label,
+                                hoveredPrimaryColor = primaryArgb,
+                                hoveredSecondaryColor = secondaryArgb,
+                            )
+                        }
+                    }
+
                     Surface(
                         modifier = Modifier.fillMaxSize(),
                         color = appColors.appBackground,
@@ -298,10 +343,23 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             apps = displayedApps,
                             onAppClickTop = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on top display: ${appInfo.label}")
+                                launchedTopScreenPackage = appInfo.packageName
+                                MegingiardSettingsClient.updateClientState(
+                                    this@FocusTopLauncherActivity,
+                                    isActive = true,
+                                    focusedPackage = appInfo.packageName,
+                                )
                                 InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
                             },
                             onAppClickBottom = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
+                                if (!isCompanionApp(appInfo.packageName)) {
+                                    MegingiardSettingsClient.updateClientState(
+                                        this@FocusTopLauncherActivity,
+                                        isActive = true,
+                                        focusedPackage = appInfo.packageName,
+                                    )
+                                }
                                 InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
                             },
                             selectedCategory = selectedCategory,
@@ -397,16 +455,40 @@ class FocusTopLauncherActivity : ComponentActivity() {
         resetToGallery()
     }
 
+    override fun onStart() {
+        super.onStart()
+        isStartedState.value = true
+    }
+
     override fun onResume() {
         super.onResume()
         AppLog.d(TAG, "FocusTopLauncherActivity resumed, refreshing installed apps")
         InstalledAppsManager.loadInstalledApps(this)
+        launchedTopScreenPackage = null
+        isResumedState.value = true
     }
 
     override fun onPause() {
         super.onPause()
         stopRepeat()
+        isResumedState.value = false
     }
+
+    override fun onStop() {
+        super.onStop()
+        isStartedState.value = false
+        if (launchedTopScreenPackage == null) {
+            MegingiardSettingsClient.updateClientState(this, isActive = false, focusedPackage = null)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        MegingiardSettingsClient.updateClientState(this, isActive = false, focusedPackage = null)
+    }
+
+    private fun isCompanionApp(packageName: String): Boolean =
+        packageName.startsWith("com.stormpanda.megingiard") && !packageName.contains("gamefocus")
 
     private fun resetToGallery(): Boolean {
         val wasNotInGallery =
@@ -1000,6 +1082,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue.coerceAtLeast(0))
                     if (targetApp != null) {
                         AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
+                        launchedTopScreenPackage = targetApp.packageName
+                        MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                         InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
                     }
                     true
@@ -1012,6 +1096,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         val targetApp = filteredApps.getOrNull(libraryFocusedIndexState.intValue)
                         if (targetApp != null) {
                             AppLog.i(TAG, "Library launch on bottom display: ${targetApp.label}")
+                            if (!isCompanionApp(targetApp.packageName)) {
+                                MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
+                            }
                             InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
                         }
                     }
@@ -1165,6 +1252,8 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 val targetApp = focusedAppState.value
                 if (targetApp != null) {
                     AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
+                    launchedTopScreenPackage = targetApp.packageName
+                    MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                     InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
                     return true
                 }
@@ -1176,6 +1265,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                 val targetApp = focusedAppState.value
                 if (targetApp != null) {
                     AppLog.i(TAG, "Gamepad X button pressed for: ${targetApp.label} -> Launching on Bottom Display")
+                    if (!isCompanionApp(targetApp.packageName)) {
+                        MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
+                    }
                     InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
                     return true
                 }

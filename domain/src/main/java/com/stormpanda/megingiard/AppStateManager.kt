@@ -101,6 +101,51 @@ object AppStateManager {
         _shutOffRequested.value = false
     }
 
+    // ── Integration Client State ──────────────────────────────────────────────
+
+    private val _isExternalClientActive = MutableStateFlow(false)
+    val isExternalClientActive: StateFlow<Boolean> = _isExternalClientActive.asStateFlow()
+
+    private val _externalClientPackage = MutableStateFlow<String?>(null)
+    val externalClientPackage: StateFlow<String?> = _externalClientPackage.asStateFlow()
+
+    private val _focusedAppPackageName = MutableStateFlow<String?>(null)
+    val focusedAppPackageName: StateFlow<String?> = _focusedAppPackageName.asStateFlow()
+
+    private val _hoveredAppPackageName = MutableStateFlow<String?>(null)
+    val hoveredAppPackageName: StateFlow<String?> = _hoveredAppPackageName.asStateFlow()
+
+    private val _hoveredAppLabel = MutableStateFlow<String?>(null)
+    val hoveredAppLabel: StateFlow<String?> = _hoveredAppLabel.asStateFlow()
+
+    private val _hoveredAppPrimaryColor = MutableStateFlow<Int?>(null)
+    val hoveredAppPrimaryColor: StateFlow<Int?> = _hoveredAppPrimaryColor.asStateFlow()
+
+    private val _hoveredAppSecondaryColor = MutableStateFlow<Int?>(null)
+    val hoveredAppSecondaryColor: StateFlow<Int?> = _hoveredAppSecondaryColor.asStateFlow()
+
+    fun setExternalClientState(
+        isActive: Boolean,
+        packageName: String?,
+        focusedApp: String?,
+        hoveredPackage: String? = null,
+        hoveredLabel: String? = null,
+        hoveredPrimaryColor: Int? = null,
+        hoveredSecondaryColor: Int? = null,
+    ) {
+        AppLog.d(
+            TAG,
+            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp hovered=$hoveredLabel ($hoveredPackage) primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
+        )
+        _isExternalClientActive.value = isActive
+        _externalClientPackage.value = packageName
+        _focusedAppPackageName.value = focusedApp
+        _hoveredAppPackageName.value = hoveredPackage
+        _hoveredAppLabel.value = hoveredLabel
+        _hoveredAppPrimaryColor.value = hoveredPrimaryColor
+        _hoveredAppSecondaryColor.value = hoveredSecondaryColor
+    }
+
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed

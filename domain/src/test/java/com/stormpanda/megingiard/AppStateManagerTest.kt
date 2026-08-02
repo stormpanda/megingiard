@@ -270,4 +270,56 @@ class AppStateManagerTest {
             // Cleanup
             AppStateManager.setAccessibilityActive(true)
         }
+
+    @Test
+    fun `setting external client state updates AppStateManager correctly`() =
+        runTest {
+            // Verify default/initial state
+            assertFalse(AppStateManager.isExternalClientActive.value)
+            assertEquals(null, AppStateManager.externalClientPackage.value)
+            assertEquals(null, AppStateManager.focusedAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppLabel.value)
+            assertEquals(null, AppStateManager.hoveredAppPrimaryColor.value)
+            assertEquals(null, AppStateManager.hoveredAppSecondaryColor.value)
+
+            // Update client state
+            AppStateManager.setExternalClientState(
+                isActive = true,
+                packageName = "com.test.launcher",
+                focusedApp = "com.test.game",
+                hoveredPackage = "com.test.hover",
+                hoveredLabel = "Hovered Game",
+                hoveredPrimaryColor = 0xFF112233.toInt(),
+                hoveredSecondaryColor = 0xFF445566.toInt(),
+            )
+
+            // Verify updated values
+            assertTrue(AppStateManager.isExternalClientActive.value)
+            assertEquals("com.test.launcher", AppStateManager.externalClientPackage.value)
+            assertEquals("com.test.game", AppStateManager.focusedAppPackageName.value)
+            assertEquals("com.test.hover", AppStateManager.hoveredAppPackageName.value)
+            assertEquals("Hovered Game", AppStateManager.hoveredAppLabel.value)
+            assertEquals(0xFF112233.toInt(), AppStateManager.hoveredAppPrimaryColor.value)
+            assertEquals(0xFF445566.toInt(), AppStateManager.hoveredAppSecondaryColor.value)
+
+            // Reset client state
+            AppStateManager.setExternalClientState(
+                isActive = false,
+                packageName = null,
+                focusedApp = null,
+                hoveredPackage = null,
+                hoveredLabel = null,
+                hoveredPrimaryColor = null,
+                hoveredSecondaryColor = null,
+            )
+
+            assertFalse(AppStateManager.isExternalClientActive.value)
+            assertEquals(null, AppStateManager.externalClientPackage.value)
+            assertEquals(null, AppStateManager.focusedAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppPackageName.value)
+            assertEquals(null, AppStateManager.hoveredAppLabel.value)
+            assertEquals(null, AppStateManager.hoveredAppPrimaryColor.value)
+            assertEquals(null, AppStateManager.hoveredAppSecondaryColor.value)
+        }
 }

@@ -40,6 +40,8 @@ data class MirrorRuntimePolicyState(
     val privdMirrorConnecting: Boolean = false,
     /** True if welcome onboarding or quick menu swipe tutorial is actively shown. */
     val tutorialsActive: Boolean = false,
+    /** True if the companion home/dashboard screen is currently active. */
+    val showIntegrationHome: Boolean = false,
 )
 
 enum class MirrorRuntimeAction {
@@ -59,6 +61,11 @@ enum class MirrorRuntimeAction {
  */
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAction {
     if (!state.isOnValidScreen || state.layoutId == null) return MirrorRuntimeAction.NONE
+
+    // If the companion integration dashboard is active, mirroring is prohibited.
+    if (state.showIntegrationHome) {
+        return if (state.isCapturing) MirrorRuntimeAction.STOP else MirrorRuntimeAction.NONE
+    }
 
     return when {
         state.isCapturing && !state.layoutWantsMirror -> MirrorRuntimeAction.STOP

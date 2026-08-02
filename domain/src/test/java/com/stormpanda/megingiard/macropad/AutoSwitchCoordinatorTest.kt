@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -8,6 +9,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.util.UUID
@@ -60,6 +63,11 @@ class AutoSwitchCoordinatorTest {
     @After
     fun tearDown() {
         AutoSwitchCoordinator.resetForTesting()
+        AppStateManager.setExternalClientState(
+            isActive = false,
+            packageName = null,
+            focusedApp = null,
+        )
         Dispatchers.resetMain()
     }
 
@@ -123,6 +131,102 @@ class AutoSwitchCoordinatorTest {
 
         // Then it is ignored and foreground app state remains null
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When game assistant focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.gameassistant")
+
+        // Then it is ignored and foreground app state remains null
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged ignores client package events when focused game is running`() {
+        // Given integration client is active and retroarch is focused game
+        AppStateManager.setExternalClientState(
+            isActive = true,
+            packageName = "com.test.launcher",
+            focusedApp = "com.retroarch",
+        )
+        MacroPadState.setActiveProfileId(profile1.id) // profile1 associatedPackage is com.retroarch
+
+        // When focus change event is reported for the client package
+        AutoSwitchCoordinator.onPackageChanged("com.test.launcher")
+
+        // Then focus change event is ignored, and active profile remains retroarch (profile1)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged deactivates client state when switching to unrelated app`() {
+        // Given integration client is active and retroarch is focused game
+        AppStateManager.setExternalClientState(
+            isActive = true,
+            packageName = "com.test.launcher",
+            focusedApp = "com.retroarch",
+        )
+        MacroPadState.setActiveProfileId(profile1.id)
+
+        // When user switches to an unrelated app (e.g. chrome)
+        AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
+
+        // Then client state is deactivated
+        assertFalse(AppStateManager.isExternalClientActive.value)
+        assertEquals(null, AppStateManager.externalClientPackage.value)
+        assertEquals(null, AppStateManager.focusedAppPackageName.value)
+    }
+
+    @Test
+    fun `onPackageChanged ignores container package events when ROM game is running`() {
+        // Given integration client is active and a ROM game is focused
+        AppStateManager.setExternalClientState(
+            isActive = true,
+            packageName = "com.test.launcher",
+            focusedApp = "rom.pc.Celeste_123",
+        )
+        MacroPadState.setActiveProfileId(profile1.id)
+
+        // When focus change event is reported for an emulator/container package
+        AutoSwitchCoordinator.onPackageChanged("app.gamenative")
+
+        // Then focus event is ignored, integration state remains active, and active profile is unchanged
+        assertTrue(AppStateManager.isExternalClientActive.value)
+        assertEquals("rom.pc.Celeste_123", AppStateManager.focusedAppPackageName.value)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When focus change event is reported for another container package like eden nightly
+        AutoSwitchCoordinator.onPackageChanged("dev.eden.eden_nightly")
+
+        // Then focus event is still ignored
+        assertTrue(AppStateManager.isExternalClientActive.value)
+        assertEquals("rom.pc.Celeste_123", AppStateManager.focusedAppPackageName.value)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When focus change event is reported for winlator
+        AutoSwitchCoordinator.onPackageChanged("com.winlator")
+
+        // Then focus event is still ignored
+        assertTrue(AppStateManager.isExternalClientActive.value)
+        assertEquals("rom.pc.Celeste_123", AppStateManager.focusedAppPackageName.value)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged deactivates client state when switching to unrelated app from ROM`() {
+        // Given integration client is active and a ROM game is focused
+        AppStateManager.setExternalClientState(
+            isActive = true,
+            packageName = "com.test.launcher",
+            focusedApp = "rom.pc.Celeste_123",
+        )
+        MacroPadState.setActiveProfileId(profile1.id)
+
+        // When focus change event is reported for an unrelated app (Chrome)
+        AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
+
+        // Then integration state is deactivated
+        assertFalse(AppStateManager.isExternalClientActive.value)
+        assertEquals(null, AppStateManager.externalClientPackage.value)
+        assertEquals(null, AppStateManager.focusedAppPackageName.value)
     }
 }

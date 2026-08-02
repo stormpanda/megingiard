@@ -36,7 +36,9 @@
 | `docs/features/FEATURE_TEMPLATE.md`        | Template for new feature documentation                                                   |
 | `docs/features/gamefocus/FEATURE.md`       | Megingiard Game Focus — dual-screen top launcher & bottom companion build variant        |
 | `docs/features/help/FEATURE.md`            | In-App Help Tutorials — shared HelpModal infrastructure and per-screen content composables |
+| `docs/features/integration-api/FEATURE.md` | Megingiard Integration API — dynamic client connection, state sharing, and profile query   |
 | `docs/features/keyboard/FEATURE.md`        | Virtual Keyboard — functional requirements & technical implementation                    |
+
 | `docs/features/log-report/FEATURE.md`      | Log Report Export — save logcat output to a file for bug reports                         |
 | `docs/features/macropad/FEATURE.md`        | MacroPad — profiles, layouts, and custom macro triggers & execution                      |
 | `docs/features/mirror/FEATURE.md`          | Screen Mirror — functional requirements & technical implementation                       |
@@ -85,7 +87,7 @@
 
 ## 3 Checklist for Every Change
 
-> **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator.
+> **Compilation policy:** The agent is encouraged to run `./gradlew compileDebugKotlin` or `./gradlew :app:assembleDebug` to verify compile safety before presenting changes to the human operator. Due to Gradle's reliance on local TCP/loopback sockets, these commands MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed).
 
 > **Deployment policy:** The agent is STRICTLY PROHIBITED from running any deployment commands (such as `./gradlew installDebug`) or executing ADB commands to deploy the APK or delete/clear app data without the human operator's explicit permission.
 
@@ -111,8 +113,7 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` and report the result.
->    This, along with sandbox compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
+> 3. **Run all tests** via `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >

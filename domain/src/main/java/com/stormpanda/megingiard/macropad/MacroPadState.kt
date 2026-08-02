@@ -138,7 +138,7 @@ object MacroPadState {
      * @param profiles         Deserialized profiles from DataStore.
      * @param activeProfileId  Persisted active profile ID.
      */
-    internal fun loadFrom(
+    fun loadFrom(
         profiles: List<PadProfile>,
         activeProfileId: String?,
     ) {

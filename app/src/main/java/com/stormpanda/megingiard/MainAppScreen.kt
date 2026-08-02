@@ -79,6 +79,7 @@ import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
+import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -91,6 +92,7 @@ import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.IntegrationHomeScreen
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
@@ -116,7 +118,11 @@ fun MainAppScreen() {
     val colors = LocalAppColors.current
 
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+    val isExternalClientActive by AppStateManager.isExternalClientActive.collectAsState()
+    val activeProfile by MacroPadState.activeProfile.collectAsState()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
+
     val fullscreenKeyboardLayout by AppStateManager.fullscreenKeyboardLayout.collectAsState()
     val isEditorActive by AppStateManager.isEditorActive.collectAsState()
     val isBackgroundSettingsActive by AppStateManager.isBackgroundSettingsActive.collectAsState()
@@ -364,8 +370,16 @@ fun MainAppScreen() {
                         }
                     },
         ) {
-            // MacroPad is the sole content screen
-            MacroPadScreen()
+            // Render either dynamic companion Home screen or MacroPad base screen
+            val showIntegrationHome =
+                isExternalClientActive &&
+                    (focusedAppPackageName == null || activeProfile?.associatedPackage != focusedAppPackageName)
+
+            if (showIntegrationHome) {
+                IntegrationHomeScreen()
+            } else {
+                MacroPadScreen()
+            }
 
             // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
             // Suppressed when ambient mode is active: the overlays are rendered on the

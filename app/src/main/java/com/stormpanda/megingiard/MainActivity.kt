@@ -66,6 +66,7 @@ import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ACTION_START_PRIVD
 import com.stormpanda.megingiard.mirror.ACTION_STOP
 import com.stormpanda.megingiard.mirror.CropSelectorActivity
@@ -274,6 +275,14 @@ class MainActivity : ComponentActivity() {
         SettingsManager.onThemeChangedListener = {
             MegingiardSettingsProvider.notifyThemeChanged(this)
             MegingiardSettingsProvider.notifySettingsChanged(this)
+        }
+
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                MacroPadState.profiles.collect {
+                    MegingiardSettingsProvider.notifyProfilesChanged(this@MainActivity)
+                }
+            }
         }
 
         val hasCreds =
@@ -499,6 +508,9 @@ class MainActivity : ComponentActivity() {
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
+                    AppStateManager.isExternalClientActive,
+                    AppStateManager.focusedAppPackageName,
+                    MacroPadState.activeProfile,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
@@ -506,6 +518,13 @@ class MainActivity : ComponentActivity() {
                     val currentLayout = values[3] as? PadLayout
                     val onValidScreen = values[4] as Boolean
                     val wizardActive = values[5] as Boolean
+                    val externalClientActive = values[6] as Boolean
+                    val focusedPackage = values[7] as? String
+                    val activeProfile = values[8] as? PadProfile
+
+                    val showIntegrationHome =
+                        externalClientActive &&
+                            (focusedPackage == null || activeProfile?.associatedPackage != focusedPackage)
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -515,6 +534,7 @@ class MainActivity : ComponentActivity() {
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
                         tutorialsActive = wizardActive,
+                        showIntegrationHome = showIntegrationHome,
                     )
                 }.combine(privdMirrorConnectingFlow) { policy, connecting ->
                     policy.copy(privdMirrorConnecting = connecting)
