@@ -127,6 +127,14 @@ fun PrivdReconnectPromptDialog(
 
     var isAccessibilityActive by remember { mutableStateOf(MegingiardAccessibilityService.isEnabled(context)) }
     val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
+    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
+    val privdState by PrivdManager.state.collectAsState()
+    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
+    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
+    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
+    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
+    var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -134,6 +142,11 @@ fun PrivdReconnectPromptDialog(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
+                    isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
+                    isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+                    isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
+                    isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                    isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -160,13 +173,6 @@ fun PrivdReconnectPromptDialog(
         }
     }
 
-    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
-    val privdState by PrivdManager.state.collectAsState()
-    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
-    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
-    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
-    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
-
     LaunchedEffect(isPrivilegedStep) {
         if (isPrivilegedStep) {
             while (isActive) {
@@ -174,6 +180,7 @@ fun PrivdReconnectPromptDialog(
                 isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
                 isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                 isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
                 delay(PRD_POLL_DELAY_MS)
             }
         }
@@ -181,7 +188,7 @@ fun PrivdReconnectPromptDialog(
 
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
-        onConnect()
+        isAutoSetupActive = true
     }
 
     val launchAccessibilitySettings = {
@@ -288,6 +295,7 @@ fun PrivdReconnectPromptDialog(
                             isDevicePaired = isDevicePaired,
                             privdState = privdState,
                             onStartAutoSetup = startAutoSetup,
+                            isAutoSetupActive = isAutoSetupActive,
                             titleText = stringResource(R.string.privd_reconnect_title),
                             descText = stringResource(R.string.privd_reconnect_desc),
                             buttonText = stringResource(R.string.privd_reconnect_auto_button),

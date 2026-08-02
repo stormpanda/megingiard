@@ -211,9 +211,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                         val paired = isDevicePaired(context) && isPairedOnScreen
                                         if (paired) {
                                             AppLog.i(TAG, "startAutoToggleLoop: Wireless Debugging active and paired, connecting daemon")
-                                            _isAutoSetupActive = false
                                             serviceScope.launch(Dispatchers.IO) {
                                                 PrivdManager.connect(context)
+                                                _isAutoSetupActive = false
                                             }
                                             break
                                         } else {
@@ -274,8 +274,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                                 )
                                                 PrivdManager.connect(context)
                                             }
+                                            _isAutoSetupActive = false
                                         }
-                                        _isAutoSetupActive = false
                                         break
                                     }
                                 }
@@ -783,6 +783,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 return
             }
 
+            _isAutoSetupActive = true
+
             val devModeActive = isDevModeActive(context)
             val usbActive = isUsbDebuggingActive(context)
             val wirelessActive = isWirelessDebuggingActive(context)
@@ -816,11 +818,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                     inst.startAutoToggleLoop()
                                 }
                             }
+                        } else {
+                            _isAutoSetupActive = false
                         }
                     }
                     return
                 }
                 Toast.makeText(context, R.string.privd_toast_all_set, Toast.LENGTH_LONG).show()
+                _isAutoSetupActive = false
                 return
             }
 
