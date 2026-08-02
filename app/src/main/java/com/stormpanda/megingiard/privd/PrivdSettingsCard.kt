@@ -219,6 +219,7 @@ internal fun PrivdSettingsCard(
                         PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
                         PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
                         PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
+                        PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
                         else -> null
                     }
                 } else {

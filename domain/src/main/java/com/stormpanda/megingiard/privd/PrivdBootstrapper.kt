@@ -7,6 +7,7 @@ import android.provider.Settings
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.BinaryIntegrity
 import com.stormpanda.megingiard.security.HmacUtil
+import io.github.muntashirakon.adb.AdbPairingRequiredException
 import io.github.muntashirakon.adb.AdbStream
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -183,6 +184,7 @@ object PrivdBootstrapper {
         _stage.value = BootstrapStage.CONNECTING_ADB
         val hosts = listOf(host, "127.0.0.1", "::1", "localhost").distinct()
         var connected = false
+        var pairingRequired = false
         for (attempt in 1..ADB_CONNECT_RETRY_COUNT) {
             for (h in hosts) {
                 try {
@@ -193,6 +195,9 @@ object PrivdBootstrapper {
                     }
                 } catch (e: Exception) {
                     AppLog.w(TAG, "connect($h:$connectPort) failed (attempt $attempt): $e")
+                    if (e is AdbPairingRequiredException) {
+                        pairingRequired = true
+                    }
                 }
             }
             if (connected) break
@@ -205,7 +210,8 @@ object PrivdBootstrapper {
             }
         }
         if (!connected) {
-            PrivdManager.reportBootstrapFailure(PrivdError.ADB_CONNECT_FAILED)
+            val err = if (pairingRequired) PrivdError.ADB_PAIRING_REQUIRED else PrivdError.ADB_CONNECT_FAILED
+            PrivdManager.reportBootstrapFailure(err)
             _stage.value = BootstrapStage.IDLE
             return false
         }

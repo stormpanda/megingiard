@@ -28,6 +28,7 @@ import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdPairScreenTextScanner
 import com.stormpanda.megingiard.privd.PrivdState
@@ -224,12 +225,21 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                                 _isAutoSetupActive = false
                                                 break
                                             } else {
-                                                AppLog.w(
-                                                    TAG,
-                                                    "startAutoToggleLoop: Connection/bootstrap failed with stored credentials. Clearing credentials and falling back to pairing code.",
-                                                )
-                                                PrivdBootstrapper.clearCredentials(context)
-                                                autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                                val lastError = PrivdManager.lastError.value
+                                                if (lastError == PrivdError.ADB_PAIRING_REQUIRED) {
+                                                    AppLog.w(
+                                                        TAG,
+                                                        "startAutoToggleLoop: Connection/bootstrap failed with stored credentials because pairing is required. Clearing credentials and falling back to pairing code.",
+                                                    )
+                                                    PrivdBootstrapper.clearCredentials(context)
+                                                    autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                                } else {
+                                                    AppLog.w(
+                                                        TAG,
+                                                        "startAutoToggleLoop: Connection/bootstrap failed with stored credentials (non-auth error: $lastError). Retrying connection next tick without clearing credentials.",
+                                                    )
+                                                    // Retain credentials, loop will retry and scan the fresh port automatically
+                                                }
                                             }
                                         } else {
                                             AppLog.i(

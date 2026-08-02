@@ -450,6 +450,7 @@ Open Settings to create a layout.</string>
     <string name="privd_error_pairing_failed">Pairing failed. Verify the address, port, and 6-digit code from the system pairing dialog.</string>
     <string name="privd_error_adb_discovery_failed">Could not discover the ADB Wireless-Debugging endpoint via mDNS. Make sure Wireless Debugging is enabled.</string>
     <string name="privd_error_adb_connect_failed">Could not connect to ADB. Try re-pairing if you previously revoked the pairing.</string>
+    <string name="privd_error_adb_pairing_required">ADB pairing is required. Please forget "Megingiard" in Wireless Debugging settings and re-pair.</string>
     <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
     <string name="privd_error_bootstrap_provision_failed">Failed to provision the authentication key. Re-run the setup wizard.</string>
