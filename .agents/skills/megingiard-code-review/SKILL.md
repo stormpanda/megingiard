@@ -1,6 +1,6 @@
 ---
 name: megingiard-code-review
-description: "Conduct a thorough code review of the current Git branch or specific files in Megingiard. Evaluates architecture compliance (:app, :domain, :core), AGENTS.md rules, Compose performance (re-compositions, LaunchedEffect keys, draw scopes), state management, thread safety, unit test coverage, and documentation sync (FEATURE.md)."
+description: "Conduct a thorough code review of the current Git branch or specific files in Megingiard. Evaluates architecture compliance (:app, :domain, :core), AGENTS.md rules, Compose performance (re-compositions, LaunchedEffect keys, draw scopes), state management, thread safety, unit test coverage, documentation sync (FEATURE.md), and provides a structured implementation plan for any findings."
 argument-hint: 'Optional git reference or scope (e.g. "feature/ocr-privd-mode" or "app/src/main/java/com/stormpanda/megingiard/privd/")'
 ---
 
@@ -120,9 +120,10 @@ Present the code review using clear, structured GitHub Markdown:
    - **High Severity**: Critical crashes, memory leaks (`HardwareBuffer`/`Bitmap`), major Compose recomposition performance degradation, or architecture boundary violations.
    - **Medium Severity**: Missing try-finally resource cleanup, incorrect test runner usage, unhandled nullability edge cases, missing localized strings.
    - **Low Severity**: Code style nitpicks, unused imports, naming inconsistencies.
-   Provide exact file paths with line numbers (e.g., [`PrivdSetupWizard.kt`](file:///path/to/PrivdSetupWizard.kt#L79-L116)) and code snippets with recommended refactorings.
+    Provide exact file paths with line numbers (e.g., [`PrivdSetupWizard.kt`](file:///path/to/PrivdSetupWizard.kt#L79-L116)) and code snippets with recommended refactorings.
 5. **Verification & Test Status**: Test execution output summary (`./gradlew` results).
-6. **Conventional Commit Proposal**: Copy-paste ready commit message covering all changes per `AGENTS.md §4`.
+6. **Implementation Plan for Findings**: (Mandatory if any High, Medium, or Low severity findings are present) A structured, step-by-step implementation plan detailing the exact refactoring or code changes needed to fix all reported findings.
+7. **Conventional Commit Proposal**: Copy-paste ready commit message covering all changes per `AGENTS.md §4`.
 
 ---
 

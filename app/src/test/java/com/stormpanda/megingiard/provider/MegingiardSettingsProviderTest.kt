@@ -24,6 +24,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
 import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
@@ -156,8 +157,7 @@ class MegingiardSettingsProviderTest {
         contentResolver.registerContentObserver(MegingiardIpcContract.PROFILES_URI, false, observer)
         try {
             MegingiardSettingsProvider.notifyProfilesChanged(RuntimeEnvironment.getApplication())
-            org.robolectric.shadows.ShadowLooper
-                .idleMainLooper()
+            ShadowLooper.idleMainLooper()
             assertTrue("Expected ContentObserver to be notified of profiles change", notified)
         } finally {
             contentResolver.unregisterContentObserver(observer)
