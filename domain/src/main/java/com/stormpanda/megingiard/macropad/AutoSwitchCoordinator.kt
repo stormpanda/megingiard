@@ -23,66 +23,6 @@ private val IGNORED_PACKAGES =
         "com.odin.gameassistant",
     )
 
-private val ROM_CONTAINER_PACKAGES =
-    setOf(
-        // PC / Windows Containers
-        "app.gamenative",
-        "com.winlator",
-        "com.winlator.vanilla",
-        "com.winlator.ludashi",
-        "com.youstone.mobox",
-        "com.eltechs.ed",
-        "com.eltechs.ed.crv5",
-        // RetroArch (Multi-system) & Frontends
-        "com.retroarch",
-        "com.retroarch.aarch64",
-        "org.retroarch",
-        "com.swordfish.lemuroid",
-        // Nintendo Switch
-        "org.yuzu.yuzu_emu",
-        "org.yuzu.yuzu_emu.ea",
-        "org.suyu.suyu_emu",
-        "org.sudachi.sudachi_emu",
-        "dev.eden.eden_emulator",
-        "dev.eden.eden_nightly",
-        "dev.legacy.eden_emulator",
-        // Nintendo 3DS / DS / N64 / GameBoy / NES / SNES
-        "org.citra.citra_emu",
-        "org.citra.citra_emu.canary",
-        "com.citra.emu",
-        "io.github.lime3ds.lime3ds",
-        "com.dsemu.drastic",
-        "me.magnum.melonds",
-        "org.mupen64plusae.v3.fzurita",
-        "com.fastemulator.gba",
-        "com.fastemulator.gbafree",
-        "com.fastemulator.gbc",
-        "com.fastemulator.gbcfree",
-        "it.dbtecno.pizzaboygba",
-        "it.dbtecno.pizzaboygbafree",
-        "it.dbtecno.pizzaboygbapro",
-        "it.dbtecno.pizzaboygbc",
-        "it.dbtecno.pizzaboygbcfree",
-        "it.dbtecno.pizzaboygbcpro",
-        "com.johnemulators.johnness",
-        "com.johnemulators.johngbac",
-        // PlayStation (PS1 / PS2 / PSP)
-        "xyz.aethersx2.android",
-        "ru.aethersx2.android",
-        "com.tahlrex.aethersx2",
-        "link.carsonli.aethersx2",
-        "com.github.stenzek.duckstation",
-        "com.epsxe.epsxe",
-        "com.emulator.fpse",
-        "org.ppsspp.ppsspp",
-        "org.ppsspp.ppssppgold",
-        // Nintendo GameCube / Wii
-        "org.dolphinemu.dolphinemu",
-        // Sega / Dreamcast
-        "com.reios.flycast",
-        "io.recompiled.redream",
-    )
-
 /**
  * Coordinates automatic profile switching when foreground application changes are detected.
  *
@@ -106,29 +46,44 @@ object AutoSwitchCoordinator {
             return
         }
 
+        val isRegisteredEmulator = EmulatorDetectionFunnel.isRegisteredEmulator(normalized)
+        AppLog.w(
+            TAG,
+            "onPackageChanged normalized=$normalized isRegisteredEmulator=$isRegisteredEmulator activeSession=${EmulatorDetectionFunnel.activeSession.value?.romPath}",
+        )
+
+        // 1. Process emulator package changes for ROM detection
+        if (isRegisteredEmulator) {
+            coordinatorScope.launch {
+                val session = EmulatorDetectionFunnel.onPackageForeground(normalized)
+                if (session != null && SettingsManager.autoSwitchProfiles.value) {
+                    val matchedProfile =
+                        MacroPadState.profiles.value.firstOrNull { profile ->
+                            val assoc = profile.associatedPackage
+                            assoc.equals(session.romPath, ignoreCase = true) ||
+                                assoc.equals(session.systemId, ignoreCase = true)
+                        }
+                    if (matchedProfile != null) {
+                        val currentActiveId = MacroPadState.activeProfileId.value
+                        if (matchedProfile.id != currentActiveId) {
+                            AppLog.i(
+                                TAG,
+                                "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for emulator session '$normalized' (${session.gameTitle})",
+                            )
+                            MacroPadState.setActiveProfileId(matchedProfile.id)
+                        }
+                    }
+                }
+            }
+        } else {
+            EmulatorDetectionFunnel.clearSession()
+        }
+
         val clientActive = AppStateManager.isExternalClientActive.value
         val clientPackage = AppStateManager.externalClientPackage.value
         val focusedGame = AppStateManager.focusedAppPackageName.value
 
-        // 1. Focus Collision Guard: Ignore client focus event if client-reported game is running
-        if (clientActive && normalized == clientPackage && focusedGame != null && focusedGame != normalized) {
-            AppLog.d(
-                TAG,
-                "onPackageChanged: Ignoring client package '$normalized' because focused game '$focusedGame' is currently running",
-            )
-            return
-        }
-
-        // 2. Emulator/Container Focus Guard: Ignore container package focus events if a ROM game is running
-        if (clientActive && focusedGame != null && focusedGame.startsWith("rom.") && normalized in ROM_CONTAINER_PACKAGES) {
-            AppLog.d(
-                TAG,
-                "onPackageChanged: Ignoring ROM container package '$normalized' because ROM game '$focusedGame' is currently running",
-            )
-            return
-        }
-
-        // 3. Auto-Deactivation Fallback: Deactivate integration state if switching to unrelated app
+        // 2. Auto-Deactivation Fallback: Deactivate integration state if switching to unrelated app
         if (clientActive && normalized != clientPackage && normalized != focusedGame) {
             AppLog.i(
                 TAG,
@@ -144,8 +99,6 @@ object AutoSwitchCoordinator {
                 hoveredSecondaryColor = null,
             )
         }
-
-        val isRegisteredEmulator = EmulatorDetectionFunnel.isRegisteredEmulator(normalized)
 
         if (_foregroundApp.value == normalized && !isRegisteredEmulator) {
             return
@@ -175,43 +128,10 @@ object AutoSwitchCoordinator {
             } else {
                 AppLog.d(TAG, "onPackageChanged: profile '${directMatchedProfile.name}' is already active")
             }
-            if (EmulatorDetectionFunnel.isRegisteredEmulator(normalized)) {
-                coordinatorScope.launch {
-                    EmulatorDetectionFunnel.onPackageForeground(normalized)
-                }
-            } else {
-                EmulatorDetectionFunnel.clearSession()
-            }
-            return
-        }
-
-        if (EmulatorDetectionFunnel.isRegisteredEmulator(normalized)) {
-            coordinatorScope.launch {
-                val session = EmulatorDetectionFunnel.onPackageForeground(normalized)
-                val matchedProfile =
-                    MacroPadState.profiles.value.firstOrNull { profile ->
-                        val assoc = profile.associatedPackage
-                        session != null && (
-                            assoc.equals(session.romPath, ignoreCase = true) ||
-                                assoc.equals("rom.${session.systemId}.${session.gameTitle}", ignoreCase = true) ||
-                                assoc.equals(session.systemId, ignoreCase = true)
-                        )
-                    }
-
-                if (matchedProfile != null) {
-                    val currentActiveId = MacroPadState.activeProfileId.value
-                    if (matchedProfile.id != currentActiveId) {
-                        AppLog.i(
-                            TAG,
-                            "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for emulator session '$normalized' (${session?.gameTitle})",
-                        )
-                        MacroPadState.setActiveProfileId(matchedProfile.id)
-                    }
-                }
-            }
         } else {
-            EmulatorDetectionFunnel.clearSession()
-            AppLog.d(TAG, "onPackageChanged: no profile mapped to package '$normalized'")
+            if (!isRegisteredEmulator) {
+                AppLog.d(TAG, "onPackageChanged: no profile mapped to package '$normalized'")
+            }
         }
     }
 

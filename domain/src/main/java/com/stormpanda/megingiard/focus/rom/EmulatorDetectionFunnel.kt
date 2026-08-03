@@ -15,6 +15,9 @@ object EmulatorDetectionFunnel {
     private val _activeSession = MutableStateFlow<ActiveGameSession?>(null)
     val activeSession: StateFlow<ActiveGameSession?> = _activeSession.asStateFlow()
 
+    private val _lastDetectedSession = MutableStateFlow<ActiveGameSession?>(null)
+    val lastDetectedSession: StateFlow<ActiveGameSession?> = _lastDetectedSession.asStateFlow()
+
     private val registeredDetectors: List<EmulatorDetector> =
         listOf(
             RetroArchDetector,
@@ -44,6 +47,9 @@ object EmulatorDetectionFunnel {
         AppLog.i(TAG, "onPackageForeground: routing '$packageName' to ${detector::class.simpleName}")
         val session = detector.detectActiveSession(packageName)
         _activeSession.value = session
+        if (session != null) {
+            _lastDetectedSession.value = session
+        }
         return session
     }
 

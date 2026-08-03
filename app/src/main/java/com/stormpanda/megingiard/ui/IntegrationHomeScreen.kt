@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -69,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
@@ -298,15 +300,31 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // 2. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
-                        if (isGameFocus && hoveredPackage != null) {
+                        // 2. Unconditional Last Detected ROM Card (second box from top)
+                        val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsState()
+                        InfoCard(
+                            title = stringResource(R.string.integration_home_detected_rom),
+                            value =
+                                lastDetectedSession?.let { session ->
+                                    val filename = java.io.File(session.romPath).name
+                                    "$filename (${session.systemId})"
+                                } ?: stringResource(R.string.integration_home_no_rom_detected),
+                            icon = Icons.Rounded.SportsEsports,
+                            colors = colors,
+                            isHighlight = lastDetectedSession != null,
+                            isMonospace = true,
+                        )
+
+                        // 3. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
+                        val targetHoveredPkg = hoveredPackage
+                        if (isGameFocus && targetHoveredPkg != null) {
                             val profiles by MacroPadState.profiles.collectAsState()
                             val associatedProfile =
-                                remember(profiles, hoveredPackage) {
-                                    profiles.find { it.associatedPackage == hoveredPackage }
+                                remember(profiles, targetHoveredPkg) {
+                                    profiles.find { it.associatedPackage == targetHoveredPkg }
                                 }
                             ProfileConfigCard(
-                                hoveredPackage = hoveredPackage!!,
+                                hoveredPackage = targetHoveredPkg,
                                 hoveredLabel = hoveredAppLabel,
                                 associatedProfile = associatedProfile,
                                 profiles = profiles,
@@ -314,7 +332,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // 3. Active Profile Card
+                        // 4. Active Profile Card
                         InfoCard(
                             title = stringResource(R.string.integration_home_active_profile),
                             value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),

@@ -50,6 +50,34 @@ class RetroArchLplParserTest {
     }
 
     @Test
+    fun parseMostRecentSession_realDeviceLplWithDefaultFields_returnsCorrectSession() {
+        val json =
+            """
+            {
+              "version": "1.5",
+              "default_core_path": "/data/data/com.retroarch.aarch64/cores/some_default.so",
+              "default_core_name": "Some Default Core",
+              "items": [
+                {
+                  "path": "/storage/emulated/0/ROMs/GBC/Super Mario Land 3.gb",
+                  "label": "",
+                  "core_path": "/data/data/com.retroarch.aarch64/cores/gambatte_libretro_android.so",
+                  "core_name": "Nintendo - Game Boy / Color (Gambatte)"
+                }
+              ]
+            }
+            """.trimIndent()
+
+        val session = RetroArchLplParser.parseMostRecentSession("com.retroarch.aarch64", json)
+
+        assertNotNull(session)
+        assertEquals("Super Mario Land 3", session?.gameTitle)
+        assertEquals("gbc", session?.systemId)
+        assertEquals("/storage/emulated/0/ROMs/GBC/Super Mario Land 3.gb", session?.romPath)
+        assertEquals("Nintendo - Game Boy / Color (Gambatte)", session?.coreOrBackend)
+    }
+
+    @Test
     fun resolveSystemId_detectsSystemByExtensionAndCore() {
         assertEquals("snes", RetroArchLplParser.resolveSystemId("/roms/game.sfc", null, "bsnes"))
         assertEquals("n64", RetroArchLplParser.resolveSystemId("/roms/mario.z64", null, "Mupen64Plus"))

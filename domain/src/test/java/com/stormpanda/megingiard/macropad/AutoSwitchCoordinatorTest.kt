@@ -177,47 +177,12 @@ class AutoSwitchCoordinatorTest {
     }
 
     @Test
-    fun `onPackageChanged ignores container package events when ROM game is running`() {
-        // Given integration client is active and a ROM game is focused
+    fun `onPackageChanged deactivates client state when switching to unrelated app from Game`() {
+        // Given integration client is active and a game package is focused
         AppStateManager.setExternalClientState(
             isActive = true,
             packageName = "com.test.launcher",
-            focusedApp = "rom.pc.Celeste_123",
-        )
-        MacroPadState.setActiveProfileId(profile1.id)
-
-        // When focus change event is reported for an emulator/container package
-        AutoSwitchCoordinator.onPackageChanged("app.gamenative")
-
-        // Then focus event is ignored, integration state remains active, and active profile is unchanged
-        assertTrue(AppStateManager.isExternalClientActive.value)
-        assertEquals("rom.pc.Celeste_123", AppStateManager.focusedAppPackageName.value)
-        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
-
-        // When focus change event is reported for another container package like eden nightly
-        AutoSwitchCoordinator.onPackageChanged("dev.eden.eden_nightly")
-
-        // Then focus event is still ignored
-        assertTrue(AppStateManager.isExternalClientActive.value)
-        assertEquals("rom.pc.Celeste_123", AppStateManager.focusedAppPackageName.value)
-        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
-
-        // When focus change event is reported for winlator
-        AutoSwitchCoordinator.onPackageChanged("com.winlator")
-
-        // Then focus event is still ignored
-        assertTrue(AppStateManager.isExternalClientActive.value)
-        assertEquals("rom.pc.Celeste_123", AppStateManager.focusedAppPackageName.value)
-        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
-    }
-
-    @Test
-    fun `onPackageChanged deactivates client state when switching to unrelated app from ROM`() {
-        // Given integration client is active and a ROM game is focused
-        AppStateManager.setExternalClientState(
-            isActive = true,
-            packageName = "com.test.launcher",
-            focusedApp = "rom.pc.Celeste_123",
+            focusedApp = "com.citra.emu",
         )
         MacroPadState.setActiveProfileId(profile1.id)
 

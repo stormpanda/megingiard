@@ -14,10 +14,21 @@ object RetroArchLplParser {
     ): ActiveGameSession? {
         if (jsonContent.isBlank()) return null
         return try {
-            val path = extractJsonField(jsonContent, "path")
-            val label = extractJsonField(jsonContent, "label")
-            val corePath = extractJsonField(jsonContent, "core_path")
-            val coreName = extractJsonField(jsonContent, "core_name")
+            val itemsIndex = jsonContent.indexOf("\"items\"")
+            if (itemsIndex == -1) return null
+            val firstBraceIndex = jsonContent.indexOf('{', itemsIndex)
+            if (firstBraceIndex == -1) return null
+            val closeBraceIndex = jsonContent.indexOf('}', firstBraceIndex)
+            if (closeBraceIndex == -1 || closeBraceIndex <= firstBraceIndex) return null
+
+            val firstItemBlock = jsonContent.substring(firstBraceIndex, closeBraceIndex + 1)
+
+            val path = extractJsonField(firstItemBlock, "path")
+            val label = extractJsonField(firstItemBlock, "label")
+            val corePath = extractJsonField(firstItemBlock, "core_path")
+            val coreName = extractJsonField(firstItemBlock, "core_name")
+
+            if (path == null) return null
 
             val gameTitle = deriveGameTitle(label, path) ?: return null
             val systemId = resolveSystemId(path, corePath, coreName)
@@ -27,7 +38,7 @@ object RetroArchLplParser {
                 romPath = path,
                 gameTitle = gameTitle,
                 systemId = systemId,
-                coreOrBackend = coreName ?: corePath,
+                coreOrBackend = coreName ?: corePath ?: "unknown",
             )
         } catch (e: Exception) {
             AppLog.w(TAG, "parseMostRecentSession: failed to parse LPL JSON - $e")

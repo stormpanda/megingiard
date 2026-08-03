@@ -202,7 +202,7 @@ class MegingiardSettingsProvider : ContentProvider() {
                     hoveredSecondaryColor = hoveredSecondary,
                 )
 
-                if (focusedPackage != null) {
+                if (focusedPackage != null && !focusedPackage.startsWith("rom.")) {
                     AutoSwitchCoordinator.onPackageChanged(focusedPackage)
                 }
 
