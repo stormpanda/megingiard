@@ -119,7 +119,7 @@ class MegingiardSettingsProvider : ContentProvider() {
                         arrayOf(
                             profile.id,
                             profile.name,
-                            profile.associatedPackage ?: "",
+                            profile.association?.packageName ?: "",
                         ),
                     )
                 }
@@ -178,6 +178,8 @@ class MegingiardSettingsProvider : ContentProvider() {
                 val romPath = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH)
                 val hoveredPackage = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE)
                 val hoveredLabel = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_LABEL)
+                val hoveredRomPath = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_ROM_PATH)
+                val hoveredSystemId = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_SYSTEM_ID)
 
                 val hoveredPrimary =
                     if (extras.containsKey(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR)) {
@@ -196,13 +198,16 @@ class MegingiardSettingsProvider : ContentProvider() {
                     isActive = isActive,
                     packageName = clientPackage,
                     focusedApp = focusedPackage,
+                    focusedRomPath = romPath,
                     hoveredPackage = hoveredPackage,
                     hoveredLabel = hoveredLabel,
+                    hoveredRomPath = hoveredRomPath,
+                    hoveredSystemId = hoveredSystemId,
                     hoveredPrimaryColor = hoveredPrimary,
                     hoveredSecondaryColor = hoveredSecondary,
                 )
 
-                if (focusedPackage != null && !focusedPackage.startsWith("rom.")) {
+                if (focusedPackage != null) {
                     AutoSwitchCoordinator.onPackageChanged(focusedPackage)
                 }
 

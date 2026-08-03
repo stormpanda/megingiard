@@ -2,9 +2,15 @@ package com.stormpanda.megingiard.focus.rom
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNull
+import org.junit.Before
 import org.junit.Test
 
 class EmulatorDetectionFunnelTest {
+    @Before
+    fun setUp() {
+        EmulatorDetectionFunnel.resetForTesting()
+    }
+
     @Test
     fun onPackageForeground_unknownPackage_returnsNullAndClearsActiveSession() =
         runTest {

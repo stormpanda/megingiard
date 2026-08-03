@@ -510,6 +510,7 @@ class MainActivity : ComponentActivity() {
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.isExternalClientActive,
                     AppStateManager.focusedAppPackageName,
+                    AppStateManager.focusedRomPath,
                     MacroPadState.activeProfile,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
@@ -520,11 +521,12 @@ class MainActivity : ComponentActivity() {
                     val wizardActive = values[5] as Boolean
                     val externalClientActive = values[6] as Boolean
                     val focusedPackage = values[7] as? String
-                    val activeProfile = values[8] as? PadProfile
+                    val focusedRom = values[8] as? String
+                    val activeProfile = values[9] as? PadProfile
 
                     val showIntegrationHome =
                         externalClientActive &&
-                            (focusedPackage == null || activeProfile?.associatedPackage != focusedPackage)
+                            (focusedPackage == null || activeProfile?.matches(focusedPackage, focusedRom) != true)
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,

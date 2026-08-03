@@ -112,11 +112,20 @@ object AppStateManager {
     private val _focusedAppPackageName = MutableStateFlow<String?>(null)
     val focusedAppPackageName: StateFlow<String?> = _focusedAppPackageName.asStateFlow()
 
+    private val _focusedRomPath = MutableStateFlow<String?>(null)
+    val focusedRomPath: StateFlow<String?> = _focusedRomPath.asStateFlow()
+
     private val _hoveredAppPackageName = MutableStateFlow<String?>(null)
     val hoveredAppPackageName: StateFlow<String?> = _hoveredAppPackageName.asStateFlow()
 
     private val _hoveredAppLabel = MutableStateFlow<String?>(null)
     val hoveredAppLabel: StateFlow<String?> = _hoveredAppLabel.asStateFlow()
+
+    private val _hoveredRomPath = MutableStateFlow<String?>(null)
+    val hoveredRomPath: StateFlow<String?> = _hoveredRomPath.asStateFlow()
+
+    private val _hoveredSystemId = MutableStateFlow<String?>(null)
+    val hoveredSystemId: StateFlow<String?> = _hoveredSystemId.asStateFlow()
 
     private val _hoveredAppPrimaryColor = MutableStateFlow<Int?>(null)
     val hoveredAppPrimaryColor: StateFlow<Int?> = _hoveredAppPrimaryColor.asStateFlow()
@@ -128,20 +137,26 @@ object AppStateManager {
         isActive: Boolean,
         packageName: String?,
         focusedApp: String?,
+        focusedRomPath: String? = null,
         hoveredPackage: String? = null,
         hoveredLabel: String? = null,
+        hoveredRomPath: String? = null,
+        hoveredSystemId: String? = null,
         hoveredPrimaryColor: Int? = null,
         hoveredSecondaryColor: Int? = null,
     ) {
         AppLog.d(
             TAG,
-            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp hovered=$hoveredLabel ($hoveredPackage) primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
+            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
         )
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
         _focusedAppPackageName.value = focusedApp
+        _focusedRomPath.value = focusedRomPath
         _hoveredAppPackageName.value = hoveredPackage
         _hoveredAppLabel.value = hoveredLabel
+        _hoveredRomPath.value = hoveredRomPath
+        _hoveredSystemId.value = hoveredSystemId
         _hoveredAppPrimaryColor.value = hoveredPrimaryColor
         _hoveredAppSecondaryColor.value = hoveredSecondaryColor
     }

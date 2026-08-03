@@ -1,6 +1,10 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
+import com.stormpanda.megingiard.macropad.PadLayout
+import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,7 +44,7 @@ class AutoSwitchCoordinatorTest {
                 name = "Retro Gaming",
                 layouts = listOf(PadLayout(id = l1Id, name = "Default")),
                 activeLayoutId = l1Id,
-                associatedPackage = "com.retroarch",
+                association = ProfileAssociation(packageName = "com.retroarch"),
             )
 
         val p2Id = UUID.randomUUID().toString()
@@ -51,7 +55,7 @@ class AutoSwitchCoordinatorTest {
                 name = "3DS Emu",
                 layouts = listOf(PadLayout(id = l2Id, name = "Default")),
                 activeLayoutId = l2Id,
-                associatedPackage = "com.citra.emu",
+                association = ProfileAssociation(packageName = "com.citra.emu"),
             )
 
         MacroPadState.loadFrom(listOf(profile1, profile2), p1Id)
@@ -63,6 +67,7 @@ class AutoSwitchCoordinatorTest {
     @After
     fun tearDown() {
         AutoSwitchCoordinator.resetForTesting()
+        EmulatorDetectionFunnel.resetForTesting()
         AppStateManager.setExternalClientState(
             isActive = false,
             packageName = null,
@@ -194,4 +199,85 @@ class AutoSwitchCoordinatorTest {
         assertEquals(null, AppStateManager.externalClientPackage.value)
         assertEquals(null, AppStateManager.focusedAppPackageName.value)
     }
+
+    @Test
+    fun `onPackageChanged with emulator matches ROM specific profile first`() =
+        kotlinx.coroutines.runBlocking {
+            val p3Id = UUID.randomUUID().toString()
+            val l3Id = UUID.randomUUID().toString()
+            // ROM-specific profile for Super Mario World on RetroArch
+            val profile3 =
+                PadProfile(
+                    id = p3Id,
+                    name = "Super Mario World",
+                    layouts = listOf(PadLayout(id = l3Id, name = "Mario Layout")),
+                    activeLayoutId = l3Id,
+                    association =
+                        ProfileAssociation(
+                            packageName = "com.retroarch",
+                            systemId = "snes",
+                            romFileName = "Super Mario World.sfc",
+                        ),
+                )
+            MacroPadState.loadFrom(listOf(profile1, profile2, profile3), profile1.id)
+
+            // Given Chrome is active and we have no ROM session
+            AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
+
+            // When RetroArch is opened with a Super Mario World snes ROM session
+            EmulatorDetectionFunnel.setActiveSessionForTesting(
+                com.stormpanda.megingiard.focus.rom.ActiveGameSession(
+                    packageName = "com.retroarch",
+                    systemId = "snes",
+                    romPath = "/roms/snes/Super Mario World.sfc",
+                    gameTitle = "Super Mario World",
+                ),
+            )
+            AutoSwitchCoordinator.onPackageChanged("com.retroarch")
+
+            // Wait for background collector to run on Dispatchers.Default
+            kotlinx.coroutines.delay(150)
+
+            // Then active profile switches to the ROM-specific profile (profile3)
+            assertEquals(profile3.id, MacroPadState.activeProfileId.value)
+        }
+
+    @Test
+    fun `onPackageChanged falls back to generic profile if no ROM specific profile matches`() =
+        kotlinx.coroutines.runBlocking {
+            // Given we load profile1 (generic retroarch) and profile3 (Mario specific)
+            val p3Id = UUID.randomUUID().toString()
+            val l3Id = UUID.randomUUID().toString()
+            val profile3 =
+                PadProfile(
+                    id = p3Id,
+                    name = "Super Mario World",
+                    layouts = listOf(PadLayout(id = l3Id, name = "Mario Layout")),
+                    activeLayoutId = l3Id,
+                    association =
+                        ProfileAssociation(
+                            packageName = "com.retroarch",
+                            systemId = "snes",
+                            romFileName = "Super Mario World.sfc",
+                        ),
+                )
+            MacroPadState.loadFrom(listOf(profile1, profile3), profile3.id)
+
+            // When RetroArch is opened with a different ROM (e.g. Zelda)
+            EmulatorDetectionFunnel.setActiveSessionForTesting(
+                com.stormpanda.megingiard.focus.rom.ActiveGameSession(
+                    packageName = "com.retroarch",
+                    systemId = "snes",
+                    romPath = "/roms/snes/Zelda.sfc",
+                    gameTitle = "Zelda",
+                ),
+            )
+            AutoSwitchCoordinator.onPackageChanged("com.retroarch")
+
+            // Wait for background collector to run on Dispatchers.Default
+            kotlinx.coroutines.delay(150)
+
+            // Then active profile falls back to the generic retroarch profile (profile1)
+            assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+        }
 }

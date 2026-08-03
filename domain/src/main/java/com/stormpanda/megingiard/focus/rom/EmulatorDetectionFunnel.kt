@@ -94,4 +94,17 @@ object EmulatorDetectionFunnel {
         pollingJob?.cancel()
         _activeSession.value = null
     }
+
+    internal fun setActiveSessionForTesting(session: ActiveGameSession?) {
+        _activeSession.value = session
+        if (session != null) {
+            _lastDetectedSession.value = session
+        }
+    }
+
+    internal fun resetForTesting() {
+        pollingJob?.cancel()
+        _activeSession.value = null
+        _lastDetectedSession.value = null
+    }
 }

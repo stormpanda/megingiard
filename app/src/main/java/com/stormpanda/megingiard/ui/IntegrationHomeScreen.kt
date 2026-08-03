@@ -75,6 +75,7 @@ import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -140,6 +141,9 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
     val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
     val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
+    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsState()
+    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsState()
+    val activeSession by EmulatorDetectionFunnel.activeSession.collectAsState()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -321,12 +325,61 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         if (isGameFocus && targetHoveredPkg != null) {
                             val profiles by MacroPadState.profiles.collectAsState()
                             val associatedProfile =
-                                remember(profiles, targetHoveredPkg) {
-                                    profiles.find { it.associatedPackage == targetHoveredPkg }
+                                remember(profiles, targetHoveredPkg, hoveredRomPath) {
+                                    val romFileName = hoveredRomPath?.substringAfterLast('/')
+                                    profiles.firstOrNull { profile ->
+                                        val assoc = profile.association ?: return@firstOrNull false
+                                        val pkgMatch = assoc.packageName.equals(targetHoveredPkg, ignoreCase = true)
+                                        val romMatch =
+                                            assoc.romFileName != null && romFileName != null &&
+                                                assoc.romFileName.equals(romFileName, ignoreCase = true)
+                                        pkgMatch && romMatch
+                                    } ?: profiles.firstOrNull { profile ->
+                                        val assoc = profile.association ?: return@firstOrNull false
+                                        val pkgMatch = assoc.packageName.equals(targetHoveredPkg, ignoreCase = true)
+                                        val romMatch = assoc.romFileName == null
+                                        pkgMatch && romMatch
+                                    }
                                 }
                             ProfileConfigCard(
-                                hoveredPackage = targetHoveredPkg,
-                                hoveredLabel = hoveredAppLabel,
+                                cardTitle = stringResource(R.string.integration_home_profile_config_title),
+                                targetPackage = targetHoveredPkg,
+                                targetLabel = hoveredAppLabel,
+                                targetRomPath = hoveredRomPath,
+                                targetSystemId = hoveredSystemId,
+                                associatedProfile = associatedProfile,
+                                profiles = profiles,
+                                colors = colors,
+                            )
+                        }
+
+                        // 3.1 Active Game Session Profile Card (Universal Launcher support)
+                        val currentActiveSession = activeSession
+                        if (currentActiveSession != null) {
+                            val profiles by MacroPadState.profiles.collectAsState()
+                            val associatedProfile =
+                                remember(profiles, currentActiveSession) {
+                                    val romFileName = currentActiveSession.romPath?.substringAfterLast('/')
+                                    profiles.firstOrNull { profile ->
+                                        val assoc = profile.association ?: return@firstOrNull false
+                                        val pkgMatch = assoc.packageName.equals(currentActiveSession.packageName, ignoreCase = true)
+                                        val romMatch =
+                                            assoc.romFileName != null && romFileName != null &&
+                                                assoc.romFileName.equals(romFileName, ignoreCase = true)
+                                        pkgMatch && romMatch
+                                    } ?: profiles.firstOrNull { profile ->
+                                        val assoc = profile.association ?: return@firstOrNull false
+                                        val pkgMatch = assoc.packageName.equals(currentActiveSession.packageName, ignoreCase = true)
+                                        val romMatch = assoc.romFileName == null
+                                        pkgMatch && romMatch
+                                    }
+                                }
+                            ProfileConfigCard(
+                                cardTitle = stringResource(R.string.integration_home_profile_config_title),
+                                targetPackage = currentActiveSession.packageName,
+                                targetLabel = currentActiveSession.gameTitle,
+                                targetRomPath = currentActiveSession.romPath,
+                                targetSystemId = currentActiveSession.systemId,
                                 associatedProfile = associatedProfile,
                                 profiles = profiles,
                                 colors = colors,
@@ -455,8 +508,11 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun ProfileConfigCard(
-    hoveredPackage: String,
-    hoveredLabel: String?,
+    cardTitle: String,
+    targetPackage: String,
+    targetLabel: String?,
+    targetRomPath: String?,
+    targetSystemId: String?,
     associatedProfile: PadProfile?,
     profiles: List<PadProfile>,
     colors: AppColors,
@@ -465,7 +521,7 @@ private fun ProfileConfigCard(
     var expandedDropdown by remember { mutableStateOf(false) }
     val unassignedProfiles =
         remember(profiles) {
-            profiles.filter { it.associatedPackage == null }
+            profiles.filter { it.association == null }
         }
 
     Card(
@@ -481,11 +537,20 @@ private fun ProfileConfigCard(
             verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
         ) {
             Text(
-                text = stringResource(R.string.integration_home_profile_config_title),
+                text = cardTitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = colors.onSurfaceSecondary,
                 fontWeight = FontWeight.SemiBold,
             )
+
+            if (targetLabel != null) {
+                Text(
+                    text = targetLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = colors.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
 
             if (associatedProfile != null) {
                 Row(
@@ -526,7 +591,7 @@ private fun ProfileConfigCard(
                 Text(
                     text = stringResource(R.string.integration_home_no_profile_assigned),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurface,
+                    color = colors.onSurfaceSecondary,
                 )
 
                 Row(
@@ -537,11 +602,17 @@ private fun ProfileConfigCard(
                         onClick = {
                             val newProfileId = UUID.randomUUID().toString()
                             val defaultLayoutId = UUID.randomUUID().toString()
+                            val assoc =
+                                ProfileAssociation(
+                                    packageName = targetPackage,
+                                    systemId = targetSystemId,
+                                    romFileName = targetRomPath?.substringAfterLast('/'),
+                                )
                             val newProfile =
                                 PadProfile(
                                     id = newProfileId,
-                                    name = hoveredLabel ?: context.getString(R.string.integration_home_new_profile),
-                                    associatedPackage = hoveredPackage,
+                                    name = targetLabel ?: context.getString(R.string.integration_home_new_profile),
+                                    association = assoc,
                                     layouts =
                                         listOf(
                                             PadLayout(
@@ -610,7 +681,13 @@ private fun ProfileConfigCard(
                                         text = { Text(profile.name, color = colors.onSurface) },
                                         onClick = {
                                             expandedDropdown = false
-                                            val updatedProfile = profile.copy(associatedPackage = hoveredPackage)
+                                            val assoc =
+                                                ProfileAssociation(
+                                                    packageName = targetPackage,
+                                                    systemId = targetSystemId,
+                                                    romFileName = targetRomPath?.substringAfterLast('/'),
+                                                )
+                                            val updatedProfile = profile.copy(association = assoc)
                                             MacroPadState.updateProfile(updatedProfile)
                                         },
                                     )

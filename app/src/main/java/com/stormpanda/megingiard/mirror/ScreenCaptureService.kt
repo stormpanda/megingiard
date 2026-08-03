@@ -282,9 +282,10 @@ class ScreenCaptureService : Service() {
             combine(
                 AppStateManager.isExternalClientActive,
                 AppStateManager.focusedAppPackageName,
+                AppStateManager.focusedRomPath,
                 MacroPadState.activeProfile,
-            ) { active, focused, profile ->
-                active && (focused == null || profile?.associatedPackage != focused)
+            ) { active, focused, focusedRom, profile ->
+                active && (focused == null || profile?.matches(focused, focusedRom) != true)
             }.collect { showIntegrationHome ->
                 if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
                     AppLog.i(TAG, "Companion Home screen became active -> stopping screen capture to conserve resources")
@@ -659,10 +660,11 @@ class ScreenCaptureService : Service() {
 
         val isExternalClientActive = AppStateManager.isExternalClientActive.value
         val focusedAppPackageName = AppStateManager.focusedAppPackageName.value
+        val focusedRomPath = AppStateManager.focusedRomPath.value
         val activeProfile = MacroPadState.activeProfile.value
         val showIntegrationHome =
             isExternalClientActive &&
-                (focusedAppPackageName == null || activeProfile?.associatedPackage != focusedAppPackageName)
+                (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
 
         val shouldShow =
             capturing && validScreen &&

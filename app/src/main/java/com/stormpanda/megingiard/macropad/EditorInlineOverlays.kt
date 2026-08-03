@@ -231,8 +231,9 @@ internal fun InlineProfileSettingsOverlay(
     val assignedPackages =
         remember(profiles) {
             profiles
-                .filter { it.associatedPackage != null && it.associatedPackage != initialPackage }
-                .mapNotNull { it.associatedPackage?.trim()?.lowercase() }
+                .mapNotNull { it.association?.packageName }
+                .filter { it != initialPackage }
+                .map { it.trim().lowercase() }
                 .toSet()
         }
 

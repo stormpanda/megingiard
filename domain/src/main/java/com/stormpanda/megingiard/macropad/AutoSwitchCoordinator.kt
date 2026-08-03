@@ -37,10 +37,28 @@ object AutoSwitchCoordinator {
             EmulatorDetectionFunnel.activeSession.collect { session ->
                 if (session != null && SettingsManager.autoSwitchProfiles.value) {
                     val matchedProfile =
-                        MacroPadState.profiles.value.firstOrNull { profile ->
-                            val assoc = profile.associatedPackage
-                            assoc.equals(session.romPath, ignoreCase = true) ||
-                                assoc.equals(session.systemId, ignoreCase = true)
+                        MacroPadState.profiles.value.let { profiles ->
+                            val romFileName = session.romPath?.substringAfterLast('/')
+
+                            // 1. Look for ROM-specific match (matching packageName, systemId, and romFileName)
+                            val romMatch =
+                                profiles.firstOrNull { profile ->
+                                    val assoc = profile.association ?: return@firstOrNull false
+                                    val packageMatches = assoc.packageName.equals(session.packageName, ignoreCase = true)
+                                    val systemMatches = assoc.systemId == null || assoc.systemId.equals(session.systemId, ignoreCase = true)
+                                    val fileMatches =
+                                        assoc.romFileName != null && romFileName != null &&
+                                            assoc.romFileName.equals(romFileName, ignoreCase = true)
+                                    packageMatches && systemMatches && fileMatches
+                                }
+
+                            // 2. Fallback to generic emulator package match
+                            romMatch ?: profiles.firstOrNull { profile ->
+                                val assoc = profile.association ?: return@firstOrNull false
+                                val packageMatches = assoc.packageName.equals(session.packageName, ignoreCase = true)
+                                val isGenericAppProfile = assoc.romFileName == null
+                                packageMatches && isGenericAppProfile
+                            }
                         }
                     if (matchedProfile != null) {
                         val currentActiveId = MacroPadState.activeProfileId.value
@@ -111,6 +129,11 @@ object AutoSwitchCoordinator {
             return
         }
 
+        if (isRegisteredEmulator && EmulatorDetectionFunnel.activeSession.value != null) {
+            AppLog.d(TAG, "onPackageChanged: active ROM session exists for emulator '$normalized' - skipping generic switch")
+            return
+        }
+
         AppLog.i(TAG, "onPackageChanged: foreground package changed to $normalized")
         _foregroundApp.value = normalized
 
@@ -120,8 +143,9 @@ object AutoSwitchCoordinator {
         }
 
         val directMatchedProfile =
-            MacroPadState.profiles.value.firstOrNull {
-                it.associatedPackage.equals(normalized, ignoreCase = true)
+            MacroPadState.profiles.value.firstOrNull { profile ->
+                val assoc = profile.association ?: return@firstOrNull false
+                assoc.packageName.equals(normalized, ignoreCase = true) && assoc.romFileName == null
             }
 
         if (directMatchedProfile != null) {

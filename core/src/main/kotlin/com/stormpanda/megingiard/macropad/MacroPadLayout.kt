@@ -407,6 +407,14 @@ data class PadLayout(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
+@Serializable
+data class ProfileAssociation(
+    val packageName: String,
+    val systemId: String? = null,
+    val romFileName: String? = null,
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PadProfile — a named collection of layouts, macros, and device settings
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -420,6 +428,7 @@ data class PadLayout(
  * @param enableGamepad    Whether the gamepad virtual device is active (auto-computed).
  * @param enableMouse      Whether the mouse virtual device is active (auto-computed).
  * @param isDefault        Whether this is a restorable default profile.
+ * @param association      Optional profile association config.
  */
 @Serializable
 data class PadProfile(
@@ -433,5 +442,20 @@ data class PadProfile(
     val enableMouse: Boolean = false,
     val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
-    val associatedPackage: String? = null,
-)
+    val association: ProfileAssociation? = null,
+) {
+    fun matches(
+        focusedPackage: String?,
+        focusedRomPath: String?,
+        systemId: String? = null,
+    ): Boolean {
+        val assoc = association ?: return false
+        val packageMatches = assoc.packageName.equals(focusedPackage, ignoreCase = true)
+        if (!packageMatches) return false
+
+        val romFileName = focusedRomPath?.substringAfterLast('/')
+        val systemMatches = assoc.systemId == null || systemId == null || assoc.systemId.equals(systemId, ignoreCase = true)
+        val romMatches = assoc.romFileName == null || (romFileName != null && assoc.romFileName.equals(romFileName, ignoreCase = true))
+        return systemMatches && romMatches
+    }
+}

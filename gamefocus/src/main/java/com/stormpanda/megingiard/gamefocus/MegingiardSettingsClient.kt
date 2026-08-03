@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
@@ -34,9 +36,32 @@ object MegingiardSettingsClient {
         focusedRomPath: String? = null,
         hoveredPackage: String? = null,
         hoveredLabel: String? = null,
+        hoveredRomPath: String? = null,
+        hoveredSystemId: String? = null,
         hoveredPrimaryColor: Int? = null,
         hoveredSecondaryColor: Int? = null,
     ) {
+        // Translate pseudo-packages to actual emulator packages and attach ROM metadata
+        val focusedRomApp =
+            if (focusedPackage != null && focusedPackage.startsWith("rom.")) {
+                RomManager.romApps.value.firstOrNull { it.packageName == focusedPackage }
+            } else {
+                null
+            }
+        val finalFocusedPackage = focusedRomApp?.let { getActualPackageName(context, it.systemId) } ?: focusedPackage
+        val finalFocusedRomPath = focusedRomApp?.romPath ?: focusedRomPath
+
+        val hoveredRomApp =
+            if (hoveredPackage != null && hoveredPackage.startsWith("rom.")) {
+                RomManager.romApps.value.firstOrNull { it.packageName == hoveredPackage }
+            } else {
+                null
+            }
+        val finalHoveredPackage = hoveredRomApp?.let { getActualPackageName(context, it.systemId) } ?: hoveredPackage
+        val finalHoveredRomPath = hoveredRomApp?.romPath ?: hoveredRomPath
+        val finalHoveredSystemId = hoveredRomApp?.systemId ?: hoveredSystemId
+        val finalHoveredLabel = hoveredRomApp?.label ?: hoveredLabel
+
         val uri = Uri.parse("content://${MegingiardIpcContract.AUTHORITY}")
         val extras =
             Bundle().apply {
@@ -46,10 +71,12 @@ object MegingiardSettingsClient {
                 )
                 putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, context.packageName)
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, isActive)
-                putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, focusedPackage)
-                putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH, focusedRomPath)
-                putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, hoveredPackage)
-                putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, hoveredLabel)
+                putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, finalFocusedPackage)
+                putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH, finalFocusedRomPath)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, finalHoveredPackage)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, finalHoveredLabel)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_ROM_PATH, finalHoveredRomPath)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_SYSTEM_ID, finalHoveredSystemId)
                 if (hoveredPrimaryColor != null) {
                     putInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR, hoveredPrimaryColor)
                 }
@@ -58,10 +85,35 @@ object MegingiardSettingsClient {
                 }
             }
         try {
-            AppLog.d(TAG, "updateClientState: isActive=$isActive, pkg=$focusedPackage, hovered=$hoveredLabel")
+            AppLog.d(
+                TAG,
+                "updateClientState: isActive=$isActive, pkg=$finalFocusedPackage, rom=$finalFocusedRomPath, hovered=$finalHoveredLabel",
+            )
             context.contentResolver.call(uri, "updateClientState", null, extras)
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to update integration client state", e)
+        }
+    }
+
+    private fun getActualPackageName(
+        context: Context,
+        systemId: String?,
+    ): String {
+        if (systemId == null) return "com.retroarch.aarch64"
+        val systemDef = SUPPORTED_SYSTEMS.find { it.id == systemId }
+        val emulatorId = systemDef?.emulatorId ?: "retroarch"
+        return if (emulatorId == "retroarch") {
+            val pm = context.packageManager
+            listOf("com.retroarch.aarch64", "com.retroarch").firstOrNull { pkg ->
+                try {
+                    pm.getPackageInfo(pkg, 0)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } ?: "com.retroarch.aarch64"
+        } else {
+            "app.gamenative"
         }
     }
 }

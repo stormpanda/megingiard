@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -125,11 +126,11 @@ class MacroPadStateTest {
         val p1 = PadProfile(id = p1Id, name = "P1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
         MacroPadState.loadFrom(listOf(p1), p1Id)
 
-        MacroPadState.renameProfile(p1Id, "New Name", "com.example.app")
+        MacroPadState.renameProfile(p1Id, "New Name", ProfileAssociation(packageName = "com.example.app"))
 
         val profile = MacroPadState.profiles.value.first()
         assertEquals("New Name", profile.name)
-        assertEquals("com.example.app", profile.associatedPackage)
+        assertEquals("com.example.app", profile.association?.packageName)
     }
 
     @Test
@@ -142,7 +143,7 @@ class MacroPadStateTest {
                 name = "Retro",
                 layouts = listOf(PadLayout(id = "l1", name = "L1")),
                 activeLayoutId = "l1",
-                associatedPackage = "com.retroarch",
+                association = ProfileAssociation(packageName = "com.retroarch"),
             )
         val p2 =
             PadProfile(
@@ -157,7 +158,7 @@ class MacroPadStateTest {
         MacroPadState.renameProfile(p1Id, "   ")
         val p1Profile = MacroPadState.profiles.value.first { it.id == p1Id }
         assertEquals("Profile", p1Profile.name)
-        assertEquals("com.retroarch", p1Profile.associatedPackage)
+        assertEquals("com.retroarch", p1Profile.association?.packageName)
 
         // Try to rename Retro (now Profile) to "Citra" (which already exists) -> should resolve to "Citra (2)"
         MacroPadState.renameProfile(p1Id, "Citra")
