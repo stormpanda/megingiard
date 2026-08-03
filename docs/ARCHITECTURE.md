@@ -58,11 +58,9 @@ The app ships native helpers (`touchinjector_arm64`, `keyinjector_arm64`, `mouse
 
 ### Privileged Mode Trust Boundary
 
-The normal app process remains in Android's untrusted app sandbox. Privileged Mode creates a narrow shell-UID bridge by starting `megingiard_privd` through ADB Wireless Debugging. The daemon listens on the abstract socket `@megingiard.privd` and performs only the privileged kernel I/O requested by feature-specific ASCII commands.
+The normal app process remains in Android's untrusted app sandbox. Privileged Mode creates a narrow shell-UID bridge by starting `megingiard_privd` through ADB Wireless Debugging. To bypass SELinux restrictions on devices with "Force SELinux" enabled, the daemon listens on a local TCP socket loopback (`127.0.0.1`, scanning ports `51234–51238`) and performs only the privileged kernel I/O requested by feature-specific ASCII commands.
 
-Before the HMAC handshake, both sides verify the OS-reported peer UID via `SO_PEERCRED` / `LocalSocket.peerCredentials`: the app checks that the server is shell UID 2000; the daemon checks that the client is the provisioned app UID. If either check fails, the connection is closed immediately.
-
-Every socket connection then completes mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The 32-byte key is generated per-install during bootstrap, encrypted under Android Keystore (AES-256-GCM, hardware-backed), and provisioned to the daemon over the ADB TLS channel — it is never embedded in the APK. Detailed protocol and key-lifecycle behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
+Every socket connection completes mutual HMAC-SHA256 authentication before normal commands are processed. The daemon first challenges the app (`CHAL/AUTH/OK`), then the app challenges the daemon (`VERIFY/PROOF`). The 32-byte key is generated per-install during bootstrap, encrypted under Android Keystore (AES-256-GCM, hardware-backed), and provisioned to the daemon over the ADB TLS channel — it is never embedded in the APK. Detailed protocol and key-lifecycle behavior is documented in [Privileged Mode](features/privileged-mode/FEATURE.md#security-model).
 
 ### Release Obfuscation
 

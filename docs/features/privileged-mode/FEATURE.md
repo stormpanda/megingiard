@@ -16,7 +16,7 @@ the regular app sandbox cannot reach (UID `untrusted_app`, missing the
 `input` group, restrictive SELinux domain). Privileged Mode bridges that gap
 by running a tiny on-device helper daemon (`megingiard_privd`) under the
 **shell** UID — the same privilege envelope that ADB itself runs in. The
-daemon listens on an abstract Unix socket; the app connects, sends ASCII
+daemon listens on a local TCP socket loopback (`127.0.0.1:51234–51238`); the app connects, sends ASCII
 commands, and the daemon performs the privileged kernel I/O on its behalf.
 
 No root, no third-party app, no external server: the bootstrap uses
@@ -118,14 +118,14 @@ every device since Android 11 (API 30).
 ┌──────────────────────────────────────────────────┐
 │ Megingiard app (UID 10xxx, untrusted_app domain) │
 │                                                  │
-│  PrivdManager ─state─▶ PrivdClient ─LocalSocket──┼─┐
+│  PrivdManager ─state─▶ PrivdClient ─TCP Socket───┼─┐
 │       ▲                                          │ │
 │       │                                          │ │
 │  GlobalSettingsScreen / PrivdSettingsCard        │ │
 └──────────────────────────────────────────────────┘ │
-                                                     │  abstract
-                                                     ▼  socket
-                              @megingiard.privd  ◀──────
+                                                     │  local
+                                                     ▼  TCP
+                        127.0.0.1:51234–51238    ◀──────
                                                      │
 ┌──────────────────────────────────────────────────┐ │
 │ megingiard_privd  (UID 2000 / shell, group input)│◀┘
@@ -184,7 +184,7 @@ Flow:
    - `VERIFYING` retries `PrivdManager.connect()` up to 20 times with a
      500 ms initial delay followed by 300 ms between retries (up to 6.5 s
      total) to absorb the race between the daemon's `bind()` and the
-     app's `LocalSocket.connect()`.
+     app's `connect()`.
 4. **Wizard step 4** confirms success and toggles `privdAutoConnect = true`.
 
 The RSA key (PKCS#8) and X.509 certificate are persisted as raw bytes in
@@ -224,7 +224,7 @@ PrivdManager.state.collect { state ->
 ```
 
 When `PrivdManager.connect(context)` is invoked:
-1. It first attempts a direct local abstract Unix socket connection via `PrivdClient.connect()`.
+1. It first attempts a direct local TCP socket connection (scanning port range `51234–51238`) via `PrivdClient.connect()`.
 2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
 3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
 
@@ -275,18 +275,13 @@ The authentication key is **never embedded in the APK**. Instead:
 
 Android destroys the Keystore AES key when the app is uninstalled, making the stored ciphertext permanently unreadable. A reinstalled app therefore cannot silently inherit the old daemon's trust relationship — re-bootstrap is required.
 
-#### OS-Level Peer Credential Checks
+#### OS-Level Peer Credential Checks (Deprecated)
 
-Before the HMAC handshake is attempted, both sides verify the OS-reported peer UID:
-
-- **App side:** `LocalSocket.peerCredentials.uid` must equal 2000 (Android shell UID). This blocks any non-shell process from impersonating the daemon.
-- **Daemon side:** `getsockopt(SO_PEERCRED)` on the accepted connection fd must match the app UID stored in the state file. This blocks rogue apps from connecting even if they somehow obtained the per-install key.
-
-If either check fails the connection is closed immediately.
+OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) are not used because communication runs over a local TCP loopback (`127.0.0.1`) which does not support peer credentials. The system relies entirely on the cryptographic mutual HMAC-SHA256 handshake described below to authenticate both the client app and the daemon.
 
 #### Mutual HMAC-SHA256 Handshake
 
-Every new LocalSocket connection (after the peer-credential check) uses mutual challenge-response. Both sides must know the per-install key:
+Every new TCP socket connection uses mutual challenge-response. Both sides must know the per-install key:
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -299,7 +294,7 @@ Daemon -> App     PROOF <64-hex-hmac2>\n   HMAC-SHA256(key, nonce2)
 The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. This blocks two important local attacks:
 
 - A rogue app cannot connect to the real daemon and issue commands unless it can produce a valid `AUTH` response (requires the per-install key that is not in the APK).
-- A rogue process that binds `@megingiard.privd` before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response and pass the UID check.
+- A rogue process that binds the local port before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response.
 
 Malformed messages, missing messages, wrong HMAC values, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds and is reset to normal blocking I/O only after the full mutual exchange succeeds.
 
@@ -452,10 +447,10 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 | File                                                     | Responsibility                                                                                                                             |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (abstract-socket server, evdev writer, passive read-only physical gamepad event stream)                               |
+| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream)                          |
 | `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
 | `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
-| `domain/.../privd/PrivdClient.kt`                        | LocalSocket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                       |
+| `domain/.../privd/PrivdClient.kt`                        | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                        |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
 | `domain/.../privd/PrivdGamepadInjector.kt`               | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |
 | `domain/.../privd/PrivdManager.kt`                       | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |

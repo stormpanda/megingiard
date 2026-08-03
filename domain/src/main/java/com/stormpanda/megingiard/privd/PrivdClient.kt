@@ -1,8 +1,6 @@
 package com.stormpanda.megingiard.privd
 
 import android.content.Context
-import android.net.LocalSocket
-import android.net.LocalSocketAddress
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.security.HmacUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -18,11 +16,15 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.security.SecureRandom
 import java.util.concurrent.LinkedBlockingQueue
 
 private const val TAG = "PrivdClient"
-private const val ABSTRACT_NAME = "megingiard.privd"
+private const val PORT_START = 51234
+private const val PORT_END = 51238
+private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
 private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
@@ -31,9 +33,6 @@ private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
 private const val NONCE_HEX_LEN = 32 // 16 nonce bytes → 32 hex chars
 private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
-
-// UID of the Android shell user (ADB / adb shell). The daemon runs as this UID.
-private const val SHELL_UID = 2000
 
 /**
  * Async LocalSocket transport to the `megingiard_privd` daemon.
@@ -110,7 +109,7 @@ object PrivdClient {
         AppLog.d(TAG, "setKey: pair key updated in memory")
     }
 
-    @Volatile private var socket: LocalSocket? = null
+    @Volatile private var socket: Socket? = null
 
     @Volatile private var writer: BufferedWriter? = null
 
@@ -133,10 +132,10 @@ object PrivdClient {
     @Volatile private var screenshotDeferred: CompletableDeferred<Boolean>? = null
 
     val isConnected: Boolean
-        get() = running && (socket?.isConnected == true)
+        get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
 
     /**
-     * Attempts to connect to the abstract socket `@megingiard.privd`.
+     * Attempts to connect to the local TCP port range.
      * Returns `true` on success, `false` if the daemon is not listening.
      */
     @Synchronized
@@ -150,62 +149,49 @@ object PrivdClient {
             _state.value = PrivdConnectionState.DISCONNECTED
             return false
         }
-        return try {
-            val s = LocalSocket()
-            s.connect(LocalSocketAddress(ABSTRACT_NAME, LocalSocketAddress.Namespace.ABSTRACT))
+        for (port in PORT_START..PORT_END) {
+            try {
+                AppLog.d(TAG, "connect(): trying 127.0.0.1:$port")
+                val s = Socket()
+                s.connect(InetSocketAddress("127.0.0.1", port), CONNECT_TIMEOUT_MS)
 
-            // OS-level peer identity check: the abstract socket server must be running as
-            // UID 2000 (Android shell). This blocks any non-shell process from impersonating
-            // the daemon — even if it somehow obtained the per-install HMAC key.
-            val peerUid = s.peerCredentials.uid
-            if (peerUid != SHELL_UID) {
-                AppLog.w(TAG, "connect(): peer UID $peerUid is not shell ($SHELL_UID) — rejecting rogue socket server")
-                try {
-                    s.close()
-                } catch (_: Exception) {
-                }
-                _state.value = PrivdConnectionState.DISCONNECTED
-                return false
-            }
+                val w = BufferedWriter(OutputStreamWriter(s.outputStream))
+                val r = BufferedReader(InputStreamReader(s.inputStream))
 
-            val w = BufferedWriter(OutputStreamWriter(s.outputStream))
-            val r = BufferedReader(InputStreamReader(s.inputStream))
-            // Mutual HMAC-SHA256 challenge-response: both parties prove they hold the
-            // per-install key that was provisioned over the trusted ADB TLS channel
-            // during Privileged Mode bootstrap. The key is never embedded in the APK.
-            if (!performHmacHandshake(s, r, w, key)) {
-                AppLog.w(TAG, "connect() rejected: HMAC handshake failed")
-                try {
-                    s.close()
-                } catch (_: Exception) {
+                if (performHmacHandshake(s, r, w, key)) {
+                    socket = s
+                    writer = w
+                    reader = r
+                    queue.clear()
+                    running = true
+                    writerThread =
+                        Thread(::writerLoop, WRITER_THREAD_NAME).apply {
+                            isDaemon = true
+                            start()
+                        }
+                    readerThread =
+                        Thread(::readerLoop, READER_THREAD_NAME).apply {
+                            isDaemon = true
+                            start()
+                        }
+                    _state.value = PrivdConnectionState.CONNECTED
+                    AppLog.i(TAG, "connect() succeeded on port $port")
+                    return true
+                } else {
+                    AppLog.w(TAG, "connect(): HMAC handshake failed on port $port")
+                    try {
+                        s.close()
+                    } catch (_: Exception) {
+                    }
                 }
-                _state.value = PrivdConnectionState.DISCONNECTED
-                return false
+            } catch (e: Exception) {
+                AppLog.d(TAG, "connect(): port $port not available — $e")
             }
-            socket = s
-            writer = w
-            reader = r
-            queue.clear()
-            running = true
-            writerThread =
-                Thread(::writerLoop, WRITER_THREAD_NAME).apply {
-                    isDaemon = true
-                    start()
-                }
-            readerThread =
-                Thread(::readerLoop, READER_THREAD_NAME).apply {
-                    isDaemon = true
-                    start()
-                }
-            _state.value = PrivdConnectionState.CONNECTED
-            AppLog.i(TAG, "connect() succeeded")
-            true
-        } catch (e: Exception) {
-            AppLog.w(TAG, "connect() failed: $e")
-            cleanupLocked()
-            _state.value = PrivdConnectionState.DISCONNECTED
-            false
         }
+        AppLog.w(TAG, "connect() failed: daemon not reachable on any port in range $PORT_START..$PORT_END")
+        cleanupLocked()
+        _state.value = PrivdConnectionState.DISCONNECTED
+        return false
     }
 
     /**
@@ -481,7 +467,7 @@ object PrivdClient {
      * CHAL and PROOF reads and reset to 0 (blocking) only after mutual success.
      */
     private fun performHmacHandshake(
-        s: LocalSocket,
+        s: Socket,
         reader: BufferedReader,
         writer: BufferedWriter,
         key: ByteArray,
