@@ -870,7 +870,7 @@ fun PrivilegedStepContent(
                         modifier = Modifier.weight(1f),
                     )
                 }
-            } else if (privdState == PrivdState.FAILED && !isAutoSetupActive) {
+            } else if (privdState == PrivdState.FAILED && !isAutoSetupActive && hasAutoSetupBeenStarted) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
