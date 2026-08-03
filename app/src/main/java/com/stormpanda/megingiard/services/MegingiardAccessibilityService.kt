@@ -223,6 +223,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             if (ok) {
                                                 AppLog.i(TAG, "startAutoToggleLoop: Connection succeeded using stored credentials!")
                                                 _isAutoSetupActive = false
+                                                withContext(Dispatchers.Main) {
+                                                    restoreTopScreenApp(context)
+                                                }
                                                 break
                                             } else {
                                                 val lastError = PrivdManager.lastError.value
@@ -342,6 +345,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                         }
                                     AppLog.i(TAG, "startAutoToggleLoop: Connection after pairing result: $connected")
                                     _isAutoSetupActive = false
+                                    if (connected) {
+                                        withContext(Dispatchers.Main) {
+                                            restoreTopScreenApp(context)
+                                        }
+                                    }
                                     break
                                 } else {
                                     AppLog.d(TAG, "startAutoToggleLoop: Waiting for pairing dialog to dismiss...")
@@ -751,6 +759,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
     companion object {
         private var instance: MegingiardAccessibilityService? = null
         private var _isAutoSetupActive = false
+        private var appToRestoreAfterSetup: String? = null
 
         val isAutoSetupActive: Boolean
             get() = _isAutoSetupActive
@@ -818,6 +827,19 @@ class MegingiardAccessibilityService : AccessibilityService() {
          * based on current device starting conditions.
          */
         fun startMultiStageAutoSetup(context: Context) {
+            val currentForeground = AutoSwitchCoordinator.foregroundApp.value
+            if (currentForeground != null &&
+                currentForeground != "com.android.settings" &&
+                currentForeground != "com.android.settings.intelligence" &&
+                !currentForeground.contains("com.stormpanda.megingiard")
+            ) {
+                appToRestoreAfterSetup = currentForeground
+                AppLog.i(TAG, "startMultiStageAutoSetup: Remembering top screen app to restore: $appToRestoreAfterSetup")
+            } else {
+                appToRestoreAfterSetup = null
+                AppLog.i(TAG, "startMultiStageAutoSetup: No restorable top screen app running (foreground app: $currentForeground)")
+            }
+
             val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
             val inst = instance
@@ -891,6 +913,9 @@ class MegingiardAccessibilityService : AccessibilityService() {
                             }
                         } else {
                             _isAutoSetupActive = false
+                            withContext(Dispatchers.Main) {
+                                restoreTopScreenApp(context)
+                            }
                         }
                     }
                     return
@@ -1105,6 +1130,51 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 }
             }
             return false
+        }
+
+        private fun restoreTopScreenApp(context: Context) {
+            val pkg = appToRestoreAfterSetup
+            appToRestoreAfterSetup = null
+            try {
+                if (!pkg.isNullOrBlank()) {
+                    AppLog.i(TAG, "restoreTopScreenApp: Attempting to reopen $pkg on the top screen")
+                    val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                    if (intent != null) {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                        val options =
+                            ActivityOptions.makeBasic().apply {
+                                setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                            }
+                        context.startActivity(intent, options.toBundle())
+                        AppLog.i(TAG, "restoreTopScreenApp: Reopened $pkg successfully on display ${Display.DEFAULT_DISPLAY}")
+                    } else {
+                        AppLog.w(TAG, "restoreTopScreenApp: No launch intent found for package $pkg, falling back to home screen")
+                        goHomeOnTopScreen(context)
+                    }
+                } else {
+                    AppLog.i(
+                        TAG,
+                        "restoreTopScreenApp: No top screen app remembered, returning to home screen on display ${Display.DEFAULT_DISPLAY}",
+                    )
+                    goHomeOnTopScreen(context)
+                }
+            } catch (e: Exception) {
+                AppLog.e(TAG, "restoreTopScreenApp: Failed to restore app/go home: ${e.message}", e)
+            }
+        }
+
+        private fun goHomeOnTopScreen(context: Context) {
+            AppLog.i(TAG, "goHomeOnTopScreen: Launching home screen on display ${Display.DEFAULT_DISPLAY}")
+            val intent =
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                }
+            val options =
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                }
+            context.startActivity(intent, options.toBundle())
         }
     }
 }
