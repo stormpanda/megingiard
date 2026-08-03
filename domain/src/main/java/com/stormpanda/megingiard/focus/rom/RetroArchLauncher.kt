@@ -11,6 +11,7 @@ private const val TAG = "RetroArchLauncher"
 private const val RETROARCH_MAIN_ACTIVITY = "com.retroarch.browser.retroactivity.RetroActivityFuture"
 private const val RETROARCH_EXTRA_ROM = "ROM"
 private const val RETROARCH_EXTRA_LIBRETRO = "LIBRETRO"
+private const val RETROARCH_EXTRA_CONFIGFILE = "CONFIGFILE"
 
 class RetroArchLauncher : RomLauncher {
     override val id: String = "retroarch"
@@ -37,7 +38,8 @@ class RetroArchLauncher : RomLauncher {
         }
 
         val corePath = "/data/data/$packageName/cores/$coreName"
-        AppLog.i(TAG, "Launching ROM '$romPath' with core '$corePath' on display $displayId")
+        val configFile = resolveConfigFile(packageName)
+        AppLog.i(TAG, "Launching ROM '$romPath' with core '$corePath' and config '$configFile' on display $displayId")
 
         return try {
             val intent =
@@ -46,7 +48,10 @@ class RetroArchLauncher : RomLauncher {
                     addCategory(Intent.CATEGORY_LAUNCHER)
                     putExtra(RETROARCH_EXTRA_ROM, romPath)
                     putExtra(RETROARCH_EXTRA_LIBRETRO, corePath)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    if (configFile != null) {
+                        putExtra(RETROARCH_EXTRA_CONFIGFILE, configFile)
+                    }
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             val options =
                 ActivityOptions.makeBasic().apply {
@@ -58,6 +63,18 @@ class RetroArchLauncher : RomLauncher {
             AppLog.e(TAG, "Failed to launch RetroArch: ${e.message}", e)
             false
         }
+    }
+
+    private fun resolveConfigFile(packageName: String): String? {
+        val candidatePaths =
+            listOf(
+                "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg",
+                "/sdcard/Android/data/$packageName/files/retroarch.cfg",
+                "/storage/emulated/0/RetroArch/retroarch.cfg",
+                "/sdcard/RetroArch/retroarch.cfg",
+            )
+        return candidatePaths.firstOrNull { java.io.File(it).exists() }
+            ?: "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg"
     }
 
     private fun getRetroArchPackageName(context: Context): String? {
