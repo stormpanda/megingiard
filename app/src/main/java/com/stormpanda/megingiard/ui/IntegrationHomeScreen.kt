@@ -306,7 +306,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             title = stringResource(R.string.integration_home_detected_rom),
                             value =
                                 lastDetectedSession?.let { session ->
-                                    val filename = java.io.File(session.romPath).name
+                                    val filename = session.romPath?.let { java.io.File(it).name } ?: session.gameTitle
                                     "$filename (${session.systemId})"
                                 } ?: stringResource(R.string.integration_home_no_rom_detected),
                             icon = Icons.Rounded.SportsEsports,

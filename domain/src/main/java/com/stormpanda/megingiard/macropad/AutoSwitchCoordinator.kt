@@ -32,6 +32,31 @@ object AutoSwitchCoordinator {
     private val _foregroundApp = MutableStateFlow<String?>(null)
     val foregroundApp: StateFlow<String?> = _foregroundApp.asStateFlow()
 
+    init {
+        coordinatorScope.launch {
+            EmulatorDetectionFunnel.activeSession.collect { session ->
+                if (session != null && SettingsManager.autoSwitchProfiles.value) {
+                    val matchedProfile =
+                        MacroPadState.profiles.value.firstOrNull { profile ->
+                            val assoc = profile.associatedPackage
+                            assoc.equals(session.romPath, ignoreCase = true) ||
+                                assoc.equals(session.systemId, ignoreCase = true)
+                        }
+                    if (matchedProfile != null) {
+                        val currentActiveId = MacroPadState.activeProfileId.value
+                        if (matchedProfile.id != currentActiveId) {
+                            AppLog.i(
+                                TAG,
+                                "activeSession observed: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for emulator session (${session.gameTitle})",
+                            )
+                            MacroPadState.setActiveProfileId(matchedProfile.id)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun onPackageChanged(packageName: String) {
         val normalized = packageName.trim()
         if (normalized.isBlank()) return
@@ -55,25 +80,7 @@ object AutoSwitchCoordinator {
         // 1. Process emulator package changes for ROM detection
         if (isRegisteredEmulator) {
             coordinatorScope.launch {
-                val session = EmulatorDetectionFunnel.onPackageForeground(normalized)
-                if (session != null && SettingsManager.autoSwitchProfiles.value) {
-                    val matchedProfile =
-                        MacroPadState.profiles.value.firstOrNull { profile ->
-                            val assoc = profile.associatedPackage
-                            assoc.equals(session.romPath, ignoreCase = true) ||
-                                assoc.equals(session.systemId, ignoreCase = true)
-                        }
-                    if (matchedProfile != null) {
-                        val currentActiveId = MacroPadState.activeProfileId.value
-                        if (matchedProfile.id != currentActiveId) {
-                            AppLog.i(
-                                TAG,
-                                "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for emulator session '$normalized' (${session.gameTitle})",
-                            )
-                            MacroPadState.setActiveProfileId(matchedProfile.id)
-                        }
-                    }
-                }
+                EmulatorDetectionFunnel.onPackageForeground(normalized)
             }
         } else {
             EmulatorDetectionFunnel.clearSession()
