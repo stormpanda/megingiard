@@ -327,35 +327,31 @@ class TouchpadGestureProcessor(
     }
 
     /**
-     * Resets the processor state when the gesture stream is cancelled or leaves composition.
+     * Resets the processor state when the gesture stream is cancelled, mode changes, or leaves composition.
      */
     fun onCancel() {
-        if (useMouse()) {
-            val wasDragging = isDragging
-            isDragging = false
-            releasedAsTap.clear()
-            pressTimes.clear()
-            downPositions.clear()
-            movedTooFar.clear()
-            primaryPointer = null
-            scrollAccumY = 0f
-            pendingClickJob?.cancel()
-            pendingClickJob = null
-            if (wasDragging) {
-                scope.launch {
-                    MouseInjector.leftUp()
-                }
-            }
-        } else {
-            val slotsToRelease = pointerToSlotMap.entries.toList()
-            pointerToSlotMap.clear()
-            activeSlots.fill(false)
-            _touchPos.value = null
-            scope.launch {
-                for ((_, slot) in slotsToRelease) {
-                    TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
-                }
-            }
+        // Unconditionally clean up Mouse mode state synchronously
+        val wasDragging = isDragging
+        isDragging = false
+        releasedAsTap.clear()
+        pressTimes.clear()
+        downPositions.clear()
+        movedTooFar.clear()
+        primaryPointer = null
+        scrollAccumY = 0f
+        pendingClickJob?.cancel()
+        pendingClickJob = null
+        if (wasDragging) {
+            MouseInjector.leftUp()
+        }
+
+        // Unconditionally clean up Touch mode state synchronously
+        val slotsToRelease = pointerToSlotMap.entries.toList()
+        pointerToSlotMap.clear()
+        activeSlots.fill(false)
+        _touchPos.value = null
+        for ((_, slot) in slotsToRelease) {
+            TouchInjector.injectTouch(slot, TouchAction.UP, 0f, 0f)
         }
     }
 

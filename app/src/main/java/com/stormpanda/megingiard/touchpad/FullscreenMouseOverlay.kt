@@ -127,14 +127,48 @@ fun FullscreenMouseOverlay() {
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isMirroringActive = !touchpadUseMouse && touchpadMirroringEnabled && isCapturing
 
+    val useMouseState = rememberUpdatedState(touchpadUseMouse)
     val tapToClickState = rememberUpdatedState(tapToClick)
     val twoFingerTapState = rememberUpdatedState(twoFingerTap)
     val threeFingerTapState = rememberUpdatedState(threeFingerTap)
     val tapDragState = rememberUpdatedState(tapDrag)
     val twoFingerScrollState = rememberUpdatedState(twoFingerScroll)
 
+    // Recreate processor parameters dynamically via rememberUpdatedState so values apply immediately without stale closures.
+    val finalSensitivity = touchpadSensitivity * sensitivity
+    val sensitivityState = rememberUpdatedState(finalSensitivity)
+    val naturalScrollState = rememberUpdatedState(touchpadNaturalScroll)
+    val scrollSpeedState = rememberUpdatedState(touchpadScrollSpeed)
+    val currentOnHapticFeedback by rememberUpdatedState {
+        if (touchpadHapticsEnabled && vibrator != null) {
+            triggerHaptic(vibrator, HapticStrength.LIGHT)
+        }
+    }
+    val processor =
+        remember {
+            TouchpadGestureProcessor(
+                useMouse = { useMouseState.value },
+                scope = coroutineScope,
+                sensitivity = { sensitivityState.value },
+                twoFingerScrollEnabled = { twoFingerScrollState.value },
+                naturalScrollEnabled = { naturalScrollState.value },
+                scrollSpeed = { scrollSpeedState.value },
+                tapToClick = { tapToClickState.value },
+                twoFingerTap = { twoFingerTapState.value },
+                threeFingerTap = { threeFingerTapState.value },
+                tapDrag = { tapDragState.value },
+                onHapticFeedback = { currentOnHapticFeedback() },
+            )
+        }
+
+    val pointersInsideTouchpad = remember { HashSet<Long>() }
+    var hasActivePointers by remember { mutableStateOf(false) }
+
     // Injector Lifecycle
     LaunchedEffect(touchpadUseMouse) {
+        processor.onCancel()
+        pointersInsideTouchpad.clear()
+        hasActivePointers = false
         if (touchpadUseMouse) {
             AppLog.i(TAG, "switching to mouse mode: starting MouseInjector, stopping TouchInjector")
             TouchInjector.stop("FullscreenTouchpad")
@@ -163,6 +197,9 @@ fun FullscreenMouseOverlay() {
     DisposableEffect(Unit) {
         onDispose {
             AppLog.i(TAG, "dispose: stopping both injectors")
+            processor.onCancel()
+            pointersInsideTouchpad.clear()
+            hasActivePointers = false
             MouseInjector.stop()
             TouchInjector.stop("FullscreenTouchpad")
             if (AppStateManager.wasMirroringStartedByTouchpad.value && !isFullscreenMouseActive) {
@@ -171,33 +208,6 @@ fun FullscreenMouseOverlay() {
             }
         }
     }
-
-    // Recreate processor when sensitivity/mode/scrolling changes so the parameters apply immediately.
-    val finalSensitivity = touchpadSensitivity * sensitivity
-    val currentOnHapticFeedback by rememberUpdatedState {
-        if (touchpadHapticsEnabled && vibrator != null) {
-            triggerHaptic(vibrator, HapticStrength.LIGHT)
-        }
-    }
-    val processor =
-        remember {
-            TouchpadGestureProcessor(
-                useMouse = { touchpadUseMouse },
-                scope = coroutineScope,
-                sensitivity = { finalSensitivity },
-                twoFingerScrollEnabled = { twoFingerScrollState.value },
-                naturalScrollEnabled = { touchpadNaturalScroll },
-                scrollSpeed = { touchpadScrollSpeed },
-                tapToClick = { tapToClickState.value },
-                twoFingerTap = { twoFingerTapState.value },
-                threeFingerTap = { threeFingerTapState.value },
-                tapDrag = { tapDragState.value },
-                onHapticFeedback = { currentOnHapticFeedback() },
-            )
-        }
-
-    val pointersInsideTouchpad = remember { HashSet<Long>() }
-    var hasActivePointers by remember { mutableStateOf(false) }
 
     val insetBezelBrush =
         Brush.linearGradient(
@@ -233,47 +243,24 @@ fun FullscreenMouseOverlay() {
                                         val id = change.id.value
                                         val wasTracked = pointersInsideTouchpad.contains(id)
 
-                                        // 1. Maintain active pointer tracking state unconditionally (even if consumed by overlay buttons)
-                                        if (inner != null && outer != null) {
-                                            val sw = inner.size.width.toFloat()
-                                            val sh = inner.size.height.toFloat()
-                                            val localPos = inner.localPositionOf(outer, change.position)
-                                            val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-
-                                            when (event.type) {
-                                                PointerEventType.Press -> {
-                                                    if (!change.previousPressed && isInside) {
-                                                        pointersInsideTouchpad.add(id)
-                                                    }
-                                                }
-
-                                                PointerEventType.Move -> {
-                                                    if (wasTracked && !isInside && !touchpadUseMouse) {
-                                                        pointersInsideTouchpad.remove(id)
-                                                    }
-                                                }
-
-                                                PointerEventType.Release -> {
-                                                    if (!change.pressed) {
-                                                        pointersInsideTouchpad.remove(id)
-                                                    }
-                                                }
+                                        // 1. Maintain active pointer tracking state & dispatch to processor
+                                        val sw = inner?.size?.width?.toFloat() ?: 1f
+                                        val sh = inner?.size?.height?.toFloat() ?: 1f
+                                        val localPos =
+                                            if (inner != null && outer != null) {
+                                                inner.localPositionOf(outer, change.position)
+                                            } else {
+                                                Offset.Zero
                                             }
-                                        }
+                                        val clampedX = localPos.x.coerceIn(0f, sw)
+                                        val clampedY = localPos.y.coerceIn(0f, sh)
+                                        val isInside = inner != null && outer != null && localPos.x in 0f..sw && localPos.y in 0f..sh
 
-                                        if (change.isConsumed) continue
-
-                                        // 2. Dispatch events to TouchpadGestureProcessor
-                                        if (inner != null && outer != null) {
-                                            val sw = inner.size.width.toFloat()
-                                            val sh = inner.size.height.toFloat()
-                                            val localPos = inner.localPositionOf(outer, change.position)
-                                            val clampedX = localPos.x.coerceIn(0f, sw)
-                                            val clampedY = localPos.y.coerceIn(0f, sh)
-
-                                            when (event.type) {
-                                                PointerEventType.Press -> {
-                                                    if (!change.previousPressed && (localPos.x in 0f..sw && localPos.y in 0f..sh)) {
+                                        when (event.type) {
+                                            PointerEventType.Press -> {
+                                                if (!change.previousPressed && isInside) {
+                                                    pointersInsideTouchpad.add(id)
+                                                    if (!change.isConsumed) {
                                                         processor.onPress(
                                                             pointerId = id,
                                                             x = clampedX,
@@ -284,35 +271,38 @@ fun FullscreenMouseOverlay() {
                                                         )
                                                     }
                                                 }
+                                            }
 
-                                                PointerEventType.Move -> {
-                                                    if (wasTracked) {
-                                                        val isInside = localPos.x in 0f..sw && localPos.y in 0f..sh
-                                                        if (!isInside && !touchpadUseMouse) {
-                                                            processor.onRelease(
-                                                                pointerId = id,
-                                                                x = clampedX,
-                                                                y = clampedY,
-                                                                surfaceW = sw,
-                                                                surfaceH = sh,
-                                                            )
-                                                        } else {
-                                                            val delta = change.positionChange()
-                                                            processor.onMove(
-                                                                pointerId = id,
-                                                                x = clampedX,
-                                                                y = clampedY,
-                                                                deltaX = delta.x,
-                                                                deltaY = delta.y,
-                                                                surfaceW = sw,
-                                                                surfaceH = sh,
-                                                            )
-                                                        }
+                                            PointerEventType.Move -> {
+                                                if (wasTracked) {
+                                                    if (!isInside && !useMouseState.value) {
+                                                        pointersInsideTouchpad.remove(id)
+                                                        processor.onRelease(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                        )
+                                                    } else if (!change.isConsumed) {
+                                                        val delta = change.positionChange()
+                                                        processor.onMove(
+                                                            pointerId = id,
+                                                            x = clampedX,
+                                                            y = clampedY,
+                                                            deltaX = delta.x,
+                                                            deltaY = delta.y,
+                                                            surfaceW = sw,
+                                                            surfaceH = sh,
+                                                        )
                                                     }
                                                 }
+                                            }
 
-                                                PointerEventType.Release -> {
-                                                    if (!change.pressed && wasTracked) {
+                                            PointerEventType.Release -> {
+                                                if (!change.pressed) {
+                                                    pointersInsideTouchpad.remove(id)
+                                                    if (wasTracked) {
                                                         processor.onRelease(
                                                             pointerId = id,
                                                             x = clampedX,
@@ -322,10 +312,10 @@ fun FullscreenMouseOverlay() {
                                                         )
                                                     }
                                                 }
+                                            }
 
-                                                else -> {
-                                                    Unit
-                                                }
+                                            else -> {
+                                                Unit
                                             }
                                         }
                                         change.consume()

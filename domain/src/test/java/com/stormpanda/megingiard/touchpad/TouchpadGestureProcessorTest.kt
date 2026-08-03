@@ -260,4 +260,27 @@ class TouchpadGestureProcessorTest {
             processor.onCancel()
             assertNull(processor.touchPos.value)
         }
+
+    @Test
+    fun `onCancel cleans absolute touch slots even after switching to mouse mode`() =
+        runTest(testDispatcher) {
+            var currentUseMouse = false
+            val processor =
+                TouchpadGestureProcessor(
+                    useMouse = { currentUseMouse },
+                    scope = this,
+                    sensitivity = { 1.0f },
+                )
+
+            // Touch mode press
+            processor.onPress(1L, 100f, 200f, 1000f, 1000f, false)
+            assertEquals(Pair(100f, 200f), processor.touchPos.value)
+
+            // Dynamic mode switch to mouse mode while pointer is down
+            currentUseMouse = true
+
+            // onCancel should clean up touch mode slots unconditionally
+            processor.onCancel()
+            assertNull(processor.touchPos.value)
+        }
 }

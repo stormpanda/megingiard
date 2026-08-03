@@ -150,6 +150,7 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
   ```
 - These coordinates are sent to slot-aware `TouchInjector.injectTouch(slot, action, normX, normY)` which maps concurrent pointer contacts to distinct Linux uinput input slots (`0..9`) and writes slot-aware commands to `touchinjector_arm64`, enabling slot-aware multi-touch on the absolute touchpad.
 - When `TouchInjector.stop(token)` is called, it removes the client registration. If the client registry becomes empty, the injector sends slot-specific `UP` commands for all supported touch slots and waits briefly for the writer queue to flush before terminating `touchinjector_arm64`. This prevents Android from retaining a visible touch indicator if a final release command was still queued during teardown.
+- **Mode Switching Safety:** When toggling dynamically between Mouse Mode and Touch Mode while fingers are down, `TouchpadGestureProcessor.onCancel()` and `LaunchedEffect(touchpadUseMouse)` unconditionally release all active touch slots (`TouchAction.UP`) and mouse drag/click states before switching background injectors. This prevents orphaned pointer slots or stuck mouse buttons.
 
 ### Secondary Display Rendering & Touchpad Mirroring
 
