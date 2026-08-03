@@ -34,6 +34,7 @@ private const val TAG = "PrivdAdbCM"
 private const val KEY_FILE = "privd_adb_key.bin"
 private const val CERT_FILE = "privd_adb_cert.bin"
 private const val DEVICE_NAME = "Megingiard"
+private const val NAME_FILE = "privd_device_name.txt"
 private const val RSA_KEY_SIZE = 2048
 private const val CERT_VALIDITY_DAYS = 30L * 365L
 private const val ONE_DAY_MS = 86_400_000L
@@ -51,6 +52,7 @@ private const val ONE_DAY_MS = 86_400_000L
 internal class PrivdAdbConnectionManager private constructor(
     private val privateKey: PrivateKey,
     private val certificate: Certificate,
+    private val deviceName: String,
 ) : AbsAdbConnectionManager() {
     init {
         api = Build.VERSION.SDK_INT
@@ -60,7 +62,7 @@ internal class PrivdAdbConnectionManager private constructor(
 
     override fun getCertificate(): Certificate = certificate
 
-    override fun getDeviceName(): String = DEVICE_NAME
+    override fun getDeviceName(): String = deviceName
 
     companion object {
         @Volatile private var instance: PrivdAdbConnectionManager? = null
@@ -74,24 +76,47 @@ internal class PrivdAdbConnectionManager private constructor(
         fun clearCredentials(context: Context) {
             val keyFile = File(context.applicationContext.noBackupFilesDir, KEY_FILE)
             val certFile = File(context.applicationContext.noBackupFilesDir, CERT_FILE)
+            val nameFile = File(context.applicationContext.noBackupFilesDir, NAME_FILE)
             if (keyFile.exists()) keyFile.delete()
             if (certFile.exists()) certFile.delete()
+            if (nameFile.exists()) nameFile.delete()
             PrivdPairKey.delete(context)
+            runCatching { instance?.disconnect() }
             instance = null
-            AppLog.i("PrivdAdbConnMgr", "clearCredentials: ADB key & cert credentials deleted")
+            flushLibaDBCache()
+            AppLog.i("PrivdAdbConnMgr", "clearCredentials: ADB key, cert & name credentials deleted")
+        }
+
+        fun flushLibaDBCache() {
+            runCatching {
+                val clazz = Class.forName("io.github.muntashirakon.adb.SslUtils")
+                val field = clazz.getDeclaredField("sslContext")
+                field.isAccessible = true
+                field.set(null, null)
+                AppLog.i(TAG, "flushLibaDBCache: Successfully cleared libadb SslUtils sslContext cache")
+            }.onFailure { e ->
+                AppLog.w(TAG, "flushLibaDBCache: Failed to clear libadb SslUtils sslContext cache: $e")
+            }
         }
 
         @Synchronized
         fun getInstance(context: Context): PrivdAdbConnectionManager {
             instance?.let { return it }
-            val (key, cert) = loadOrCreateCredentials(context.applicationContext)
-            return PrivdAdbConnectionManager(key, cert).also { instance = it }
+            val (keyAndCert, name) = loadOrCreateCredentials(context.applicationContext)
+            return PrivdAdbConnectionManager(keyAndCert.first, keyAndCert.second, name).also { instance = it }
         }
 
-        private fun loadOrCreateCredentials(context: Context): Pair<PrivateKey, Certificate> {
+        private fun loadOrCreateCredentials(context: Context): Pair<Pair<PrivateKey, Certificate>, String> {
             val keyFile = File(context.noBackupFilesDir, KEY_FILE)
             val certFile = File(context.noBackupFilesDir, CERT_FILE)
+            val nameFile = File(context.noBackupFilesDir, NAME_FILE)
             if (keyFile.exists() && certFile.exists()) {
+                val loadedName =
+                    if (nameFile.exists()) {
+                        runCatching { nameFile.readText().trim() }.getOrDefault(DEVICE_NAME)
+                    } else {
+                        DEVICE_NAME
+                    }
                 runCatching {
                     val keyBytes = keyFile.readBytes()
                     val key =
@@ -102,20 +127,28 @@ internal class PrivdAdbConnectionManager private constructor(
                         certFile.inputStream().use { ins ->
                             CertificateFactory.getInstance("X.509").generateCertificate(ins)
                         }
-                    AppLog.d(TAG, "Loaded existing ADB credentials")
-                    return key to cert
+                    AppLog.d(TAG, "Loaded existing ADB credentials for $loadedName")
+                    return (key to cert) to loadedName
                 }.onFailure { e ->
                     AppLog.w(TAG, "Failed to load credentials, regenerating: $e")
                 }
             }
-            return generateAndStore(keyFile, certFile)
+            return generateAndStore(keyFile, certFile, nameFile)
         }
 
         private fun generateAndStore(
             keyFile: File,
             certFile: File,
-        ): Pair<PrivateKey, Certificate> {
-            AppLog.i(TAG, "Generating new ADB key pair + certificate")
+            nameFile: File,
+        ): Pair<Pair<PrivateKey, Certificate>, String> {
+            flushLibaDBCache()
+            val suffix =
+                java.util.UUID
+                    .randomUUID()
+                    .toString()
+                    .substring(0, 4)
+            val uniqueName = "$DEVICE_NAME-$suffix"
+            AppLog.i(TAG, "Generating new ADB key pair + certificate under name $uniqueName")
             val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
             keyPairGenerator.initialize(RSA_KEY_SIZE, SecureRandom())
             val keyPair = keyPairGenerator.generateKeyPair()
@@ -124,7 +157,7 @@ internal class PrivdAdbConnectionManager private constructor(
 
             val notBefore = Date()
             val notAfter = Date(System.currentTimeMillis() + ONE_DAY_MS * CERT_VALIDITY_DAYS)
-            val subject = "CN=$DEVICE_NAME"
+            val subject = "CN=$uniqueName"
             val algorithmName = "SHA512withRSA"
 
             val extensions = CertificateExtensions()
@@ -152,11 +185,12 @@ internal class PrivdAdbConnectionManager private constructor(
             runCatching {
                 keyFile.writeBytes(privateKey.encoded)
                 certFile.writeBytes(cert.encoded)
-                AppLog.i(TAG, "ADB credentials stored")
+                nameFile.writeText(uniqueName)
+                AppLog.i(TAG, "ADB credentials stored under name $uniqueName")
             }.onFailure { e ->
                 AppLog.w(TAG, "Could not persist ADB credentials: $e")
             }
-            return privateKey to cert
+            return (privateKey to cert) to uniqueName
         }
     }
 }

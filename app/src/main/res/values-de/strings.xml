@@ -320,6 +320,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_action_show_wizard">Einrichten…</string>
     <string name="privd_action_test_autotoggle">Auto-Toggle testen</string>
     <string name="privd_action_auto_setup">Auto-Einrichtung</string>
+    <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
     <string name="privd_toast_accessibility_required">Eingabehilfe-Dienst wird für den automatischen Toggle benötigt. Bitte in den Einstellungen aktivieren.</string>
     <string name="privd_toast_all_set">Alles bereit! Privilegiierter Modus ist einsatzbereit.</string>
     <string name="privd_ping_ok">Daemon antwortet — Verbindung ist intakt.</string>
@@ -403,6 +404,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_error_pairing_failed">Kopplung fehlgeschlagen. Prüfe Adresse, Port und 6-stelligen Code aus dem System-Dialog.</string>
     <string name="privd_error_adb_discovery_failed">Konnte den ADB-Drahtloses-Debugging-Endpunkt nicht via mDNS finden. Stelle sicher, dass Drahtloses Debugging aktiviert ist.</string>
     <string name="privd_error_adb_connect_failed">Verbindung zu ADB fehlgeschlagen. Falls du die Kopplung widerrufen hast, kopple erneut.</string>
+    <string name="privd_error_adb_pairing_required">ADB-Kopplung erforderlich. Bitte lösche "Megingiard" aus den Einstellungen für drahtloses Debugging und kopple erneut.</string>
     <string name="privd_error_bootstrap_push_failed">Daemon-Binary konnte nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
     <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>

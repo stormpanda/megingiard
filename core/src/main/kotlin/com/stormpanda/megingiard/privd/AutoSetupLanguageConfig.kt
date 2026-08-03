@@ -14,8 +14,6 @@ import java.util.Locale
  * @property wirelessDebuggingQueryAndKeyword Search query and UI node matching string for Wireless Debugging.
  * @property usbDebuggingQueryAndKeyword Search query and UI node matching string for USB Debugging.
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
- * @property explicitPortKeywords List of UI text labels used by text scanner to extract explicit pairing ports.
- * @property searchBarKeywords List of UI text keywords used to fallback-detect search bar/button.
  * @property allowButtonKeywords List of UI text keywords used to confirm network trust dialogs.
  */
 data class AutoSetupLanguageConfig(
@@ -25,8 +23,6 @@ data class AutoSetupLanguageConfig(
     val wirelessDebuggingQueryAndKeyword: String,
     val usbDebuggingQueryAndKeyword: String,
     val pairDeviceKeywords: List<String>,
-    val explicitPortKeywords: List<String>,
-    val searchBarKeywords: List<String>,
     val allowButtonKeywords: List<String>,
 ) {
     companion object {
@@ -45,19 +41,6 @@ data class AutoSetupLanguageConfig(
                         "kopplungscode koppeln",
                         "mit kopplungscode koppeln",
                         "wlan-kopplungscode",
-                    ),
-                explicitPortKeywords =
-                    listOf(
-                        "ip-adresse & port",
-                        "ip-adresse und port",
-                        "port",
-                        "adresse & port",
-                    ),
-                searchBarKeywords =
-                    listOf(
-                        "einstellungen durchsuchen",
-                        "einstellungen suchen",
-                        "suchen",
                     ),
                 allowButtonKeywords =
                     listOf(
@@ -86,17 +69,6 @@ data class AutoSetupLanguageConfig(
                         "emparejar dispositivo con un código de sincronización",
                         "código de sincronización",
                     ),
-                explicitPortKeywords =
-                    listOf(
-                        "dirección ip y puerto",
-                        "puerto",
-                    ),
-                searchBarKeywords =
-                    listOf(
-                        "buscar en ajustes",
-                        "buscar en la configuración",
-                        "buscar",
-                    ),
                 allowButtonKeywords =
                     listOf(
                         "permitir",
@@ -124,17 +96,6 @@ data class AutoSetupLanguageConfig(
                         "code d'association",
                         "code de synchronisation",
                     ),
-                explicitPortKeywords =
-                    listOf(
-                        "adresse ip et port",
-                        "port",
-                    ),
-                searchBarKeywords =
-                    listOf(
-                        "rechercher dans les paramètres",
-                        "rechercher",
-                        "recherche",
-                    ),
                 allowButtonKeywords =
                     listOf(
                         "autoriser",
@@ -157,17 +118,6 @@ data class AutoSetupLanguageConfig(
                     listOf(
                         "pair device with pairing code",
                         "pair with pairing code",
-                    ),
-                explicitPortKeywords =
-                    listOf(
-                        "port",
-                        "ip address & port",
-                        "address & port",
-                    ),
-                searchBarKeywords =
-                    listOf(
-                        "search settings",
-                        "search",
                     ),
                 allowButtonKeywords =
                     listOf(

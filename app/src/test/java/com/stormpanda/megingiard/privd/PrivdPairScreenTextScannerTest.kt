@@ -80,4 +80,68 @@ class PrivdPairScreenTextScannerTest {
         assertEquals("41209", result.port)
         assertTrue(result.isComplete)
     }
+
+    @Test
+    fun parseConnectPortFromText_extractsConnectPortCorrectober() {
+        val sampleText =
+            """
+            Wireless debugging
+            IP address & Port
+            192.168.178.35:41235
+            """.trimIndent()
+
+        val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
+        assertEquals(41235, port)
+    }
+
+    @Test
+    fun parseConnectPortFromText_ignoresTextWithPairingKeywords() {
+        val sampleText =
+            """
+            Wi-Fi pairing code
+            722106
+            IP address & Port
+            192.168.178.35:35283
+            """.trimIndent()
+
+        val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
+        assertEquals(0, port)
+    }
+
+    @Test
+    fun parseConnectPortFromText_parsesSettingsScreenDespitePairingRowText() {
+        val sampleText =
+            """
+            Wireless debugging
+            Use wireless debugging
+            IP address & Port
+            192.168.178.35:41235
+            Pair device with pairing code
+            Gerät über einen Kopplungscode koppeln
+            """.trimIndent()
+
+        val port = PrivdPairScreenTextScanner.parseConnectPortFromText(sampleText)
+        assertEquals(41235, port)
+    }
+
+    @Test
+    fun hasPairingCode_detectsPresenceOfPairingCode() {
+        val sampleTextWithCode =
+            """
+            Wi-Fi pairing code
+            722106
+            IP address & Port
+            192.168.178.35:35283
+            """.trimIndent()
+        val sampleTextWithoutCode =
+            """
+            Wireless debugging
+            IP address & Port
+            192.168.178.35:41235
+            """.trimIndent()
+
+        assertTrue(PrivdPairScreenTextScanner.hasPairingCode(sampleTextWithCode))
+        assertFalse(PrivdPairScreenTextScanner.hasPairingCode(sampleTextWithoutCode))
+        assertFalse(PrivdPairScreenTextScanner.hasPairingCode(""))
+    }
 }

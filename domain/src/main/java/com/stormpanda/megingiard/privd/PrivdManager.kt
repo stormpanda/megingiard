@@ -106,6 +106,9 @@ enum class PrivdError {
      * a non-zero exit. Re-run the Privileged Mode setup wizard to retry.
      */
     BOOTSTRAP_PROVISION_FAILED,
+
+    /** ADB pairing is explicitly required (credentials/key rejected by adbd). */
+    ADB_PAIRING_REQUIRED,
 }
 
 /**

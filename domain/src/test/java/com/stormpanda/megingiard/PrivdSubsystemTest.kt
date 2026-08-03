@@ -6,14 +6,17 @@ import com.stormpanda.megingiard.macropad.MacroStep
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.EvdevEvent
+import com.stormpanda.megingiard.privd.PrivdAdbConnectionManager
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdFeature
 import com.stormpanda.megingiard.privd.PrivdState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import javax.net.ssl.SSLContext
 
 private const val EV_KEY = 1
 private const val EV_ABS = 3
@@ -134,7 +137,7 @@ class PrivdSubsystemTest {
 
     @Test
     fun `PrivdError enum covers all bootstrap failure modes`() {
-        assertEquals(7, PrivdError.entries.size)
+        assertEquals(8, PrivdError.entries.size)
         assertNotNull(PrivdError.valueOf("DAEMON_UNREACHABLE"))
         assertNotNull(PrivdError.valueOf("PAIRING_FAILED"))
         assertNotNull(PrivdError.valueOf("ADB_DISCOVERY_FAILED"))
@@ -142,6 +145,7 @@ class PrivdSubsystemTest {
         assertNotNull(PrivdError.valueOf("BOOTSTRAP_PUSH_FAILED"))
         assertNotNull(PrivdError.valueOf("BOOTSTRAP_SPAWN_FAILED"))
         assertNotNull(PrivdError.valueOf("BOOTSTRAP_PROVISION_FAILED"))
+        assertNotNull(PrivdError.valueOf("ADB_PAIRING_REQUIRED"))
     }
 
     @Test
@@ -279,5 +283,20 @@ class PrivdSubsystemTest {
             com.stormpanda.megingiard.privd.PrivdBootstrapper
                 .readAdbTlsConnectPort()
         assertTrue(port >= 0)
+    }
+
+    @Test
+    fun `flushLibaDBCache clears static sslContext field in SslUtils`() {
+        val clazz = Class.forName("io.github.muntashirakon.adb.SslUtils")
+        val field = clazz.getDeclaredField("sslContext")
+        field.isAccessible = true
+
+        val dummyContext = SSLContext.getDefault()
+        field.set(null, dummyContext)
+        assertEquals(dummyContext, field.get(null))
+
+        PrivdAdbConnectionManager.flushLibaDBCache()
+
+        assertNull(field.get(null))
     }
 }

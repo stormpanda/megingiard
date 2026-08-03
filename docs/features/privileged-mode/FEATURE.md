@@ -16,7 +16,7 @@ the regular app sandbox cannot reach (UID `untrusted_app`, missing the
 `input` group, restrictive SELinux domain). Privileged Mode bridges that gap
 by running a tiny on-device helper daemon (`megingiard_privd`) under the
 **shell** UID — the same privilege envelope that ADB itself runs in. The
-daemon listens on an abstract Unix socket; the app connects, sends ASCII
+daemon listens on a local TCP socket loopback (`127.0.0.1:51234–51238`); the app connects, sends ASCII
 commands, and the daemon performs the privileged kernel I/O on its behalf.
 
 No root, no third-party app, no external server: the bootstrap uses
@@ -73,13 +73,14 @@ every device since Android 11 (API 30).
 
 - The Privileged Mode card in Global Settings and Step 5 (`PRIVILEGED`) of the Welcome Tour MUST expose an "Auto Setup" button.
 - Clicking the button MUST evaluate device setup conditions and run the appropriate automated pipeline on Display 0 via `MegingiardAccessibilityService`:
+  - **Settings Task Stack Warm-Up**: To prevent transition crashes and focus collisions with the active system launcher (like Game Focus) during cold starts (e.g. immediately after a fresh device reboot), the setup pipeline MUST first launch the root Settings homepage (`Settings.ACTION_SETTINGS`) to warm up the Settings task stack. After a brief delay (e.g. 400ms), it then launches the target deep-linked sub-screen (About Phone or Developer Options).
   - **Stage A (Dev Mode Activation)**: If Developer Options are disabled, launches About Phone settings and taps "Build number" 7 times to unlock Developer Mode.
-  - **Stage B (USB & Wireless Debugging Activation)**: If USB Debugging or Wireless Debugging is disabled, launches Settings Search for `"USB debugging"` and/or `"Wireless debugging"`, selects the result items, toggles switches `ON`, and confirms dialogs. Activating USB Debugging is mandatory whenever Wireless Debugging is activated to ensure Wireless ADB sessions persist.
-  - **Stage C (Auto-Pairing)**: If Megingiard has not been paired, launches Settings Search for `"Wireless debugging"` to enter the Wireless Debugging sub-screen directly, opens the pairing dialog ("Pair device with pairing code"), scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
-  - **Full-Service Auto-Connect**: Upon completing pairing or toggling Wireless Debugging for an already paired device, the service MUST automatically initiate `PrivdManager.connect()` to start the privileged daemon seamlessly without extra taps.
+  - **Stage B (USB & Wireless Debugging Activation)**: If USB Debugging or Wireless Debugging is disabled, routes directly to Developer Options settings via `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`, locates the USB debugging switch by its standardized view Resource IDs (e.g., `com.android.settings:id/switch_widget`, `android:id/switch_widget`, etc.) and toggles it `ON` (confirming warning dialogs using resource ID `android:id/button1`). To toggle Wireless Debugging, it clicks the `"Wireless debugging"` preference row to enter its sub-screen, then toggles its main switch `ON`. Activating USB Debugging is mandatory whenever Wireless Debugging is activated to ensure Wireless ADB sessions persist.
+  - **Stage C (Auto-Pairing / Connection with Stored Credentials)**: If stored credentials exist, the service first attempts to connect and bootstrap the daemon using them once Wireless Debugging is activated. If that connection succeeds, the setup finishes successfully. If the connection fails (or if credentials are not present), the service clears the credentials and proceeds with the pairing dialog flow: routes directly to Developer Options settings via `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS`, clicks the `"Wireless debugging"` preference row to enter its sub-screen, opens the pairing dialog ("Pair device with pairing code") by locating and clicking the row matching the pairing keywords via view Resource IDs (e.g. `android:id/title`), scans text for the 6-digit code and port via `PrivdPairScreenTextScanner`, and pairs via `PrivdBootstrapper.pair()`.
+  - **Full-Service Auto-Connect & App Restoration**: Upon completing pairing, the service waits for the pairing dialog to dismiss and for `adbd` keys database to stabilize (using a 1500ms delay), rescans the screen for the connect port, and automatically initiates `PrivdManager.connect()` to start the privileged daemon seamlessly. Once the daemon is connected successfully (either via stored credentials or after dynamic pairing), the service retrieves the package name of the application that was running on the top screen prior to auto setup starting (using `AutoSwitchCoordinator.foregroundApp`), and launches it back on the top screen (`Display.DEFAULT_DISPLAY`). If no app was running or it was a system Settings panel, the service automatically falls back to launching the Home launcher/screen on the default display.
   - **All Set**: If Developer Mode, USB Debugging, Wireless Debugging, and ADB pairing are all active, automatically initiates `PrivdManager.connect()` if disconnected and displays a Toast notification: *"You're all set! Privileged Mode is ready."*
-  - **Multi-Language System Navigation**: Settings search queries and UI node matching MUST dynamically adapt to the Android system language and country locale (e.g. English `en-US`/`en-GB`, German `de-DE`/`de-AT`, Spanish `es-ES`/`es-MX`, French `fr-FR`/`fr-CA`) by querying `LocaleManager.systemLocales` via `AutoSetupLanguageConfig`.
-  - **Network Trust Dialog Auto-Confirmation**: If the system displays a Wireless Debugging or USB Debugging network trust confirmation dialog ("Debugging über WLAN in diesem Netzwerk zulassen?" / "USB-Debugging zulassen?"), the service MUST automatically click the positive action button ("ZULASSEN" / "ALLOW" / "OK") while strictly ignoring checkable CheckBox nodes.
+  - **Language-Independent Navigation**: By utilizing standardized Android system view Resource IDs (such as `com.android.settings:id/main_switch`, `android:id/switch_widget`, `android:id/title`, and dialog buttons like `android:id/button1`), settings traversal and toggling logic is inherently language-independent. The locale configuration (`AutoSetupLanguageConfig`) is only used for mapping target keyword text checks (e.g. pairing dialog title matches or system warning confirmations) to the active system locale. If a targeted settings element is off-screen (such as the Build number row at the bottom of About Phone), the service MUST recursively find scrollable containers and execute scroll forward actions to bring them into view.
+  - **Network Trust Dialog Auto-Confirmation**: If the system displays a Wireless Debugging or USB Debugging network trust confirmation dialog ("Debugging über WLAN in diesem Netzwerk zulassen?" / "USB-Debugging zulassen?"), the service MUST automatically click the positive action button ("ZULASSEN" / "ALLOW" / "OK") by looking up the resource IDs (e.g. `android:id/button1` or `com.android.settings:id/button1`) while strictly ignoring checkable CheckBox nodes.
 - Step 5 of the Welcome Tour MUST render a live status checklist displaying stage progress icons (`PENDING`, `ACTIVE`, `DONE`) for Developer Options, Wireless Debugging, ADB Pairing, and Daemon Connection.
 - If the Accessibility Service is inactive, clicking the button MUST display a helpful Toast notification and launch system Accessibility settings.
 
@@ -117,14 +118,14 @@ every device since Android 11 (API 30).
 ┌──────────────────────────────────────────────────┐
 │ Megingiard app (UID 10xxx, untrusted_app domain) │
 │                                                  │
-│  PrivdManager ─state─▶ PrivdClient ─LocalSocket──┼─┐
+│  PrivdManager ─state─▶ PrivdClient ─TCP Socket───┼─┐
 │       ▲                                          │ │
 │       │                                          │ │
 │  GlobalSettingsScreen / PrivdSettingsCard        │ │
 └──────────────────────────────────────────────────┘ │
-                                                     │  abstract
-                                                     ▼  socket
-                              @megingiard.privd  ◀──────
+                                                     │  local
+                                                     ▼  TCP
+                        127.0.0.1:51234–51238    ◀──────
                                                      │
 ┌──────────────────────────────────────────────────┐ │
 │ megingiard_privd  (UID 2000 / shell, group input)│◀┘
@@ -183,14 +184,19 @@ Flow:
    - `VERIFYING` retries `PrivdManager.connect()` up to 20 times with a
      500 ms initial delay followed by 300 ms between retries (up to 6.5 s
      total) to absorb the race between the daemon's `bind()` and the
-     app's `LocalSocket.connect()`.
+     app's `connect()`.
 4. **Wizard step 4** confirms success and toggles `privdAutoConnect = true`.
 
 The RSA key (PKCS#8) and X.509 certificate are persisted as raw bytes in
 `noBackupFilesDir/privd_adb_key.bin` and `noBackupFilesDir/privd_adb_cert.bin`
 (using `Context.noBackupFilesDir` to exclude them from Auto Backup / device-to-device
-transfer). They are generated once via `android.sun.security.x509.*` (SHA512withRSA,
-~30-year validity, CN=Megingiard) and reused on every subsequent pair / connect.
+transfer). To prevent trust database collisions in the system `adbd` daemon when
+re-pairing, the device name is generated with a random 4-character suffix (e.g.
+`Megingiard-abcd`) and stored in `privd_device_name.txt`. This unique name is used
+as the CN in the self-signed X.509 certificate (SHA512withRSA, ~30-year validity).
+On credential regeneration or deletion, the `libadb-android` library's static
+`SslUtils.sslContext` cache is cleared via reflection to ensure the new certificate
+and private key are loaded successfully by subsequent TLS connections.
 
 Key pair generation uses `SecureRandom()` (not a named algorithm) for the
 RSA key-pair initializer, and `SecureRandom().nextInt() and Int.MAX_VALUE`
@@ -218,9 +224,9 @@ PrivdManager.state.collect { state ->
 ```
 
 When `PrivdManager.connect(context)` is invoked:
-1. It first attempts a direct local abstract Unix socket connection via `PrivdClient.connect()`.
+1. It first attempts a direct local TCP socket connection (scanning port range `51234–51238`) via `PrivdClient.connect()`.
 2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
-3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port, connects to the local ADB server, pushes and spawns the daemon, and connects the socket.
+3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
 
 The `triggered` guard ensures auto-connect runs at most once for a given
 OFF/FAILED transition and therefore cannot spin in a tight retry loop when the
@@ -235,7 +241,7 @@ To guide users when Privileged Mode is offline, `GlobalSettingsViewModel` expose
 
 `GlobalSettingsViewModel` delegates these checks to domain singletons:
 1. **Credentials Presence:** `PrivdBootstrapper.hasCredentials(context)` verifies if the local ADB pairing files (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in `noBackupFilesDir`.
-2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive()` reads the system property `service.adb.tls.port` via `readAdbTlsConnectPort()` to check if Wireless Debugging is active and listening on a dynamic TLS port (port > 0).
+2. **Wireless Debugging Activity:** `PrivdBootstrapper.isWirelessDebuggingActive(context)` queries the system global setting `adb_wifi_enabled` first. If enabled, it returns `true`; otherwise, it falls back to reading the system property `service.adb.tls.port` via `readAdbTlsConnectPort(context)`, the screen-scanned cache, and local Network Service Discovery (mDNS) port lookup to check if Wireless Debugging is active (port > 0).
 
 The results are presented to the user as clear, localized guidance messages in the settings card:
 - **Running:** "Privileged Mode is active and running."
@@ -269,18 +275,13 @@ The authentication key is **never embedded in the APK**. Instead:
 
 Android destroys the Keystore AES key when the app is uninstalled, making the stored ciphertext permanently unreadable. A reinstalled app therefore cannot silently inherit the old daemon's trust relationship — re-bootstrap is required.
 
-#### OS-Level Peer Credential Checks
+#### OS-Level Peer Credential Checks (Deprecated)
 
-Before the HMAC handshake is attempted, both sides verify the OS-reported peer UID:
-
-- **App side:** `LocalSocket.peerCredentials.uid` must equal 2000 (Android shell UID). This blocks any non-shell process from impersonating the daemon.
-- **Daemon side:** `getsockopt(SO_PEERCRED)` on the accepted connection fd must match the app UID stored in the state file. This blocks rogue apps from connecting even if they somehow obtained the per-install key.
-
-If either check fails the connection is closed immediately.
+OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) are not used because communication runs over a local TCP loopback (`127.0.0.1`) which does not support peer credentials. The system relies entirely on the cryptographic mutual HMAC-SHA256 handshake described below to authenticate both the client app and the daemon.
 
 #### Mutual HMAC-SHA256 Handshake
 
-Every new LocalSocket connection (after the peer-credential check) uses mutual challenge-response. Both sides must know the per-install key:
+Every new TCP socket connection uses mutual challenge-response. Both sides must know the per-install key:
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -293,7 +294,7 @@ Daemon -> App     PROOF <64-hex-hmac2>\n   HMAC-SHA256(key, nonce2)
 The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. This blocks two important local attacks:
 
 - A rogue app cannot connect to the real daemon and issue commands unless it can produce a valid `AUTH` response (requires the per-install key that is not in the APK).
-- A rogue process that binds `@megingiard.privd` before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response and pass the UID check.
+- A rogue process that binds the local port before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response.
 
 Malformed messages, missing messages, wrong HMAC values, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds and is reset to normal blocking I/O only after the full mutual exchange succeeds.
 
@@ -446,10 +447,10 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 | File                                                     | Responsibility                                                                                                                             |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (abstract-socket server, evdev writer, passive read-only physical gamepad event stream)                               |
+| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream)                          |
 | `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
 | `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
-| `domain/.../privd/PrivdClient.kt`                        | LocalSocket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                       |
+| `domain/.../privd/PrivdClient.kt`                        | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                        |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
 | `domain/.../privd/PrivdGamepadInjector.kt`               | Same surface as `ShellGamepadInjector`, sends via `PrivdClient`                                                                            |
 | `domain/.../privd/PrivdManager.kt`                       | Top-level state machine, `PrivdState` (incl. `BOOTSTRAPPING`), `PrivdError` (6 codes), `PrivdFeature` enum                                 |

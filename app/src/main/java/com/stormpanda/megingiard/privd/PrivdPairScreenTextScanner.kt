@@ -46,24 +46,7 @@ object PrivdPairScreenTextScanner {
         // Priority A: IP:PORT format (e.g. 192.168.178.35:35283 -> 35283)
         var pairingPort = IP_PORT_REGEX.find(text)?.groupValues?.get(1)
 
-        // Priority B: Port explicitly after "IP address & Port", "IP-Adresse & Port", "Port", etc.
-        if (pairingPort == null) {
-            val keywords =
-                (config?.explicitPortKeywords ?: emptyList()) +
-                    listOf(
-                        "port",
-                        "ip address & port",
-                        "address & port",
-                        "ip-adresse & port",
-                        "ip-adresse und port",
-                        "adresse & port",
-                    )
-            val keywordsPattern = keywords.distinct().joinToString("|") { Regex.escape(it) }
-            val explicitPortRegex = Regex("""(?i)(?:$keywordsPattern)[:\s]*(\d{4,5})\b""")
-            pairingPort = explicitPortRegex.find(text)?.groupValues?.get(1)
-        }
-
-        // Priority C: Standalone 5-digit number
+        // Priority B: Standalone 5-digit number (independent of system language)
         if (pairingPort == null) {
             pairingPort =
                 FIVE_DIGIT_PORT_REGEX
@@ -74,5 +57,36 @@ object PrivdPairScreenTextScanner {
 
         AppLog.d(TAG, "parsePairingInfoFromText -> code=$pairingCode, port=$pairingPort (textLength=${text.length})")
         return PrivdPairScreenTextResult(port = pairingPort, code = pairingCode)
+    }
+
+    /**
+     * Parses raw text from the main Wireless Debugging screen to extract the
+     * 5-digit connect port (IP:PORT format). Returns 0 if not found.
+     */
+    fun parseConnectPortFromText(
+        text: String,
+        config: AutoSetupLanguageConfig? = null,
+    ): Int {
+        if (text.isBlank()) return 0
+
+        // If the text contains a 6-digit pairing code, it's the pairing dialog,
+        // so the IP:PORT is the pairing port, not the connect port.
+        if (PAIRING_CODE_REGEX.containsMatchIn(text)) {
+            AppLog.d(TAG, "parseConnectPortFromText: text contains a pairing code, skipping connect port extraction")
+            return 0
+        }
+
+        val portStr = IP_PORT_REGEX.find(text)?.groupValues?.get(1)
+        val port = portStr?.toIntOrNull() ?: 0
+        AppLog.d(TAG, "parseConnectPortFromText -> port=$port")
+        return port
+    }
+
+    /**
+     * Returns true if the text contains a 6-digit pairing code.
+     */
+    fun hasPairingCode(text: String): Boolean {
+        if (text.isBlank()) return false
+        return PAIRING_CODE_REGEX.containsMatchIn(text)
     }
 }

@@ -48,6 +48,8 @@
 #include <signal.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <sys/time.h>
 #include <sys/random.h>
 #include <stddef.h>
@@ -62,7 +64,8 @@
 #include <time.h>
 #include "cmd_parsers.h"
 
-#define ABSTRACT_SOCKET_NAME "megingiard.privd"
+#define PORT_START 51234
+#define PORT_END 51238
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
 #define MAX_LINE 512
@@ -312,35 +315,38 @@ static int discover_gamepad_fd(void) {
 
 
 /*
- * Binds an abstract-namespace Unix socket "@megingiard.privd".
+ * Binds a local TCP socket to 127.0.0.1, scanning port range 51234-51238.
  * Returns a listening fd on success, -1 on failure.
+ * Writes the bound port back to out_port.
  */
-static int bind_listening_socket(void) {
+static int bind_listening_socket(int *out_port) {
     /* SOCK_CLOEXEC ensures the fd is automatically closed in forked children
      * (e.g. the mirror app_process child launched via start_direct_mirror_child).
-     * Without it, the child inherits the fd and keeps the abstract socket bound
+     * Without it, the child inherits the fd and keeps the socket bound
      * even after the parent daemon is killed, causing the next spawn attempt to
      * fail with EADDRINUSE. */
-    int srv = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    int srv = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (srv < 0) return -1;
 
-    struct sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    /* Abstract namespace: leading NUL byte. */
-    addr.sun_path[0] = '\0';
-    strncpy(addr.sun_path + 1, ABSTRACT_SOCKET_NAME, sizeof(addr.sun_path) - 2);
+    int opt = 1;
+    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    socklen_t len = (socklen_t)(offsetof(struct sockaddr_un, sun_path) + 1 + strlen(ABSTRACT_SOCKET_NAME));
-    if (bind(srv, (struct sockaddr *)&addr, len) < 0) {
-        close(srv);
-        return -1;
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    for (int port = PORT_START; port <= PORT_END; port++) {
+        addr.sin_port = htons(port);
+        if (bind(srv, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+            if (listen(srv, 1) == 0) {
+                *out_port = port;
+                return srv;
+            }
+        }
     }
-    if (listen(srv, 1) < 0) {
-        close(srv);
-        return -1;
-    }
-    return srv;
+    close(srv);
+    return -1;
 }
 
 /*
@@ -1099,7 +1105,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "privd: warning: failed to open touchscreen node event6 (touch injection disabled) errno=%d\n", errno);
     }
 
-    int srv_fd = bind_listening_socket();
+    int bound_port = 0;
+    int srv_fd = bind_listening_socket(&bound_port);
     if (srv_fd < 0) {
         fprintf(stderr, "privd: bind_listening_socket failed errno=%d\n", errno);
         (void)write(STDOUT_FILENO, "E\n", 2);
@@ -1108,6 +1115,7 @@ int main(int argc, char *argv[]) {
         close(g_gamepad_fd);
         return 1;
     }
+    fprintf(stderr, "privd: bound to TCP port %d\n", bound_port);
 
     /* Signal readiness, then detach. */
     (void)write(STDOUT_FILENO, "R\n", 2);
@@ -1119,17 +1127,6 @@ int main(int argc, char *argv[]) {
         if (client < 0) {
             if (errno == EINTR) continue;
             break;
-        }
-        /* OS-level peer identity check: reject connections from any process
-         * that is not the provisioned Megingiard app.  This blocks rogue
-         * apps from even reaching the HMAC challenge-response, regardless of
-         * whether they somehow obtained the per-install key. */
-        struct ucred peer_cred;
-        socklen_t cred_len = sizeof(peer_cred);
-        if (getsockopt(client, SOL_SOCKET, SO_PEERCRED, &peer_cred, &cred_len) < 0 ||
-            peer_cred.uid != g_expected_app_uid) {
-            close(client);
-            continue;
         }
         /* HMAC challenge-response: reject clients that cannot prove they hold
          * the per-install key provisioned during bootstrap.

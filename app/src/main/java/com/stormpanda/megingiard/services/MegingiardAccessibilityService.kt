@@ -28,6 +28,7 @@ import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdClient
+import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdPairScreenTextScanner
 import com.stormpanda.megingiard.privd.PrivdState
@@ -45,6 +46,9 @@ import java.util.Locale
 private const val TAG = "MegingiardAccessService"
 private const val AUTO_TOGGLE_MAX_ATTEMPTS = 25
 private const val AUTO_TOGGLE_STEP_DELAY_MS = 350L
+private const val AUTO_SETUP_WARMUP_DELAY_MS = 400L
+private const val DEV_MODE_CLICK_COUNT = 7
+private const val POST_PAIRING_STABILIZATION_DELAY_MS = 1500L
 
 private enum class AutoSetupTargetStage {
     STAGE_B_WIRELESS_DEBUG,
@@ -52,18 +56,12 @@ private enum class AutoSetupTargetStage {
 }
 
 private enum class AutoToggleStage {
-    ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER,
-    ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT,
-    ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER,
-    ENTER_USB_DEBUG_SEARCH_QUERY,
-    CLICK_USB_DEBUG_SEARCH_RESULT,
-    TOGGLE_USB_DEBUG_SWITCH,
-    CLICK_SEARCH_BAR,
-    ENTER_SEARCH_QUERY,
-    CLICK_SEARCH_RESULT,
-    TOGGLE_SWITCH,
+    ACTIVATE_DEV_MODE,
+    TOGGLE_USB_DEBUG,
+    TOGGLE_WIRELESS_DEBUG,
     CLICK_PAIR_DIALOG,
     SCAN_PAIRING_CODE_AND_PAIR,
+    POST_PAIRING_STABILIZATION,
 }
 
 /**
@@ -76,7 +74,7 @@ private enum class AutoToggleStage {
 class MegingiardAccessibilityService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var autoToggleJob: Job? = null
-    private var autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
+    private var autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
     private var autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
 
     override fun onServiceConnected() {
@@ -98,8 +96,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun handleAutoToggleEvent(event: AccessibilityEvent) {
-        val pendingTime = autoTogglePendingTimestamp
-        if (pendingTime == 0L || System.currentTimeMillis() - pendingTime > AUTO_TOGGLE_TIMEOUT_MS) {
+        if (!_isAutoSetupActive) {
             return
         }
         val packageName = event.packageName?.toString() ?: return
@@ -152,13 +149,14 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 val config = getSystemAutoSetupConfig(applicationContext)
                 AppLog.i(
                     TAG,
-                    "startAutoToggleLoop: Starting Search-based auto-toggle loop in stage $autoToggleStage using language '${config.languageCode}'",
+                    "startAutoToggleLoop: Starting deep-link based auto-toggle loop in stage $autoToggleStage using language '${config.languageCode}'",
                 )
                 var attempts = 0
+                var lastStage = autoToggleStage
                 val context = applicationContext
                 val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
-                while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && autoTogglePendingTimestamp != 0L) {
+                while (isActive && attempts < AUTO_TOGGLE_MAX_ATTEMPTS && _isAutoSetupActive) {
                     val rootNode = getRootNodeForDisplay(Display.DEFAULT_DISPLAY)
                     if (rootNode != null) {
                         val clickedAllow = findAndClickAllowDialogButton(rootNode, config.allowButtonKeywords)
@@ -167,177 +165,126 @@ class MegingiardAccessibilityService : AccessibilityService() {
                         }
 
                         when (autoToggleStage) {
-                            AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER -> {
-                                val entered = findAndSetSearchQuery(rootNode, config.buildNumberQueryAndKeyword)
-                                if (entered) {
-                                    AppLog.i(
-                                        TAG,
-                                        "startAutoToggleLoop: Entered search query '${config.buildNumberQueryAndKeyword}' for Stage A",
-                                    )
-                                    autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT
-                                }
-                            }
-
-                            AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_SEARCH_RESULT -> {
-                                val clicked = findAndClickSearchResultItem(rootNode, config.buildNumberQueryAndKeyword)
-                                if (clicked) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Build number search result")
-                                    autoToggleStage = AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER
-                                }
-                            }
-
-                            AutoToggleStage.ACTIVATE_DEV_MODE_CLICK_BUILD_NUMBER -> {
-                                val clicked = findAndClickBuildNumber(rootNode, config.buildNumberQueryAndKeyword)
-                                if (clicked || isDevModeActive(context)) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Unlocked Developer Mode (Stage A)")
-                                    if (!isUsbDebuggingActive(context)) {
-                                        AppLog.i(
-                                            TAG,
-                                            "startAutoToggleLoop: USB debugging inactive, advancing to ENTER_USB_DEBUG_SEARCH_QUERY",
-                                        )
-                                        autoToggleStage = AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
-                                    } else {
-                                        AppLog.i(
-                                            TAG,
-                                            "startAutoToggleLoop: USB debugging active, advancing to Stage B (ENTER_SEARCH_QUERY)",
-                                        )
-                                        autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
-                                    }
-                                    launchSearchActivity(context, displayOptions)
-                                }
-                            }
-
-                            AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY -> {
-                                val entered = findAndSetSearchQuery(rootNode, config.usbDebuggingQueryAndKeyword)
-                                if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query '${config.usbDebuggingQueryAndKeyword}'")
-                                    autoToggleStage = AutoToggleStage.CLICK_USB_DEBUG_SEARCH_RESULT
+                            AutoToggleStage.ACTIVATE_DEV_MODE -> {
+                                if (isDevModeActive(context)) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: Developer Mode is active. Transitioning to TOGGLE_USB_DEBUG")
+                                    autoToggleStage = AutoToggleStage.TOGGLE_USB_DEBUG
+                                    launchSettingsScreen(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, displayOptions)
                                 } else {
-                                    val clickedBar = findAndClickSearchBar(rootNode, config.searchBarKeywords)
-                                    if (clickedBar) {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar fallback for USB Debugging")
-                                        autoToggleStage = AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
-                                    }
-                                }
-                            }
-
-                            AutoToggleStage.CLICK_USB_DEBUG_SEARCH_RESULT -> {
-                                val clickedResult = findAndClickSearchResultItem(rootNode, config.usbDebuggingQueryAndKeyword)
-                                if (clickedResult) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked USB Debugging search result")
-                                    autoToggleStage = AutoToggleStage.TOGGLE_USB_DEBUG_SWITCH
-                                }
-                            }
-
-                            AutoToggleStage.TOGGLE_USB_DEBUG_SWITCH -> {
-                                if (isUsbDebuggingActive(context)) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: USB Debugging is active! Advancing to Wireless Debugging search")
-                                    if (!isWirelessDebuggingActive(context) ||
-                                        autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING ||
-                                        !isDevicePaired(context)
-                                    ) {
-                                        autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
-                                        launchSearchActivity(context, displayOptions)
+                                    val clicked = findAndClickBuildNumber(rootNode, config.buildNumberQueryAndKeyword)
+                                    if (clicked) {
+                                        AppLog.d(TAG, "startAutoToggleLoop: Clicked build number. Waiting for active verification.")
                                     } else {
-                                        AppLog.i(TAG, "startAutoToggleLoop: USB & Wireless Debugging active and paired, connecting daemon")
-                                        autoTogglePendingTimestamp = 0L
-                                        serviceScope.launch(Dispatchers.IO) {
-                                            PrivdManager.connect(context)
-                                        }
-                                        break
+                                        AppLog.d(TAG, "startAutoToggleLoop: Build number not visible, scrolling forward.")
+                                        performScrollForward(rootNode)
                                     }
+                                }
+                            }
+
+                            AutoToggleStage.TOGGLE_USB_DEBUG -> {
+                                if (isUsbDebuggingActive(context)) {
+                                    AppLog.i(TAG, "startAutoToggleLoop: USB Debugging is active. Transitioning to TOGGLE_WIRELESS_DEBUG")
+                                    autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
+                                    launchSettingsScreen(context, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, displayOptions)
                                 } else {
                                     val toggled = findAndToggleSwitch(rootNode, config.usbDebuggingQueryAndKeyword)
                                     if (toggled) {
-                                        AppLog.i(
-                                            TAG,
-                                            "startAutoToggleLoop: Toggled USB Debugging switch, waiting for system dialog confirmation",
-                                        )
-                                    }
-                                }
-                            }
-
-                            AutoToggleStage.CLICK_SEARCH_BAR -> {
-                                val clicked = findAndClickSearchBar(rootNode, config.searchBarKeywords)
-                                if (clicked) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar")
-                                    autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
-                                }
-                            }
-
-                            AutoToggleStage.ENTER_SEARCH_QUERY -> {
-                                val entered = findAndSetSearchQuery(rootNode, config.wirelessDebuggingQueryAndKeyword)
-                                if (entered) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Entered search query '${config.wirelessDebuggingQueryAndKeyword}'")
-                                    autoToggleStage = AutoToggleStage.CLICK_SEARCH_RESULT
-                                } else {
-                                    val clickedBar = findAndClickSearchBar(rootNode, config.searchBarKeywords)
-                                    if (clickedBar) {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Search Bar fallback")
-                                        autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
-                                    }
-                                }
-                            }
-
-                            AutoToggleStage.CLICK_SEARCH_RESULT -> {
-                                val clickedResult = findAndClickSearchResultItem(rootNode, config.wirelessDebuggingQueryAndKeyword)
-                                if (clickedResult) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging search result")
-                                    autoToggleStage = AutoToggleStage.TOGGLE_SWITCH
-                                }
-                            }
-
-                            AutoToggleStage.TOGGLE_SWITCH -> {
-                                val toggled = findAndToggleSwitch(rootNode, config.wirelessDebuggingQueryAndKeyword)
-                                if (toggled) {
-                                    AppLog.i(TAG, "startAutoToggleLoop: Successfully toggled Wireless Debugging switch ON")
-                                    val isPairedOnScreen = isMegingiardInPairedDevices(rootNode)
-                                    val hasLocalCreds = isDevicePaired(context)
-                                    AppLog.i(TAG, "startAutoToggleLoop: isPairedOnScreen=$isPairedOnScreen, hasLocalCreds=$hasLocalCreds")
-
-                                    if (hasLocalCreds && !isPairedOnScreen) {
-                                        AppLog.w(
-                                            TAG,
-                                            "startAutoToggleLoop: Stored credentials present but Megingiard not listed in system paired devices! Clearing stale credentials and triggering pairing.",
-                                        )
-                                        PrivdBootstrapper.clearCredentials(context)
-                                        autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
-                                    }
-
-                                    if (!isUsbDebuggingActive(context)) {
-                                        AppLog.i(
-                                            TAG,
-                                            "startAutoToggleLoop: USB debugging inactive after Wireless toggle, advancing to ENTER_USB_DEBUG_SEARCH_QUERY",
-                                        )
-                                        autoToggleStage = AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
-                                        launchSearchActivity(context, displayOptions)
-                                    } else if (autoSetupTargetStage == AutoSetupTargetStage.STAGE_C_PAIRING &&
-                                        !isMegingiardInPairedDevices(rootNode)
-                                    ) {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Advancing to Stage C (Clicking Pair Dialog row)")
-                                        autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                        AppLog.d(TAG, "startAutoToggleLoop: Issued toggle for USB Debugging.")
                                     } else {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Auto-setup pipeline completed successfully, connecting daemon")
-                                        autoTogglePendingTimestamp = 0L
-                                        serviceScope.launch(Dispatchers.IO) {
-                                            PrivdManager.connect(context)
+                                        AppLog.d(TAG, "startAutoToggleLoop: USB Debugging switch not visible, scrolling forward.")
+                                        performScrollForward(rootNode)
+                                    }
+                                }
+                            }
+
+                            AutoToggleStage.TOGGLE_WIRELESS_DEBUG -> {
+                                val isWirelessOn = isWirelessDebuggingActive(context)
+                                val hasLocalCreds = PrivdBootstrapper.hasCredentials(context)
+
+                                val isSubScreen = isWirelessDebuggingSubScreen(rootNode, config.wirelessDebuggingQueryAndKeyword)
+
+                                if (isSubScreen) {
+                                    if (isWirelessOn) {
+                                        val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                        if (connectPort > 0) {
+                                            PrivdBootstrapper.setScreenConnectPort(connectPort)
                                         }
-                                        break
+
+                                        if (hasLocalCreds) {
+                                            AppLog.i(
+                                                TAG,
+                                                "startAutoToggleLoop: Wireless Debugging active and stored credentials exist. Attempting connection first...",
+                                            )
+                                            val ok =
+                                                withContext(Dispatchers.IO) {
+                                                    PrivdManager.connect(context)
+                                                }
+                                            if (ok) {
+                                                AppLog.i(TAG, "startAutoToggleLoop: Connection succeeded using stored credentials!")
+                                                _isAutoSetupActive = false
+                                                withContext(Dispatchers.Main) {
+                                                    restoreTopScreenApp(context)
+                                                }
+                                                break
+                                            } else {
+                                                val lastError = PrivdManager.lastError.value
+                                                if (lastError == PrivdError.ADB_PAIRING_REQUIRED) {
+                                                    AppLog.w(
+                                                        TAG,
+                                                        "startAutoToggleLoop: Connection/bootstrap failed with stored credentials because pairing is required. Clearing credentials and falling back to pairing code.",
+                                                    )
+                                                    PrivdBootstrapper.clearCredentials(context)
+                                                    autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                                } else {
+                                                    AppLog.w(
+                                                        TAG,
+                                                        "startAutoToggleLoop: Connection/bootstrap failed with stored credentials (non-auth error: $lastError). Retrying connection next tick without clearing credentials.",
+                                                    )
+                                                    // Retain credentials, loop will retry and scan the fresh port automatically
+                                                }
+                                            }
+                                        } else {
+                                            AppLog.i(
+                                                TAG,
+                                                "startAutoToggleLoop: Wireless Debugging active but unpaired (no credentials), advancing to CLICK_PAIR_DIALOG",
+                                            )
+                                            autoToggleStage = AutoToggleStage.CLICK_PAIR_DIALOG
+                                        }
+                                    } else {
+                                        val toggled = findAndToggleMainSwitchOnSubScreen(rootNode)
+                                        if (toggled) {
+                                            AppLog.d(TAG, "startAutoToggleLoop: Issued toggle for Wireless Debugging main switch.")
+                                        }
+                                    }
+                                } else {
+                                    val clickedRow = findAndClickPreferenceRow(rootNode, config.wirelessDebuggingQueryAndKeyword)
+                                    if (clickedRow) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging row to enter sub-screen")
+                                    } else {
+                                        AppLog.d(
+                                            TAG,
+                                            "startAutoToggleLoop: Wireless Debugging preference row not visible, scrolling forward.",
+                                        )
+                                        performScrollForward(rootNode)
                                     }
                                 }
                             }
 
                             AutoToggleStage.CLICK_PAIR_DIALOG -> {
+                                val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                if (connectPort > 0) {
+                                    PrivdBootstrapper.setScreenConnectPort(connectPort)
+                                }
+
                                 val clickedPair = findAndClickPairDialog(rootNode, config.pairDeviceKeywords)
                                 if (clickedPair) {
                                     AppLog.i(TAG, "startAutoToggleLoop: Clicked Pair Dialog row, advancing to SCAN_PAIRING_CODE_AND_PAIR")
                                     autoToggleStage = AutoToggleStage.SCAN_PAIRING_CODE_AND_PAIR
                                 } else {
-                                    val clickedSubScreen =
-                                        findAndClickSearchResultItem(rootNode, config.wirelessDebuggingQueryAndKeyword)
-                                    if (clickedSubScreen) {
-                                        AppLog.i(TAG, "startAutoToggleLoop: Clicked Wireless Debugging row text to enter sub-screen")
-                                    }
+                                    AppLog.d(TAG, "startAutoToggleLoop: Pair Dialog row not visible, scrolling forward.")
+                                    performScrollForward(rootNode)
                                 }
                             }
 
@@ -352,34 +299,113 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                             TAG,
                                             "startAutoToggleLoop: Auto-discovered pairing params port=$portInt, code=$codeStr. Triggering PrivdBootstrapper.pair()",
                                         )
-                                        serviceScope.launch(Dispatchers.IO) {
-                                            val ok = PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
-                                            if (ok) {
-                                                AppLog.i(
-                                                    TAG,
-                                                    "startAutoToggleLoop: Pairing succeeded! Connecting daemon via PrivdManager.connect()",
-                                                )
-                                                PrivdManager.connect(context)
+                                        val ok =
+                                            withContext(Dispatchers.IO) {
+                                                PrivdBootstrapper.pair(context, "127.0.0.1", portInt, codeStr)
                                             }
+                                        if (ok) {
+                                            AppLog.i(
+                                                TAG,
+                                                "startAutoToggleLoop: Pairing succeeded! Transitioning to POST_PAIRING_STABILIZATION",
+                                            )
+                                            autoToggleStage = AutoToggleStage.POST_PAIRING_STABILIZATION
+                                        } else {
+                                            AppLog.w(TAG, "startAutoToggleLoop: Pairing failed.")
+                                            _isAutoSetupActive = false
+                                            break
                                         }
-                                        autoTogglePendingTimestamp = 0L
-                                        break
                                     }
+                                }
+                            }
+
+                            AutoToggleStage.POST_PAIRING_STABILIZATION -> {
+                                val allText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                if (!PrivdPairScreenTextScanner.hasPairingCode(allText)) {
+                                    AppLog.i(
+                                        TAG,
+                                        "startAutoToggleLoop: Pairing dialog dismissed. Waiting 1.5s for adbd key stabilization...",
+                                    )
+                                    delay(POST_PAIRING_STABILIZATION_DELAY_MS) // Wait for adbd to write & reload keys
+
+                                    // Rescan the main Wireless Debugging screen for the connect port
+                                    val screenText = scanActiveWindowText(Display.DEFAULT_DISPLAY)
+                                    val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(screenText, config)
+                                    if (connectPort > 0) {
+                                        AppLog.i(TAG, "startAutoToggleLoop: Scanned connect port after pairing: $connectPort")
+                                        PrivdBootstrapper.setScreenConnectPort(connectPort)
+                                    } else {
+                                        AppLog.w(TAG, "startAutoToggleLoop: Failed to scan connect port after pairing.")
+                                    }
+
+                                    // Attempt connection
+                                    AppLog.i(TAG, "startAutoToggleLoop: Connecting daemon via PrivdManager.connect()")
+                                    val connected =
+                                        withContext(Dispatchers.IO) {
+                                            PrivdManager.connect(context)
+                                        }
+                                    AppLog.i(TAG, "startAutoToggleLoop: Connection after pairing result: $connected")
+                                    _isAutoSetupActive = false
+                                    if (connected) {
+                                        withContext(Dispatchers.Main) {
+                                            restoreTopScreenApp(context)
+                                        }
+                                    }
+                                    break
+                                } else {
+                                    AppLog.d(TAG, "startAutoToggleLoop: Waiting for pairing dialog to dismiss...")
                                 }
                             }
                         }
                     }
-                    attempts++
+                    if (autoToggleStage != lastStage) {
+                        attempts = 0
+                        lastStage = autoToggleStage
+                    } else {
+                        attempts++
+                    }
                     delay(AUTO_TOGGLE_STEP_DELAY_MS)
                 }
-                if (autoTogglePendingTimestamp != 0L) {
+                if (_isAutoSetupActive) {
                     AppLog.w(TAG, "startAutoToggleLoop: Timed out in stage $autoToggleStage after $AUTO_TOGGLE_MAX_ATTEMPTS attempts")
-                    autoTogglePendingTimestamp = 0L
+                    _isAutoSetupActive = false
                 }
             }
     }
 
     private fun findAndClickAllowDialogButton(
+        rootNode: AccessibilityNodeInfo,
+        allowKeywords: List<String>,
+    ): Boolean {
+        val buttonNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/button1") ?: emptyList()
+        val settingsButtonNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/button1") ?: emptyList()
+        val allButtons = (buttonNodes + settingsButtonNodes).distinct()
+
+        for (btn in allButtons) {
+            val text = btn.text?.toString() ?: ""
+            val contentDesc = btn.contentDescription?.toString() ?: ""
+            val combined = "$text $contentDesc".lowercase().trim()
+
+            val isMatch =
+                allowKeywords.any { kw ->
+                    val cleanKw = kw.lowercase().trim()
+                    combined.contains(cleanKw) || text.equals(cleanKw, ignoreCase = true)
+                } || (combined.isNotBlank() && !combined.contains("cancel") && !combined.contains("abbrechen"))
+
+            if (isMatch) {
+                val clickable = findClickableAncestorOrSelf(btn) ?: btn
+                clickable.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                val success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (success) {
+                    AppLog.i(TAG, "findAndClickAllowDialogButton: Clicked network trust dialog button via ID: '$text'")
+                    return true
+                }
+            }
+        }
+
+        return findAndClickAllowDialogButtonRecursive(rootNode, allowKeywords)
+    }
+
+    private fun findAndClickAllowDialogButtonRecursive(
         node: AccessibilityNodeInfo,
         allowKeywords: List<String>,
     ): Boolean {
@@ -395,222 +421,93 @@ class MegingiardAccessibilityService : AccessibilityService() {
         val isMatch =
             allowKeywords.any { kw ->
                 val cleanKw = kw.lowercase().trim()
-                combined == cleanKw ||
-                    combined.startsWith(cleanKw) ||
-                    cleanKw in combined.split(Regex("\\s+")) ||
-                    text.equals(cleanKw, ignoreCase = true) ||
-                    contentDesc.equals(cleanKw, ignoreCase = true)
+                combined == cleanKw || text.equals(cleanKw, ignoreCase = true)
             } || (viewId.contains("button1") && combined.isNotBlank() && !combined.contains("cancel") && !combined.contains("abbrechen"))
 
         if (isMatch) {
-            val clickableNode = findClickableAncestorOrSelf(node) ?: node
-            clickableNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-            val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            if (success) {
-                AppLog.i(TAG, "findAndClickAllowDialogButton: Clicked network trust dialog positive button '$text' ($viewId)")
-                return true
-            } else {
-                val directSuccess = node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                if (directSuccess) {
-                    AppLog.i(
-                        TAG,
-                        "findAndClickAllowDialogButton: Clicked network trust dialog positive button directly '$text' ($viewId)",
-                    )
-                    return true
-                }
-            }
+            val clickable = findClickableAncestorOrSelf(node) ?: node
+            val success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            if (success) return true
         }
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndClickAllowDialogButton(child, allowKeywords)) return true
-        }
-        return false
-    }
-
-    private fun findAndClickSearchBar(
-        node: AccessibilityNodeInfo,
-        searchKeywords: List<String>,
-    ): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val viewId = node.viewIdResourceName ?: ""
-        val combined = "$text $contentDesc $viewId".lowercase()
-
-        val isSearchNode =
-            viewId.contains("search_action_bar") ||
-                viewId.contains("search_bar") ||
-                searchKeywords.any { combined.contains(it.lowercase()) }
-
-        if (isSearchNode) {
-            val clickableNode = findClickableAncestorOrSelf(node)
-            if (clickableNode != null) {
-                val success = clickableNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                if (success) return true
-            }
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (findAndClickSearchBar(child, searchKeywords)) return true
-        }
-        return false
-    }
-
-    private fun findAndSetSearchQuery(
-        node: AccessibilityNodeInfo,
-        query: String,
-    ): Boolean {
-        val viewId = node.viewIdResourceName ?: ""
-        val className = node.className?.toString() ?: ""
-
-        val isEditTextNode =
-            viewId.contains("search_src_text") ||
-                viewId.contains("search_view") ||
-                className.contains("EditText") ||
-                className.contains("AutoCompleteTextView")
-
-        if (isEditTextNode) {
-            node.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-            node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-
-            val arguments =
-                Bundle().apply {
-                    putCharSequence(
-                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                        query,
-                    )
-                }
-            val success = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
-            if (success) {
-                AppLog.i(TAG, "findAndSetSearchQuery: Successfully set text '$query' via ACTION_SET_TEXT on $viewId ($className)")
-                return true
-            } else {
-                AppLog.w(TAG, "findAndSetSearchQuery: ACTION_SET_TEXT returned false on $viewId ($className)")
-            }
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (findAndSetSearchQuery(child, query)) return true
-        }
-        return false
-    }
-
-    private fun findAndClickSearchResultItem(
-        node: AccessibilityNodeInfo,
-        vararg targetKeywords: String,
-    ): Boolean {
-        val viewId = node.viewIdResourceName ?: ""
-        val className = node.className?.toString() ?: ""
-
-        // Skip the search input box / search bar at the top of the screen
-        if (viewId.contains("search_src_text") ||
-            viewId.contains("search_view") ||
-            className.contains("EditText") ||
-            className.contains("AutoCompleteTextView")
-        ) {
-            return false
-        }
-
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val combined = "$text $contentDesc".lowercase()
-
-        val isMatch =
-            targetKeywords.any { kw ->
-                val cleanKw = kw.lowercase()
-                combined.contains(cleanKw) ||
-                    combined.contains(cleanKw.replace("-", " ")) ||
-                    combined.contains(cleanKw.replace("-", ""))
-            }
-
-        if (isMatch) {
-            val clickable = findClickableAncestorOrSelf(node)
-            if (clickable != null) {
-                val clickedId = clickable.viewIdResourceName ?: ""
-                if (!clickedId.contains("search_src") && !clickedId.contains("search_view")) {
-                    val success = clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    if (success) {
-                        AppLog.i(TAG, "findAndClickSearchResultItem: Successfully clicked search result item for '$text'")
-                        return true
-                    }
-                }
-            }
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (findAndClickSearchResultItem(child, *targetKeywords)) return true
+            if (findAndClickAllowDialogButtonRecursive(child, allowKeywords)) return true
         }
         return false
     }
 
     private fun findAndToggleSwitch(
-        node: AccessibilityNodeInfo,
+        rootNode: AccessibilityNodeInfo,
         targetKeyword: String,
     ): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val viewId = node.viewIdResourceName ?: ""
-        val combined = "$text $contentDesc $viewId".lowercase()
-
-        val cleanKw = targetKeyword.lowercase()
-        val isTargetText =
-            combined.contains(cleanKw) ||
-                combined.contains(cleanKw.replace("-", " ")) ||
-                combined.contains(cleanKw.replace("-", "")) ||
-                combined.contains("wireless debugging") ||
-                combined.contains("debugging über wlan") ||
-                combined.contains("usb debugging") ||
-                combined.contains("usb-debugging")
-
-        if (isTargetText) {
-            val container = node.parent ?: node
-            val switchNode =
-                findSwitchOrCheckable(node)
-                    ?: findSwitchOrCheckable(container)
-                    ?: findSwitchOrCheckable(container.parent ?: container)
-
-            val isChecked = switchNode?.isChecked == true
-
-            if (!isChecked) {
-                AppLog.i(TAG, "findAndToggleSwitch: Target '$targetKeyword' is OFF, attempting row and switch click ($viewId)")
-
-                // 1. Try clicking preference row container first (triggers Preference.performClick())
-                val rowClickable =
-                    findClickableAncestorOrSelf(node)
-                        ?: findClickableAncestorOrSelf(container)
-                        ?: (if (switchNode != null) findClickableAncestorOrSelf(switchNode) else null)
-
-                var clicked = rowClickable?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
-
-                // 2. If row click failed, click switch widget directly
-                if (!clicked && switchNode != null) {
-                    clicked = switchNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }
-
-                // 3. Fallback: focus + click row
-                if (!clicked && rowClickable != null) {
-                    rowClickable.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-                    clicked = rowClickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                }
-
-                if (clicked) {
-                    AppLog.i(TAG, "findAndToggleSwitch: Successfully issued ACTION_CLICK for '$targetKeyword'")
-                } else {
-                    AppLog.w(TAG, "findAndToggleSwitch: Failed to click row or switch for '$targetKeyword'")
-                }
-                return true
+        // Special fallback for main switch bar on sub-screens (Wireless Debugging page)
+        val mainSwitchNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch") ?: emptyList()
+        val switchBarNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch_bar") ?: emptyList()
+        val allMainSwitches = (mainSwitchNodes + switchBarNodes).distinct()
+        for (ms in allMainSwitches) {
+            val switchNode = findSwitchOrCheckable(ms) ?: ms
+            if (!switchNode.isChecked) {
+                AppLog.i(TAG, "findAndToggleSwitch: Found main switch bar. Toggling ON.")
+                return switchNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             } else {
-                AppLog.i(TAG, "findAndToggleSwitch: Switch for '$targetKeyword' is already ON")
+                AppLog.d(TAG, "findAndToggleSwitch: Main switch bar is already ON")
                 return true
             }
         }
 
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (findAndToggleSwitch(child, targetKeyword)) return true
+        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
+        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
+        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+
+        val cleanKw = targetKeyword.lowercase()
+
+        for (titleNode in allTitles) {
+            val titleText = titleNode.text?.toString() ?: ""
+            val matches =
+                titleText.lowercase().contains(cleanKw) ||
+                    titleText.lowercase().replace("-", " ").contains(cleanKw.replace("-", " ")) ||
+                    titleText.lowercase().replace("-", "").contains(cleanKw.replace("-", ""))
+
+            if (matches) {
+                val parentRow = titleNode.parent ?: continue
+                val switchIds =
+                    listOf(
+                        "android:id/switch_widget",
+                        "com.android.settings:id/switch_widget",
+                        "com.android.settings:id/main_switch",
+                    )
+                var switchNode: AccessibilityNodeInfo? = null
+                for (sid in switchIds) {
+                    val found = parentRow.findAccessibilityNodeInfosByViewId(sid) ?: continue
+                    if (found.isNotEmpty()) {
+                        switchNode = found.first()
+                        break
+                    }
+                }
+
+                if (switchNode == null) {
+                    switchNode = findSwitchOrCheckable(parentRow)
+                }
+
+                if (switchNode != null) {
+                    if (!switchNode.isChecked) {
+                        AppLog.i(TAG, "findAndToggleSwitch: Target '$targetKeyword' is OFF, toggling switch")
+                        val rowClickable =
+                            findClickableAncestorOrSelf(titleNode)
+                                ?: findClickableAncestorOrSelf(parentRow)
+                                ?: switchNode
+                        var clicked = rowClickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        if (!clicked) {
+                            clicked = switchNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                        }
+                        return clicked
+                    } else {
+                        AppLog.d(TAG, "findAndToggleSwitch: Switch for '$targetKeyword' is already ON")
+                        return true
+                    }
+                }
+            }
         }
         return false
     }
@@ -635,33 +532,32 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun findAndClickBuildNumber(
-        node: AccessibilityNodeInfo,
+        rootNode: AccessibilityNodeInfo,
         targetKeyword: String,
     ): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val viewId = node.viewIdResourceName ?: ""
-        val combined = "$text $contentDesc $viewId".lowercase()
+        val buildNumberIds =
+            listOf(
+                "com.android.settings:id/build_number",
+                "android:id/title",
+            )
 
-        val cleanKw = targetKeyword.lowercase()
-        val isBuildNumber =
-            combined.contains(cleanKw) ||
-                combined.contains(cleanKw.replace("-", " ")) ||
-                combined.contains(cleanKw.replace("-", "")) ||
-                viewId.contains("build_number")
+        for (bid in buildNumberIds) {
+            val nodes = rootNode.findAccessibilityNodeInfosByViewId(bid) ?: continue
+            for (node in nodes) {
+                val text = node.text?.toString() ?: ""
+                val matches =
+                    text.contains(targetKeyword, ignoreCase = true) ||
+                        node.viewIdResourceName?.contains("build_number") == true
 
-        if (isBuildNumber) {
-            val clickable = findClickableAncestorOrSelf(node) ?: node
-            AppLog.i(TAG, "findAndClickBuildNumber: Found Build Number item, clicking 7 times")
-            for (k in 0..6) {
-                clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                if (matches) {
+                    val clickable = findClickableAncestorOrSelf(node) ?: node
+                    AppLog.i(TAG, "findAndClickBuildNumber: Found build number row ('$text'), clicking $DEV_MODE_CLICK_COUNT times")
+                    repeat(DEV_MODE_CLICK_COUNT) {
+                        clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    }
+                    return true
+                }
             }
-            return true
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (findAndClickBuildNumber(child, targetKeyword)) return true
         }
         return false
     }
@@ -683,28 +579,126 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun findAndClickPairDialog(
-        node: AccessibilityNodeInfo,
+        rootNode: AccessibilityNodeInfo,
         pairKeywords: List<String>,
     ): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val viewId = node.viewIdResourceName ?: ""
-        val combined = "$text $contentDesc $viewId".lowercase()
+        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
+        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
+        val allTitles = (titleNodes + settingsTitleNodes).distinct()
 
-        val isPairItem =
-            pairKeywords.any { kw ->
-                combined.contains(kw.lowercase())
+        for (titleNode in allTitles) {
+            val titleText = titleNode.text?.toString() ?: ""
+            val isPairItem =
+                pairKeywords.any { kw ->
+                    titleText.contains(kw, ignoreCase = true)
+                }
+
+            if (isPairItem) {
+                val clickable = findClickableAncestorOrSelf(titleNode) ?: titleNode
+                AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row ('$titleText'), clicking")
+                return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             }
-
-        if (isPairItem) {
-            val clickable = findClickableAncestorOrSelf(node) ?: node
-            AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row, clicking")
-            return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         }
+        return false
+    }
 
+    private fun performScrollForward(node: AccessibilityNodeInfo): Boolean {
+        if (node.isScrollable) {
+            val success = node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            if (success) {
+                AppLog.d(TAG, "performScrollForward: Scrolled container successfully")
+                return true
+            }
+        }
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            if (findAndClickPairDialog(child, pairKeywords)) return true
+            if (performScrollForward(child)) return true
+        }
+        return false
+    }
+
+    private fun pairKeywordsMatchPresent(
+        rootNode: AccessibilityNodeInfo,
+        pairKeywords: List<String>,
+    ): Boolean {
+        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
+        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
+        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+
+        for (titleNode in allTitles) {
+            val titleText = titleNode.text?.toString() ?: ""
+            if (pairKeywords.any { kw -> titleText.contains(kw, ignoreCase = true) }) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun findAndClickPreferenceRow(
+        rootNode: AccessibilityNodeInfo,
+        targetKeyword: String,
+    ): Boolean {
+        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
+        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
+        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+
+        for (titleNode in allTitles) {
+            val titleText = titleNode.text?.toString() ?: ""
+            if (titleText.contains(targetKeyword, ignoreCase = true)) {
+                val clickable = findClickableAncestorOrSelf(titleNode) ?: titleNode
+                return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            }
+        }
+        return false
+    }
+
+    private fun isWirelessDebuggingSubScreen(
+        rootNode: AccessibilityNodeInfo,
+        wirelessDebuggingKeyword: String,
+    ): Boolean {
+        val sb = StringBuilder()
+        collectAllText(rootNode, sb)
+        val allText = sb.toString().lowercase()
+
+        val devOptionsKeywords =
+            listOf("developer options", "entwickleroptionen", "opciones de desarrollador", "options pour les développeurs")
+        val isDevOptionsPresent = devOptionsKeywords.any { kw -> allText.contains(kw) }
+
+        val isWirelessDebuggingPresent = allText.contains(wirelessDebuggingKeyword.lowercase())
+
+        return isWirelessDebuggingPresent && !isDevOptionsPresent
+    }
+
+    private fun findAndToggleMainSwitchOnSubScreen(rootNode: AccessibilityNodeInfo): Boolean {
+        val mainSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch") ?: emptyList()
+        val settingsSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/switch_widget") ?: emptyList()
+        val genericSwitches = rootNode.findAccessibilityNodeInfosByViewId("android:id/switch_widget") ?: emptyList()
+        val allSwitches = (mainSwitches + settingsSwitches + genericSwitches).distinct()
+
+        for (switchNode in allSwitches) {
+            if (switchNode.isCheckable) {
+                if (!switchNode.isChecked) {
+                    AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Main switch is OFF, toggling ON")
+                    val target = findClickableAncestorOrSelf(switchNode) ?: switchNode
+                    return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                } else {
+                    AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Main switch is already ON")
+                    return true
+                }
+            }
+            for (i in 0 until switchNode.childCount) {
+                val child = switchNode.getChild(i) ?: continue
+                if (child.isCheckable) {
+                    if (!child.isChecked) {
+                        AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Child switch is OFF, toggling ON")
+                        val target = findClickableAncestorOrSelf(child) ?: child
+                        return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    } else {
+                        AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Child switch is already ON")
+                        return true
+                    }
+                }
+            }
         }
         return false
     }
@@ -764,8 +758,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     companion object {
         private var instance: MegingiardAccessibilityService? = null
-        private var autoTogglePendingTimestamp = 0L
-        private const val AUTO_TOGGLE_TIMEOUT_MS = 15000L
+        private var _isAutoSetupActive = false
+        private var appToRestoreAfterSetup: String? = null
+
+        val isAutoSetupActive: Boolean
+            get() = _isAutoSetupActive
 
         /**
          * Returns true if the service instance is active and connected.
@@ -805,8 +802,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 false
             }
 
-        fun isDevicePaired(context: Context): Boolean =
-            PrivdBootstrapper.hasCredentials(context) && PrivdManager.state.value != PrivdState.FAILED
+        fun isDevicePaired(context: Context): Boolean = PrivdBootstrapper.hasCredentials(context)
 
         fun dismissNotificationShade(): Boolean {
             val inst = instance ?: return false
@@ -831,10 +827,24 @@ class MegingiardAccessibilityService : AccessibilityService() {
          * based on current device starting conditions.
          */
         fun startMultiStageAutoSetup(context: Context) {
+            val currentForeground = AutoSwitchCoordinator.foregroundApp.value
+            if (currentForeground != null &&
+                currentForeground != "com.android.settings" &&
+                currentForeground != "com.android.settings.intelligence" &&
+                !currentForeground.contains("com.stormpanda.megingiard")
+            ) {
+                appToRestoreAfterSetup = currentForeground
+                AppLog.i(TAG, "startMultiStageAutoSetup: Remembering top screen app to restore: $appToRestoreAfterSetup")
+            } else {
+                appToRestoreAfterSetup = null
+                AppLog.i(TAG, "startMultiStageAutoSetup: No restorable top screen app running (foreground app: $currentForeground)")
+            }
+
             val displayOptions = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY).toBundle()
 
-            if (!isEnabled(context)) {
-                AppLog.w(TAG, "startMultiStageAutoSetup: Accessibility Service is not enabled")
+            val inst = instance
+            if (inst == null || !isEnabled(context)) {
+                AppLog.w(TAG, "startMultiStageAutoSetup: Accessibility Service is not active or enabled")
                 Toast.makeText(context, R.string.privd_toast_accessibility_required, Toast.LENGTH_LONG).show()
                 val accessibilityIntent =
                     Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
@@ -866,6 +876,8 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 return
             }
 
+            _isAutoSetupActive = true
+
             val devModeActive = isDevModeActive(context)
             val usbActive = isUsbDebuggingActive(context)
             val wirelessActive = isWirelessDebuggingActive(context)
@@ -887,17 +899,29 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 "startMultiStageAutoSetup: Connect/bootstrap failed despite saved credentials. Falling back to Stage C (Pairing).",
                             )
                             withContext(Dispatchers.Main) {
-                                instance?.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
-                                instance?.autoToggleStage = AutoToggleStage.ENTER_SEARCH_QUERY
-                                autoTogglePendingTimestamp = System.currentTimeMillis()
-                                instance?.startAutoToggleLoop()
-                                launchSearchActivity(context, displayOptions)
+                                inst.autoSetupTargetStage = AutoSetupTargetStage.STAGE_C_PAIRING
+                                inst.autoToggleStage = AutoToggleStage.TOGGLE_WIRELESS_DEBUG
+                                _isAutoSetupActive = true
+                                launchSettingsScreenWarmedUp(
+                                    context,
+                                    Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS,
+                                    displayOptions,
+                                    inst.serviceScope,
+                                ) {
+                                    inst.startAutoToggleLoop()
+                                }
+                            }
+                        } else {
+                            _isAutoSetupActive = false
+                            withContext(Dispatchers.Main) {
+                                restoreTopScreenApp(context)
                             }
                         }
                     }
                     return
                 }
                 Toast.makeText(context, R.string.privd_toast_all_set, Toast.LENGTH_LONG).show()
+                _isAutoSetupActive = false
                 return
             }
 
@@ -911,86 +935,75 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
             val initialStage =
                 when {
-                    !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER
-                    !usbActive -> AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY
-                    else -> AutoToggleStage.ENTER_SEARCH_QUERY
+                    !devModeActive -> AutoToggleStage.ACTIVATE_DEV_MODE
+                    !usbActive -> AutoToggleStage.TOGGLE_USB_DEBUG
+                    else -> AutoToggleStage.TOGGLE_WIRELESS_DEBUG
                 }
 
-            instance?.autoSetupTargetStage = targetStage
-            instance?.autoToggleStage = initialStage
-            autoTogglePendingTimestamp = System.currentTimeMillis()
+            inst.autoSetupTargetStage = targetStage
+            inst.autoToggleStage = initialStage
+            _isAutoSetupActive = true
 
-            instance?.startAutoToggleLoop()
-
-            when (initialStage) {
-                AutoToggleStage.ACTIVATE_DEV_MODE_SEARCH_BUILD_NUMBER,
-                AutoToggleStage.ENTER_USB_DEBUG_SEARCH_QUERY,
-                AutoToggleStage.ENTER_SEARCH_QUERY,
-                -> {
-                    launchSearchActivity(context, displayOptions)
+            val actionToLaunch =
+                when (initialStage) {
+                    AutoToggleStage.ACTIVATE_DEV_MODE -> Settings.ACTION_DEVICE_INFO_SETTINGS
+                    AutoToggleStage.TOGGLE_USB_DEBUG -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+                    AutoToggleStage.TOGGLE_WIRELESS_DEBUG -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+                    else -> null
                 }
 
-                else -> {}
+            if (actionToLaunch != null) {
+                launchSettingsScreenWarmedUp(
+                    context,
+                    actionToLaunch,
+                    displayOptions,
+                    inst.serviceScope,
+                ) {
+                    inst.startAutoToggleLoop()
+                }
+            } else {
+                inst.startAutoToggleLoop()
             }
         }
 
-        private fun launchSearchActivity(
+        private fun launchSettingsScreen(
             context: Context,
+            action: String,
             displayOptions: Bundle,
         ) {
-            val searchActivityIntent =
-                Intent().apply {
-                    component =
-                        ComponentName(
-                            "com.android.settings.intelligence",
-                            "com.android.settings.intelligence.search.SearchActivity",
-                        )
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-            val searchActionIntent =
-                Intent("android.settings.SETTINGS_SEARCH_SETTINGS").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-            val settingsIntent =
-                Intent(Settings.ACTION_SETTINGS).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
+            val intents =
+                listOf(
+                    Intent(action),
+                    Intent(Settings.ACTION_SETTINGS),
+                )
 
-            try {
-                context.startActivity(searchActivityIntent, displayOptions)
-            } catch (e: Exception) {
+            for (intent in intents) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 try {
-                    context.startActivity(searchActionIntent, displayOptions)
-                } catch (e2: Exception) {
-                    try {
-                        context.startActivity(settingsIntent, displayOptions)
-                    } catch (e3: Exception) {
-                        AppLog.e(TAG, "Failed to launch Settings: $e3")
-                    }
+                    AppLog.d(TAG, "launchSettingsScreen: Attempting to launch intent: $intent")
+                    context.startActivity(intent, displayOptions)
+                    return
+                } catch (e: Exception) {
+                    AppLog.w(TAG, "launchSettingsScreen: Failed to launch intent '$intent': ${e.message}")
                 }
             }
+            AppLog.e(TAG, "launchSettingsScreen: All settings intents failed to launch.")
         }
 
-        private fun launchWirelessDebuggingSettings(
+        private fun launchSettingsScreenWarmedUp(
             context: Context,
+            targetAction: String,
             displayOptions: Bundle,
+            scope: CoroutineScope,
+            onDone: () -> Unit,
         ) {
-            val wirelessDebuggingIntent =
-                Intent("android.settings.WIRELESS_DEBUGGING_SETTINGS").apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-            val devSettingsIntent =
-                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-            try {
-                context.startActivity(wirelessDebuggingIntent, displayOptions)
-            } catch (e: Exception) {
-                try {
-                    context.startActivity(devSettingsIntent, displayOptions)
-                } catch (e2: Exception) {
-                    AppLog.e(TAG, "Failed to launch Wireless Debugging settings: $e2")
-                }
+            scope.launch(Dispatchers.Main) {
+                AppLog.d(TAG, "launchSettingsScreenWarmedUp: Warming up Settings task stack with general settings")
+                launchSettingsScreen(context, Settings.ACTION_SETTINGS, displayOptions)
+                delay(AUTO_SETUP_WARMUP_DELAY_MS)
+                AppLog.d(TAG, "launchSettingsScreenWarmedUp: Launching target Settings deep-link: $targetAction")
+                launchSettingsScreen(context, targetAction, displayOptions)
+                onDone()
             }
         }
 
@@ -1117,6 +1130,51 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 }
             }
             return false
+        }
+
+        private fun restoreTopScreenApp(context: Context) {
+            val pkg = appToRestoreAfterSetup
+            appToRestoreAfterSetup = null
+            try {
+                if (!pkg.isNullOrBlank()) {
+                    AppLog.i(TAG, "restoreTopScreenApp: Attempting to reopen $pkg on the top screen")
+                    val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                    if (intent != null) {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                        val options =
+                            ActivityOptions.makeBasic().apply {
+                                setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                            }
+                        context.startActivity(intent, options.toBundle())
+                        AppLog.i(TAG, "restoreTopScreenApp: Reopened $pkg successfully on display ${Display.DEFAULT_DISPLAY}")
+                    } else {
+                        AppLog.w(TAG, "restoreTopScreenApp: No launch intent found for package $pkg, falling back to home screen")
+                        goHomeOnTopScreen(context)
+                    }
+                } else {
+                    AppLog.i(
+                        TAG,
+                        "restoreTopScreenApp: No top screen app remembered, returning to home screen on display ${Display.DEFAULT_DISPLAY}",
+                    )
+                    goHomeOnTopScreen(context)
+                }
+            } catch (e: Exception) {
+                AppLog.e(TAG, "restoreTopScreenApp: Failed to restore app/go home: ${e.message}", e)
+            }
+        }
+
+        private fun goHomeOnTopScreen(context: Context) {
+            AppLog.i(TAG, "goHomeOnTopScreen: Launching home screen on display ${Display.DEFAULT_DISPLAY}")
+            val intent =
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                }
+            val options =
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                }
+            context.startActivity(intent, options.toBundle())
         }
     }
 }

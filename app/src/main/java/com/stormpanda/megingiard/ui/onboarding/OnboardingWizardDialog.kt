@@ -45,10 +45,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,6 +93,7 @@ import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
+import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
@@ -123,6 +124,17 @@ private val OW_STEPPER_DOT_SIZE = 24.dp
 
 private const val OW_SCRIM_ALPHA = 0.55f
 
+private val OW_WARNING_CORNER_RADIUS = 12.dp
+private val OW_WARNING_BORDER_WIDTH = 1.dp
+private val OW_WARNING_PADDING = 12.dp
+private val OW_WARNING_SPACED_BY_SMALL = 8.dp
+private val OW_WARNING_ICON_SIZE = 20.dp
+private val OW_WARNING_SPACED_BY_MEDIUM = 16.dp
+private val OW_BUTTON_ICON_SIZE = 18.dp
+private val OW_BUTTON_SPACED_BY = 8.dp
+private const val OW_WARNING_ALPHA_BG = 0.12f
+private const val OW_WARNING_ALPHA_BORDER = 0.5f
+
 /**
  * Root host dialog for the multi-step onboarding wizard.
  * Renders header stepper indicator, step-specific content, and footer navigation buttons.
@@ -148,6 +160,16 @@ fun OnboardingWizardDialog(
         mutableStateOf(MegingiardAccessibilityService.isEnabled(context))
     }
     val isAccessibilityStep = currentStepState.id == OnboardingStepId.ACCESSIBILITY
+
+    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
+    val privdState by PrivdManager.state.collectAsState()
+    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
+    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
+    var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
+    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
+    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
+    var isAutoSetupActive by remember { mutableStateOf(MegingiardAccessibilityService.isAutoSetupActive) }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -155,6 +177,12 @@ fun OnboardingWizardDialog(
             LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
+                    isWifiActive = MegingiardAccessibilityService.isWifiActive(context)
+                    isDevModeActive = MegingiardAccessibilityService.isDevModeActive(context)
+                    isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
+                    isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
+                    isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                    isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
                 }
             }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -177,14 +205,6 @@ fun OnboardingWizardDialog(
         }
     }
 
-    val isPrivilegedStep = currentStepState.id == OnboardingStepId.PRIVILEGED
-    val privdState by PrivdManager.state.collectAsState()
-    var isWifiActive by remember { mutableStateOf(MegingiardAccessibilityService.isWifiActive(context)) }
-    var isDevModeActive by remember { mutableStateOf(MegingiardAccessibilityService.isDevModeActive(context)) }
-    var isUsbActive by remember { mutableStateOf(MegingiardAccessibilityService.isUsbDebuggingActive(context)) }
-    var isWirelessActive by remember { mutableStateOf(MegingiardAccessibilityService.isWirelessDebuggingActive(context)) }
-    var isDevicePaired by remember { mutableStateOf(PrivdBootstrapper.hasCredentials(context)) }
-
     LaunchedEffect(isPrivilegedStep) {
         if (isPrivilegedStep) {
             AppLog.d(TAG, "Starting 1s continuous polling loop for Privileged Mode status & Wi-Fi in onboarding")
@@ -194,6 +214,7 @@ fun OnboardingWizardDialog(
                 isUsbActive = MegingiardAccessibilityService.isUsbDebuggingActive(context)
                 isWirelessActive = MegingiardAccessibilityService.isWirelessDebuggingActive(context)
                 isDevicePaired = PrivdBootstrapper.hasCredentials(context)
+                isAutoSetupActive = MegingiardAccessibilityService.isAutoSetupActive
                 delay(1000L)
             }
         }
@@ -201,6 +222,7 @@ fun OnboardingWizardDialog(
 
     val startAutoSetup = {
         MegingiardAccessibilityService.startMultiStageAutoSetup(context)
+        isAutoSetupActive = true
     }
 
     val launchAccessibilitySettings = {
@@ -304,6 +326,7 @@ fun OnboardingWizardDialog(
                                 isDevicePaired = isDevicePaired,
                                 privdState = privdState,
                                 onStartAutoSetup = startAutoSetup,
+                                isAutoSetupActive = isAutoSetupActive,
                             )
                         }
 
@@ -605,12 +628,14 @@ fun PrivilegedStepContent(
     isDevicePaired: Boolean,
     privdState: PrivdState,
     onStartAutoSetup: () -> Unit,
+    isAutoSetupActive: Boolean = false,
     titleText: String = stringResource(R.string.onboarding_privd_title),
     descText: String = stringResource(R.string.onboarding_privd_desc),
     buttonText: String = stringResource(R.string.onboarding_privd_auto_setup),
 ) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
+    val lastError by PrivdManager.lastError.collectAsState()
     val systemLocale =
         remember {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -749,7 +774,19 @@ fun PrivilegedStepContent(
                     if (devStatus == ChecklistStatus.DONE && wirelessStatus == ChecklistStatus.DONE &&
                         pairingStatus == ChecklistStatus.DONE
                     ) {
-                        if (privdState == PrivdState.RUNNING) ChecklistStatus.DONE else ChecklistStatus.ACTIVE
+                        when (privdState) {
+                            PrivdState.RUNNING -> {
+                                ChecklistStatus.DONE
+                            }
+
+                            PrivdState.FAILED -> {
+                                if (isAutoSetupActive) ChecklistStatus.ACTIVE else ChecklistStatus.FAILED
+                            }
+
+                            else -> {
+                                ChecklistStatus.ACTIVE
+                            }
+                        }
                     } else {
                         ChecklistStatus.PENDING
                     }
@@ -810,17 +847,20 @@ fun PrivilegedStepContent(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .background(colors.error.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .border(1.dp, colors.error.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .padding(12.dp),
+                            .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
+                            .border(
+                                OW_WARNING_BORDER_WIDTH,
+                                colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
+                                RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
+                            ).padding(OW_WARNING_PADDING),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Warning,
                         contentDescription = null,
                         tint = colors.error,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(OW_WARNING_ICON_SIZE),
                     )
                     Text(
                         text = stringResource(R.string.onboarding_privd_wifi_warning),
@@ -829,6 +869,61 @@ fun PrivilegedStepContent(
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f),
                     )
+                }
+            } else if (privdState == PrivdState.FAILED && !isAutoSetupActive && hasAutoSetupBeenStarted) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_MEDIUM),
+                ) {
+                    val errorRes = errorStringResource(lastError)
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(colors.error.copy(alpha = OW_WARNING_ALPHA_BG), RoundedCornerShape(OW_WARNING_CORNER_RADIUS))
+                                .border(
+                                    OW_WARNING_BORDER_WIDTH,
+                                    colors.error.copy(alpha = OW_WARNING_ALPHA_BORDER),
+                                    RoundedCornerShape(OW_WARNING_CORNER_RADIUS),
+                                ).padding(OW_WARNING_PADDING),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(OW_WARNING_SPACED_BY_SMALL),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Warning,
+                            contentDescription = null,
+                            tint = colors.error,
+                            modifier = Modifier.size(OW_WARNING_ICON_SIZE),
+                        )
+                        Text(
+                            text = if (errorRes != null) stringResource(errorRes) else "Daemon connection failed.",
+                            color = colors.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    AppMagicalButton(
+                        onClick = {
+                            hasAutoSetupBeenStarted = true
+                            onStartAutoSetup()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.AutoFixHigh,
+                            contentDescription = null,
+                            tint = colors.actionColorSystem,
+                            modifier = Modifier.size(OW_BUTTON_ICON_SIZE),
+                        )
+                        Spacer(modifier = Modifier.width(OW_BUTTON_SPACED_BY))
+                        Text(
+                            text = stringResource(R.string.privd_action_retry),
+                            color = colors.actionColorSystem,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
             } else {
                 AppMagicalButton(
@@ -856,7 +951,7 @@ fun PrivilegedStepContent(
     }
 }
 
-private enum class ChecklistStatus { PENDING, ACTIVE, DONE }
+private enum class ChecklistStatus { PENDING, ACTIVE, DONE, FAILED }
 
 @Composable
 private fun PrivdChecklistRow(
@@ -894,6 +989,15 @@ private fun PrivdChecklistRow(
                     modifier = Modifier.size(20.dp),
                 )
             }
+
+            ChecklistStatus.FAILED -> {
+                Icon(
+                    imageVector = Icons.Rounded.Cancel,
+                    contentDescription = null,
+                    tint = colors.error,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
         Text(
             text = label,
@@ -902,6 +1006,7 @@ private fun PrivdChecklistRow(
                     ChecklistStatus.DONE -> colors.onSurface
                     ChecklistStatus.ACTIVE -> colors.onSurface
                     ChecklistStatus.PENDING -> colors.onSurfaceSecondary
+                    ChecklistStatus.FAILED -> colors.error
                 },
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -1107,3 +1212,16 @@ fun AccessibilityStepContent(
         }
     }
 }
+
+private fun errorStringResource(error: PrivdError?): Int? =
+    when (error) {
+        PrivdError.DAEMON_UNREACHABLE -> R.string.privd_error_daemon_unreachable
+        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
+        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
+        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
+        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
+        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
+        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
+        PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
+        null -> null
+    }
