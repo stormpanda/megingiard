@@ -145,7 +145,9 @@ object AutoSwitchCoordinator {
             )
         }
 
-        if (_foregroundApp.value == normalized) {
+        val isRegisteredEmulator = EmulatorDetectionFunnel.isRegisteredEmulator(normalized)
+
+        if (_foregroundApp.value == normalized && !isRegisteredEmulator) {
             return
         }
 
