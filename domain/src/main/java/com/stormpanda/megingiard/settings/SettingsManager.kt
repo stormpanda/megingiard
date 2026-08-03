@@ -217,13 +217,16 @@ object SettingsManager {
         }
     }
 
+    private val optionalDataStore: DataStore<Preferences>?
+        get() = if (::dataStore.isInitialized) dataStore else null
+
     fun setShowMacroEditorTutorial(value: Boolean) {
         updateSettingPref(
             KEY_SHOW_MACRO_EDITOR_TUTORIAL,
             value,
             _showMacroEditorTutorial,
             scope,
-            dataStore,
+            optionalDataStore,
             TAG,
             "setShowMacroEditorTutorial",
         )
@@ -235,7 +238,7 @@ object SettingsManager {
             value,
             _welcomeTourCompletedVersion,
             scope,
-            dataStore,
+            optionalDataStore,
             TAG,
             "setWelcomeTourCompletedVersion",
         )
@@ -246,44 +249,42 @@ object SettingsManager {
         _showMacroEditorTutorial.value = true
         _welcomeTourCompletedVersion.value = 0
         scope.launch {
-            if (::dataStore.isInitialized) {
-                dataStore.edit { prefs ->
-                    prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
-                    prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] = 0
-                }
+            optionalDataStore?.edit { prefs ->
+                prefs[KEY_SHOW_MACRO_EDITOR_TUTORIAL] = true
+                prefs[KEY_WELCOME_TOUR_COMPLETED_VERSION] = 0
             }
         }
     }
 
     fun setAutoSwitchProfiles(value: Boolean) {
-        updateSettingPref(KEY_AUTO_SWITCH_PROFILES, value, _autoSwitchProfiles, scope, dataStore, TAG, "setAutoSwitchProfiles")
+        updateSettingPref(KEY_AUTO_SWITCH_PROFILES, value, _autoSwitchProfiles, scope, optionalDataStore, TAG, "setAutoSwitchProfiles")
     }
 
     fun setExcludeFromRecents(value: Boolean) {
-        updateSettingPref(KEY_EXCLUDE_FROM_RECENTS, value, _excludeFromRecents, scope, dataStore, TAG, "setExcludeFromRecents")
+        updateSettingPref(KEY_EXCLUDE_FROM_RECENTS, value, _excludeFromRecents, scope, optionalDataStore, TAG, "setExcludeFromRecents")
     }
 
     @Volatile
     var onThemeChangedListener: (() -> Unit)? = null
 
     fun setAccentColor(argb: Int) {
-        updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, dataStore, TAG, "setAccentColor")
+        updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, optionalDataStore, TAG, "setAccentColor")
         onThemeChangedListener?.invoke()
     }
 
     fun setThemeMode(value: ThemeMode) {
         AppLog.d(TAG, "setThemeMode($value)")
         _themeMode.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_THEME_MODE] = value.name } }
+        scope.launch { optionalDataStore?.edit { prefs -> prefs[KEY_THEME_MODE] = value.name } }
         onThemeChangedListener?.invoke()
     }
 
     fun setOverlayAtBottom(value: Boolean) {
-        updateSettingPref(KEY_OVERLAY_AT_BOTTOM, value, _overlayAtBottom, scope, dataStore, TAG, "setOverlayAtBottom")
+        updateSettingPref(KEY_OVERLAY_AT_BOTTOM, value, _overlayAtBottom, scope, optionalDataStore, TAG, "setOverlayAtBottom")
     }
 
     fun setOverlayFadeOut(value: Boolean) {
-        updateSettingPref(KEY_OVERLAY_FADE_OUT, value, _overlayFadeOut, scope, dataStore, TAG, "setOverlayFadeOut")
+        updateSettingPref(KEY_OVERLAY_FADE_OUT, value, _overlayFadeOut, scope, optionalDataStore, TAG, "setOverlayFadeOut")
     }
 
     fun setSteamGridDbApiToken(value: String) {

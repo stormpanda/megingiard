@@ -2,13 +2,20 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.SettingsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 private const val TAG = "AutoSwitchCoordinator"
 private const val APP_PACKAGE_SELF = "com.stormpanda.megingiard"
+private val coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
 private val IGNORED_PACKAGES =
     setOf(
         "com.android.systemui",
@@ -150,28 +157,64 @@ object AutoSwitchCoordinator {
             return
         }
 
-        val matchedProfile =
+        val directMatchedProfile =
             MacroPadState.profiles.value.firstOrNull {
                 it.associatedPackage.equals(normalized, ignoreCase = true)
             }
 
-        if (matchedProfile != null) {
+        if (directMatchedProfile != null) {
             val currentActiveId = MacroPadState.activeProfileId.value
-            if (matchedProfile.id != currentActiveId) {
+            if (directMatchedProfile.id != currentActiveId) {
                 AppLog.i(
                     TAG,
-                    "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for app '$normalized'",
+                    "onPackageChanged: auto-switching to profile '${directMatchedProfile.name}' (id=${directMatchedProfile.id}) for app '$normalized'",
                 )
-                MacroPadState.setActiveProfileId(matchedProfile.id)
+                MacroPadState.setActiveProfileId(directMatchedProfile.id)
             } else {
-                AppLog.d(TAG, "onPackageChanged: profile '${matchedProfile.name}' is already active")
+                AppLog.d(TAG, "onPackageChanged: profile '${directMatchedProfile.name}' is already active")
+            }
+            if (EmulatorDetectionFunnel.isRegisteredEmulator(normalized)) {
+                coordinatorScope.launch {
+                    EmulatorDetectionFunnel.onPackageForeground(normalized)
+                }
+            } else {
+                EmulatorDetectionFunnel.clearSession()
+            }
+            return
+        }
+
+        if (EmulatorDetectionFunnel.isRegisteredEmulator(normalized)) {
+            coordinatorScope.launch {
+                val session = EmulatorDetectionFunnel.onPackageForeground(normalized)
+                val matchedProfile =
+                    MacroPadState.profiles.value.firstOrNull { profile ->
+                        val assoc = profile.associatedPackage
+                        session != null && (
+                            assoc.equals(session.romPath, ignoreCase = true) ||
+                                assoc.equals("rom.${session.systemId}.${session.gameTitle}", ignoreCase = true) ||
+                                assoc.equals(session.systemId, ignoreCase = true)
+                        )
+                    }
+
+                if (matchedProfile != null) {
+                    val currentActiveId = MacroPadState.activeProfileId.value
+                    if (matchedProfile.id != currentActiveId) {
+                        AppLog.i(
+                            TAG,
+                            "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for emulator session '$normalized' (${session?.gameTitle})",
+                        )
+                        MacroPadState.setActiveProfileId(matchedProfile.id)
+                    }
+                }
             }
         } else {
+            EmulatorDetectionFunnel.clearSession()
             AppLog.d(TAG, "onPackageChanged: no profile mapped to package '$normalized'")
         }
     }
 
     internal fun resetForTesting() {
         _foregroundApp.value = null
+        EmulatorDetectionFunnel.clearSession()
     }
 }

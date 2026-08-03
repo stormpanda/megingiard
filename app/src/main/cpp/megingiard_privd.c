@@ -863,6 +863,31 @@ static int authenticate_client(int client_fd) {
     return 1;
 }
 
+static void handle_read_file(int client_fd, const char *path) {
+    pthread_mutex_lock(&g_send_mutex);
+    FILE *fp = fopen(path, "r");
+    if (!fp) {
+        (void)write(client_fd, "READ_ERR FILE_NOT_FOUND\n", 24);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    (void)write(client_fd, "READ_BEGIN\n", 11);
+    char buf[1024];
+    size_t total_read = 0;
+    const size_t MAX_READ_BYTES = 128 * 1024;
+    while (total_read < MAX_READ_BYTES) {
+        size_t n = fread(buf, 1, sizeof(buf), fp);
+        if (n == 0) break;
+        (void)write(client_fd, buf, n);
+        total_read += n;
+    }
+    fclose(fp);
+
+    (void)write(client_fd, "\nREAD_END\n", 10);
+    pthread_mutex_unlock(&g_send_mutex);
+}
+
 /*
  * Handles a single client connection.
  * Returns 0 on normal disconnect, 1 if the client requested QUIT.
@@ -1013,6 +1038,18 @@ static int serve_client(int client_fd) {
             pthread_mutex_lock(&g_send_mutex);
             (void)write(client_fd, resp, rl);
             pthread_mutex_unlock(&g_send_mutex);
+            continue;
+        }
+
+        if (strncmp(line, "READ_FILE ", 10) == 0) {
+            char *p = line + 10;
+            size_t len = strlen(p);
+            while (len > 0 && (p[len - 1] == '\n' || p[len - 1] == '\r')) {
+                p[len - 1] = '\0';
+                len--;
+            }
+            while (*p == ' ') p++;
+            handle_read_file(client_fd, p);
             continue;
         }
 

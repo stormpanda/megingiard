@@ -131,6 +131,12 @@ object PrivdClient {
 
     @Volatile private var screenshotDeferred: CompletableDeferred<Boolean>? = null
 
+    @Volatile private var readFileDeferred: CompletableDeferred<String?>? = null
+
+    @Volatile private var isCapturingReadFile = false
+
+    private val readFileDumpBuilder = StringBuilder()
+
     val isConnected: Boolean
         get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
 
@@ -275,6 +281,18 @@ object PrivdClient {
         return ok
     }
 
+    suspend fun readTextFile(path: String): String? {
+        if (!isConnected) return null
+        val deferred = CompletableDeferred<String?>()
+        readFileDeferred = deferred
+        send("READ_FILE $path\n")
+        val result = withTimeoutOrNull(5000) { deferred.await() }
+        readFileDeferred = null
+        isCapturingReadFile = false
+        AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
+        return result
+    }
+
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
@@ -382,6 +400,26 @@ object PrivdClient {
                 screenshotDeferred?.complete(false)
                 continue
             }
+            if (line == "READ_BEGIN") {
+                isCapturingReadFile = true
+                readFileDumpBuilder.clear()
+                continue
+            }
+            if (line.startsWith("READ_ERR")) {
+                isCapturingReadFile = false
+                readFileDeferred?.complete(null)
+                continue
+            }
+            if (line == "READ_END") {
+                isCapturingReadFile = false
+                readFileDeferred?.complete(readFileDumpBuilder.toString())
+                readFileDumpBuilder.clear()
+                continue
+            }
+            if (isCapturingReadFile) {
+                readFileDumpBuilder.append(line).append('\n')
+                continue
+            }
             if (line.startsWith("EVT ")) {
                 val parts = line.split(' ')
                 if (parts.size == 4) {
@@ -421,6 +459,10 @@ object PrivdClient {
         mirrorStopDeferred = null
         screenshotDeferred?.complete(false)
         screenshotDeferred = null
+        readFileDeferred?.complete(null)
+        readFileDeferred = null
+        isCapturingReadFile = false
+        readFileDumpBuilder.clear()
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null
