@@ -89,7 +89,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField

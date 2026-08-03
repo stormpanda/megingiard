@@ -550,7 +550,7 @@ fun MacroPadEditor(onDone: () -> Unit) {
             BackgroundSettingsEditor(
                 title = stringResource(R.string.layout_settings_bg_section_title),
                 layoutId = curLayout.id,
-                layoutName = curLayout.name,
+                profileName = profile?.name ?: "",
                 initialBackgroundImagePath = curLayout.backgroundImagePath,
                 initialUseAsMask = curLayout.useBackgroundImageAsMask,
                 initialBgImageScale = curLayout.bgImageScale,

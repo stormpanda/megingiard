@@ -137,7 +137,7 @@ private val BSE_BORDER_WIDTH_1 = 1.dp
 internal fun BackgroundSettingsEditor(
     title: String,
     layoutId: String,
-    layoutName: String,
+    profileName: String,
     initialBackgroundImagePath: String?,
     initialUseAsMask: Boolean,
     initialBgImageScale: Float = 1f,
@@ -541,7 +541,7 @@ internal fun BackgroundSettingsEditor(
 
         if (showScrapeDialog) {
             SteamGridDbScrapeDialog(
-                initialSearchQuery = layoutName,
+                initialSearchQuery = profileName,
                 onImageSelected = { uri ->
                     pendingImageUri = uri
                     currentBgPath = null

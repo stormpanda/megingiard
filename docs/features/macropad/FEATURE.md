@@ -229,7 +229,7 @@ Each button supports one of the following actions:
 - When clicked, Megingiard checks if a SteamGridDB API key is configured.
   - If **no key is configured**, a warning dialog appears directing the user to create a token on SteamGridDB and providing a button that opens the **Global Settings Screen** directly.
   - If a key is configured, the **SteamGridDB Scraper** dialog opens.
-- The scraper dialog automatically performs an autocomplete search for games matching the layout's name as the initial query.
+- The scraper dialog automatically performs an autocomplete search for games matching the profile's name as the initial query.
 - The user can modify the search query, search for games manually, select a matching game, and switch between four asset types: **Grid**, **Hero**, **Logo**, and **Icon**.
 - Tapping on a preview thumbnail downloads the chosen image asynchronously, copies it to the internal files folder, and sets it as the layout's background image.
 - **Scraper Error Handling**: If any network request to SteamGridDB fails while the scraping dialog is open (searching, loading images, or downloading a selected image), a dismissible `AlertDialog` is displayed to the user explaining the specific error:
