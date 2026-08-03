@@ -185,7 +185,7 @@ internal fun PadCanvas(
             .height(padHeight)
             .border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(0.dp))
             .clip(RoundedCornerShape(0.dp))
-            .background(colors.macroPadSurface)
+            .background(Color.Black)
             .onSizeChanged { canvasSize = it }
 
     Box(modifier = padModifier) {

@@ -308,7 +308,7 @@ internal fun PadSurface(
                 Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(MP_CORNER_RADIUS))
-                    .background(if (transparentBackground) Color.Transparent else colors.macroPadSurface)
+                    .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
                     .pointerInput(profile, layout, canvasSizeState.value, bgTouchpadActive) {
                         try {

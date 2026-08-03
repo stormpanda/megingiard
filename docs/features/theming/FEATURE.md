@@ -78,7 +78,6 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `onError`                | Text/icons on error-colored surfaces                                                                                               |
 | `actionColorGamepad`     | Badge tint for gamepad/joystick macro step chips                                                                                   |
 | `actionColorSystem`      | Badge tint for system/d-pad macro step chips                                                                                       |
-| `macroPadSurface`        | MacroPad button-placement canvas/surface                                                                                           |
 | `macroPadOnSurface`      | MacroPad button-placement text/icons                                                                                               |
 | `macroPadAccentBorder`   | MacroPad placement border/outline tint                                                                                             |
 | `sectionHeaderColor`     | Uppercase section-header label tint                                                                                                |
@@ -337,7 +336,6 @@ Modifier.padding(dimens.paddingLarge)
 | `onError`              | `Color.White` | `Color.White` | `CP_DARK_RED`       | Text on error-colored surfaces          |
 | `actionColorGamepad`   | `0xFFFF9800`  | `0xFFFF9800`  | `0xFFFF9800`        | Gamepad button step indicators          |
 | `actionColorSystem`    | `0xFF2196F3`  | `0xFF2196F3`  | `CP_ACCENT`         | System/mirror action indicators         |
-| `macroPadSurface`      | `0xFF1C1C1E`  | `0xFF1C1C1E`  | `CP_SURFACE`        | MacroPad placement canvas surface       |
 | `macroPadOnSurface`    | `Color.White` | `Color.White` | `CP_TEXT`           | MacroPad placement labels/icons         |
 | `macroPadAccentBorder` | `White@30%`   | `White@30%`   | `CP_ACCENT@35%`     | MacroPad placement border tint          |
 | `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
