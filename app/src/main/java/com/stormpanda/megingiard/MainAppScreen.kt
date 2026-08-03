@@ -544,6 +544,7 @@ fun MainAppScreen() {
                     OnboardingWizardManager.finishWizard()
                     val active = MegingiardAccessibilityService.isEnabled(context)
                     AppStateManager.setAccessibilityActive(active)
+                    AppStateManager.resetPrivdPromptState()
                 },
             )
         }

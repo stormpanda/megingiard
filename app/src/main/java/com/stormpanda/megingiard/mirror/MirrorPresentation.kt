@@ -834,6 +834,7 @@ class MirrorPresentation(
                                         overlayAtBottom = overlayAtBottom,
                                         onDismiss = {
                                             OnboardingWizardManager.finishWizard()
+                                            AppStateManager.resetPrivdPromptState()
                                         },
                                     )
                                 }

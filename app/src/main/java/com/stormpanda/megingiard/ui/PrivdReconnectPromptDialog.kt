@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,13 +95,20 @@ fun PrivdReconnectPromptDialog(
     val context = LocalContext.current
     val colors = LocalAppColors.current
 
+    val initialAccessibilityActive =
+        rememberSaveable {
+            MegingiardAccessibilityService.isEnabled(context)
+        }
+    val initialPrivdRunning =
+        rememberSaveable {
+            PrivdManager.state.value == PrivdState.RUNNING
+        }
+
     val stepIds =
-        remember {
-            val isAccessibilityActive = MegingiardAccessibilityService.isEnabled(context)
-            val isPrivdRunning = PrivdManager.state.value == PrivdState.RUNNING
+        remember(initialAccessibilityActive, initialPrivdRunning) {
             listOfNotNull(
-                if (!isAccessibilityActive) OnboardingStepId.ACCESSIBILITY else null,
-                if (!isPrivdRunning) OnboardingStepId.PRIVILEGED else null,
+                if (!initialAccessibilityActive) OnboardingStepId.ACCESSIBILITY else null,
+                if (!initialPrivdRunning) OnboardingStepId.PRIVILEGED else null,
                 OnboardingStepId.FINISHED,
             )
         }
