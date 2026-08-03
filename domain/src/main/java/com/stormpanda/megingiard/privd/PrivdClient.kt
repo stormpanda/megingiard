@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
 import java.io.BufferedWriter
@@ -57,6 +59,8 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
 object PrivdClient {
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
+
+    private val commandMutex = Mutex()
 
     /**
      * Raw evdev events streamed from the daemon while a `SUB GAMEPAD` subscription is active.
@@ -226,16 +230,17 @@ object PrivdClient {
      * `false` on timeout or transport error. Useful as a health-check from
      * the Privileged Mode settings card.
      */
-    suspend fun ping(): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        pingDeferred = deferred
-        send("PING\n")
-        val ok = withTimeoutOrNull(PING_TIMEOUT_MS) { deferred.await() } ?: false
-        pingDeferred = null
-        AppLog.d(TAG, "ping() → $ok")
-        return ok
-    }
+    suspend fun ping(): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            pingDeferred = deferred
+            send("PING\n")
+            val ok = withTimeoutOrNull(PING_TIMEOUT_MS) { deferred.await() } ?: false
+            pingDeferred = null
+            AppLog.d(TAG, "ping() → $ok")
+            return ok
+        }
 
     /**
      * Requests the daemon to start the direct-Surface privileged mirror path.
@@ -244,54 +249,58 @@ object PrivdClient {
     suspend fun startDirectMirror(
         width: Int,
         height: Int,
-    ): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        mirrorDirectStartDeferred = deferred
-        send("MIRROR START_DIRECT $width $height\n")
-        val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
-        mirrorDirectStartDeferred = null
-        AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
-        return ok
-    }
+    ): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            mirrorDirectStartDeferred = deferred
+            send("MIRROR START_DIRECT $width $height\n")
+            val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
+            mirrorDirectStartDeferred = null
+            AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
+            return ok
+        }
 
     /**
      * Stops the privileged-mirror server child. Returns `true` if the daemon
      * acknowledged with `MIRROR_STOPPED`, `false` on timeout / disconnect.
      */
-    suspend fun stopMirror(): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        mirrorStopDeferred = deferred
-        send("MIRROR STOP\n")
-        val ok = withTimeoutOrNull(MIRROR_STOP_TIMEOUT_MS) { deferred.await() } ?: false
-        mirrorStopDeferred = null
-        AppLog.i(TAG, "stopMirror() → $ok")
-        return ok
-    }
+    suspend fun stopMirror(): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            mirrorStopDeferred = deferred
+            send("MIRROR STOP\n")
+            val ok = withTimeoutOrNull(MIRROR_STOP_TIMEOUT_MS) { deferred.await() } ?: false
+            mirrorStopDeferred = null
+            AppLog.i(TAG, "stopMirror() → $ok")
+            return ok
+        }
 
-    suspend fun takeScreenshot(path: String): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        screenshotDeferred = deferred
-        send("SCREENSHOT $path\n")
-        val ok = withTimeoutOrNull(4000) { deferred.await() } ?: false
-        screenshotDeferred = null
-        AppLog.i(TAG, "takeScreenshot($path) -> $ok")
-        return ok
-    }
+    suspend fun takeScreenshot(path: String): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            screenshotDeferred = deferred
+            send("SCREENSHOT $path\n")
+            val ok = withTimeoutOrNull(4000) { deferred.await() } ?: false
+            screenshotDeferred = null
+            AppLog.i(TAG, "takeScreenshot($path) -> $ok")
+            return ok
+        }
 
-    suspend fun readTextFile(path: String): String? {
-        if (!isConnected) return null
-        val deferred = CompletableDeferred<String?>()
-        readFileDeferred = deferred
-        send("READ_FILE $path\n")
-        val result = withTimeoutOrNull(5000) { deferred.await() }
-        readFileDeferred = null
-        isCapturingReadFile = false
-        AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
-        return result
-    }
+    suspend fun readTextFile(path: String): String? =
+        commandMutex.withLock {
+            if (!isConnected) return null
+            val deferred = CompletableDeferred<String?>()
+            readFileDeferred = deferred
+            send("READ_FILE $path\n")
+            val result = withTimeoutOrNull(5000) { deferred.await() }
+            readFileDeferred = null
+            isCapturingReadFile = false
+            AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
+            return result
+        }
 
     // -------------------------------------------------------------------------
     // Internal

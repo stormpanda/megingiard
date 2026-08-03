@@ -80,6 +80,7 @@ import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import kotlinx.coroutines.delay
+import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -306,7 +307,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             title = stringResource(R.string.integration_home_detected_rom),
                             value =
                                 lastDetectedSession?.let { session ->
-                                    val filename = session.romPath?.let { java.io.File(it).name } ?: session.gameTitle
+                                    val filename = session.romPath?.let { File(it).name } ?: session.gameTitle
                                     "$filename (${session.systemId})"
                                 } ?: stringResource(R.string.integration_home_no_rom_detected),
                             icon = Icons.Rounded.SportsEsports,

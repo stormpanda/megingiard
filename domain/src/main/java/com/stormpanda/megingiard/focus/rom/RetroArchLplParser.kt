@@ -4,6 +4,13 @@ import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "RetroArchLplParser"
 
+private val EXT_SNES = setOf("sfc", "smc", "fig")
+private val EXT_N64 = setOf("n64", "z64", "v64")
+private val EXT_GBC = setOf("gb", "gbc")
+private val EXT_NES = setOf("nes", "fds")
+private val EXT_PS1 = setOf("pbp", "chd", "cue")
+private val EXT_GENESIS = setOf("md", "gen", "smd")
+
 /**
  * Pure Kotlin parser for RetroArch `content_history.lpl` and system playlist JSON files.
  */
@@ -82,13 +89,13 @@ object RetroArchLplParser {
         val core = (coreName ?: corePath ?: "").lowercase()
 
         return when {
-            ext in listOf("sfc", "smc", "fig") || core.contains("snes") || core.contains("bsnes") -> "snes"
-            ext in listOf("n64", "z64", "v64") || core.contains("mupen") || core.contains("n64") -> "n64"
+            ext in EXT_SNES || core.contains("snes") || core.contains("bsnes") -> "snes"
+            ext in EXT_N64 || core.contains("mupen") || core.contains("n64") -> "n64"
             ext == "gba" || core.contains("mgba") || core.contains("vba") -> "gba"
-            ext in listOf("gb", "gbc") || core.contains("gambatte") -> "gbc"
-            ext in listOf("nes", "fds") || core.contains("fceu") || core.contains("nestopia") -> "nes"
-            ext in listOf("pbp", "chd", "cue") && (core.contains("pcsx") || core.contains("beetle_psx")) -> "ps1"
-            ext in listOf("md", "gen", "smd") || core.contains("genesis") || core.contains("picodrive") -> "genesis"
+            ext in EXT_GBC || core.contains("gambatte") -> "gbc"
+            ext in EXT_NES || core.contains("fceu") || core.contains("nestopia") -> "nes"
+            ext in EXT_PS1 && (core.contains("pcsx") || core.contains("beetle_psx")) -> "ps1"
+            ext in EXT_GENESIS || core.contains("genesis") || core.contains("picodrive") -> "genesis"
             ext == "nds" || core.contains("melonds") || core.contains("drastic") -> "nds"
             else -> "retroarch"
         }

@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val TAG = "EmulatorDetectionFunnel"
+private const val POLLING_MAX_ATTEMPTS = 5
+private const val POLLING_DELAY_MS = 1000L
 
 /**
  * Central router singleton that intercepts foreground application changes, dispatches
@@ -65,8 +67,8 @@ object EmulatorDetectionFunnel {
         pollingJob =
             funnelScope.launch {
                 val initialRomPath = initialSession?.romPath
-                for (i in 1..5) {
-                    delay(1000)
+                for (i in 1..POLLING_MAX_ATTEMPTS) {
+                    delay(POLLING_DELAY_MS)
                     val currentSession = detector.detectActiveSession(packageName)
                     if (currentSession != null) {
                         if (currentSession.romPath != initialRomPath) {

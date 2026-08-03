@@ -72,7 +72,7 @@ object AutoSwitchCoordinator {
         }
 
         val isRegisteredEmulator = EmulatorDetectionFunnel.isRegisteredEmulator(normalized)
-        AppLog.w(
+        AppLog.d(
             TAG,
             "onPackageChanged normalized=$normalized isRegisteredEmulator=$isRegisteredEmulator activeSession=${EmulatorDetectionFunnel.activeSession.value?.romPath}",
         )
