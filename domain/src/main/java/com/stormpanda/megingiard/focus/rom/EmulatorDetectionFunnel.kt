@@ -32,6 +32,7 @@ object EmulatorDetectionFunnel {
     private val registeredDetectors: List<EmulatorDetector> =
         listOf(
             RetroArchDetector,
+            GameNativeDetector,
         )
 
     private val packageMap: Map<String, EmulatorDetector> by lazy {
