@@ -196,8 +196,9 @@ class MainActivity : ComponentActivity() {
     // visible even after moving to the correct display.
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY
-        DisplayDetector.updateDisplayValidity(displayId)
+        display?.displayId?.let { displayId ->
+            DisplayDetector.updateDisplayValidity(displayId)
+        }
     }
 
     /**
