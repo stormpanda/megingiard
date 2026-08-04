@@ -493,12 +493,12 @@ object InstalledAppsManager {
         }
     }
 
-    fun launchAppOnPrimaryDisplay(
+    suspend fun launchAppOnPrimaryDisplay(
         context: Context,
         appInfo: InstalledAppInfo,
     ): Boolean = launchAppOnDisplay(context, appInfo, Display.DEFAULT_DISPLAY)
 
-    fun launchAppOnSecondaryDisplay(
+    suspend fun launchAppOnSecondaryDisplay(
         context: Context,
         appInfo: InstalledAppInfo,
     ): Boolean {
@@ -507,7 +507,7 @@ object InstalledAppsManager {
         return launchAppOnDisplay(context, appInfo, displayId)
     }
 
-    fun launchAppOnDisplay(
+    suspend fun launchAppOnDisplay(
         context: Context,
         appInfo: InstalledAppInfo,
         displayId: Int,

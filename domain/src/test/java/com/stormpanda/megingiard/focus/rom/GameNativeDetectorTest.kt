@@ -26,6 +26,25 @@ class GameNativeDetectorTest {
     }
 
     @Test
+    fun parseSessionFromProcesses_forwardSlashes_returnsCorrectSession() {
+        val procList =
+            """
+            PROC 29091 10142 app.gamenative
+            PROC 29978 10142 start.exe /exec explorer /desktop=shell,1280x720 winhandler.exe
+            PROC 30006 10142 C:\windows\system32\services.exe
+            PROC 30101 10142 Z:/home/sandbox/steamapps/common/BALL x PIT/BALLxPIT.exe
+            """.trimIndent()
+
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
+
+        assertNotNull(session)
+        assertEquals("app.gamenative", session?.packageName)
+        assertEquals("pc", session?.systemId)
+        assertEquals("BALL x PIT.steam", session?.romPath)
+        assertEquals("BALL x PIT", session?.gameTitle)
+    }
+
+    @Test
     fun parseSessionFromProcesses_onlySystemHelpers_returnsNull() {
         val procList =
             """

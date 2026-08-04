@@ -5,6 +5,8 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "GameNativeLauncher"
@@ -15,7 +17,7 @@ class GameNativeLauncher : RomLauncher {
     override val id: String = "gamenative"
     override val displayName: String = "GameNative"
 
-    override fun launchGame(
+    override suspend fun launchGame(
         context: Context,
         romPath: String,
         systemId: String,
@@ -32,7 +34,7 @@ class GameNativeLauncher : RomLauncher {
         }
 
         // Try to parse steam app ID
-        val appId = parseSteamAppId(romPath)
+        val appId = withContext(Dispatchers.IO) { parseSteamAppId(romPath) }
         AppLog.i(TAG, "Launching GameNative with ROM path: $romPath, parsed appId: $appId on display $displayId")
 
         return try {

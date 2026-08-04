@@ -15,7 +15,7 @@ interface RomLauncher {
      * Launches the game using the emulator's intent/launch method on the designated display.
      * @return true if launched successfully.
      */
-    fun launchGame(
+    suspend fun launchGame(
         context: Context,
         romPath: String,
         systemId: String,

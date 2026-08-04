@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.focus.rom.ActiveGameSession
 import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -226,7 +227,7 @@ class AutoSwitchCoordinatorTest {
 
             // When RetroArch is opened with a Super Mario World snes ROM session
             EmulatorDetectionFunnel.setActiveSessionForTesting(
-                com.stormpanda.megingiard.focus.rom.ActiveGameSession(
+                ActiveGameSession(
                     packageName = "com.retroarch",
                     systemId = "snes",
                     romPath = "/roms/snes/Super Mario World.sfc",
@@ -265,7 +266,7 @@ class AutoSwitchCoordinatorTest {
 
             // When RetroArch is opened with a different ROM (e.g. Zelda)
             EmulatorDetectionFunnel.setActiveSessionForTesting(
-                com.stormpanda.megingiard.focus.rom.ActiveGameSession(
+                ActiveGameSession(
                     packageName = "com.retroarch",
                     systemId = "snes",
                     romPath = "/roms/snes/Zelda.sfc",

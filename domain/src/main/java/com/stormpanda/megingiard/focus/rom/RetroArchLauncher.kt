@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "RetroArchLauncher"
@@ -18,7 +20,7 @@ class RetroArchLauncher : RomLauncher {
     override val id: String = "retroarch"
     override val displayName: String = "RetroArch"
 
-    override fun launchGame(
+    override suspend fun launchGame(
         context: Context,
         romPath: String,
         systemId: String,
@@ -39,7 +41,7 @@ class RetroArchLauncher : RomLauncher {
         }
 
         val corePath = "/data/data/$packageName/cores/$coreName"
-        val configFile = resolveConfigFile(packageName)
+        val configFile = withContext(Dispatchers.IO) { resolveConfigFile(packageName) }
         AppLog.i(TAG, "Launching ROM '$romPath' with core '$corePath' and config '$configFile' on display $displayId")
 
         return try {

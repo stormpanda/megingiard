@@ -453,16 +453,25 @@ data class PadProfile(
         val packageMatches = assoc.packageName.equals(focusedPackage, ignoreCase = true)
         if (!packageMatches) return false
 
-        val romFileName = focusedRomPath?.substringAfterLast('/')
+        val romFileName = focusedRomPath?.substringAfterLast('/')?.substringAfterLast('\\')
         val systemMatches = assoc.systemId == null || systemId == null || assoc.systemId.equals(systemId, ignoreCase = true)
         val romMatches =
             assoc.romFileName == null || (
                 romFileName != null &&
                     (
                         assoc.romFileName.equals(romFileName, ignoreCase = true) ||
-                            assoc.romFileName.substringBeforeLast('.').equals(romFileName.substringBeforeLast('.'), ignoreCase = true)
+                            assoc.romFileName.substringBeforeLast('.').equals(romFileName.substringBeforeLast('.'), ignoreCase = true) ||
+                            assoc.romFileName.normalizeRomName() == romFileName.normalizeRomName()
                     )
             )
         return systemMatches && romMatches
     }
 }
+
+private fun String.normalizeRomName(): String =
+    this
+        .substringBeforeLast('.')
+        .lowercase()
+        .replace(" ", "")
+        .replace("_", "")
+        .replace("-", "")

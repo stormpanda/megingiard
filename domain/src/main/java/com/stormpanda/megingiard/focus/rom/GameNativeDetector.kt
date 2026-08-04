@@ -83,14 +83,13 @@ object GameNativeDetector : EmulatorDetector {
                     val cmdline = parts[3].trim()
                     if (uid == targetUid) {
                         if (cmdline.endsWith(".exe", ignoreCase = true)) {
-                            val lastSlash = cmdline.lastIndexOf('\\')
-                            val lastForwardSlash = cmdline.lastIndexOf('/')
-                            val separatorIdx = maxOf(lastSlash, lastForwardSlash)
-                            val exeName = if (separatorIdx != -1) cmdline.substring(separatorIdx + 1) else cmdline
+                            val normalizedCmd = cmdline.replace('/', '\\')
+                            val lastSlash = normalizedCmd.lastIndexOf('\\')
+                            val exeName = if (lastSlash != -1) normalizedCmd.substring(lastSlash + 1) else normalizedCmd
 
                             if (systemHelpers.any { helper ->
                                     exeName.equals(helper, ignoreCase = true) ||
-                                        cmdline.contains(helper, ignoreCase = true)
+                                        normalizedCmd.contains(helper, ignoreCase = true)
                                 }
                             ) {
                                 continue
@@ -98,13 +97,13 @@ object GameNativeDetector : EmulatorDetector {
 
                             // Try to extract the game folder name from typical Windows steamapps paths, or use the exe name
                             // path looks like: C:\Program Files (x86)\Steam\steamapps\common\Baba Is You\Baba Is You.exe
-                            val commonIndex = cmdline.indexOf("steamapps\\common\\", ignoreCase = true)
+                            val commonIndex = normalizedCmd.indexOf("steamapps\\common\\", ignoreCase = true)
                             val folderName =
                                 if (commonIndex != -1) {
                                     val start = commonIndex + "steamapps\\common\\".length
-                                    val end = cmdline.indexOf('\\', start)
+                                    val end = normalizedCmd.indexOf('\\', start)
                                     if (end != -1) {
-                                        cmdline.substring(start, end)
+                                        normalizedCmd.substring(start, end)
                                     } else {
                                         exeName.removeSuffix(".exe")
                                     }

@@ -109,4 +109,40 @@ class PadProfileMatchesTest {
         assertTrue(profile.matches("app.gamenative", null, null))
         assertTrue(profile.matches("app.gamenative", "Any ROM.zip", "snes"))
     }
+
+    @Test
+    fun matches_spacingDifferences_returnsTrue() {
+        val profile1 =
+            PadProfile(
+                id = "test-3",
+                name = "Ball x Pit Profile",
+                association =
+                    ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "BALL x PIT.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        // Matches when active session has no spaces
+        assertTrue(profile1.matches("app.gamenative", "BALLxPIT.steam", "pc"))
+
+        val profile2 =
+            PadProfile(
+                id = "test-4",
+                name = "BallxPit Profile",
+                association =
+                    ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "BALLxPIT.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        // Matches when active session has spaces
+        assertTrue(profile2.matches("app.gamenative", "BALL x PIT.steam", "pc"))
+
+        // Matches with underscores/dashes differences
+        assertTrue(profile2.matches("app.gamenative", "BALL_x-PIT.steam", "pc"))
+    }
 }
