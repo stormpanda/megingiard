@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
+import java.io.File
 
 private const val TAG = "RetroArchLauncher"
 private const val RETROARCH_MAIN_ACTIVITY = "com.retroarch.browser.retroactivity.RetroActivityFuture"
@@ -73,7 +74,7 @@ class RetroArchLauncher : RomLauncher {
                 "/storage/emulated/0/RetroArch/retroarch.cfg",
                 "/sdcard/RetroArch/retroarch.cfg",
             )
-        return candidatePaths.firstOrNull { java.io.File(it).exists() }
+        return candidatePaths.firstOrNull { File(it).exists() }
             ?: "/storage/emulated/0/Android/data/$packageName/files/retroarch.cfg"
     }
 

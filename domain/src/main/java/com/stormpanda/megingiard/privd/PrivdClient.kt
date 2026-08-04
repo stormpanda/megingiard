@@ -30,6 +30,8 @@ private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
 private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
+private const val SCREENSHOT_TIMEOUT_MS = 4_000L
+private const val READ_FILE_TIMEOUT_MS = 5_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
@@ -283,7 +285,7 @@ object PrivdClient {
             val deferred = CompletableDeferred<Boolean>()
             screenshotDeferred = deferred
             send("SCREENSHOT $path\n")
-            val ok = withTimeoutOrNull(4000) { deferred.await() } ?: false
+            val ok = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { deferred.await() } ?: false
             screenshotDeferred = null
             AppLog.i(TAG, "takeScreenshot($path) -> $ok")
             return ok
@@ -295,7 +297,7 @@ object PrivdClient {
             val deferred = CompletableDeferred<String?>()
             readFileDeferred = deferred
             send("READ_FILE $path\n")
-            val result = withTimeoutOrNull(5000) { deferred.await() }
+            val result = withTimeoutOrNull(READ_FILE_TIMEOUT_MS) { deferred.await() }
             readFileDeferred = null
             isCapturingReadFile = false
             AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
