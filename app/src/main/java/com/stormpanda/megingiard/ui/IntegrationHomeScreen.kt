@@ -331,19 +331,12 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             val profiles by MacroPadState.profiles.collectAsState()
                             val associatedProfile =
                                 remember(profiles, targetHoveredPkg, hoveredRomPath) {
-                                    val romFileName = hoveredRomPath?.substringAfterLast('/')
                                     profiles.firstOrNull { profile ->
-                                        val assoc = profile.association ?: return@firstOrNull false
-                                        val pkgMatch = assoc.packageName.equals(targetHoveredPkg, ignoreCase = true)
-                                        val romMatch =
-                                            assoc.romFileName != null && romFileName != null &&
-                                                assoc.romFileName.equals(romFileName, ignoreCase = true)
-                                        pkgMatch && romMatch
+                                        profile.association?.romFileName != null &&
+                                            profile.matches(targetHoveredPkg, hoveredRomPath, hoveredSystemId)
                                     } ?: profiles.firstOrNull { profile ->
-                                        val assoc = profile.association ?: return@firstOrNull false
-                                        val pkgMatch = assoc.packageName.equals(targetHoveredPkg, ignoreCase = true)
-                                        val romMatch = assoc.romFileName == null
-                                        pkgMatch && romMatch
+                                        profile.association?.romFileName == null &&
+                                            profile.matches(targetHoveredPkg, hoveredRomPath, hoveredSystemId)
                                     }
                                 }
                             ProfileConfigCard(
@@ -364,19 +357,20 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             val profiles by MacroPadState.profiles.collectAsState()
                             val associatedProfile =
                                 remember(profiles, currentActiveSession) {
-                                    val romFileName = currentActiveSession.romPath?.substringAfterLast('/')
                                     profiles.firstOrNull { profile ->
-                                        val assoc = profile.association ?: return@firstOrNull false
-                                        val pkgMatch = assoc.packageName.equals(currentActiveSession.packageName, ignoreCase = true)
-                                        val romMatch =
-                                            assoc.romFileName != null && romFileName != null &&
-                                                assoc.romFileName.equals(romFileName, ignoreCase = true)
-                                        pkgMatch && romMatch
+                                        profile.association?.romFileName != null &&
+                                            profile.matches(
+                                                currentActiveSession.packageName,
+                                                currentActiveSession.romPath,
+                                                currentActiveSession.systemId,
+                                            )
                                     } ?: profiles.firstOrNull { profile ->
-                                        val assoc = profile.association ?: return@firstOrNull false
-                                        val pkgMatch = assoc.packageName.equals(currentActiveSession.packageName, ignoreCase = true)
-                                        val romMatch = assoc.romFileName == null
-                                        pkgMatch && romMatch
+                                        profile.association?.romFileName == null &&
+                                            profile.matches(
+                                                currentActiveSession.packageName,
+                                                currentActiveSession.romPath,
+                                                currentActiveSession.systemId,
+                                            )
                                     }
                                 }
                             ProfileConfigCard(

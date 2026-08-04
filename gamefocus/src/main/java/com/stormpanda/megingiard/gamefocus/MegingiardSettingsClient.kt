@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.focus.rom.GameNativeDetector
 import com.stormpanda.megingiard.focus.rom.RomManager
 import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
@@ -113,7 +114,15 @@ object MegingiardSettingsClient {
                 }
             } ?: "com.retroarch.aarch64"
         } else {
-            "app.gamenative"
+            val pm = context.packageManager
+            GameNativeDetector.supportedPackages.firstOrNull { pkg ->
+                try {
+                    pm.getPackageInfo(pkg, 0)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            } ?: "app.gamenative"
         }
     }
 }

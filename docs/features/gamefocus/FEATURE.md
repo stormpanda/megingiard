@@ -106,7 +106,7 @@ Megingiard Game Focus is a dedicated build variant of Megingiard (`com.stormpand
 - Each RetroArch-compatible system definition MUST configure a primary core (`retroArchCore`) and a set of popular alternative cores (`retroArchCoreAlternatives`) to prepare for future user-configurable core adjustments.
 - Starting a dynamic ROM game MUST invoke the appropriate launcher:
   - **RetroArchLauncher**: Resolves physical file paths and fires a targeted Android Intent (`com.retroarch` / `com.retroarch.aarch64` activity `RetroActivityFuture`) passing the target `ROM` path and the matching core `LIBRETRO` name.
-  - **GameNativeLauncher**: Invokes PC games via launcher intent `app.gamenative.MainActivity` passing the parsed Steam App ID from `.steam` or `.steamappid` files.
+  - **GameNativeLauncher**: Invokes PC games via launcher intent `[packageName].MainActivity` (dynamically checking `app.gamenative` and `com.utkarshdalal.gamenative`) passing the parsed Steam App ID from `.steam` or `.steamappid` files.
 - Selecting "Remove ROM Folder" in the Library Action Menu MUST display an `AppModalDialog` detailing added systems, followed by an `AppAlertDialog` confirmation overlay. Removing a folder immediately unregisters its scanned ROMs and dynamic category.
 - When cover artwork is absent for ROMs, the UI MUST render the scraped game logo if available, falling back to the `"sports_esports"` symbol ligature from the Material Symbols Rounded font if no logo was scraped.
 

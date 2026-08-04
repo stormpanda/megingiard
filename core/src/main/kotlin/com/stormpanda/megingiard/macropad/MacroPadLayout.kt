@@ -455,7 +455,14 @@ data class PadProfile(
 
         val romFileName = focusedRomPath?.substringAfterLast('/')
         val systemMatches = assoc.systemId == null || systemId == null || assoc.systemId.equals(systemId, ignoreCase = true)
-        val romMatches = assoc.romFileName == null || (romFileName != null && assoc.romFileName.equals(romFileName, ignoreCase = true))
+        val romMatches =
+            assoc.romFileName == null || (
+                romFileName != null &&
+                    (
+                        assoc.romFileName.equals(romFileName, ignoreCase = true) ||
+                            assoc.romFileName.substringBeforeLast('.').equals(romFileName.substringBeforeLast('.'), ignoreCase = true)
+                    )
+            )
         return systemMatches && romMatches
     }
 }

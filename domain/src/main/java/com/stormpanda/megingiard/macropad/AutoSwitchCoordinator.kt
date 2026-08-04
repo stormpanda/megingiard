@@ -38,26 +38,12 @@ object AutoSwitchCoordinator {
                 if (session != null && SettingsManager.autoSwitchProfiles.value) {
                     val matchedProfile =
                         MacroPadState.profiles.value.let { profiles ->
-                            val romFileName = session.romPath?.substringAfterLast('/')
-
-                            // 1. Look for ROM-specific match (matching packageName, systemId, and romFileName)
-                            val romMatch =
-                                profiles.firstOrNull { profile ->
-                                    val assoc = profile.association ?: return@firstOrNull false
-                                    val packageMatches = assoc.packageName.equals(session.packageName, ignoreCase = true)
-                                    val systemMatches = assoc.systemId == null || assoc.systemId.equals(session.systemId, ignoreCase = true)
-                                    val fileMatches =
-                                        assoc.romFileName != null && romFileName != null &&
-                                            assoc.romFileName.equals(romFileName, ignoreCase = true)
-                                    packageMatches && systemMatches && fileMatches
-                                }
-
-                            // 2. Fallback to generic emulator package match
-                            romMatch ?: profiles.firstOrNull { profile ->
-                                val assoc = profile.association ?: return@firstOrNull false
-                                val packageMatches = assoc.packageName.equals(session.packageName, ignoreCase = true)
-                                val isGenericAppProfile = assoc.romFileName == null
-                                packageMatches && isGenericAppProfile
+                            profiles.firstOrNull { profile ->
+                                profile.association?.romFileName != null &&
+                                    profile.matches(session.packageName, session.romPath, session.systemId)
+                            } ?: profiles.firstOrNull { profile ->
+                                profile.association?.romFileName == null &&
+                                    profile.matches(session.packageName, session.romPath, session.systemId)
                             }
                         }
                     if (matchedProfile != null) {

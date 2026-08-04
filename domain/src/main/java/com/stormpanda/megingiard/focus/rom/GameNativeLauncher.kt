@@ -4,14 +4,10 @@ import android.app.ActivityOptions
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import com.stormpanda.megingiard.AppLog
 import java.io.File
 
 private const val TAG = "GameNativeLauncher"
-private const val GAMENATIVE_PACKAGE = "app.gamenative"
-private const val GAMENATIVE_MAIN_ACTIVITY = "app.gamenative.MainActivity"
-private const val GAMENATIVE_LAUNCH_ACTION = "app.gamenative.LAUNCH_GAME"
 private const val GAMENATIVE_EXTRA_APP_ID = "app_id"
 private const val GAMENATIVE_EXTRA_ROM = "ROM"
 
@@ -26,12 +22,12 @@ class GameNativeLauncher : RomLauncher {
         displayId: Int,
         retroArchCore: String?,
     ): Boolean {
-        val packageName = GAMENATIVE_PACKAGE
-        val pm = context.packageManager
-        try {
-            pm.getPackageInfo(packageName, 0)
-        } catch (e: PackageManager.NameNotFoundException) {
-            AppLog.e(TAG, "GameNative is not installed (checked $packageName)")
+        val packageName = getGameNativePackageName(context)
+        if (packageName == null) {
+            AppLog.e(
+                TAG,
+                "GameNative is not installed (checked ${GameNativeDetector.supportedPackages.joinToString()})",
+            )
             return false
         }
 
@@ -42,9 +38,9 @@ class GameNativeLauncher : RomLauncher {
         return try {
             val intent =
                 Intent().apply {
-                    component = ComponentName(packageName, GAMENATIVE_MAIN_ACTIVITY)
+                    component = ComponentName(packageName, "$packageName.MainActivity")
                     if (appId != null) {
-                        action = GAMENATIVE_LAUNCH_ACTION
+                        action = "$packageName.LAUNCH_GAME"
                         putExtra(GAMENATIVE_EXTRA_APP_ID, appId)
                     } else {
                         action = Intent.ACTION_MAIN
@@ -62,6 +58,18 @@ class GameNativeLauncher : RomLauncher {
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to launch GameNative: ${e.message}", e)
             false
+        }
+    }
+
+    private fun getGameNativePackageName(context: Context): String? {
+        val pm = context.packageManager
+        return GameNativeDetector.supportedPackages.firstOrNull { pkg ->
+            try {
+                pm.getPackageInfo(pkg, 0)
+                true
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 
