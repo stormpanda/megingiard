@@ -513,6 +513,10 @@ object PrivdClient {
         readFileDeferred = null
         isCapturingReadFile = false
         readFileDumpBuilder.clear()
+        listProcessesDeferred?.complete(null)
+        listProcessesDeferred = null
+        isCapturingProcesses = false
+        processesDumpBuilder.clear()
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null
