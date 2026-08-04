@@ -4,10 +4,13 @@ Welcome to **Megingiard**, a bespoke companion application specifically designed
 
 <p align="center">
   <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">
-    <img src="https://img.youtube.com/vi/vgs6X9piswA/hqdefault.jpg" alt="Megingiard Feature Overview by Rye J's Outpost" width="600">
+    <img src="https://img.youtube.com/vi/vgs6X9piswA/hqdefault.jpg" alt="Megingiard Feature Overview by Rye J's Outpost" width="390">
+  </a>
+  <a href="https://youtu.be/1Iksugqljj8">
+    <img src="https://img.youtube.com/vi/1Iksugqljj8/hqdefault.jpg" alt="Turn All Your Games Into Dual Screen Games by RoeTaKa" width="390">
   </a>
   <br>
-  <em>Megingiard Feature Overview by <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">Rye J’s Outpost</a></em>
+  <em>Megingiard Feature Overview by <a href="https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3">Rye J’s Outpost</a> &nbsp;·&nbsp; Turn All Your Games Into Dual Screen Games by <a href="https://youtu.be/1Iksugqljj8">RoeTaKa</a></em>
 </p>
 
 ---
@@ -85,8 +88,8 @@ Given its hardware-specific approach and advanced features, this project is exte
 
 ### Dual-Screen Companion Setup
 
-| Primary screen | Secondary screen |
-| :---: | :---: |
+|                               Primary screen                               |                                              Secondary screen                                              |
+| :------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------: |
 | ![Primary Screen on the AYN Thor](./assets/screenshots/primary_screen.png) | ![Secondary Screen with custom MacroPad layout on the AYN Thor](./assets/screenshots/secondary_screen.png) |
 
 _Dual-screen companion experience in action. The primary screen displays your target game or app, while the secondary screen hosts your custom MacroPad layout or active companion tool._
@@ -103,10 +106,10 @@ _The step-by-step interactive welcome tour that guides new users through Megingi
 
 ### Virtual Keyboards & Touchpads
 
-| Compact Full Keyboard | Ergonomic Split Keyboard |
-| :---: | :---: |
-| ![Compact Full Keyboard Layout](./assets/screenshots/compact_full_keyboard.png) | ![Ergonomic Split Keyboard Layout](./assets/screenshots/ergonomic_keyboard.png) |
-| **Relative Mouse Touchpad** | **Absolute Touch Touchpad** |
+|                               Compact Full Keyboard                               |                             Ergonomic Split Keyboard                              |
+| :-------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------: |
+|  ![Compact Full Keyboard Layout](./assets/screenshots/compact_full_keyboard.png)  |  ![Ergonomic Split Keyboard Layout](./assets/screenshots/ergonomic_keyboard.png)  |
+|                            **Relative Mouse Touchpad**                            |                            **Absolute Touch Touchpad**                            |
 | ![Relative Mouse Touchpad Mode](./assets/screenshots/relative_mouse_touchpad.png) | ![Absolute Touch Touchpad Mode](./assets/screenshots/absolute_touch_touchpad.png) |
 
 _Virtual input modes designed for the secondary screen. Top row: Full Compact and Ergonomic Split on-screen keyboards with sticky modifiers and trackpoints. Bottom row: Kernel-level Relative Mouse Trackpad and Absolute Touch direct digitizer emulation modes._
@@ -359,6 +362,8 @@ Megingiard is completely free to use for personal, non-commercial use. If you en
 📣 **Are you creating videos, guides, or posts featuring Megingiard? Reach out, and I will gladly feature your content right here!** 📣
 
 - [Megingiard Feature Overview by Rye J’s Outpost](https://youtu.be/vgs6X9piswA?si=K8TbTrWHGzLIRxe3) - A detailed general feature walkthrough and overview of Megingiard.
+- [Turn All Your Games Into Dual Screen Games by RoeTaKa](https://youtu.be/1Iksugqljj8) - A setup and configuration guide showing how to use Megingiard for different gaming layouts.
+- [Another Must Have App for the AYN Thor! by Joey's Retro Handhelds](https://youtu.be/CoagJc1Z0gQ) - A detailed (and funny!) setup walkthrough and app overview featuring Megingiard. focused on the screen mirroring aspect.
 - [Screen Mirroring Demo by dylosama](https://www.youtube.com/shorts/v_UhWzfCbRQ) - A YouTube Short highlighting the app's latency-free, multi-cutout screen mirroring functionality in action.
 - Megingiard is featured in [GAFT (Games & Apps for AYN Thor)](https://andreyvelsk.github.io/GAFT/) - A community-curated directory of dual-screen games, companion app pairings, and Android ports for the AYN Thor, created and maintained by Andrey Velsk (@andreyvelsk).
 
