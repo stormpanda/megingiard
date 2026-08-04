@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
@@ -121,6 +123,9 @@ private const val IH_SCROLL_FADE_BOTTOM_ALPHA = 0.7f
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private const val IH_INACTIVE_DOT_ALPHA = 0.4f
 private val IH_BUTTON_SPACING = 8.dp
+private val IH_SHOW_BUTTON_HEIGHT = 36.dp
+private val IH_SHOW_BUTTON_PADDING_H = 12.dp
+private val IH_SHOW_BUTTON_PADDING_V = 6.dp
 
 private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
 private val IH_STATUS_ACTIVE_COLOR = Color(0xFF81C784)
@@ -386,13 +391,41 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // 4. Active Profile Card
                         InfoCard(
                             title = stringResource(R.string.integration_home_active_profile),
                             value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             isHighlight = activeProfile != null,
+                            action =
+                                if (activeProfile != null) {
+                                    {
+                                        Button(
+                                            onClick = {
+                                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                                            },
+                                            colors =
+                                                ButtonDefaults.buttonColors(
+                                                    containerColor = colors.accent,
+                                                    contentColor = colors.onAccent,
+                                                ),
+                                            shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                            contentPadding =
+                                                PaddingValues(
+                                                    horizontal = IH_SHOW_BUTTON_PADDING_H,
+                                                    vertical = IH_SHOW_BUTTON_PADDING_V,
+                                                ),
+                                            modifier = Modifier.height(IH_SHOW_BUTTON_HEIGHT),
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.integration_home_show_macropad),
+                                                style = MaterialTheme.typography.labelLarge,
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
                         )
 
                         // 4. Status Panel Card
@@ -756,6 +789,7 @@ private fun InfoCard(
     colors: AppColors,
     isHighlight: Boolean,
     isMonospace: Boolean = false,
+    action: @Composable (() -> Unit)? = null,
 ) {
     Card(
         modifier =
@@ -803,6 +837,10 @@ private fun InfoCard(
                     color = if (isHighlight) colors.accent else colors.onSurface,
                     fontWeight = FontWeight.Bold,
                 )
+            }
+
+            if (action != null) {
+                action()
             }
         }
     }

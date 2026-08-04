@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -48,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
@@ -124,6 +126,7 @@ fun QuickMenu(
     val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
+    val companionViewMode by AppStateManager.companionViewMode.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
@@ -221,6 +224,20 @@ fun QuickMenu(
                         MacroPadState.setActiveLayoutId(layoutId)
                     },
                 )
+
+                if (companionViewMode == CompanionViewMode.MACROPAD) {
+                    Spacer(Modifier.height(PM_SECTION_SPACING))
+                    QuickMenuActionChip(
+                        label = stringResource(R.string.quick_menu_show_dashboard),
+                        icon = Icons.Rounded.Home,
+                        colors = colors,
+                        onClick = {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
 
                 Spacer(Modifier.height(PM_SECTION_SPACING))
                 HorizontalDivider(color = colors.controlOverlayBorder)

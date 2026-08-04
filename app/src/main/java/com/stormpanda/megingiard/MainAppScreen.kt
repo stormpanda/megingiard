@@ -120,6 +120,7 @@ fun MainAppScreen() {
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val isExternalClientActive by AppStateManager.isExternalClientActive.collectAsState()
     val activeProfile by MacroPadState.activeProfile.collectAsState()
+    val companionViewMode by AppStateManager.companionViewMode.collectAsState()
     val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
     val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
@@ -372,8 +373,20 @@ fun MainAppScreen() {
                     },
         ) {
             val showIntegrationHome =
-                isExternalClientActive &&
-                    (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
+                when (companionViewMode) {
+                    CompanionViewMode.MACROPAD -> {
+                        false
+                    }
+
+                    CompanionViewMode.DASHBOARD -> {
+                        true
+                    }
+
+                    CompanionViewMode.AUTO -> {
+                        isExternalClientActive &&
+                            (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
+                    }
+                }
 
             if (showIntegrationHome) {
                 IntegrationHomeScreen()

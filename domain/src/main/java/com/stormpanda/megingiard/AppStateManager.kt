@@ -22,6 +22,12 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
 
+enum class CompanionViewMode {
+    AUTO,
+    MACROPAD,
+    DASHBOARD,
+}
+
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -149,6 +155,12 @@ object AppStateManager {
             TAG,
             "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
         )
+        if (_isExternalClientActive.value != isActive ||
+            _focusedAppPackageName.value != focusedApp ||
+            _focusedRomPath.value != focusedRomPath
+        ) {
+            _companionViewMode.value = CompanionViewMode.AUTO
+        }
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
         _focusedAppPackageName.value = focusedApp
@@ -269,6 +281,14 @@ object AppStateManager {
 
     fun setWasMirroringStartedByTouchpad(started: Boolean) {
         _wasMirroringStartedByTouchpad.value = started
+    }
+
+    private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
+    val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
+
+    fun setCompanionViewMode(mode: CompanionViewMode) {
+        AppLog.d(TAG, "setCompanionViewMode($mode)")
+        _companionViewMode.value = mode
     }
 
     private val _isBackgroundSettingsActive = MutableStateFlow(false)

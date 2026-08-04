@@ -512,6 +512,7 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.focusedAppPackageName,
                     AppStateManager.focusedRomPath,
                     MacroPadState.activeProfile,
+                    AppStateManager.companionViewMode,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
@@ -523,10 +524,23 @@ class MainActivity : ComponentActivity() {
                     val focusedPackage = values[7] as? String
                     val focusedRom = values[8] as? String
                     val activeProfile = values[9] as? PadProfile
+                    val companionViewMode = values[10] as CompanionViewMode
 
                     val showIntegrationHome =
-                        externalClientActive &&
-                            (focusedPackage == null || activeProfile?.matches(focusedPackage, focusedRom) != true)
+                        when (companionViewMode) {
+                            CompanionViewMode.MACROPAD -> {
+                                false
+                            }
+
+                            CompanionViewMode.DASHBOARD -> {
+                                true
+                            }
+
+                            CompanionViewMode.AUTO -> {
+                                externalClientActive &&
+                                    (focusedPackage == null || activeProfile?.matches(focusedPackage, focusedRom) != true)
+                            }
+                        }
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,

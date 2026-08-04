@@ -1208,5 +1208,7 @@ Open Settings to create a layout.</string>
     <string name="integration_home_no_rom_detected">None detected</string>
     <string name="integration_home_new_profile">New Profile</string>
     <string name="integration_home_default_layout">Default</string>
+    <string name="integration_home_show_macropad">Show</string>
+    <string name="quick_menu_show_dashboard">Show Dashboard</string>
 </resources>
 
