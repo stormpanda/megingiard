@@ -62,6 +62,7 @@
 #include <poll.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <dirent.h>
 #include "cmd_parsers.h"
 
 #define PORT_START 51234
@@ -888,6 +889,63 @@ static void handle_read_file(int client_fd, const char *path) {
     pthread_mutex_unlock(&g_send_mutex);
 }
 
+static void handle_list_processes(int client_fd) {
+    pthread_mutex_lock(&g_send_mutex);
+    DIR *dir = opendir("/proc");
+    if (!dir) {
+        (void)write(client_fd, "PROC_ERR OPENDIR_FAILED\n", 24);
+        pthread_mutex_unlock(&g_send_mutex);
+        return;
+    }
+
+    (void)write(client_fd, "PROC_BEGIN\n", 11);
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        char *endptr;
+        long pid = strtol(entry->d_name, &endptr, 10);
+        if (*endptr == '\0' && pid > 0) {
+            char path[256];
+            snprintf(path, sizeof(path), "/proc/%ld/cmdline", pid);
+            FILE *fp = fopen(path, "r");
+            if (fp) {
+                char cmdline[1024];
+                memset(cmdline, 0, sizeof(cmdline));
+                size_t n = fread(cmdline, 1, sizeof(cmdline) - 1, fp);
+                fclose(fp);
+                if (n > 0) {
+                    for (size_t i = 0; i < n; i++) {
+                        if (cmdline[i] == '\0') {
+                            cmdline[i] = ' ';
+                        }
+                    }
+                    while (n > 0 && (cmdline[n - 1] == ' ' || cmdline[n - 1] == '\n' || cmdline[n - 1] == '\r')) {
+                        cmdline[n - 1] = '\0';
+                        n--;
+                    }
+                    if (n > 0) {
+                        struct stat st;
+                        snprintf(path, sizeof(path), "/proc/%ld", pid);
+                        uid_t uid = 0;
+                        if (stat(path, &st) == 0) {
+                            uid = st.st_uid;
+                        }
+                        char resp[2048];
+                        int len = snprintf(resp, sizeof(resp), "PROC %ld %u %s\n", pid, (unsigned int)uid, cmdline);
+                        if (len > 0) {
+                            (void)write(client_fd, resp, (size_t)len);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    closedir(dir);
+
+    (void)write(client_fd, "PROC_END\n", 9);
+    pthread_mutex_unlock(&g_send_mutex);
+}
+
 /*
  * Handles a single client connection.
  * Returns 0 on normal disconnect, 1 if the client requested QUIT.
@@ -1050,6 +1108,11 @@ static int serve_client(int client_fd) {
             }
             while (*p == ' ') p++;
             handle_read_file(client_fd, p);
+            continue;
+        }
+
+        if (strncmp(line, "LIST_PROCESSES", 14) == 0) {
+            handle_list_processes(client_fd);
             continue;
         }
 

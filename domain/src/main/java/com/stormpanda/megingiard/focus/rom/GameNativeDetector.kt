@@ -8,7 +8,7 @@ private const val TAG = "GameNativeDetector"
 
 /**
  * Detector implementation for GameNative instances.
- * Reads `wine.log` over privileged socket to parse active PC/Steam game.
+ * Traverses running processes to resolve active PC/Steam game.
  */
 object GameNativeDetector : EmulatorDetector {
     override val supportedPackages: Set<String> =
@@ -19,91 +19,130 @@ object GameNativeDetector : EmulatorDetector {
 
     override val systemId: String = "pc"
 
-    private val logPaths =
-        listOf(
-            "/storage/emulated/0/Android/data/app.gamenative/files/wine_logs/wine.log",
-            "/storage/emulated/0/Android/data/com.utkarshdalal.gamenative/files/wine_logs/wine.log",
-            "/sdcard/Android/data/app.gamenative/files/wine_logs/wine.log",
-            "/sdcard/Android/data/com.utkarshdalal.gamenative/files/wine_logs/wine.log",
-        )
-
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
 
-        for (path in logPaths) {
-            val logContent = PrivdClient.readTextFile(path)
-            if (!logContent.isNullOrBlank()) {
-                val session = parseSessionFromLog(packageName, logContent)
-                if (session != null) {
-                    AppLog.i(TAG, "Resolved session via log file '$path': ${session.gameTitle} (${session.systemId})")
-                    return session
-                }
+        val procList = PrivdClient.getRunningProcesses()
+        if (!procList.isNullOrBlank()) {
+            val session = parseSessionFromProcesses(packageName, procList)
+            if (session != null) {
+                AppLog.i(TAG, "Resolved session via process list: ${session.gameTitle} (${session.systemId})")
+                return session
             }
         }
 
-        AppLog.d(TAG, "No GameNative log file could be parsed for $packageName")
+        AppLog.d(TAG, "No GameNative session could be resolved for $packageName")
         return null
     }
 
-    internal fun parseSessionFromLog(
+    internal fun parseSessionFromProcesses(
         packageName: String,
-        content: String,
+        procList: String,
     ): ActiveGameSession? {
-        // 1. Search for Steam App ID or game ID in environment variables/logs
-        val appIdRegex = Regex("""(?:STEAM_APP_ID|steam_appid|app_id|game_id)\s*=\s*(\d+)""", RegexOption.IGNORE_CASE)
-        val appIdMatch = appIdRegex.findAll(content).lastOrNull()
-        val appId = appIdMatch?.groupValues?.get(1)
+        val lines = procList.split('\n')
 
-        // 2. Search for common Windows paths or executables being started by wine
-        val pathRegex =
-            Regex(
-                """L"C:\\(?:Program Files(?:\s*\(x86\))?\\)?(?:Steam\\steamapps\\common|Epic Games|GOG Galaxy\\Games|Games)\\([^"\\]+)""",
-                RegexOption.IGNORE_CASE,
-            )
-        val pathMatch = pathRegex.findAll(content).lastOrNull()
-        val folderOrExeName = pathMatch?.groupValues?.get(1)
-
-        if (appId == null && folderOrExeName == null) return null
-
-        // Look for matching ROM app in RomManager
-        val romApps = RomManager.romApps.value
-        val matchedApp =
-            if (appId != null) {
-                romApps.firstOrNull { app ->
-                    val file = app.romPath?.let { File(it) }
-                    file?.nameWithoutExtension == appId
+        // Find the UID of the target package (e.g. app.gamenative)
+        var targetUid: String? = null
+        for (line in lines) {
+            if (line.startsWith("PROC ")) {
+                val parts = line.split(' ', limit = 4)
+                if (parts.size >= 4) {
+                    val uid = parts[2]
+                    val cmdline = parts[3].trim()
+                    if (cmdline == packageName || cmdline.startsWith("$packageName:")) {
+                        targetUid = uid
+                        break
+                    }
                 }
-            } else {
-                null
             }
-
-        val finalMatchedApp =
-            matchedApp ?: if (folderOrExeName != null) {
-                romApps.firstOrNull { app ->
-                    val file = app.romPath?.let { File(it) }
-                    app.label.equals(folderOrExeName, ignoreCase = true) ||
-                        file?.nameWithoutExtension?.contains(folderOrExeName, ignoreCase = true) == true
-                }
-            } else {
-                null
-            }
-
-        return if (finalMatchedApp != null) {
-            ActiveGameSession(
-                packageName = packageName,
-                systemId = "pc",
-                romPath = finalMatchedApp.romPath ?: "",
-                gameTitle = finalMatchedApp.label,
-            )
-        } else {
-            // Fallback session
-            val finalAppId = appId ?: folderOrExeName ?: "unknown"
-            ActiveGameSession(
-                packageName = packageName,
-                systemId = "pc",
-                romPath = "$finalAppId.steam",
-                gameTitle = folderOrExeName ?: "Steam Game $finalAppId",
-            )
         }
+
+        if (targetUid == null) {
+            AppLog.d(TAG, "parseSessionFromProcesses: Main process not found for $packageName")
+            return null
+        }
+
+        // Find running .exe under that UID which is not a known system process
+        val systemHelpers =
+            setOf(
+                "wineserver",
+                "services.exe",
+                "winedevice.exe",
+                "explorer.exe",
+                "winhandler.exe",
+                "tabtip.exe",
+                "steamclient_loader_x64.exe",
+                "pulseaudio",
+            )
+
+        for (line in lines) {
+            if (line.startsWith("PROC ")) {
+                val parts = line.split(' ', limit = 4)
+                if (parts.size >= 4) {
+                    val uid = parts[2]
+                    val cmdline = parts[3].trim()
+                    if (uid == targetUid) {
+                        if (cmdline.endsWith(".exe", ignoreCase = true)) {
+                            val lastSlash = cmdline.lastIndexOf('\\')
+                            val lastForwardSlash = cmdline.lastIndexOf('/')
+                            val separatorIdx = maxOf(lastSlash, lastForwardSlash)
+                            val exeName = if (separatorIdx != -1) cmdline.substring(separatorIdx + 1) else cmdline
+
+                            if (systemHelpers.any { helper ->
+                                    exeName.equals(helper, ignoreCase = true) ||
+                                        cmdline.contains(helper, ignoreCase = true)
+                                }
+                            ) {
+                                continue
+                            }
+
+                            // Try to extract the game folder name from typical Windows steamapps paths, or use the exe name
+                            // path looks like: C:\Program Files (x86)\Steam\steamapps\common\Baba Is You\Baba Is You.exe
+                            val commonIndex = cmdline.indexOf("steamapps\\common\\", ignoreCase = true)
+                            val folderName =
+                                if (commonIndex != -1) {
+                                    val start = commonIndex + "steamapps\\common\\".length
+                                    val end = cmdline.indexOf('\\', start)
+                                    if (end != -1) {
+                                        cmdline.substring(start, end)
+                                    } else {
+                                        exeName.removeSuffix(".exe")
+                                    }
+                                } else {
+                                    exeName.removeSuffix(".exe")
+                                }
+
+                            // Match against RomManager
+                            val romApps = RomManager.romApps.value
+                            val matchedApp =
+                                romApps.firstOrNull { app ->
+                                    val file = app.romPath?.let { File(it) }
+                                    app.label.equals(folderName, ignoreCase = true) ||
+                                        file?.nameWithoutExtension?.contains(folderName, ignoreCase = true) == true ||
+                                        app.label.equals(exeName.removeSuffix(".exe"), ignoreCase = true)
+                                }
+
+                            return if (matchedApp != null) {
+                                ActiveGameSession(
+                                    packageName = packageName,
+                                    systemId = "pc",
+                                    romPath = matchedApp.romPath ?: "",
+                                    gameTitle = matchedApp.label,
+                                )
+                            } else {
+                                ActiveGameSession(
+                                    packageName = packageName,
+                                    systemId = "pc",
+                                    romPath = "$folderName.steam",
+                                    gameTitle = folderName,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return null
     }
 }

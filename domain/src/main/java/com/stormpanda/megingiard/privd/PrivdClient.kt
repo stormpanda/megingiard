@@ -143,6 +143,12 @@ object PrivdClient {
 
     private val readFileDumpBuilder = StringBuilder()
 
+    @Volatile private var listProcessesDeferred: CompletableDeferred<String?>? = null
+
+    @Volatile private var isCapturingProcesses = false
+
+    private val processesDumpBuilder = StringBuilder()
+
     val isConnected: Boolean
         get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
 
@@ -304,6 +310,19 @@ object PrivdClient {
             return result
         }
 
+    suspend fun getRunningProcesses(): String? =
+        commandMutex.withLock {
+            if (!isConnected) return null
+            val deferred = CompletableDeferred<String?>()
+            listProcessesDeferred = deferred
+            send("LIST_PROCESSES\n")
+            val result = withTimeoutOrNull(READ_FILE_TIMEOUT_MS) { deferred.await() }
+            listProcessesDeferred = null
+            isCapturingProcesses = false
+            AppLog.i(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
+            return result
+        }
+
     // -------------------------------------------------------------------------
     // Internal
     // -------------------------------------------------------------------------
@@ -429,6 +448,26 @@ object PrivdClient {
             }
             if (isCapturingReadFile) {
                 readFileDumpBuilder.append(line).append('\n')
+                continue
+            }
+            if (line == "PROC_BEGIN") {
+                isCapturingProcesses = true
+                processesDumpBuilder.clear()
+                continue
+            }
+            if (line.startsWith("PROC_ERR")) {
+                isCapturingProcesses = false
+                listProcessesDeferred?.complete(null)
+                continue
+            }
+            if (line == "PROC_END") {
+                isCapturingProcesses = false
+                listProcessesDeferred?.complete(processesDumpBuilder.toString())
+                processesDumpBuilder.clear()
+                continue
+            }
+            if (isCapturingProcesses) {
+                processesDumpBuilder.append(line).append('\n')
                 continue
             }
             if (line.startsWith("EVT ")) {

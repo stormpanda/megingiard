@@ -7,47 +7,47 @@ import org.junit.Test
 
 class GameNativeDetectorTest {
     @Test
-    fun parseSessionFromLog_appIdEnvVar_returnsCorrectFallbackSession() {
-        val log =
+    fun parseSessionFromProcesses_validGame_returnsCorrectSession() {
+        val procList =
             """
-            08-04 10:00:00.123 1234 1234 I GameNative: Environment: STEAM_APP_ID=620
-            08-04 10:00:00.456 1234 1234 D GameNative: wine: starting L"C:\Program Files\Steam\steamapps\common\Portal 2\portal2.exe"
+            PROC 29091 10142 app.gamenative
+            PROC 29978 10142 start.exe /exec explorer /desktop=shell,1280x720 winhandler.exe
+            PROC 30006 10142 C:\windows\system32\services.exe
+            PROC 30101 10142 C:\Program Files (x86)\Steam\steamapps\common\Baba Is You\Baba Is You.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromLog("app.gamenative", log)
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
         assertEquals("pc", session?.systemId)
-        assertEquals("620.steam", session?.romPath)
-        assertEquals("Portal 2", session?.gameTitle)
+        assertEquals("Baba Is You.steam", session?.romPath)
+        assertEquals("Baba Is You", session?.gameTitle)
     }
 
     @Test
-    fun parseSessionFromLog_onlyExePath_returnsCorrectFallbackSession() {
-        val log =
+    fun parseSessionFromProcesses_onlySystemHelpers_returnsNull() {
+        val procList =
             """
-            08-04 10:00:00.456 1234 1234 D GameNative: wine: starting L"C:\Program Files\GOG Galaxy\Games\The Witcher 3\witcher3.exe"
+            PROC 29091 10142 app.gamenative
+            PROC 29978 10142 start.exe /exec explorer /desktop=shell,1280x720 winhandler.exe
+            PROC 30006 10142 C:\windows\system32\services.exe
+            PROC 30022 10142 C:\windows\system32\winedevice.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromLog("app.gamenative", log)
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
 
-        assertNotNull(session)
-        assertEquals("app.gamenative", session?.packageName)
-        assertEquals("pc", session?.systemId)
-        assertEquals("The Witcher 3.steam", session?.romPath)
-        assertEquals("The Witcher 3", session?.gameTitle)
+        assertNull(session)
     }
 
     @Test
-    fun parseSessionFromLog_noAppIdOrPath_returnsNull() {
-        val log =
+    fun parseSessionFromProcesses_noMainProcess_returnsNull() {
+        val procList =
             """
-            08-04 10:00:00.123 1234 1234 I GameNative: Started container successfully.
-            08-04 10:00:01.000 1234 1234 I GameNative: XServer started.
+            PROC 30101 10142 C:\Program Files (x86)\Steam\steamapps\common\Baba Is You\Baba Is You.exe
             """.trimIndent()
 
-        val session = GameNativeDetector.parseSessionFromLog("app.gamenative", log)
+        val session = GameNativeDetector.parseSessionFromProcesses("app.gamenative", procList)
 
         assertNull(session)
     }
