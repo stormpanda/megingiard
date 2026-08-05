@@ -69,6 +69,31 @@ Megingiard is split into modular layers:
 
 ---
 
+## Contributing Translations & Locale Support
+
+We welcome translation contributions to make Megingiard accessible to more users worldwide! When submitting new or updated translations, please adhere to the following requirements:
+
+### 1. Multi-Module Translation Scope
+* You can provide translations for both `:app` (`app/src/main/res/values-<lang>/strings.xml`) and `:gamefocus` (`gamefocus/src/main/res/values-<lang>/strings.xml`) in a single Pull Request. Maintainers develop and coordinate features across both modules simultaneously.
+
+### 2. Mandatory Privileged Auto Setup Support
+* **Strict Requirement:** Any language offered as an app translation **must** also support **Privileged Auto Setup**. (Auto Setup is permitted and welcomed to support *more* system languages than Megingiard offers UI translations for, but any language with UI translations must support Auto Setup).
+* **Configuration:** You must update [`AutoSetupLanguageConfig.kt`](core/src/main/kotlin/com/stormpanda/megingiard/privd/AutoSetupLanguageConfig.kt) in the `:core` module by adding a new language configuration containing:
+  - BCP 47 locale tag and 2-letter ISO language code.
+  - System settings search query strings for **Build Number**, **Wireless Debugging**, and **USB Debugging**.
+  - Localized keyword lists for identifying the **"Pair device with pairing code"** row and dialog **"Allow" / "OK"** confirmation buttons.
+* **Unit Tests:** Add unit tests for the new language config in [`AutoSetupLanguageConfigTest.kt`](core/src/test/kotlin/com/stormpanda/megingiard/privd/AutoSetupLanguageConfigTest.kt) to verify locale parsing and fallback behavior.
+
+### 3. Mandatory Permutation Testing for Auto Setup
+Before submitting a translation Pull Request, you **must** manually verify that the Privileged Auto Setup workflow functions correctly across all device starting points defined by the following state permutations:
+* **Developer Options:** ON vs. OFF
+* **Wireless Debugging:** ON vs. OFF
+* **USB Debugging:** ON vs. OFF
+* **Wireless Debugging Pairing:** First-time pairing (never paired with Megingiard) vs. Previously paired
+* **Interrupted / Reset Connection:** Privileged Daemon previously connected successfully, followed by a device reboot or manual deactivation of Developer Options / Wireless Debugging / USB Debugging.
+
+---
+
 ## How to Contribute
 
 ### Step 1: Open an Issue First
