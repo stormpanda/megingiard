@@ -22,9 +22,13 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import android.os.Process as AndroidProcess
 
 private const val TAG = "PrivdBootstrapper"
 private const val DAEMON_ASSET_NAME = "megingiard_privd_arm64"
+
+private const val PORT_RELEASE_START = 51234
+private const val PORT_DEBUG_START = 51244
 
 private fun getDaemonRemotePath(context: Context): String {
     val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
@@ -260,7 +264,7 @@ object PrivdBootstrapper {
         }
         val provisionOk =
             runCatching {
-                provisionDaemon(context, mgr, HmacUtil.bytesToHex(keyBytes), android.os.Process.myUid())
+                provisionDaemon(context, mgr, HmacUtil.bytesToHex(keyBytes), AndroidProcess.myUid())
             }.getOrElse { e ->
                 AppLog.w(TAG, "provisionDaemon() threw: $e")
                 false
@@ -273,7 +277,7 @@ object PrivdBootstrapper {
         }
         // Key is now stored on both sides. Update in-memory copy before verifyConnect().
         PrivdClient.setKey(keyBytes)
-        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned (app UID=${android.os.Process.myUid()})")
+        AppLog.i(TAG, "bootstrapAndConnect: per-install key provisioned (app UID=${AndroidProcess.myUid()})")
 
         // Spawn
         _stage.value = BootstrapStage.SPAWNING_DAEMON
@@ -698,7 +702,7 @@ object PrivdBootstrapper {
         val remotePath = getDaemonRemotePath(context)
         val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
         val stateFilePath = if (isDebug) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-        val portStart = if (isDebug) 51244 else 51234
+        val portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
         val cmd = "shell:$remotePath --keyfile $stateFilePath --port $portStart --provision $keyHex $appUid && echo $PROVISION_OK_MARKER"
         AppLog.d(TAG, "provision cmd issued (keyHex redacted, appUid=$appUid)")
         val stream = mgr.openStream(cmd) ?: return false
@@ -733,7 +737,7 @@ object PrivdBootstrapper {
         val dexPath = getMirrorDexRemotePath(context)
         val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
         val stateFilePath = if (isDebug) "/data/local/tmp/megingiard_privd_debug.key" else "/data/local/tmp/megingiard_privd.key"
-        val portStart = if (isDebug) 51244 else 51234
+        val portStart = if (isDebug) PORT_DEBUG_START else PORT_RELEASE_START
         val killCmd = "kill -9 \$(pidof $processName 2>/dev/null) 2>/dev/null; sleep 1"
         // Run the daemon in the foreground. Since the daemon forks inside
         // detach_from_shell(), the parent exits immediately after writing the
