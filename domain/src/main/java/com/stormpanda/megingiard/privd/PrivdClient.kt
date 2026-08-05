@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.BufferedReader
 import java.io.BufferedWriter
@@ -28,6 +30,8 @@ private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
 private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
 private const val MIRROR_STOP_TIMEOUT_MS = 3_000L
+private const val SCREENSHOT_TIMEOUT_MS = 4_000L
+private const val READ_FILE_TIMEOUT_MS = 5_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
@@ -57,6 +61,8 @@ private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
 object PrivdClient {
     private val _state = MutableStateFlow(PrivdConnectionState.DISCONNECTED)
     val state: StateFlow<PrivdConnectionState> = _state.asStateFlow()
+
+    private val commandMutex = Mutex()
 
     /**
      * Raw evdev events streamed from the daemon while a `SUB GAMEPAD` subscription is active.
@@ -130,6 +136,20 @@ object PrivdClient {
     @Volatile private var mirrorStopDeferred: CompletableDeferred<Boolean>? = null
 
     @Volatile private var screenshotDeferred: CompletableDeferred<Boolean>? = null
+
+    @Volatile private var readFileDeferred: CompletableDeferred<String?>? = null
+
+    @Volatile private var isCapturingReadFile = false
+
+    private val readFileDumpBuilder = StringBuilder()
+
+    @Volatile private var listProcessesDeferred: CompletableDeferred<String?>? = null
+
+    @Volatile private var isCapturingProcesses = false
+
+    private val processesDumpBuilder = StringBuilder()
+
+    private val dumpLock = Any()
 
     val isConnected: Boolean
         get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
@@ -220,16 +240,17 @@ object PrivdClient {
      * `false` on timeout or transport error. Useful as a health-check from
      * the Privileged Mode settings card.
      */
-    suspend fun ping(): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        pingDeferred = deferred
-        send("PING\n")
-        val ok = withTimeoutOrNull(PING_TIMEOUT_MS) { deferred.await() } ?: false
-        pingDeferred = null
-        AppLog.d(TAG, "ping() → $ok")
-        return ok
-    }
+    suspend fun ping(): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            pingDeferred = deferred
+            send("PING\n")
+            val ok = withTimeoutOrNull(PING_TIMEOUT_MS) { deferred.await() } ?: false
+            pingDeferred = null
+            AppLog.d(TAG, "ping() → $ok")
+            return ok
+        }
 
     /**
      * Requests the daemon to start the direct-Surface privileged mirror path.
@@ -238,42 +259,71 @@ object PrivdClient {
     suspend fun startDirectMirror(
         width: Int,
         height: Int,
-    ): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        mirrorDirectStartDeferred = deferred
-        send("MIRROR START_DIRECT $width $height\n")
-        val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
-        mirrorDirectStartDeferred = null
-        AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
-        return ok
-    }
+    ): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            mirrorDirectStartDeferred = deferred
+            send("MIRROR START_DIRECT $width $height\n")
+            val ok = withTimeoutOrNull(MIRROR_DIRECT_START_TIMEOUT_MS) { deferred.await() } ?: false
+            mirrorDirectStartDeferred = null
+            AppLog.i(TAG, "startDirectMirror($width x $height -> app surface) -> $ok")
+            return ok
+        }
 
     /**
      * Stops the privileged-mirror server child. Returns `true` if the daemon
      * acknowledged with `MIRROR_STOPPED`, `false` on timeout / disconnect.
      */
-    suspend fun stopMirror(): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        mirrorStopDeferred = deferred
-        send("MIRROR STOP\n")
-        val ok = withTimeoutOrNull(MIRROR_STOP_TIMEOUT_MS) { deferred.await() } ?: false
-        mirrorStopDeferred = null
-        AppLog.i(TAG, "stopMirror() → $ok")
-        return ok
-    }
+    suspend fun stopMirror(): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            mirrorStopDeferred = deferred
+            send("MIRROR STOP\n")
+            val ok = withTimeoutOrNull(MIRROR_STOP_TIMEOUT_MS) { deferred.await() } ?: false
+            mirrorStopDeferred = null
+            AppLog.i(TAG, "stopMirror() → $ok")
+            return ok
+        }
 
-    suspend fun takeScreenshot(path: String): Boolean {
-        if (!isConnected) return false
-        val deferred = CompletableDeferred<Boolean>()
-        screenshotDeferred = deferred
-        send("SCREENSHOT $path\n")
-        val ok = withTimeoutOrNull(4000) { deferred.await() } ?: false
-        screenshotDeferred = null
-        AppLog.i(TAG, "takeScreenshot($path) -> $ok")
-        return ok
-    }
+    suspend fun takeScreenshot(path: String): Boolean =
+        commandMutex.withLock {
+            if (!isConnected) return false
+            val deferred = CompletableDeferred<Boolean>()
+            screenshotDeferred = deferred
+            send("SCREENSHOT $path\n")
+            val ok = withTimeoutOrNull(SCREENSHOT_TIMEOUT_MS) { deferred.await() } ?: false
+            screenshotDeferred = null
+            AppLog.i(TAG, "takeScreenshot($path) -> $ok")
+            return ok
+        }
+
+    suspend fun readTextFile(path: String): String? =
+        commandMutex.withLock {
+            if (!isConnected) return null
+            val deferred = CompletableDeferred<String?>()
+            readFileDeferred = deferred
+            send("READ_FILE $path\n")
+            val result = withTimeoutOrNull(READ_FILE_TIMEOUT_MS) { deferred.await() }
+            readFileDeferred = null
+            isCapturingReadFile = false
+            AppLog.i(TAG, "readTextFile($path) fetched ${result?.length ?: 0} bytes")
+            return result
+        }
+
+    suspend fun getRunningProcesses(): String? =
+        commandMutex.withLock {
+            if (!isConnected) return null
+            val deferred = CompletableDeferred<String?>()
+            listProcessesDeferred = deferred
+            send("LIST_PROCESSES\n")
+            val result = withTimeoutOrNull(READ_FILE_TIMEOUT_MS) { deferred.await() }
+            listProcessesDeferred = null
+            isCapturingProcesses = false
+            AppLog.i(TAG, "getRunningProcesses() fetched ${result?.length ?: 0} bytes")
+            return result
+        }
 
     // -------------------------------------------------------------------------
     // Internal
@@ -382,6 +432,64 @@ object PrivdClient {
                 screenshotDeferred?.complete(false)
                 continue
             }
+            if (line == "READ_BEGIN") {
+                isCapturingReadFile = true
+                synchronized(dumpLock) {
+                    readFileDumpBuilder.clear()
+                }
+                continue
+            }
+            if (line.startsWith("READ_ERR")) {
+                isCapturingReadFile = false
+                readFileDeferred?.complete(null)
+                continue
+            }
+            if (line == "READ_END") {
+                isCapturingReadFile = false
+                val content =
+                    synchronized(dumpLock) {
+                        val res = readFileDumpBuilder.toString()
+                        readFileDumpBuilder.clear()
+                        res
+                    }
+                readFileDeferred?.complete(content)
+                continue
+            }
+            if (isCapturingReadFile) {
+                synchronized(dumpLock) {
+                    readFileDumpBuilder.append(line).append('\n')
+                }
+                continue
+            }
+            if (line == "PROC_BEGIN") {
+                isCapturingProcesses = true
+                synchronized(dumpLock) {
+                    processesDumpBuilder.clear()
+                }
+                continue
+            }
+            if (line.startsWith("PROC_ERR")) {
+                isCapturingProcesses = false
+                listProcessesDeferred?.complete(null)
+                continue
+            }
+            if (line == "PROC_END") {
+                isCapturingProcesses = false
+                val content =
+                    synchronized(dumpLock) {
+                        val res = processesDumpBuilder.toString()
+                        processesDumpBuilder.clear()
+                        res
+                    }
+                listProcessesDeferred?.complete(content)
+                continue
+            }
+            if (isCapturingProcesses) {
+                synchronized(dumpLock) {
+                    processesDumpBuilder.append(line).append('\n')
+                }
+                continue
+            }
             if (line.startsWith("EVT ")) {
                 val parts = line.split(' ')
                 if (parts.size == 4) {
@@ -421,6 +529,16 @@ object PrivdClient {
         mirrorStopDeferred = null
         screenshotDeferred?.complete(false)
         screenshotDeferred = null
+        readFileDeferred?.complete(null)
+        readFileDeferred = null
+        isCapturingReadFile = false
+        listProcessesDeferred?.complete(null)
+        listProcessesDeferred = null
+        isCapturingProcesses = false
+        synchronized(dumpLock) {
+            readFileDumpBuilder.clear()
+            processesDumpBuilder.clear()
+        }
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null

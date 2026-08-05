@@ -22,6 +22,12 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AppStateManager"
 
+enum class CompanionViewMode {
+    AUTO,
+    MACROPAD,
+    DASHBOARD,
+}
+
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -112,11 +118,20 @@ object AppStateManager {
     private val _focusedAppPackageName = MutableStateFlow<String?>(null)
     val focusedAppPackageName: StateFlow<String?> = _focusedAppPackageName.asStateFlow()
 
+    private val _focusedRomPath = MutableStateFlow<String?>(null)
+    val focusedRomPath: StateFlow<String?> = _focusedRomPath.asStateFlow()
+
     private val _hoveredAppPackageName = MutableStateFlow<String?>(null)
     val hoveredAppPackageName: StateFlow<String?> = _hoveredAppPackageName.asStateFlow()
 
     private val _hoveredAppLabel = MutableStateFlow<String?>(null)
     val hoveredAppLabel: StateFlow<String?> = _hoveredAppLabel.asStateFlow()
+
+    private val _hoveredRomPath = MutableStateFlow<String?>(null)
+    val hoveredRomPath: StateFlow<String?> = _hoveredRomPath.asStateFlow()
+
+    private val _hoveredSystemId = MutableStateFlow<String?>(null)
+    val hoveredSystemId: StateFlow<String?> = _hoveredSystemId.asStateFlow()
 
     private val _hoveredAppPrimaryColor = MutableStateFlow<Int?>(null)
     val hoveredAppPrimaryColor: StateFlow<Int?> = _hoveredAppPrimaryColor.asStateFlow()
@@ -128,20 +143,32 @@ object AppStateManager {
         isActive: Boolean,
         packageName: String?,
         focusedApp: String?,
+        focusedRomPath: String? = null,
         hoveredPackage: String? = null,
         hoveredLabel: String? = null,
+        hoveredRomPath: String? = null,
+        hoveredSystemId: String? = null,
         hoveredPrimaryColor: Int? = null,
         hoveredSecondaryColor: Int? = null,
     ) {
         AppLog.d(
             TAG,
-            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp hovered=$hoveredLabel ($hoveredPackage) primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
+            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
         )
+        if (_isExternalClientActive.value != isActive ||
+            _focusedAppPackageName.value != focusedApp ||
+            _focusedRomPath.value != focusedRomPath
+        ) {
+            _companionViewMode.value = CompanionViewMode.AUTO
+        }
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
         _focusedAppPackageName.value = focusedApp
+        _focusedRomPath.value = focusedRomPath
         _hoveredAppPackageName.value = hoveredPackage
         _hoveredAppLabel.value = hoveredLabel
+        _hoveredRomPath.value = hoveredRomPath
+        _hoveredSystemId.value = hoveredSystemId
         _hoveredAppPrimaryColor.value = hoveredPrimaryColor
         _hoveredAppSecondaryColor.value = hoveredSecondaryColor
     }
@@ -254,6 +281,14 @@ object AppStateManager {
 
     fun setWasMirroringStartedByTouchpad(started: Boolean) {
         _wasMirroringStartedByTouchpad.value = started
+    }
+
+    private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
+    val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
+
+    fun setCompanionViewMode(mode: CompanionViewMode) {
+        AppLog.d(TAG, "setCompanionViewMode($mode)")
+        _companionViewMode.value = mode
     }
 
     private val _isBackgroundSettingsActive = MutableStateFlow(false)

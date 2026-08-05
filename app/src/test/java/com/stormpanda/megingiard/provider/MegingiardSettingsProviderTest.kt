@@ -13,6 +13,7 @@ import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -52,7 +53,7 @@ class MegingiardSettingsProviderTest {
                 name = "Test Integration Profile",
                 layouts = listOf(PadLayout(id = layoutId, name = "Layout 1")),
                 activeLayoutId = layoutId,
-                associatedPackage = "com.test.targetapp",
+                association = ProfileAssociation(packageName = "com.test.targetapp"),
             )
         MacroPadState.loadFrom(listOf(testProfile), profileId)
 
@@ -73,7 +74,7 @@ class MegingiardSettingsProviderTest {
 
                 assertEquals(profile.id, it.getString(idIndex))
                 assertEquals(profile.name, it.getString(nameIndex))
-                assertEquals(profile.associatedPackage ?: "", it.getString(pkgIndex))
+                assertEquals(profile.association?.packageName ?: "", it.getString(pkgIndex))
             }
             assertEquals("Cursor row count did not match profiles list size", activeProfiles.size, index)
         }

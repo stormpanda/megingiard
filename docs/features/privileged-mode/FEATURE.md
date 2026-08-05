@@ -352,6 +352,10 @@ the existing protocol.
 | App → D   | `SCREENSHOT <path>\n`          | Take primary display screenshot, output to path          |
 | D → App   | `SCREENSHOT_OK\n`               | Screenshot completed successfully                        |
 | D → App   | `SCREENSHOT_ERR <reason>\n`     | Screenshot failed (e.g. invalid path / execution error)  |
+| App → D   | `READ_FILE <path>\n`           | Read text file (up to 128KB) from storage under shell UID |
+| D → App   | `READ_BEGIN\n`                 | Stream file contents start marker                        |
+| D → App   | `READ_END\n`                   | Stream file contents end marker                          |
+| D → App   | `READ_ERR <reason>\n`          | File read failed (e.g. file not found)                   |
 
 For the privileged mirror (`MIRROR START_DIRECT`), the `app_process` child registers the Binder service `megingiard.direct.surface` to receive multiple target `Surface` instances and their physical dimensions. This allows the direct mirror server to set up and capture multiple concurrent virtual displays mapping to different cutout regions without process restarts.
 

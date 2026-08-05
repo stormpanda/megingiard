@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,16 +70,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import kotlinx.coroutines.delay
+import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -117,6 +123,9 @@ private const val IH_SCROLL_FADE_BOTTOM_ALPHA = 0.7f
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private const val IH_INACTIVE_DOT_ALPHA = 0.4f
 private val IH_BUTTON_SPACING = 8.dp
+private val IH_SHOW_BUTTON_HEIGHT = 36.dp
+private val IH_SHOW_BUTTON_PADDING_H = 12.dp
+private val IH_SHOW_BUTTON_PADDING_V = 6.dp
 
 private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
 private val IH_STATUS_ACTIVE_COLOR = Color(0xFF81C784)
@@ -137,6 +146,9 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
     val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
     val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
+    val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsState()
+    val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsState()
+    val activeSession by EmulatorDetectionFunnel.activeSession.collectAsState()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -298,29 +310,116 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             )
                         }
 
-                        // 2. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
-                        if (isGameFocus && hoveredPackage != null) {
+                        // 2. Unconditional Last Detected ROM Card (second box from top)
+                        val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsState()
+                        InfoCard(
+                            title = stringResource(R.string.integration_home_detected_rom),
+                            value =
+                                lastDetectedSession?.let { session ->
+                                    val filename = session.romPath?.let { File(it).name } ?: session.gameTitle
+                                    "$filename (${session.systemId})"
+                                } ?: stringResource(R.string.integration_home_no_rom_detected),
+                            icon = Icons.Rounded.SportsEsports,
+                            colors = colors,
+                            isHighlight = lastDetectedSession != null,
+                            isMonospace = true,
+                        )
+
+                        // 3. Profile Setup/Link Card (only when gamefocus is active and we have a hovered app)
+                        val targetHoveredPkg = hoveredPackage
+                        if (isGameFocus && targetHoveredPkg != null) {
                             val profiles by MacroPadState.profiles.collectAsState()
                             val associatedProfile =
-                                remember(profiles, hoveredPackage) {
-                                    profiles.find { it.associatedPackage == hoveredPackage }
+                                remember(profiles, targetHoveredPkg, hoveredRomPath) {
+                                    profiles.firstOrNull { profile ->
+                                        profile.association?.romFileName != null &&
+                                            profile.matches(targetHoveredPkg, hoveredRomPath, hoveredSystemId)
+                                    } ?: profiles.firstOrNull { profile ->
+                                        profile.association?.romFileName == null &&
+                                            profile.matches(targetHoveredPkg, hoveredRomPath, hoveredSystemId)
+                                    }
                                 }
                             ProfileConfigCard(
-                                hoveredPackage = hoveredPackage!!,
-                                hoveredLabel = hoveredAppLabel,
+                                cardTitle = stringResource(R.string.integration_home_profile_config_title),
+                                targetPackage = targetHoveredPkg,
+                                targetLabel = hoveredAppLabel,
+                                targetRomPath = hoveredRomPath,
+                                targetSystemId = hoveredSystemId,
                                 associatedProfile = associatedProfile,
                                 profiles = profiles,
                                 colors = colors,
                             )
                         }
 
-                        // 3. Active Profile Card
+                        // 3.1 Active Game Session Profile Card (Universal Launcher support)
+                        val currentActiveSession = activeSession
+                        if (currentActiveSession != null) {
+                            val profiles by MacroPadState.profiles.collectAsState()
+                            val associatedProfile =
+                                remember(profiles, currentActiveSession) {
+                                    profiles.firstOrNull { profile ->
+                                        profile.association?.romFileName != null &&
+                                            profile.matches(
+                                                currentActiveSession.packageName,
+                                                currentActiveSession.romPath,
+                                                currentActiveSession.systemId,
+                                            )
+                                    } ?: profiles.firstOrNull { profile ->
+                                        profile.association?.romFileName == null &&
+                                            profile.matches(
+                                                currentActiveSession.packageName,
+                                                currentActiveSession.romPath,
+                                                currentActiveSession.systemId,
+                                            )
+                                    }
+                                }
+                            ProfileConfigCard(
+                                cardTitle = stringResource(R.string.integration_home_profile_config_title),
+                                targetPackage = currentActiveSession.packageName,
+                                targetLabel = currentActiveSession.gameTitle,
+                                targetRomPath = currentActiveSession.romPath,
+                                targetSystemId = currentActiveSession.systemId,
+                                associatedProfile = associatedProfile,
+                                profiles = profiles,
+                                colors = colors,
+                            )
+                        }
+
                         InfoCard(
                             title = stringResource(R.string.integration_home_active_profile),
                             value = activeProfile?.name ?: stringResource(R.string.integration_home_no_profile_active),
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             isHighlight = activeProfile != null,
+                            action =
+                                if (activeProfile != null) {
+                                    {
+                                        Button(
+                                            onClick = {
+                                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                                            },
+                                            colors =
+                                                ButtonDefaults.buttonColors(
+                                                    containerColor = colors.accent,
+                                                    contentColor = colors.onAccent,
+                                                ),
+                                            shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
+                                            contentPadding =
+                                                PaddingValues(
+                                                    horizontal = IH_SHOW_BUTTON_PADDING_H,
+                                                    vertical = IH_SHOW_BUTTON_PADDING_V,
+                                                ),
+                                            modifier = Modifier.height(IH_SHOW_BUTTON_HEIGHT),
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.integration_home_show_macropad),
+                                                style = MaterialTheme.typography.labelLarge,
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
                         )
 
                         // 4. Status Panel Card
@@ -436,8 +535,11 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun ProfileConfigCard(
-    hoveredPackage: String,
-    hoveredLabel: String?,
+    cardTitle: String,
+    targetPackage: String,
+    targetLabel: String?,
+    targetRomPath: String?,
+    targetSystemId: String?,
     associatedProfile: PadProfile?,
     profiles: List<PadProfile>,
     colors: AppColors,
@@ -446,7 +548,7 @@ private fun ProfileConfigCard(
     var expandedDropdown by remember { mutableStateOf(false) }
     val unassignedProfiles =
         remember(profiles) {
-            profiles.filter { it.associatedPackage == null }
+            profiles.filter { it.association == null }
         }
 
     Card(
@@ -462,11 +564,20 @@ private fun ProfileConfigCard(
             verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
         ) {
             Text(
-                text = stringResource(R.string.integration_home_profile_config_title),
+                text = cardTitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = colors.onSurfaceSecondary,
                 fontWeight = FontWeight.SemiBold,
             )
+
+            if (targetLabel != null) {
+                Text(
+                    text = targetLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = colors.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
 
             if (associatedProfile != null) {
                 Row(
@@ -507,7 +618,7 @@ private fun ProfileConfigCard(
                 Text(
                     text = stringResource(R.string.integration_home_no_profile_assigned),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSurface,
+                    color = colors.onSurfaceSecondary,
                 )
 
                 Row(
@@ -518,11 +629,17 @@ private fun ProfileConfigCard(
                         onClick = {
                             val newProfileId = UUID.randomUUID().toString()
                             val defaultLayoutId = UUID.randomUUID().toString()
+                            val assoc =
+                                ProfileAssociation(
+                                    packageName = targetPackage,
+                                    systemId = targetSystemId,
+                                    romFileName = targetRomPath?.substringAfterLast('/'),
+                                )
                             val newProfile =
                                 PadProfile(
                                     id = newProfileId,
-                                    name = hoveredLabel ?: context.getString(R.string.integration_home_new_profile),
-                                    associatedPackage = hoveredPackage,
+                                    name = targetLabel ?: context.getString(R.string.integration_home_new_profile),
+                                    association = assoc,
                                     layouts =
                                         listOf(
                                             PadLayout(
@@ -591,7 +708,13 @@ private fun ProfileConfigCard(
                                         text = { Text(profile.name, color = colors.onSurface) },
                                         onClick = {
                                             expandedDropdown = false
-                                            val updatedProfile = profile.copy(associatedPackage = hoveredPackage)
+                                            val assoc =
+                                                ProfileAssociation(
+                                                    packageName = targetPackage,
+                                                    systemId = targetSystemId,
+                                                    romFileName = targetRomPath?.substringAfterLast('/'),
+                                                )
+                                            val updatedProfile = profile.copy(association = assoc)
                                             MacroPadState.updateProfile(updatedProfile)
                                         },
                                     )
@@ -660,6 +783,7 @@ private fun InfoCard(
     colors: AppColors,
     isHighlight: Boolean,
     isMonospace: Boolean = false,
+    action: @Composable (() -> Unit)? = null,
 ) {
     Card(
         modifier =
@@ -707,6 +831,10 @@ private fun InfoCard(
                     color = if (isHighlight) colors.accent else colors.onSurface,
                     fontWeight = FontWeight.Bold,
                 )
+            }
+
+            if (action != null) {
+                action()
             }
         }
     }

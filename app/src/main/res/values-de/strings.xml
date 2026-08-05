@@ -1211,7 +1211,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_status_stopped">GESTOPPT</string>
     <string name="integration_home_unknown">Unbekannt</string>
     <string name="integration_home_none">Keine</string>
+    <string name="integration_home_detected_rom">Zuletzt erkanntes ROM</string>
+    <string name="integration_home_no_rom_detected">Keins erkannt</string>
     <string name="integration_home_new_profile">Neues Profil</string>
     <string name="integration_home_default_layout">Standard</string>
+    <string name="integration_home_show_macropad">Anzeigen</string>
+    <string name="quick_menu_show_dashboard">Dashboard anzeigen</string>
 </resources>
 

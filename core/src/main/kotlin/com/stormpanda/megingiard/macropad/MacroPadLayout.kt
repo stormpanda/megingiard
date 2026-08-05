@@ -2,9 +2,13 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shape enums
@@ -407,6 +411,14 @@ data class PadLayout(
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
+@Serializable
+data class ProfileAssociation(
+    val packageName: String,
+    val systemId: String? = null,
+    val romFileName: String? = null,
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
 // PadProfile — a named collection of layouts, macros, and device settings
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -420,8 +432,9 @@ data class PadLayout(
  * @param enableGamepad    Whether the gamepad virtual device is active (auto-computed).
  * @param enableMouse      Whether the mouse virtual device is active (auto-computed).
  * @param isDefault        Whether this is a restorable default profile.
+ * @param association      Optional profile association config.
  */
-@Serializable
+@Serializable(with = PadProfileSerializer::class)
 data class PadProfile(
     val id: String,
     val name: String,
@@ -433,5 +446,98 @@ data class PadProfile(
     val enableMouse: Boolean = false,
     val enableTouch: Boolean = false,
     val isDefault: Boolean = false,
+    val association: ProfileAssociation? = null,
+) {
+    fun matches(
+        focusedPackage: String?,
+        focusedRomPath: String?,
+        systemId: String? = null,
+    ): Boolean {
+        val assoc = association ?: return false
+        val packageMatches = assoc.packageName.equals(focusedPackage, ignoreCase = true)
+        if (!packageMatches) return false
+
+        val romFileName = focusedRomPath?.substringAfterLast('/')?.substringAfterLast('\\')
+        val systemMatches = assoc.systemId == null || systemId == null || assoc.systemId.equals(systemId, ignoreCase = true)
+        val romMatches =
+            assoc.romFileName == null || (
+                romFileName != null &&
+                    (
+                        assoc.romFileName.equals(romFileName, ignoreCase = true) ||
+                            assoc.romFileName.substringBeforeLast('.').equals(romFileName.substringBeforeLast('.'), ignoreCase = true) ||
+                            assoc.romFileName.normalizeRomName() == romFileName.normalizeRomName()
+                    )
+            )
+        return systemMatches && romMatches
+    }
+}
+
+private fun String.normalizeRomName(): String =
+    this
+        .substringBeforeLast('.')
+        .lowercase()
+        .replace(" ", "")
+        .replace("_", "")
+        .replace("-", "")
+
+@Serializable
+private class PadProfileSurrogate(
+    val id: String,
+    val name: String,
+    val layouts: List<PadLayout> = emptyList(),
+    val activeLayoutId: String? = null,
+    val macros: List<Macro> = emptyList(),
+    val enableKeyboard: Boolean = false,
+    val enableGamepad: Boolean = false,
+    val enableMouse: Boolean = false,
+    val enableTouch: Boolean = false,
+    val isDefault: Boolean = false,
+    val association: ProfileAssociation? = null,
     val associatedPackage: String? = null,
 )
+
+object PadProfileSerializer : KSerializer<PadProfile> {
+    override val descriptor: SerialDescriptor = PadProfileSurrogate.serializer().descriptor
+
+    override fun serialize(
+        encoder: Encoder,
+        value: PadProfile,
+    ) {
+        val surrogate =
+            PadProfileSurrogate(
+                id = value.id,
+                name = value.name,
+                layouts = value.layouts,
+                activeLayoutId = value.activeLayoutId,
+                macros = value.macros,
+                enableKeyboard = value.enableKeyboard,
+                enableGamepad = value.enableGamepad,
+                enableMouse = value.enableMouse,
+                enableTouch = value.enableTouch,
+                isDefault = value.isDefault,
+                association = value.association,
+            )
+        encoder.encodeSerializableValue(PadProfileSurrogate.serializer(), surrogate)
+    }
+
+    override fun deserialize(decoder: Decoder): PadProfile {
+        val surrogate = decoder.decodeSerializableValue(PadProfileSurrogate.serializer())
+        val finalAssoc =
+            surrogate.association ?: surrogate.associatedPackage?.let {
+                ProfileAssociation(packageName = it)
+            }
+        return PadProfile(
+            id = surrogate.id,
+            name = surrogate.name,
+            layouts = surrogate.layouts,
+            activeLayoutId = surrogate.activeLayoutId,
+            macros = surrogate.macros,
+            enableKeyboard = surrogate.enableKeyboard,
+            enableGamepad = surrogate.enableGamepad,
+            enableMouse = surrogate.enableMouse,
+            enableTouch = surrogate.enableTouch,
+            isDefault = surrogate.isDefault,
+            association = finalAssoc,
+        )
+    }
+}

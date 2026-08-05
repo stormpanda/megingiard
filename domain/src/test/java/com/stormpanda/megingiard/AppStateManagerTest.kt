@@ -322,4 +322,42 @@ class AppStateManagerTest {
             assertEquals(null, AppStateManager.hoveredAppPrimaryColor.value)
             assertEquals(null, AppStateManager.hoveredAppSecondaryColor.value)
         }
+
+    @Test
+    fun `companionViewMode state and reset on focus changes`() =
+        runTest {
+            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+
+            // Set companionViewMode to MACROPAD
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
+
+            // Update external client state with different focusedApp -> should reset companionViewMode to AUTO
+            AppStateManager.setExternalClientState(
+                isActive = true,
+                packageName = "com.test.launcher",
+                focusedApp = "com.test.game",
+            )
+            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+
+            // Set companionViewMode to DASHBOARD
+            AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+            assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
+
+            // Update with same focusedApp -> should not reset
+            AppStateManager.setExternalClientState(
+                isActive = true,
+                packageName = "com.test.launcher",
+                focusedApp = "com.test.game",
+            )
+            assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
+
+            // Deactivate client -> should reset
+            AppStateManager.setExternalClientState(
+                isActive = false,
+                packageName = null,
+                focusedApp = null,
+            )
+            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+        }
 }

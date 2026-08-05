@@ -17,19 +17,21 @@ fun <T> updateSettingPref(
     value: T,
     stateFlow: MutableStateFlow<T>,
     scope: CoroutineScope,
-    dataStore: DataStore<Preferences>,
+    dataStore: DataStore<Preferences>?,
     tag: String,
     methodName: String = key.name,
 ) {
     AppLog.d(tag, "$methodName($value)")
     stateFlow.value = value
-    scope.launch {
-        try {
-            dataStore.edit { prefs ->
-                prefs[key] = value
+    if (dataStore != null) {
+        scope.launch {
+            try {
+                dataStore.edit { prefs ->
+                    prefs[key] = value
+                }
+            } catch (e: Exception) {
+                AppLog.e(tag, "Failed to persist setting key ${key.name}: $e")
             }
-        } catch (e: Exception) {
-            AppLog.e(tag, "Failed to persist setting key ${key.name}: $e")
         }
     }
 }

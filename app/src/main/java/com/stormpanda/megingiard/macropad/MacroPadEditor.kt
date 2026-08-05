@@ -463,7 +463,8 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 accentColor = colors.accent,
                 existingNames = profiles.map { it.name },
                 onConfirm = { name, pkg ->
-                    val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name, associatedPackage = pkg)
+                    val assoc = pkg?.let { ProfileAssociation(packageName = it) }
+                    val newProfile = PadProfile(id = UUID.randomUUID().toString(), name = name, association = assoc)
                     MacroPadState.addProfile(newProfile)
                     showNewProfileDialog = false
                 },
@@ -476,11 +477,22 @@ fun MacroPadEditor(onDone: () -> Unit) {
             InlineProfileSettingsOverlay(
                 title = stringResource(R.string.profile_settings_title),
                 initialName = profile.name,
-                initialPackage = profile.associatedPackage,
+                initialPackage = profile.association?.packageName,
                 accentColor = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
                 onConfirm = { name, pkg ->
-                    MacroPadState.renameProfile(profile.id, name, pkg)
+                    val assoc =
+                        if (pkg != null) {
+                            val existing = profile.association
+                            if (existing != null && existing.packageName.equals(pkg, ignoreCase = true)) {
+                                existing
+                            } else {
+                                ProfileAssociation(packageName = pkg)
+                            }
+                        } else {
+                            null
+                        }
+                    MacroPadState.renameProfile(profile.id, name, assoc)
                     showRenameProfileDialog = false
                 },
                 onDismiss = { showRenameProfileDialog = false },

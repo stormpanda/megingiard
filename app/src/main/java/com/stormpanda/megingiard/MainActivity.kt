@@ -196,8 +196,9 @@ class MainActivity : ComponentActivity() {
     // visible even after moving to the correct display.
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        val displayId = display?.displayId ?: Display.DEFAULT_DISPLAY
-        DisplayDetector.updateDisplayValidity(displayId)
+        display?.displayId?.let { displayId ->
+            DisplayDetector.updateDisplayValidity(displayId)
+        }
     }
 
     /**
@@ -510,7 +511,9 @@ class MainActivity : ComponentActivity() {
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.isExternalClientActive,
                     AppStateManager.focusedAppPackageName,
+                    AppStateManager.focusedRomPath,
                     MacroPadState.activeProfile,
+                    AppStateManager.companionViewMode,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val suppressedLayoutId = values[1] as? String
@@ -520,11 +523,25 @@ class MainActivity : ComponentActivity() {
                     val wizardActive = values[5] as Boolean
                     val externalClientActive = values[6] as Boolean
                     val focusedPackage = values[7] as? String
-                    val activeProfile = values[8] as? PadProfile
+                    val focusedRom = values[8] as? String
+                    val activeProfile = values[9] as? PadProfile
+                    val companionViewMode = values[10] as CompanionViewMode
 
                     val showIntegrationHome =
-                        externalClientActive &&
-                            (focusedPackage == null || activeProfile?.associatedPackage != focusedPackage)
+                        when (companionViewMode) {
+                            CompanionViewMode.MACROPAD -> {
+                                false
+                            }
+
+                            CompanionViewMode.DASHBOARD -> {
+                                true
+                            }
+
+                            CompanionViewMode.AUTO -> {
+                                externalClientActive &&
+                                    (focusedPackage == null || activeProfile?.matches(focusedPackage, focusedRom) != true)
+                            }
+                        }
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,

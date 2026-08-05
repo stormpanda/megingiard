@@ -28,6 +28,8 @@ object MegingiardIpcContract {
     const val COLUMN_FOCUSED_ROM_PATH = "focused_rom_path"
     const val COLUMN_HOVERED_PACKAGE = "hovered_package"
     const val COLUMN_HOVERED_LABEL = "hovered_label"
+    const val COLUMN_HOVERED_ROM_PATH = "hovered_rom_path"
+    const val COLUMN_HOVERED_SYSTEM_ID = "hovered_system_id"
     const val COLUMN_HOVERED_PRIMARY_COLOR = "hovered_primary_color"
     const val COLUMN_HOVERED_SECONDARY_COLOR = "hovered_secondary_color"
 

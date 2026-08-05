@@ -349,7 +349,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                     isActive = true,
                                     focusedPackage = appInfo.packageName,
                                 )
-                                InstalledAppsManager.launchAppOnPrimaryDisplay(this, appInfo)
+                                lifecycleScope.launch {
+                                    InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, appInfo)
+                                }
                             },
                             onAppClickBottom = { appInfo ->
                                 AppLog.i(TAG, "Launching app from top launcher on bottom display: ${appInfo.label}")
@@ -360,7 +362,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                                         focusedPackage = appInfo.packageName,
                                     )
                                 }
-                                InstalledAppsManager.launchAppOnSecondaryDisplay(this, appInfo)
+                                lifecycleScope.launch {
+                                    InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, appInfo)
+                                }
                             },
                             selectedCategory = selectedCategory,
                             categories = categories,
@@ -1084,7 +1088,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                         AppLog.i(TAG, "Library launch on top display: ${targetApp.label}")
                         launchedTopScreenPackage = targetApp.packageName
                         MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
-                        InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                        lifecycleScope.launch {
+                            InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, targetApp)
+                        }
                     }
                     true
                 }
@@ -1099,7 +1105,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                             if (!isCompanionApp(targetApp.packageName)) {
                                 MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                             }
-                            InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
+                            lifecycleScope.launch {
+                                InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, targetApp)
+                            }
                         }
                     }
                     true
@@ -1254,7 +1262,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     AppLog.i(TAG, "Gamepad A button / launch key pressed for: ${targetApp.label} -> Launching on Top Display")
                     launchedTopScreenPackage = targetApp.packageName
                     MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
-                    InstalledAppsManager.launchAppOnPrimaryDisplay(this, targetApp)
+                    lifecycleScope.launch {
+                        InstalledAppsManager.launchAppOnPrimaryDisplay(this@FocusTopLauncherActivity, targetApp)
+                    }
                     return true
                 }
             }
@@ -1268,7 +1278,9 @@ class FocusTopLauncherActivity : ComponentActivity() {
                     if (!isCompanionApp(targetApp.packageName)) {
                         MegingiardSettingsClient.updateClientState(this, isActive = true, focusedPackage = targetApp.packageName)
                     }
-                    InstalledAppsManager.launchAppOnSecondaryDisplay(this, targetApp)
+                    lifecycleScope.launch {
+                        InstalledAppsManager.launchAppOnSecondaryDisplay(this@FocusTopLauncherActivity, targetApp)
+                    }
                     return true
                 }
             }
