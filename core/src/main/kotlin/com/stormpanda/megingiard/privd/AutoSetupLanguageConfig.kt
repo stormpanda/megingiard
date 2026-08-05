@@ -14,6 +14,10 @@ import java.util.Locale
  * @property wirelessDebuggingQueryAndKeyword Search query and UI node matching string for Wireless Debugging.
  * @property usbDebuggingQueryAndKeyword Search query and UI node matching string for USB Debugging.
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
+ * @property developerOptionsKeywords Lowercased UI text keywords identifying the Developer options screen,
+ *   used to tell it apart from the Wireless debugging sub-screen (both carry the wireless debugging label).
+ *   Defaults to the titles of the previously supported locales, so a new locale whose title is not
+ *   among them must supply its own — otherwise Auto Setup mistakes Developer options for the sub-screen.
  * @property allowButtonKeywords List of UI text keywords used to confirm network trust dialogs.
  */
 data class AutoSetupLanguageConfig(
@@ -23,9 +27,23 @@ data class AutoSetupLanguageConfig(
     val wirelessDebuggingQueryAndKeyword: String,
     val usbDebuggingQueryAndKeyword: String,
     val pairDeviceKeywords: List<String>,
+    val developerOptionsKeywords: List<String> = DEFAULT_DEVELOPER_OPTIONS_KEYWORDS,
     val allowButtonKeywords: List<String>,
 ) {
     companion object {
+        /**
+         * Developer options titles for the locales that shipped before this field existed.
+         * Kept as the default so those configs stay unchanged; a locale whose title is not
+         * listed here must pass its own [developerOptionsKeywords].
+         */
+        private val DEFAULT_DEVELOPER_OPTIONS_KEYWORDS =
+            listOf(
+                "developer options",
+                "entwickleroptionen",
+                "opciones de desarrollador",
+                "options pour les développeurs",
+            )
+
         val GERMAN_DE =
             AutoSetupLanguageConfig(
                 localeTag = "de-DE",
@@ -146,6 +164,10 @@ data class AutoSetupLanguageConfig(
                         "使用配對碼",
                         "裝置配對碼",
                         "配對碼",
+                    ),
+                developerOptionsKeywords =
+                    listOf(
+                        "開發人員選項",
                     ),
                 allowButtonKeywords =
                     listOf(

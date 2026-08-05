@@ -127,6 +127,46 @@ class AutoSetupLanguageConfigTest {
     }
 
     @Test
+    fun everyConfigCarriesDeveloperOptionsKeywords() {
+        // Auto Setup tells the Wireless debugging sub-screen apart from Developer options by
+        // looking for the Developer options title, because both screens show the wireless
+        // debugging label. A locale missing this keyword reports the sub-screen while still on
+        // Developer options and then scrolls forever looking for the pairing row.
+        val configs =
+            listOf(
+                AutoSetupLanguageConfig.GERMAN_DE,
+                AutoSetupLanguageConfig.SPANISH_ES,
+                AutoSetupLanguageConfig.FRENCH_FR,
+                AutoSetupLanguageConfig.ENGLISH_US,
+                AutoSetupLanguageConfig.CHINESE_TW,
+            )
+
+        configs.forEach { config ->
+            val keywords = config.developerOptionsKeywords
+            org.junit.Assert.assertTrue(
+                "${config.localeTag} has no developerOptionsKeywords",
+                keywords.isNotEmpty(),
+            )
+            keywords.forEach { keyword ->
+                org.junit.Assert.assertTrue(
+                    "${config.localeTag} keyword '$keyword' must be lowercase — matching lowercases the screen text",
+                    keyword == keyword.lowercase(),
+                )
+            }
+        }
+
+        // The locales that predate this field keep the shared default, so their behaviour is
+        // unchanged; Traditional Chinese overrides it because its title is not in that default.
+        org.junit.Assert.assertTrue(
+            AutoSetupLanguageConfig.ENGLISH_US.developerOptionsKeywords.contains("developer options"),
+        )
+        org.junit.Assert.assertTrue(
+            AutoSetupLanguageConfig.GERMAN_DE.developerOptionsKeywords.contains("entwickleroptionen"),
+        )
+        assertEquals(listOf("開發人員選項"), AutoSetupLanguageConfig.CHINESE_TW.developerOptionsKeywords)
+    }
+
+    @Test
     fun fromLocale_returnsRegionSpecificTraditionalChineseConfigs() {
         val configZhTw = AutoSetupLanguageConfig.fromLocale(Locale.TRADITIONAL_CHINESE)
         val configZhHk = AutoSetupLanguageConfig.fromLocale(Locale("zh", "HK"))
