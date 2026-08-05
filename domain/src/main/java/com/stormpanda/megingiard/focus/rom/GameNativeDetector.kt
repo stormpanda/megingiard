@@ -5,6 +5,7 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import java.io.File
 
 private const val TAG = "GameNativeDetector"
+private const val PROC_SPLIT_LIMIT = 4
 
 /**
  * Detector implementation for GameNative instances.
@@ -45,8 +46,8 @@ object GameNativeDetector : EmulatorDetector {
         var targetUid: String? = null
         for (line in lines) {
             if (line.startsWith("PROC ")) {
-                val parts = line.split(' ', limit = 4)
-                if (parts.size >= 4) {
+                val parts = line.split(' ', limit = PROC_SPLIT_LIMIT)
+                if (parts.size >= PROC_SPLIT_LIMIT) {
                     val uid = parts[2]
                     val cmdline = parts[3].trim()
                     if (cmdline == packageName || cmdline.startsWith("$packageName:")) {
@@ -77,8 +78,8 @@ object GameNativeDetector : EmulatorDetector {
 
         for (line in lines) {
             if (line.startsWith("PROC ")) {
-                val parts = line.split(' ', limit = 4)
-                if (parts.size >= 4) {
+                val parts = line.split(' ', limit = PROC_SPLIT_LIMIT)
+                if (parts.size >= PROC_SPLIT_LIMIT) {
                     val uid = parts[2]
                     val cmdline = parts[3].trim()
                     if (uid == targetUid) {

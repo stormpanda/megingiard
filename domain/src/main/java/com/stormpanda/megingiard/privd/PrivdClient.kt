@@ -149,6 +149,8 @@ object PrivdClient {
 
     private val processesDumpBuilder = StringBuilder()
 
+    private val dumpLock = Any()
+
     val isConnected: Boolean
         get() = running && (socket?.isConnected == true) && (socket?.isClosed == false)
 
@@ -432,7 +434,9 @@ object PrivdClient {
             }
             if (line == "READ_BEGIN") {
                 isCapturingReadFile = true
-                readFileDumpBuilder.clear()
+                synchronized(dumpLock) {
+                    readFileDumpBuilder.clear()
+                }
                 continue
             }
             if (line.startsWith("READ_ERR")) {
@@ -442,17 +446,26 @@ object PrivdClient {
             }
             if (line == "READ_END") {
                 isCapturingReadFile = false
-                readFileDeferred?.complete(readFileDumpBuilder.toString())
-                readFileDumpBuilder.clear()
+                val content =
+                    synchronized(dumpLock) {
+                        val res = readFileDumpBuilder.toString()
+                        readFileDumpBuilder.clear()
+                        res
+                    }
+                readFileDeferred?.complete(content)
                 continue
             }
             if (isCapturingReadFile) {
-                readFileDumpBuilder.append(line).append('\n')
+                synchronized(dumpLock) {
+                    readFileDumpBuilder.append(line).append('\n')
+                }
                 continue
             }
             if (line == "PROC_BEGIN") {
                 isCapturingProcesses = true
-                processesDumpBuilder.clear()
+                synchronized(dumpLock) {
+                    processesDumpBuilder.clear()
+                }
                 continue
             }
             if (line.startsWith("PROC_ERR")) {
@@ -462,12 +475,19 @@ object PrivdClient {
             }
             if (line == "PROC_END") {
                 isCapturingProcesses = false
-                listProcessesDeferred?.complete(processesDumpBuilder.toString())
-                processesDumpBuilder.clear()
+                val content =
+                    synchronized(dumpLock) {
+                        val res = processesDumpBuilder.toString()
+                        processesDumpBuilder.clear()
+                        res
+                    }
+                listProcessesDeferred?.complete(content)
                 continue
             }
             if (isCapturingProcesses) {
-                processesDumpBuilder.append(line).append('\n')
+                synchronized(dumpLock) {
+                    processesDumpBuilder.append(line).append('\n')
+                }
                 continue
             }
             if (line.startsWith("EVT ")) {
@@ -512,11 +532,13 @@ object PrivdClient {
         readFileDeferred?.complete(null)
         readFileDeferred = null
         isCapturingReadFile = false
-        readFileDumpBuilder.clear()
         listProcessesDeferred?.complete(null)
         listProcessesDeferred = null
         isCapturingProcesses = false
-        processesDumpBuilder.clear()
+        synchronized(dumpLock) {
+            readFileDumpBuilder.clear()
+            processesDumpBuilder.clear()
+        }
         writerThread?.interrupt()
         readerThread?.interrupt()
         writerThread = null
