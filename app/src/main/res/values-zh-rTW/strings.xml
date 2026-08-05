@@ -1,0 +1,1209 @@
+<resources>
+    <string name="app_name">Megingiard-zh</string>
+    <string name="focus_launcher_title">遊戲聚焦啟動器</string>
+    <string name="focus_launcher_refresh">重新整理</string>
+    <string name="focus_launcher_search_hint">搜尋應用程式與遊戲…</string>
+    <string name="focus_launcher_no_apps">找不到應用程式</string>
+    <string name="mirror_waiting_permission">正在等待螢幕投影授權\u2026</string>
+    <string name="wrong_screen_message">Megingiard 必須在底部螢幕運行。\n請移動應用程式以繼續。</string>
+    <string name="cd_wrong_screen_arrow">指向底部螢幕的箭頭</string>
+    <string name="mirror_start_button">開始投影</string>
+    <string name="cd_previous_tool">上一個工具</string>
+    <string name="cd_next_tool">下一個工具</string>
+    <string name="cd_stop_mirroring">停止投影</string>
+    <string name="cd_start_mirroring">開始投影</string>
+    <string name="cd_freeze">凍結</string>
+    <string name="cd_unfreeze">解除凍結</string>
+    <string name="cd_screenshot">螢幕截圖</string>
+    <string name="cd_lock_view">鎖定視圖</string>
+    <string name="cd_unlock_view">解鎖視圖</string>
+    <string name="cd_touch_projection_on">觸控投影開啟</string>
+    <string name="cd_touch_projection_off">觸控投影關閉</string>
+    <string name="cd_frozen_image">凍結的串流圖像</string>
+    <string name="notification_mirroring_active">螢幕投影活動中</string>
+
+    <!-- Settings screen -->
+    <string name="settings_close">關閉</string>
+    <string name="settings_support_app">支持此應用程式</string>
+    <string name="cd_open_settings">開啟設定</string>
+    <string name="cd_open_global_settings">開啟全域設定</string>
+    <string name="cd_drag_reorder">拖曳以重新排序</string>
+    <string name="settings_section_tools">工具</string>
+    <string name="settings_section_general">一般</string>
+    <string name="settings_section_automation">設定檔與自動化</string>
+    <string name="settings_section_appearance">外觀</string>
+    <string name="settings_global_title">設定</string>
+    <string name="settings_back">返回</string>
+    <string name="settings_accent_color">強調色</string>
+    <string name="settings_theme">主題</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_dark_oled">深色 OLED</string>
+    <string name="theme_megingiard">Megingiard</string>
+    <string name="theme_mjolnir">Mjölnir 鋼鐵</string>
+    <string name="theme_valhalla">英靈殿日落</string>
+    <string name="theme_aurora">北極光</string>
+    <string name="theme_retro_phosphor">復古磷光體</string>
+    <string name="theme_royal_asgard">皇家阿斯嘉特</string>
+    <string name="settings_overlay_position">控制列置於底部</string>
+    <string name="settings_overlay_fade_out">自動隱藏控制列</string>
+    <string name="settings_overlay_fade_out_desc">閒置幾秒後自動隱藏快速選單列</string>
+    <string name="mirror_edge_blend_label">邊緣融合</string>
+    <string name="mirror_edge_blend_label_value">%1$d</string>
+    <string name="mirror_edge_blend_strength_off">關閉</string>
+    <string name="mirror_edge_blend_strength_light">輕微</string>
+    <string name="mirror_edge_blend_strength_medium">中等</string>
+    <string name="mirror_edge_blend_strength_strong">強烈</string>
+    <string name="mirror_edge_blend_strength_max">最大</string>
+    <string name="mirror_fps_label">FPS 限制</string>
+    <string name="mirror_fps_value">%1$d FPS</string>
+
+    <string name="settings_auto_switch_profiles">自動切換設定檔</string>
+    <string name="settings_auto_switch_profiles_desc">當主螢幕啟動已對應的應用程式時，自動切換 MacroPad 設定檔</string>
+    <string name="settings_exclude_from_recents">從最近任務中排除</string>
+    <string name="settings_exclude_from_recents_desc">切換到其他程式時，在最近任務列表中隱藏此應用程式</string>
+    <string name="settings_accessibility_status">無障礙服務</string>
+    <string name="settings_accessibility_status_active">已啟用</string>
+    <string name="settings_accessibility_status_inactive">未啟用（點擊以啟用）</string>
+    <string name="settings_accessibility_status_desc">讓 Megingiard 能夠偵測當前運行的應用程式，以便自動切換設定檔。</string>
+    <string name="settings_accessibility_setup">前往設定</string>
+    <string name="settings_accent_color_picker_title">選擇強調色</string>
+    <string name="settings_accent_color_custom">自定義</string>
+    <string name="settings_accent_suggestions_title">推薦強調色</string>
+    <string name="settings_accent_palette_suggestions">預設強調色</string>
+    <string name="settings_accent_suggestions_close">關閉</string>
+    <string name="settings_color_brightness">亮度</string>
+    <string name="settings_color_cancel">取消</string>
+    <string name="settings_color_apply">應用</string>
+
+    <!-- Keyboard settings -->
+    <string name="settings_keyboard_title">鍵盤設定</string>
+    <string name="cd_keyboard_trackpoint">軌跡點</string>
+    <string name="cd_kb_select_all">全選</string>
+    <string name="cd_kb_cut">剪下</string>
+    <string name="cd_kb_copy">複製</string>
+    <string name="cd_kb_paste">貼上</string>
+    <string name="cd_kb_shift">Shift</string>
+    <string name="cd_kb_backspace">退格</string>
+    <string name="cd_kb_enter">Enter</string>
+    <string name="cd_kb_layout">鍵盤配置</string>
+    <string name="cd_kb_collapse">收起鍵盤</string>
+    <string name="cd_kb_settings">鍵盤設定</string>
+    <string name="settings_kb_layout">鍵盤配置</string>
+    <string name="settings_kb_layout_desc">字母排列方式</string>
+    <string name="settings_kb_layout_qwertz">QWERTZ</string>
+    <string name="settings_kb_layout_qwerty">QWERTY</string>
+    <string name="settings_kb_layout_azerty">AZERTY</string>
+    <string name="settings_kb_trackpoint">軌跡點</string>
+    <string name="settings_kb_trackpoint_desc">在主行顯示軌跡點</string>
+    <string name="settings_kb_repeat">按鍵重複</string>
+    <string name="settings_kb_repeat_desc">按住按鍵以重複輸入</string>
+    <string name="settings_kb_fullscreen">全螢幕鍵盤</string>
+    <string name="settings_kb_fullscreen_desc">無底部間隙 — 鍵盤填滿整個螢幕</string>
+    <string name="settings_kb_touchpad">鍵盤觸控板</string>
+    <string name="settings_kb_touchpad_desc">在鍵盤上方顯示觸控板</string>
+
+
+    <!-- Input method (touchpad + keyboard trackpoint) -->
+    <string name="settings_input_method">滑鼠模式</string>
+    <string name="settings_input_method_desc">使用滑鼠移動而非觸控控制</string>
+    <string name="settings_tap_to_click">輕點以點擊</string>
+    <string name="settings_tap_to_click_desc">單指輕點 = 左鍵點擊</string>
+    <string name="settings_two_finger_tap">雙指輕點</string>
+    <string name="settings_two_finger_tap_desc">雙指輕點 = 右鍵點擊</string>
+
+
+    <!-- Mirror session state persistence -->
+    <string name="settings_remember_viewport">記住視窗</string>
+    <string name="settings_remember_viewport_desc">投影重啟時恢復縮放與平移位置</string>
+    <string name="settings_remember_lock">記住鎖定狀態</string>
+    <string name="settings_remember_lock_desc">投影重啟時恢復視圖鎖定狀態</string>
+    <string name="settings_remember_projection">記住觸控投影</string>
+    <!-- MacroPad tool -->
+    <string name="macropad_no_profile">未配置設定檔。\n請開啟設定以建立配置。</string>
+    <string name="macropad_open_settings">開啟設定</string>
+    <string name="cd_macropad_button">MacroPad 按鈕: %s</string>
+    <string name="cd_macropad_trackpoint">軌跡點</string>
+
+    <!-- MacroPad editor -->
+    <string name="macropad_editor_title">編輯配置</string>
+    <string name="macropad_editor_title_edit_profile">編輯設定檔</string>
+    <string name="macropad_editor_done">儲存</string>
+    <string name="macropad_editor_add_button">新增按鈕</string>
+    <string name="macropad_editor_add">新增</string>
+    <string name="macropad_editor_delete_button">刪除</string>
+    <string name="macropad_editor_button_label">標籤</string>
+    <string name="macropad_editor_action">動作</string>
+    <string name="macropad_editor_button_shape">按鈕形狀</string>
+    <string name="macropad_editor_shape_circle">圓形</string>
+    <string name="macropad_editor_shape_square">正方形</string>
+    <string name="macropad_editor_shape_icon_only">僅圖示</string>
+    <string name="macropad_editor_button_size">按鈕大小</string>
+    <string name="macropad_button_size_1x1">1×1</string>
+    <string name="macropad_modifier_none">—</string>
+    <string name="macropad_picker_label_key">按鍵</string>
+    <string name="macropad_picker_label_mod_1">修飾鍵 1</string>
+    <string name="macropad_picker_label_mod_2">修飾鍵 2</string>
+    <string name="macropad_picker_label_button">按鈕</string>
+    <string name="macropad_picker_label_extra_1">額外 1</string>
+    <string name="macropad_picker_label_extra_2">額外 2</string>
+    <string name="macropad_picker_label_extra_3">額外 3</string>
+    <string name="macropad_button_size_2x1">2×1</string>
+    <string name="macropad_button_size_1x2">1×2</string>
+    <string name="macropad_button_size_2x2">2×2</string>
+    <string name="macropad_editor_trackpoint_size">軌跡點大小</string>
+    <string name="macropad_trackpoint_size_small">小</string>
+    <string name="macropad_trackpoint_size_medium">中</string>
+    <string name="macropad_trackpoint_size_large">大</string>
+    <string name="macropad_editor_trackpoint_mode">追蹤模式</string>
+    <string name="macropad_trackpoint_mode_physical">虛擬實體滑鼠</string>
+    <string name="macropad_trackpoint_mode_touch">虛擬觸控 (開發中)</string>
+    <string name="macropad_trackpoint_mode_physical_desc">模擬標準滑鼠。拖曳會從系統游標目前位置相對移動。</string>
+    <string name="macropad_trackpoint_mode_touch_desc">模擬主螢幕上的絕對觸控輸入。游標位置會被記住，讓您可以從同一點進行多次滑動。(開發中)</string>
+    <string name="macropad_editor_section_haptic">觸感回饋</string>
+    <string name="macropad_haptic_off">關閉</string>
+    <string name="macropad_haptic_light">輕微</string>
+    <string name="macropad_haptic_medium">中等</string>
+    <string name="macropad_haptic_strong">強烈</string>
+    <string name="macropad_haptic_custom">自定義</string>
+    <string name="macropad_haptic_custom_duration">持續時間</string>
+    <string name="macropad_haptic_custom_amplitude">振幅</string>
+    <string name="macropad_haptic_custom_test">測試振動</string>
+    <string name="macropad_editor_devices">模擬裝置</string>
+    <string name="macropad_editor_device_keyboard">鍵盤</string>
+    <string name="macropad_editor_device_gamepad">手把</string>
+    <string name="macropad_editor_device_mouse">滑鼠</string>
+    <string name="macropad_device_disabled_keyboard">此配置已禁用鍵盤</string>
+    <string name="macropad_device_disabled_gamepad">此配置已禁用手把</string>
+
+    <!-- Keyboard trackpoint virtual mouse buttons -->
+    <string name="kb_mouse_btn_left">左鍵</string>
+    <string name="kb_mouse_btn_middle">中鍵</string>
+    <string name="kb_mouse_btn_right">右鍵</string>
+    <string name="kb_mouse_btn_4">M4</string>
+    <string name="kb_mouse_btn_5">M5</string>
+    <!-- Keyboard trackpoint mouse button position setting -->
+    <string name="settings_kb_mouse_btn_pos">按鈕位置</string>
+    <string name="settings_kb_mouse_btn_pos_desc">左/右鍵按鈕顯示位置</string>
+    <string name="kb_mouse_btn_pos_left">左側</string>
+    <string name="kb_mouse_btn_pos_right">右側</string>
+    <string name="kb_mouse_btn_pos_both">兩側</string>
+    <string name="macropad_device_disabled_mouse">此配置已禁用滑鼠</string>
+    <string name="macropad_device_disabled_touch">此配置已禁用觸控</string>
+    <string name="macropad_editor_new_profile_name">設定檔 %1$d</string>
+    <string name="macropad_editor_rename">重新命名</string>
+    <string name="macropad_editor_delete_profile">刪除設定檔</string>
+    <string name="macropad_editor_confirm_delete">刪除此設定檔？</string>
+    <string name="macropad_editor_delete_layout">刪除配置</string>
+    <string name="cd_layout_enable_toggle">切換配置啟用狀態</string>
+    <string name="macropad_editor_cancel">取消</string>
+    <string name="macropad_editor_confirm">刪除</string>
+
+    <!-- Profile settings -->
+    <string name="profile_settings_title">設定檔設定</string>
+    <string name="profile_settings_name">設定檔名稱</string>
+    <string name="profile_settings_app_mapping">分配應用程式</string>
+    <string name="profile_settings_select_app">選擇應用程式…</string>
+    <string name="profile_settings_clear_app">清除關聯</string>
+    <string name="profile_settings_search_apps">搜尋應用程式…</string>
+    <string name="profile_settings_no_apps">找不到應用程式</string>
+    <string name="profile_settings_app_assigned">(已分配)</string>
+    <string name="profile_settings_loading_apps">正在載入應用程式…</string>
+    <string name="profile_settings_accessibility_required">必須在全域設定中啟動無障礙服務</string>
+
+    <!-- MacroPad icon picker -->
+    <string name="macropad_icon_picker_title">選擇圖示</string>
+    <string name="macropad_icon_picker_search">搜尋圖示…</string>
+    <string name="macropad_icon_picker_no_results">找不到圖示</string>
+    <string name="macropad_icon_picker_filled">填滿</string>
+    <string name="macropad_icon_picker_currently_selected">當前選擇</string>
+
+    <!-- Configuration export/import -->
+    <string name="settings_section_config">配置</string>
+    <string name="settings_section_data">數據</string>
+    <string name="settings_restore_defaults">還原預設設定檔</string>
+    <string name="settings_restore_defaults_desc">刪除所有設定檔並建立一個空白預設設定檔</string>
+    <string name="settings_restore_defaults_confirm">這將刪除所有現有的設定檔與巨集，並建立一個空白設定檔。此操作無法撤銷。</string>
+    <string name="settings_restore_defaults_confirm_button">還原</string>
+    <string name="settings_restore_defaults_confirm_countdown">還原 (%1$d)</string>
+    <string name="settings_cancel">取消</string>
+    <string name="settings_config_export">建立備份</string>
+    <string name="settings_config_export_desc">將所有設定與 MacroPad 設定檔儲存為 .mgrd 備份檔</string>
+    <string name="settings_config_import">還原備份</string>
+    <string name="settings_config_import_desc">套用設定並從內部每日備份或外部 .mgrd 檔案新增設定檔</string>
+    <string name="settings_config_export_profile">分享設定檔</string>
+    <string name="settings_config_export_profile_desc">將單個 MacroPad 設定檔匯出為 .mgrd 檔案以便分享</string>
+    <string name="settings_config_import_profile">匯入分享的設定檔</string>
+    <string name="settings_config_import_profile_desc">從 .mgrd 檔案新增 MacroPad 設定檔</string>
+    <string name="settings_add_to_obtainium">新增到 Obtainium</string>
+    <string name="settings_add_to_obtainium_desc">在 Obtainium 中預填儲存庫連結以進行自動更新</string>
+    <string name="config_export_default_filename">megingiard_%s.mgrd</string>
+
+    <!-- Export metadata dialog -->
+    <string name="config_export_dialog_title">匯出資訊 (選填)</string>
+    <string name="config_export_author">作者</string>
+    <string name="config_export_description">描述</string>
+    <string name="config_export_tags">標籤 (逗號分隔)</string>
+    <string name="config_export_confirm">匯出</string>
+    <string name="config_export_cancel">取消</string>
+
+    <!-- Import preview dialog -->
+    <string name="config_import_title">匯入配置</string>
+    <string name="config_import_author_label">作者</string>
+    <string name="config_import_description_label">描述</string>
+    <string name="config_import_tags_label">標籤</string>
+    <string name="config_import_sections_label">包含內容</string>
+    <string name="config_import_section_global">全域設定</string>
+    <string name="config_import_section_mirror">投影設定</string>
+    <string name="config_import_section_touchpad">觸控板設定</string>
+    <string name="config_import_section_keyboard">鍵盤設定</string>
+    <string name="config_import_section_macropad">MacroPad (%1$d 個設定檔, %2$d 個巨集)</string>
+    <string name="config_import_section_macropad_settings">MacroPad 設定</string>
+    <string name="config_import_section_settings">設定 (全域 / 工具設定)</string>
+    <string name="config_import_meta_author">作者: %1$s</string>
+    <string name="config_import_warning">新的設定檔與巨集將新增至現有內容中。</string>
+    <string name="config_import_warning_backup">新的設定檔將新增至現有內容中。應用程式設定將被覆蓋。</string>
+    <string name="config_import_warning_profile">設定檔將新增至現有內容中。此檔案中的應用程式設定將被忽略。</string>
+    <string name="config_profile_export_dialog_title">分享設定檔</string>
+    <string name="config_profile_export_select">要分享的設定檔</string>
+    <string name="config_profile_import_success">設定檔匯入成功。</string>
+    <string name="config_import_confirm">匯入</string>
+    <string name="config_import_cancel">取消</string>
+
+    <!-- Export/import results -->
+    <string name="config_export_success">配置匯出成功。</string>
+    <string name="config_import_success">配置匯入成功。</string>
+    <string name="config_error_title">錯誤</string>
+    <string name="config_success_title">完成</string>
+    <string name="config_error_unknown">發生非預期的錯誤。</string>
+    <string name="config_ok">確定</string>
+    <string name="cd_icon_picker_button">選擇按鈕圖示</string>
+    <string name="cd_icon_picker_confirm">套用圖示選擇</string>
+    <string name="cd_icon_picker_delete">移除圖示</string>
+
+    <!-- MacroPad action picker labels -->
+    <string name="macropad_action_keyboard_key">鍵盤按鍵</string>
+    <string name="macropad_action_gamepad_button">手把按鈕</string>
+    <string name="macropad_action_mouse_button">滑鼠按鈕</string>
+    <string name="macropad_action_scroll_wheel">滾輪</string>
+    <string name="macropad_action_trackpoint">軌跡點 (相對滑鼠)</string>
+    <string name="macropad_action_ambient_peek">背景預覽</string>
+    <string name="macropad_action_layout_next">下一個配置</string>
+    <string name="macropad_action_layout_previous">上一個配置</string>
+    <string name="macropad_action_profile_switcher">設定檔切換器</string>
+    <string name="macropad_action_mirror_play_stop">投影 開始/停止</string>
+    <string name="macropad_action_mirror_freeze">投影 凍結</string>
+    <string name="macropad_action_mirror_viewport_edit">投影 視窗</string>
+    <string name="macropad_action_mirror_touch_projection">觸控投影</string>
+    <string name="macropad_action_fullscreen_mouse">全螢幕滑鼠</string>
+    <string name="macropad_action_fullscreen_keyboard">全螢幕鍵盤</string>
+
+    <!-- MacroPad profile / layout strings -->
+    <string name="settings_macropad_profile">活動設定檔</string>
+    <string name="settings_macropad_new_profile">新設定檔</string>
+    <string name="settings_macropad_pad_shape">Pad 形狀</string>
+    <string name="settings_macropad_shape_square">正方形</string>
+    <string name="settings_macropad_shape_circle">圓形</string>
+    <string name="settings_macropad_pad_size">Pad 大小: %d%%</string>
+    <string name="settings_macropad_edit_layout">編輯配置…</string>
+    <string name="settings_macropad_new_layout">新配置</string>
+    <string name="settings_macropad_edit">編輯</string>
+    <string name="settings_macropad_new">新建</string>
+    <string name="macropad_layout_template_title">複製自…</string>
+    <string name="macropad_layout_template_blank">空白</string>
+    <string name="macropad_reorder_profiles">重新排序設定檔</string>
+    <string name="macropad_reorder_layouts">重新排序配置</string>
+
+    <!-- MacroPad ambient display settings -->
+    <string name="settings_section_background_following">背景跟隨</string>
+    <string name="settings_mirror_follow_touch">背景投影跟隨觸控</string>
+    <string name="settings_mirror_follow_touch_desc">將投影視窗中心對齊您在主螢幕上最後觸碰的位置。</string>
+    <string name="settings_mirror_follow_smoothing">平滑度</string>
+    <string name="settings_mirror_follow_smoothing_desc">使用指數衰減平滑視窗移動</string>
+    <string name="settings_mirror_follow_touch_off">關閉</string>
+    <string name="settings_section_cutouts">區塊 (Cutouts)</string>
+    <string name="settings_mirror_no_cutouts">未定義區塊。請在視窗編輯器中新增。</string>
+
+
+    <string name="settings_macropad_ambient">背景顯示</string>
+    <string name="settings_macropad_ambient_hint">自動開始螢幕投影 (首次使用需授權)</string>
+    <string name="settings_macropad_ambient_preview">顯示預覽</string>
+    <string name="settings_macropad_ambient_preview_hint">調整顯示時顯示透明視窗</string>
+    <string name="settings_macropad_ambient_apply_theme">將主題套用於背景顯示</string>
+    <string name="settings_macropad_ambient_apply_theme_hint">禁用時，所有按鈕將以中性灰色風格顯示</string>
+    <string name="settings_macropad_dim">調暗</string>
+
+    <string name="ambient_preview">預覽</string>
+
+
+    <!-- MacroPad button action display labels (shown in editor button list) -->
+    <string name="macropad_display_keyboard_key">按鍵: %s</string>
+    <string name="macropad_display_gamepad_button">手把: %s</string>
+    <string name="macropad_display_mouse_button">滑鼠: %s</string>
+    <string name="macropad_display_scroll_wheel">滾輪</string>
+    <string name="macropad_display_trackpoint">軌跡點</string>
+
+    <!-- Language setting -->
+    <string name="settings_language">語言</string>
+    <string name="settings_language_system">系統預設</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_de">Deutsch</string>
+    <string name="settings_log_level">日誌級別</string>
+    <string name="settings_gamepad_swap_face_buttons">交換面按鈕標籤 (A/B 與 X/Y)</string>
+    <string name="settings_gamepad_swap_face_buttons_desc">在手把選擇器中顯示任天堂風格標籤 (A↔B 且 X↔Y)。注入的鍵碼保持不變。</string>
+
+    <!-- Privileged Mode -->
+    <string name="privd_title">特權模式</string>
+    <string name="privd_description">提高相容性並增強特定功能。查看說明以獲取更多資訊。</string>
+    <string name="privd_status_off">關閉</string>
+    <string name="privd_status_connecting">正在連接…</string>
+    <string name="privd_status_bootstrapping">正在初始化…</string>
+    <string name="privd_status_running">運行中</string>
+    <string name="privd_status_failed">失敗</string>
+    <string name="privd_action_connect">連接</string>
+    <string name="privd_action_disconnect">斷開連接</string>
+    <string name="privd_action_test">測試連接</string>
+    <string name="privd_action_show_wizard">設定…</string>
+    <string name="privd_action_test_autotoggle">測試自動切換</string>
+    <string name="privd_action_auto_setup">自動設定</string>
+    <string name="privd_action_retry">重試自動設定</string>
+    <string name="privd_toast_accessibility_required">自動切換需要無障礙服務，請先在系統設定中啟用。</string>
+    <string name="privd_toast_all_set">設定完成！Privd 特權模式已就緒。</string>
+    <string name="privd_ping_ok">Daemon 有回應 — 連接正常。</string>
+    <string name="privd_ping_fail">Daemon 無回應。連接可能已失效。</string>
+
+    <string name="privd_show_reconnect_prompt">顯示重新連接提示</string>
+    <string name="privd_show_reconnect_prompt_desc">如果與特權助手 daemon 連接失敗，在啟動時顯示對話視窗。</string>
+    <string name="privd_reconnect_prompt_title">重新啟用特權模式</string>
+    <string name="privd_reconnect_prompt_skip">跳過</string>
+    <string name="privd_reconnect_prompt_done">完成</string>
+    <string name="privd_reconnect_prompt_settings">開發者設定</string>
+
+
+
+
+    <!-- Dead-zone settings row + dialog -->
+    <string name="privd_deadzone_title">配置死區</string>
+    <string name="privd_deadzone_desc">左: %1$d %%  ·  右: %2$d %%</string>
+    <string name="privd_deadzone_dialog_title">手把死區</string>
+    <string name="privd_deadzone_dialog_hint">開啟 Thor 內建設定 → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius 查看各搖桿值，然後填入下方。</string>
+    <string name="privd_deadzone_left">左搖桿</string>
+    <string name="privd_deadzone_right">右搖桿</string>
+    <string name="privd_deadzone_ok">確定</string>
+    <string name="privd_deadzone_cancel">取消</string>
+
+    <string name="privd_recording_physical_title">正在錄製實體控制器…</string>
+    <string name="privd_recording_physical_hint">按下實體手把上的按鈕並移動搖桿。完成後點擊停止。</string>
+    <string name="privd_recording_physical_pressed">已按下: %1$s</string>
+    <string name="privd_recording_physical_stick_left">左搖桿: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stick_right">右搖桿: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stop">停止並儲存</string>
+    <string name="privd_recording_physical_cancel">取消</string>
+
+    <!-- Privileged Mode — setup wizard -->
+    <string name="privd_wizard_title">設定特權模式</string>
+    <string name="privd_wizard_next">下一步</string>
+    <string name="privd_wizard_back">上一步</string>
+    <string name="privd_wizard_close">完成</string>
+    <string name="privd_wizard_close_dialog">關閉嚮導</string>
+    <string name="privd_wizard_pairing">正在配對…</string>
+    <string name="privd_wizard_bootstrapping">正在初始化…</string>
+
+    <string name="privd_wizard_step1_intro">按照以下步驟啟用無線偵錯：</string>
+    <string name="privd_wizard_step1_substep_1">1. 開啟設定 → 關於掌上型主機</string>
+    <string name="privd_wizard_step1_substep_2">2. 連續點擊「版本號碼」7 次直到出現「您現在已成為開發人員！」</string>
+    <string name="privd_wizard_step1_substep_3">3. 返回 → System → 開發人員選項</string>
+    <string name="privd_wizard_step1_substep_4">4. 啟用「無線偵錯」並將其開啟</string>
+    <string name="privd_wizard_step1_substep_5">5. 點擊「使用配對碼配對裝置」並保持該對話視窗開啟</string>
+    <string name="privd_wizard_step1_open">開啟系統設定</string>
+
+    <string name="privd_wizard_step2_intro">在無線偵錯設定中點擊「使用配對碼配對裝置」。輸入該對話視窗中顯示的配對連接埠與 6 位數配對碼。連線連接埠會自動偵測。</string>
+    <string name="privd_wizard_field_pair_port">配對連接埠 (來自「配對裝置」對話視窗)</string>
+    <string name="privd_wizard_field_code">配對碼 (6 位數)</string>
+    <string name="privd_wizard_step2_pair">配對</string>
+    <string name="privd_wizard_step2_error">配對失敗。請檢查配對連接埠與配對碼，然後重試。</string>
+    <string name="privd_wizard_autofill_read_screen">自動填入（讀取螢幕）</string>
+    <string name="privd_wizard_autofill_scanning">正在掃描螢幕…</string>
+    <string name="privd_wizard_autofill_success">已自動填入配對資訊！</string>
+    <string name="privd_wizard_autofill_not_found">未能在螢幕上偵測到配對資訊。請確認「配對裝置」對話框顯示於上螢幕。</string>
+    <string name="privd_wizard_autofill_accessibility_disabled">請在系統設定中啟用無障礙服務，才能透過讀取螢幕文字自動填入。</string>
+
+    <string name="privd_wizard_step3_intro">Megingiard 現在將推送助手 daemon 執行檔到 /data/local/tmp 並啟動它。Daemon 以 ADB shell 使用者身份運行，直到您重啟設備為止。</string>
+    <string name="privd_wizard_step3_start">推送並啟動 daemon</string>
+
+    <string name="privd_wizard_step4_done">特權模式設定完成。未來應用程式啟動時將自動重新連接。</string>
+
+    <string name="privd_wizard_stage_idle">閒置</string>
+    <string name="privd_wizard_stage_pairing">正在與 ADB 配對…</string>
+    <string name="privd_wizard_stage_connecting">正在連接到 ADB…</string>
+    <string name="privd_wizard_stage_pushing">正在推送 daemon 檔案…</string>
+    <string name="privd_wizard_stage_spawning">正在啟動 daemon…</string>
+    <string name="privd_wizard_stage_verifying">正在驗證連接…</string>
+    <string name="privd_wizard_stage_done">完成</string>
+
+    <string name="privd_wizard_checklist_adb">ADB 連接</string>
+    <string name="privd_wizard_checklist_push">推送 daemon 執行檔</string>
+    <string name="privd_wizard_checklist_spawn">啟動 daemon</string>
+    <string name="privd_wizard_checklist_verify">驗證連接</string>
+
+    <string name="privd_error_daemon_unreachable">無法連接到 Daemon。請執行設定嚮導。</string>
+    <string name="privd_error_pairing_failed">配對失敗。請驗證系統配對對話視窗中的地址、連接埠與 6 位數代碼。</string>
+    <string name="privd_error_adb_discovery_failed">無法透過 mDNS 發現 ADB 無線偵錯端點。請確保無線偵錯已啟用。</string>
+    <string name="privd_error_adb_connect_failed">無法連接到 ADB。如果您之前撤銷了配對，請重新配對。</string>
+    <string name="privd_error_adb_pairing_required">需要進行 ADB 配對。請在無線偵錯設定中移除「Megingiard」後重新配對。</string>
+    <string name="privd_error_bootstrap_push_failed">推送 daemon 檔案失敗。請檢查 /data/local/tmp 中的可用空間。</string>
+    <string name="privd_error_bootstrap_spawn_failed">啟動 daemon 進程失敗。</string>
+    <string name="privd_error_bootstrap_provision_failed">提供驗證金鑰失敗。請重新執行設定嚮導。</string>
+    <string name="privd_info_running">特權模式已啟用並正在運行。</string>
+    <string name="privd_info_no_credentials">找不到配對憑據。請執行設定嚮導來配對此裝置。</string>
+    <string name="privd_info_wireless_disabled">無線偵錯未啟用。請在開發人員選項中開啟並重試。</string>
+    <string name="privd_info_wireless_active_disconnected">無線偵錯已啟用。點擊連接以啟動特權模式。</string>
+    <string name="privd_info_connecting">正在連接到 daemon…</string>
+    <string name="settings_jump_all">全部</string>
+    <string name="settings_filter_label">篩選</string>
+    <string name="settings_jump_general">一般</string>
+    <string name="settings_jump_automation">自動化</string>
+    <string name="settings_jump_appearance">外觀</string>
+    <string name="settings_jump_data">數據</string>
+    <string name="settings_jump_config">配置</string>
+    <string name="settings_jump_privileged_mode">特權模式</string>
+    <string name="settings_jump_diagnostics">診斷</string>
+    <string name="settings_section_privileged_mode">特權模式</string>
+    <string name="settings_section_diagnostics">診斷</string>
+    <string name="settings_section_expand">展開區塊</string>
+    <string name="settings_section_collapse">收起區塊</string>
+    <string name="settings_name_error_empty">名稱不能為空。</string>
+    <string name="settings_name_error_duplicate">此名稱已存在。</string>
+
+    <string name="wrong_screen_retry">重試偵測</string>
+    <string name="wrong_screen_help_title">設定與放置說明</string>
+    <string name="wrong_screen_help_step1">1. 在次螢幕重新開啟 Megingiard，然後點擊「重試」。</string>
+    <string name="wrong_screen_help_step2">2. 建議：如果您的啟動器支援，請將 Megingiard 固定在底部螢幕以保持其位置。</string>
+    <string name="wrong_screen_help_step3">3. 焦點模式：由於 Megingiard 僅使用觸控控制，請在 AYN 設定中將焦點模式設為「主螢幕」。</string>
+    <string name="mirror_control_label_start">開始</string>
+    <string name="mirror_control_label_stop">停止</string>
+    <string name="mirror_control_label_freeze">凍結</string>
+    <string name="mirror_control_label_unfreeze">解除凍結</string>
+    <string name="mirror_control_label_viewport">視窗</string>
+    <string name="mirror_control_label_projection">投影</string>
+    <string name="mirror_control_label_screenshot">螢幕截圖</string>
+    <string name="screenshot_saved">螢幕截圖已儲存至 Pictures/Megingiard</string>
+    <string name="screenshot_failed">儲存螢幕截圖失敗</string>
+
+    <!-- Exit confirmation dialog -->
+    <string name="exit_dialog_title">退出 Megingiard</string>
+    <string name="exit_dialog_message">您確定要關閉應用程式嗎？</string>
+    <string name="exit_dialog_confirm">關閉</string>
+    <string name="exit_dialog_cancel">取消</string>
+
+    <!-- MacroPad macro action -->
+    <string name="macropad_action_macro">巨集</string>
+    <string name="macropad_display_macro">巨集: %s</string>
+
+    <!-- MacroPad macro picker (PadActionPicker) -->
+    <string name="macropad_picker_folder_empty">沒有可用的巨集</string>
+    <string name="macropad_macro_picker_no_macros">沒有可用的巨集</string>
+    <string name="macropad_macro_picker_unknown">未知的巨集</string>
+
+    <!-- MacroPad editor toolbar -->
+    <string name="macropad_editor_manage_macros">巨集…</string>
+    <string name="macropad_editor_add_macro_button">新增巨集按鈕</string>
+
+    <!-- MacroPad editor grid -->
+    <string name="macropad_editor_grid_off">網格關閉</string>
+    <string name="macropad_editor_grid_rectangular">矩形網格</string>
+    <string name="macropad_editor_grid_radial">徑向網格</string>
+    <string name="macropad_editor_grid_toggle">更改網格</string>
+    <string name="macropad_editor_toolbar_button">新增按鈕</string>
+    <string name="macropad_editor_unlock">解鎖按鈕</string>
+    <string name="macropad_editor_lock">鎖定按鈕</string>
+    <string name="macropad_editor_change_background">更改背景</string>
+
+    <!-- MacroPad editor section headers -->
+    <string name="macropad_editor_section_layout">配置</string>
+    <string name="macropad_editor_section_buttons">按鈕</string>
+    <string name="macropad_editor_section_button_settings">按鈕設定</string>
+    <string name="macropad_editor_section_layout_settings">配置設定</string>
+    <string name="macropad_macro_section_list">列表</string>
+    <string name="macropad_macro_section_steps">巨集步驟</string>
+    <string name="macropad_macro_section_settings">巨集設定</string>
+
+    <!-- MacroPad editor layout settings — button color style -->
+    <string name="macropad_editor_button_color_no_mirror">按鈕顏色 (未投影時)</string>
+    <string name="macropad_editor_button_color_mirror">按鈕顏色 (投影時)</string>
+    <string name="macropad_editor_button_color_accented">強調</string>
+    <string name="macropad_editor_button_color_neutral">中性</string>
+
+    <!-- Layout background image settings -->
+    <string name="layout_settings_bg_image_title">背景圖片</string>
+    <string name="layout_settings_bg_image_desc">設定按鈕面板的背景圖片</string>
+    <string name="layout_settings_bg_image_none">未選擇</string>
+    <string name="layout_settings_bg_image_active">自定義背景啟用中</string>
+    <string name="layout_settings_bg_image_pending">已選擇新圖片 (未儲存)</string>
+    <string name="layout_settings_bg_image_choose">選擇圖片</string>
+    <string name="layout_settings_bg_image_change">更改圖片</string>
+    <string name="layout_settings_bg_image_remove">移除背景圖片</string>
+    <string name="layout_settings_bg_image_use_as_mask">作為遮罩使用</string>
+    <string name="layout_settings_bg_image_use_as_mask_desc">將背景圖片繪製在螢幕投影區塊上方。適用於具有透明度的 PNG。</string>
+    <string name="layout_settings_bg_image_preview_desc">預覽背景圖片</string>
+    <string name="layout_settings_bg_image_preview_dialog_title">背景圖片預覽</string>
+    <string name="layout_settings_bg_image_crop">裁切</string>
+    <string name="layout_settings_crop_image_title">裁切背景圖片</string>
+    <string name="layout_settings_crop_image_instructions">拖曳選取框以移動 • 拖曳角落以調整大小</string>
+    <string name="layout_settings_bg_section_title">背景</string>
+    <string name="layout_settings_bg_image_dimming_title">調暗</string>
+    <string name="layout_settings_colors_section_title">按鈕預設顏色</string>
+    <string name="button_settings_colors_section_title">按鈕顏色</string>
+    <string name="layout_settings_color_text">文字與圖示顏色</string>
+    <string name="layout_settings_color_border">邊框顏色</string>
+    <string name="layout_settings_color_bg">淡出顏色</string>
+    <string name="layout_settings_select_text_color">選擇文字與圖示顏色</string>
+    <string name="layout_settings_select_border_color">選擇邊框顏色</string>
+    <string name="layout_settings_select_bg_color">選擇淡出顏色</string>
+    <string name="layout_settings_color_neutral">中性風格</string>
+    <string name="layout_settings_color_accent">強調色</string>
+    <string name="layout_settings_recent_colors">最近使用的顏色</string>
+    <string name="layout_settings_no_recent_colors">尚無最近使用的顏色</string>
+    <string name="layout_settings_color_layout_default">配置預設值</string>
+    <string name="layout_settings_color_opacity">不透明度</string>
+    <string name="layout_settings_invisible_buttons">隱形按鈕</string>
+    <string name="layout_settings_invisible_buttons_desc">使用配置時讓按鈕隱形，編輯時仍然可見。</string>
+ 
+ 
+    <!-- Help menu strings for Layout settings -->
+    <string name="help_layout_settings_title">配置設定說明</string>
+    <string name="help_layout_settings_intro">設定此配置的外觀、背景圖片與按鈕預設顏色。</string>
+    <string name="help_layout_settings_intro_no_bg">設定此配置的外觀、名稱與按鈕預設顏色。</string>
+    <string name="help_layout_settings_sec_properties">屬性</string>
+    <string name="help_layout_settings_name_title">配置名稱</string>
+    <string name="help_layout_settings_name_desc">為此配置取一個不重複的名稱，方便在編輯器與快捷選單中辨識。</string>
+    <string name="help_layout_settings_bg_title">背景圖片</string>
+    <string name="help_layout_settings_bg_desc">可選擇在按鈕後方顯示自定義圖片。支援 JPG、PNG 與 WebP 格式。</string>
+    <string name="help_layout_settings_mask_title">作為遮罩使用</string>
+    <string name="help_layout_settings_mask_desc">將背景圖片覆蓋在螢幕投影區塊上方。非常適合具有透明度的自定義主機外殼或框架。</string>
+    <string name="help_layout_settings_sec_colors">按鈕顏色</string>
+    <string name="help_layout_settings_colors_title">自訂預設顏色</string>
+    <string name="help_layout_settings_colors_desc">設定此配置中所有按鈕的預設顏色（文字／圖示、外框與漸隱顏色）。個別按鈕可以各自覆寫這些預設值。</string>
+    <string name="help_layout_settings_palette_title">快速調色盤</string>
+    <string name="help_layout_settings_palette_desc">點擊顏色旁邊的調色盤圖示，即可從標準的中性／強調色樣式，或最近選過的自訂顏色中挑選。</string>
+
+    <!-- Help menu strings for Background settings -->
+    <string name="help_bg_settings_intro">設定此配置的背景圖片設定、調暗、抓取與遮罩選項。</string>
+    <string name="help_bg_settings_dimming_title">調暗</string>
+    <string name="help_bg_settings_dimming_desc">使用滑桿調暗背景圖片。範圍從 0% (不調暗) 到 90% (最大調暗)，以保持按鈕清晰可見。</string>
+    <string name="help_bg_settings_crop_title">裁切與平移</string>
+    <string name="help_bg_settings_crop_desc">使用拖曳平移與捏合縮放手勢裁切並縮放圖片，使其符合雙螢幕長寬比。</string>
+
+    <!-- MacroListEditor -->
+    <string name="macropad_macro_list_title">巨集</string>
+    <string name="macropad_macro_list_new">新增巨集</string>
+    <string name="macropad_macro_list_empty">尚無巨集。點擊 + 建立一個。</string>
+    <!-- %1$d = step count, %2$s = total duration text -->
+    <string name="macropad_macro_list_steps">%1$d 個步驟 • %2$s</string>
+    <string name="macropad_macro_duration">%1$d 毫秒</string>
+    <string name="macropad_macro_duration_randomized">%1$d 毫秒 (隨機偏移 %2$d 毫秒)</string>
+    <string name="macropad_macro_default_name">新巨集</string>
+    <string name="macropad_macro_delete_title">刪除巨集</string>
+    <string name="macropad_macro_delete_confirm">刪除此巨集？引用它的按鈕將停止運作。</string>
+    <string name="macropad_macro_delete_confirm_referenced">此巨集被 %d 個按鈕使用。確定要刪除嗎？</string>
+    <string name="macropad_macro_duplicate">複製巨集</string>
+
+    <!-- MacroTimelineEditor -->
+    <string name="macropad_macro_editor_save">儲存</string>
+    <string name="macropad_macro_editor_cancel">取消</string>
+    <string name="macropad_macro_add_step">步驟</string>
+    <string name="macropad_macro_record_gamepad">錄製</string>
+    <string name="macropad_macro_record_touch">錄製</string>
+    <string name="macropad_macro_no_steps">尚無步驟。點擊 + 新增一個。</string>
+    <string name="macropad_macro_step_delete_title">刪除步驟</string>
+    <string name="macropad_macro_step_delete_confirm">從巨集中移除此步驟？</string>
+    <string name="macropad_macro_record_gamepad_title">錄製手把輸入</string>
+    <string name="macropad_macro_record_gamepad_hint">觸碰螢幕上的控制器。輸入將被錄製並即時轉發到上方螢幕。</string>
+    <string name="macropad_macro_record_gamepad_stop">完成</string>
+    <string name="macropad_macro_record_gamepad_cancel">取消</string>
+    <string name="macropad_macro_record_gamepad_left_stick">左搖桿</string>
+    <string name="macropad_macro_record_gamepad_right_stick">右搖桿</string>
+    <string name="macropad_macro_record_gamepad_l3">L3</string>
+    <string name="macropad_macro_record_gamepad_r3">R3</string>
+    <string name="macropad_macro_record_gamepad_select">SE</string>
+    <string name="macropad_macro_record_gamepad_home">HM</string>
+    <string name="macropad_macro_record_gamepad_start">ST</string>
+    <string name="macropad_macro_record_gamepad_dialog_confirm">開始</string>
+    <string name="macropad_macro_record_gamepad_dialog_title">開始手把錄製</string>
+    <string name="macropad_macro_record_gamepad_dialog_message">此螢幕上將開啟觸控手把覆蓋層。您的觸碰將被錄製為巨集步驟，並透過虛擬手把即時轉發到上方螢幕。</string>
+    <string name="macropad_macro_record_gamepad_dialog_dont_show_again">不再顯示</string>
+    <string name="macropad_macro_record_gamepad_error_title">手把錄製不可用</string>
+    <string name="macropad_macro_record_gamepad_error_start">無法啟動虛擬手把。錄製未開始。</string>
+
+    <!-- Touch recording flow -->
+    <string name="macropad_macro_record_touch_dialog_title">錄製觸控</string>
+    <string name="macropad_macro_record_touch_dialog_message">螢幕投影將開始。請選擇您要錄製單次點擊還是連續手勢 (包含多指觸控)。</string>
+    <string name="macropad_macro_record_touch_option_tap">點擊</string>
+    <string name="macropad_macro_record_touch_option_gesture">手勢</string>
+    <string name="cd_record_gamepad">錄製手把輸入</string>
+    <string name="cd_record_touch">錄製觸控步驟</string>
+    <string name="macropad_macro_test_run">測試運行</string>
+    <string name="cd_test_macro">測試巨集</string>
+    <string name="cd_edit_macro">編輯巨集</string>
+    <string name="macropad_macro_loop_toggle">循環巨集</string>
+    <string name="macropad_macro_loop_pause_label">兩次循環間的暫停時間</string>
+    <string name="macropad_macro_randomize_toggle">隨機化時序</string>
+    <string name="macropad_macro_randomize_range_label">時序偏移最大值</string>
+    <string name="macropad_macro_randomize_desc">每次執行時，為每個步驟的設定啟動時間與持續時間增加一個隨機毫秒數 (最高至最大值)。</string>
+    <string name="macropad_macro_editor_undo">復原</string>
+    <string name="macropad_macro_editor_redo">重做</string>
+    <string name="macropad_macro_editor_view_label">檢視</string>
+    <string name="macropad_macro_editor_view_list">列表/編輯</string>
+    <string name="macropad_macro_editor_view_timeline">時間軸</string>
+    <string name="macropad_macro_editor_shift_subsequent">移動後續步驟</string>
+    <string name="macropad_macro_editor_shift_none">關閉</string>
+    <string name="macropad_macro_editor_shift_start_delta">啟動偏移 &#916;</string>
+    <string name="macropad_macro_editor_shift_end_delta">結束偏移 &#916;</string>
+    <!-- MacroStepEditDialog -->
+    <string name="macropad_macro_step_new">新增步驟</string>
+    <string name="macropad_macro_step_edit">編輯步驟</string>
+    <string name="macropad_macro_step_type_gamepad">手把按鈕</string>
+    <string name="macropad_macro_step_type_joystick">搖桿</string>
+    <string name="macropad_macro_step_type_joystick_path">搖桿路徑</string>
+    <string name="macropad_macro_step_type_dpad">方向鍵</string>
+    <string name="macropad_macro_step_type_touch">觸控點擊</string>
+    <string name="macropad_macro_step_type_touch_path">觸控手勢</string>
+    <string name="macropad_macro_step_label_short_tap">點擊</string>
+    <string name="macropad_macro_step_label_short_gesture">手勢</string>
+    <string name="macropad_macro_step_short_samples_count">(%1$d 點)</string>
+    <string name="macropad_macro_step_joystick_path_short">%1$s (%2$d 點)</string>
+    <string name="macropad_macro_step_touch_path_details">手勢路徑: 已錄製 %1$d 個點。</string>
+    <string name="macropad_macro_step_touch_position">錄製位置 (唯讀)</string>
+    <string name="macropad_macro_step_touch_path_readonly">已錄製的觸控手勢 (唯讀)。僅能編輯時序。</string>
+    <string name="macropad_macro_step_path_readonly">已錄製的類比搖桿路徑 (唯讀)。僅能編輯時序。</string>
+    <string name="macropad_macro_step_path_summary_stick">搖桿: %1$s</string>
+    <string name="macropad_macro_step_path_summary_samples">採樣數: %1$d</string>
+    <string name="macropad_macro_step_start_ms">開始時間 (毫秒)</string>
+    <string name="macropad_macro_step_duration_ms">持續時間 (毫秒)</string>
+    <string name="macropad_macro_step_timing_delta">%+d</string>
+    <string name="macropad_macro_step_stick_left">左搖桿</string>
+    <string name="macropad_macro_step_stick_right">右搖桿</string>
+    <string name="macropad_macro_step_magnitude">力度: %.1f</string>
+    <string name="macropad_macro_step_direction">方向</string>
+    <string name="macropad_gamepad_face_label_template">%1$s / %2$s / %3$s</string>
+    <string name="macropad_gamepad_symbol_cross">╳</string>
+    <string name="macropad_gamepad_symbol_circle">○</string>
+    <string name="macropad_gamepad_symbol_triangle">△</string>
+    <string name="macropad_gamepad_symbol_square">□</string>
+    <string name="macropad_gamepad_position_south">↓</string>
+    <string name="macropad_gamepad_position_east">→</string>
+    <string name="macropad_gamepad_position_north">↑</string>
+    <string name="macropad_gamepad_position_west">←</string>
+    <!-- %1$s = original macro name; result: "Name Copy", "Name Copy (2)", etc. -->
+    <string name="macropad_macro_copy_name">%1$s 複本</string>
+    <!-- %1$d = time in ms (tick label on the timeline) -->
+    <string name="macropad_macro_timeline_tick">%1$d 毫秒</string>
+    <!-- %1$d = start time ms, %2$d = duration ms -->
+    <string name="macropad_macro_step_timing">從 @%1$d 毫秒  ⟶  持續 %2$d 毫秒</string>
+
+    <string name="cd_more_options">更多選項</string>
+
+    <!-- Quick Menu Bar -->
+
+
+    <!-- Quick Menu -->
+    <string name="quick_menu_profile_label">設定檔</string>
+    <string name="quick_menu_layout_label">配置</string>
+    <string name="quick_menu_new_profile">新設定檔</string>
+    <string name="quick_menu_new_layout">新配置</string>
+    <string name="quick_menu_edit_layout">編輯設定檔／配置</string>
+    <string name="quick_menu_ambient_settings">螢幕投影設定</string>
+    <string name="quick_menu_screen_mirroring">螢幕投影</string>
+    <string name="quick_menu_global_settings">全域設定</string>
+    <string name="quick_menu_shut_off_cd">關閉 Megingiard</string>
+    <string name="shut_off_dialog_title">關閉 Megingiard</string>
+    <string name="shut_off_dialog_body">您確定要關閉 Megingiard 嗎？</string>
+    <string name="shut_off_dialog_confirm">關閉</string>
+    <string name="quick_menu_dismiss_dialog">關閉對話視窗</string>
+    <string name="quick_menu_profile_name_hint">設定檔名稱</string>
+    <string name="quick_menu_layout_name_hint">配置名稱</string>
+    <string name="cd_layout_prev">上一個配置</string>
+    <string name="cd_layout_next">下一個配置</string>
+    <string name="cd_viewport_edit">編輯視窗</string>
+
+    <!-- Touchpad hints -->
+    <string name="touchpad_hint">點擊此處控制上方螢幕</string>
+    <string name="touchpad_hint_mouse">拖曳移動 · 輕點點擊</string>
+    <string name="macropad_action_group_keyboard">鍵盤</string>
+    <string name="macropad_action_group_gamepad">手把</string>
+    <string name="macropad_action_group_mouse">滑鼠</string>
+    <string name="macropad_action_group_macro">巨集</string>
+    <string name="macropad_action_group_layout">設定檔/配置</string>
+    <string name="macropad_action_group_mirror">投影選單</string>
+    <string name="macropad_action_group_profile">設定檔</string>
+    <string name="macropad_action_group_other">全螢幕工具</string>
+    <string name="macropad_picker_label_group">群組</string>
+
+    <!-- Log report export -->
+    <string name="settings_save_log_report">儲存日誌報告</string>
+    <string name="settings_save_log_report_desc">將最近的 logcat 輸出儲存為 .txt 檔案以便回報錯誤</string>
+    <string name="log_report_save_success">日誌報告已儲存。</string>
+    <string name="log_report_save_error">儲存日誌報告失敗。</string>
+
+    <!-- Restore backup selection dialog -->
+    <string name="config_restore_dialog_title">還原備份</string>
+    <string name="config_restore_option_external">外部檔案…</string>
+    <string name="config_restore_option_external_sub">從儲存空間選擇 .mgrd 檔案</string>
+    <string name="config_restore_option_internal_sub">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集</string>
+
+    <!-- Copy macros/buttons/layouts to other profiles/layouts -->
+    <string name="macropad_editor_copy_to_profile">複製到設定檔…</string>
+    <string name="macropad_editor_copy_to_layout">複製到配置…</string>
+    <string name="macropad_editor_copy_profile_select">選擇目標設定檔</string>
+    <string name="macropad_editor_copy_layout_select">選擇目標配置</string>
+    <string name="macropad_editor_copy_button_duplicate">重複按鈕</string>
+    <string name="macropad_duplicate_profile">重複設定檔</string>
+    <string name="macropad_duplicate_layout">重複配置</string>
+    <string name="macropad_copy_no_profiles_available">沒有其他可用的設定檔。</string>
+    <string name="macropad_copy_no_layouts_available">沒有其他可用的配置。</string>
+
+    <!-- Crop editor -->
+    <string name="mirror_crop_editor_title">定義裁切區域</string>
+    <string name="mirror_crop_editor_subtitle">區塊: %1$s</string>
+    <string name="mirror_crop_editor_done">完成</string>
+    <string name="mirror_crop_editor_cancel">取消</string>
+    <string name="cd_drag_toolbar">拖曳以移動工具列</string>
+
+    <!-- Cutout Layout Editor -->
+    <string name="mirror_editor_add_cutout">新增區塊</string>
+    <string name="mirror_editor_delete_cutout">刪除所選</string>
+    <string name="mirror_editor_delete_cutout_label">刪除區塊</string>
+    <string name="mirror_editor_edit_crop">編輯裁切</string>
+    <string name="mirror_editor_single_mode">單個視窗</string>
+    <string name="mirror_editor_multi_mode">多個區塊</string>
+    <string name="mirror_editor_done">完成</string>
+    <string name="mirror_editor_multi_cutout_privileged_only">多個區塊需要特權模式</string>
+    <string name="mirror_editor_aspect_ratio_mode">長寬比模式</string>
+    <string name="mirror_editor_aspect_ratio_locked">比例: 已鎖定</string>
+    <string name="mirror_editor_aspect_ratio_free">自由</string>
+    <string name="mirror_editor_aspect_ratio_top">頂部</string>
+    <string name="mirror_editor_aspect_ratio_bottom">底部</string>
+    <string name="mirror_editor_motion_smoothing">平滑</string>
+    <string name="cd_motion_smoothing">切換所選區塊的平滑移動</string>
+    <string name="mirror_smoothing_strength_label">平滑度</string>
+    <string name="mirror_smoothing_strength_value">%1$d%%</string>
+    <string name="mirror_smoothing_strength_light">輕微</string>
+    <string name="mirror_smoothing_strength_medium">中等</string>
+    <string name="mirror_smoothing_strength_strong">強烈</string>
+    <string name="mirror_smoothing_strength_off">關閉</string>
+    <string name="mirror_editor_shape_circle">形狀: 圓形</string>
+    <string name="mirror_editor_shape_rectangle">形狀: 矩形</string>
+    <string name="mirror_editor_no_space">沒有足夠空間新增另一個區塊</string>
+    <string name="mirror_editor_max_cutouts">最多允許 10 個區塊</string>
+    <string name="mirror_editor_rename_cutout">重新命名區塊</string>
+    <string name="mirror_editor_cutout_name_hint">區塊名稱</string>
+
+    <!-- Cutout Layout Editor Toolbar Short Labels -->
+    <string name="mirror_editor_toolbar_add">新增</string>
+    <string name="mirror_editor_toolbar_settings">設定</string>
+    <string name="mirror_editor_toolbar_delete">刪除</string>
+    <string name="mirror_editor_toolbar_crop">裁切</string>
+    <string name="mirror_editor_toolbar_done">完成</string>
+    <string name="mirror_editor_toolbar_cancel">取消</string>
+    <string name="mirror_editor_toolbar_shape_circle">圓形</string>
+    <string name="mirror_editor_toolbar_shape_rect">矩形</string>
+    <string name="settings_mirror_touch_projection">觸控投影</string>
+    <string name="settings_mirror_touch_projection_desc">將此區塊內的觸控輸入轉發到主螢幕</string>
+    <string name="settings_mirror_cutout_default">區塊</string>
+    <string name="settings_mirror_cutout_default_name_fmt">區塊 %1$d</string>
+
+    <!-- ── Help tutorial system ──────────────────────────────────────────── -->
+    <!-- Shared -->
+    <string name="help_open_cd">開啟說明</string>
+    <string name="help_close_cd">關閉說明</string>
+
+    <!-- MacroPad Editor help -->
+    <string name="help_editor_title">MacroPad 編輯器 — 說明</string>
+    <string name="help_editor_intro">此螢幕讓您建立並組織顯示在巨集板上的每個按鈕。變更會立即儲存 — 沒有單獨的儲存步驟。</string>
+    <string name="help_editor_section_profiles">設定檔</string>
+    <string name="help_editor_profiles_label">設定檔標籤</string>
+    <string name="help_editor_profiles_desc">點擊標籤以切換活動設定檔。當前活動的標籤會醒目顯示。每個設定檔包含自己的配置與巨集組，因此您可以為不同遊戲建立獨立設定。</string>
+    <string name="help_editor_add_profile_label">新增設定檔</string>
+    <string name="help_editor_add_profile_desc">點擊設定檔標題旁的加號 (+) 按鈕以建立全新空白設定檔。</string>
+    <string name="help_editor_profile_options_label">設定檔選項</string>
+    <string name="help_editor_profile_options_desc">點擊選項 (三個點) 圖示可複製、重新排序或刪除設定檔。重新命名不在這裡，而是標題列上的那支鉛筆；分配應用程式也不在這裡，而是「巨集…」旁邊那顆按鈕。</string>
+    <string name="help_editor_section_layouts">配置</string>
+    <string name="help_editor_layouts_label">配置標籤</string>
+    <string name="help_editor_layouts_desc">一個設定檔可以有多個配置。僅啟用的配置會出現在快速選單中以便快速切換。長按並拖曳配置標籤可以重新排序。</string>
+    <string name="help_editor_add_layout_label">新增配置</string>
+    <string name="help_editor_add_layout_desc">點擊配置標題旁的加號 (+) 按鈕。配置會立刻以預設名稱建立並切換過去，要改名就點配置標題列上的鉛筆。</string>
+    <string name="help_editor_layout_options_label">配置選項</string>
+    <string name="help_editor_layout_options_desc">點擊選項 (三個點) 圖示以複製配置、複製到其他設定檔、重新排序或刪除配置。</string>
+    <string name="help_editor_section_toolbar">工具列</string>
+    <string name="help_editor_toolbar_button_label">按鈕</string>
+    <string name="help_editor_toolbar_button_desc">在畫布上放置新的巨集按鈕。點擊後，在畫布解鎖狀態下您可以將其拖曳到任何位置。</string>
+    <string name="help_editor_toolbar_background_label">背景</string>
+    <string name="help_editor_toolbar_background_desc">開啟背景圖片設定，可以選擇或移除背景圖片、從 SteamGridDB 抓取封面、裁切／縮放圖片，或切換遮罩模式。</string>
+    <string name="help_editor_profile_macros_label">巨集…</string>
+    <string name="help_editor_profile_macros_desc">開啟此設定檔的巨集列表，您可以在此建立、編輯與組織可重複使用的巨集序列。</string>
+    <string name="help_editor_toolbar_grid_label">網格</string>
+    <string name="help_editor_toolbar_grid_desc">循環切換網格模式：關閉 → 矩形 → 徑向。當網格啟用時，按鈕在拖曳時會對齊網格位置，使精確佈局更加容易。</string>
+    <string name="help_editor_toolbar_lock_label">鎖定 / 解鎖</string>
+    <string name="help_editor_toolbar_lock_desc">鎖定可防止意外移動按鈕。點擊鎖定圖示以再次允許重新定位。表格模式的按鈕依格子配置、沒有自由拖曳，因此該功能不會顯示。</string>
+    <string name="help_editor_section_canvas">畫布</string>
+    <string name="help_editor_canvas_drag_label">拖曳按鈕</string>
+    <string name="help_editor_canvas_drag_desc">當畫布解鎖時，長按並拖曳任何按鈕即可自由重新定位。放開即可放置。</string>
+    <string name="help_editor_section_buttons">按鈕</string>
+    <string name="help_editor_button_edit_label">編輯按鈕</string>
+    <string name="help_editor_button_edit_desc">點擊畫布下方列表中的任何按鈕以開啟編輯對話視窗。在此您可以更改其標籤、圖示、大小、形狀、顏色、觸感以及分配的巨集動作。</string>
+    <string name="help_editor_button_reorder_label">重新排序按鈕</string>
+    <string name="help_editor_button_reorder_desc">拖曳列表項右側的控制把手以重新排序列表中的按鈕。</string>
+
+    <!-- Macro List help -->
+    <string name="help_macrolist_title">巨集 — 說明</string>
+    <string name="help_macrolist_intro">巨集列表顯示屬於當前設定檔的所有可重複使用巨集。巨集是獨立的輸入步驟序列，可以分配給一或多個按鈕。</string>
+    <string name="help_macrolist_section_actions">動作</string>
+    <string name="help_macrolist_add_label">新增巨集</string>
+    <string name="help_macrolist_add_desc">建立一個新的空白巨集並立即開啟時間軸編輯器，以便您可以開始新增步驟。在編輯器頂端給它一個有意義的名稱。</string>
+    <string name="help_macrolist_section_list">巨集項目</string>
+    <string name="help_macrolist_tap_label">點擊巨集列</string>
+    <string name="help_macrolist_tap_desc">開啟該巨集的時間軸編輯器，以便您查看或編輯其步驟。</string>
+    <string name="help_macrolist_menu_label">選項選單</string>
+    <string name="help_macrolist_menu_desc">每列巨集都有一個選項選單 (三個點)，可進行重新命名、重複、複製到設定檔或刪除巨集。刪除是永久性的。</string>
+    <string name="help_macrolist_drag_label">拖曳把手</string>
+    <string name="help_macrolist_drag_desc">長按巨集列右側的拖曳把手並移動，以重新排序列表中的巨集。此處的順序僅供美觀參考，不影響執行。</string>
+
+    <!-- Macro Timeline Editor help -->
+    <string name="help_timeline_title">巨集編輯器 — 說明</string>
+    <string name="help_timeline_intro">時間軸編輯器是用來建構巨集執行的確切輸入序列。步驟會依序從上到下執行。時序可以精確錄製或手動輸入。</string>
+    <string name="help_timeline_section_topbar">頂端欄控制</string>
+    <string name="help_timeline_name_label">巨集名稱欄位</string>
+    <string name="help_timeline_name_desc">點擊文字欄位以重新命名巨集。當您點擊儲存時名稱會被儲存。</string>
+    <string name="help_timeline_cancel_label">取消</string>
+    <string name="help_timeline_cancel_desc">捨棄此巨集所有未儲存的變更並返回巨集列表。您在本次工作期間新增的步驟將會遺失。</string>
+    <string name="help_timeline_save_label">儲存</string>
+    <string name="help_timeline_save_desc">將當前名稱與所有步驟儲存到設定檔。如果名稱欄位為空，按鈕將顯示為灰色不可用。</string>
+    <string name="help_timeline_section_secondary">次要欄</string>
+    <string name="help_timeline_undo_label">復原</string>
+    <string name="help_timeline_undo_desc">還原對步驟列表的上一次更改。當前編輯工作期間最多保留 50 個復原步驟。</string>
+    <string name="help_timeline_redo_label">重做</string>
+    <string name="help_timeline_redo_desc">重新套用先前復原的更改。每當您進行新編輯時，重做歷史記錄就會被清除。</string>
+    <string name="help_timeline_view_list_label">列表/編輯</string>
+    <string name="help_timeline_view_list_desc">以垂直捲動列表形式顯示所有步驟 — 這是審查與編輯個別步驟時序最易讀的檢視方式。</string>
+    <string name="help_timeline_view_timeline_label">時間軸</string>
+    <string name="help_timeline_view_timeline_desc">將步驟水平佈置在時間軸上。適用於發現間隙、重疊以及檢視巨集時序的整體形狀。</string>
+    <string name="help_timeline_shift_label">移動後續步驟</string>
+    <string name="help_timeline_shift_desc">控制編輯後的後續步驟如何移動：無 (不移動)、依啟動延遲 (隨啟動時間變更而移動) 或依總持續時間 (隨啟動時間或持續時間變更而移動)。</string>
+    <string name="help_timeline_section_steps">新增與測試步驟</string>
+    <string name="help_timeline_add_step_label">新增步驟</string>
+    <string name="help_timeline_add_step_desc">開啟選擇器供您選擇輸入類型：按鍵、手把按鈕、滑鼠點擊、捲動、延遲等。</string>
+    <string name="help_timeline_record_touch_label">錄製觸控</string>
+    <string name="help_timeline_record_touch_desc">錄製主螢幕上的實際點擊或手勢，並將其轉換為觸控步驟。如果投影串流尚未活動，系統會自動啟動。</string>
+    <string name="help_timeline_record_gamepad_label">錄製手把</string>
+    <string name="help_timeline_record_gamepad_desc">捕捉實體控制器的即時按鍵動作並轉換為手把步驟。如果特權模式已連接，則使用實體手把錄製器以獲得更高的精確度。</string>
+    <string name="help_timeline_test_run_label">測試運行</string>
+    <string name="help_timeline_test_run_desc">立即在裝置上執行目前的巨集步驟以便您驗證序列。測試運行期間禁用循環播放。</string>
+    <string name="help_timeline_section_step_items">步驟選項</string>
+    <string name="help_timeline_step_edit_label">編輯步驟</string>
+    <string name="help_timeline_step_edit_desc">點擊編輯 (鉛筆) 圖示或步驟列本身，以開啟該步驟的配置對話視窗。</string>
+    <string name="help_timeline_step_delete_label">刪除步驟</string>
+    <string name="help_timeline_step_delete_desc">點擊刪除 (垃圾桶) 圖示以從巨集時間軸中移除該步驟。</string>
+    <string name="help_timeline_section_loop">循環與時序</string>
+    <string name="help_timeline_loop_label">循環開關</string>
+    <string name="help_timeline_loop_desc">啟用後，巨集將持續重複直到停止。您可以使用開關下方出現的滑桿設定兩次循環間的暫停時間。</string>
+    <string name="help_timeline_randomise_label">隨機化時序</string>
+    <string name="help_timeline_randomise_desc">每次執行時為每個步驟的時序新增一個微小的隨機偏移 (±範圍)。這使巨集感覺不那麼機械化，並有助於避免某些應用程式中的自動偵測模式。</string>
+
+    <!-- Ambient / Background Settings help -->
+    <string name="help_ambient_title">螢幕投影設定 — 說明</string>
+    <string name="help_ambient_intro">這些設定控制投影的上方螢幕圖像在背景模式下的外觀 — 即當 Megingiard 在按鈕後方背景運行時。所有變更僅套用於當前活動的配置。</string>
+    <string name="help_ambient_dim_label">調暗</string>
+    <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色蒙版來降低投影圖像的亮度。0% 表示不調暗；90% 幾乎為全黑。使用眼睛圖示可在次螢幕上即時預覽效果而不儲存。</string>
+    <string name="help_ambient_blend_label">邊緣融合</string>
+    <string name="help_ambient_blend_desc">使投影圖像的邊緣向內淡出，讓投影內容與背景平滑過渡而非生硬切斷。較高的值會產生更強的暈影效果。</string>
+    <string name="help_ambient_follow_touch_desc">將投影視窗中心對齊您在主螢幕上最後觸碰的位置。從下拉選單中選擇一個區塊以啟用，或選擇「關閉」以禁用。</string>
+    <string name="help_ambient_cutouts_label">區塊列表</string>
+    <string name="help_ambient_cutouts_desc">列出為此配置定義的所有投影區塊。您可以使用編輯 (鉛筆) 圖示重新命名每個區塊，或調整其運動平滑度與觸控投影設定。</string>
+    <string name="help_ambient_smoothing_label">平滑度</string>
+    <string name="help_ambient_smoothing_desc">套用運動平滑於區塊平移 (關閉、輕微、中等或強烈)。較高的值會使視窗移動在平移過程中更加平滑，但可能會增加極少量的延遲。</string>
+    <string name="help_ambient_touch_projection_desc">將投影區塊區域上的觸控輸入轉換回主螢幕。啟用後，區塊內的觸碰會觸發主螢幕上相應的動作。</string>
+    <string name="help_ambient_preview_label">預覽</string>
+    <string name="help_ambient_preview_desc">在次螢幕上啟用該滑桿值的即時預覽。與次螢幕的控制項互動以確認或取消該值。這讓您無需離開當前頁面即可看到效果。</string>
+
+    <!-- Mirror editor (Cutout Layout Editor) help -->
+    <string name="help_mirror_editor_title">投影編輯器 — 說明</string>
+    <string name="help_mirror_editor_intro">投影編輯器讓您在投影過程中，於次螢幕上新增、定位、調整大小與配置區塊。點擊螢幕上的區塊進行選擇，然後使用下方的工具列按鈕執行操作。表格版面會用版面背景圖取代投影畫面，沒有東西可編排，編輯器只會顯示提示。編排期間巨集按鈕會變暗且不反應，邊緣滑動也停用——請用完成或取消離開。離開編輯器後，每個區塊會帶著自己的模式顏色與圖示；編排期間會隱藏，也可以在設定中關閉。</string>
+    <string name="help_mirror_editor_section_global">全域動作</string>
+    <string name="help_mirror_editor_add_desc">在次螢幕的空閒位置建立一個新的區塊。每個配置最多允許 10 個區塊。新區塊會被自動選中，並預設鎖定「底部」長寬比，因此調整大小時裁切會跟著重新配合。</string>
+    <string name="help_mirror_editor_settings_desc">開啟這個配置的背景設定：亮度與邊緣融合、觸控跟隨選擇，以及逐區塊清單，可在其中改名、設定平滑度，並選擇與工具列相同的區塊模式。</string>
+    <string name="help_mirror_editor_section_selected">所選區塊</string>
+    <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「頂部」— 鎖定長寬比以匹配主螢幕的裁切。「底部」— 鎖定長寬比以匹配次螢幕的區塊。</string>
+    <string name="help_mirror_editor_shape_label">形狀</string>
+    <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
+    <string name="help_mirror_editor_crop_desc">開啟所選區塊的裁切選擇器，讓您在主螢幕拖曳框架以選擇投影到此區塊的區域。</string>
+    <string name="help_mirror_editor_delete_desc">從配置中永久移除所選區塊。如果被刪除的區塊啟用了觸控跟隨，該模式也會被停用。</string>
+    <string name="help_mirror_editor_section_finish">完成</string>
+    <string name="help_mirror_editor_done_desc">關閉編輯器。所有變更在你操作當下就已套用到配置，這顆只是離開編排模式。</string>
+    <string name="help_mirror_editor_cancel_desc">把區塊還原成開啟編輯器當下的樣子。在「設定」面板改的亮度、邊緣融合、觸控跟隨已經存檔，不會被還原。</string>
+
+    <!-- Global Settings help -->
+    <string name="help_settings_title">設定 — 說明</string>
+    <string name="help_settings_intro">全域設定套用於整個應用程式並在會話間持久儲存. 使用頂端的區塊跳轉列可快速捲動到特定群組。</string>
+    <string name="help_settings_overlay_position_desc">如果您的手握姿勢自然落在裝置底部附近，建議開啟此項，使快速選單更容易滑開而無需移動大拇指。</string>
+    <string name="help_settings_overlay_fade_out_desc">在幾秒後視覺上隱藏側邊快速選單列。即使控制列完全不可見，滑動手勢仍可正常感應，讓您隨時開啟快速選單。</string>
+
+    <string name="help_settings_auto_profile_desc">實現無縫遊戲體驗的關鍵。將巨集設定檔與特定 App 關聯，以便在啟動遊戲時立即切換自定義按鈕，無需手動選單導覽。</string>
+    <string name="help_settings_recents_desc">保持 Android 最近任務選單整潔。如果您在遊戲時完全透過側邊快速選單列控制 Megingiard，建議開啟此項。</string>
+    <string name="help_settings_accessibility_desc">自動切換設定檔所需。Android 權限要求此服務以偵測主螢幕上當前活動的遊戲。點擊此列進行配置。</string>
+    <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
+    <string name="help_settings_gamepad_swap_desc">如果您偏好任天堂配置 (A 在右側，B 在底部) 而非預設的 Xbox 配置 (A 在底部，B 在右側)，請啟用此項。注入的鍵碼將保持不變。</string>
+    <string name="help_settings_accent_desc">自定義活動按鈕與分頁的強調顏色。自定義強調色套用於深色與深色 OLED 主題；點擊顏色預覽以開啟自定義選色輪，或點擊調色盤圖示以選擇預設的主題強調顏色。</string>
+    <string name="help_settings_theme_desc">從 8 種獨特視覺主題中選擇，包括深色、深色 OLED、Megingiard、Mjölnir 鋼鐵、英靈殿日落、北極光、復古磷光體與皇家阿斯嘉特。</string>
+    <string name="help_settings_restore_desc">如果配置錯誤，可使用此項將所有設定還原為出廠預設值。這將刪除您所有自定義的設定檔、配置與巨集。</string>
+    <string name="help_settings_export_desc">建立自定義設定檔與配置的完整備份。建議在執行應用程式更新或重置設定前進行備份。</string>
+    <string name="help_settings_import_desc">從先前儲存的 .mgrd 檔案或每日自動備份中還原設定檔與配置。確認後將覆蓋當前配置。</string>
+    <string name="help_settings_export_profile_desc">將單個設定檔儲存到檔案中，以便與其他玩家分享配置與巨集，而無需洩露您的完整 App 配置。</string>
+    <string name="help_settings_import_profile_desc">從其他用戶新增分享的設定檔到您的收藏中。此操作是安全的，不會修改或覆蓋您現有的設定檔。</string>
+    <string name="help_settings_add_to_obtainium_desc">開啟 Obtainium (如果已安裝) 並預填 Megingiard 儲存庫連結。如果未安裝 Obtainium，則會在瀏覽器中開啟 Obtainium 的 GitHub 版本發佈頁面。</string>
+    <string name="help_settings_privd_desc">透過無線偵錯建立背景助手連接，以寫入一般應用程式無法訪問的系統輸入裝置。這將啟用：\n\n• 手把合併：結合虛擬與實體手把，使遊戲僅看到一個控制器 (提高相容性)。\n• 實體手把錄製：錄製來自實體控制器的巨集輸入。\n• 特權螢幕投影：無需在每次運行時提示螢幕擷取權限即可開始投影。\n• 螢幕截圖：在未開啟螢幕投影的情況下，直接從快速選單覆蓋層儲存主螢幕截圖。</string>
+    <string name="help_settings_deadzone_desc">確保類比搖桿錄製不會捕捉到漂移或雜訊。將這些百分比與 Thor 系統設定中的死區設定匹配以獲得最佳準確性。</string>
+    <string name="help_settings_reconnect_prompt_desc">啟用後，如果背景助手連接斷開，在 App 啟動時會顯示幫助重新連接的嚮導對話視窗，讓您能立即配對並恢復。</string>
+    <string name="help_settings_log_level_desc">正常遊戲時請保持在 Warn 或 Info。僅在重現問題以收集詳細日誌以供錯誤報告時才設定為 Debug 或 Verbose。</string>
+    <string name="help_settings_save_log_desc">匯出最新的系統日誌。在遇到錯誤或當機後立即產生此日誌，並將其附加到 GitHub 議題或開發者報告中。</string>
+    <!-- Keyboard settings help -->
+    <string name="help_keyboard_settings_title">鍵盤設定 — 說明</string>
+    <string name="help_keyboard_settings_intro">為虛擬鍵盤配置配置與按鍵。</string>
+    <string name="help_keyboard_settings_layout_desc">選擇您偏好的字母排列 (QWERTY、QWERTZ 或 AZERTY)。請注意，此配置僅影響字母 (ABC) 鍵盤配置模式。數字與符號配置層在不同區域格式間保持相同。</string>
+    <string name="help_keyboard_settings_touchpad_desc">鍵盤開啟時，在鍵盤配置上方的區域顯示一個小型相對觸控板。支援點擊以按一下、雙指點擊 (按右鍵) 以及雙指捲動等手勢。游標速度與捲動速度靈敏度設定繼承自觸控板設定選單。</string>
+
+
+    <!-- Quick Menu help -->
+    <string name="help_quickmenu_title">快速選單 — 說明</string>
+    <string name="help_quickmenu_intro">快速選單讓您能快速訪問設定檔、配置與最常用的動作 — 且無需離開當前遊戲。從螢幕邊緣的快速選單列往內滑動即可開啟；點擊背景遮罩即可關閉。</string>
+    <string name="help_quickmenu_section_mirror">投影控制 (頂端卡片)</string>
+    <string name="help_quickmenu_start_label">開始 / 停止投影</string>
+    <string name="help_quickmenu_start_desc">開始或停止螢幕投影擷取。投影進行時，「凍結」與「螢幕截圖」會加入該列，「螢幕投影」也才可按。</string>
+    <string name="help_quickmenu_freeze_label">凍結 / 解除凍結</string>
+    <string name="help_quickmenu_freeze_desc">凍結投影圖像，使其顯示靜態畫面而非即時畫面。適用於您需要仔細閱讀遊戲場景時暫停畫面。僅在投影進行中才會出現。</string>
+    <string name="help_quickmenu_viewport_desc">在次螢幕上開啟視窗配置編輯器，以便您在投影覆蓋層中調整大小、移動或新增透明區塊視窗。未投影時仍在列上，但要開始投影後才可按。</string>
+    <string name="help_quickmenu_screenshot_label">螢幕截圖</string>
+    <string name="help_quickmenu_screenshot_desc">擷取主螢幕截圖。僅在投影進行中、或特權模式已連接時才會出現。</string>
+    <string name="help_quickmenu_section_macropad">設定檔、配置與動作 (底端卡片)</string>
+    <string name="help_quickmenu_profiles_desc">點擊標籤以立即切換到不同的巨集設定檔。使用中的標籤會醒目顯示，開啟選單時也會被捲到中間；邊緣淡出表示該列還有內容。當該列放不下時，會出現 ··· 按鈕開啟完整清單。設定檔及其配置在「MacroPad 編輯器」中管理。</string>
+    <string name="help_quickmenu_layouts_desc">點擊標籤以切換到當前設定檔中的不同按鈕配置。該設定檔的所有配置都會列出；當該列放不下時，會出現 ··· 按鈕開啟完整清單。</string>
+    <string name="help_quickmenu_edit_desc">開啟「MacroPad 編輯器」，您可以在此新增、移動與設定按鈕，管理設定檔與配置，以及建立或編輯巨集。</string>
+    <string name="help_quickmenu_settings_desc">開啟全域設定螢幕以進行 App 範圍配置，例如主題、強調色、投影自動啟動與特權模式設定。</string>
+    <string name="help_quickmenu_shut_off_label">關閉 App</string>
+    <string name="help_quickmenu_shut_off_desc">正常關閉 Megingiard，停止螢幕投影與背景服務。會先詢問確認。</string>
+    <string name="help_quickmenu_help_label">說明 (此螢幕)</string>
+    <string name="help_quickmenu_help_desc">開啟此說明工作表，其中包含快速選單中每個控制項的解釋。</string>
+
+    <!-- Welcome Tutorial & Reset -->
+    <string name="welcome_title">歡迎使用 Megingiard！</string>
+    <string name="welcome_desc">Megingiard 是 AYN Thor 雙螢幕掌機的助手應用程式。它讓您能配置自定義 MacroPad 設定檔、虛擬鍵盤對應、虛擬觸控板以及螢幕間的投影。</string>
+    <string name="welcome_help_title">如何獲取幫助</string>
+    <string name="welcome_help_intro">尋找各個螢幕右上角的說明圖示 (?)，以查看該功能的詳細指南與最佳實踐。</string>
+    <string name="welcome_btn_got_it">了解</string>
+    <string name="welcome_btn_dont_show">不再顯示</string>
+    <string name="settings_reset_tutorials">重置教學</string>
+    <string name="settings_reset_tutorials_desc">重置所有教學彈窗，以便下次造訪時再次顯示</string>
+    <string name="settings_reset_tutorials_toast">教學現在將再次顯示</string>
+    <string name="help_settings_reset_tutorials_desc">強制在造訪時再次顯示所有教學螢幕與歡迎彈窗，即使您先前已關閉它們。</string>
+
+    <!-- Macro Editor Tutorial -->
+    <string name="macro_tutorial_title">建立巨集</string>
+    <string name="macro_tutorial_intro">巨集讓您能自動化手把輸入或螢幕點擊序列。</string>
+    <string name="macro_tutorial_privileged_title">使用實體按鈕錄製</string>
+    <string name="macro_tutorial_privileged_body">為了獲得最佳體驗，請在全域設定中啟用特權模式。這讓您能透過按下 Thor 裝置上的實體按鈕來錄製巨集。</string>
+    <string name="macro_tutorial_virtual_title">虛擬手把備案</string>
+    <string name="macro_tutorial_virtual_body">如果特權模式未活動，螢幕上將顯示虛擬觸控手把覆蓋層，讓您錄製控制器輸入。</string>
+    <string name="macro_tutorial_manual_title">手動編輯與時序</string>
+    <string name="macro_tutorial_manual_body">您可以使用下方的工具列手動新增步驟。執行此操作時，請嘗試思考您在遊戲中實際輸入指令時使用的時序：首先精確模仿那些物理時序與輸入，之後再進行優化 (例如為了更快的執行)。雖然系統會自動新增預設時序以建立邏輯序列，但它們幾乎總是必須根據遊戲的具體需求進行調整。</string>
+    <string name="macro_tutorial_randomize_title">時序隨機化</string>
+    <string name="macro_tutorial_randomize_body">您可以在列表視圖底部的設定區塊下啟用時序隨機化。這會為每次播放的步驟延遲增加微小的隨機偏移，模擬人類輸入的不一致性。對於線上遊戲，強烈建議開啟此項以防止防作弊偵測。請記住，巨集旨在使您的生活更輕鬆，而不應讓其他玩家的生活更艱難；本 App 與此功能不適用於線上作弊。</string>
+    <string name="macro_tutorial_btn_got_it">了解</string>
+    <string name="macro_tutorial_btn_dont_show">不再顯示</string>
+
+    <!-- Onboarding Wizard -->
+    <string name="settings_start_welcome_tour">播放歡迎嚮導與快速設定</string>
+    <string name="settings_start_welcome_tour_desc">重新執行分步引導教學與邊緣手勢功能導覽</string>
+    <string name="settings_start_welcome_tour_btn">開始</string>
+    <string name="onboarding_step_welcome">歡迎使用</string>
+    <string name="onboarding_step_quick_menu">邊緣手勢</string>
+    <string name="onboarding_step_theme">主題風格</string>
+    <string name="onboarding_theme_title">選擇您的主題風格</string>
+    <string name="onboarding_theme_desc">為 Megingiard 選擇視覺色彩與主題。您隨時可以在全域設定中重新調整。</string>
+    <string name="onboarding_theme_prev">上一個主題</string>
+    <string name="onboarding_theme_next">下一個主題</string>
+    <string name="onboarding_step_accessibility">無障礙服務</string>
+    <string name="onboarding_accessibility_title">無障礙服務授權</string>
+    <string name="onboarding_accessibility_desc">無障礙服務是 Megingiard 的必要基礎。啟動遊戲時自動切換巨集配置、設定 Privd 特權模式等核心功能皆需此服務。</string>
+    <string name="onboarding_step_privileged">Privd 特權模式</string>
+    <string name="onboarding_privd_title">Privd 特權模式 (強烈推薦！)</string>
+    <string name="onboarding_privd_desc">解鎖超低延遲直接觸控注入、Trackpoint 高精度點按與實體搖桿錄製，無需 Root 或電腦。您可以使用一鍵自動設定快速開通。</string>
+    <string name="onboarding_privd_auto_setup">開始自動設定</string>
+    <string name="privd_reconnect_title">重新連線 Privd 特權模式</string>
+    <string name="privd_reconnect_desc">Privd 特權模式已中斷（可能是裝置重新開機或無線除錯被關閉）。</string>
+    <string name="privd_reconnect_auto_button">自動重新連線</string>
+    <string name="privd_reconnect_all_set">已全部設定完成！</string>
+    <string name="privd_reconnect_btn_close">關閉</string>
+    <string name="onboarding_privd_stage_dev">開發者選項</string>
+    <string name="onboarding_privd_stage_wireless">無線除錯</string>
+    <string name="onboarding_privd_stage_pairing">ADB 無線配對</string>
+    <string name="onboarding_privd_stage_daemon">Daemon 服務連線</string>
+    <string name="onboarding_privd_wifi_warning">Wi-Fi 已關閉。必須開啟 Wi-Fi 才能進行無線除錯配對。</string>
+    <string name="onboarding_privd_unsupported_lang_warning">目前的系統語言 (%1$s) 暫不支援自動腳本導航，請改用手動配對。</string>
+    <string name="onboarding_privd_manual_title">手動設定 Privd 特權模式</string>
+    <string name="onboarding_privd_manual_step_1">1. 先暫時跳過此步驟並進行下一步。</string>
+    <string name="onboarding_privd_manual_step_2">2. 開啟全域設定 → Privd 特權模式進行配對。</string>
+    <string name="onboarding_privd_manual_step_3">3. 依照該處的手動配對說明啟用 Privd 特權模式。</string>
+    <string name="onboarding_step_finished">完成設定</string>
+    <string name="onboarding_finished_title">設定完成！準備好開始調校了嗎？</string>
+    <string name="onboarding_finished_desc">您已完成歡迎導覽。隨時可從 全域設定 → 一般 重新執行此導覽。</string>
+    <string name="onboarding_step_counter">第 %1$d 步，共 %2$d 步</string>
+    <string name="onboarding_btn_next">下一步</string>
+    <string name="onboarding_btn_back">上一步</string>
+    <string name="onboarding_btn_skip">略過</string>
+    <string name="onboarding_btn_finish">好，開始動手吧！</string>
+    <!-- Quick Menu Tutorial -->
+    <string name="quick_menu_tutorial_title">開啟選單</string>
+    <string name="quick_menu_tutorial_body">滑動螢幕邊緣的快速選單列指示器以開啟快速選單。您可以使用它快速切換設定檔、配置或設定。\n\n注意：如果您喜歡更簡潔的外觀，可以在全域設定 (外觀) 中配置控制列自動隱藏。此行為預設為禁用。</string>
+    <string name="quick_menu_label_keyboard">鍵盤</string>
+    <string name="quick_menu_label_menu">選單</string>
+    <string name="quick_menu_label_mouse">滑鼠</string>
+
+    <!-- SteamGridDB integration -->
+    <string name="settings_steamgriddb_token">SteamGridDB API 金鑰</string>
+    <string name="settings_steamgriddb_token_desc">從 steamgriddb.com 抓取背景圖片所需。在該網站的「個人資料偏好設定」中產生一個金鑰。</string>
+    <string name="settings_steamgriddb_token_placeholder">在此輸入您的 API 金鑰</string>
+    <string name="layout_settings_bg_image_scrape">從 SteamGridDB 抓取</string>
+    <string name="layout_settings_bg_image_browse_local">瀏覽本地圖片</string>
+    <string name="steamgriddb_token_missing_title">需要 API 金鑰</string>
+    <string name="steamgriddb_token_missing_message">SteamGridDB 抓取功能需要 API 金鑰。請在您的 SteamGridDB 帳戶偏好設定中建立 API 金鑰，並新增至 Megingiard 的全域設定中。</string>
+    <string name="steamgriddb_token_missing_go_settings">前往設定</string>
+    <string name="steamgriddb_scrape_search_label">搜尋遊戲</string>
+    <string name="steamgriddb_scrape_search_placeholder">例如: Half-Life 2</string>
+    <string name="steamgriddb_scrape_type_grid">網格 (Grid)</string>
+    <string name="steamgriddb_scrape_type_hero">主圖 (Hero)</string>
+    <string name="steamgriddb_scrape_type_logo">標誌 (Logo)</string>
+    <string name="steamgriddb_scrape_type_icon">圖示 (Icon)</string>
+    <string name="steamgriddb_scrape_search_btn">搜尋</string>
+    <string name="steamgriddb_scrape_searching_games">正在搜尋遊戲\u2026</string>
+    <string name="steamgriddb_scrape_loading_images">正在載入圖片\u2026</string>
+    <string name="steamgriddb_scrape_no_games_found">找不到遊戲。</string>
+    <string name="steamgriddb_scrape_no_images_found">找不到此類型的圖片。</string>
+    <string name="steamgriddb_scrape_select_game">選擇遊戲:</string>
+    <string name="steamgriddb_scrape_error">錯誤: %1$s</string>
+    <string name="steamgriddb_scrape_dialog_title">SteamGridDB 抓取器</string>
+    <string name="steamgriddb_scrape_downloading">正在下載圖片\u2026</string>
+    <string name="steamgriddb_error_offline_title">連線已斷開</string>
+    <string name="steamgriddb_error_offline_message">您目前處於離線狀態。請檢查您的網路連線並重試。</string>
+    <string name="steamgriddb_error_rate_limited_title">觸發頻率限制</string>
+    <string name="steamgriddb_error_rate_limited_message">已超過頻率限制。請稍後重試。</string>
+    <string name="steamgriddb_error_unreachable_title">無法連接 SteamGridDB</string>
+    <string name="steamgriddb_error_unreachable_message">目前無法連接 SteamGridDB 或伺服器已離線。請稍後重試。</string>
+    <string name="steamgriddb_error_generic_title">錯誤</string>
+    <string name="steamgriddb_error_generic_message">發生非預期的錯誤。請重試。</string>
+    <string name="steamgriddb_error_dismiss">確定</string>
+
+    <!-- Game Focus -->
+    <string name="focus_change_artwork_title">更換封面圖</string>
+
+    <!-- Touchpad settings -->
+    <string name="settings_touchpad_title">觸控板設定</string>
+    <string name="settings_section_relative_mouse">手勢與點擊設定</string>
+    <string name="settings_section_absolute_touch">觸控(投影)畫面設定</string>
+    <string name="cd_touchpad_collapse">收起觸控板</string>
+    <string name="cd_touchpad_settings">觸控板設定</string>
+    <string name="settings_touchpad_use_mouse">強制使用傳統滑鼠模式</string>
+    <string name="settings_touchpad_use_mouse_desc">顯示滑鼠按鈕並禁用投影自動切換行為</string>
+    <string name="settings_touchpad_tap_to_click">輕點以點擊</string>
+    <string name="settings_touchpad_tap_to_click_desc">單指輕點即為滑鼠左鍵點擊</string>
+    <string name="settings_touchpad_two_finger_tap">雙指輕點</string>
+    <string name="settings_touchpad_two_finger_tap_desc">雙指輕點即為滑鼠右鍵點擊</string>
+    <string name="settings_touchpad_three_finger_tap">三指輕點</string>
+    <string name="settings_touchpad_three_finger_tap_desc">三指輕點即為滑鼠中鍵點擊</string>
+    <string name="settings_touchpad_tap_drag">三指按住圈選與拖曳</string>
+    <string name="settings_touchpad_tap_drag_desc">三指按住移動即可拖曳圈選文字或視窗</string>
+    <string name="settings_touchpad_two_finger_scroll">雙指捲動</string>
+    <string name="settings_touchpad_two_finger_scroll_desc">雙指垂直拖曳以捲動螢幕</string>
+    <string name="settings_touchpad_natural_scroll">自然捲動</string>
+    <string name="settings_touchpad_natural_scroll_desc">內容隨手指移動方向捲動</string>
+    <string name="settings_touchpad_scroll_speed">捲動速度</string>
+    <string name="settings_touchpad_scroll_speed_desc">調整捲動靈敏度倍率</string>
+    <string name="settings_touchpad_mouse_4_5">啟用滑鼠 4/5 按鈕</string>
+    <string name="settings_touchpad_mouse_4_5_desc">在頂端角落顯示實體返回 (M4) 與前進 (M5) 按鈕</string>
+    <string name="settings_touchpad_sensitivity">游標速度</string>
+    <string name="settings_touchpad_sensitivity_desc">調整游標靈敏度倍率</string>
+    <string name="settings_touchpad_haptics">觸感回饋</string>
+    <string name="settings_touchpad_haptics_desc">在點擊與手勢時產生輕微振動</string>
+    <string name="help_touchpad_settings_title">觸控板說明</string>
+    <string name="help_touchpad_settings_intro">配置全螢幕虛擬觸控板的選項。</string>
+    <string name="help_touchpad_settings_mode_desc">相對滑鼠模式使用手指移動量來移動游標，而絕對模式則直接投影觸控座標。</string>
+    <string name="help_touchpad_settings_click_desc">可透過單、雙或三指短促輕點來模擬左鍵、右鍵與中鍵點擊。</string>
+    <string name="help_touchpad_settings_scroll_desc">使用雙指垂直拖曳以發送滑鼠滾輪事件。</string>
+    <string name="settings_touchpad_mirroring">觸控板投影</string>
+    <string name="settings_touchpad_mirroring_desc">在觸控板區域內投影上方顯示器</string>
+    <string name="settings_touchpad_mirror_dim">投影亮度遮罩</string>
+ 
+    <string name="settings_touchpad_m4_label">M4</string>
+    <string name="settings_touchpad_m5_label">M5</string>
+    <string name="cd_touchpad_relative_mouse_mode">相對滑鼠模式</string>
+    <string name="cd_touchpad_absolute_touch_mode">絕對觸控模式</string>
+    <string name="cd_touchpad_toggle_mirroring">切換觸控板投影</string>
+    <string name="help_touchpad_settings_tap_to_click_desc">單指短促輕點即執行滑鼠左鍵點擊。</string>
+    <string name="help_touchpad_settings_two_finger_tap_desc">雙指短促輕點即執行滑鼠右鍵點擊。</string>
+    <string name="help_touchpad_settings_three_finger_tap_desc">三指短促輕點即執行滑鼠中鍵點擊。</string>
+    <string name="help_touchpad_settings_tap_drag_desc">三指按住移動以啟動左鍵按住拖曳圈選。</string>
+    <string name="help_touchpad_settings_mouse_4_5_desc">在相對滑鼠區域的角落顯示 M4 (返回) 與 M5 (前進) 按鈕。</string>
+    <string name="help_touchpad_settings_mirroring_desc">啟用絕對觸控投影與主顯示器的即時影像投影。</string>
+    <string name="help_touchpad_settings_mirror_dim_desc">調整觸控板內投影螢幕的亮度覆蓋層。</string>
+    <string name="help_touchpad_settings_sensitivity_desc">調整相對滑鼠模式下的游標移動速度倍率。</string>
+    <string name="help_touchpad_settings_natural_scroll_desc">啟用自然捲動方向：向下拖曳手指會將螢幕內容拉下。</string>
+    <string name="help_touchpad_settings_scroll_speed_desc">調整雙指捲動的靈敏度/速度。</string>
+    <string name="help_touchpad_settings_haptics_desc">點擊視覺按鈕或執行點擊手勢時，啟用細微的實體觸感震動。</string>
+
+    <string name="macropad_editor_touchpad_settings">觸控板設定</string>
+    <string name="layout_settings_touchpad_title">背景觸控板</string>
+    <string name="layout_settings_touchpad_enable">啟用背景觸控板</string>
+    <string name="layout_settings_touchpad_enable_desc">將空白畫布區域作為相對滑鼠觸控板使用</string>
+    <string name="help_editor_toolbar_touchpad_label">觸控板設定</string>
+    <string name="help_editor_toolbar_touchpad_desc">配置空白畫布區域的特定配置相對滑鼠觸控板行為。</string>
+    <string name="macropad_touchpad_conflict_projection_title">禁用觸控投影？</string>
+    <string name="macropad_touchpad_conflict_projection_body">啟用背景觸控板會關閉此配置中所有區塊的觸控投影。</string>
+    <string name="macropad_touchpad_conflict_projection_confirm">關閉觸控投影並啟用觸控板</string>
+    <string name="macropad_projection_conflict_touchpad_title">禁用背景觸控板？</string>
+    <string name="macropad_projection_conflict_touchpad_body">啟用觸控投影將禁用此配置的背景觸控板。</string>
+    <string name="macropad_projection_conflict_touchpad_confirm">禁用觸控板並啟用投影</string>
+    <string name="layout_settings_touchpad_incompatible_warning">與目前啟用的觸控投影不相容</string>
+    <string name="layout_settings_projection_incompatible_warning">與目前啟用的背景觸控板不相容</string>
+    <string name="settings_section_master_touchpad">背景觸控板</string>
+    <string name="settings_section_pointer_speed">游標速度</string>
+    <string name="settings_section_gestures">手勢與動作</string>
+    <string name="settings_section_scrolling">捲動</string>
+    <string name="settings_section_feedback">觸感</string>
+    <string name="config_export_include_backgrounds">包含圖片</string>
+    <string name="config_import_section_background_images">背景圖片 (%1$d)</string>
+
+    <!-- Megingiard Integration API / Home Screen -->
+    <string name="integration_home_title">Megingiard 配套程式</string>
+    <string name="integration_home_connected_client">已連線的用戶端</string>
+    <string name="integration_home_active_profile">使用中的控制設定檔</string>
+    <string name="integration_home_hovered_game">停留中的遊戲／應用程式</string>
+    <string name="integration_home_no_game_hovered">無</string>
+    <string name="integration_home_no_profile_active">沒有使用中的設定檔</string>
+    <string name="integration_home_profile_config_title">設定檔配置</string>
+    <string name="integration_home_linked_profile">已連結的設定檔</string>
+    <string name="integration_home_edit_layout">編輯配置</string>
+    <string name="integration_home_no_profile_assigned">尚未為此應用程式設定任何設定檔。</string>
+    <string name="integration_home_create_profile">建立設定檔</string>
+    <string name="integration_home_link_existing">連結既有設定檔</string>
+    <string name="integration_home_no_unassigned_profiles">沒有未指派的設定檔</string>
+    <string name="integration_home_status_title">狀態面板</string>
+    <string name="integration_home_status_privd">特權 Daemon</string>
+    <string name="integration_home_status_mirror">螢幕投影</string>
+    <string name="integration_home_status_accessibility">無障礙服務</string>
+    <string name="integration_home_status_active">啟用中</string>
+    <string name="integration_home_status_inactive">未啟用</string>
+    <string name="integration_home_status_running">執行中</string>
+    <string name="integration_home_status_stopped">已停止</string>
+    <string name="integration_home_unknown">未知</string>
+    <string name="integration_home_none">無</string>
+    <string name="integration_home_new_profile">新增設定檔</string>
+    <string name="integration_home_default_layout">預設</string>
+</resources>
+
