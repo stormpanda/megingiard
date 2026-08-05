@@ -11,6 +11,7 @@
 /app/build
 /gamefocus/build
 /app/release
+/app/release-gf
 /app/debug
 /app/debug-gf
 /core/build
