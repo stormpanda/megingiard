@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 1
+#define PRIVD_VERSION 2
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32

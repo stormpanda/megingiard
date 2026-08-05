@@ -27,6 +27,8 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
 
+> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `app/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
+
 ---
 
 ## Native Asset Integrity
