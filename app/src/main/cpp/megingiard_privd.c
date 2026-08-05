@@ -65,6 +65,8 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
+#define PRIVD_VERSION 1
+
 static int g_port_start = 51234;
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
@@ -861,6 +863,39 @@ static int authenticate_client(int client_fd) {
     char proof_msg[PROOF_MSG_LEN];
     int proof_len = snprintf(proof_msg, sizeof(proof_msg), "PROOF %s\n", proof_hex);
     if (write(client_fd, proof_msg, (size_t)proof_len) != (ssize_t)proof_len) return 0;
+
+    /* --- Protocol Version Verification --- */
+    /* Set 1-second read timeout for VERSION command from client. */
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    char version_line[64];
+    int vr = read_line_n(client_fd, version_line, sizeof(version_line));
+
+    /* Reset to blocking. */
+    tv.tv_sec = 0;
+    setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    if (vr <= 0 || strncmp(version_line, "VERSION ", 8) != 0) {
+        char err_msg[64];
+        int err_len = snprintf(err_msg, sizeof(err_msg), "VERSION_MISMATCH %d\n", PRIVD_VERSION);
+        (void)write(client_fd, err_msg, (size_t)err_len);
+        return 0;
+    }
+
+    int client_version = atoi(version_line + 8);
+    if (client_version != PRIVD_VERSION) {
+        char err_msg[64];
+        int err_len = snprintf(err_msg, sizeof(err_msg), "VERSION_MISMATCH %d\n", PRIVD_VERSION);
+        (void)write(client_fd, err_msg, (size_t)err_len);
+        return 0;
+    }
+
+    char ok_msg[64];
+    int ok_len = snprintf(ok_msg, sizeof(ok_msg), "VERSION_OK %d\n", PRIVD_VERSION);
+    if (write(client_fd, ok_msg, (size_t)ok_len) != (ssize_t)ok_len) return 0;
+
     return 1;
 }
 

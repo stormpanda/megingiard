@@ -454,6 +454,7 @@ Open Settings to create a layout.</string>
     <string name="privd_error_bootstrap_push_failed">Failed to push the daemon binary. Check available storage in /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Failed to start the daemon process.</string>
     <string name="privd_error_bootstrap_provision_failed">Failed to provision the authentication key. Re-run the setup wizard.</string>
+    <string name="privd_error_version_mismatch">Daemon version mismatch. Tap Auto Setup or Connect to update the daemon.</string>
     <string name="privd_info_running">Privileged Mode is active and running.</string>
     <string name="privd_info_no_credentials">No pairing credentials found. Please run the setup wizard to pair this device.</string>
     <string name="privd_info_wireless_disabled">Wireless Debugging is inactive. Please enable it in the developer settings and try again.</string>

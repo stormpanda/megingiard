@@ -109,6 +109,9 @@ enum class PrivdError {
 
     /** ADB pairing is explicitly required (credentials/key rejected by adbd). */
     ADB_PAIRING_REQUIRED,
+
+    /** Daemon protocol or binary version does not match expected app version. */
+    VERSION_MISMATCH,
 }
 
 /**
