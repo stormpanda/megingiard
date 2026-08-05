@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -144,5 +146,24 @@ class PadProfileMatchesTest {
 
         // Matches with underscores/dashes differences
         assertTrue(profile2.matches("app.gamenative", "BALL_x-PIT.steam", "pc"))
+    }
+
+    @Test
+    fun deserialize_migratesAssociatedPackageToAssociation() {
+        val oldJson =
+            """
+            {
+                "id": "old-id-1",
+                "name": "Old Profile",
+                "associatedPackage": "com.retroarch"
+            }
+            """.trimIndent()
+
+        val parsed = Json.decodeFromString<PadProfile>(oldJson)
+        assertEquals("old-id-1", parsed.id)
+        assertEquals("Old Profile", parsed.name)
+        assertEquals("com.retroarch", parsed.association?.packageName)
+        assertEquals(null, parsed.association?.systemId)
+        assertEquals(null, parsed.association?.romFileName)
     }
 }
