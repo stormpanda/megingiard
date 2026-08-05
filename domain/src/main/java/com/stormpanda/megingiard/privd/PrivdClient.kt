@@ -24,8 +24,10 @@ import java.security.SecureRandom
 import java.util.concurrent.LinkedBlockingQueue
 
 private const val TAG = "PrivdClient"
-private const val PORT_START = 51234
-private const val PORT_END = 51238
+
+@Volatile private var portStart = 51234
+
+@Volatile private var portEnd = 51238
 private const val CONNECT_TIMEOUT_MS = 500
 private const val PING_TIMEOUT_MS = 1_500L
 private const val MIRROR_DIRECT_START_TIMEOUT_MS = 4_000L
@@ -95,7 +97,15 @@ object PrivdClient {
      *
      * The decryption involves a short (~10 ms) hardware-backed Keystore operation.
      */
+    fun setPackageName(name: String) {
+        val isDebug = name.endsWith(".debug") || name.contains(".debug")
+        portStart = if (isDebug) 51244 else 51234
+        portEnd = portStart + 4
+        AppLog.d(TAG, "setPackageName: $name -> port range $portStart..$portEnd")
+    }
+
     fun loadKey(context: Context) {
+        setPackageName(context.packageName)
         val key = PrivdPairKey.load(context)
         if (key != null) {
             hmacKeyBytes = key
@@ -169,7 +179,7 @@ object PrivdClient {
             _state.value = PrivdConnectionState.DISCONNECTED
             return false
         }
-        for (port in PORT_START..PORT_END) {
+        for (port in portStart..portEnd) {
             try {
                 AppLog.d(TAG, "connect(): trying 127.0.0.1:$port")
                 val s = Socket()
@@ -208,7 +218,7 @@ object PrivdClient {
                 AppLog.d(TAG, "connect(): port $port not available — $e")
             }
         }
-        AppLog.w(TAG, "connect() failed: daemon not reachable on any port in range $PORT_START..$PORT_END")
+        AppLog.w(TAG, "connect() failed: daemon not reachable on any port in range $portStart..$portEnd")
         cleanupLocked()
         _state.value = PrivdConnectionState.DISCONNECTED
         return false

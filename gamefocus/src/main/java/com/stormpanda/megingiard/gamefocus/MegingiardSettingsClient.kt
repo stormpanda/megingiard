@@ -17,8 +17,9 @@ import kotlinx.coroutines.flow.map
 object MegingiardSettingsClient {
     private const val TAG = "MegingiardSettingsClient"
 
-    fun observeSteamGridDbApiToken(context: Context): Flow<String> =
-        observeContentProvider(
+    fun observeSteamGridDbApiToken(context: Context): Flow<String> {
+        MegingiardIpcContract.init(context)
+        return observeContentProvider(
             context = context,
             uri = MegingiardIpcContract.SETTINGS_URI,
             parser = { resolver, uri -> IpcSettingsParser.parse(resolver, uri) },
@@ -29,6 +30,7 @@ object MegingiardSettingsClient {
                 SettingsManager.steamGridDbApiToken.value
             }
         }
+    }
 
     fun updateClientState(
         context: Context,
@@ -42,6 +44,8 @@ object MegingiardSettingsClient {
         hoveredPrimaryColor: Int? = null,
         hoveredSecondaryColor: Int? = null,
     ) {
+        MegingiardIpcContract.init(context)
+
         // Translate pseudo-packages to actual emulator packages and attach ROM metadata
         val focusedRomApp =
             if (focusedPackage != null && focusedPackage.startsWith("rom.")) {

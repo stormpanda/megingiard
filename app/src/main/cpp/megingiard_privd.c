@@ -65,8 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PORT_START 51234
-#define PORT_END 51238
+static int g_port_start = 51234;
 #define SCAN_MAX 32
 #define INPUT_PATH_PREFIX "/dev/input/event"
 #define MAX_LINE 512
@@ -92,7 +91,7 @@ static int g_touch_fd = -1;
  * provisioned by the app over the trusted ADB TLS channel during bootstrap.
  * Never compiled into the binary; the binary has no hardcoded key.
  * --------------------------------------------------------------------------- */
-#define STATE_FILE      "/data/local/tmp/megingiard_privd.key"
+static const char *g_state_file_path = "/data/local/tmp/megingiard_privd.key";
 #define KEY_HEX_LEN     64     /* 32 bytes * 2 hex chars */
 #define HMAC_KEY_BYTES  32
 
@@ -108,7 +107,7 @@ static pthread_mutex_t g_send_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* Direct mirror server child (MIRROR START_DIRECT/STOP). */
 static volatile pid_t g_mirror_pid = -1;
 static char g_mirror_socket[64] = {0};
-#define MIRROR_DEX_PATH "/data/local/tmp/megingiard_mirror.dex"
+static const char *g_dex_file_path = "/data/local/tmp/megingiard_mirror.dex";
 #define DIRECT_MIRROR_MAIN_CLASS "com.stormpanda.megingiard.mirrorserver.DirectMirrorServer"
 
 /*
@@ -337,7 +336,8 @@ static int bind_listening_socket(int *out_port) {
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    for (int port = PORT_START; port <= PORT_END; port++) {
+    int port_end = g_port_start + 4;
+    for (int port = g_port_start; port <= port_end; port++) {
         addr.sin_port = htons(port);
         if (bind(srv, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
             if (listen(srv, 1) == 0) {
@@ -393,7 +393,7 @@ static int start_direct_mirror_child(int width, int height) {
         snprintf(w, sizeof(w), "%d", width);
         snprintf(h, sizeof(h), "%d", height);
 
-        setenv("CLASSPATH", MIRROR_DEX_PATH, 1);
+        setenv("CLASSPATH", g_dex_file_path, 1);
         char *const argv[] = {
             (char *)"app_process",
             (char *)"/data/local/tmp",
@@ -668,9 +668,9 @@ static int read_line_n(int fd, char *out, int max_len) {
  * or cannot be parsed (daemon must refuse to start without it).
  */
 static int load_state_file(void) {
-    FILE *f = fopen(STATE_FILE, "r");
+    FILE *f = fopen(g_state_file_path, "r");
     if (!f) {
-        fprintf(stderr, "privd: state file not found: %s\n", STATE_FILE);
+        fprintf(stderr, "privd: state file not found: %s\n", g_state_file_path);
         return 0;
     }
     char line[128];
@@ -732,15 +732,15 @@ static int provision_state(const char *key_hex, const char *uid_str) {
         return 1;
     }
     /* Write with mode 0600 so only the shell user (UID 2000) can read it. */
-    int fd = open(STATE_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = open(g_state_file_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd < 0) {
-        fprintf(stderr, "privd: provision: cannot write %s: %s\n", STATE_FILE, strerror(errno));
+        fprintf(stderr, "privd: provision: cannot write %s: %s\n", g_state_file_path, strerror(errno));
         return 1;
     }
     dprintf(fd, "KEY=%s\nUID=%ld\n", key_hex, uid);
     close(fd);
     /* Ensure umask didn't widen permissions. */
-    chmod(STATE_FILE, 0600);
+    chmod(g_state_file_path, 0600);
     fprintf(stderr, "privd: provisioned (UID=%ld)\n", uid);
     return 0;
 }
@@ -1172,10 +1172,26 @@ int main(int argc, char *argv[]) {
     signal(SIGINT,  signal_handler);
     signal(SIGPIPE, SIG_IGN);
 
+    int arg_idx = 1;
+    while (arg_idx < argc) {
+        if (strcmp(argv[arg_idx], "--keyfile") == 0 && arg_idx + 1 < argc) {
+            g_state_file_path = argv[arg_idx + 1];
+            arg_idx += 2;
+        } else if (strcmp(argv[arg_idx], "--dexfile") == 0 && arg_idx + 1 < argc) {
+            g_dex_file_path = argv[arg_idx + 1];
+            arg_idx += 2;
+        } else if (strcmp(argv[arg_idx], "--port") == 0 && arg_idx + 1 < argc) {
+            g_port_start = atoi(argv[arg_idx + 1]);
+            arg_idx += 2;
+        } else {
+            break;
+        }
+    }
+
     /* --provision <key_hex> <app_uid>: write the state file and exit.
      * Called by PrivdBootstrapper during bootstrap over the ADB TLS channel. */
-    if (argc == 4 && strcmp(argv[1], "--provision") == 0) {
-        return provision_state(argv[2], argv[3]);
+    if (arg_idx < argc && strcmp(argv[arg_idx], "--provision") == 0 && arg_idx + 2 < argc) {
+        return provision_state(argv[arg_idx + 1], argv[arg_idx + 2]);
     }
 
     /* Daemon mode: load per-install key + authorized app UID from state file.

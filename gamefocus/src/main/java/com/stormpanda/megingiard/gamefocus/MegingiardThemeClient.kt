@@ -11,8 +11,9 @@ import kotlinx.coroutines.flow.map
 import java.util.concurrent.atomic.AtomicInteger
 
 object MegingiardThemeClient {
-    fun observeTheme(context: Context): Flow<Pair<ThemeMode, Color?>> =
-        observeContentProvider(
+    fun observeTheme(context: Context): Flow<Pair<ThemeMode, Color?>> {
+        MegingiardIpcContract.init(context)
+        return observeContentProvider(
             context = context,
             uri = MegingiardIpcContract.THEME_URI,
             parser = { resolver, uri -> IpcThemeParser.parse(resolver, uri) },
@@ -22,8 +23,10 @@ object MegingiardThemeClient {
                 config.userAccentArgb?.let { Color(it) },
             )
         }
+    }
 
     fun observeThemeUpdates(context: Context): Flow<Int> {
+        MegingiardIpcContract.init(context)
         val count = AtomicInteger(0)
         return observeContentProvider(
             context = context,

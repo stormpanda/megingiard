@@ -49,6 +49,7 @@ class MegingiardSettingsProvider : ContentProvider() {
     override fun onCreate(): Boolean {
         AppLog.i(TAG, "MegingiardSettingsProvider created")
         context?.let { ctx ->
+            MegingiardIpcContract.init(ctx)
             SettingsManager.init(ctx)
             notifyThemeChanged(ctx)
             notifySettingsChanged(ctx)
