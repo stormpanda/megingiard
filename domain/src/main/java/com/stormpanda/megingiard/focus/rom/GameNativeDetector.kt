@@ -6,6 +6,8 @@ import java.io.File
 
 private const val TAG = "GameNativeDetector"
 private const val PROC_SPLIT_LIMIT = 4
+private const val PROC_INDEX_UID = 2
+private const val PROC_INDEX_CMDLINE = 3
 
 /**
  * Detector implementation for GameNative instances.
@@ -48,8 +50,8 @@ object GameNativeDetector : EmulatorDetector {
             if (line.startsWith("PROC ")) {
                 val parts = line.split(' ', limit = PROC_SPLIT_LIMIT)
                 if (parts.size >= PROC_SPLIT_LIMIT) {
-                    val uid = parts[2]
-                    val cmdline = parts[3].trim()
+                    val uid = parts[PROC_INDEX_UID]
+                    val cmdline = parts[PROC_INDEX_CMDLINE].trim()
                     if (cmdline == packageName || cmdline.startsWith("$packageName:")) {
                         targetUid = uid
                         break
@@ -80,8 +82,8 @@ object GameNativeDetector : EmulatorDetector {
             if (line.startsWith("PROC ")) {
                 val parts = line.split(' ', limit = PROC_SPLIT_LIMIT)
                 if (parts.size >= PROC_SPLIT_LIMIT) {
-                    val uid = parts[2]
-                    val cmdline = parts[3].trim()
+                    val uid = parts[PROC_INDEX_UID]
+                    val cmdline = parts[PROC_INDEX_CMDLINE].trim()
                     if (uid == targetUid) {
                         if (cmdline.endsWith(".exe", ignoreCase = true)) {
                             val normalizedCmd = cmdline.replace('/', '\\')
