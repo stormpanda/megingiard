@@ -132,6 +132,40 @@ data class AutoSetupLanguageConfig(
 
         val ENGLISH = ENGLISH_US
 
+        val CHINESE_TW =
+            AutoSetupLanguageConfig(
+                localeTag = "zh-TW",
+                languageCode = "zh",
+                buildNumberQueryAndKeyword = "版本號碼",
+                wirelessDebuggingQueryAndKeyword = "無線偵錯",
+                usbDebuggingQueryAndKeyword = "USB 偵錯",
+                pairDeviceKeywords =
+                    listOf(
+                        "使用配對碼配對裝置",
+                        "配對碼配對",
+                        "使用配對碼",
+                        "裝置配對碼",
+                        "配對碼",
+                    ),
+                allowButtonKeywords =
+                    listOf(
+                        "允許",
+                        "確定",
+                    ),
+            )
+
+        val CHINESE_HK = CHINESE_TW.copy(localeTag = "zh-HK")
+        val CHINESE_MO = CHINESE_TW.copy(localeTag = "zh-MO")
+
+        /**
+         * Traditional Chinese only. Simplified Chinese (zh-CN, zh-SG) uses different
+         * Settings wording ("版本号", "无线调试", …) and is deliberately not mapped here,
+         * so there is no alias for a bare `CHINESE`.
+         */
+        val CHINESE_TRADITIONAL = CHINESE_TW
+
+        private val TRADITIONAL_CHINESE_SUBTAGS = setOf("tw", "hk", "mo", "hant")
+
         private val CONFIGS_BY_TAG: Map<String, AutoSetupLanguageConfig> =
             listOf(
                 GERMAN_DE,
@@ -146,7 +180,20 @@ data class AutoSetupLanguageConfig(
                 ENGLISH_GB,
                 ENGLISH_CA,
                 ENGLISH_AU,
+                CHINESE_TW,
+                CHINESE_HK,
+                CHINESE_MO,
             ).associateBy { it.localeTag.lowercase() }
+
+        /**
+         * Resolves a `zh` locale to the Traditional Chinese config only when the region or
+         * script subtag says so. Simplified Chinese must return null rather than fall back
+         * to Traditional keywords: the Settings entries it would search for do not exist on
+         * a Simplified device, so Auto Setup would stall instead of reporting the language
+         * as unsupported.
+         */
+        private fun traditionalChineseOrNull(subtags: List<String>): AutoSetupLanguageConfig? =
+            if (subtags.any { it in TRADITIONAL_CHINESE_SUBTAGS }) CHINESE_TW else null
 
         /**
          * Selects appropriate [AutoSetupLanguageConfig] for given [Locale], or null if unsupported.
@@ -164,6 +211,10 @@ data class AutoSetupLanguageConfig(
                 "es" -> SPANISH_ES
                 "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
+                "zh" ->
+                    traditionalChineseOrNull(
+                        listOf(locale.country.lowercase(), locale.script.lowercase()),
+                    )
                 else -> null
             }
         }
@@ -184,12 +235,14 @@ data class AutoSetupLanguageConfig(
                 return matchedByTag
             }
 
-            val primaryLang = cleanTag.split("-").firstOrNull() ?: ""
+            val subtags = cleanTag.split("-")
+            val primaryLang = subtags.firstOrNull() ?: ""
             return when (primaryLang) {
                 "de" -> GERMAN_DE
                 "es" -> SPANISH_ES
                 "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
+                "zh" -> traditionalChineseOrNull(subtags)
                 else -> null
             }
         }
