@@ -481,7 +481,17 @@ fun MacroPadEditor(onDone: () -> Unit) {
                 accentColor = colors.accent,
                 existingNames = profiles.filter { it.id != profile.id }.map { it.name },
                 onConfirm = { name, pkg ->
-                    val assoc = pkg?.let { ProfileAssociation(packageName = it) }
+                    val assoc =
+                        if (pkg != null) {
+                            val existing = profile.association
+                            if (existing != null && existing.packageName.equals(pkg, ignoreCase = true)) {
+                                existing
+                            } else {
+                                ProfileAssociation(packageName = pkg)
+                            }
+                        } else {
+                            null
+                        }
                     MacroPadState.renameProfile(profile.id, name, assoc)
                     showRenameProfileDialog = false
                 },
