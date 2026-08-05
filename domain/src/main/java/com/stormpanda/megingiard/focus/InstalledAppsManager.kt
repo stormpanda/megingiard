@@ -370,6 +370,7 @@ object InstalledAppsManager {
     ) {
         if (isSettingsObserverRegistered) return
         isSettingsObserverRegistered = true
+        MegingiardIpcContract.init(context)
         scope.launch {
             observeContentProvider(
                 context,
@@ -390,6 +391,7 @@ object InstalledAppsManager {
         coversDir: File,
     ) {
         registerSettingsObserverIfNeeded(context, coversDir)
+        MegingiardIpcContract.init(context)
 
         var apiKey = SettingsManager.steamGridDbApiToken.value
         if (apiKey.isBlank()) {

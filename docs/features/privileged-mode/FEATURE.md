@@ -16,7 +16,7 @@ the regular app sandbox cannot reach (UID `untrusted_app`, missing the
 `input` group, restrictive SELinux domain). Privileged Mode bridges that gap
 by running a tiny on-device helper daemon (`megingiard_privd`) under the
 **shell** UID — the same privilege envelope that ADB itself runs in. The
-daemon listens on a local TCP socket loopback (`127.0.0.1:51234–51238`); the app connects, sends ASCII
+daemon listens on a local TCP socket loopback (`127.0.0.1:51234–51238` for release variants or `127.0.0.1:51244–51248` for debug variants); the app connects, sends ASCII
 commands, and the daemon performs the privileged kernel I/O on its behalf.
 
 No root, no third-party app, no external server: the bootstrap uses
@@ -123,10 +123,10 @@ every device since Android 11 (API 30).
 │       │                                          │ │
 │  GlobalSettingsScreen / PrivdSettingsCard        │ │
 └──────────────────────────────────────────────────┘ │
-                                                     │  local
-                                                     ▼  TCP
-                        127.0.0.1:51234–51238    ◀──────
-                                                     │
+                                                      │  local
+                                                      ▼  TCP
+               127.0.0.1:51234–51238 / 51244–51248    ◀──────
+                                                      │
 ┌──────────────────────────────────────────────────┐ │
 │ megingiard_privd  (UID 2000 / shell, group input)│◀┘
 │                                                  │
@@ -224,7 +224,7 @@ PrivdManager.state.collect { state ->
 ```
 
 When `PrivdManager.connect(context)` is invoked:
-1. It first attempts a direct local TCP socket connection (scanning port range `51234–51238`) via `PrivdClient.connect()`.
+1. It first attempts a direct local TCP socket connection (scanning port range `51234–51238` for release or `51244–51248` for debug) via `PrivdClient.connect()`.
 2. If this fails (e.g. after a reboot when the daemon process has terminated), it checks if saved ADB credentials (`privd_adb_key.bin` and `privd_adb_cert.bin`) exist in the `noBackupFilesDir` folder.
 3. If they exist, it automatically starts a background ADB bootstrap via `PrivdBootstrapper.bootstrapAndConnect(context, "127.0.0.1")` which reads the dynamic ADB Wireless Debugging port (using screen-scanned or NSD fallbacks if necessary), connects to the local ADB server trying multiple loopback addresses (`127.0.0.1`, `::1`, `localhost`) to handle system IP binding preferences, pushes and spawns the daemon, and connects the socket.
 
@@ -269,8 +269,8 @@ The authentication key is **never embedded in the APK**. Instead:
 
 1. During bootstrap the app generates 32 random bytes with `SecureRandom`.
 2. The key is encrypted under an AES-256-GCM Keystore key (`megingiard_privd_pair_key_v1`, hardware-backed where available) and stored in `noBackupFilesDir/privd_pair_key.enc`. Backup is explicitly excluded so the key never leaves the device.
-3. The plaintext key is transmitted to the daemon over the already-authenticated ADB TLS channel: `megingiard_privd --provision <key_hex> <app_uid>`.
-4. The daemon writes it to `/data/local/tmp/megingiard_privd.key` (mode 0600, shell-owned) together with the provisioned app UID.
+3. The plaintext key is transmitted to the daemon over the already-authenticated ADB TLS channel: `megingiard_privd [--keyfile <path>] [--port <port>] --provision <key_hex> <app_uid>`.
+4. The daemon writes it to the designated state keyfile, e.g. `/data/local/tmp/megingiard_privd.key` for release or `/data/local/tmp/megingiard_privd_debug.key` for debug (mode 0600, shell-owned) together with the provisioned app UID.
 5. On every subsequent app start `PrivdPairKey.load()` decrypts the key from Keystore storage and `PrivdClient.loadKey()` places it in memory.
 
 Android destroys the Keystore AES key when the app is uninstalled, making the stored ciphertext permanently unreadable. A reinstalled app therefore cannot silently inherit the old daemon's trust relationship — re-bootstrap is required.

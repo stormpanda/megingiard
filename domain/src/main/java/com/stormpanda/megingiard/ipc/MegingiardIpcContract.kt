@@ -1,23 +1,86 @@
 package com.stormpanda.megingiard.ipc
 
+import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 
 object MegingiardIpcContract {
-    const val AUTHORITY = "com.stormpanda.megingiard.provider"
-    val BASE_URI: Uri = Uri.parse("content://$AUTHORITY")
+    @Volatile
+    private var isInitialized = false
+
+    @Volatile
+    var AUTHORITY = "com.stormpanda.megingiard.provider"
+        private set
+
+    @Volatile
+    var BASE_URI: Uri = Uri.parse("content://$AUTHORITY")
+        private set
 
     const val PATH_THEME = "theme"
-    val THEME_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_THEME")
+
+    @Volatile
+    var THEME_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_THEME")
+        private set
 
     const val PATH_SETTINGS = "settings"
-    val SETTINGS_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_SETTINGS")
+
+    @Volatile
+    var SETTINGS_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_SETTINGS")
+        private set
 
     // ── Integration API ──
     const val PATH_CLIENT_STATE = "client_state"
-    val CLIENT_STATE_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_CLIENT_STATE")
+
+    @Volatile
+    var CLIENT_STATE_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_CLIENT_STATE")
+        private set
 
     const val PATH_PROFILES = "profiles"
-    val PROFILES_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_PROFILES")
+
+    @Volatile
+    var PROFILES_URI: Uri = Uri.parse("content://$AUTHORITY/$PATH_PROFILES")
+        private set
+
+    @Synchronized
+    fun init(context: Context) {
+        if (isInitialized) return
+
+        val pm = context.packageManager
+        val isDebug = context.packageName.endsWith(".debug") || context.packageName.contains(".debug")
+
+        AUTHORITY =
+            if (context.packageName.startsWith("com.stormpanda.megingiard")) {
+                if (isDebug) "com.stormpanda.megingiard.debug.provider" else "com.stormpanda.megingiard.provider"
+            } else {
+                val releaseInstalled = isPackageInstalled(pm, "com.stormpanda.megingiard")
+                val debugInstalled = isPackageInstalled(pm, "com.stormpanda.megingiard.debug")
+                when {
+                    isDebug && debugInstalled -> "com.stormpanda.megingiard.debug.provider"
+                    releaseInstalled -> "com.stormpanda.megingiard.provider"
+                    debugInstalled -> "com.stormpanda.megingiard.debug.provider"
+                    else -> "com.stormpanda.megingiard.provider"
+                }
+            }
+
+        BASE_URI = Uri.parse("content://$AUTHORITY")
+        THEME_URI = Uri.parse("content://$AUTHORITY/$PATH_THEME")
+        SETTINGS_URI = Uri.parse("content://$AUTHORITY/$PATH_SETTINGS")
+        CLIENT_STATE_URI = Uri.parse("content://$AUTHORITY/$PATH_CLIENT_STATE")
+        PROFILES_URI = Uri.parse("content://$AUTHORITY/$PATH_PROFILES")
+
+        isInitialized = true
+    }
+
+    private fun isPackageInstalled(
+        pm: PackageManager,
+        packageName: String,
+    ): Boolean =
+        try {
+            pm.getPackageInfo(packageName, 0)
+            true
+        } catch (_: Exception) {
+            false
+        }
 
     // Client State columns
     const val COLUMN_API_VERSION = "api_version"

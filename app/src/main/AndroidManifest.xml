@@ -72,7 +72,7 @@
 
         <provider
             android:name=".provider.MegingiardSettingsProvider"
-            android:authorities="com.stormpanda.megingiard.provider"
+            android:authorities="${applicationId}.provider"
             android:exported="true" />
 
     </application>
