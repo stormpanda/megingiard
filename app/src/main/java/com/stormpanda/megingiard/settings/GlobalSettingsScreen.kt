@@ -364,7 +364,7 @@ fun GlobalSettingsScreen(
                                     text =
                                         stringResource(
                                             if (isAccessibilityActive) {
-                                                R.string.privd_status_running
+                                                R.string.accessibility_status_active
                                             } else {
                                                 R.string.privd_status_off
                                             },

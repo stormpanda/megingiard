@@ -358,7 +358,8 @@ Open Settings to create a layout.</string>
     <string name="privd_status_off">Off</string>
     <string name="privd_status_connecting">Connecting…</string>
     <string name="privd_status_bootstrapping">Bootstrapping…</string>
-    <string name="privd_status_running">Running</string>
+    <string name="privd_status_running">Running (v%1$d)</string>
+    <string name="accessibility_status_active">Active</string>
     <string name="privd_status_failed">Failed</string>
     <string name="privd_action_connect">Connect</string>
     <string name="privd_action_disconnect">Disconnect</string>

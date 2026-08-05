@@ -312,7 +312,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_status_off">Aus</string>
     <string name="privd_status_connecting">Verbinde…</string>
     <string name="privd_status_bootstrapping">Einrichten…</string>
-    <string name="privd_status_running">Aktiv</string>
+    <string name="privd_status_running">Aktiv (v%1$d)</string>
+    <string name="accessibility_status_active">Aktiv</string>
     <string name="privd_status_failed">Fehlgeschlagen</string>
     <string name="privd_action_connect">Verbinden</string>
     <string name="privd_action_disconnect">Trennen</string>

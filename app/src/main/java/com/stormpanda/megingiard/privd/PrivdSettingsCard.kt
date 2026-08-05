@@ -124,11 +124,26 @@ internal fun PrivdSettingsCard(
         Column {
             val (dotColor, label) =
                 when (state) {
-                    PrivdState.OFF -> colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
-                    PrivdState.BOOTSTRAPPING -> colors.accent to stringResource(R.string.privd_status_bootstrapping)
-                    PrivdState.CONNECTING -> colors.accent to stringResource(R.string.privd_status_connecting)
-                    PrivdState.RUNNING -> colors.actionColorSystem to stringResource(R.string.privd_status_running)
-                    PrivdState.FAILED -> colors.error to stringResource(R.string.privd_status_failed)
+                    PrivdState.OFF -> {
+                        colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
+                    }
+
+                    PrivdState.BOOTSTRAPPING -> {
+                        colors.accent to stringResource(R.string.privd_status_bootstrapping)
+                    }
+
+                    PrivdState.CONNECTING -> {
+                        colors.accent to stringResource(R.string.privd_status_connecting)
+                    }
+
+                    PrivdState.RUNNING -> {
+                        colors.actionColorSystem to
+                            stringResource(R.string.privd_status_running, PrivdConstants.PRIVD_VERSION)
+                    }
+
+                    PrivdState.FAILED -> {
+                        colors.error to stringResource(R.string.privd_status_failed)
+                    }
                 }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
