@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Gamepad
@@ -236,6 +237,20 @@ fun QuickMenu(
                 Spacer(Modifier.height(PM_SECTION_SPACING))
                 HorizontalDivider(color = colors.controlOverlayBorder)
                 Spacer(Modifier.height(PM_SECTION_SPACING))
+
+                if (companionViewMode != CompanionViewMode.AUTO) {
+                    QuickMenuActionChip(
+                        label = stringResource(R.string.quick_menu_auto_mode),
+                        icon = Icons.Rounded.Autorenew,
+                        colors = colors,
+                        onClick = {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
 
                 if (!showIntegrationHome) {
                     QuickMenuActionChip(

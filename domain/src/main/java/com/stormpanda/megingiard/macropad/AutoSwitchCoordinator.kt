@@ -36,15 +36,7 @@ object AutoSwitchCoordinator {
             EmulatorDetectionFunnel.activeSession.collect { session ->
                 if (session != null) {
                     val matchedProfile =
-                        MacroPadState.profiles.value.let { profiles ->
-                            profiles.firstOrNull { profile ->
-                                profile.association?.romFileName != null &&
-                                    profile.matches(session.packageName, session.romPath, session.systemId)
-                            } ?: profiles.firstOrNull { profile ->
-                                profile.association?.romFileName == null &&
-                                    profile.matches(session.packageName, session.romPath, session.systemId)
-                            }
-                        }
+                        MacroPadState.findBestMatchingProfile(session.packageName, session.romPath, session.systemId)
                     if (matchedProfile != null) {
                         val currentActiveId = MacroPadState.activeProfileId.value
                         if (matchedProfile.id != currentActiveId) {
@@ -145,15 +137,7 @@ object AutoSwitchCoordinator {
             val session = EmulatorDetectionFunnel.activeSession.value!!
             AppLog.d(TAG, "onPackageChanged: active ROM session exists for emulator '$normalized' (${session.romPath})")
             val matchedProfile =
-                MacroPadState.profiles.value.let { profiles ->
-                    profiles.firstOrNull { profile ->
-                        profile.association?.romFileName != null &&
-                            profile.matches(session.packageName, session.romPath, session.systemId)
-                    } ?: profiles.firstOrNull { profile ->
-                        profile.association?.romFileName == null &&
-                            profile.matches(session.packageName, session.romPath, session.systemId)
-                    }
-                }
+                MacroPadState.findBestMatchingProfile(session.packageName, session.romPath, session.systemId)
             if (matchedProfile != null) {
                 val currentActiveId = MacroPadState.activeProfileId.value
                 if (matchedProfile.id != currentActiveId) {
@@ -171,11 +155,7 @@ object AutoSwitchCoordinator {
         AppLog.i(TAG, "onPackageChanged: foreground package changed to $normalized")
         _foregroundApp.value = normalized
 
-        val directMatchedProfile =
-            MacroPadState.profiles.value.firstOrNull { profile ->
-                val assoc = profile.association ?: return@firstOrNull false
-                assoc.packageName.equals(normalized, ignoreCase = true) && assoc.romFileName == null
-            }
+        val directMatchedProfile = MacroPadState.findBestMatchingProfile(normalized)
 
         if (directMatchedProfile != null) {
             val currentActiveId = MacroPadState.activeProfileId.value

@@ -1262,6 +1262,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_settings_desc">App-Einstellungen</string>
     <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
     <string name="quick_menu_show_dashboard">Companion Hub anzeigen</string>
+    <string name="quick_menu_auto_mode">Automatischer Ansichtsmodus</string>
     <string name="quick_menu_show_macropad">MacroPad anzeigen</string>
 </resources>
 
