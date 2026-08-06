@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -62,6 +64,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -104,6 +107,10 @@ private val IH_BATTERY_SPACING = 6.dp
 
 private const val IH_AMBIENT_PRIMARY_ALPHA = 0.22f
 private const val IH_AMBIENT_SECONDARY_ALPHA = 0.12f
+private const val IH_BG_LOGO_ALPHA = 0.085f
+private const val IH_BG_LOGO_WIDTH_FRACTION = 0.65f
+private const val IH_BG_LOGO_ASPECT_RATIO = 2038f / 1076f
+private const val IH_CARD_BG_ALPHA = 0.30f
 private const val IH_COLOR_TRANSITION_DURATION_MS = 800
 private const val IH_CLOCK_UPDATE_INTERVAL_MS = 1000L
 private const val IH_BATTERY_MAX = 100
@@ -186,7 +193,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Column(
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
@@ -199,132 +206,148 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     )
                 },
     ) {
-        // Top Header Row (Clock on Left, "Megingiard" in Dead Center, Battery on Right)
-        Box(
+        // Background Logo Watermark (sits between ambient background and card boxes)
+        Icon(
+            painter = painterResource(R.drawable.ic_megingiard_logo),
+            contentDescription = null,
+            tint = colors.onSurface.copy(alpha = IH_BG_LOGO_ALPHA),
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = IH_PADDING_SCREEN,
-                        top = IH_PADDING_HEADER_TOP,
-                        end = IH_PADDING_SCREEN,
-                        bottom = IH_PADDING_HEADER_BOTTOM,
-                    ),
+                    .align(Alignment.Center)
+                    .fillMaxWidth(IH_BG_LOGO_WIDTH_FRACTION)
+                    .aspectRatio(IH_BG_LOGO_ASPECT_RATIO),
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
         ) {
-            // Clock (Upper Left)
-            Text(
-                text = timeText,
-                style = MaterialTheme.typography.titleLarge,
-                color = colors.onSurfaceSecondary,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.CenterStart),
-            )
-
-            // "Megingiard" (Dead Center)
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleLarge,
-                color = colors.onSurface,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center),
-            )
-
-            // Battery Indicator (Upper Right)
-            Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(IH_BATTERY_SPACING),
+            // Top Header Row (Clock on Left, "Megingiard" in Dead Center, Battery on Right)
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = IH_PADDING_SCREEN,
+                            top = IH_PADDING_HEADER_TOP,
+                            end = IH_PADDING_SCREEN,
+                            bottom = IH_PADDING_HEADER_BOTTOM,
+                        ),
             ) {
-                val batteryIcon =
-                    when {
-                        batteryState.isCharging -> Icons.Rounded.BatteryChargingFull
-                        batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD -> Icons.Rounded.BatteryAlert
-                        else -> Icons.Rounded.BatteryFull
-                    }
-                Icon(
-                    imageVector = batteryIcon,
-                    contentDescription = null,
-                    tint =
-                        if (batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD &&
-                            !batteryState.isCharging
-                        ) {
-                            IH_BATTERY_LOW_COLOR
-                        } else {
-                            colors.onSurfaceSecondary
-                        },
-                    modifier = Modifier.size(IH_BATTERY_ICON_SIZE),
-                )
+                // Clock (Upper Left)
                 Text(
-                    text = "${batteryState.percentage}%",
+                    text = timeText,
                     style = MaterialTheme.typography.titleLarge,
                     color = colors.onSurfaceSecondary,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.CenterStart),
                 )
-            }
-        }
 
-        // Main Non-Scrollable Content Layout
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(
-                        start = IH_PADDING_SCREEN,
-                        end = IH_PADDING_SCREEN,
-                        top = IH_PADDING_HEADER_BOTTOM,
-                        bottom = IH_PADDING_SCREEN,
-                    ),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // 1. Featured Hero Game / Companion Card
-            val profiles by MacroPadState.profiles.collectAsState()
+                // "Megingiard" (Dead Center)
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = colors.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center),
+                )
 
-            val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName
-            val targetLabel =
-                hoveredAppLabel ?: activeSession?.gameTitle ?: lastDetectedSession?.let { s ->
-                    s.romPath?.let { File(it).name } ?: s.gameTitle
+                // Battery Indicator (Upper Right)
+                Row(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(IH_BATTERY_SPACING),
+                ) {
+                    val batteryIcon =
+                        when {
+                            batteryState.isCharging -> Icons.Rounded.BatteryChargingFull
+                            batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD -> Icons.Rounded.BatteryAlert
+                            else -> Icons.Rounded.BatteryFull
+                        }
+                    Icon(
+                        imageVector = batteryIcon,
+                        contentDescription = null,
+                        tint =
+                            if (batteryState.percentage <= IH_BATTERY_LOW_THRESHOLD &&
+                                !batteryState.isCharging
+                            ) {
+                                IH_BATTERY_LOW_COLOR
+                            } else {
+                                colors.onSurfaceSecondary
+                            },
+                        modifier = Modifier.size(IH_BATTERY_ICON_SIZE),
+                    )
+                    Text(
+                        text = "${batteryState.percentage}%",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colors.onSurfaceSecondary,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
-            val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath
-            val targetSystem = hoveredSystemId ?: activeSession?.systemId ?: lastDetectedSession?.systemId
+            }
 
-            val associatedProfile =
-                remember(profiles, targetPkg, targetRom, targetSystem) {
-                    if (targetPkg == null) {
-                        null
-                    } else {
-                        profiles.firstOrNull { profile ->
-                            profile.association?.romFileName != null &&
-                                profile.matches(targetPkg, targetRom, targetSystem)
-                        } ?: profiles.firstOrNull { profile ->
-                            profile.association?.romFileName == null &&
-                                profile.matches(targetPkg, targetRom, targetSystem)
+            // Main Non-Scrollable Content Layout
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(
+                            start = IH_PADDING_SCREEN,
+                            end = IH_PADDING_SCREEN,
+                            top = IH_PADDING_HEADER_BOTTOM,
+                            bottom = IH_PADDING_SCREEN,
+                        ),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // 1. Featured Hero Game / Companion Card
+                val profiles by MacroPadState.profiles.collectAsState()
+
+                val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName
+                val targetLabel =
+                    hoveredAppLabel ?: activeSession?.gameTitle ?: lastDetectedSession?.let { s ->
+                        s.romPath?.let { File(it).name } ?: s.gameTitle
+                    }
+                val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath
+                val targetSystem = hoveredSystemId ?: activeSession?.systemId ?: lastDetectedSession?.systemId
+
+                val associatedProfile =
+                    remember(profiles, targetPkg, targetRom, targetSystem) {
+                        if (targetPkg == null) {
+                            null
+                        } else {
+                            profiles.firstOrNull { profile ->
+                                profile.association?.romFileName != null &&
+                                    profile.matches(targetPkg, targetRom, targetSystem)
+                            } ?: profiles.firstOrNull { profile ->
+                                profile.association?.romFileName == null &&
+                                    profile.matches(targetPkg, targetRom, targetSystem)
+                            }
                         }
                     }
-                }
 
-            HeroCompanionCard(
-                targetPackage = targetPkg,
-                targetLabel = targetLabel,
-                targetRomPath = targetRom,
-                targetSystemId = targetSystem,
-                associatedProfile = associatedProfile,
-                activeProfile = activeProfile,
-                profiles = profiles,
-                colors = colors,
-            )
+                HeroCompanionCard(
+                    targetPackage = targetPkg,
+                    targetLabel = targetLabel,
+                    targetRomPath = targetRom,
+                    targetSystemId = targetSystem,
+                    associatedProfile = associatedProfile,
+                    activeProfile = activeProfile,
+                    profiles = profiles,
+                    colors = colors,
+                )
 
-            Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.weight(1f))
 
-            // 2. Companion Tools 2x2 Grid (Anchored at Bottom)
-            CompanionToolsDeck(
-                activeProfile = activeProfile,
-                isFullscreenKeyboardActive = isFullscreenKeyboardActive,
-                isGlobalSettingsOpen = isGlobalSettingsOpen,
-                isFullscreenMouseActive = isFullscreenMouseActive,
-                colors = colors,
-            )
+                // 2. Companion Tools 2x2 Grid (Anchored at Bottom)
+                CompanionToolsDeck(
+                    activeProfile = activeProfile,
+                    isFullscreenKeyboardActive = isFullscreenKeyboardActive,
+                    isGlobalSettingsOpen = isGlobalSettingsOpen,
+                    isFullscreenMouseActive = isFullscreenMouseActive,
+                    colors = colors,
+                )
+            }
         }
     }
 }
@@ -352,7 +375,7 @@ private fun HeroCompanionCard(
                 .fillMaxWidth()
                 .border(IH_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = IH_CARD_SHAPE),
         shape = IH_CARD_SHAPE,
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        colors = CardDefaults.cardColors(containerColor = colors.surface.copy(alpha = IH_CARD_BG_ALPHA)),
     ) {
         Column(
             modifier = Modifier.padding(IH_PADDING_CARD),
@@ -776,7 +799,7 @@ private fun ToolCard(
                 .border(IH_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = IH_DECK_CARD_SHAPE)
                 .clickable { onClick() },
         shape = IH_DECK_CARD_SHAPE,
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        colors = CardDefaults.cardColors(containerColor = colors.surface.copy(alpha = IH_CARD_BG_ALPHA)),
     ) {
         Row(
             modifier = Modifier.padding(IH_PADDING_CARD),
