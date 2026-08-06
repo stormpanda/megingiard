@@ -52,7 +52,8 @@ every device since Android 11 (API 30).
 
 - After a successful first-time setup, the app MUST silently re-open the
   daemon socket on every cold start so users do not need to re-run the
-  wizard after each reboot. Auto-connect is unconditionally active.
+  wizard after each reboot. Auto-connect is unconditionally active, and showing
+  the reconnection prompt upon daemon failure or service deactivation is standard behavior.
 
 ### FR-PV7: Mandatory Accessibility Service & Dynamic Reconnection Wizard
 

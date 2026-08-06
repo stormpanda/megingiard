@@ -791,10 +791,6 @@ private fun GlobalSettingsHelpModal(
             description = stringResource(R.string.help_settings_privd_desc),
         )
         HelpEntry(
-            label = stringResource(R.string.privd_show_reconnect_prompt),
-            description = stringResource(R.string.help_settings_reconnect_prompt_desc),
-        )
-        HelpEntry(
             label = stringResource(R.string.privd_deadzone_title),
             description = stringResource(R.string.help_settings_deadzone_desc),
         )

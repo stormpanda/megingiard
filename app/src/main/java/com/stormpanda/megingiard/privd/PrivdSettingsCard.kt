@@ -98,7 +98,6 @@ internal fun PrivdSettingsCard(
 
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
-    val showAdbPrompt by viewModel.privdShowAdbPrompt.collectAsState()
     val colors = LocalAppColors.current
     val context = LocalContext.current
 
@@ -230,14 +229,6 @@ internal fun PrivdSettingsCard(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-
-        AppDivider()
-        RememberSettingRow(
-            label = stringResource(R.string.privd_show_reconnect_prompt),
-            description = stringResource(R.string.privd_show_reconnect_prompt_desc),
-            checked = showAdbPrompt,
-            onCheckedChange = { viewModel.setPrivdShowAdbPrompt(it) },
-        )
 
         // ── Dead-zone configuration row ──────────────────────────────────────
         AppDivider()

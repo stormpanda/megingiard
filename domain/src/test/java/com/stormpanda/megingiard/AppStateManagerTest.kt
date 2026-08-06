@@ -92,7 +92,6 @@ class AppStateManagerTest {
             AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setPrivdPromptDismissed(false)
             AppStateManager.setBackgroundSettingsActive(false)
-            MacroPadSettings.setPrivdShowAdbPromptForTesting(true)
             PrivdManager.setStateForTesting(PrivdState.OFF)
 
             // Yield to allow combine collection to initialize
@@ -190,7 +189,6 @@ class AppStateManagerTest {
             AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setPrivdPromptDismissed(false)
             AppStateManager.setBackgroundSettingsActive(false)
-            MacroPadSettings.setPrivdShowAdbPromptForTesting(true)
             PrivdManager.setStateForTesting(PrivdState.FAILED)
             testScheduler.advanceUntilIdle()
             assertTrue(AppStateManager.isPrivdPromptActive.value)
@@ -223,7 +221,6 @@ class AppStateManagerTest {
             AppStateManager.setHasAdbCredentials(true)
             AppStateManager.setBackgroundSettingsActive(false)
             AppStateManager.setAccessibilityActive(true)
-            MacroPadSettings.setPrivdShowAdbPromptForTesting(true)
             PrivdManager.setStateForTesting(PrivdState.RUNNING)
 
             testScheduler.advanceUntilIdle()

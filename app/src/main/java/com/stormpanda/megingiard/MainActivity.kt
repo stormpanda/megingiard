@@ -490,14 +490,12 @@ class MainActivity : ComponentActivity() {
                         PrivdManager.state,
                         AppStateManager.isPrivdPromptActive,
                         AppStateManager.hasAdbCredentials,
-                        MacroPadSettings.privdShowAdbPrompt,
                         AppStateManager.isPrivdPromptDismissed,
-                    ) { privdState, promptActive, hasCreds, showPromptPref, dismissed ->
+                    ) { privdState, promptActive, hasCreds, dismissed ->
                         isPrivdMirrorConnecting(
                             privdState = privdState,
                             promptActive = promptActive,
                             hasCreds = hasCreds,
-                            showPromptPref = showPromptPref,
                             dismissed = dismissed,
                             isManuallyDisconnected = PrivdManager.isManuallyDisconnected,
                         )

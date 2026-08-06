@@ -207,13 +207,12 @@ class MirrorRuntimePolicyTest {
 
     @Test
     fun `isPrivdMirrorConnecting blocks during race window and allows once dismissed`() {
-        // 1. Race window: daemon failed, prompt is not yet active (async delay), but user wants it
+        // 1. Race window: daemon failed, prompt is not yet active (async delay), but user has creds
         assertTrue(
             isPrivdMirrorConnecting(
                 privdState = PrivdState.FAILED,
                 promptActive = false,
                 hasCreds = true,
-                showPromptPref = true,
                 dismissed = false,
                 isManuallyDisconnected = false,
             ),
@@ -225,31 +224,17 @@ class MirrorRuntimePolicyTest {
                 privdState = PrivdState.FAILED,
                 promptActive = false,
                 hasCreds = true,
-                showPromptPref = true,
                 dismissed = true,
                 isManuallyDisconnected = false,
             ),
         )
 
-        // 3. User disabled the show prompt preference -> should not block on FAILED state
-        assertFalse(
-            isPrivdMirrorConnecting(
-                privdState = PrivdState.FAILED,
-                promptActive = false,
-                hasCreds = true,
-                showPromptPref = false,
-                dismissed = false,
-                isManuallyDisconnected = false,
-            ),
-        )
-
-        // 4. Normal active connecting states should block
+        // 3. Normal active connecting states should block
         assertTrue(
             isPrivdMirrorConnecting(
                 privdState = PrivdState.CONNECTING,
                 promptActive = false,
                 hasCreds = true,
-                showPromptPref = true,
                 dismissed = false,
                 isManuallyDisconnected = false,
             ),
@@ -259,31 +244,28 @@ class MirrorRuntimePolicyTest {
                 privdState = PrivdState.BOOTSTRAPPING,
                 promptActive = false,
                 hasCreds = true,
-                showPromptPref = true,
                 dismissed = false,
                 isManuallyDisconnected = false,
             ),
         )
 
-        // 5. Active connection pending on OFF state should block
+        // 4. Active connection pending on OFF state should block
         assertTrue(
             isPrivdMirrorConnecting(
                 privdState = PrivdState.OFF,
                 promptActive = false,
                 hasCreds = true,
-                showPromptPref = true,
                 dismissed = false,
                 isManuallyDisconnected = false,
             ),
         )
 
-        // 6. OFF state after manual disconnect should not block
+        // 5. OFF state after manual disconnect should not block
         assertFalse(
             isPrivdMirrorConnecting(
                 privdState = PrivdState.OFF,
                 promptActive = false,
                 hasCreds = true,
-                showPromptPref = true,
                 dismissed = false,
                 isManuallyDisconnected = true,
             ),
