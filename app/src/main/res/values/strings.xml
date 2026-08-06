@@ -1009,18 +1009,18 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_help_label">Help (this screen)</string>
     <string name="help_quickmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
 
-    <!-- Companion Home help -->
-    <string name="help_companion_home_title">Companion Home — Help</string>
-    <string name="help_companion_home_intro">The Companion Home screen is your central hub on the secondary display for game-specific macro controls, active game status, and rapid access to companion tools.</string>
-    <string name="help_companion_home_sec_hero">Active Game &amp; Control Profile</string>
-    <string name="help_companion_home_hero_show_desc">Opens the MacroPad touch layout for the active game full-screen on the bottom display.</string>
-    <string name="help_companion_home_hero_edit_desc">Launches the profile and layout editor to customize button positions, styling, and macro assignments.</string>
-    <string name="help_companion_home_hero_link_desc">Links a custom MacroPad control profile or creates a new dedicated profile for the currently active or selected game.</string>
-    <string name="help_companion_home_sec_tools">Companion Tools</string>
-    <string name="help_companion_home_macropad_desc">Quick shortcut to open the active MacroPad touch control surface.</string>
-    <string name="help_companion_home_settings_desc">Access app-wide settings including theme colors, privileged daemon state, input deadzones, and configuration backups.</string>
-    <string name="help_companion_home_keyboard_desc">Toggle the full-screen virtual touch keyboard overlay for text input.</string>
-    <string name="help_companion_home_touchpad_desc">Toggle the full-screen virtual touchpad for precision mouse and touch cursor control.</string>
+    <!-- Companion Hub help -->
+    <string name="help_companion_hub_title">Companion Hub — Help</string>
+    <string name="help_companion_hub_intro">The Companion Hub screen is your central dashboard on the secondary display for game-specific macro controls, active game status, and rapid access to companion tools.</string>
+    <string name="help_companion_hub_sec_hero">Active Game &amp; Control Profile</string>
+    <string name="help_companion_hub_hero_show_desc">Opens the MacroPad touch layout for the active game full-screen on the bottom display.</string>
+    <string name="help_companion_hub_hero_edit_desc">Launches the profile and layout editor to customize button positions, styling, and macro assignments.</string>
+    <string name="help_companion_hub_hero_link_desc">Links a custom MacroPad control profile or creates a new dedicated profile for the currently active or selected game.</string>
+    <string name="help_companion_hub_sec_tools">Companion Tools</string>
+    <string name="help_companion_hub_macropad_desc">Quick shortcut to open the active MacroPad touch control surface.</string>
+    <string name="help_companion_hub_settings_desc">Access app-wide settings including theme colors, privileged daemon state, input deadzones, and configuration backups.</string>
+    <string name="help_companion_hub_keyboard_desc">Toggle the full-screen virtual touch keyboard overlay for text input.</string>
+    <string name="help_companion_hub_touchpad_desc">Toggle the full-screen virtual touchpad for precision mouse and touch cursor control.</string>
 
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">Welcome to Megingiard!</string>

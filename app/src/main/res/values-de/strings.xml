@@ -1016,18 +1016,18 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_quickmenu_help_label">Hilfe (diese Ansicht)</string>
     <string name="help_quickmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>
 
-    <!-- Companion Home help -->
-    <string name="help_companion_home_title">Companion Home — Hilfe</string>
-    <string name="help_companion_home_intro">Der Companion Home Bildschirm ist Ihr zentrales Dashboard auf dem Unterbildschirm für spielspezifische Makro-Steuerungen, aktiven Spielstatus und Schnellzugriff auf Begleit-Tools.</string>
-    <string name="help_companion_home_sec_hero">Aktives Spiel &amp; Steuerungsprofil</string>
-    <string name="help_companion_home_hero_show_desc">Öffnet das MacroPad-Touch-Layout für das aktive Spiel im Vollbildmodus auf dem unteren Bildschirm.</string>
-    <string name="help_companion_home_hero_edit_desc">Startet den Profil- und Layout-Editor zum Anpassen von Tastenpositionen, Styles und Makro-Zuweisungen.</string>
-    <string name="help_companion_home_hero_link_desc">Verknüpft ein benutzerdefiniertes Steuerungsprofil oder erstellt ein neues Profil für das aktuell aktive oder ausgewählte Spiel.</string>
-    <string name="help_companion_home_sec_tools">Begleit-Tools</string>
-    <string name="help_companion_home_macropad_desc">Schnellzugriff zum Öffnen der aktiven MacroPad-Touch-Bedienoberfläche.</string>
-    <string name="help_companion_home_settings_desc">Zugriff auf app-weite Einstellungen wie Theme-Farben, Daemon-Status, Totzonen und Konfigurations-Backups.</string>
-    <string name="help_companion_home_keyboard_desc">Schaltet die virtuelle Touch-Tastatur im Vollbildmodus für Texteingaben ein oder aus.</string>
-    <string name="help_companion_home_touchpad_desc">Schaltet das virtuelle Touchpad zur präzisen Maus- und Touch-Cursor-Steuerung ein oder aus.</string>
+    <!-- Companion Hub help -->
+    <string name="help_companion_hub_title">Companion Hub — Hilfe</string>
+    <string name="help_companion_hub_intro">Der Companion Hub Bildschirm ist Ihr zentrales Dashboard auf dem Unterbildschirm für spielspezifische Makro-Steuerungen, aktiven Spielstatus und Schnellzugriff auf Begleit-Tools.</string>
+    <string name="help_companion_hub_sec_hero">Aktives Spiel &amp; Steuerungsprofil</string>
+    <string name="help_companion_hub_hero_show_desc">Öffnet das MacroPad-Touch-Layout für das aktive Spiel im Vollbildmodus auf dem unteren Bildschirm.</string>
+    <string name="help_companion_hub_hero_edit_desc">Startet den Profil- und Layout-Editor zum Anpassen von Tastenpositionen, Styles und Makro-Zuweisungen.</string>
+    <string name="help_companion_hub_hero_link_desc">Verknüpft ein benutzerdefiniertes Steuerungsprofil oder erstellt ein neues Profil für das aktuell aktive oder ausgewählte Spiel.</string>
+    <string name="help_companion_hub_sec_tools">Begleit-Tools</string>
+    <string name="help_companion_hub_macropad_desc">Schnellzugriff zum Öffnen der aktiven MacroPad-Touch-Bedienoberfläche.</string>
+    <string name="help_companion_hub_settings_desc">Zugriff auf app-weite Einstellungen wie Theme-Farben, Daemon-Status, Totzonen und Konfigurations-Backups.</string>
+    <string name="help_companion_hub_keyboard_desc">Schaltet die virtuelle Touch-Tastatur im Vollbildmodus für Texteingaben ein oder aus.</string>
+    <string name="help_companion_hub_touchpad_desc">Schaltet das virtuelle Touchpad zur präzisen Maus- und Touch-Cursor-Steuerung ein oder aus.</string>
 
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">Willkommen bei Megingiard!</string>

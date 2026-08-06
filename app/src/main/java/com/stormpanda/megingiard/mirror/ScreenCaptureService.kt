@@ -302,7 +302,7 @@ class ScreenCaptureService : Service() {
                 }
             }.collect { showIntegrationHome ->
                 if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
-                    AppLog.i(TAG, "Companion Home screen became active -> stopping screen capture to conserve resources")
+                    AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
                     stopSelf()
                 }
             }

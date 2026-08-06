@@ -178,7 +178,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val batteryState = rememberBatteryState()
     var timeText by remember { mutableStateOf("") }
-    var showHomeHelp by remember { mutableStateOf(false) }
+    var showHubHelp by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -285,7 +285,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         fontWeight = FontWeight.Bold,
                     )
 
-                    HelpIconButton(onClick = { showHomeHelp = true })
+                    HelpIconButton(onClick = { showHubHelp = true })
                 }
             }
 
@@ -354,62 +354,62 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        CompanionHomeHelpModal(
-            visible = showHomeHelp,
-            onDismiss = { showHomeHelp = false },
+        CompanionHubHelpModal(
+            visible = showHubHelp,
+            onDismiss = { showHubHelp = false },
         )
     }
 }
 
 @Composable
-private fun CompanionHomeHelpModal(
+private fun CompanionHubHelpModal(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
     HelpModal(
         visible = visible,
-        title = stringResource(R.string.help_companion_home_title),
+        title = stringResource(R.string.help_companion_hub_title),
         onDismiss = onDismiss,
     ) {
-        HelpIntro(stringResource(R.string.help_companion_home_intro))
+        HelpIntro(stringResource(R.string.help_companion_hub_intro))
 
-        HelpSection(stringResource(R.string.help_companion_home_sec_hero))
+        HelpSection(stringResource(R.string.help_companion_hub_sec_hero))
         HelpEntry(
             icon = Icons.Rounded.Visibility,
             label = stringResource(R.string.integration_home_show_macropad),
-            description = stringResource(R.string.help_companion_home_hero_show_desc),
+            description = stringResource(R.string.help_companion_hub_hero_show_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
             label = stringResource(R.string.integration_home_edit_layout),
-            description = stringResource(R.string.help_companion_home_hero_edit_desc),
+            description = stringResource(R.string.help_companion_hub_hero_edit_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Link,
             label = stringResource(R.string.integration_home_link_existing),
-            description = stringResource(R.string.help_companion_home_hero_link_desc),
+            description = stringResource(R.string.help_companion_hub_hero_link_desc),
         )
 
-        HelpSection(stringResource(R.string.help_companion_home_sec_tools))
+        HelpSection(stringResource(R.string.help_companion_hub_sec_tools))
         HelpEntry(
             icon = Icons.Rounded.Gamepad,
             label = stringResource(R.string.integration_home_tool_macropad),
-            description = stringResource(R.string.help_companion_home_macropad_desc),
+            description = stringResource(R.string.help_companion_hub_macropad_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Settings,
             label = stringResource(R.string.integration_home_tool_settings),
-            description = stringResource(R.string.help_companion_home_settings_desc),
+            description = stringResource(R.string.help_companion_hub_settings_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Keyboard,
             label = stringResource(R.string.integration_home_tool_keyboard),
-            description = stringResource(R.string.help_companion_home_keyboard_desc),
+            description = stringResource(R.string.help_companion_hub_keyboard_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.TouchApp,
             label = stringResource(R.string.integration_home_tool_touchpad),
-            description = stringResource(R.string.help_companion_home_touchpad_desc),
+            description = stringResource(R.string.help_companion_hub_touchpad_desc),
         )
     }
 }
