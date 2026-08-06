@@ -422,6 +422,7 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_dev_enabled_substep_2">2. Enable USB debugging and turn it ON</string>
     <string name="privd_wizard_step1_dev_enabled_substep_3">3. Enable Wireless debugging and turn it ON</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
+    <string name="privd_wizard_step1_error_missing_toggles">Please enable both USB Debugging and Wireless Debugging in Developer Options to continue.</string>
 
     <string name="privd_wizard_step2_intro">Enter the connect port from the Wireless Debugging menu, and the pairing code and pairing port from the \"Pair device with pairing code\" dialog.</string>
     <string name="privd_wizard_step2_connect_intro">Enter the 5-digit connect port shown under \"IP address &amp; Port\" on the main Wireless Debugging menu.</string>

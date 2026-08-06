@@ -124,6 +124,8 @@ internal fun PrivdSetupWizardDialog(
     var pairCode by rememberSaveable { mutableStateOf("") }
     var pairError by remember { mutableStateOf(false) }
     var hasAttemptedSubmit by remember { mutableStateOf(false) }
+    var step1Error by remember { mutableStateOf(false) }
+    var step1Busy by remember { mutableStateOf(false) }
     var pairBusy by remember { mutableStateOf(false) }
     var bootstrapBusy by remember { mutableStateOf(false) }
 
@@ -158,6 +160,9 @@ internal fun PrivdSetupWizardDialog(
 
     LaunchedEffect(step) {
         AppLog.d(TAG, "PrivdSetupWizardDialog: step changed to $step")
+        if (step != 0) {
+            step1Error = false
+        }
         if (step != 2) {
             hasAttemptedSubmit = false
             pairError = false
@@ -169,10 +174,10 @@ internal fun PrivdSetupWizardDialog(
     }
 
     BackHandler(enabled = true) {
-        if (step > 0 && step < 3 && !pairBusy && !bootstrapBusy) {
+        if (step > 0 && step < 3 && !step1Busy && !pairBusy && !bootstrapBusy) {
             isNextAnimation = false
             step--
-        } else if (!pairBusy && !bootstrapBusy) {
+        } else if (!step1Busy && !pairBusy && !bootstrapBusy) {
             AppLog.i(TAG, "PrivdSetupWizardDialog: Back handler triggered, resetting and dismissing")
             viewModel.privdResetBootstrapStage()
             onDismiss()
@@ -188,7 +193,7 @@ internal fun PrivdSetupWizardDialog(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        if (!pairBusy && !bootstrapBusy) {
+                        if (!step1Busy && !pairBusy && !bootstrapBusy) {
                             AppLog.i(TAG, "PrivdSetupWizardDialog: Scrim clicked, resetting and dismissing")
                             viewModel.privdResetBootstrapStage()
                             onDismiss()
@@ -253,7 +258,7 @@ internal fun PrivdSetupWizardDialog(
                 ) { currentStep ->
                     when (currentStep) {
                         0 -> {
-                            Step1MenuDescription()
+                            Step1MenuDescription(error = step1Error)
                         }
 
                         1 -> {
@@ -303,6 +308,7 @@ internal fun PrivdSetupWizardDialog(
                 when {
                     step == 0 -> {
                         OutlinedButton(
+                            enabled = !step1Busy,
                             onClick = {
                                 val devOptionsEnabled =
                                     Settings.Global.getInt(
@@ -355,7 +361,7 @@ internal fun PrivdSetupWizardDialog(
 
                     step in 1..2 -> {
                         OutlinedButton(
-                            enabled = !pairBusy && !bootstrapBusy,
+                            enabled = !step1Busy && !pairBusy && !bootstrapBusy,
                             onClick = {
                                 isNextAnimation = false
                                 step--
@@ -375,7 +381,7 @@ internal fun PrivdSetupWizardDialog(
 
                 val isNextEnabled =
                     when (step) {
-                        0 -> true
+                        0 -> !step1Busy
                         1 -> connectPort.length == 5
                         2 -> pairCode.length == 6 && pairPort.length == 5 && !pairBusy && !bootstrapBusy
                         3 -> true
@@ -387,8 +393,37 @@ internal fun PrivdSetupWizardDialog(
                     onClick = {
                         when (step) {
                             0 -> {
-                                isNextAnimation = true
-                                step = 1
+                                val isUsbDebuggingOn =
+                                    Settings.Global.getInt(
+                                        context.contentResolver,
+                                        Settings.Global.ADB_ENABLED,
+                                        0,
+                                    ) != 0
+
+                                val isWirelessDebuggingOn = PrivdBootstrapper.isWirelessDebuggingActive(context)
+
+                                if (!isUsbDebuggingOn || !isWirelessDebuggingOn) {
+                                    step1Error = true
+                                } else {
+                                    step1Error = false
+                                    if (PrivdBootstrapper.hasCredentials(context)) {
+                                        step1Busy = true
+                                        viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
+                                            step1Busy = false
+                                            if (ok) {
+                                                isNextAnimation = true
+                                                step = 3
+                                            } else {
+                                                viewModel.privdResetBootstrapStage()
+                                                isNextAnimation = true
+                                                step = 1
+                                            }
+                                        }
+                                    } else {
+                                        isNextAnimation = true
+                                        step = 1
+                                    }
+                                }
                             }
 
                             1 -> {
@@ -444,7 +479,15 @@ internal fun PrivdSetupWizardDialog(
                     Text(
                         text =
                             when {
-                                step == 0 || step == 1 -> {
+                                step == 0 -> {
+                                    if (step1Busy) {
+                                        stringResource(R.string.privd_wizard_bootstrapping)
+                                    } else {
+                                        stringResource(R.string.privd_wizard_next)
+                                    }
+                                }
+
+                                step == 1 -> {
                                     stringResource(R.string.privd_wizard_next)
                                 }
 
@@ -469,7 +512,7 @@ internal fun PrivdSetupWizardDialog(
 }
 
 @Composable
-private fun Step1MenuDescription() {
+private fun Step1MenuDescription(error: Boolean) {
     val colors = LocalAppColors.current
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
         Text(
@@ -532,6 +575,14 @@ private fun Step1MenuDescription() {
             Text(
                 text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_3),
                 color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        if (error) {
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_error_missing_toggles),
+                color = colors.error,
                 style = MaterialTheme.typography.bodySmall,
             )
         }

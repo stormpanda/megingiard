@@ -376,6 +376,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_step1_dev_enabled_substep_2">2. USB-Debugging aktivieren und einschalten</string>
     <string name="privd_wizard_step1_dev_enabled_substep_3">3. Drahtloses Debugging aktivieren und einschalten</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
+    <string name="privd_wizard_step1_error_missing_toggles">Bitte aktiviere sowohl USB-Debugging als auch Drahtloses Debugging in den Entwickleroptionen, um fortzufahren.</string>
 
     <string name="privd_wizard_step2_intro">Gib den Connect-Port aus dem Menü \"WLAN-Debugging\" sowie den Kopplungscode und Kopplungs-Port aus dem Dialog \"Gerät über Kopplungscode koppeln\" ein.</string>
     <string name="privd_wizard_step2_connect_intro">Gib den 5-stelligen Connect-Port ein, der unter \"IP-Adresse &amp; Port\" im WLAN-Debugging-Hauptmenü angezeigt wird.</string>
