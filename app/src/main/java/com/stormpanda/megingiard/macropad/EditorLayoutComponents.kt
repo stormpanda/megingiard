@@ -22,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,12 +60,23 @@ internal fun EditorProfileChipsBar(
     var menuExpanded by remember { mutableStateOf(false) }
     val canDelete = profiles.size > 1
 
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(activeProfile?.id, profiles) {
+        val activeId = activeProfile?.id ?: return@LaunchedEffect
+        val index = profiles.indexOfFirst { it.id == activeId }
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+        }
+    }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         LazyRow(
+            state = listState,
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             contentPadding = PaddingValues(vertical = 4.dp),
@@ -182,6 +194,14 @@ internal fun EditorLayoutChipsBar(
                 MacroPadState.reorderLayouts(mutable)
             }
         }
+
+    LaunchedEffect(activeLayout?.id, layouts) {
+        val activeId = activeLayout?.id ?: return@LaunchedEffect
+        val index = layouts.indexOfFirst { it.id == activeId }
+        if (index >= 0) {
+            lazyRowState.animateScrollToItem(index)
+        }
+    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
