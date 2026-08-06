@@ -582,24 +582,70 @@ class MegingiardAccessibilityService : AccessibilityService() {
         rootNode: AccessibilityNodeInfo,
         pairKeywords: List<String>,
     ): Boolean {
+        // 1. Language-agnostic Resource ID lookup (AOSP Settings resource IDs for Wireless ADB pairing preference)
+        val knownPairingResourceIds =
+            listOf(
+                "com.android.settings:id/adb_pair_choice",
+                "com.android.settings:id/pair_with_code",
+                "com.android.settings:id/adb_pair_code",
+                "com.android.settings:id/adb_pairing_code",
+                "com.android.settings:id/adb_pair_with_code_pref",
+                "com.android.settings:id/adb_pair_by_code_preference",
+            )
+
+        for (resId in knownPairingResourceIds) {
+            val nodes = rootNode.findAccessibilityNodeInfosByViewId(resId) ?: emptyList()
+            for (node in nodes) {
+                val clickable = findClickableAncestorOrSelf(node) ?: node
+                AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row via resource ID '$resId', clicking")
+                if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                    return true
+                }
+            }
+        }
+
+        // 2. Language-agnostic Resource ID pattern matching in node tree
+        val resIdMatchNode = findNodeByResourceIdPattern(rootNode)
+        if (resIdMatchNode != null) {
+            val clickable = findClickableAncestorOrSelf(resIdMatchNode) ?: resIdMatchNode
+            AppLog.i(
+                TAG,
+                "findAndClickPairDialog: Found pair dialog row via resource ID pattern '${resIdMatchNode.viewIdResourceName}', clicking",
+            )
+            if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                return true
+            }
+        }
+
+        // 3. Fallback: Keyword matching (multi-language fallback)
         val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
         val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
         val allTitles = (titleNodes + settingsTitleNodes).distinct()
 
         for (titleNode in allTitles) {
             val titleText = titleNode.text?.toString() ?: ""
-            val isPairItem =
-                pairKeywords.any { kw ->
-                    titleText.contains(kw, ignoreCase = true)
-                }
+            val isPairItem = pairKeywords.any { kw -> titleText.contains(kw, ignoreCase = true) }
 
             if (isPairItem) {
                 val clickable = findClickableAncestorOrSelf(titleNode) ?: titleNode
-                AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row ('$titleText'), clicking")
+                AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row via keyword ('$titleText'), clicking")
                 return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             }
         }
         return false
+    }
+
+    private fun findNodeByResourceIdPattern(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        val resId = node.viewIdResourceName?.lowercase() ?: ""
+        if (resId.contains("adb_pair") || resId.contains("pair_code") || resId.contains("pair_choice") || resId.contains("pairing_code")) {
+            return node
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findNodeByResourceIdPattern(child)
+            if (found != null) return found
+        }
+        return null
     }
 
     private fun performScrollForward(node: AccessibilityNodeInfo): Boolean {
@@ -621,6 +667,21 @@ class MegingiardAccessibilityService : AccessibilityService() {
         rootNode: AccessibilityNodeInfo,
         pairKeywords: List<String>,
     ): Boolean {
+        val knownPairingResourceIds =
+            listOf(
+                "com.android.settings:id/adb_pair_choice",
+                "com.android.settings:id/pair_with_code",
+                "com.android.settings:id/adb_pair_code",
+                "com.android.settings:id/adb_pairing_code",
+                "com.android.settings:id/adb_pair_with_code_pref",
+                "com.android.settings:id/adb_pair_by_code_preference",
+            )
+        for (resId in knownPairingResourceIds) {
+            val nodes = rootNode.findAccessibilityNodeInfosByViewId(resId) ?: emptyList()
+            if (nodes.isNotEmpty()) return true
+        }
+        if (findNodeByResourceIdPattern(rootNode) != null) return true
+
         val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
         val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
         val allTitles = (titleNodes + settingsTitleNodes).distinct()
@@ -818,6 +879,27 @@ class MegingiardAccessibilityService : AccessibilityService() {
                 AppLog.w(TAG, "dismissNotificationShade: Exception checking active window node: ${e.message}")
             }
             return shadeDismissed
+        }
+
+        fun performBackAction(): Boolean {
+            val inst = instance ?: return false
+            AppLog.d(TAG, "performBackAction: issuing GLOBAL_ACTION_BACK")
+            return inst.performGlobalAction(GLOBAL_ACTION_BACK)
+        }
+
+        fun clickPairDialogRow(
+            pairKeywords: List<String> = AutoSetupLanguageConfig.fromLocale(java.util.Locale.getDefault()).pairDeviceKeywords,
+        ): Boolean {
+            val inst = instance ?: return false
+            val rootNode = inst.rootInActiveWindow ?: return false
+            AppLog.d(TAG, "clickPairDialogRow: attempting to click pair dialog row")
+            if (inst.findAndClickPairDialog(rootNode, pairKeywords)) {
+                return true
+            }
+            AppLog.d(TAG, "clickPairDialogRow: pair dialog row not visible, scrolling forward...")
+            inst.performScrollForward(rootNode)
+            val scrolledRoot = inst.rootInActiveWindow ?: rootNode
+            return inst.findAndClickPairDialog(scrolledRoot, pairKeywords)
         }
 
         fun triggerWirelessDebuggingAutoToggle(context: Context) = startMultiStageAutoSetup(context)

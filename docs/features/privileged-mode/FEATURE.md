@@ -63,11 +63,11 @@ every device since Android 11 (API 30).
   - **Privileged Mode Step**: **Optional**. Excluded dynamically if Privileged Mode is already in the `RUNNING` state and only Accessibility Service is missing. Included if Privileged Mode is disconnected or in `FAILED` state.
   - **Finished Step**: Displays "You're all set!" with a "Close" finish button.
 
-### FR-PV8: Accessibility Pairing Auto-Fill
+### FR-PV8: Manual Pairing Input & Connect Port Entry
 
-- Step 2 (`StepPair`) of the setup wizard MUST provide an **Auto-fill (read screen)** button.
-- When activated or when entering Step 2, the app MUST inspect visible accessibility text nodes on the primary display (Display 0) via `MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)`.
-- Using `PrivdPairScreenTextScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
+- Step 2 (`StepPair`) of the setup wizard MUST provide text fields for **Connect Port** (from Wireless Debugging menu), **WiFi pairing code** (6 digits), and **Pairing port** (5 digits), grouped under descriptive section headers ("From Wireless Debugging menu" and "From pairing dialog").
+- Step 2 MUST provide a **Back** button on the bottom-left to return to Step 1 (`StepEnableWireless`) describing how to navigate to the menu, and a **Pair** button on the bottom-right to submit pairing once all three fields are populated.
+- On submission, the connect port is cached in `PrivdBootstrapper`, and pairing is attempted to `127.0.0.1:<PairPort>`.
 
 ### FR-PV9: Multi-Stage Privileged Mode Auto-Setup & Onboarding Tour Integration
 

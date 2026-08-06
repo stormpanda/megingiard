@@ -66,8 +66,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.services.MegingiardAccessibilityService
-import com.stormpanda.megingiard.ui.AppMagicalButton
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -79,9 +77,9 @@ private const val SW_DIALOG_WIDTH_FRACTION = 0.85f
 private val SW_DIALOG_CORNER = 16.dp
 private val SW_DIALOG_PADDING = 20.dp
 private val SW_GAP = 12.dp
+private val SW_SECTION_GAP = 8.dp
 private val SW_CHECKLIST_GAP = 6.dp
 private val SW_CHECKLIST_ICON_SIZE = 18.dp
-private val SW_AUTOFILL_ICON_SIZE = 18.dp
 private val SW_DONE_PADDING_BOTTOM = 16.dp
 private const val SW_STABILIZATION_DELAY_MS = 1500L
 
@@ -92,7 +90,7 @@ private const val SW_STABILIZATION_DELAY_MS = 1500L
  *
  * Steps:
  *  1. **Enable Wireless Debugging** — step-by-step instructions + opens system settings.
- *  2. **Pair** — user enters host:port + 6-digit pairing code shown by Android.
+ *  2. **Pair** — user enters connect port (from menu) + pairing code & pairing port (from dialog).
  *  3. **Bootstrap** — pushes the daemon binary, spawns it, verifies with the abstract
  *     socket. Shows a per-stage progress checklist.
  *  4. **Done** — closes the dialog.
@@ -111,6 +109,7 @@ internal fun PrivdSetupWizardDialog(
     val lastError by viewModel.privdLastError.collectAsState()
 
     var step by rememberSaveable { mutableStateOf(0) }
+    var connectPort by rememberSaveable { mutableStateOf("") }
     var pairPort by rememberSaveable { mutableStateOf("") }
     var pairCode by rememberSaveable { mutableStateOf("") }
     var pairError by remember { mutableStateOf(false) }
@@ -236,17 +235,28 @@ internal fun PrivdSetupWizardDialog(
 
             1 -> {
                 StepPair(
+                    connectPort = connectPort,
                     pairPort = pairPort,
                     code = pairCode,
                     busy = pairBusy,
                     error = pairError,
                     fieldColors = fieldColors,
                     focusManager = focusManager,
+                    onConnectPortChange = { connectPort = it.filter { ch -> ch.isDigit() }.take(5) },
                     onPairPortChange = { pairPort = it.filter { ch -> ch.isDigit() }.take(5) },
                     onCodeChange = { pairCode = it.filter { ch -> ch.isDigit() }.take(6) },
+                    onBack = {
+                        AppLog.i(TAG, "PrivdSetupWizardDialog: Going back to step 0 from step 1")
+                        step = 0
+                    },
                     onSubmit = {
+                        val connectPortInt = connectPort.toIntOrNull()
                         val portInt = pairPort.toIntOrNull() ?: return@StepPair
-                        AppLog.i(TAG, "PrivdSetupWizardDialog: Submitting pairing with port=$portInt")
+                        if (connectPortInt != null && connectPortInt > 0) {
+                            AppLog.i(TAG, "PrivdSetupWizardDialog: Setting user-entered connect port: $connectPortInt")
+                            PrivdBootstrapper.setScreenConnectPort(connectPortInt)
+                        }
+                        AppLog.i(TAG, "PrivdSetupWizardDialog: Submitting pairing with pairPort=$portInt")
                         pairBusy = true
                         pairError = false
                         viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
@@ -355,66 +365,56 @@ private fun StepEnableWireless(
 
 @Composable
 private fun StepPair(
+    connectPort: String,
     pairPort: String,
     code: String,
     busy: Boolean,
     error: Boolean,
     fieldColors: TextFieldColors,
     focusManager: FocusManager,
+    onConnectPortChange: (String) -> Unit,
     onPairPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
+    onBack: () -> Unit,
     onSubmit: () -> Unit,
 ) {
-    val context = LocalContext.current
     val colors = LocalAppColors.current
-    var autoFillScanning by remember { mutableStateOf(false) }
-    var autoFillMessage by remember { mutableStateOf<String?>(null) }
-    var autoFillSuccess by remember { mutableStateOf(false) }
-
-    fun performAutoFillScan() {
-        if (autoFillScanning || busy) return
-        AppLog.i(TAG, "performAutoFillScan: Triggering screen scan")
-        autoFillMessage = null
-        autoFillSuccess = false
-        if (!MegingiardAccessibilityService.isEnabled(context)) {
-            AppLog.w(TAG, "performAutoFillScan: Autofill failed, accessibility service disabled")
-            autoFillMessage = context.getString(R.string.privd_wizard_autofill_accessibility_disabled)
-            return
-        }
-        autoFillScanning = true
-
-        val nodeText = MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)
-        val connectPort = PrivdPairScreenTextScanner.parseConnectPortFromText(nodeText)
-        if (connectPort > 0) {
-            AppLog.i(TAG, "performAutoFillScan: Set screen-scanned connect port fallback: $connectPort")
-            PrivdBootstrapper.setScreenConnectPort(connectPort)
-        }
-        val nodeResult = PrivdPairScreenTextScanner.parsePairingInfoFromText(nodeText)
-        autoFillScanning = false
-
-        if (nodeResult.isComplete) {
-            val detectedPort = nodeResult.port ?: ""
-            val detectedCode = nodeResult.code ?: ""
-            AppLog.i(TAG, "performAutoFillScan: Scan succeeded. Detected port=$detectedPort, codeLen=${detectedCode.length}")
-            onPairPortChange(detectedPort)
-            onCodeChange(detectedCode)
-            autoFillSuccess = true
-            autoFillMessage = context.getString(R.string.privd_wizard_autofill_success)
-            if (detectedPort.length == 5 && detectedCode.length == 6) {
-                AppLog.i(TAG, "performAutoFillScan: Automatic submit triggered after successful scan")
-                onSubmit()
-            }
-        } else {
-            AppLog.w(TAG, "performAutoFillScan: Scan finished. Pairing info not found on screen.")
-            autoFillMessage = context.getString(R.string.privd_wizard_autofill_not_found)
-        }
-    }
 
     Text(
         text = stringResource(R.string.privd_wizard_step2_intro),
         color = colors.onSurface,
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(bottom = SW_GAP),
+    )
+
+    // Section 1: From Wireless Debugging menu
+    Text(
+        text = stringResource(R.string.privd_wizard_section_connect),
+        color = colors.actionColorSystem,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(top = SW_SECTION_GAP),
+    )
+    OutlinedTextField(
+        value = connectPort,
+        onValueChange = onConnectPortChange,
+        label = { Text(stringResource(R.string.privd_wizard_field_connect_port)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !busy,
+        colors = fieldColors,
+        keyboardOptions =
+            KeyboardOptions(
+                imeAction = ImeAction.Next,
+            ),
+        keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+    )
+
+    // Section 2: From pairing dialog
+    Text(
+        text = stringResource(R.string.privd_wizard_section_pair),
+        color = colors.actionColorSystem,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier.padding(top = SW_SECTION_GAP),
     )
     OutlinedTextField(
         value = code,
@@ -452,24 +452,23 @@ private fun StepPair(
         )
     }
 
-    autoFillMessage?.let { msg ->
-        Text(
-            text = msg,
-            color = if (autoFillSuccess) colors.actionColorSystem else colors.error,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(top = SW_GAP),
-        )
-    }
-
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = SW_GAP),
         horizontalArrangement = Arrangement.spacedBy(SW_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        TextButton(
+            onClick = onBack,
+            enabled = !busy,
+        ) {
+            Text(stringResource(R.string.privd_wizard_back))
+        }
+        Spacer(modifier = Modifier.weight(1f))
         Button(
             onClick = onSubmit,
             enabled =
                 !busy &&
+                    connectPort.length == 5 &&
                     pairPort.length == 5 &&
                     code.length == 6,
         ) {
@@ -480,30 +479,6 @@ private fun StepPair(
                     stringResource(R.string.privd_wizard_step2_pair)
                 },
             )
-        }
-        AppMagicalButton(
-            onClick = { performAutoFillScan() },
-            enabled = !busy && !autoFillScanning,
-            modifier = Modifier.weight(1f),
-        ) {
-            if (autoFillScanning) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(SW_AUTOFILL_ICON_SIZE),
-                    strokeWidth = 2.dp,
-                    color = colors.actionColorSystem,
-                )
-                Spacer(modifier = Modifier.size(SW_GAP))
-                Text(stringResource(R.string.privd_wizard_autofill_scanning))
-            } else {
-                Icon(
-                    imageVector = Icons.Rounded.AutoFixHigh,
-                    contentDescription = null,
-                    tint = colors.actionColorSystem,
-                    modifier = Modifier.size(SW_AUTOFILL_ICON_SIZE),
-                )
-                Spacer(modifier = Modifier.size(SW_GAP))
-                Text(stringResource(R.string.privd_wizard_autofill_read_screen))
-            }
         }
     }
 }
