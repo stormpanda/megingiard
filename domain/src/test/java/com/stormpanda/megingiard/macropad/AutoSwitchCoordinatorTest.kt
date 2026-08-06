@@ -160,10 +160,10 @@ class AutoSwitchCoordinatorTest {
         // When user switches to an unrelated app (e.g. chrome)
         AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
 
-        // Then client state is deactivated
+        // Then client state is deactivated and standalone foreground app is recorded
         assertFalse(AppStateManager.isExternalClientActive.value)
         assertEquals(null, AppStateManager.externalClientPackage.value)
-        assertEquals(null, AppStateManager.focusedAppPackageName.value)
+        assertEquals("com.android.chrome", AppStateManager.focusedAppPackageName.value)
     }
 
     @Test
@@ -179,10 +179,10 @@ class AutoSwitchCoordinatorTest {
         // When focus change event is reported for an unrelated app (Chrome)
         AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
 
-        // Then integration state is deactivated
+        // Then integration state is deactivated and standalone foreground app is recorded
         assertFalse(AppStateManager.isExternalClientActive.value)
         assertEquals(null, AppStateManager.externalClientPackage.value)
-        assertEquals(null, AppStateManager.focusedAppPackageName.value)
+        assertEquals("com.android.chrome", AppStateManager.focusedAppPackageName.value)
     }
 
     @Test
@@ -265,4 +265,13 @@ class AutoSwitchCoordinatorTest {
             // Then active profile falls back to the generic retroarch profile (profile1)
             assertEquals(profile1.id, MacroPadState.activeProfileId.value)
         }
+
+    @Test
+    fun `onPackageChanged updates AppStateManager focusedAppPackageName for standalone apps`() {
+        AutoSwitchCoordinator.onPackageChanged("org.es_de.frontend")
+        assertEquals("org.es_de.frontend", AppStateManager.focusedAppPackageName.value)
+
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+        assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
+    }
 }

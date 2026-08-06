@@ -193,6 +193,19 @@ object AppStateManager {
         _hoveredAppSecondaryColor.value = hoveredSecondaryColor
     }
 
+    fun setStandaloneForegroundState(
+        focusedApp: String?,
+        focusedRomPath: String? = null,
+    ) {
+        if (_isExternalClientActive.value) return
+        if (_focusedAppPackageName.value != focusedApp || _focusedRomPath.value != focusedRomPath) {
+            AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath")
+            _companionViewMode.value = CompanionViewMode.AUTO
+            _focusedAppPackageName.value = focusedApp
+            _focusedRomPath.value = focusedRomPath
+        }
+    }
+
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed

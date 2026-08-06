@@ -55,6 +55,7 @@ object AutoSwitchCoordinator {
                             MacroPadState.setActiveProfileId(matchedProfile.id)
                         }
                     }
+                    AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
                 }
             }
         }
@@ -108,6 +109,18 @@ object AutoSwitchCoordinator {
                 hoveredPrimaryColor = null,
                 hoveredSecondaryColor = null,
             )
+        }
+
+        // 3. Sync standalone foreground package state with AppStateManager
+        if (!isRegisteredEmulator) {
+            AppStateManager.setStandaloneForegroundState(normalized, null)
+        } else {
+            val session = EmulatorDetectionFunnel.activeSession.value
+            if (session != null && session.packageName == normalized) {
+                AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
+            } else {
+                AppStateManager.setStandaloneForegroundState(normalized, null)
+            }
         }
 
         if (_foregroundApp.value == normalized && !isRegisteredEmulator) {
