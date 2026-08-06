@@ -64,11 +64,14 @@ every device since Android 11 (API 30).
   - **Privileged Mode Step**: **Optional**. Excluded dynamically if Privileged Mode is already in the `RUNNING` state and only Accessibility Service is missing. Included if Privileged Mode is disconnected or in `FAILED` state.
   - **Finished Step**: Displays "You're all set!" with a "Close" finish button.
 
-### FR-PV8: Manual Pairing Input & Connect Port Entry
+### FR-PV8: 4-Step Manual Setup Wizard & Connect Port Entry
 
-- Step 2 (`StepPair`) of the setup wizard MUST provide text fields for **Connect Port** (from Wireless Debugging menu), **WiFi pairing code** (6 digits), and **Pairing port** (5 digits), grouped under descriptive section headers ("From Wireless Debugging menu" and "From pairing dialog").
-- Step 2 MUST provide a **Back** button on the bottom-left to return to Step 1 (`StepEnableWireless`) describing how to navigate to the menu, and a **Pair** button on the bottom-right to submit pairing once all three fields are populated.
-- On submission, the connect port is cached in `PrivdBootstrapper`, and pairing is attempted to `127.0.0.1:<PairPort>`.
+- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions):
+  - **Step 1 (Menu Description)**: Displays instructions for navigating to Developer Options -> Wireless Debugging with an "Open system settings" button.
+  - **Step 2 (Connect Port)**: Provides an input field for the Wireless Debugging **Connect Port** (5 digits).
+  - **Step 3 (Pairing Code & Pairing Port)**: Provides input fields for **WiFi pairing code** (6 digits) and **Pairing port** (5 digits), triggering pairing and bootstrapping with live stage progress checklist.
+  - **Step 4 (You're All Set)**: Reuses `FinishedStepContent` to display completion confirmation ("You're all set! Privileged Mode is ready.").
+- Step 2 and Step 3 provide **Back** buttons to navigate to preceding steps, and the **Pair** button on Step 3 triggers `PrivdBootstrapper` pairing (`127.0.0.1:<PairPort>`) and bootstrap.
 
 ### FR-PV9: Multi-Stage Privileged Mode Auto-Setup & Onboarding Tour Integration
 

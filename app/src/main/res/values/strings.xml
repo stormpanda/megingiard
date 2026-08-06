@@ -418,6 +418,8 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
     <string name="privd_wizard_step2_intro">Enter the connect port from the Wireless Debugging menu, and the pairing code and pairing port from the \"Pair device with pairing code\" dialog.</string>
+    <string name="privd_wizard_step2_connect_intro">Enter the 5-digit connect port shown under \"IP address &amp; Port\" on the main Wireless Debugging menu.</string>
+    <string name="privd_wizard_step3_pair_intro">Tap \"Pair device with pairing code\" in Wireless Debugging settings and enter the 6-digit pairing code and 5-digit pairing port.</string>
     <string name="privd_wizard_section_connect">From Wireless Debugging menu</string>
     <string name="privd_wizard_field_connect_port">Connect port (5 digits under \"IP address &amp; Port\")</string>
     <string name="privd_wizard_section_pair">From pairing dialog</string>
