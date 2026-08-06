@@ -397,19 +397,24 @@ internal fun PrivdSetupWizardDialog(
                                     pairError = false
                                     viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
                                         AppLog.i(TAG, "PrivdSetupWizardDialog: Pairing result ok=$ok")
-                                        pairBusy = false
                                         if (ok) {
                                             bootstrapBusy = true
                                             viewModel.privdBootstrap(context, "127.0.0.1") { bOk ->
                                                 AppLog.i(TAG, "PrivdSetupWizardDialog: Bootstrap result bOk=$bOk")
                                                 bootstrapBusy = false
+                                                pairBusy = false
                                                 if (bOk) {
                                                     isNextAnimation = true
                                                     step = 3
+                                                } else {
+                                                    pairError = true
+                                                    viewModel.privdResetBootstrapStage()
                                                 }
                                             }
                                         } else {
+                                            pairBusy = false
                                             pairError = true
+                                            viewModel.privdResetBootstrapStage()
                                         }
                                     }
                                 }
@@ -663,15 +668,7 @@ private fun Step3Pairing(
         }
 
         if (hasAttemptedSubmit) {
-            if (error) {
-                Text(
-                    text = stringResource(R.string.privd_wizard_step2_error),
-                    color = colors.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            val errorRes = errorStringResource(lastError)
+            val errorRes = errorStringResource(lastError) ?: if (error) R.string.privd_error_pairing_failed else null
             if (errorRes != null) {
                 Text(
                     text = stringResource(errorRes),

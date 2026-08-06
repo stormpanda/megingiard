@@ -160,11 +160,15 @@ object PrivdBootstrapper {
                 }
             }
             AppLog.i(TAG, "pair() → $ok")
-            if (!ok) PrivdManager.reportBootstrapFailure(PrivdError.PAIRING_FAILED)
+            if (!ok) {
+                PrivdManager.reportBootstrapFailure(PrivdError.PAIRING_FAILED)
+                _stage.value = BootstrapStage.IDLE
+            }
             ok
         } catch (e: Exception) {
             AppLog.w(TAG, "pair() threw: $e")
             PrivdManager.reportBootstrapFailure(PrivdError.PAIRING_FAILED)
+            _stage.value = BootstrapStage.IDLE
             false
         }
     }
