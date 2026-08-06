@@ -383,9 +383,8 @@ Open Settings to create a layout.</string>
 
 
 
-    <!-- Dead-zone settings row + dialog -->
     <string name="privd_deadzone_title">Configure dead zones</string>
-    <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
+    <string name="privd_deadzone_desc">To ensure perfectly matching replay of analog inputs in macros, align the dead zones to what is configured in the Thor\'s settings. (Left stick: %1$d%% · Right stick: %2$d%%)</string>
     <string name="privd_deadzone_dialog_title">Gamepad dead zones</string>
     <string name="privd_deadzone_dialog_hint">Open the Thor\'s built-in Settings app → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius to look up the values for each stick, then enter them below.</string>
     <string name="privd_deadzone_left">Left stick</string>
@@ -471,9 +470,9 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
-    <string name="settings_jump_privileged_mode">Privileged Mode</string>
+    <string name="settings_jump_input">Input</string>
     <string name="settings_jump_diagnostics">Diagnostics</string>
-    <string name="settings_section_privileged_mode">Privileged Mode</string>
+    <string name="settings_section_input">Input</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_expand">Expand section</string>
     <string name="settings_section_collapse">Collapse section</string>

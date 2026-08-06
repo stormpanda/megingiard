@@ -50,6 +50,7 @@ import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
+import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -91,12 +92,8 @@ private val PR_DIALOG_PCT_WIDTH = 52.dp
 internal fun PrivdSettingsCard(
     viewModel: GlobalSettingsViewModel,
     onShowWizard: () -> Unit,
-    onShowDeadzoneDialog: () -> Unit,
 ) {
     val state by viewModel.privdState.collectAsState()
-
-    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
-    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val colors = LocalAppColors.current
     val context = LocalContext.current
 
@@ -158,8 +155,6 @@ internal fun PrivdSettingsCard(
             style = MaterialTheme.typography.bodySmall,
         )
 
-        Spacer(Modifier.height(PR_BUTTON_GAP))
-
         // ── Action buttons ──────────────────────────────────────────────────
         if (state != PrivdState.RUNNING) {
             Spacer(Modifier.height(PR_BUTTON_GAP))
@@ -175,41 +170,40 @@ internal fun PrivdSettingsCard(
                 }
             }
         }
+    }
+}
 
-        // ── Dead-zone configuration row ──────────────────────────────────────
-        AppDivider()
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onShowDeadzoneDialog() }
-                    .padding(vertical = PR_ROW_V_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.privd_deadzone_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text =
-                        stringResource(
-                            R.string.privd_deadzone_desc,
-                            (deadzoneLeft * 100).toInt(),
-                            (deadzoneRight * 100).toInt(),
-                        ),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(PR_ARROW_ICON_SIZE),
+@Composable
+internal fun PrivdDeadzoneSettingsRow(
+    deadzoneLeft: Float,
+    deadzoneRight: Float,
+    onClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    AppSettingsRow(onClick = onClick) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.privd_deadzone_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text =
+                    stringResource(
+                        R.string.privd_deadzone_desc,
+                        (deadzoneLeft * 100).toInt(),
+                        (deadzoneRight * 100).toInt(),
+                    ),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
             )
         }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(PR_ARROW_ICON_SIZE),
+        )
     }
 }
 

@@ -67,7 +67,7 @@ private val GS_SECTION_HEADER_PADDING_V = 10.dp
 
 internal enum class SettingsSectionFilter {
     GENERAL,
-    PRIVILEGED_MODE,
+    INPUT,
     AUTOMATION,
     APPEARANCE,
     DATA,
@@ -364,7 +364,7 @@ internal fun SectionJumpRow(
     onSelectAppearance: () -> Unit,
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
-    onSelectPrivilegedMode: () -> Unit,
+    onSelectInput: () -> Unit,
     onSelectDiagnostics: () -> Unit,
 ) {
     Row(
@@ -393,9 +393,9 @@ internal fun SectionJumpRow(
             onClick = onSelectGeneral,
         )
         SectionJumpChip(
-            label = stringResource(R.string.settings_jump_privileged_mode),
-            selected = selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE,
-            onClick = onSelectPrivilegedMode,
+            label = stringResource(R.string.settings_jump_input),
+            selected = selectedSectionFilter == SettingsSectionFilter.INPUT,
+            onClick = onSelectInput,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_automation),
