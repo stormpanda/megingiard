@@ -411,10 +411,14 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
 
     <string name="privd_wizard_step1_intro">Follow these steps to enable Wireless Debugging:</string>
+    <string name="privd_wizard_step1_variant_dev_disabled_title">If Developer options are NOT active yet:</string>
     <string name="privd_wizard_step1_substep_1">1. Open Settings → About handheld console</string>
     <string name="privd_wizard_step1_substep_2">2. Tap Build number 7 times until "You are now a developer!" appears</string>
     <string name="privd_wizard_step1_substep_3">3. Go back → System → Developer options</string>
     <string name="privd_wizard_step1_substep_4">4. Enable Wireless debugging and turn it ON</string>
+    <string name="privd_wizard_step1_variant_dev_enabled_title">If Developer options are ALREADY active:</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_1">1. Open Settings → System → Developer options</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_2">2. Enable Wireless debugging and turn it ON</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
     <string name="privd_wizard_step2_intro">Enter the connect port from the Wireless Debugging menu, and the pairing code and pairing port from the \"Pair device with pairing code\" dialog.</string>

@@ -365,10 +365,14 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_bootstrapping">Einrichten…</string>
 
     <string name="privd_wizard_step1_intro">Folge diesen Schritten, um Drahtloses Debugging zu aktivieren:</string>
+    <string name="privd_wizard_step1_variant_dev_disabled_title">Falls Entwickleroptionen NOCH NICHT aktiv sind:</string>
     <string name="privd_wizard_step1_substep_1">1. Einstellungen → Über die Handheld-Konsole öffnen</string>
     <string name="privd_wizard_step1_substep_2">2. Build-Nummer 7-mal tippen, bis "Du bist jetzt Entwickler!" erscheint</string>
     <string name="privd_wizard_step1_substep_3">3. Zurück → System → Entwickleroptionen</string>
     <string name="privd_wizard_step1_substep_4">4. Drahtloses Debugging aktivieren und einschalten</string>
+    <string name="privd_wizard_step1_variant_dev_enabled_title">Falls Entwickleroptionen BEREITS aktiv sind:</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_1">1. Einstellungen → System → Entwickleroptionen öffnen</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_2">2. Drahtloses Debugging aktivieren und einschalten</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
 
     <string name="privd_wizard_step2_intro">Gib den Connect-Port aus dem Menü \"WLAN-Debugging\" sowie den Kopplungscode und Kopplungs-Port aus dem Dialog \"Gerät über Kopplungscode koppeln\" ein.</string>

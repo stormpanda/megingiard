@@ -477,6 +477,13 @@ private fun Step1MenuDescription() {
             color = colors.onSurface,
             style = MaterialTheme.typography.bodyMedium,
         )
+
+        Text(
+            text = stringResource(R.string.privd_wizard_step1_variant_dev_disabled_title),
+            color = colors.actionColorSystem,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(top = SW_SECTION_GAP),
+        )
         Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
             Text(
                 text = stringResource(R.string.privd_wizard_step1_substep_1),
@@ -495,6 +502,25 @@ private fun Step1MenuDescription() {
             )
             Text(
                 text = stringResource(R.string.privd_wizard_step1_substep_4),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        Text(
+            text = stringResource(R.string.privd_wizard_step1_variant_dev_enabled_title),
+            color = colors.actionColorSystem,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(top = SW_SECTION_GAP),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_1),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_2),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
             )
