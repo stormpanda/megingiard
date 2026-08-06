@@ -149,19 +149,19 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
     val targetPrimary =
-        remember(isGameFocus, hoveredPrimaryColor) {
+        remember(isGameFocus, hoveredPrimaryColor, colors.accent) {
             if (isGameFocus && hoveredPrimaryColor != null) {
                 Color(hoveredPrimaryColor!!).copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             } else {
-                colors.appBackground
+                colors.accent.copy(alpha = IH_AMBIENT_PRIMARY_ALPHA)
             }
         }
     val targetSecondary =
-        remember(isGameFocus, hoveredSecondaryColor) {
+        remember(isGameFocus, hoveredSecondaryColor, colors.onSurfaceSecondary) {
             if (isGameFocus && hoveredSecondaryColor != null) {
                 Color(hoveredSecondaryColor!!).copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             } else {
-                colors.appBackground
+                colors.onSurfaceSecondary.copy(alpha = IH_AMBIENT_SECONDARY_ALPHA)
             }
         }
 
