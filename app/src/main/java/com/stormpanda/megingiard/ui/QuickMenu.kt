@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -227,9 +228,11 @@ fun QuickMenu(
 
                 if (companionViewMode == CompanionViewMode.MACROPAD) {
                     Spacer(Modifier.height(PM_SECTION_SPACING))
+                    HorizontalDivider(color = colors.controlOverlayBorder)
+                    Spacer(Modifier.height(PM_SECTION_SPACING))
                     QuickMenuActionChip(
                         label = stringResource(R.string.quick_menu_show_dashboard),
-                        icon = Icons.Rounded.Home,
+                        painter = painterResource(R.drawable.ic_megingiard_logo),
                         colors = colors,
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
