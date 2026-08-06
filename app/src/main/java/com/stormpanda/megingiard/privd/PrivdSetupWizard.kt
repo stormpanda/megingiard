@@ -53,6 +53,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -78,6 +79,9 @@ import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
 import com.stormpanda.megingiard.ui.onboarding.OnboardingStepper
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val TAG = "PrivdSetupWizard"
 private val PRD_DIALOG_MAX_WIDTH = 480.dp
@@ -113,6 +117,7 @@ internal fun PrivdSetupWizardDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val colors = LocalAppColors.current
     val stage by viewModel.privdBootstrapStage.collectAsState()
     val lastError by viewModel.privdLastError.collectAsState()
@@ -393,35 +398,48 @@ internal fun PrivdSetupWizardDialog(
                     onClick = {
                         when (step) {
                             0 -> {
-                                val isUsbDebuggingOn =
-                                    Settings.Global.getInt(
-                                        context.contentResolver,
-                                        Settings.Global.ADB_ENABLED,
-                                        0,
-                                    ) != 0
-
-                                val isWirelessDebuggingOn = PrivdBootstrapper.isWirelessDebuggingActive(context)
-
-                                if (!isUsbDebuggingOn || !isWirelessDebuggingOn) {
-                                    step1Error = true
-                                } else {
-                                    step1Error = false
-                                    if (PrivdBootstrapper.hasCredentials(context)) {
-                                        step1Busy = true
-                                        viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
-                                            step1Busy = false
-                                            if (ok) {
-                                                isNextAnimation = true
-                                                step = 3
-                                            } else {
-                                                viewModel.privdResetBootstrapStage()
-                                                isNextAnimation = true
-                                                step = 1
-                                            }
+                                step1Busy = true
+                                scope.launch {
+                                    val (isUsbDebuggingOn, isWirelessDebuggingOn, hasCreds) =
+                                        withContext(Dispatchers.IO) {
+                                            val usb =
+                                                Settings.Global.getInt(
+                                                    context.contentResolver,
+                                                    Settings.Global.ADB_ENABLED,
+                                                    0,
+                                                ) != 0
+                                            val wireless =
+                                                Settings.Global.getInt(
+                                                    context.contentResolver,
+                                                    "adb_wifi_enabled",
+                                                    0,
+                                                ) != 0
+                                            val creds = PrivdBootstrapper.hasCredentials(context)
+                                            Triple(usb, wireless, creds)
                                         }
+
+                                    if (!isUsbDebuggingOn || !isWirelessDebuggingOn) {
+                                        step1Busy = false
+                                        step1Error = true
                                     } else {
-                                        isNextAnimation = true
-                                        step = 1
+                                        step1Error = false
+                                        if (hasCreds) {
+                                            viewModel.privdBootstrap(context, "127.0.0.1") { ok ->
+                                                step1Busy = false
+                                                if (ok) {
+                                                    isNextAnimation = true
+                                                    step = 3
+                                                } else {
+                                                    viewModel.privdResetBootstrapStage()
+                                                    isNextAnimation = true
+                                                    step = 1
+                                                }
+                                            }
+                                        } else {
+                                            step1Busy = false
+                                            isNextAnimation = true
+                                            step = 1
+                                        }
                                     }
                                 }
                             }
