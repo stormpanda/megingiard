@@ -213,6 +213,7 @@ fun QuickMenu(
                     onProfileSelected = { profile ->
                         AppLog.d(TAG, "profile selected: ${profile.id}")
                         MacroPadState.setActiveProfileId(profile.id)
+                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                 )
 
@@ -228,6 +229,7 @@ fun QuickMenu(
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
+                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                 )
 
