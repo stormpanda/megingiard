@@ -29,23 +29,11 @@ enum class CompanionViewMode {
     DASHBOARD,
 }
 
-fun CompanionViewMode.shouldShowIntegrationHome(
-    focusedAppPackageName: String?,
-    focusedRomPath: String?,
-    activeProfile: PadProfile?,
-): Boolean =
+fun CompanionViewMode.shouldShowIntegrationHome(activeProfile: PadProfile?): Boolean =
     when (this) {
-        CompanionViewMode.MACROPAD -> {
-            false
-        }
-
-        CompanionViewMode.DASHBOARD -> {
-            true
-        }
-
-        CompanionViewMode.AUTO -> {
-            focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true
-        }
+        CompanionViewMode.MACROPAD -> false
+        CompanionViewMode.DASHBOARD -> true
+        CompanionViewMode.AUTO -> activeProfile?.association == null
     }
 
 object AppStateManager {
@@ -200,7 +188,6 @@ object AppStateManager {
         if (_isExternalClientActive.value) return
         if (_focusedAppPackageName.value != focusedApp || _focusedRomPath.value != focusedRomPath) {
             AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath")
-            _companionViewMode.value = CompanionViewMode.AUTO
             _focusedAppPackageName.value = focusedApp
             _focusedRomPath.value = focusedRomPath
         }

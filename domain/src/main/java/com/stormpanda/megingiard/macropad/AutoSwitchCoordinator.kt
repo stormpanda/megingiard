@@ -56,6 +56,11 @@ object AutoSwitchCoordinator {
                         }
                     }
                     AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
+                } else {
+                    val currentForeground = _foregroundApp.value
+                    if (currentForeground != null) {
+                        AppStateManager.setStandaloneForegroundState(currentForeground, null)
+                    }
                 }
             }
         }
@@ -128,7 +133,29 @@ object AutoSwitchCoordinator {
         }
 
         if (isRegisteredEmulator && EmulatorDetectionFunnel.activeSession.value != null) {
-            AppLog.d(TAG, "onPackageChanged: active ROM session exists for emulator '$normalized' - skipping generic switch")
+            val session = EmulatorDetectionFunnel.activeSession.value!!
+            AppLog.d(TAG, "onPackageChanged: active ROM session exists for emulator '$normalized' (${session.romPath})")
+            val matchedProfile =
+                MacroPadState.profiles.value.let { profiles ->
+                    profiles.firstOrNull { profile ->
+                        profile.association?.romFileName != null &&
+                            profile.matches(session.packageName, session.romPath, session.systemId)
+                    } ?: profiles.firstOrNull { profile ->
+                        profile.association?.romFileName == null &&
+                            profile.matches(session.packageName, session.romPath, session.systemId)
+                    }
+                }
+            if (matchedProfile != null) {
+                val currentActiveId = MacroPadState.activeProfileId.value
+                if (matchedProfile.id != currentActiveId) {
+                    AppLog.i(
+                        TAG,
+                        "onPackageChanged: auto-switching to profile '${matchedProfile.name}' (id=${matchedProfile.id}) for emulator session (${session.gameTitle})",
+                    )
+                    MacroPadState.setActiveProfileId(matchedProfile.id)
+                }
+            }
+            AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
             return
         }
 

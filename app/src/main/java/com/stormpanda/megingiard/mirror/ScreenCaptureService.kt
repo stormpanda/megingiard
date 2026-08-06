@@ -282,12 +282,10 @@ class ScreenCaptureService : Service() {
 
         scope.launch {
             combine(
-                AppStateManager.focusedAppPackageName,
-                AppStateManager.focusedRomPath,
                 MacroPadState.activeProfile,
                 AppStateManager.companionViewMode,
-            ) { focused, focusedRom, profile, viewMode ->
-                viewMode.shouldShowIntegrationHome(focused, focusedRom, profile)
+            ) { profile, viewMode ->
+                viewMode.shouldShowIntegrationHome(profile)
             }.collect { showIntegrationHome ->
                 if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
                     AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
@@ -660,15 +658,9 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
 
-        val focusedAppPackageName = AppStateManager.focusedAppPackageName.value
-        val focusedRomPath = AppStateManager.focusedRomPath.value
         val activeProfile = MacroPadState.activeProfile.value
         val showIntegrationHome =
-            AppStateManager.companionViewMode.value.shouldShowIntegrationHome(
-                focusedAppPackageName = focusedAppPackageName,
-                focusedRomPath = focusedRomPath,
-                activeProfile = activeProfile,
-            )
+            AppStateManager.companionViewMode.value.shouldShowIntegrationHome(activeProfile)
 
         val shouldShow =
             capturing && validScreen &&

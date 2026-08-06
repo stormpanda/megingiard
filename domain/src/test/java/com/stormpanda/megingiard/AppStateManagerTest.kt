@@ -360,13 +360,25 @@ class AppStateManagerTest {
 
     @Test
     fun `shouldShowIntegrationHome returns expected values across view modes`() {
-        assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome("com.test.game", null, null))
-        assertTrue(CompanionViewMode.DASHBOARD.shouldShowIntegrationHome("com.test.game", null, null))
+        val unassignedProfile = PadProfile(id = "1", name = "Default", layouts = emptyList())
+        val associatedProfile =
+            PadProfile(
+                id = "2",
+                name = "Game",
+                layouts = emptyList(),
+                association =
+                    com.stormpanda.megingiard.macropad
+                        .ProfileAssociation(packageName = "com.test.game"),
+            )
 
-        // AUTO mode: true when focusedApp is null (idle)
-        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(null, null, null))
+        assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome(associatedProfile))
+        assertTrue(CompanionViewMode.DASHBOARD.shouldShowIntegrationHome(associatedProfile))
 
-        // AUTO mode: true when focusedApp has no profile matching
-        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.unmapped.app", null, null))
+        // AUTO mode: true when activeProfile is null or has no association
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(null))
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(unassignedProfile))
+
+        // AUTO mode: false when activeProfile has an associated game/app
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome(associatedProfile))
     }
 }
