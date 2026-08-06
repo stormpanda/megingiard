@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -177,6 +178,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
 
     val batteryState = rememberBatteryState()
     var timeText by remember { mutableStateOf("") }
+    var showHomeHelp by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -282,6 +284,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         color = colors.onSurfaceSecondary,
                         fontWeight = FontWeight.Bold,
                     )
+
+                    HelpIconButton(onClick = { showHomeHelp = true })
                 }
             }
 
@@ -349,6 +353,64 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 )
             }
         }
+
+        CompanionHomeHelpModal(
+            visible = showHomeHelp,
+            onDismiss = { showHomeHelp = false },
+        )
+    }
+}
+
+@Composable
+private fun CompanionHomeHelpModal(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+) {
+    HelpModal(
+        visible = visible,
+        title = stringResource(R.string.help_companion_home_title),
+        onDismiss = onDismiss,
+    ) {
+        HelpIntro(stringResource(R.string.help_companion_home_intro))
+
+        HelpSection(stringResource(R.string.help_companion_home_sec_hero))
+        HelpEntry(
+            icon = Icons.Rounded.Visibility,
+            label = stringResource(R.string.integration_home_show_macropad),
+            description = stringResource(R.string.help_companion_home_hero_show_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Edit,
+            label = stringResource(R.string.integration_home_edit_layout),
+            description = stringResource(R.string.help_companion_home_hero_edit_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Link,
+            label = stringResource(R.string.integration_home_link_existing),
+            description = stringResource(R.string.help_companion_home_hero_link_desc),
+        )
+
+        HelpSection(stringResource(R.string.help_companion_home_sec_tools))
+        HelpEntry(
+            icon = Icons.Rounded.Gamepad,
+            label = stringResource(R.string.integration_home_tool_macropad),
+            description = stringResource(R.string.help_companion_home_macropad_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Settings,
+            label = stringResource(R.string.integration_home_tool_settings),
+            description = stringResource(R.string.help_companion_home_settings_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Keyboard,
+            label = stringResource(R.string.integration_home_tool_keyboard),
+            description = stringResource(R.string.help_companion_home_keyboard_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.TouchApp,
+            label = stringResource(R.string.integration_home_tool_touchpad),
+            description = stringResource(R.string.help_companion_home_touchpad_desc),
+        )
     }
 }
 
@@ -395,7 +457,7 @@ private fun HeroCompanionCard(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = if (hasActiveGame) Icons.Rounded.SportsEsports else Icons.Rounded.Gamepad,
+                        imageVector = if (hasActiveGame) Icons.Rounded.TrackChanges else Icons.Rounded.Gamepad,
                         contentDescription = null,
                         tint = colors.accent,
                         modifier = Modifier.size(IH_HERO_ICON_SIZE),
