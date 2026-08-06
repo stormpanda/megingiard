@@ -18,24 +18,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.HelpOutline
-import androidx.compose.material.icons.rounded.Accessibility
-import androidx.compose.material.icons.rounded.Airplay
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryFull
 import androidx.compose.material.icons.rounded.Gamepad
-import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Keyboard
-import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
@@ -53,7 +45,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,10 +70,7 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
-import com.stormpanda.megingiard.privd.PrivdManager
-import com.stormpanda.megingiard.privd.PrivdState
 import kotlinx.coroutines.delay
 import java.io.File
 import java.time.LocalDateTime
@@ -97,14 +85,9 @@ private val IH_PADDING_CARD = 16.dp
 private val IH_PADDING_SCREEN = 20.dp
 private val IH_PADDING_HEADER_TOP = 12.dp
 private val IH_PADDING_HEADER_BOTTOM = 8.dp
-private val IH_SCROLL_TOP_MARGIN = 8.dp
-private val IH_SCROLL_BOTTOM_MARGIN = 24.dp
 private val IH_SPACING_CARD = 12.dp
 private val IH_SPACING_SECTION = 16.dp
 private val IH_SPACING_GRID = 12.dp
-private val IH_SPACING_STATUS = 8.dp
-private val IH_STATUS_DOT_SIZE = 10.dp
-private val IH_STATUS_ICON_SIZE = 22.dp
 private val IH_HERO_ICON_SIZE = 32.dp
 private val IH_HERO_ICON_BG_SIZE = 56.dp
 private val IH_DECK_ICON_BG_SIZE = 44.dp
@@ -122,15 +105,10 @@ private const val IH_BATTERY_MAX = 100
 
 private val IH_BORDER_WIDTH = 1.dp
 private val IH_BUTTON_CORNER_RADIUS = 10.dp
-private val IH_SCROLL_FADE_TOP_HEIGHT = 20.dp
-private val IH_SCROLL_FADE_BOTTOM_HEIGHT = 36.dp
-private const val IH_SCROLL_FADE_BOTTOM_ALPHA = 0.7f
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
-private const val IH_INACTIVE_DOT_ALPHA = 0.4f
 private val IH_BUTTON_SPACING = 10.dp
 
 private val IH_BATTERY_LOW_COLOR = Color(0xFFE57373)
-private val IH_STATUS_ACTIVE_COLOR = Color(0xFF81C784)
 
 @Composable
 fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
@@ -141,11 +119,9 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val activeProfile by MacroPadState.activeProfile.collectAsState()
     val hoveredAppLabel by AppStateManager.hoveredAppLabel.collectAsState()
 
-    val privdState by PrivdManager.state.collectAsState()
-    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
-    val isAccessibilityActive by AppStateManager.isAccessibilityActive.collectAsState()
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
+    val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
 
     val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
     val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
@@ -216,8 +192,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     )
                 },
     ) {
-        // Top Header Row (Clock on Left, Battery on Right)
-        Row(
+        // Top Header Row (Clock on Left, "Megingiard" in Dead Center, Battery on Right)
+        Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -227,8 +203,6 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         end = IH_PADDING_SCREEN,
                         bottom = IH_PADDING_HEADER_BOTTOM,
                     ),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Clock (Upper Left)
             Text(
@@ -236,10 +210,21 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.titleLarge,
                 color = colors.onSurfaceSecondary,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.CenterStart),
+            )
+
+            // "Megingiard" (Dead Center)
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                color = colors.onSurface,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Center),
             )
 
             // Battery Indicator (Upper Right)
             Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(IH_BATTERY_SPACING),
             ) {
@@ -271,126 +256,67 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        Box(
+        // Main Non-Scrollable Content Layout
+        Column(
             modifier =
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(
+                        start = IH_PADDING_SCREEN,
+                        end = IH_PADDING_SCREEN,
+                        top = IH_PADDING_HEADER_BOTTOM,
+                        bottom = IH_PADDING_SCREEN,
+                    ),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val scrollState = rememberScrollState()
-            val canScrollUp by remember { derivedStateOf { scrollState.value > 0 } }
+            // 1. Featured Hero Game / Companion Card
+            val profiles by MacroPadState.profiles.collectAsState()
 
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(start = IH_PADDING_SCREEN, end = IH_PADDING_SCREEN),
-                verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .verticalScroll(scrollState)
-                                .padding(top = IH_SCROLL_TOP_MARGIN),
-                        verticalArrangement = Arrangement.spacedBy(IH_SPACING_SECTION),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        // 1. Featured Hero Game / Companion Card
-                        val profiles by MacroPadState.profiles.collectAsState()
+            val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName
+            val targetLabel =
+                hoveredAppLabel ?: activeSession?.gameTitle ?: lastDetectedSession?.let { s ->
+                    s.romPath?.let { File(it).name } ?: s.gameTitle
+                }
+            val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath
+            val targetSystem = hoveredSystemId ?: activeSession?.systemId ?: lastDetectedSession?.systemId
 
-                        val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName
-                        val targetLabel =
-                            hoveredAppLabel ?: activeSession?.gameTitle ?: lastDetectedSession?.let { s ->
-                                s.romPath?.let { File(it).name } ?: s.gameTitle
-                            }
-                        val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath
-                        val targetSystem = hoveredSystemId ?: activeSession?.systemId ?: lastDetectedSession?.systemId
-
-                        val associatedProfile =
-                            remember(profiles, targetPkg, targetRom, targetSystem) {
-                                if (targetPkg == null) {
-                                    null
-                                } else {
-                                    profiles.firstOrNull { profile ->
-                                        profile.association?.romFileName != null &&
-                                            profile.matches(targetPkg, targetRom, targetSystem)
-                                    } ?: profiles.firstOrNull { profile ->
-                                        profile.association?.romFileName == null &&
-                                            profile.matches(targetPkg, targetRom, targetSystem)
-                                    }
-                                }
-                            }
-
-                        HeroCompanionCard(
-                            targetPackage = targetPkg,
-                            targetLabel = targetLabel,
-                            targetRomPath = targetRom,
-                            targetSystemId = targetSystem,
-                            associatedProfile = associatedProfile,
-                            activeProfile = activeProfile,
-                            profiles = profiles,
-                            colors = colors,
-                        )
-
-                        // 2. Companion Tools Quick Deck (2x2 Grid of Cards)
-                        CompanionToolsDeck(
-                            activeProfile = activeProfile,
-                            isCapturing = isCapturing,
-                            isFullscreenKeyboardActive = isFullscreenKeyboardActive,
-                            isFullscreenMouseActive = isFullscreenMouseActive,
-                            colors = colors,
-                        )
-
-                        // 3. Companion System Status & Actions Card
-                        CompanionStatusCard(
-                            privdState = privdState,
-                            isCapturing = isCapturing,
-                            isAccessibilityActive = isAccessibilityActive,
-                            colors = colors,
-                        )
-
-                        Spacer(modifier = Modifier.height(IH_SCROLL_BOTTOM_MARGIN))
+            val associatedProfile =
+                remember(profiles, targetPkg, targetRom, targetSystem) {
+                    if (targetPkg == null) {
+                        null
+                    } else {
+                        profiles.firstOrNull { profile ->
+                            profile.association?.romFileName != null &&
+                                profile.matches(targetPkg, targetRom, targetSystem)
+                        } ?: profiles.firstOrNull { profile ->
+                            profile.association?.romFileName == null &&
+                                profile.matches(targetPkg, targetRom, targetSystem)
+                        }
                     }
                 }
-            }
 
-            // Top fade indicator
-            if (canScrollUp) {
-                Box(
-                    modifier =
-                        Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .height(IH_SCROLL_FADE_TOP_HEIGHT)
-                            .background(
-                                brush =
-                                    Brush.verticalGradient(
-                                        colors = listOf(colors.appBackground, Color.Transparent),
-                                    ),
-                            ),
-                )
-            }
+            HeroCompanionCard(
+                targetPackage = targetPkg,
+                targetLabel = targetLabel,
+                targetRomPath = targetRom,
+                targetSystemId = targetSystem,
+                associatedProfile = associatedProfile,
+                activeProfile = activeProfile,
+                profiles = profiles,
+                colors = colors,
+            )
 
-            // Bottom fade indicator
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(IH_SCROLL_FADE_BOTTOM_HEIGHT)
-                        .drawBehind {
-                            drawRect(
-                                brush =
-                                    Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = IH_SCROLL_FADE_BOTTOM_ALPHA)),
-                                    ),
-                            )
-                        },
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 2. Companion Tools 2x2 Grid (Anchored at Bottom)
+            CompanionToolsDeck(
+                activeProfile = activeProfile,
+                isFullscreenKeyboardActive = isFullscreenKeyboardActive,
+                isGlobalSettingsOpen = isGlobalSettingsOpen,
+                isFullscreenMouseActive = isFullscreenMouseActive,
+                colors = colors,
             )
         }
     }
@@ -690,8 +616,8 @@ private fun HeroCompanionCard(
 @Composable
 private fun CompanionToolsDeck(
     activeProfile: PadProfile?,
-    isCapturing: Boolean,
     isFullscreenKeyboardActive: Boolean,
+    isGlobalSettingsOpen: Boolean,
     isFullscreenMouseActive: Boolean,
     colors: AppColors,
 ) {
@@ -706,11 +632,12 @@ private fun CompanionToolsDeck(
             fontWeight = FontWeight.SemiBold,
         )
 
+        // Top Row: Show Active Profile (Top Left) & Global Settings (Top Right)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(IH_SPACING_GRID),
         ) {
-            // Card 1: MacroPad
+            // Top Left: Show Active Profile (MacroPad)
             ToolCard(
                 title = stringResource(R.string.integration_home_tool_macropad),
                 subtitle = activeProfile?.name ?: stringResource(R.string.integration_home_macropad_desc),
@@ -721,23 +648,24 @@ private fun CompanionToolsDeck(
                 onClick = { AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD) },
             )
 
-            // Card 2: Touchpad
+            // Top Right: Global Settings
             ToolCard(
-                title = stringResource(R.string.integration_home_tool_touchpad),
-                subtitle = stringResource(R.string.integration_home_touchpad_desc),
-                icon = Icons.Rounded.TouchApp,
-                isActive = isFullscreenMouseActive,
+                title = stringResource(R.string.integration_home_tool_settings),
+                subtitle = stringResource(R.string.integration_home_settings_desc),
+                icon = Icons.Rounded.Settings,
+                isActive = isGlobalSettingsOpen,
                 colors = colors,
                 modifier = Modifier.weight(1f),
-                onClick = { AppStateManager.setFullscreenMouseActive(!isFullscreenMouseActive) },
+                onClick = { AppStateManager.setGlobalSettingsOpen(true) },
             )
         }
 
+        // Bottom Row: Keyboard (Bottom Left) & Touchpad (Bottom Right)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(IH_SPACING_GRID),
         ) {
-            // Card 3: Virtual Keyboard
+            // Bottom Left: Keyboard
             ToolCard(
                 title = stringResource(R.string.integration_home_tool_keyboard),
                 subtitle = stringResource(R.string.integration_home_keyboard_desc),
@@ -748,28 +676,15 @@ private fun CompanionToolsDeck(
                 onClick = { AppStateManager.setFullscreenKeyboardActive(!isFullscreenKeyboardActive) },
             )
 
-            // Card 4: Screen Mirror
+            // Bottom Right: Touchpad
             ToolCard(
-                title = stringResource(R.string.integration_home_tool_mirror),
-                subtitle =
-                    if (isCapturing) {
-                        stringResource(
-                            R.string.integration_home_status_active,
-                        )
-                    } else {
-                        stringResource(R.string.integration_home_status_inactive)
-                    },
-                icon = Icons.Rounded.Airplay,
-                isActive = isCapturing,
+                title = stringResource(R.string.integration_home_tool_touchpad),
+                subtitle = stringResource(R.string.integration_home_touchpad_desc),
+                icon = Icons.Rounded.TouchApp,
+                isActive = isFullscreenMouseActive,
                 colors = colors,
                 modifier = Modifier.weight(1f),
-                onClick = {
-                    if (isCapturing) {
-                        AppStateManager.requestMirrorStop()
-                    } else {
-                        AppStateManager.requestMirrorStart()
-                    }
-                },
+                onClick = { AppStateManager.setFullscreenMouseActive(!isFullscreenMouseActive) },
             )
         }
     }
@@ -820,6 +735,7 @@ private fun ToolCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = colors.onSurface,
                     fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                 )
                 Text(
                     text = subtitle,
@@ -827,114 +743,6 @@ private fun ToolCard(
                     color = if (isActive) colors.accent else colors.onSurfaceSecondary,
                     maxLines = 1,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompanionStatusCard(
-    privdState: PrivdState,
-    isCapturing: Boolean,
-    isAccessibilityActive: Boolean,
-    colors: AppColors,
-) {
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .border(IH_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = IH_CARD_SHAPE),
-        shape = IH_CARD_SHAPE,
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
-    ) {
-        Column(
-            modifier = Modifier.padding(IH_PADDING_CARD),
-            verticalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
-        ) {
-            Text(
-                text = stringResource(R.string.integration_home_status_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.onSurfaceSecondary,
-                fontWeight = FontWeight.SemiBold,
-            )
-
-            // Privileged Daemon Row
-            StatusRow(
-                label = stringResource(R.string.integration_home_status_privd),
-                icon = Icons.Rounded.LockOpen,
-                isActive = privdState == PrivdState.RUNNING,
-                activeLabel = stringResource(R.string.integration_home_status_running),
-                inactiveLabel = stringResource(R.string.integration_home_status_stopped),
-                colors = colors,
-            )
-
-            // Mirror Session Row
-            StatusRow(
-                label = stringResource(R.string.integration_home_status_mirror),
-                icon = Icons.Rounded.Airplay,
-                isActive = isCapturing,
-                activeLabel = stringResource(R.string.integration_home_status_active),
-                inactiveLabel = stringResource(R.string.integration_home_status_inactive),
-                colors = colors,
-            )
-
-            // Accessibility Service Row
-            StatusRow(
-                label = stringResource(R.string.integration_home_status_accessibility),
-                icon = Icons.Rounded.Accessibility,
-                isActive = isAccessibilityActive,
-                activeLabel = stringResource(R.string.integration_home_status_active),
-                inactiveLabel = stringResource(R.string.integration_home_status_inactive),
-                colors = colors,
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_SPACING),
-            ) {
-                OutlinedButton(
-                    onClick = { AppStateManager.setGlobalSettingsOpen(true) },
-                    modifier = Modifier.weight(1f),
-                    border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = colors.onSurface,
-                        ),
-                    shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Settings,
-                        contentDescription = null,
-                        modifier = Modifier.size(IH_STATUS_ICON_SIZE).padding(end = 4.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.integration_home_settings),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = { AppStateManager.openQuickMenu() },
-                    modifier = Modifier.weight(1f),
-                    border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
-                    colors =
-                        ButtonDefaults.outlinedButtonColors(
-                            contentColor = colors.onSurface,
-                        ),
-                    shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(IH_STATUS_ICON_SIZE).padding(end = 4.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.integration_home_help),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
             }
         }
     }
@@ -985,58 +793,4 @@ private fun rememberBatteryState(): BatteryState {
         }
     }
     return batteryState
-}
-
-@Composable
-private fun StatusRow(
-    label: String,
-    icon: ImageVector,
-    isActive: Boolean,
-    activeLabel: String,
-    inactiveLabel: String,
-    colors: AppColors,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(IH_SPACING_STATUS),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(IH_STATUS_ICON_SIZE),
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                color = colors.onSurface,
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(IH_SPACING_STATUS),
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(IH_STATUS_DOT_SIZE)
-                        .clip(CircleShape)
-                        .background(
-                            if (isActive) IH_STATUS_ACTIVE_COLOR else colors.onSurfaceSecondary.copy(alpha = IH_INACTIVE_DOT_ALPHA),
-                        ),
-            )
-            Text(
-                text = if (isActive) activeLabel else inactiveLabel,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isActive) colors.accent else colors.onSurfaceSecondary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
 }

@@ -1245,6 +1245,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_tool_macropad">MacroPad</string>
     <string name="integration_home_tool_touchpad">Touchpad</string>
     <string name="integration_home_tool_keyboard">Tastatur</string>
+    <string name="integration_home_tool_settings">Einstellungen</string>
+    <string name="integration_home_settings_desc">App-Einstellungen</string>
     <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
     <string name="quick_menu_show_dashboard">Dashboard anzeigen</string>
 </resources>
