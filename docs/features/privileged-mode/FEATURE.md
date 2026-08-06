@@ -52,7 +52,8 @@ every device since Android 11 (API 30).
 
 - After a successful first-time setup, the app MUST silently re-open the
   daemon socket on every cold start so users do not need to re-run the
-  wizard after each reboot. Auto-connect is unconditionally active.
+  wizard after each reboot. Auto-connect is unconditionally active, and showing
+  the reconnection prompt upon daemon failure or service deactivation is standard behavior.
 
 ### FR-PV7: Mandatory Accessibility Service & Dynamic Reconnection Wizard
 
@@ -63,11 +64,14 @@ every device since Android 11 (API 30).
   - **Privileged Mode Step**: **Optional**. Excluded dynamically if Privileged Mode is already in the `RUNNING` state and only Accessibility Service is missing. Included if Privileged Mode is disconnected or in `FAILED` state.
   - **Finished Step**: Displays "You're all set!" with a "Close" finish button.
 
-### FR-PV8: Accessibility Pairing Auto-Fill
+### FR-PV8: 4-Step Manual Setup Wizard & Connect Port Entry
 
-- Step 2 (`StepPair`) of the setup wizard MUST provide an **Auto-fill (read screen)** button.
-- When activated or when entering Step 2, the app MUST inspect visible accessibility text nodes on the primary display (Display 0) via `MegingiardAccessibilityService.scanActiveWindowText(Display.DEFAULT_DISPLAY)`.
-- Using `PrivdPairScreenTextScanner` regex parsing, the app MUST automatically extract the 6-digit pairing code and 5-digit pairing port from the system Wireless Debugging "Pair device with pairing code" dialog and populate the text fields — with zero APK size overhead.
+- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions):
+  - **Step 1 (Menu Description)**: Displays instructions for navigating to Developer Options -> Wireless Debugging with an "Open system settings" button.
+  - **Step 2 (Connect Port)**: Provides an input field for the Wireless Debugging **Connect Port** (5 digits).
+  - **Step 3 (Pairing Code & Pairing Port)**: Provides input fields for **WiFi pairing code** (6 digits) and **Pairing port** (5 digits), triggering pairing and bootstrapping with live stage progress checklist.
+  - **Step 4 (You're All Set)**: Reuses `FinishedStepContent` to display completion confirmation ("You're all set! Privileged Mode is ready.").
+- Step 2 and Step 3 provide **Back** buttons to navigate to preceding steps, and the **Pair** button on Step 3 triggers `PrivdBootstrapper` pairing (`127.0.0.1:<PairPort>`) and bootstrap.
 
 ### FR-PV9: Multi-Stage Privileged Mode Auto-Setup & Onboarding Tour Integration
 

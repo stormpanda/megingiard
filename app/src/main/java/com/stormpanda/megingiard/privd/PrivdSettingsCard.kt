@@ -50,6 +50,7 @@ import com.stormpanda.megingiard.settings.RememberSettingRow
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
+import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
@@ -91,58 +92,32 @@ private val PR_DIALOG_PCT_WIDTH = 52.dp
 internal fun PrivdSettingsCard(
     viewModel: GlobalSettingsViewModel,
     onShowWizard: () -> Unit,
-    onShowDeadzoneDialog: () -> Unit,
 ) {
     val state by viewModel.privdState.collectAsState()
-    val lastError by viewModel.privdLastError.collectAsState()
-
-    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
-    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
-    val showAdbPrompt by viewModel.privdShowAdbPrompt.collectAsState()
     val colors = LocalAppColors.current
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
-    var pingResult by remember { mutableStateOf<Boolean?>(null) }
-    var isPinging by remember { mutableStateOf(false) }
-
-    val wirelessDebuggingActive by viewModel.isWirelessDebuggingActive.collectAsState()
-    val hasCredentials by viewModel.hasCredentials.collectAsState()
-
-    LaunchedEffect(state) {
-        viewModel.checkPrivilegedModeStatus(context)
-    }
-
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .padding(PR_CARD_PADDING),
-    ) {
-        // ── Status row ──────────────────────────────────────────────────────
-        Column {
-            val (dotColor, label) =
+    AppSettingsRow {
+        Column(modifier = Modifier.weight(1f)) {
+            val (dotColor, textColor, label) =
                 when (state) {
                     PrivdState.OFF -> {
-                        colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
+                        Triple(colors.onSurfaceSecondary, colors.onSurfaceSecondary, stringResource(R.string.privd_status_off))
                     }
 
                     PrivdState.BOOTSTRAPPING -> {
-                        colors.accent to stringResource(R.string.privd_status_bootstrapping)
+                        Triple(colors.accent, colors.accent, stringResource(R.string.privd_status_bootstrapping))
                     }
 
                     PrivdState.CONNECTING -> {
-                        colors.accent to stringResource(R.string.privd_status_connecting)
+                        Triple(colors.accent, colors.accent, stringResource(R.string.privd_status_connecting))
                     }
 
                     PrivdState.RUNNING -> {
-                        colors.actionColorSystem to
-                            stringResource(R.string.privd_status_running, PrivdConstants.PRIVD_VERSION)
+                        Triple(colors.accent, colors.accent, stringResource(R.string.privd_status_running, PrivdConstants.PRIVD_VERSION))
                     }
 
                     PrivdState.FAILED -> {
-                        colors.error to stringResource(R.string.privd_status_failed)
+                        Triple(colors.error, colors.error, stringResource(R.string.privd_status_failed))
                     }
                 }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -161,157 +136,65 @@ internal fun PrivdSettingsCard(
             }
             Text(
                 text = label,
+                color = textColor,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.privd_description),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        Spacer(Modifier.height(PR_BUTTON_GAP))
-        Text(
-            text = stringResource(R.string.privd_description),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
 
-        Spacer(Modifier.height(PR_BUTTON_GAP))
-
-        // ── Action buttons ──────────────────────────────────────────────────
-        Row(horizontalArrangement = Arrangement.spacedBy(PR_BUTTON_GAP)) {
-            if (state == PrivdState.RUNNING) {
-                OutlinedButton(onClick = { viewModel.privdDisconnect() }) {
-                    Text(stringResource(R.string.privd_action_disconnect))
-                }
-                Button(onClick = {
-                    pingResult = null
-                    isPinging = true
-                    scope.launch {
-                        val ok = withContext(Dispatchers.IO) { PrivdClient.ping() }
-                        isPinging = false
-                        pingResult = ok
-                    }
-                }, enabled = !isPinging) {
-                    if (isPinging) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(PR_PING_SPINNER_SIZE),
-                            strokeWidth = PR_PING_SPINNER_STROKE.dp,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    } else {
-                        Text(stringResource(R.string.privd_action_test))
-                    }
-                }
-            } else {
-                Button(
-                    onClick = { viewModel.privdConnect(context) },
-                    enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
-                ) {
-                    Text(stringResource(R.string.privd_action_connect))
-                }
-            }
-            TextButton(onClick = onShowWizard) {
+        if (state != PrivdState.RUNNING) {
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = onShowWizard,
+                enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
+            ) {
                 Text(stringResource(R.string.privd_action_show_wizard))
             }
         }
+    }
+}
 
-        // ── Ping result / Status Guidance ──────────────────────────────────
-        if (pingResult != null) {
-            val ok = pingResult!!
-            Spacer(Modifier.height(PR_BUTTON_GAP))
+@Composable
+internal fun PrivdDeadzoneSettingsRow(
+    deadzoneLeft: Float,
+    deadzoneRight: Float,
+    onClick: () -> Unit,
+) {
+    val colors = LocalAppColors.current
+    AppSettingsRow(onClick = onClick) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.privd_deadzone_title),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = stringResource(R.string.privd_deadzone_desc),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
             Text(
                 text =
                     stringResource(
-                        if (ok) R.string.privd_ping_ok else R.string.privd_ping_fail,
+                        R.string.privd_deadzone_values,
+                        (deadzoneLeft * 100).roundToInt(),
+                        (deadzoneRight * 100).roundToInt(),
                     ),
-                color = if (ok) colors.actionColorSystem else colors.error,
+                color = colors.accent,
                 style = MaterialTheme.typography.bodySmall,
             )
-        } else {
-            val specificErrorRes =
-                if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
-                    when (lastError) {
-                        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
-                        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
-                        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
-                        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
-                        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
-                        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
-                        PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
-                        PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
-                        else -> null
-                    }
-                } else {
-                    null
-                }
-
-            val infoStringRes =
-                when {
-                    state == PrivdState.RUNNING -> R.string.privd_info_running
-                    state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
-                    hasCredentials == false -> R.string.privd_info_no_credentials
-                    wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
-                    specificErrorRes != null -> specificErrorRes
-                    wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
-                    else -> null
-                }
-            infoStringRes?.let { resId ->
-                val textColor =
-                    when {
-                        state == PrivdState.RUNNING -> colors.actionColorSystem
-                        hasCredentials == false -> colors.onSurfaceSecondary
-                        wirelessDebuggingActive == false -> colors.error
-                        specificErrorRes != null -> colors.error
-                        else -> colors.actionColorSystem
-                    }
-                Spacer(Modifier.height(PR_BUTTON_GAP))
-                Text(
-                    text = stringResource(resId),
-                    color = textColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
         }
-
-        AppDivider()
-        RememberSettingRow(
-            label = stringResource(R.string.privd_show_reconnect_prompt),
-            description = stringResource(R.string.privd_show_reconnect_prompt_desc),
-            checked = showAdbPrompt,
-            onCheckedChange = { viewModel.setPrivdShowAdbPrompt(it) },
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(PR_ARROW_ICON_SIZE),
         )
-
-        // ── Dead-zone configuration row ──────────────────────────────────────
-        AppDivider()
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onShowDeadzoneDialog() }
-                    .padding(vertical = PR_ROW_V_PADDING),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.privd_deadzone_title),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text =
-                        stringResource(
-                            R.string.privd_deadzone_desc,
-                            (deadzoneLeft * 100).toInt(),
-                            (deadzoneRight * 100).toInt(),
-                        ),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(PR_ARROW_ICON_SIZE),
-            )
-        }
     }
 }
 

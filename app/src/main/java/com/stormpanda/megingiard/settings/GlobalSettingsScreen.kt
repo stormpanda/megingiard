@@ -68,6 +68,7 @@ import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.DeadzoneDialog
+import com.stormpanda.megingiard.privd.PrivdDeadzoneSettingsRow
 import com.stormpanda.megingiard.privd.PrivdSettingsCard
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppDivider
@@ -110,6 +111,8 @@ fun GlobalSettingsScreen(
     val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
+    val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
+    val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
     val colors = LocalAppColors.current
@@ -247,11 +250,11 @@ fun GlobalSettingsScreen(
                     selectedSectionFilter = selectedSectionFilter,
                     onSelectAll = { selectedSectionFilter = null },
                     onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
+                    onSelectInput = { selectedSectionFilter = SettingsSectionFilter.INPUT },
                     onSelectAutomation = { selectedSectionFilter = SettingsSectionFilter.AUTOMATION },
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
-                    onSelectPrivilegedMode = { selectedSectionFilter = SettingsSectionFilter.PRIVILEGED_MODE },
                     onSelectDiagnostics = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
@@ -271,6 +274,11 @@ fun GlobalSettingsScreen(
                             },
                         )
                         AppDivider()
+                        PrivdSettingsCard(
+                            viewModel = viewModel,
+                            onShowWizard = { showPrivdWizard = true },
+                        )
+                        AppDivider()
                         LanguagePickerRow(
                             language = appLanguage,
                             accentColor = effectiveAccent,
@@ -284,13 +292,6 @@ fun GlobalSettingsScreen(
                             onCheckedChange = { viewModel.setExcludeFromRecents(it) },
                         )
                         AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
-                            description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
-                            checked = gamepadSwapFaceButtons,
-                            onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
-                        )
-                        AppDivider()
                         SteamGridDbTokenRow(
                             token = steamGridDbApiToken,
                             onTokenChanged = { viewModel.setSteamGridDbApiToken(it) },
@@ -299,15 +300,22 @@ fun GlobalSettingsScreen(
                     }
                 }
 
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.PRIVILEGED_MODE) {
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.INPUT) {
                     SettingsSection(
-                        title = stringResource(R.string.settings_section_privileged_mode),
+                        title = stringResource(R.string.settings_section_input),
                         colors = colors,
                     ) {
-                        PrivdSettingsCard(
-                            viewModel = viewModel,
-                            onShowWizard = { showPrivdWizard = true },
-                            onShowDeadzoneDialog = { showDeadzoneDialog = true },
+                        RememberSettingRow(
+                            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
+                            description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
+                            checked = gamepadSwapFaceButtons,
+                            onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                        )
+                        AppDivider()
+                        PrivdDeadzoneSettingsRow(
+                            deadzoneLeft = deadzoneLeft,
+                            deadzoneRight = deadzoneRight,
+                            onClick = { showDeadzoneDialog = true },
                         )
                     }
                 }
@@ -773,6 +781,10 @@ private fun GlobalSettingsHelpModal(
             description = stringResource(R.string.settings_start_welcome_tour_desc),
         )
         HelpEntry(
+            label = stringResource(R.string.privd_title),
+            description = stringResource(R.string.help_settings_privd_desc),
+        )
+        HelpEntry(
             label = stringResource(R.string.settings_language),
             description = stringResource(R.string.help_settings_language_desc),
         )
@@ -780,19 +792,11 @@ private fun GlobalSettingsHelpModal(
             label = stringResource(R.string.settings_exclude_from_recents),
             description = stringResource(R.string.help_settings_recents_desc),
         )
+
+        HelpSection(stringResource(R.string.settings_section_input))
         HelpEntry(
             label = stringResource(R.string.settings_gamepad_swap_face_buttons),
             description = stringResource(R.string.help_settings_gamepad_swap_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_privileged_mode))
-        HelpEntry(
-            label = stringResource(R.string.privd_title),
-            description = stringResource(R.string.help_settings_privd_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_show_reconnect_prompt),
-            description = stringResource(R.string.help_settings_reconnect_prompt_desc),
         )
         HelpEntry(
             label = stringResource(R.string.privd_deadzone_title),

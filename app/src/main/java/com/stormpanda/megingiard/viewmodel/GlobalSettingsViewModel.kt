@@ -58,7 +58,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val privdLastError: StateFlow<PrivdError?> = PrivdManager.lastError
     val privdDeadzoneLeft: StateFlow<Float> = MacroPadSettings.deadzoneLeft
     val privdDeadzoneRight: StateFlow<Float> = MacroPadSettings.deadzoneRight
-    val privdShowAdbPrompt: StateFlow<Boolean> = MacroPadSettings.privdShowAdbPrompt
     val privdBootstrapStage: StateFlow<BootstrapStage> = PrivdBootstrapper.stage
 
     private val _isWirelessDebuggingActive = MutableStateFlow<Boolean?>(null)
@@ -113,8 +112,6 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setPrivdDeadzoneLeft(value: Float) = MacroPadSettings.setDeadzoneLeft(value)
 
     fun setPrivdDeadzoneRight(value: Float) = MacroPadSettings.setDeadzoneRight(value)
-
-    fun setPrivdShowAdbPrompt(value: Boolean) = MacroPadSettings.setPrivdShowAdbPrompt(value)
 
     fun privdResetBootstrapStage() = PrivdBootstrapper.resetStage()
 

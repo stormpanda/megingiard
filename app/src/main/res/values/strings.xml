@@ -364,7 +364,7 @@ Open Settings to create a layout.</string>
     <string name="privd_action_connect">Connect</string>
     <string name="privd_action_disconnect">Disconnect</string>
     <string name="privd_action_test">Test connection</string>
-    <string name="privd_action_show_wizard">Set up…</string>
+    <string name="privd_action_show_wizard">Set up</string>
     <string name="privd_action_test_autotoggle">Test Auto-Toggle</string>
     <string name="privd_action_auto_setup">Auto Setup</string>
     <string name="privd_action_retry">Retry Auto Setup</string>
@@ -383,9 +383,9 @@ Open Settings to create a layout.</string>
 
 
 
-    <!-- Dead-zone settings row + dialog -->
     <string name="privd_deadzone_title">Configure dead zones</string>
-    <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
+    <string name="privd_deadzone_desc">To ensure perfectly matching replay of analog inputs in macros, align the dead zones to what is configured in the Thor\'s settings.</string>
+    <string name="privd_deadzone_values">Left stick: %1$d%%  ·  Right stick: %2$d%%</string>
     <string name="privd_deadzone_dialog_title">Gamepad dead zones</string>
     <string name="privd_deadzone_dialog_hint">Open the Thor\'s built-in Settings app → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius to look up the values for each stick, then enter them below.</string>
     <string name="privd_deadzone_left">Left stick</string>
@@ -411,22 +411,36 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_bootstrapping">Bootstrapping…</string>
 
     <string name="privd_wizard_step1_intro">Follow these steps to enable Wireless Debugging:</string>
+    <string name="privd_wizard_step1_variant_dev_disabled_title">If Developer options are NOT active yet:</string>
     <string name="privd_wizard_step1_substep_1">1. Open Settings → About handheld console</string>
     <string name="privd_wizard_step1_substep_2">2. Tap Build number 7 times until "You are now a developer!" appears</string>
     <string name="privd_wizard_step1_substep_3">3. Go back → System → Developer options</string>
-    <string name="privd_wizard_step1_substep_4">4. Enable Wireless debugging and turn it ON</string>
-    <string name="privd_wizard_step1_substep_5">5. Tap \"Pair device with pairing code\" and keep that dialog open</string>
+    <string name="privd_wizard_step1_substep_4">4. Enable USB debugging and turn it ON</string>
+    <string name="privd_wizard_step1_substep_5">5. Enable Wireless debugging and turn it ON</string>
+    <string name="privd_wizard_step1_variant_dev_enabled_title">If Developer options are ALREADY active:</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_1">1. Open Settings → System → Developer options</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_2">2. Enable USB debugging and turn it ON</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_3">3. Enable Wireless debugging and turn it ON</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
+    <string name="privd_wizard_step1_error_missing_toggles">Please enable both USB Debugging and Wireless Debugging in Developer Options to continue.</string>
 
-    <string name="privd_wizard_step2_intro">Tap \"Pair device with pairing code\" in the Wireless Debugging settings. Enter the pairing port and 6-digit code shown in that dialog.</string>
-    <string name="privd_wizard_field_pair_port">Port (5 digits after \":\", without IP address)</string>
+    <string name="privd_wizard_step2_intro">Enter the connect port from the Wireless Debugging menu, and the pairing code and pairing port from the \"Pair device with pairing code\" dialog.</string>
+    <string name="privd_wizard_step2_connect_intro">Enter the 5-digit connect port shown under \"IP address &amp; Port\" on the main Wireless Debugging menu.</string>
+    <string name="privd_wizard_step2_connect_example">Example IP address &amp; port: 192.168.1.42:</string>
+    <string name="privd_wizard_step3_pair_intro">Tap \"Pair device with pairing code\" in Wireless Debugging settings and enter the 6-digit pairing code and 5-digit pairing port.</string>
+    <string name="privd_wizard_step3_code_example">Example pairing code: </string>
+    <string name="privd_wizard_step3_port_example">Example pairing IP address &amp; port: 192.168.1.42:</string>
+    <string name="privd_wizard_section_connect">From Wireless Debugging menu</string>
+    <string name="privd_wizard_field_connect_port">Connect port (5 digits under \"IP address &amp; Port\")</string>
+    <string name="privd_wizard_section_pair">From pairing dialog</string>
     <string name="privd_wizard_field_code">WiFi pairing code (6 digits)</string>
+    <string name="privd_wizard_field_pair_port">Pairing port (5 digits under \"Pair device\")</string>
     <string name="privd_wizard_step2_pair">Pair</string>
-    <string name="privd_wizard_step2_error">Pairing failed. Double-check the pairing port and code, then try again.</string>
+    <string name="privd_wizard_step2_error">Pairing failed. Double-check the ports and code, then try again.</string>
     <string name="privd_wizard_autofill_read_screen">Auto-fill (read screen)</string>
     <string name="privd_wizard_autofill_scanning">Scanning screen…</string>
     <string name="privd_wizard_autofill_success">Auto-filled pairing details!</string>
-    <string name="privd_wizard_autofill_not_found">Could not detect pairing details on screen. Ensure the \"Pair device\" dialog is visible on top screen.</string>
+    <string name="privd_wizard_autofill_not_found">Could not detect all pairing details on screen. Ensure either the Wireless Debugging menu or the \"Pair device\" dialog is open on top screen.</string>
     <string name="privd_wizard_autofill_accessibility_disabled">Enable Accessibility Service in Settings to auto-fill by reading screen text.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard will now push the helper daemon binary to /data/local/tmp and start it. The daemon runs as the ADB shell user and survives until you reboot.</string>
@@ -468,9 +482,9 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
-    <string name="settings_jump_privileged_mode">Privileged Mode</string>
+    <string name="settings_jump_input">Input</string>
     <string name="settings_jump_diagnostics">Diagnostics</string>
-    <string name="settings_section_privileged_mode">Privileged Mode</string>
+    <string name="settings_section_input">Input</string>
     <string name="settings_section_diagnostics">Diagnostics</string>
     <string name="settings_section_expand">Expand section</string>
     <string name="settings_section_collapse">Collapse section</string>

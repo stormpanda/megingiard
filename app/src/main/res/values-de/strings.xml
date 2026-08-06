@@ -318,7 +318,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_action_connect">Verbinden</string>
     <string name="privd_action_disconnect">Trennen</string>
     <string name="privd_action_test">Verbindung testen</string>
-    <string name="privd_action_show_wizard">Einrichten…</string>
+    <string name="privd_action_show_wizard">Einrichten</string>
     <string name="privd_action_test_autotoggle">Auto-Toggle testen</string>
     <string name="privd_action_auto_setup">Auto-Einrichtung</string>
     <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
@@ -337,9 +337,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
 
 
-    <!-- Dead-zone-Einstellungen Zeile + Dialog -->
     <string name="privd_deadzone_title">Deadzones einstellen</string>
-    <string name="privd_deadzone_desc">L: %1$d %%  ·  R: %2$d %%</string>
+    <string name="privd_deadzone_desc">Um eine perfekt übereinstimmende Wiedergabe analoger Eingaben in Makros zu gewährleisten, passe die Totzonen an die Einstellungen des Thor an.</string>
+    <string name="privd_deadzone_values">Linker Stick: %1$d%%  ·  Rechter Stick: %2$d%%</string>
     <string name="privd_deadzone_dialog_title">Gamepad-Deadzones</string>
     <string name="privd_deadzone_dialog_hint">Öffne Einstellungen → Thor Settings → Joystick calibration &amp; Gamepad test → Joystick deadzone radius, um die Werte für jeden Stick nachzuschlagen, und trage sie unten ein.</string>
     <string name="privd_deadzone_left">Linker Stick</string>
@@ -365,22 +365,36 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_wizard_bootstrapping">Einrichten…</string>
 
     <string name="privd_wizard_step1_intro">Folge diesen Schritten, um Drahtloses Debugging zu aktivieren:</string>
+    <string name="privd_wizard_step1_variant_dev_disabled_title">Falls Entwickleroptionen NOCH NICHT aktiv sind:</string>
     <string name="privd_wizard_step1_substep_1">1. Einstellungen → Über die Handheld-Konsole öffnen</string>
     <string name="privd_wizard_step1_substep_2">2. Build-Nummer 7-mal tippen, bis "Du bist jetzt Entwickler!" erscheint</string>
     <string name="privd_wizard_step1_substep_3">3. Zurück → System → Entwickleroptionen</string>
-    <string name="privd_wizard_step1_substep_4">4. Drahtloses Debugging aktivieren und einschalten</string>
-    <string name="privd_wizard_step1_substep_5">5. Auf \"Gerät über Kopplungscode koppeln\" tippen und diesen Dialog offen lassen</string>
+    <string name="privd_wizard_step1_substep_4">4. USB-Debugging aktivieren und einschalten</string>
+    <string name="privd_wizard_step1_substep_5">5. Drahtloses Debugging aktivieren und einschalten</string>
+    <string name="privd_wizard_step1_variant_dev_enabled_title">Falls Entwickleroptionen BEREITS aktiv sind:</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_1">1. Einstellungen → System → Entwickleroptionen öffnen</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_2">2. USB-Debugging aktivieren und einschalten</string>
+    <string name="privd_wizard_step1_dev_enabled_substep_3">3. Drahtloses Debugging aktivieren und einschalten</string>
     <string name="privd_wizard_step1_open">Systemeinstellungen öffnen</string>
+    <string name="privd_wizard_step1_error_missing_toggles">Bitte aktiviere sowohl USB-Debugging als auch Drahtloses Debugging in den Entwickleroptionen, um fortzufahren.</string>
 
-    <string name="privd_wizard_step2_intro">Tippe auf \"Gerät über Kopplungscode koppeln\" in den Drahtloses-Debugging-Einstellungen. Trage den Kopplungsport und den 6-stelligen Code aus dem Dialog ein.</string>
-    <string name="privd_wizard_field_pair_port">Port (5 Ziffern nach \":\", ohne IP-Adresse)</string>
+    <string name="privd_wizard_step2_intro">Gib den Connect-Port aus dem Menü \"WLAN-Debugging\" sowie den Kopplungscode und Kopplungs-Port aus dem Dialog \"Gerät über Kopplungscode koppeln\" ein.</string>
+    <string name="privd_wizard_step2_connect_intro">Gib den 5-stelligen Connect-Port ein, der unter \"IP-Adresse &amp; Port\" im WLAN-Debugging-Hauptmenü angezeigt wird.</string>
+    <string name="privd_wizard_step2_connect_example">Beispiel IP-Adresse &amp; Port: 192.168.1.42:</string>
+    <string name="privd_wizard_step3_pair_intro">Tippe auf \"Gerät über Kopplungscode koppeln\" in den WLAN-Debugging-Einstellungen und gib den 6-stelligen Kopplungscode sowie den 5-stelligen Kopplungs-Port ein.</string>
+    <string name="privd_wizard_step3_code_example">Beispiel Kopplungscode: </string>
+    <string name="privd_wizard_step3_port_example">Beispiel Kopplungs-IP-Adresse &amp; Port: 192.168.1.42:</string>
+    <string name="privd_wizard_section_connect">Aus WLAN-Debugging Menü</string>
+    <string name="privd_wizard_field_connect_port">Connect-Port (5 Ziffern unter \"IP-Adresse &amp; Port\")</string>
+    <string name="privd_wizard_section_pair">Aus Kopplungsdialog</string>
     <string name="privd_wizard_field_code">WLAN-Kopplungscode (6 Ziffern)</string>
+    <string name="privd_wizard_field_pair_port">Kopplungs-Port (5 Ziffern unter \"Gerät koppeln\")</string>
     <string name="privd_wizard_step2_pair">Koppeln</string>
-    <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Kopplungsport und Code und versuche es erneut.</string>
+    <string name="privd_wizard_step2_error">Kopplung fehlgeschlagen. Prüfe Ports und Code und versuche es erneut.</string>
     <string name="privd_wizard_autofill_read_screen">Automatisch ausfüllen (Bildschirm lesen)</string>
     <string name="privd_wizard_autofill_scanning">Bildschirm wird gescanned…</string>
     <string name="privd_wizard_autofill_success">Kopplungsdaten automatisch eingetragen!</string>
-    <string name="privd_wizard_autofill_not_found">Keine Kopplungsdaten auf dem Bildschirm erkannt. Stelle sicher, dass der Dialog \"Gerät koppeln\" auf dem oberen Bildschirm sichtbar ist.</string>
+    <string name="privd_wizard_autofill_not_found">Konnte nicht alle Kopplungsdaten auf dem Bildschirm erkennen. Stelle sicher, dass entweder das WLAN-Debugging Menü oder der \"Gerät koppeln\"-Dialog auf dem oberen Bildschirm geöffnet ist.</string>
     <string name="privd_wizard_autofill_accessibility_disabled">Aktiviere den Barrierefreiheitsdienst in den Einstellungen für automatisches Ausfüllen durch Bildschirmlesen.</string>
 
     <string name="privd_wizard_step3_intro">Megingiard kopiert jetzt die Helfer-Daemon-Binary nach /data/local/tmp und startet sie. Der Daemon läuft als ADB-Shell-Benutzer und bleibt bis zum Neustart aktiv.</string>
@@ -603,9 +617,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_data">Daten</string>
     <string name="settings_jump_config">Konfiguration</string>
-    <string name="settings_jump_privileged_mode">Priv. Modus</string>
+    <string name="settings_jump_input">Eingabe</string>
     <string name="settings_jump_diagnostics">Diagnose</string>
-    <string name="settings_section_privileged_mode">Privilegierter Modus</string>
+    <string name="settings_section_input">Eingabe</string>
     <string name="settings_section_diagnostics">Diagnose</string>
     <string name="settings_section_expand">Abschnitt aufklappen</string>
     <string name="settings_section_collapse">Abschnitt zuklappen</string>

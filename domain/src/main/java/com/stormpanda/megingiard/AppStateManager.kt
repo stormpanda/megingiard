@@ -557,18 +557,16 @@ object AppStateManager {
         scope.launch {
             combine(
                 PrivdManager.state,
-                MacroPadSettings.privdShowAdbPrompt,
                 _hasAdbCredentials,
                 MacroPadSettings.privdPromptDismissed,
                 _isBackgroundSettingsActive,
                 _isAccessibilityActive,
             ) { array ->
                 val state = array[0] as PrivdState
-                val showPromptPref = array[1] as Boolean
-                val hasCreds = array[2] as Boolean
-                val dismissed = array[3] as Boolean
-                val bgSettingsActive = array[4] as Boolean
-                val accessibilityActive = array[5] as Boolean
+                val hasCreds = array[1] as Boolean
+                val dismissed = array[2] as Boolean
+                val bgSettingsActive = array[3] as Boolean
+                val accessibilityActive = array[4] as Boolean
 
                 if (state == PrivdState.RUNNING && accessibilityActive && dismissed) {
                     MacroPadSettings.setPrivdPromptDismissed(false)
@@ -578,7 +576,7 @@ object AppStateManager {
                     _isPrivdPromptShowing.value = true
                 } else if (dismissed || bgSettingsActive) {
                     _isPrivdPromptShowing.value = false
-                } else if (state == PrivdState.FAILED && showPromptPref && hasCreds) {
+                } else if (state == PrivdState.FAILED && hasCreds) {
                     _isPrivdPromptShowing.value = true
                 }
             }.collect {}
