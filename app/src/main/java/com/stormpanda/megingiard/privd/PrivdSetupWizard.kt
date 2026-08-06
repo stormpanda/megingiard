@@ -583,61 +583,64 @@ private fun Step3Pairing(
             }
         }
 
+    val isProgressActive = busy || stage != BootstrapStage.IDLE
+
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
         Text(
             text = stringResource(R.string.privd_wizard_step3_pair_intro),
             color = colors.onSurface,
             style = MaterialTheme.typography.bodyMedium,
         )
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = exampleCodeString,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceSecondary,
-            )
-            Text(
-                text = examplePairPortString,
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onSurfaceSecondary,
-            )
-        }
-        Text(
-            text = stringResource(R.string.privd_wizard_section_pair),
-            color = colors.actionColorSystem,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(top = SW_SECTION_GAP),
-        )
-        OutlinedTextField(
-            value = code,
-            onValueChange = onCodeChange,
-            label = { Text(stringResource(R.string.privd_wizard_field_code)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !busy,
-            colors = fieldColors,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.clearFocus() }),
-        )
-        OutlinedTextField(
-            value = pairPort,
-            onValueChange = onPairPortChange,
-            label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !busy,
-            colors = fieldColors,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-        )
 
-        if (busy || stage != BootstrapStage.IDLE) {
+        if (!isProgressActive) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = exampleCodeString,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceSecondary,
+                )
+                Text(
+                    text = examplePairPortString,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceSecondary,
+                )
+            }
+            Text(
+                text = stringResource(R.string.privd_wizard_section_pair),
+                color = colors.actionColorSystem,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(top = SW_SECTION_GAP),
+            )
+            OutlinedTextField(
+                value = code,
+                onValueChange = onCodeChange,
+                label = { Text(stringResource(R.string.privd_wizard_field_code)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy,
+                colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.clearFocus() }),
+            )
+            OutlinedTextField(
+                value = pairPort,
+                onValueChange = onPairPortChange,
+                label = { Text(stringResource(R.string.privd_wizard_field_pair_port)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy,
+                colors = fieldColors,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+            )
+        } else {
             val ord = stage.ordinal
             Column(verticalArrangement = Arrangement.spacedBy(SW_CHECKLIST_GAP)) {
                 ChecklistRow(
