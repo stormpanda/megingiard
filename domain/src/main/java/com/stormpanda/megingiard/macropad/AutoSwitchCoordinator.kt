@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.macropad
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
-import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,7 +34,7 @@ object AutoSwitchCoordinator {
     init {
         coordinatorScope.launch {
             EmulatorDetectionFunnel.activeSession.collect { session ->
-                if (session != null && SettingsManager.autoSwitchProfiles.value) {
+                if (session != null) {
                     val matchedProfile =
                         MacroPadState.profiles.value.let { profiles ->
                             profiles.firstOrNull { profile ->
@@ -122,11 +121,6 @@ object AutoSwitchCoordinator {
 
         AppLog.i(TAG, "onPackageChanged: foreground package changed to $normalized")
         _foregroundApp.value = normalized
-
-        if (!SettingsManager.autoSwitchProfiles.value) {
-            AppLog.d(TAG, "onPackageChanged: auto-switch is disabled in settings")
-            return
-        }
 
         val directMatchedProfile =
             MacroPadState.profiles.value.firstOrNull { profile ->

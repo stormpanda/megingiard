@@ -350,7 +350,7 @@ Each button supports one of the following actions:
 - **Foreground App Detection:** To achieve immediate transitions with zero latency and zero polling CPU/battery overhead, Megingiard registers an event-driven `MegingiardAccessibilityService` that observes window focus change events (`TYPE_WINDOW_STATE_CHANGED`).
 - **Privacy Protections:** The Accessibility Service is configured to filter specifically for window state changes (`typeWindowStateChanged`) and explicitly disables scraping or reading window content (`canRetrieveWindowContent="false"`).
 - **Self-Exclusion & Transient System Guards:** Automatic profile transitions MUST ignore focus changes inside Megingiard's own package (`com.stormpanda.megingiard`) to prevent self-exclusion loops (ensuring users can edit layouts or adjust settings without the active profile switching out contextually). Additionally, transient focus transitions for core system packages—specifically `com.android.systemui` (the status bar and system overlays) and `android` (system dialogs)—MUST be ignored so that temporary system interactions do not overwrite or lose the active foreground application context.
-- **Global Settings Controls:** The feature is controlled by a global setting **Auto-switch profiles** (persisted in DataStore via `KEY_AUTO_SWITCH_PROFILES`).
+- **Default Enabled Auto-Switching:** Automatic profile switching is enabled by default. Profile associations automatically trigger when mapped applications or ROMs gain focus.
 - **Emulator Detection Funnel & ROM-Aware Switching:**
   - Automatic profile switching supports **Emulator & ROM Granularity** via `EmulatorDetectionFunnel` (`:domain`).
   - When a registered emulator or container package (e.g. `com.retroarch`, `app.gamenative`) enters the foreground, `MegingiardAccessibilityService` routes the package to `EmulatorDetectionFunnel`.
@@ -433,11 +433,8 @@ When Background Display is enabled and `ScreenCaptureService` is capturing:
    - It performs the transient package check: package transitions matching `IGNORED_PACKAGES` (`com.android.systemui`, `android`) are ignored so system UI focus shifts do not corrupt active foreground mappings.
    - **Focus Collision Guard**: If an integration client is active and has reported a focused game, focus events matching the launcher client's package or emulator container packages are ignored when the active profile matches the focused game and ROM. This prevents launcher focus shifts or emulator container events from overriding the active game profile.
    - **Auto-Deactivation Fallback**: If an integration client is active, but the focused package changes to something other than the client, the active game, or system ignored packages (e.g., the user switched to Google Chrome), the coordinator automatically deactivates the integration client state in `AppStateManager`.
-   - If `SettingsManager.autoSwitchProfiles.value` is true, it searches for a matching profile in `MacroPadState.profiles` using `PadProfile.matches` against the normalized package name and any active ROM session details.
+   - It searches for a matching profile in `MacroPadState.profiles` using `PadProfile.matches` against the normalized package name and any active ROM session details.
    - If a matching profile is found, and it is not already active, `MacroPadState.setActiveProfileId()` is invoked to switch the active profile immediately.
-3. **DataStore Settings Integration**:
-   - `SettingsManager` manages the active state under the `KEY_AUTO_SWITCH_PROFILES` key.
-   - The active settings flow is grouped under `GLOBAL_KEYS` to ensure compatibility with portables backup/restore (`.mgrd` files).
 
 ### Data Model
 

@@ -49,7 +49,6 @@ class GlobalSettingsViewModel : ViewModel() {
     val logLevel: StateFlow<AppLog.Level> = SettingsManager.logLevel
     val steamGridDbApiToken: StateFlow<String> = SettingsManager.steamGridDbApiToken
 
-    val autoSwitchProfiles: StateFlow<Boolean> = SettingsManager.autoSwitchProfiles
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
 
@@ -83,8 +82,6 @@ class GlobalSettingsViewModel : ViewModel() {
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
 
     fun resetAllTutorials() = SettingsManager.resetAllTutorials()
-
-    fun setAutoSwitchProfiles(value: Boolean) = SettingsManager.setAutoSwitchProfiles(value)
 
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
 

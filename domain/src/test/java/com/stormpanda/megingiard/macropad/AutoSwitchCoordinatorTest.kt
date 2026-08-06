@@ -60,9 +60,6 @@ class AutoSwitchCoordinatorTest {
             )
 
         MacroPadState.loadFrom(listOf(profile1, profile2), p1Id)
-
-        // Enable auto-switch settings for test runs
-        SettingsManager.setAutoSwitchProfiles(true)
     }
 
     @After
@@ -78,7 +75,7 @@ class AutoSwitchCoordinatorTest {
     }
 
     @Test
-    fun `onPackageChanged switches active profile when mapping exists and auto switch is enabled`() {
+    fun `onPackageChanged switches active profile when mapping exists`() {
         // Given we are currently on profile1
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
 
@@ -91,19 +88,6 @@ class AutoSwitchCoordinatorTest {
         AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
         // Then active profile switches to profile2
         assertEquals(profile2.id, MacroPadState.activeProfileId.value)
-    }
-
-    @Test
-    fun `onPackageChanged does not switch active profile when auto switch is disabled`() {
-        // Given auto switch is disabled
-        SettingsManager.setAutoSwitchProfiles(false)
-        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
-
-        // When a mapped app (com.citra.emu -> profile2) is opened
-        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
-
-        // Then active profile remains profile1
-        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
     }
 
     @Test

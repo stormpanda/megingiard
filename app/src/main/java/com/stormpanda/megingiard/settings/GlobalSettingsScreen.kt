@@ -108,7 +108,6 @@ fun GlobalSettingsScreen(
     val themeMode by viewModel.themeMode.collectAsState()
     val appLanguage by viewModel.appLanguage.collectAsState()
     val logLevel by viewModel.logLevel.collectAsState()
-    val autoSwitchProfiles by viewModel.autoSwitchProfiles.collectAsState()
     val excludeFromRecents by viewModel.excludeFromRecents.collectAsState()
     val gamepadSwapFaceButtons by viewModel.gamepadSwapFaceButtons.collectAsState()
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
@@ -141,36 +140,6 @@ fun GlobalSettingsScreen(
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
 
     var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
-    var isAccessibilityActive by remember { mutableStateOf(false) }
-    var isCheckingAccessibility by remember { mutableStateOf(false) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer =
-            LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    isAccessibilityActive = viewModel.checkAccessibilityActive(context)
-                }
-            }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-    LaunchedEffect(isCheckingAccessibility, isAccessibilityActive) {
-        if (isCheckingAccessibility && !isAccessibilityActive) {
-            AppLog.d(TAG, "Starting 1s polling loop for accessibility activation")
-            while (isActive && !isAccessibilityActive) {
-                delay(1000L)
-                val active = viewModel.checkAccessibilityActive(context)
-                if (active) {
-                    isAccessibilityActive = true
-                    isCheckingAccessibility = false
-                    AppLog.i(TAG, "Accessibility service activation detected")
-                    break
-                }
-            }
-        }
-    }
     LaunchedEffect(showRestoreDefaultsConfirm) {
         if (showRestoreDefaultsConfirm) {
             restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
@@ -251,7 +220,6 @@ fun GlobalSettingsScreen(
                     onSelectAll = { selectedSectionFilter = null },
                     onSelectGeneral = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
                     onSelectInput = { selectedSectionFilter = SettingsSectionFilter.INPUT },
-                    onSelectAutomation = { selectedSectionFilter = SettingsSectionFilter.AUTOMATION },
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
@@ -316,98 +284,6 @@ fun GlobalSettingsScreen(
                             deadzoneLeft = deadzoneLeft,
                             deadzoneRight = deadzoneRight,
                             onClick = { showDeadzoneDialog = true },
-                        )
-                    }
-                }
-
-                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.AUTOMATION) {
-                    SettingsSection(
-                        title = stringResource(R.string.settings_section_automation),
-                        colors = colors,
-                    ) {
-                        val launchAccessibilitySettings = {
-                            if (!isAccessibilityActive) {
-                                isCheckingAccessibility = true
-                            }
-                            try {
-                                val intent =
-                                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                                        addFlags(
-                                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                                                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                                                Intent.FLAG_ACTIVITY_CLEAR_TOP,
-                                        )
-                                    }
-                                val options = ActivityOptions.makeBasic()
-                                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                context.startActivity(intent, options.toBundle())
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Failed to open accessibility settings: ${e.message}")
-                            }
-                        }
-                        AppSettingsRow(
-                            onClick = { launchAccessibilitySettings() },
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = stringResource(R.string.settings_accessibility_status),
-                                        color = colors.onSurface,
-                                        style = MaterialTheme.typography.titleMedium,
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Box(
-                                        modifier =
-                                            Modifier
-                                                .size(10.dp)
-                                                .background(
-                                                    if (isAccessibilityActive) colors.actionColorSystem else colors.onSurfaceSecondary,
-                                                    CircleShape,
-                                                ),
-                                    )
-                                }
-                                Text(
-                                    text =
-                                        stringResource(
-                                            if (isAccessibilityActive) {
-                                                R.string.accessibility_status_active
-                                            } else {
-                                                R.string.privd_status_off
-                                            },
-                                        ),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.settings_accessibility_status_desc),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            if (!isAccessibilityActive) {
-                                Button(
-                                    onClick = { launchAccessibilitySettings() },
-                                ) {
-                                    Text(stringResource(R.string.settings_accessibility_setup))
-                                }
-                            } else {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                                    contentDescription = null,
-                                    tint = effectiveAccent,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                            }
-                        }
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_auto_switch_profiles),
-                            description = stringResource(R.string.settings_auto_switch_profiles_desc),
-                            checked = autoSwitchProfiles,
-                            onCheckedChange = { viewModel.setAutoSwitchProfiles(it) },
                         )
                     }
                 }
@@ -801,16 +677,6 @@ private fun GlobalSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.privd_deadzone_title),
             description = stringResource(R.string.help_settings_deadzone_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_automation))
-        HelpEntry(
-            label = stringResource(R.string.settings_accessibility_status),
-            description = stringResource(R.string.help_settings_accessibility_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_auto_switch_profiles),
-            description = stringResource(R.string.help_settings_auto_profile_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_appearance))
