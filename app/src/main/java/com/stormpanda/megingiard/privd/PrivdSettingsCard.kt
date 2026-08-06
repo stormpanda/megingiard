@@ -188,13 +188,18 @@ internal fun PrivdDeadzoneSettingsRow(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
+                text = stringResource(R.string.privd_deadzone_desc),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
                 text =
                     stringResource(
-                        R.string.privd_deadzone_desc,
-                        (deadzoneLeft * 100).toInt(),
-                        (deadzoneRight * 100).toInt(),
+                        R.string.privd_deadzone_values,
+                        (deadzoneLeft * 100).roundToInt(),
+                        (deadzoneRight * 100).roundToInt(),
                     ),
-                color = colors.onSurfaceSecondary,
+                color = colors.accent,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
