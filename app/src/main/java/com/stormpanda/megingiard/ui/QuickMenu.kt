@@ -132,7 +132,7 @@ fun QuickMenu(
     val companionViewMode by AppStateManager.companionViewMode.collectAsState()
     val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
     val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
-    val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(activeProfile)
+    val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(focusedAppPackageName, focusedRomPath, activeProfile)
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()

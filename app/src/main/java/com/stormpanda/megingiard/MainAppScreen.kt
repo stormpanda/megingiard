@@ -372,7 +372,12 @@ fun MainAppScreen() {
                         }
                     },
         ) {
-            val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(activeProfile)
+            val showIntegrationHome =
+                companionViewMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = focusedAppPackageName,
+                    focusedRomPath = focusedRomPath,
+                    activeProfile = activeProfile,
+                )
 
             if (showIntegrationHome) {
                 IntegrationHomeScreen()

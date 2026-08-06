@@ -29,11 +29,27 @@ enum class CompanionViewMode {
     DASHBOARD,
 }
 
-fun CompanionViewMode.shouldShowIntegrationHome(activeProfile: PadProfile?): Boolean =
+fun CompanionViewMode.shouldShowIntegrationHome(
+    focusedAppPackageName: String?,
+    focusedRomPath: String?,
+    activeProfile: PadProfile?,
+): Boolean =
     when (this) {
-        CompanionViewMode.MACROPAD -> false
-        CompanionViewMode.DASHBOARD -> true
-        CompanionViewMode.AUTO -> activeProfile?.association == null
+        CompanionViewMode.MACROPAD -> {
+            false
+        }
+
+        CompanionViewMode.DASHBOARD -> {
+            true
+        }
+
+        CompanionViewMode.AUTO -> {
+            if (focusedAppPackageName == null) {
+                true
+            } else {
+                activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) != true
+            }
+        }
     }
 
 object AppStateManager {

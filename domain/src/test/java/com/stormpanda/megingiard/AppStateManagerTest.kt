@@ -360,7 +360,6 @@ class AppStateManagerTest {
 
     @Test
     fun `shouldShowIntegrationHome returns expected values across view modes`() {
-        val unassignedProfile = PadProfile(id = "1", name = "Default", layouts = emptyList())
         val associatedProfile =
             PadProfile(
                 id = "2",
@@ -371,14 +370,16 @@ class AppStateManagerTest {
                         .ProfileAssociation(packageName = "com.test.game"),
             )
 
-        assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome(associatedProfile))
-        assertTrue(CompanionViewMode.DASHBOARD.shouldShowIntegrationHome(associatedProfile))
+        assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
+        assertTrue(CompanionViewMode.DASHBOARD.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
 
-        // AUTO mode: true when activeProfile is null or has no association
-        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(null))
-        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(unassignedProfile))
+        // AUTO mode: true when focusedApp is null (idle)
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(null, null, associatedProfile))
 
-        // AUTO mode: false when activeProfile has an associated game/app
-        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome(associatedProfile))
+        // AUTO mode: true when focusedApp (e.g. launcher) does not match activeProfile
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.android.launcher3", null, associatedProfile))
+
+        // AUTO mode: false when focusedApp matches activeProfile
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
     }
 }

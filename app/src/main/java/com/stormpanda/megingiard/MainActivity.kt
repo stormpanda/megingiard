@@ -525,7 +525,12 @@ class MainActivity : ComponentActivity() {
                     val activeProfile = values[9] as? PadProfile
                     val companionViewMode = values[10] as CompanionViewMode
 
-                    val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(activeProfile)
+                    val showIntegrationHome =
+                        companionViewMode.shouldShowIntegrationHome(
+                            focusedAppPackageName = focusedPackage,
+                            focusedRomPath = focusedRom,
+                            activeProfile = activeProfile,
+                        )
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,

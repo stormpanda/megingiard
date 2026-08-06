@@ -124,7 +124,16 @@ object AutoSwitchCoordinator {
             if (session != null && session.packageName == normalized) {
                 AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
             } else {
-                AppStateManager.setStandaloneForegroundState(normalized, null)
+                val currentFocusedPkg = AppStateManager.focusedAppPackageName.value
+                val currentFocusedRom = AppStateManager.focusedRomPath.value
+                val currentActiveProfile = MacroPadState.activeProfile.value
+                if (currentFocusedPkg == normalized &&
+                    currentActiveProfile?.matches(normalized, currentFocusedRom, isActiveProfile = true) == true
+                ) {
+                    AppLog.d(TAG, "onPackageChanged: preserving active ROM path '$currentFocusedRom' for emulator '$normalized'")
+                } else {
+                    AppStateManager.setStandaloneForegroundState(normalized, null)
+                }
             }
         }
 
