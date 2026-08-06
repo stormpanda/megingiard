@@ -253,50 +253,7 @@ internal fun PrivdSetupWizardDialog(
                 ) { currentStep ->
                     when (currentStep) {
                         0 -> {
-                            Step1MenuDescription(
-                                onOpenSettings = {
-                                    val devOptionsEnabled =
-                                        Settings.Global.getInt(
-                                            context.contentResolver,
-                                            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
-                                            0,
-                                        ) != 0
-
-                                    val intentsToTry =
-                                        if (devOptionsEnabled) {
-                                            listOf(
-                                                Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
-                                                    component =
-                                                        ComponentName(
-                                                            "com.android.settings",
-                                                            "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
-                                                        )
-                                                },
-                                                Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
-                                                Intent(Settings.ACTION_SETTINGS),
-                                            )
-                                        } else {
-                                            listOf(
-                                                Intent(Settings.ACTION_SETTINGS),
-                                            )
-                                        }
-
-                                    val options =
-                                        ActivityOptions.makeBasic().apply {
-                                            setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                        }
-
-                                    for (intent in intentsToTry) {
-                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        try {
-                                            context.startActivity(intent, options.toBundle())
-                                            break
-                                        } catch (e: Exception) {
-                                            // Fallback to next intent
-                                        }
-                                    }
-                                },
-                            )
+                            Step1MenuDescription()
                         }
 
                         1 -> {
@@ -343,21 +300,77 @@ internal fun PrivdSetupWizardDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (step > 0 && step < 3) {
-                    OutlinedButton(
-                        enabled = !pairBusy && !bootstrapBusy,
-                        onClick = {
-                            isNextAnimation = false
-                            step--
-                        },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.privd_wizard_back),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                when {
+                    step == 0 -> {
+                        OutlinedButton(
+                            onClick = {
+                                val devOptionsEnabled =
+                                    Settings.Global.getInt(
+                                        context.contentResolver,
+                                        Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+                                        0,
+                                    ) != 0
+
+                                val intentsToTry =
+                                    if (devOptionsEnabled) {
+                                        listOf(
+                                            Intent("android.service.quicksettings.action.QS_TILE_PREFERENCES").apply {
+                                                component =
+                                                    ComponentName(
+                                                        "com.android.settings",
+                                                        "com.android.settings.development.qstile.DevelopmentTiles\$WirelessDebugging",
+                                                    )
+                                            },
+                                            Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS),
+                                            Intent(Settings.ACTION_SETTINGS),
+                                        )
+                                    } else {
+                                        listOf(
+                                            Intent(Settings.ACTION_SETTINGS),
+                                        )
+                                    }
+
+                                val options =
+                                    ActivityOptions.makeBasic().apply {
+                                        setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                                    }
+
+                                for (intent in intentsToTry) {
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    try {
+                                        context.startActivity(intent, options.toBundle())
+                                        break
+                                    } catch (e: Exception) {
+                                        // Fallback to next intent
+                                    }
+                                }
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.privd_wizard_step1_open),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
+
+                    step in 1..2 -> {
+                        OutlinedButton(
+                            enabled = !pairBusy && !bootstrapBusy,
+                            onClick = {
+                                isNextAnimation = false
+                                step--
+                            },
+                        ) {
+                            Text(
+                                text = stringResource(R.string.privd_wizard_back),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    }
+
+                    else -> {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
 
                 val isNextEnabled =
@@ -456,7 +469,7 @@ internal fun PrivdSetupWizardDialog(
 }
 
 @Composable
-private fun Step1MenuDescription(onOpenSettings: () -> Unit) {
+private fun Step1MenuDescription() {
     val colors = LocalAppColors.current
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
         Text(
@@ -485,9 +498,6 @@ private fun Step1MenuDescription(onOpenSettings: () -> Unit) {
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
             )
-        }
-        OutlinedButton(onClick = onOpenSettings) {
-            Text(stringResource(R.string.privd_wizard_step1_open))
         }
     }
 }
