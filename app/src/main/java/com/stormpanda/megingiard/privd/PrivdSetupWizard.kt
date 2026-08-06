@@ -782,15 +782,13 @@ private fun Step3Pairing(
             }
         }
 
-        if (hasAttemptedSubmit) {
-            val errorRes = errorStringResource(lastError) ?: if (error) R.string.privd_error_pairing_failed else null
-            if (errorRes != null) {
-                Text(
-                    text = stringResource(errorRes),
-                    color = colors.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+        if (hasAttemptedSubmit && error && !isProgressActive) {
+            val errorRes = errorStringResource(lastError) ?: R.string.privd_error_pairing_failed
+            Text(
+                text = stringResource(errorRes),
+                color = colors.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }
