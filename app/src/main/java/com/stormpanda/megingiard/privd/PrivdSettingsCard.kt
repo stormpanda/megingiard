@@ -95,17 +95,9 @@ internal fun PrivdSettingsCard(
 ) {
     val state by viewModel.privdState.collectAsState()
     val colors = LocalAppColors.current
-    val context = LocalContext.current
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .padding(PR_CARD_PADDING),
-    ) {
-        // ── Status row ──────────────────────────────────────────────────────
-        Column {
+    AppSettingsRow {
+        Column(modifier = Modifier.weight(1f)) {
             val (dotColor, textColor, label) =
                 when (state) {
                     PrivdState.OFF -> {
@@ -147,27 +139,21 @@ internal fun PrivdSettingsCard(
                 color = textColor,
                 style = MaterialTheme.typography.bodySmall,
             )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.privd_description),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
-        Spacer(Modifier.height(PR_BUTTON_GAP))
-        Text(
-            text = stringResource(R.string.privd_description),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
 
-        // ── Action buttons ──────────────────────────────────────────────────
         if (state != PrivdState.RUNNING) {
-            Spacer(Modifier.height(PR_BUTTON_GAP))
-            Row(horizontalArrangement = Arrangement.spacedBy(PR_BUTTON_GAP)) {
-                Button(
-                    onClick = { viewModel.privdConnect(context) },
-                    enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
-                ) {
-                    Text(stringResource(R.string.privd_action_connect))
-                }
-                TextButton(onClick = onShowWizard) {
-                    Text(stringResource(R.string.privd_action_show_wizard))
-                }
+            Spacer(Modifier.width(8.dp))
+            Button(
+                onClick = onShowWizard,
+                enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
+            ) {
+                Text(stringResource(R.string.privd_action_show_wizard))
             }
         }
     }

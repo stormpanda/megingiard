@@ -364,7 +364,7 @@ Open Settings to create a layout.</string>
     <string name="privd_action_connect">Connect</string>
     <string name="privd_action_disconnect">Disconnect</string>
     <string name="privd_action_test">Test connection</string>
-    <string name="privd_action_show_wizard">Set up…</string>
+    <string name="privd_action_show_wizard">Set up</string>
     <string name="privd_action_test_autotoggle">Test Auto-Toggle</string>
     <string name="privd_action_auto_setup">Auto Setup</string>
     <string name="privd_action_retry">Retry Auto Setup</string>

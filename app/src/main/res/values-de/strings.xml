@@ -318,7 +318,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_action_connect">Verbinden</string>
     <string name="privd_action_disconnect">Trennen</string>
     <string name="privd_action_test">Verbindung testen</string>
-    <string name="privd_action_show_wizard">Einrichten…</string>
+    <string name="privd_action_show_wizard">Einrichten</string>
     <string name="privd_action_test_autotoggle">Auto-Toggle testen</string>
     <string name="privd_action_auto_setup">Auto-Einrichtung</string>
     <string name="privd_action_retry">Auto-Einrichtung wiederholen</string>
