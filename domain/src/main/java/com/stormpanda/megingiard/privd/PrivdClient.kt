@@ -39,6 +39,7 @@ private const val READ_FILE_TIMEOUT_MS = 5_000L
 private const val WRITER_THREAD_NAME = "PrivdClientWriter"
 private const val READER_THREAD_NAME = "PrivdClientReader"
 private const val HANDSHAKE_TIMEOUT_MS = 5_000
+private const val VERSION_CHECK_TIMEOUT_MS = 1_000
 private const val NONCE_HEX_LEN = 32 // 16 nonce bytes → 32 hex chars
 private const val HMAC_HEX_LEN = 64 // SHA-256 digest → 64 hex chars
 
@@ -656,8 +657,28 @@ object PrivdClient {
                 return false
             }
 
-            s.soTimeout = 0 // reset to blocking — full mutual handshake complete
-            AppLog.d(TAG, "handshake: mutual authentication successful")
+            // --- Protocol Version Verification ---
+            s.soTimeout = VERSION_CHECK_TIMEOUT_MS
+            writer.write("VERSION ${PrivdConstants.PRIVD_VERSION}\n")
+            writer.flush()
+
+            val versionLine =
+                reader.readLine() ?: run {
+                    AppLog.w(TAG, "handshake: version response missing / timed out (legacy pre-versioning daemon)")
+                    return false
+                }
+            if (!versionLine.startsWith("VERSION_OK ")) {
+                AppLog.w(TAG, "handshake: version check failed, got: $versionLine (expected VERSION_OK ${PrivdConstants.PRIVD_VERSION})")
+                return false
+            }
+            val daemonVersion = versionLine.substring(11).toIntOrNull()
+            if (daemonVersion != PrivdConstants.PRIVD_VERSION) {
+                AppLog.w(TAG, "handshake: version mismatch — daemon version $daemonVersion != app version ${PrivdConstants.PRIVD_VERSION}")
+                return false
+            }
+
+            s.soTimeout = 0 // reset to blocking — full mutual handshake and version check complete
+            AppLog.d(TAG, "handshake: mutual authentication and version check (v${PrivdConstants.PRIVD_VERSION}) successful")
             true
         } catch (e: Exception) {
             AppLog.w(TAG, "handshake: exception — $e")

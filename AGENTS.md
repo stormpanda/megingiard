@@ -105,6 +105,8 @@
 >
 > Run the script **before** proposing the commit message. If the build fails, fix the
 > source error before proceeding. The scripts must be run from the workspace root.
+>
+> **Daemon Versioning Rule:** Whenever modifying `megingiard_privd.c` (or daemon protocol logic), you **must** increment `PRIVD_VERSION` in both `app/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/.../privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild via `./build_megingiard_privd.sh`. This ensures the app detects version mismatches and triggers automatic daemon updates.
 
 > **Unit test policy:** After every implementation — feature, bug fix, or refactor —
 > the agent **must**:

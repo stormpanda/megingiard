@@ -279,9 +279,9 @@ Android destroys the Keystore AES key when the app is uninstalled, making the st
 
 OS-level peer credential checks (`SO_PEERCRED` / `peerCredentials.uid` checks) are not used because communication runs over a local TCP loopback (`127.0.0.1`) which does not support peer credentials. The system relies entirely on the cryptographic mutual HMAC-SHA256 handshake described below to authenticate both the client app and the daemon.
 
-#### Mutual HMAC-SHA256 Handshake
+#### Mutual HMAC-SHA256 Handshake & Protocol Version Verification
 
-Every new TCP socket connection uses mutual challenge-response. Both sides must know the per-install key:
+Every new TCP socket connection uses mutual challenge-response followed by protocol version verification. Both sides must know the per-install key and agree on the daemon protocol version (`PRIVD_VERSION`):
 
 ```
 Daemon -> App     CHAL <32-hex-nonce1>\n
@@ -289,14 +289,21 @@ App    -> Daemon  AUTH <64-hex-hmac1>\n    HMAC-SHA256(key, nonce1)
 Daemon -> App     OK\n
 App    -> Daemon  VERIFY <32-hex-nonce2>\n
 Daemon -> App     PROOF <64-hex-hmac2>\n   HMAC-SHA256(key, nonce2)
+App    -> Daemon  VERSION <app_version>\n  Protocol version check
+Daemon -> App     VERSION_OK <daemon_ver>\n Version match confirmed
 ```
 
-The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. This blocks two important local attacks:
+The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon accepts commands. The second half (`VERIFY/PROOF`) proves the daemon knows the key before the app sends privileged commands. The third phase (`VERSION/VERSION_OK`) validates daemon protocol compatibility:
 
-- A rogue app cannot connect to the real daemon and issue commands unless it can produce a valid `AUTH` response (requires the per-install key that is not in the APK).
-- A rogue process that binds the local port before the real daemon cannot convince Megingiard to send commands unless it can produce a valid `PROOF` response.
+- **Version Matching**: The app sends `VERSION <app_version>\n`. If `<app_version> == daemon_version`, the daemon responds with `VERSION_OK <daemon_ver>\n`.
+- **Version Mismatch Handling**: If `<app_version> != daemon_version`, the daemon responds with `VERSION_MISMATCH <daemon_ver>\n` and closes the socket.
+- **Legacy Daemon / Legacy App Handling**:
+  - Legacy pre-versioning daemons ignore `VERSION` and produce no `VERSION_OK` response; the app's 1-second version read times out and treats the connection as failed.
+  - Legacy pre-versioning apps fail to issue `VERSION` as their initial command; new daemons reject unverified initial commands with `VERSION_MISMATCH` and close the socket.
+- **Auto-Update & Reconnect Prompt**: Connection failure triggers background auto-rebootstrap (or `PrivdState.FAILED` with `PrivdError.VERSION_MISMATCH`), guiding daemon replacement during app upgrades or downgrades.
+- **Mandatory Version Increment Rule**: Whenever the daemon source code (`megingiard_privd.c`) or protocol behavior is updated, developers and agents **must** increment `PRIVD_VERSION` in both `megingiard_privd.c` and `PrivdConstants.kt` and run `./build_megingiard_privd.sh`.
 
-Malformed messages, missing messages, wrong HMAC values, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds and is reset to normal blocking I/O only after the full mutual exchange succeeds.
+Malformed messages, missing messages, wrong HMAC values, version mismatch, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds for HMAC and 1 second for version check, and is reset to normal blocking I/O only after the full exchange succeeds.
 
 The daemon compares the app's `AUTH` proof with a constant-time XOR accumulator. The Kotlin app compares the daemon `PROOF` through `HmacUtil.constantTimeEqualsHex()` so both authentication legs avoid early-exit string equality for same-length MAC values.
 

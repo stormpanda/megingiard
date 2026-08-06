@@ -312,7 +312,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_status_off">Aus</string>
     <string name="privd_status_connecting">Verbinde…</string>
     <string name="privd_status_bootstrapping">Einrichten…</string>
-    <string name="privd_status_running">Aktiv</string>
+    <string name="privd_status_running">Aktiv (v%1$d)</string>
+    <string name="accessibility_status_active">Aktiv</string>
     <string name="privd_status_failed">Fehlgeschlagen</string>
     <string name="privd_action_connect">Verbinden</string>
     <string name="privd_action_disconnect">Trennen</string>
@@ -408,6 +409,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_error_bootstrap_push_failed">Daemon-Binary konnte nicht übertragen werden. Prüfe den verfügbaren Speicher unter /data/local/tmp.</string>
     <string name="privd_error_bootstrap_spawn_failed">Daemon-Prozess konnte nicht gestartet werden.</string>
     <string name="privd_error_bootstrap_provision_failed">Authentifizierungsschlüssel konnte nicht übertragen werden. Führe den Einrichtungsassistenten erneut aus.</string>
+    <string name="privd_error_version_mismatch">Daemon-Version stimmt nicht überein. Tippe auf Auto-Setup oder Verbinden, um den Daemon zu aktualisieren.</string>
     <string name="privd_info_running">Privilegiert-Modus ist aktiv und läuft.</string>
     <string name="privd_info_no_credentials">Keine Kopplungs-Anmeldedaten gefunden. Bitte führe den Einrichtungsassistenten aus.</string>
     <string name="privd_info_wireless_disabled">Drahtloses Debugging ist inaktiv. Bitte aktiviere es in den Entwicklereinstellungen und versuche es erneut.</string>
