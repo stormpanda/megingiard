@@ -101,10 +101,6 @@ internal fun PrivdSettingsCard(
     val showAdbPrompt by viewModel.privdShowAdbPrompt.collectAsState()
     val colors = LocalAppColors.current
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    var pingResult by remember { mutableStateOf<Boolean?>(null) }
-    var isPinging by remember { mutableStateOf(false) }
 
     val wirelessDebuggingActive by viewModel.isWirelessDebuggingActive.collectAsState()
     val hasCredentials by viewModel.hasCredentials.collectAsState()
@@ -175,99 +171,64 @@ internal fun PrivdSettingsCard(
         Spacer(Modifier.height(PR_BUTTON_GAP))
 
         // ── Action buttons ──────────────────────────────────────────────────
-        Row(horizontalArrangement = Arrangement.spacedBy(PR_BUTTON_GAP)) {
-            if (state == PrivdState.RUNNING) {
-                OutlinedButton(onClick = { viewModel.privdDisconnect() }) {
-                    Text(stringResource(R.string.privd_action_disconnect))
-                }
-                Button(onClick = {
-                    pingResult = null
-                    isPinging = true
-                    scope.launch {
-                        val ok = withContext(Dispatchers.IO) { PrivdClient.ping() }
-                        isPinging = false
-                        pingResult = ok
-                    }
-                }, enabled = !isPinging) {
-                    if (isPinging) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(PR_PING_SPINNER_SIZE),
-                            strokeWidth = PR_PING_SPINNER_STROKE.dp,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    } else {
-                        Text(stringResource(R.string.privd_action_test))
-                    }
-                }
-            } else {
+        if (state != PrivdState.RUNNING) {
+            Spacer(Modifier.height(PR_BUTTON_GAP))
+            Row(horizontalArrangement = Arrangement.spacedBy(PR_BUTTON_GAP)) {
                 Button(
                     onClick = { viewModel.privdConnect(context) },
                     enabled = state != PrivdState.BOOTSTRAPPING && state != PrivdState.CONNECTING,
                 ) {
                     Text(stringResource(R.string.privd_action_connect))
                 }
-            }
-            TextButton(onClick = onShowWizard) {
-                Text(stringResource(R.string.privd_action_show_wizard))
+                TextButton(onClick = onShowWizard) {
+                    Text(stringResource(R.string.privd_action_show_wizard))
+                }
             }
         }
 
-        // ── Ping result / Status Guidance ──────────────────────────────────
-        if (pingResult != null) {
-            val ok = pingResult!!
-            Spacer(Modifier.height(PR_BUTTON_GAP))
-            Text(
-                text =
-                    stringResource(
-                        if (ok) R.string.privd_ping_ok else R.string.privd_ping_fail,
-                    ),
-                color = if (ok) colors.actionColorSystem else colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        } else {
-            val specificErrorRes =
-                if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
-                    when (lastError) {
-                        PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
-                        PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
-                        PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
-                        PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
-                        PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
-                        PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
-                        PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
-                        PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
-                        else -> null
-                    }
-                } else {
-                    null
-                }
-
-            val infoStringRes =
-                when {
-                    state == PrivdState.RUNNING -> R.string.privd_info_running
-                    state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
-                    hasCredentials == false -> R.string.privd_info_no_credentials
-                    wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
-                    specificErrorRes != null -> specificErrorRes
-                    wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
+        // ── Status Guidance ──────────────────────────────────
+        val specificErrorRes =
+            if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
+                when (lastError) {
+                    PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
+                    PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
+                    PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
+                    PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
+                    PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
+                    PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
+                    PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
+                    PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
                     else -> null
                 }
-            infoStringRes?.let { resId ->
-                val textColor =
-                    when {
-                        state == PrivdState.RUNNING -> colors.actionColorSystem
-                        hasCredentials == false -> colors.onSurfaceSecondary
-                        wirelessDebuggingActive == false -> colors.error
-                        specificErrorRes != null -> colors.error
-                        else -> colors.actionColorSystem
-                    }
-                Spacer(Modifier.height(PR_BUTTON_GAP))
-                Text(
-                    text = stringResource(resId),
-                    color = textColor,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            } else {
+                null
             }
+
+        val infoStringRes =
+            when {
+                state == PrivdState.RUNNING -> R.string.privd_info_running
+                state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
+                hasCredentials == false -> R.string.privd_info_no_credentials
+                wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
+                specificErrorRes != null -> specificErrorRes
+                wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
+                else -> null
+            }
+        infoStringRes?.let { resId ->
+            val textColor =
+                when {
+                    state == PrivdState.RUNNING -> colors.actionColorSystem
+                    hasCredentials == false -> colors.onSurfaceSecondary
+                    wirelessDebuggingActive == false -> colors.error
+                    specificErrorRes != null -> colors.error
+                    else -> colors.actionColorSystem
+                }
+            Spacer(Modifier.height(PR_BUTTON_GAP))
+            Text(
+                text = stringResource(resId),
+                color = textColor,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         AppDivider()
