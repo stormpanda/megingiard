@@ -346,11 +346,6 @@ private fun StepEnableWireless(
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
             )
-            Text(
-                text = stringResource(R.string.privd_wizard_step1_substep_5),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(SW_GAP)) {
             OutlinedButton(onClick = onOpenSettings) {

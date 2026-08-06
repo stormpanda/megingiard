@@ -415,7 +415,6 @@ Open Settings to create a layout.</string>
     <string name="privd_wizard_step1_substep_2">2. Tap Build number 7 times until "You are now a developer!" appears</string>
     <string name="privd_wizard_step1_substep_3">3. Go back → System → Developer options</string>
     <string name="privd_wizard_step1_substep_4">4. Enable Wireless debugging and turn it ON</string>
-    <string name="privd_wizard_step1_substep_5">5. Tap \"Pair device with pairing code\" and keep that dialog open</string>
     <string name="privd_wizard_step1_open">Open system settings</string>
 
     <string name="privd_wizard_step2_intro">Enter the connect port from the Wireless Debugging menu, and the pairing code and pairing port from the \"Pair device with pairing code\" dialog.</string>
