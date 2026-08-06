@@ -145,6 +145,8 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsState()
     val activeSession by EmulatorDetectionFunnel.activeSession.collectAsState()
     val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsState()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
+    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -307,12 +309,12 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 // 1. Featured Hero Game / Companion Card
                 val profiles by MacroPadState.profiles.collectAsState()
 
-                val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName
+                val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName ?: focusedAppPackageName
                 val targetLabel =
                     hoveredAppLabel ?: activeSession?.gameTitle ?: lastDetectedSession?.let { s ->
                         s.romPath?.let { File(it).name } ?: s.gameTitle
                     }
-                val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath
+                val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath ?: focusedRomPath
                 val targetSystem = hoveredSystemId ?: activeSession?.systemId ?: lastDetectedSession?.systemId
 
                 val associatedProfile =

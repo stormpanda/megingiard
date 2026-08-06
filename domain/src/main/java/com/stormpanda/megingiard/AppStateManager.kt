@@ -2,6 +2,7 @@ package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -27,6 +28,25 @@ enum class CompanionViewMode {
     MACROPAD,
     DASHBOARD,
 }
+
+fun CompanionViewMode.shouldShowIntegrationHome(
+    focusedAppPackageName: String?,
+    focusedRomPath: String?,
+    activeProfile: PadProfile?,
+): Boolean =
+    when (this) {
+        CompanionViewMode.MACROPAD -> {
+            false
+        }
+
+        CompanionViewMode.DASHBOARD -> {
+            true
+        }
+
+        CompanionViewMode.AUTO -> {
+            focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true
+        }
+    }
 
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the

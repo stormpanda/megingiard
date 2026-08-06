@@ -373,20 +373,11 @@ fun MainAppScreen() {
                     },
         ) {
             val showIntegrationHome =
-                when (companionViewMode) {
-                    CompanionViewMode.MACROPAD -> {
-                        false
-                    }
-
-                    CompanionViewMode.DASHBOARD -> {
-                        true
-                    }
-
-                    CompanionViewMode.AUTO -> {
-                        isExternalClientActive &&
-                            (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
-                    }
-                }
+                companionViewMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = focusedAppPackageName,
+                    focusedRomPath = focusedRomPath,
+                    activeProfile = activeProfile,
+                )
 
             if (showIntegrationHome) {
                 IntegrationHomeScreen()

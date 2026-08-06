@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -60,6 +61,7 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.shouldShowIntegrationHome
 import java.util.UUID
 
 private const val TAG = "QuickMenu"
@@ -128,6 +130,9 @@ fun QuickMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val companionViewMode by AppStateManager.companionViewMode.collectAsState()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
+    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
+    val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(focusedAppPackageName, focusedRomPath, activeProfile)
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
@@ -226,16 +231,28 @@ fun QuickMenu(
                     },
                 )
 
-                if (companionViewMode == CompanionViewMode.MACROPAD) {
-                    Spacer(Modifier.height(PM_SECTION_SPACING))
-                    HorizontalDivider(color = colors.controlOverlayBorder)
-                    Spacer(Modifier.height(PM_SECTION_SPACING))
+                Spacer(Modifier.height(PM_SECTION_SPACING))
+                HorizontalDivider(color = colors.controlOverlayBorder)
+                Spacer(Modifier.height(PM_SECTION_SPACING))
+
+                if (!showIntegrationHome) {
                     QuickMenuActionChip(
                         label = stringResource(R.string.quick_menu_show_dashboard),
                         painter = painterResource(R.drawable.ic_megingiard_logo),
                         colors = colors,
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    QuickMenuActionChip(
+                        label = stringResource(R.string.quick_menu_show_macropad),
+                        icon = Icons.Rounded.Gamepad,
+                        colors = colors,
+                        onClick = {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),

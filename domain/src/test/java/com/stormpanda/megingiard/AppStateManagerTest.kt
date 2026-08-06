@@ -357,4 +357,16 @@ class AppStateManagerTest {
             )
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
         }
+
+    @Test
+    fun `shouldShowIntegrationHome returns expected values across view modes`() {
+        assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome("com.test.game", null, null))
+        assertTrue(CompanionViewMode.DASHBOARD.shouldShowIntegrationHome("com.test.game", null, null))
+
+        // AUTO mode: true when focusedApp is null (idle)
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(null, null, null))
+
+        // AUTO mode: true when focusedApp has no profile matching
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.unmapped.app", null, null))
+    }
 }

@@ -33,6 +33,7 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.MirrorSettings
+import com.stormpanda.megingiard.shouldShowIntegrationHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -281,25 +282,12 @@ class ScreenCaptureService : Service() {
 
         scope.launch {
             combine(
-                AppStateManager.isExternalClientActive,
                 AppStateManager.focusedAppPackageName,
                 AppStateManager.focusedRomPath,
                 MacroPadState.activeProfile,
                 AppStateManager.companionViewMode,
-            ) { active, focused, focusedRom, profile, viewMode ->
-                when (viewMode) {
-                    CompanionViewMode.MACROPAD -> {
-                        false
-                    }
-
-                    CompanionViewMode.DASHBOARD -> {
-                        true
-                    }
-
-                    CompanionViewMode.AUTO -> {
-                        active && (focused == null || profile?.matches(focused, focusedRom) != true)
-                    }
-                }
+            ) { focused, focusedRom, profile, viewMode ->
+                viewMode.shouldShowIntegrationHome(focused, focusedRom, profile)
             }.collect { showIntegrationHome ->
                 if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
                     AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
@@ -672,25 +660,15 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
 
-        val isExternalClientActive = AppStateManager.isExternalClientActive.value
         val focusedAppPackageName = AppStateManager.focusedAppPackageName.value
         val focusedRomPath = AppStateManager.focusedRomPath.value
         val activeProfile = MacroPadState.activeProfile.value
         val showIntegrationHome =
-            when (AppStateManager.companionViewMode.value) {
-                CompanionViewMode.MACROPAD -> {
-                    false
-                }
-
-                CompanionViewMode.DASHBOARD -> {
-                    true
-                }
-
-                CompanionViewMode.AUTO -> {
-                    isExternalClientActive &&
-                        (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
-                }
-            }
+            AppStateManager.companionViewMode.value.shouldShowIntegrationHome(
+                focusedAppPackageName = focusedAppPackageName,
+                focusedRomPath = focusedRomPath,
+                activeProfile = activeProfile,
+            )
 
         val shouldShow =
             capturing && validScreen &&

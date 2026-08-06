@@ -1255,5 +1255,6 @@ Open Settings to create a layout.</string>
     <string name="integration_home_settings_desc">App Preferences</string>
     <string name="integration_home_tool_mirror">Screen Mirror</string>
     <string name="quick_menu_show_dashboard">Show Companion Hub</string>
+    <string name="quick_menu_show_macropad">Show MacroPad</string>
 </resources>
 
