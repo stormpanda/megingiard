@@ -1210,7 +1210,7 @@ Open Settings to create a layout.</string>
     <string name="integration_home_create_profile">Create Profile</string>
     <string name="integration_home_link_existing">Link Existing</string>
     <string name="integration_home_no_unassigned_profiles">No unassigned profiles</string>
-    <string name="integration_home_status_title">Status Panel</string>
+    <string name="integration_home_status_title">Companion Status</string>
     <string name="integration_home_status_privd">Privileged Daemon</string>
     <string name="integration_home_status_mirror">Screen Mirroring</string>
     <string name="integration_home_status_accessibility">Accessibility Service</string>
@@ -1225,6 +1225,20 @@ Open Settings to create a layout.</string>
     <string name="integration_home_new_profile">New Profile</string>
     <string name="integration_home_default_layout">Default</string>
     <string name="integration_home_show_macropad">Show</string>
+    <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
+    <string name="integration_home_hero_idle_subtitle">Select a game on the top screen or launch companion tools below.</string>
+    <string name="integration_home_launch_controls">Launch Controls</string>
+    <string name="integration_home_deck_title">Companion Tools</string>
+    <string name="integration_home_macropad_desc">Gamepad &amp; Macros</string>
+    <string name="integration_home_touchpad_desc">Trackpoint &amp; Pointer</string>
+    <string name="integration_home_keyboard_desc">Virtual Keyboard</string>
+    <string name="integration_home_mirror_desc">Top Screen Mirror</string>
+    <string name="integration_home_settings">Global Settings</string>
+    <string name="integration_home_help">Help &amp; Tutorials</string>
+    <string name="integration_home_tool_macropad">MacroPad</string>
+    <string name="integration_home_tool_touchpad">Touchpad</string>
+    <string name="integration_home_tool_keyboard">Keyboard</string>
+    <string name="integration_home_tool_mirror">Screen Mirror</string>
     <string name="quick_menu_show_dashboard">Show Dashboard</string>
 </resources>
 

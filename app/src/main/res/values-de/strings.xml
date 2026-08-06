@@ -1217,7 +1217,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_create_profile">Profil erstellen</string>
     <string name="integration_home_link_existing">Bestehendes verknüpfen</string>
     <string name="integration_home_no_unassigned_profiles">Keine unzugewiesenen Profile</string>
-    <string name="integration_home_status_title">Status-Anzeige</string>
+    <string name="integration_home_status_title">Begleiter-Status</string>
     <string name="integration_home_status_privd">Privilegierter Daemon</string>
     <string name="integration_home_status_mirror">Bildschirm-Spiegelung</string>
     <string name="integration_home_status_accessibility">Barrierefreiheitsdienst</string>
@@ -1232,6 +1232,20 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_new_profile">Neues Profil</string>
     <string name="integration_home_default_layout">Standard</string>
     <string name="integration_home_show_macropad">Anzeigen</string>
+    <string name="integration_home_hero_idle_title">Megingiard Begleiter-Hub</string>
+    <string name="integration_home_hero_idle_subtitle">Wähle ein Spiel auf dem oberen Bildschirm oder öffne unten ein Werkzeug.</string>
+    <string name="integration_home_launch_controls">Steuerung starten</string>
+    <string name="integration_home_deck_title">Begleiter-Werkzeuge</string>
+    <string name="integration_home_macropad_desc">Gamepad &amp; Makros</string>
+    <string name="integration_home_touchpad_desc">Trackpoint &amp; Zeiger</string>
+    <string name="integration_home_keyboard_desc">Virtuelle Tastatur</string>
+    <string name="integration_home_mirror_desc">Oberer Bildschirm-Spiegel</string>
+    <string name="integration_home_settings">Globale Einstellungen</string>
+    <string name="integration_home_help">Hilfe &amp; Tutorials</string>
+    <string name="integration_home_tool_macropad">MacroPad</string>
+    <string name="integration_home_tool_touchpad">Touchpad</string>
+    <string name="integration_home_tool_keyboard">Tastatur</string>
+    <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
     <string name="quick_menu_show_dashboard">Dashboard anzeigen</string>
 </resources>
 
