@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,14 +24,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryFull
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -105,6 +110,8 @@ private const val IH_BATTERY_MAX = 100
 
 private val IH_BORDER_WIDTH = 1.dp
 private val IH_BUTTON_CORNER_RADIUS = 10.dp
+private val IH_BUTTON_ICON_SIZE = 16.dp
+private val IH_BUTTON_ICON_SPACING = 6.dp
 private const val IH_HIGHLIGHT_ALPHA = 0.15f
 private val IH_BUTTON_SPACING = 10.dp
 
@@ -387,6 +394,8 @@ private fun HeroCompanionCard(
                         style = MaterialTheme.typography.titleLarge,
                         color = colors.onSurface,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.appMarquee(enabled = hasActiveGame),
                     )
 
                     if (hasActiveGame) {
@@ -400,6 +409,8 @@ private fun HeroCompanionCard(
                                 text = sysInfo,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.onSurfaceSecondary,
+                                maxLines = 1,
+                                modifier = Modifier.appMarquee(),
                             )
                         }
                     } else {
@@ -416,7 +427,7 @@ private fun HeroCompanionCard(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -429,6 +440,8 @@ private fun HeroCompanionCard(
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (associatedProfile != null) colors.accent else colors.onSurfaceSecondary,
                             fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            modifier = Modifier.appMarquee(),
                         )
                     }
 
@@ -439,6 +452,7 @@ private fun HeroCompanionCard(
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
                                     AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                                 },
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =
                                     ButtonDefaults.buttonColors(
                                         containerColor = colors.accent,
@@ -446,11 +460,21 @@ private fun HeroCompanionCard(
                                     ),
                                 shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                             ) {
-                                Text(
-                                    text = stringResource(R.string.integration_home_launch_controls),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Visibility,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.integration_home_launch_controls),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
                             }
 
                             OutlinedButton(
@@ -458,6 +482,7 @@ private fun HeroCompanionCard(
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
                                     AppStateManager.setEditorActive(true)
                                 },
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
                                 colors =
                                     ButtonDefaults.outlinedButtonColors(
@@ -465,10 +490,20 @@ private fun HeroCompanionCard(
                                     ),
                                 shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                             ) {
-                                Text(
-                                    text = stringResource(R.string.integration_home_edit_layout),
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Edit,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.integration_home_edit_layout),
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -502,6 +537,7 @@ private fun HeroCompanionCard(
                                     MacroPadState.setActiveProfileId(newProfileId)
                                     AppStateManager.setEditorActive(true)
                                 },
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =
                                     ButtonDefaults.buttonColors(
                                         containerColor = colors.accent,
@@ -509,16 +545,27 @@ private fun HeroCompanionCard(
                                     ),
                                 shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                             ) {
-                                Text(
-                                    text = stringResource(R.string.integration_home_create_profile),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.integration_home_create_profile),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                }
                             }
 
                             Box {
                                 OutlinedButton(
                                     onClick = { expandedDropdown = true },
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                     border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
                                     colors =
                                         ButtonDefaults.outlinedButtonColors(
@@ -526,10 +573,20 @@ private fun HeroCompanionCard(
                                         ),
                                     shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.integration_home_link_existing),
-                                        style = MaterialTheme.typography.labelLarge,
-                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Link,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.integration_home_link_existing),
+                                            style = MaterialTheme.typography.labelLarge,
+                                        )
+                                    }
                                 }
 
                                 DropdownMenu(
@@ -574,9 +631,9 @@ private fun HeroCompanionCard(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(IH_SPACING_CARD),
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.integration_home_active_profile),
                             style = MaterialTheme.typography.bodySmall,
@@ -587,6 +644,8 @@ private fun HeroCompanionCard(
                             style = MaterialTheme.typography.bodyLarge,
                             color = colors.accent,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            modifier = Modifier.appMarquee(),
                         )
                     }
 
@@ -594,6 +653,7 @@ private fun HeroCompanionCard(
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                         },
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                         colors =
                             ButtonDefaults.buttonColors(
                                 containerColor = colors.accent,
@@ -601,11 +661,21 @@ private fun HeroCompanionCard(
                             ),
                         shape = RoundedCornerShape(IH_BUTTON_CORNER_RADIUS),
                     ) {
-                        Text(
-                            text = stringResource(R.string.integration_home_launch_controls),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(IH_BUTTON_ICON_SPACING),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Visibility,
+                                contentDescription = null,
+                                modifier = Modifier.size(IH_BUTTON_ICON_SIZE),
+                            )
+                            Text(
+                                text = stringResource(R.string.integration_home_launch_controls),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }

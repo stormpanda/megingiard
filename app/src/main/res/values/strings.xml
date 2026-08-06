@@ -1205,10 +1205,10 @@ Open Settings to create a layout.</string>
     <string name="integration_home_no_profile_active">No Profile Active</string>
     <string name="integration_home_profile_config_title">Profile Configuration</string>
     <string name="integration_home_linked_profile">Linked Profile</string>
-    <string name="integration_home_edit_layout">Edit Layout</string>
+    <string name="integration_home_edit_layout">Edit</string>
     <string name="integration_home_no_profile_assigned">No profile configured for this app yet.</string>
-    <string name="integration_home_create_profile">Create Profile</string>
-    <string name="integration_home_link_existing">Link Existing</string>
+    <string name="integration_home_create_profile">Create</string>
+    <string name="integration_home_link_existing">Link</string>
     <string name="integration_home_no_unassigned_profiles">No unassigned profiles</string>
     <string name="integration_home_status_title">Companion Status</string>
     <string name="integration_home_status_privd">Privileged Daemon</string>
@@ -1227,7 +1227,7 @@ Open Settings to create a layout.</string>
     <string name="integration_home_show_macropad">Show</string>
     <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
     <string name="integration_home_hero_idle_subtitle">Select a game on the top screen or launch companion tools below.</string>
-    <string name="integration_home_launch_controls">Launch Controls</string>
+    <string name="integration_home_launch_controls">Show</string>
     <string name="integration_home_deck_title">Companion Tools</string>
     <string name="integration_home_macropad_desc">Gamepad &amp; Macros</string>
     <string name="integration_home_touchpad_desc">Mouse / Touch Projection</string>

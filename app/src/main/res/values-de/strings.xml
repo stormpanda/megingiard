@@ -1212,10 +1212,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_no_profile_active">Kein Profil aktiv</string>
     <string name="integration_home_profile_config_title">Profil-Konfiguration</string>
     <string name="integration_home_linked_profile">Verknüpftes Profil</string>
-    <string name="integration_home_edit_layout">Layout bearbeiten</string>
+    <string name="integration_home_edit_layout">Bearbeiten</string>
     <string name="integration_home_no_profile_assigned">Noch kein Profil für diese App konfiguriert.</string>
-    <string name="integration_home_create_profile">Profil erstellen</string>
-    <string name="integration_home_link_existing">Bestehendes verknüpfen</string>
+    <string name="integration_home_create_profile">Erstellen</string>
+    <string name="integration_home_link_existing">Verknüpfen</string>
     <string name="integration_home_no_unassigned_profiles">Keine unzugewiesenen Profile</string>
     <string name="integration_home_status_title">Begleiter-Status</string>
     <string name="integration_home_status_privd">Privilegierter Daemon</string>
@@ -1234,7 +1234,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_show_macropad">Anzeigen</string>
     <string name="integration_home_hero_idle_title">Megingiard Begleiter-Hub</string>
     <string name="integration_home_hero_idle_subtitle">Wähle ein Spiel auf dem oberen Bildschirm oder öffne unten ein Werkzeug.</string>
-    <string name="integration_home_launch_controls">Steuerung starten</string>
+    <string name="integration_home_launch_controls">Anzeigen</string>
     <string name="integration_home_deck_title">Begleiter-Werkzeuge</string>
     <string name="integration_home_macropad_desc">Gamepad &amp; Makros</string>
     <string name="integration_home_touchpad_desc">Maus / Touch-Projektion</string>
