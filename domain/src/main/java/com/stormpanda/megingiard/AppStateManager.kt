@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
@@ -44,7 +45,11 @@ fun CompanionViewMode.shouldShowIntegrationHome(
         }
 
         CompanionViewMode.AUTO -> {
-            if (focusedAppPackageName == null) {
+            if (focusedAppPackageName == null ||
+                focusedAppPackageName.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
+                focusedAppPackageName.contains("launcher") ||
+                focusedAppPackageName.contains("home")
+            ) {
                 true
             } else {
                 activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) != true

@@ -152,7 +152,10 @@ fun QuickMenu(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = PM_SCRIM_ALPHA))
                     .pointerInput(Unit) {
-                        detectTapGestures(onTap = { onDismiss() })
+                        detectTapGestures(onTap = {
+                            AppStateManager.closeQuickMenu()
+                            onDismiss()
+                        })
                     },
         ) {
             // ── Top card — Mirror controls (always visible) ───────────────
@@ -245,6 +248,7 @@ fun QuickMenu(
                         colors = colors,
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                            AppStateManager.closeQuickMenu()
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -259,6 +263,7 @@ fun QuickMenu(
                         colors = colors,
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                            AppStateManager.closeQuickMenu()
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -270,6 +275,7 @@ fun QuickMenu(
                         colors = colors,
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                            AppStateManager.closeQuickMenu()
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),

@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -154,6 +155,17 @@ object AutoSwitchCoordinator {
 
         AppLog.i(TAG, "onPackageChanged: foreground package changed to $normalized")
         _foregroundApp.value = normalized
+
+        val isGameFocusLauncher = normalized.startsWith("com.stormpanda.megingiard.gamefocus")
+
+        if (isGameFocusLauncher) {
+            AppLog.d(TAG, "onPackageChanged: foreground package is GameFocus launcher '$normalized', ignoring")
+            return
+        }
+
+        if (!isRegisteredEmulator) {
+            AppStateManager.setStandaloneForegroundState(normalized, null)
+        }
 
         val directMatchedProfile = MacroPadState.findBestMatchingProfile(normalized)
 

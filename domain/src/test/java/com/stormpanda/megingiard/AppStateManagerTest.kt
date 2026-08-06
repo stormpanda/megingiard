@@ -504,4 +504,37 @@ class AppStateManagerTest {
             assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
             assertFalse(AppStateManager.isQuickMenuOpen.value)
         }
+
+    @Test
+    fun `shouldShowIntegrationHome evaluates true for launcher packages in AUTO mode`() =
+        runTest {
+            val autoMode = CompanionViewMode.AUTO
+
+            // GameFocus package -> should show Companion Hub
+            assertTrue(
+                autoMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = "com.stormpanda.megingiard.gamefocus.debug",
+                    focusedRomPath = null,
+                    activeProfile = null,
+                ),
+            )
+
+            // System UI / Android Launcher -> should show Companion Hub
+            assertTrue(
+                autoMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = "com.android.launcher3",
+                    focusedRomPath = null,
+                    activeProfile = null,
+                ),
+            )
+
+            // Null package -> should show Companion Hub
+            assertTrue(
+                autoMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = null,
+                    focusedRomPath = null,
+                    activeProfile = null,
+                ),
+            )
+        }
 }
