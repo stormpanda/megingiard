@@ -63,7 +63,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -119,6 +123,7 @@ internal fun PrivdSetupWizardDialog(
     var pairPort by rememberSaveable { mutableStateOf("") }
     var pairCode by rememberSaveable { mutableStateOf("") }
     var pairError by remember { mutableStateOf(false) }
+    var hasAttemptedSubmit by remember { mutableStateOf(false) }
     var pairBusy by remember { mutableStateOf(false) }
     var bootstrapBusy by remember { mutableStateOf(false) }
 
@@ -148,10 +153,15 @@ internal fun PrivdSetupWizardDialog(
 
     LaunchedEffect(Unit) {
         AppLog.d(TAG, "PrivdSetupWizardDialog: wizard opened")
+        viewModel.privdResetBootstrapStage()
     }
 
     LaunchedEffect(step) {
         AppLog.d(TAG, "PrivdSetupWizardDialog: step changed to $step")
+        if (step != 2) {
+            hasAttemptedSubmit = false
+            pairError = false
+        }
     }
 
     LaunchedEffect(stage) {
@@ -305,6 +315,7 @@ internal fun PrivdSetupWizardDialog(
                                 code = pairCode,
                                 busy = pairBusy || bootstrapBusy,
                                 error = pairError,
+                                hasAttemptedSubmit = hasAttemptedSubmit,
                                 lastError = lastError,
                                 stage = stage,
                                 fieldColors = fieldColors,
@@ -381,6 +392,7 @@ internal fun PrivdSetupWizardDialog(
                                         "PrivdSetupWizardDialog: Setting connect port=$connectPortInt and pairing pairPort=$portInt",
                                     )
                                     PrivdBootstrapper.setScreenConnectPort(connectPortInt)
+                                    hasAttemptedSubmit = true
                                     pairBusy = true
                                     pairError = false
                                     viewModel.privdPair(context, "127.0.0.1", portInt, pairCode) { ok ->
@@ -484,12 +496,36 @@ private fun Step2ConnectPort(
     onConnectPortChange: (String) -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val examplePrefix = stringResource(R.string.privd_wizard_step2_connect_example)
+    val exampleConnectPortString =
+        remember(examplePrefix, colors.accent) {
+            buildAnnotatedString {
+                append(examplePrefix)
+                withStyle(SpanStyle(color = colors.accent, fontWeight = FontWeight.Bold)) {
+                    append("37123")
+                }
+            }
+        }
+
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
         Text(
             text = stringResource(R.string.privd_wizard_step2_connect_intro),
             color = colors.onSurface,
             style = MaterialTheme.typography.bodyMedium,
         )
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = exampleConnectPortString,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceSecondary,
+            )
+        }
         Text(
             text = stringResource(R.string.privd_wizard_section_connect),
             color = colors.actionColorSystem,
@@ -516,6 +552,7 @@ private fun Step3Pairing(
     code: String,
     busy: Boolean,
     error: Boolean,
+    hasAttemptedSubmit: Boolean,
     lastError: PrivdError?,
     stage: BootstrapStage,
     fieldColors: TextFieldColors,
@@ -524,12 +561,53 @@ private fun Step3Pairing(
     onCodeChange: (String) -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val codeExamplePrefix = stringResource(R.string.privd_wizard_step3_code_example)
+    val exampleCodeString =
+        remember(codeExamplePrefix, colors.accent) {
+            buildAnnotatedString {
+                append(codeExamplePrefix)
+                withStyle(SpanStyle(color = colors.accent, fontWeight = FontWeight.Bold)) {
+                    append("123456")
+                }
+            }
+        }
+
+    val portExamplePrefix = stringResource(R.string.privd_wizard_step3_port_example)
+    val examplePairPortString =
+        remember(portExamplePrefix, colors.accent) {
+            buildAnnotatedString {
+                append(portExamplePrefix)
+                withStyle(SpanStyle(color = colors.accent, fontWeight = FontWeight.Bold)) {
+                    append("45678")
+                }
+            }
+        }
+
     Column(verticalArrangement = Arrangement.spacedBy(SW_GAP)) {
         Text(
             text = stringResource(R.string.privd_wizard_step3_pair_intro),
             color = colors.onSurface,
             style = MaterialTheme.typography.bodyMedium,
         )
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = exampleCodeString,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceSecondary,
+            )
+            Text(
+                text = examplePairPortString,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceSecondary,
+            )
+        }
         Text(
             text = stringResource(R.string.privd_wizard_section_pair),
             color = colors.actionColorSystem,
@@ -581,21 +659,23 @@ private fun Step3Pairing(
             }
         }
 
-        if (error) {
-            Text(
-                text = stringResource(R.string.privd_wizard_step2_error),
-                color = colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        if (hasAttemptedSubmit) {
+            if (error) {
+                Text(
+                    text = stringResource(R.string.privd_wizard_step2_error),
+                    color = colors.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
 
-        val errorRes = errorStringResource(lastError)
-        if (errorRes != null) {
-            Text(
-                text = stringResource(errorRes),
-                color = colors.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            val errorRes = errorStringResource(lastError)
+            if (errorRes != null) {
+                Text(
+                    text = stringResource(errorRes),
+                    color = colors.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

@@ -373,7 +373,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <string name="privd_wizard_step2_intro">Gib den Connect-Port aus dem Menü \"WLAN-Debugging\" sowie den Kopplungscode und Kopplungs-Port aus dem Dialog \"Gerät über Kopplungscode koppeln\" ein.</string>
     <string name="privd_wizard_step2_connect_intro">Gib den 5-stelligen Connect-Port ein, der unter \"IP-Adresse &amp; Port\" im WLAN-Debugging-Hauptmenü angezeigt wird.</string>
+    <string name="privd_wizard_step2_connect_example">Beispiel IP-Adresse &amp; Port: 192.168.1.42:</string>
     <string name="privd_wizard_step3_pair_intro">Tippe auf \"Gerät über Kopplungscode koppeln\" in den WLAN-Debugging-Einstellungen und gib den 6-stelligen Kopplungscode sowie den 5-stelligen Kopplungs-Port ein.</string>
+    <string name="privd_wizard_step3_code_example">Beispiel Kopplungscode: </string>
+    <string name="privd_wizard_step3_port_example">Beispiel Kopplungs-IP-Adresse &amp; Port: 192.168.1.42:</string>
     <string name="privd_wizard_section_connect">Aus WLAN-Debugging Menü</string>
     <string name="privd_wizard_field_connect_port">Connect-Port (5 Ziffern unter \"IP-Adresse &amp; Port\")</string>
     <string name="privd_wizard_section_pair">Aus Kopplungsdialog</string>
