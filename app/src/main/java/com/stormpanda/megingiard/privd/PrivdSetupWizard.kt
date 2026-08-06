@@ -505,6 +505,11 @@ private fun Step1MenuDescription() {
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
             )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_substep_5),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         Text(
@@ -521,6 +526,11 @@ private fun Step1MenuDescription() {
             )
             Text(
                 text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_2),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = stringResource(R.string.privd_wizard_step1_dev_enabled_substep_3),
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
             )
