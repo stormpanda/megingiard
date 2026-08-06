@@ -718,13 +718,6 @@ private fun CompanionToolsDeck(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(IH_SPACING_GRID),
     ) {
-        Text(
-            text = stringResource(R.string.integration_home_deck_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = colors.onSurfaceSecondary,
-            fontWeight = FontWeight.SemiBold,
-        )
-
         // Top Row: Show Active Profile (Top Left) & Global Settings (Top Right)
         Row(
             modifier = Modifier.fillMaxWidth(),
