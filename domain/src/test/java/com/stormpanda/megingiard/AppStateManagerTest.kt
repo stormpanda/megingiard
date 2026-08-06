@@ -382,4 +382,29 @@ class AppStateManagerTest {
         // AUTO mode: false when focusedApp matches activeProfile
         assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
     }
+
+    @Test
+    fun `shouldShowIntegrationHome in AUTO handles GameNative ROM active profiles`() {
+        val gameNativeProfile =
+            PadProfile(
+                id = "gn-1",
+                name = "Ball x Pit",
+                layouts = emptyList(),
+                association =
+                    com.stormpanda.megingiard.macropad.ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "BALL x PIT.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        // When focused package is app.gamenative and activeProfile is Ball x Pit:
+        // Returns false (shows MacroPad) even if focusedRomPath is null due to isActiveProfile fallback
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("app.gamenative", null, gameNativeProfile))
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("app.gamenative", "BALLxPIT.steam", gameNativeProfile))
+
+        // When focused package changes to home launcher (e.g. com.android.launcher3):
+        // Returns true (shows Companion Hub) while gameNativeProfile remains activeProfile
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.android.launcher3", null, gameNativeProfile))
+    }
 }
