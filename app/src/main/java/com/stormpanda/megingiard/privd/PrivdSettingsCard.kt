@@ -94,19 +94,11 @@ internal fun PrivdSettingsCard(
     onShowDeadzoneDialog: () -> Unit,
 ) {
     val state by viewModel.privdState.collectAsState()
-    val lastError by viewModel.privdLastError.collectAsState()
 
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val colors = LocalAppColors.current
     val context = LocalContext.current
-
-    val wirelessDebuggingActive by viewModel.isWirelessDebuggingActive.collectAsState()
-    val hasCredentials by viewModel.hasCredentials.collectAsState()
-
-    LaunchedEffect(state) {
-        viewModel.checkPrivilegedModeStatus(context)
-    }
 
     Column(
         modifier =
@@ -117,27 +109,26 @@ internal fun PrivdSettingsCard(
     ) {
         // ── Status row ──────────────────────────────────────────────────────
         Column {
-            val (dotColor, label) =
+            val (dotColor, textColor, label) =
                 when (state) {
                     PrivdState.OFF -> {
-                        colors.onSurfaceSecondary to stringResource(R.string.privd_status_off)
+                        Triple(colors.onSurfaceSecondary, colors.onSurfaceSecondary, stringResource(R.string.privd_status_off))
                     }
 
                     PrivdState.BOOTSTRAPPING -> {
-                        colors.accent to stringResource(R.string.privd_status_bootstrapping)
+                        Triple(colors.accent, colors.accent, stringResource(R.string.privd_status_bootstrapping))
                     }
 
                     PrivdState.CONNECTING -> {
-                        colors.accent to stringResource(R.string.privd_status_connecting)
+                        Triple(colors.accent, colors.accent, stringResource(R.string.privd_status_connecting))
                     }
 
                     PrivdState.RUNNING -> {
-                        colors.actionColorSystem to
-                            stringResource(R.string.privd_status_running, PrivdConstants.PRIVD_VERSION)
+                        Triple(colors.accent, colors.accent, stringResource(R.string.privd_status_running, PrivdConstants.PRIVD_VERSION))
                     }
 
                     PrivdState.FAILED -> {
-                        colors.error to stringResource(R.string.privd_status_failed)
+                        Triple(colors.error, colors.error, stringResource(R.string.privd_status_failed))
                     }
                 }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -156,7 +147,7 @@ internal fun PrivdSettingsCard(
             }
             Text(
                 text = label,
-                color = colors.onSurfaceSecondary,
+                color = textColor,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -183,51 +174,6 @@ internal fun PrivdSettingsCard(
                     Text(stringResource(R.string.privd_action_show_wizard))
                 }
             }
-        }
-
-        // ── Status Guidance ──────────────────────────────────
-        val specificErrorRes =
-            if (state == PrivdState.FAILED && lastError != null && lastError != PrivdError.DAEMON_UNREACHABLE) {
-                when (lastError) {
-                    PrivdError.PAIRING_FAILED -> R.string.privd_error_pairing_failed
-                    PrivdError.ADB_DISCOVERY_FAILED -> R.string.privd_error_adb_discovery_failed
-                    PrivdError.ADB_CONNECT_FAILED -> R.string.privd_error_adb_connect_failed
-                    PrivdError.BOOTSTRAP_PUSH_FAILED -> R.string.privd_error_bootstrap_push_failed
-                    PrivdError.BOOTSTRAP_SPAWN_FAILED -> R.string.privd_error_bootstrap_spawn_failed
-                    PrivdError.BOOTSTRAP_PROVISION_FAILED -> R.string.privd_error_bootstrap_provision_failed
-                    PrivdError.ADB_PAIRING_REQUIRED -> R.string.privd_error_adb_pairing_required
-                    PrivdError.VERSION_MISMATCH -> R.string.privd_error_version_mismatch
-                    else -> null
-                }
-            } else {
-                null
-            }
-
-        val infoStringRes =
-            when {
-                state == PrivdState.RUNNING -> R.string.privd_info_running
-                state == PrivdState.BOOTSTRAPPING || state == PrivdState.CONNECTING -> R.string.privd_info_connecting
-                hasCredentials == false -> R.string.privd_info_no_credentials
-                wirelessDebuggingActive == false -> R.string.privd_info_wireless_disabled
-                specificErrorRes != null -> specificErrorRes
-                wirelessDebuggingActive == true && (state == PrivdState.OFF || state == PrivdState.FAILED) -> R.string.privd_info_wireless_active_disconnected
-                else -> null
-            }
-        infoStringRes?.let { resId ->
-            val textColor =
-                when {
-                    state == PrivdState.RUNNING -> colors.actionColorSystem
-                    hasCredentials == false -> colors.onSurfaceSecondary
-                    wirelessDebuggingActive == false -> colors.error
-                    specificErrorRes != null -> colors.error
-                    else -> colors.actionColorSystem
-                }
-            Spacer(Modifier.height(PR_BUTTON_GAP))
-            Text(
-                text = stringResource(resId),
-                color = textColor,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
 
         // ── Dead-zone configuration row ──────────────────────────────────────
