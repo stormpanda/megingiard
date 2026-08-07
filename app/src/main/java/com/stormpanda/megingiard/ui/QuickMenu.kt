@@ -241,8 +241,6 @@ fun QuickMenu(
                             colors = colors,
                             onClick = {
                                 AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
-                                AppStateManager.closeQuickMenu()
-                                onDismiss()
                             },
                             modifier = Modifier.weight(1f),
                         )
@@ -253,8 +251,6 @@ fun QuickMenu(
                             colors = colors,
                             onClick = {
                                 AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                                AppStateManager.closeQuickMenu()
-                                onDismiss()
                             },
                             modifier = Modifier.weight(1f),
                         )

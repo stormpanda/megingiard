@@ -502,6 +502,32 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `activeLayout change does not side effect uiMode or close active overlay`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.openQuickMenu()
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+
+            val profile =
+                PadProfile(
+                    id = "p_test_qm",
+                    name = "Test Profile",
+                    layouts =
+                        listOf(
+                            PadLayout(id = "l_test_qm_1", name = "Layout 1"),
+                            PadLayout(id = "l_test_qm_2", name = "Layout 2"),
+                        ),
+                    activeLayoutId = "l_test_qm_1",
+                )
+            MacroPadState.addProfile(profile)
+            MacroPadState.setActiveProfileId("p_test_qm")
+            MacroPadState.setActiveLayoutId("l_test_qm_2")
+
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+            AppStateManager.closeQuickMenu()
+        }
+
+    @Test
     fun `shouldShowIntegrationHome evaluates true for launcher packages in AUTO mode`() =
         runTest {
             val autoMode = CompanionViewMode.AUTO
