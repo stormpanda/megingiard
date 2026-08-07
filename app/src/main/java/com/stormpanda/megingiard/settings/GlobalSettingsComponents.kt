@@ -540,7 +540,10 @@ internal fun UpdateAvailableBanner(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Button(
-                onClick = onUpdateClick,
+                onClick = {
+                    AppLog.d(TAG, "UpdateAvailableBanner clicked: $tagName")
+                    onUpdateClick()
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = accentColor),
             ) {
                 Text(
@@ -566,7 +569,10 @@ internal fun UpdateCheckSection(
         label = stringResource(R.string.settings_auto_update_check),
         description = stringResource(R.string.settings_auto_update_check_desc),
         checked = autoUpdateCheckEnabled,
-        onCheckedChange = onAutoUpdateCheckChanged,
+        onCheckedChange = { enabled ->
+            AppLog.d(TAG, "autoUpdateCheckEnabled changed to $enabled")
+            onAutoUpdateCheckChanged(enabled)
+        },
     )
     AppDivider()
     val descText =
@@ -579,6 +585,9 @@ internal fun UpdateCheckSection(
         label = stringResource(R.string.settings_check_for_updates),
         description = descText,
         accentColor = accentColor,
-        onClick = onCheckForUpdates,
+        onClick = {
+            AppLog.d(TAG, "UpdateCheckSection manual check clicked")
+            onCheckForUpdates()
+        },
     )
 }
