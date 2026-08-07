@@ -1009,12 +1009,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_quickmenu_screenshot_label">Screenshot aufnehmen</string>
     <string name="help_quickmenu_screenshot_desc">Nimmt einen Screenshot des Hauptbildschirms auf. Wenn die Spiegelung nicht aktiv ist, erfordert dies eine Verbindung zum Privilegierten Modus.</string>
     <string name="help_quickmenu_section_macropad">MacroPad-Steuerung (untere Karte)</string>
-    <string name="help_quickmenu_profiles_desc">Tipe auf einen Chip, um sofort zu einem anderen Makroprofil zu wechseln. Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
-    <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Schaltflächen-Layout im aktuellen Profil zu wechseln. Nur als aktiviert markierte Layouts erscheinen hier.</string>
+    <string name="help_quickmenu_profiles_desc">Tippe auf einen Chip, um sofort zu einem anderen Spielprofil zu wechseln (deaktiviert den Auto-Wechsel). Das aktive Profil ist hervorgehoben. Profile werden im Bereich „Profil/Layout bearbeiten“ verwaltet.</string>
+    <string name="help_quickmenu_layouts_desc">Tippe auf einen Chip, um zu einem anderen Layout im aktuellen Profil zu wechseln (deaktiviert den Auto-Wechsel). Nur als aktiviert markierte Layouts erscheinen hier.</string>
     <string name="help_quickmenu_auto_switch_label">Auto-Wechsel</string>
     <string name="help_quickmenu_auto_switch_desc">Schaltet die automatische Profilzuordnung EIN/AUS. Bei EIN wechseln Profile und Companion-Ansichten automatisch basierend auf dem aktiven Spiel oder Emulator. Bei AUS ist der automatische Wechsel pausiert.</string>
     <string name="help_quickmenu_view_switch_label">Zum Hub / Spiel-Profil wechseln</string>
-    <string name="help_quickmenu_view_switch_desc">Wechselt manuell zwischen dem Companion Hub Dashboard und dem aktiven Spiel-Profil-Layout.</string>
+    <string name="help_quickmenu_view_switch_desc">Wechselt manuell zwischen dem Companion Hub Dashboard und dem aktiven Spiel-Profil-Layout (deaktiviert den Auto-Wechsel).</string>
     <string name="help_quickmenu_edit_desc">Öffnet den Bereich „Profil/Layout bearbeiten“, in dem du Schaltflächen hinzufügen, verschieben und konfigurieren sowie Profile, Layouts und Makros verwalten kannst.</string>
     <string name="help_quickmenu_settings_desc">Öffnet die globalen Einstellungen für App-weite Konfiguration wie Design, Akzentfarbe, automatischen Spiegelungsstart und Privilegierter-Modus-Einrichtung.</string>
     <string name="help_quickmenu_shut_off_label">App beenden</string>
