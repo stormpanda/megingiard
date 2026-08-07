@@ -143,6 +143,10 @@ object ScreenCaptureManager {
     fun setCapturing(capturing: Boolean) {
         AppLog.i(TAG, "setCapturing($capturing)")
         _isCapturing.value = capturing
+        if (!capturing) {
+            _isFrozen.value = false
+            setFrozenBitmap(null)
+        }
     }
 
     fun setScale(scale: Float) {

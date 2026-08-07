@@ -75,20 +75,6 @@ class ScreenCaptureService : Service() {
         // fire immediately after show() — isActivityResumed would then toggle hide() and
         // trigger an indefinite cycle. onUserLeaveHint is NOT called for Presentation
         // coverage, only for genuine user navigation.
-        scope.launch {
-            AppStateManager.isUserLeaving.collect { leaving ->
-                AppLog.d(TAG, "isUserLeaving=$leaving → ${if (leaving) "hide" else "show"} presentations")
-                if (leaving) {
-                    mirrorPresentation?.hide()
-                    recordingPresentation?.hide()
-                } else {
-                    if (shouldShowMirrorPresentation()) {
-                        mirrorPresentation?.show()
-                    }
-                    recordingPresentation?.show()
-                }
-            }
-        }
 
         scope.launch {
             AppStateManager.isPrivdPromptActive.collect { active ->
@@ -337,6 +323,7 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+
         if (intent?.action == ACTION_START_PRIVD) {
             return startPrivdPath()
         }
@@ -657,7 +644,6 @@ class ScreenCaptureService : Service() {
         val editorActive = AppStateManager.isEditorActive.value
         val ambientActive = AppStateManager.isBackgroundSettingsActive.value
         val ambientPreviewActive = AmbientPreviewManager.isActive.value
-        val userLeaving = AppStateManager.isUserLeaving.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
 
@@ -671,14 +657,13 @@ class ScreenCaptureService : Service() {
             capturing && validScreen &&
                 !filePickerOpen && !editorActive &&
                 (!ambientActive || ambientPreviewActive) &&
-                !userLeaving &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
                 !showIntegrationHome
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
         )
         return shouldShow
     }
