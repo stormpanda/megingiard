@@ -163,6 +163,10 @@ val nativeCTest = tasks.register<Exec>("nativeCTest") {
     group = "verification"
     description = "Compiles and executes native C unit tests."
     workingDir = rootProject.projectDir
+    onlyIf {
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        !isWindows
+    }
     commandLine("./run_native_tests.sh")
 }
 
