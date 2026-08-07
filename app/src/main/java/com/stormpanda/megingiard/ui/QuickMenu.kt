@@ -258,11 +258,9 @@ fun QuickMenu(
                         )
                     }
 
-                    QuickMenuActionChip(
-                        label = stringResource(R.string.quick_menu_auto_mode),
-                        icon = Icons.Rounded.Autorenew,
-                        colors = colors,
+                    MagicalAutoToggleChip(
                         active = companionViewMode == CompanionViewMode.AUTO,
+                        colors = colors,
                         onClick = {
                             if (companionViewMode == CompanionViewMode.AUTO) {
                                 val targetMode = if (showIntegrationHome) CompanionViewMode.DASHBOARD else CompanionViewMode.MACROPAD

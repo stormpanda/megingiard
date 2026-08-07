@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,9 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +31,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -172,6 +179,83 @@ internal fun QuickMenuActionChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+internal fun MagicalAutoToggleChip(
+    active: Boolean,
+    colors: AppColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val accentColor = colors.accent
+    val magicalBrush = rememberMagicalBezelBrush(accentColor)
+    val borderColor = if (active) colors.accent.copy(alpha = 0.5f) else colors.controlOverlayBorder
+    val contentColor = if (active) colors.accent else colors.onSurfaceSecondary
+
+    Row(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .then(
+                    if (active) {
+                        Modifier
+                            .drawBehind {
+                                val dy = 1.dp.toPx()
+                                val dx = 2.dp.toPx()
+                                val cornerRadius = CornerRadius((PM_ACTION_BUTTON_CORNER.value + 1).dp.toPx())
+                                drawRoundRect(
+                                    color = accentColor.copy(alpha = 0.12f),
+                                    cornerRadius = cornerRadius,
+                                    size = Size(size.width + 2 * dx, size.height + 2 * dy),
+                                    topLeft = Offset(-dx, -dy),
+                                )
+                            }.border(1.5.dp, magicalBrush, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                            .background(accentColor.copy(alpha = 0.10f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                    } else {
+                        Modifier.border(PM_BORDER_WIDTH, borderColor, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                    },
+                ).clickable(onClick = onClick)
+                .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.AutoFixHigh,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(PM_NAV_ICON_SIZE),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = stringResource(R.string.quick_menu_auto_mode),
+            color = contentColor,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.width(8.dp))
+        Box(
+            modifier =
+                Modifier
+                    .width(28.dp)
+                    .height(16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (active) accentColor.copy(alpha = 0.35f) else colors.surfaceVariant)
+                    .border(1.dp, if (active) accentColor.copy(alpha = 0.7f) else colors.controlOverlayBorder, RoundedCornerShape(8.dp))
+                    .padding(2.dp),
+            contentAlignment = if (active) Alignment.CenterEnd else Alignment.CenterStart,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(if (active) accentColor else colors.onSurfaceSecondary.copy(alpha = 0.6f)),
+            )
+        }
     }
 }
 
