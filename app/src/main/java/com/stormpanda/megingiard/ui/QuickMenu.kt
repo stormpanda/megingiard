@@ -36,6 +36,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -124,6 +125,7 @@ fun QuickMenu(
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }
+    var autoShimmerTrigger by remember { mutableIntStateOf(0) }
 
     AnimatedVisibility(
         visible = visible,
@@ -260,16 +262,16 @@ fun QuickMenu(
 
                     MagicalAutoToggleChip(
                         active = companionViewMode == CompanionViewMode.AUTO,
+                        shimmerTrigger = autoShimmerTrigger,
                         colors = colors,
                         onClick = {
                             if (companionViewMode == CompanionViewMode.AUTO) {
                                 val targetMode = if (showIntegrationHome) CompanionViewMode.DASHBOARD else CompanionViewMode.MACROPAD
                                 AppStateManager.setCompanionViewMode(targetMode)
                             } else {
+                                autoShimmerTrigger++
                                 AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
                             }
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
                         },
                         modifier = Modifier.wrapContentWidth(),
                     )

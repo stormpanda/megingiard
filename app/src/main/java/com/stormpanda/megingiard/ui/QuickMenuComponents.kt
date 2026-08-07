@@ -1,5 +1,10 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +33,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +44,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -188,10 +200,67 @@ internal fun MagicalAutoToggleChip(
     colors: AppColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    shimmerTrigger: Int = 0,
 ) {
     val accentColor = colors.accent
-    val magicalBrush = rememberMagicalBezelBrush(accentColor)
-    val borderColor = if (active) colors.accent.copy(alpha = 0.5f) else colors.controlOverlayBorder
+    val angleAnim = remember { Animatable(0f) }
+    var isAnimating by remember { mutableStateOf(false) }
+
+    LaunchedEffect(shimmerTrigger) {
+        if (shimmerTrigger > 0 && active) {
+            isAnimating = true
+            angleAnim.snapTo(0f)
+            angleAnim.animateTo(
+                targetValue = 360f,
+                animationSpec = tween(durationMillis = 3500, easing = LinearEasing),
+            )
+            isAnimating = false
+        } else {
+            angleAnim.snapTo(360f)
+            isAnimating = false
+        }
+    }
+
+    val currentAngle = angleAnim.value
+    val (shimmerAlpha, solidAlpha) =
+        remember(currentAngle, isAnimating, active) {
+            if (!active) {
+                0f to 0f
+            } else if (!isAnimating || currentAngle >= 360f) {
+                0f to 1f
+            } else if (currentAngle <= 270f) {
+                1f to 0f
+            } else {
+                val progress = ((currentAngle - 270f) / 90f).coerceIn(0f, 1f)
+                (1f - progress) to progress
+            }
+        }
+
+    val magicalBrush =
+        remember(currentAngle, accentColor) {
+            val rad = Math.toRadians(currentAngle.toDouble())
+            val cos = kotlin.math.cos(rad).toFloat()
+            val sin = kotlin.math.sin(rad).toFloat()
+            val startX = 500f * (1f - cos)
+            val startY = 500f * (1f - sin)
+            val endX = 500f * (1f + cos)
+            val endY = 500f * (1f + sin)
+
+            Brush.linearGradient(
+                colorStops =
+                    arrayOf(
+                        0.0f to Color.White.copy(alpha = 0.85f),
+                        0.2f to accentColor.copy(alpha = 0.9f),
+                        0.45f to Color.White.copy(alpha = 0.25f),
+                        0.7f to Color.Transparent,
+                        0.85f to accentColor.copy(alpha = 0.5f),
+                        1.0f to Color.White.copy(alpha = 0.85f),
+                    ),
+                start = Offset(startX, startY),
+                end = Offset(endX, endY),
+            )
+        }
+
     val contentColor = if (active) colors.accent else colors.onSurfaceSecondary
 
     Row(
@@ -205,16 +274,37 @@ internal fun MagicalAutoToggleChip(
                                 val dy = 1.dp.toPx()
                                 val dx = 2.dp.toPx()
                                 val cornerRadius = CornerRadius((PM_ACTION_BUTTON_CORNER.value + 1).dp.toPx())
+                                val strokeWidth = 1.5.dp.toPx()
+
+                                // Persistent Background Blur / Glow Tint
                                 drawRoundRect(
                                     color = accentColor.copy(alpha = 0.12f),
                                     cornerRadius = cornerRadius,
                                     size = Size(size.width + 2 * dx, size.height + 2 * dy),
                                     topLeft = Offset(-dx, -dy),
                                 )
-                            }.border(1.5.dp, magicalBrush, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                            .background(accentColor.copy(alpha = 0.10f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+
+                                // Solid accent border fading in
+                                if (solidAlpha > 0.001f) {
+                                    drawRoundRect(
+                                        color = accentColor.copy(alpha = 0.5f * solidAlpha),
+                                        cornerRadius = CornerRadius(PM_ACTION_BUTTON_CORNER.toPx()),
+                                        style = Stroke(width = strokeWidth),
+                                    )
+                                }
+
+                                // Magical shimmer border fading out smoothly
+                                if (shimmerAlpha > 0.001f) {
+                                    drawRoundRect(
+                                        brush = magicalBrush,
+                                        alpha = shimmerAlpha,
+                                        cornerRadius = CornerRadius(PM_ACTION_BUTTON_CORNER.toPx()),
+                                        style = Stroke(width = strokeWidth),
+                                    )
+                                }
+                            }.background(accentColor.copy(alpha = 0.10f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                     } else {
-                        Modifier.border(PM_BORDER_WIDTH, borderColor, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                        Modifier.border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                     },
                 ).clickable(onClick = onClick)
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
