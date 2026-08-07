@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
@@ -375,6 +376,16 @@ private fun QuickMenuHelpModal(
         HelpEntry(
             label = stringResource(R.string.quick_menu_layout_label),
             description = stringResource(R.string.help_quickmenu_layouts_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.AutoFixHigh,
+            label = stringResource(R.string.help_quickmenu_auto_switch_label),
+            description = stringResource(R.string.help_quickmenu_auto_switch_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Gamepad,
+            label = stringResource(R.string.help_quickmenu_view_switch_label),
+            description = stringResource(R.string.help_quickmenu_view_switch_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,
