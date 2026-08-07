@@ -29,7 +29,6 @@ data class MirrorRuntimePolicyState(
     val isCapturing: Boolean,
     val layoutId: String?,
     val layoutWantsMirror: Boolean,
-    val autoStartSuppressed: Boolean,
     /**
      * True while the privd mirror daemon is in a transient connecting state
      * (CONNECTING, BOOTSTRAPPING, or OFF-but-auto-connect-pending).
@@ -55,8 +54,6 @@ enum class MirrorRuntimeAction {
  * `PadLayout.mirrorAutoStart` is the single source of truth: a running capture
  * stops whenever the active layout does not want mirror, and a stopped capture
  * starts only when the active layout wants mirror and global auto-start allows it.
- * A freshly stopped or cancelled layout can suppress auto-start while asynchronous
- * layout state catches up, preventing immediate restart loops.
  */
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAction {
     if (!state.isOnValidScreen || state.layoutId == null) return MirrorRuntimeAction.NONE
@@ -70,7 +67,6 @@ fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAct
         state.isCapturing && !state.layoutWantsMirror -> MirrorRuntimeAction.STOP
 
         state.layoutWantsMirror &&
-            !state.autoStartSuppressed &&
             !state.isCapturing &&
             !state.promptInFlight &&
             !state.privdMirrorConnecting &&

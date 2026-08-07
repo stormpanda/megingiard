@@ -336,6 +336,16 @@ object AppStateManager {
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
+    val showIntegrationHome: StateFlow<Boolean> =
+        combine(
+            _focusedAppPackageName,
+            _focusedRomPath,
+            MacroPadState.activeProfile,
+            _companionViewMode,
+        ) { focusedPackage, focusedRom, profile, viewMode ->
+            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile)
+        }.stateIn(scope, SharingStarted.Eagerly, false)
+
     fun setCompanionViewMode(mode: CompanionViewMode) {
         AppLog.d(TAG, "setCompanionViewMode($mode)")
         _companionViewMode.value = mode

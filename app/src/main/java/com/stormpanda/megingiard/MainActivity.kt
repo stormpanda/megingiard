@@ -495,35 +495,18 @@ class MainActivity : ComponentActivity() {
                     }
                 combine(
                     AppStateManager.promptInFlight,
-                    AppStateManager.mirrorAutoStartSuppressedLayoutId,
                     ScreenCaptureManager.isCapturing,
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
-                    AppStateManager.isExternalClientActive,
-                    AppStateManager.focusedAppPackageName,
-                    AppStateManager.focusedRomPath,
-                    MacroPadState.activeProfile,
-                    AppStateManager.companionViewMode,
+                    AppStateManager.showIntegrationHome,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
-                    val suppressedLayoutId = values[1] as? String
-                    val capturing = values[2] as Boolean
-                    val currentLayout = values[3] as? PadLayout
-                    val onValidScreen = values[4] as Boolean
-                    val wizardActive = values[5] as Boolean
-                    val externalClientActive = values[6] as Boolean
-                    val focusedPackage = values[7] as? String
-                    val focusedRom = values[8] as? String
-                    val activeProfile = values[9] as? PadProfile
-                    val companionViewMode = values[10] as CompanionViewMode
-
-                    val showIntegrationHome =
-                        companionViewMode.shouldShowIntegrationHome(
-                            focusedAppPackageName = focusedPackage,
-                            focusedRomPath = focusedRom,
-                            activeProfile = activeProfile,
-                        )
+                    val capturing = values[1] as Boolean
+                    val currentLayout = values[2] as? PadLayout
+                    val onValidScreen = values[3] as Boolean
+                    val wizardActive = values[4] as Boolean
+                    val showIntegrationHome = values[5] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -531,7 +514,6 @@ class MainActivity : ComponentActivity() {
                         isCapturing = capturing,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
-                        autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
                         tutorialsActive = wizardActive,
                         showIntegrationHome = showIntegrationHome,
                     )
@@ -590,7 +572,6 @@ class MainActivity : ComponentActivity() {
                     val requestedLayoutId = activeLayout?.id
                     if (requestedLayoutId != null) {
                         val layoutId = requestedLayoutId
-                        AppStateManager.clearMirrorAutoStartSuppression(layoutId)
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
                         MacroPadState.activeLayout
                             .map { layout -> layout?.id == layoutId && layout?.mirrorAutoStart == true }
@@ -614,7 +595,6 @@ class MainActivity : ComponentActivity() {
                     AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
                     AppStateManager.consumeMirrorStopRequest()
                     activeLayout?.id?.let { layoutId ->
-                        AppStateManager.suppressMirrorAutoStart(layoutId)
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
                     if (isCapturing) stopMirrorService()
