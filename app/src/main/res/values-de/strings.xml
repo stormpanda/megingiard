@@ -1263,9 +1263,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_tool_settings">Globale Einstellungen</string>
     <string name="integration_home_settings_desc">App-Einstellungen</string>
     <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
-    <string name="quick_menu_show_dashboard">Companion Hub anzeigen</string>
-    <string name="quick_menu_auto_mode">Automatischer Ansichtsmodus</string>
-    <string name="quick_menu_show_macropad">MacroPad anzeigen</string>
+    <string name="quick_menu_show_dashboard">Zum Hub wechseln</string>
+    <string name="quick_menu_auto_mode">Auto-Wechsel</string>
+    <string name="quick_menu_show_macropad">Zu Spiel-Profil wechseln</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update verfügbar</string>
