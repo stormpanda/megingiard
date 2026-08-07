@@ -441,7 +441,7 @@ private fun HeroCompanionCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .border(IH_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = IH_CARD_SHAPE),
+                .border(IH_BORDER_WIDTH, brush = rememberBezelBrush(), shape = IH_CARD_SHAPE),
         shape = IH_CARD_SHAPE,
         colors = CardDefaults.cardColors(containerColor = colors.surface.copy(alpha = IH_CARD_BG_ALPHA)),
     ) {
@@ -869,7 +869,7 @@ private fun ToolCard(
     Card(
         modifier =
             modifier
-                .border(IH_BORDER_WIDTH, brush = rememberQuickMenuBezelBrush(), shape = IH_DECK_CARD_SHAPE)
+                .border(IH_BORDER_WIDTH, brush = rememberBezelBrush(), shape = IH_DECK_CARD_SHAPE)
                 .clickable { onClick() },
         shape = IH_DECK_CARD_SHAPE,
         colors = CardDefaults.cardColors(containerColor = colors.surface.copy(alpha = IH_CARD_BG_ALPHA)),

@@ -45,7 +45,7 @@ fun Modifier.blockPointerEvents(): Modifier =
     }
 
 @androidx.compose.runtime.Composable
-internal fun rememberQuickMenuBezelBrush(): androidx.compose.ui.graphics.Brush =
+internal fun rememberBezelBrush(): androidx.compose.ui.graphics.Brush =
     androidx.compose.runtime.remember {
         androidx.compose.ui.graphics.Brush.linearGradient(
             colorStops =

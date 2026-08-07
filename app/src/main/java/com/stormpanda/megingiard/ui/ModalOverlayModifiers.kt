@@ -1,6 +1,11 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 
 /**
@@ -42,4 +47,27 @@ fun Modifier.blockPointerEvents(): Modifier =
                 // to prevent events from reaching z-order siblings below.
             }
         }
+    }
+
+/**
+ * App-wide bezel light refraction border brush.
+ *
+ * Features a primary top-left white highlight (0.0f) and an accent bottom-right
+ * white highlight (1.0f) fading through semi-transparent midtones.
+ */
+@Composable
+internal fun rememberBezelBrush(): Brush =
+    remember {
+        Brush.linearGradient(
+            colorStops =
+                arrayOf(
+                    0.0f to Color.White.copy(alpha = 0.25f),
+                    0.25f to Color.White.copy(alpha = 0.05f),
+                    0.5f to Color.Transparent,
+                    0.833f to Color.White.copy(alpha = 0.05f),
+                    1.0f to Color.White.copy(alpha = 0.25f),
+                ),
+            start = Offset(0f, 0f),
+            end = Offset.Infinite,
+        )
     }

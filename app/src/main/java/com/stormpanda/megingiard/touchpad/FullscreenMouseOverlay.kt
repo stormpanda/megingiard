@@ -79,6 +79,7 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -209,16 +210,7 @@ fun FullscreenMouseOverlay() {
         }
     }
 
-    val insetBezelBrush =
-        Brush.linearGradient(
-            colors =
-                listOf(
-                    Color.Black.copy(alpha = 0.45f),
-                    Color.White.copy(alpha = 0.12f),
-                ),
-            start = Offset(0f, 0f),
-            end = Offset.Infinite,
-        )
+    val insetBezelBrush = rememberBezelBrush()
 
     Box(
         modifier =
@@ -598,18 +590,7 @@ private fun TouchpadMouseButton(
     val surfaceColor = if (pressed) colors.keyPressed else colors.keyBackground
     val depthColor = Color.Black.copy(alpha = 0.55f)
 
-    val buttonBezelBrush =
-        Brush.linearGradient(
-            colorStops =
-                arrayOf(
-                    0.0f to Color.White.copy(alpha = 0.25f),
-                    0.25f to Color.White.copy(alpha = 0.05f),
-                    0.5f to Color.Transparent,
-                    1.0f to Color.Black.copy(alpha = 0.4f),
-                ),
-            start = Offset(0f, 0f),
-            end = Offset.Infinite,
-        )
+    val buttonBezelBrush = rememberBezelBrush()
 
     Box(
         modifier =

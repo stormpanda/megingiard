@@ -152,7 +152,7 @@ Before marking a task as done, verify:
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis or build compiles)
-- [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberQuickMenuBezelBrush() border
+- [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
 - [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)

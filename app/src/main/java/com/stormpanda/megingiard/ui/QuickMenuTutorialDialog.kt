@@ -715,7 +715,7 @@ fun QuickMenuTutorialDialog(
                     .background(colors.surface)
                     .border(
                         QM_DIALOG_BORDER_WIDTH,
-                        brush = rememberQuickMenuBezelBrush(),
+                        brush = rememberBezelBrush(),
                         shape = RoundedCornerShape(QM_DIALOG_CORNER_RADIUS),
                     ).padding(
                         start = QM_DIALOG_PADDING_HORIZONTAL,

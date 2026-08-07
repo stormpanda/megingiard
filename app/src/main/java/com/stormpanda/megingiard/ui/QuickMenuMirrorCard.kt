@@ -53,7 +53,7 @@ internal fun MirrorControlCard(
     onToggleViewportEdit: () -> Unit,
     onTakeScreenshot: () -> Unit,
 ) {
-    val menuBezelBrush = rememberQuickMenuBezelBrush()
+    val menuBezelBrush = rememberBezelBrush()
     val isEditEnabled = !isCompanionHub && isCapturing
     val isStartStopEnabled = !isCompanionHub
     val isPauseEnabled = !isCompanionHub && isCapturing

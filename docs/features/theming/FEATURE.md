@@ -41,7 +41,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 ### FR-TH4: Centralized Modal Container & Bezel Light Refraction Border
 
 - All non-fullscreen modal popups, dialogs, and overlays MUST use `AppModalDialog` or `AppAlertDialog` (defined in `com.stormpanda.megingiard.ui.AppModalDialog.kt`).
-- The modal container MUST automatically apply `colors.surface`, standard elevation shadow, scrim background, and the app's dual-corner bezel light refraction border (`rememberQuickMenuBezelBrush()`).
+- The modal container MUST automatically apply `colors.surface`, standard elevation shadow, scrim background, and the app's dual-corner bezel light refraction border (`rememberBezelBrush()`).
 - Custom or unstyled modal containers/borders MUST NOT be used for dialog popups.
 
 ---
