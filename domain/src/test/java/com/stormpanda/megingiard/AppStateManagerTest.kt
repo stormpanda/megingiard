@@ -321,7 +321,7 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `companionViewMode state and reset on focus changes`() =
+    fun `companionViewMode state persists across focus changes until explicit reset`() =
         runTest {
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
 
@@ -329,32 +329,28 @@ class AppStateManagerTest {
             AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
             assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
 
-            // Update external client state with different focusedApp -> should reset companionViewMode to AUTO
+            // Update external client state -> should preserve MACROPAD mode (sticky toggle)
             AppStateManager.setExternalClientState(
                 isActive = true,
                 packageName = "com.test.launcher",
                 focusedApp = "com.test.game",
             )
-            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
 
             // Set companionViewMode to DASHBOARD
             AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
             assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
 
-            // Update with same focusedApp -> should not reset
-            AppStateManager.setExternalClientState(
-                isActive = true,
-                packageName = "com.test.launcher",
-                focusedApp = "com.test.game",
-            )
-            assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
-
-            // Deactivate client -> should reset
+            // Deactivate client -> should preserve DASHBOARD mode
             AppStateManager.setExternalClientState(
                 isActive = false,
                 packageName = null,
                 focusedApp = null,
             )
+            assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
+
+            // Explicitly set AUTO -> should revert to AUTO
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
         }
 

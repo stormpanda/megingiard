@@ -2,6 +2,7 @@ package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -188,7 +189,7 @@ object AppStateManager {
             _focusedAppPackageName.value != focusedApp ||
             _focusedRomPath.value != focusedRomPath
         ) {
-            _companionViewMode.value = CompanionViewMode.AUTO
+            AppLog.d(TAG, "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath")
         }
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
@@ -355,6 +356,9 @@ object AppStateManager {
     fun setCompanionViewMode(mode: CompanionViewMode) {
         AppLog.d(TAG, "setCompanionViewMode($mode)")
         _companionViewMode.value = mode
+        if (mode == CompanionViewMode.AUTO) {
+            AutoSwitchCoordinator.reevaluateAutoState()
+        }
     }
 
     val isPrivdPromptDismissed: StateFlow<Boolean> = MacroPadSettings.privdPromptDismissed

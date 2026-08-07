@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -226,44 +227,53 @@ fun QuickMenu(
                 HorizontalDivider(color = colors.controlOverlayBorder)
                 Spacer(Modifier.height(PM_SECTION_SPACING))
 
-                if (companionViewMode != CompanionViewMode.AUTO) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (!showIntegrationHome) {
+                        QuickMenuActionChip(
+                            label = stringResource(R.string.quick_menu_show_dashboard),
+                            painter = painterResource(R.drawable.ic_megingiard_logo),
+                            colors = colors,
+                            onClick = {
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                                AppStateManager.closeQuickMenu()
+                                onDismiss()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        QuickMenuActionChip(
+                            label = stringResource(R.string.quick_menu_show_macropad),
+                            icon = Icons.Rounded.Gamepad,
+                            colors = colors,
+                            onClick = {
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                                AppStateManager.closeQuickMenu()
+                                onDismiss()
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
                     QuickMenuActionChip(
                         label = stringResource(R.string.quick_menu_auto_mode),
                         icon = Icons.Rounded.Autorenew,
                         colors = colors,
+                        active = companionViewMode == CompanionViewMode.AUTO,
                         onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                            if (companionViewMode == CompanionViewMode.AUTO) {
+                                val targetMode = if (showIntegrationHome) CompanionViewMode.DASHBOARD else CompanionViewMode.MACROPAD
+                                AppStateManager.setCompanionViewMode(targetMode)
+                            } else {
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                            }
                             AppStateManager.closeQuickMenu()
                             onDismiss()
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
-
-                if (!showIntegrationHome) {
-                    QuickMenuActionChip(
-                        label = stringResource(R.string.quick_menu_show_dashboard),
-                        painter = painterResource(R.drawable.ic_megingiard_logo),
-                        colors = colors,
-                        onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    QuickMenuActionChip(
-                        label = stringResource(R.string.quick_menu_show_macropad),
-                        icon = Icons.Rounded.Gamepad,
-                        colors = colors,
-                        onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.wrapContentWidth(),
                     )
                 }
 

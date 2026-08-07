@@ -135,13 +135,15 @@ internal fun QuickMenuActionChip(
     icon: ImageVector? = null,
     painter: Painter? = null,
     iconSize: Dp = if (painter != null) 24.dp else PM_NAV_ICON_SIZE,
+    active: Boolean = true,
 ) {
-    val accent = colors.accent
+    val accent = if (active) colors.accent else colors.onSurfaceSecondary
+    val borderColor = if (active) colors.accent.copy(alpha = 0.5f) else colors.controlOverlayBorder
     Row(
         modifier =
             modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
+                .border(PM_BORDER_WIDTH, borderColor, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .clickable(onClick = onClick)
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
