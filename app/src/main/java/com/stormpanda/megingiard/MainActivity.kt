@@ -222,6 +222,12 @@ class MainActivity : ComponentActivity() {
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
 
+        // Trigger session background update check on app launch
+        com.stormpanda.megingiard.update.UpdateManager.checkForUpdates(
+            force = false,
+            currentVersion = BuildConfig.VERSION_NAME,
+        )
+
         // Load the per-install Privd pair key before any connect() attempt.
         // The Keystore decrypt is a short hardware-backed operation (~10 ms);
         // loading it here (before setContent) ensures the key is in place
