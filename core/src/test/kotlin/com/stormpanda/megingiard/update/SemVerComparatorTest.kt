@@ -12,6 +12,13 @@ class SemVerComparatorTest {
     }
 
     @Test
+    fun `prerelease current version vs release tag returns true`() {
+        assertTrue(SemVerComparator.isUpdateAvailable("0.8.0-rc1", "v0.8.0"))
+        assertTrue(SemVerComparator.isUpdateAvailable("0.8.0-beta.2", "v0.8.0"))
+        assertFalse(SemVerComparator.isUpdateAvailable("0.8.0-rc1", "v0.8.0-rc1"))
+    }
+
+    @Test
     fun `older version vs newer release tag returns true`() {
         assertTrue(SemVerComparator.isUpdateAvailable("0.8.0-SNAPSHOT", "v0.8.1"))
         assertTrue(SemVerComparator.isUpdateAvailable("0.8.0", "v0.8.1"))

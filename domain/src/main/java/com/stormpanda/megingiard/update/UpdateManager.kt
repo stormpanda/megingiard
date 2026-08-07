@@ -40,6 +40,10 @@ object UpdateManager {
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private var isLoadedFromDataStore = false
+    private var pendingCheckVersion: String? = null
+    private var pendingCheckApiUrl: String? = null
+
     private val _autoUpdateCheckEnabled = MutableStateFlow(true)
     val autoUpdateCheckEnabled: StateFlow<Boolean> = _autoUpdateCheckEnabled.asStateFlow()
 
@@ -71,6 +75,8 @@ object UpdateManager {
         prefs: Preferences,
         currentVersion: String = "",
     ) {
+        val firstLoad = !isLoadedFromDataStore
+        isLoadedFromDataStore = true
         _autoUpdateCheckEnabled.value = prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] ?: true
 
         val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
@@ -88,6 +94,17 @@ object UpdateManager {
             TAG,
             "loadFrom: autoCheck=${_autoUpdateCheckEnabled.value}, lastCheck=${_lastCheckTime.value}, tag=$tag, updateAvailable=${_updateAvailable.value}",
         )
+
+        if (firstLoad) {
+            val pendingVer = pendingCheckVersion
+            val pendingUrl = pendingCheckApiUrl
+            if (pendingVer != null && pendingUrl != null) {
+                pendingCheckVersion = null
+                pendingCheckApiUrl = null
+                AppLog.d(TAG, "DataStore load complete, executing pending initial update check")
+                checkForUpdates(force = false, currentVersion = pendingVer, releasesApiUrl = pendingUrl)
+            }
+        }
     }
 
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
@@ -112,6 +129,13 @@ object UpdateManager {
         currentVersion: String,
         releasesApiUrl: String = DEFAULT_RELEASES_API_URL,
     ) {
+        if (!force && !isLoadedFromDataStore) {
+            AppLog.d(TAG, "DataStore preferences not loaded yet, queuing initial update check")
+            pendingCheckVersion = currentVersion
+            pendingCheckApiUrl = releasesApiUrl
+            return
+        }
+
         val now = System.currentTimeMillis()
         if (!force) {
             if (!_autoUpdateCheckEnabled.value) {
@@ -172,14 +196,17 @@ object UpdateManager {
                     setRequestProperty("Accept", "application/vnd.github+json")
                     setRequestProperty("User-Agent", "Megingiard-App")
                 }
+            try {
+                val responseCode = connection.responseCode
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                    throw IllegalStateException("HTTP $responseCode: $errorText")
+                }
 
-            val responseCode = connection.responseCode
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                val errorText = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-                throw IllegalStateException("HTTP $responseCode: $errorText")
+                val body = connection.inputStream.bufferedReader().use { it.readText() }
+                json.decodeFromString<AppReleaseInfo>(body)
+            } finally {
+                connection.disconnect()
             }
-
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            json.decodeFromString<AppReleaseInfo>(body)
         }
 }

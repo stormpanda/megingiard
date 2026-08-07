@@ -7,6 +7,7 @@ import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.privd.BootstrapStage
@@ -104,11 +105,11 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setAutoUpdateCheckEnabled(value: Boolean) = UpdateManager.setAutoUpdateCheckEnabled(value)
 
     fun checkForUpdatesManually() {
-        UpdateManager.checkForUpdates(force = true, currentVersion = com.stormpanda.megingiard.BuildConfig.VERSION_NAME)
+        UpdateManager.checkForUpdates(force = true, currentVersion = BuildConfig.VERSION_NAME)
     }
 
     fun checkForUpdatesBackground() {
-        UpdateManager.checkForUpdates(force = false, currentVersion = com.stormpanda.megingiard.BuildConfig.VERSION_NAME)
+        UpdateManager.checkForUpdates(force = false, currentVersion = BuildConfig.VERSION_NAME)
     }
 
     // Privileged Mode actions

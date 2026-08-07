@@ -96,6 +96,7 @@ import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
+import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -223,7 +224,7 @@ class MainActivity : ComponentActivity() {
         SettingsManager.init(this)
 
         // Trigger session background update check on app launch
-        com.stormpanda.megingiard.update.UpdateManager.checkForUpdates(
+        UpdateManager.checkForUpdates(
             force = false,
             currentVersion = BuildConfig.VERSION_NAME,
         )

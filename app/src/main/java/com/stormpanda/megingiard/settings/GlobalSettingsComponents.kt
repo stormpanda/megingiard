@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
@@ -539,9 +541,7 @@ internal fun UpdateAvailableBanner(
             Spacer(modifier = Modifier.width(12.dp))
             Button(
                 onClick = onUpdateClick,
-                colors =
-                    androidx.compose.material3.ButtonDefaults
-                        .buttonColors(containerColor = accentColor),
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
             ) {
                 Text(
                     text = stringResource(R.string.settings_update_now_btn),
@@ -573,7 +573,7 @@ internal fun UpdateCheckSection(
         when {
             isChecking -> stringResource(R.string.settings_update_checking)
             updateAvailable && latestTag.isNotBlank() -> stringResource(R.string.settings_update_available_banner, latestTag)
-            else -> stringResource(R.string.settings_update_up_to_date, com.stormpanda.megingiard.BuildConfig.VERSION_NAME)
+            else -> stringResource(R.string.settings_update_up_to_date, BuildConfig.VERSION_NAME)
         }
     ConfigActionRow(
         label = stringResource(R.string.settings_check_for_updates),

@@ -86,4 +86,28 @@ class UpdateManagerTest {
             UpdateManager.setAutoUpdateCheckEnabled(true)
             assertTrue(UpdateManager.autoUpdateCheckEnabled.value)
         }
+
+    @Test
+    fun `checkForUpdates before loadFrom respects disabled auto update setting after loadFrom`() =
+        runTest(testDispatcher) {
+            val testDataStore =
+                PreferenceDataStoreFactory.create(
+                    scope = CoroutineScope(SupervisorJob() + testDispatcher),
+                    produceFile = { tempFile },
+                )
+
+            testDataStore.edit { prefs ->
+                prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = false
+            }
+
+            // Simulate MainActivity calling checkForUpdates before DataStore loads
+            UpdateManager.checkForUpdates(force = false, currentVersion = "0.8.0")
+            assertFalse(UpdateManager.isChecking.value)
+
+            val prefs = testDataStore.data.first()
+            UpdateManager.loadFrom(prefs, currentVersion = "0.8.0")
+
+            assertFalse(UpdateManager.autoUpdateCheckEnabled.value)
+            assertFalse(UpdateManager.isChecking.value)
+        }
 }
