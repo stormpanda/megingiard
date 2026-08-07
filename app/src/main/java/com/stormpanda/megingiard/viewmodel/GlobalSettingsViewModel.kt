@@ -19,6 +19,8 @@ import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.ThemeMode
+import com.stormpanda.megingiard.update.AppReleaseInfo
+import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +53,18 @@ class GlobalSettingsViewModel : ViewModel() {
 
     val excludeFromRecents: StateFlow<Boolean> = SettingsManager.excludeFromRecents
     val gamepadSwapFaceButtons: StateFlow<Boolean> = MacroPadSettings.gamepadSwapFaceButtons
+
+    // Update checks
+    val autoUpdateCheckEnabled: StateFlow<Boolean> = UpdateManager.autoUpdateCheckEnabled
+    val updateAvailable: StateFlow<Boolean> = UpdateManager.updateAvailable
+    val latestReleaseInfo: StateFlow<AppReleaseInfo?> = UpdateManager.latestReleaseInfo
+    val isCheckingUpdates: StateFlow<Boolean> = UpdateManager.isChecking
+    val lastUpdateCheckTime: StateFlow<Long> = UpdateManager.lastCheckTime
+    val updateCheckError: StateFlow<String?> = UpdateManager.checkError
+
+    init {
+        checkForUpdatesBackground()
+    }
 
     // Privileged Mode
     val privdState: StateFlow<PrivdState> = PrivdManager.state
@@ -86,6 +100,16 @@ class GlobalSettingsViewModel : ViewModel() {
     fun setExcludeFromRecents(value: Boolean) = SettingsManager.setExcludeFromRecents(value)
 
     fun setGamepadSwapFaceButtons(value: Boolean) = MacroPadSettings.setGamepadSwapFaceButtons(value)
+
+    fun setAutoUpdateCheckEnabled(value: Boolean) = UpdateManager.setAutoUpdateCheckEnabled(value)
+
+    fun checkForUpdatesManually() {
+        UpdateManager.checkForUpdates(force = true, currentVersion = com.stormpanda.megingiard.BuildConfig.VERSION_NAME)
+    }
+
+    fun checkForUpdatesBackground() {
+        UpdateManager.checkForUpdates(force = false, currentVersion = com.stormpanda.megingiard.BuildConfig.VERSION_NAME)
+    }
 
     // Privileged Mode actions
 

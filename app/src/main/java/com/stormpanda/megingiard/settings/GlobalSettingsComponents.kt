@@ -501,3 +501,84 @@ internal fun ConfigSection(
         onClick = onAddToObtainium,
     )
 }
+
+@Composable
+internal fun UpdateAvailableBanner(
+    tagName: String,
+    accentColor: Color,
+    colors: AppColors,
+    onUpdateClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(accentColor.copy(alpha = 0.15f))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                .padding(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_update_available_banner, tagName),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colors.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.settings_update_available_banner_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceSecondary,
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+                onClick = onUpdateClick,
+                colors =
+                    androidx.compose.material3.ButtonDefaults
+                        .buttonColors(containerColor = accentColor),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_update_now_btn),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun UpdateCheckSection(
+    autoUpdateCheckEnabled: Boolean,
+    isChecking: Boolean,
+    latestTag: String,
+    updateAvailable: Boolean,
+    accentColor: Color,
+    onAutoUpdateCheckChanged: (Boolean) -> Unit,
+    onCheckForUpdates: () -> Unit,
+) {
+    RememberSettingRow(
+        label = stringResource(R.string.settings_auto_update_check),
+        description = stringResource(R.string.settings_auto_update_check_desc),
+        checked = autoUpdateCheckEnabled,
+        onCheckedChange = onAutoUpdateCheckChanged,
+    )
+    AppDivider()
+    val descText =
+        when {
+            isChecking -> stringResource(R.string.settings_update_checking)
+            updateAvailable && latestTag.isNotBlank() -> stringResource(R.string.settings_update_available_banner, latestTag)
+            else -> stringResource(R.string.settings_update_up_to_date, com.stormpanda.megingiard.BuildConfig.VERSION_NAME)
+        }
+    ConfigActionRow(
+        label = stringResource(R.string.settings_check_for_updates),
+        description = descText,
+        accentColor = accentColor,
+        onClick = onCheckForUpdates,
+    )
+}

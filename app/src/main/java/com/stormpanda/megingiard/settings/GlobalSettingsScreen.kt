@@ -114,10 +114,17 @@ fun GlobalSettingsScreen(
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
+
+    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsState()
+    val updateAvailable by viewModel.updateAvailable.collectAsState()
+    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsState()
+    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
+
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
     var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
+    var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
 
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showPresetPaletteDialog by rememberSaveable { mutableStateOf(false) }
@@ -214,6 +221,15 @@ fun GlobalSettingsScreen(
                         .padding(paddingValues)
                         .verticalScroll(rememberScrollState()),
             ) {
+                if (updateAvailable && latestReleaseInfo != null) {
+                    UpdateAvailableBanner(
+                        tagName = latestReleaseInfo!!.tagName,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onUpdateClick = { showUpdatePromptDialog = true },
+                    )
+                }
+
                 SectionJumpRow(
                     colors = colors,
                     selectedSectionFilter = selectedSectionFilter,
@@ -230,6 +246,16 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_general),
                         colors = colors,
                     ) {
+                        UpdateCheckSection(
+                            autoUpdateCheckEnabled = autoUpdateCheckEnabled,
+                            isChecking = isCheckingUpdates,
+                            latestTag = latestReleaseInfo?.tagName ?: "",
+                            updateAvailable = updateAvailable,
+                            accentColor = effectiveAccent,
+                            onAutoUpdateCheckChanged = { viewModel.setAutoUpdateCheckEnabled(it) },
+                            onCheckForUpdates = { viewModel.checkForUpdatesManually() },
+                        )
+                        AppDivider()
                         ConfigActionRow(
                             label = stringResource(R.string.settings_start_welcome_tour),
                             description = stringResource(R.string.settings_start_welcome_tour_desc),
@@ -502,6 +528,51 @@ fun GlobalSettingsScreen(
                 onDismiss = { showExportMetadataDialog = false },
             )
         }
+        if (showUpdatePromptDialog) {
+            UpdatePromptDialog(
+                tagName = latestReleaseInfo?.tagName ?: "",
+                colors = colors,
+                accentColor = effectiveAccent,
+                onBackupAndOpen = {
+                    showUpdatePromptDialog = false
+                    showExportMetadataDialog = true
+                    val url =
+                        latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                            ?: "https://github.com/stormpanda/megingiard/releases"
+                    try {
+                        val intent =
+                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        context.startActivity(intent, options.toBundle())
+                        AppLog.d(TAG, "Launched release URL on top display: $url")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
+                    }
+                },
+                onOpenDirectly = {
+                    showUpdatePromptDialog = false
+                    val url =
+                        latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                            ?: "https://github.com/stormpanda/megingiard/releases"
+                    try {
+                        val intent =
+                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        context.startActivity(intent, options.toBundle())
+                        AppLog.d(TAG, "Launched release URL on top display: $url")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
+                    }
+                },
+                onDismiss = { showUpdatePromptDialog = false },
+            )
+        }
         if (showProfileExportDialog) {
             ProfileExportDialog(
                 colors = colors,
@@ -652,6 +723,10 @@ private fun GlobalSettingsHelpModal(
         HelpIntro(stringResource(R.string.help_settings_intro))
 
         HelpSection(stringResource(R.string.settings_section_general))
+        HelpEntry(
+            label = stringResource(R.string.settings_auto_update_check),
+            description = stringResource(R.string.help_settings_auto_update_desc),
+        )
         HelpEntry(
             label = stringResource(R.string.settings_start_welcome_tour),
             description = stringResource(R.string.settings_start_welcome_tour_desc),

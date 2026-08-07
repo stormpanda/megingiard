@@ -46,6 +46,7 @@
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
 | `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
 | `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
+| `docs/features/updates/FEATURE.md`         | Automatic Update Check & Browser Release Launcher — functional requirements & technical implementation |
 
 > [!IMPORTANT]
 > **Documentation language: English only.**
