@@ -39,7 +39,7 @@ data class MirrorRuntimePolicyState(
     val privdMirrorConnecting: Boolean = false,
     /** True if welcome onboarding or quick menu swipe tutorial is actively shown. */
     val tutorialsActive: Boolean = false,
-    /** True if the companion home/dashboard screen is currently active. */
+    /** True if the companion hub/dashboard screen is currently active. */
     val showIntegrationHome: Boolean = false,
 )
 

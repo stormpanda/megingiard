@@ -357,4 +357,184 @@ class AppStateManagerTest {
             )
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
         }
+
+    @Test
+    fun `shouldShowIntegrationHome returns expected values across view modes`() {
+        val associatedProfile =
+            PadProfile(
+                id = "2",
+                name = "Game",
+                layouts = emptyList(),
+                association =
+                    com.stormpanda.megingiard.macropad
+                        .ProfileAssociation(packageName = "com.test.game"),
+            )
+
+        assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
+        assertTrue(CompanionViewMode.DASHBOARD.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
+
+        // AUTO mode: true when focusedApp is null (idle)
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome(null, null, associatedProfile))
+
+        // AUTO mode: true when focusedApp (e.g. launcher) does not match activeProfile
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.android.launcher3", null, associatedProfile))
+
+        // AUTO mode: false when focusedApp matches activeProfile
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
+    }
+
+    @Test
+    fun `shouldShowIntegrationHome in AUTO handles GameNative ROM active profiles`() {
+        val gameNativeProfile =
+            PadProfile(
+                id = "gn-1",
+                name = "Ball x Pit",
+                layouts = emptyList(),
+                association =
+                    com.stormpanda.megingiard.macropad.ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "BALL x PIT.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        // When focused package is app.gamenative and activeProfile is Ball x Pit:
+        // Returns false (shows MacroPad) even if focusedRomPath is null due to isActiveProfile fallback
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("app.gamenative", null, gameNativeProfile))
+        assertFalse(CompanionViewMode.AUTO.shouldShowIntegrationHome("app.gamenative", "BALLxPIT.steam", gameNativeProfile))
+
+        // When focused package changes to home launcher (e.g. com.android.launcher3):
+        // Returns true (shows Companion Hub) while gameNativeProfile remains activeProfile
+        assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.android.launcher3", null, gameNativeProfile))
+    }
+
+    @Test
+    fun `closeActiveModal resets all modal states and overlay selections simultaneously`() =
+        runTest {
+            AppStateManager.setFullscreenKeyboardActive(true)
+            AppStateManager.setFullscreenMouseActive(true)
+            AppStateManager.setViewportEditActive(true)
+            AppStateManager.setBackgroundSettingsActive(true)
+            AppStateManager.setGlobalSettingsOpen(true)
+            AppStateManager.setKeyboardSettingsOpen(true)
+            AppStateManager.setTouchpadSettingsOpen(true)
+            AppStateManager.setActiveCropCutoutId("cutout_1")
+            AppStateManager.setSelectedCutoutId("cutout_2")
+
+            AppStateManager.closeActiveModal()
+
+            assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
+            assertFalse(AppStateManager.isFullscreenMouseActive.value)
+            assertFalse(AppStateManager.isViewportEditActive.value)
+            assertFalse(AppStateManager.isBackgroundSettingsActive.value)
+            assertFalse(AppStateManager.isGlobalSettingsOpen.value)
+            assertFalse(AppStateManager.isKeyboardSettingsOpen.value)
+            assertFalse(AppStateManager.isTouchpadSettingsOpen.value)
+            assertEquals(null, AppStateManager.activeCropCutoutId.value)
+            assertEquals(null, AppStateManager.selectedCutoutId.value)
+        }
+
+    @Test
+    fun `isAnyModalActive evaluates true for all modals and false for standard use`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertFalse(AppStateManager.isAnyModalActive.value)
+
+            AppStateManager.setGlobalSettingsOpen(true)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            AppStateManager.closeActiveModal()
+
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            AppStateManager.closeActiveModal()
+
+            AppStateManager.setFullscreenMouseActive(true)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            AppStateManager.closeActiveModal()
+
+            AppStateManager.setViewportEditActive(true)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            AppStateManager.closeActiveModal()
+
+            assertFalse(AppStateManager.isAnyModalActive.value)
+        }
+
+    @Test
+    fun `isAnyMenuOpen evaluates true for settings and editors and false for fullscreen input overlays`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertFalse(AppStateManager.isAnyMenuOpen.value)
+
+            AppStateManager.setGlobalSettingsOpen(true)
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+            AppStateManager.closeActiveModal()
+
+            AppStateManager.setEditorActive(true)
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+            AppStateManager.setEditorActive(false)
+
+            AppStateManager.openQuickMenu()
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+            AppStateManager.closeQuickMenu()
+
+            // Fullscreen keyboard or mouse should NOT count as menu open
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertFalse(AppStateManager.isAnyMenuOpen.value)
+            AppStateManager.closeActiveModal()
+        }
+
+    @Test
+    fun `handleEdgeSwipe prioritizes closing active modals over toggling quick menu`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.closeQuickMenu()
+
+            // Case 1: No modal, Quick Menu closed -> handleEdgeSwipe opens Quick Menu
+            AppStateManager.handleEdgeSwipe()
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+
+            // Case 2: Quick Menu open -> handleEdgeSwipe closes Quick Menu
+            AppStateManager.handleEdgeSwipe()
+            assertFalse(AppStateManager.isQuickMenuOpen.value)
+
+            // Case 3: Modal active (e.g. Fullscreen Keyboard) -> handleEdgeSwipe closes modal
+            AppStateManager.setFullscreenKeyboardActive(true)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            AppStateManager.handleEdgeSwipe()
+            assertFalse(AppStateManager.isFullscreenKeyboardActive.value)
+            assertFalse(AppStateManager.isQuickMenuOpen.value)
+        }
+
+    @Test
+    fun `shouldShowIntegrationHome evaluates true for launcher packages in AUTO mode`() =
+        runTest {
+            val autoMode = CompanionViewMode.AUTO
+
+            // GameFocus package -> should show Companion Hub
+            assertTrue(
+                autoMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = "com.stormpanda.megingiard.gamefocus.debug",
+                    focusedRomPath = null,
+                    activeProfile = null,
+                ),
+            )
+
+            // System UI / Android Launcher -> should show Companion Hub
+            assertTrue(
+                autoMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = "com.android.launcher3",
+                    focusedRomPath = null,
+                    activeProfile = null,
+                ),
+            )
+
+            // Null package -> should show Companion Hub
+            assertTrue(
+                autoMode.shouldShowIntegrationHome(
+                    focusedAppPackageName = null,
+                    focusedRomPath = null,
+                    activeProfile = null,
+                ),
+            )
+        }
 }

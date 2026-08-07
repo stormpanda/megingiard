@@ -526,20 +526,11 @@ class MainActivity : ComponentActivity() {
                     val companionViewMode = values[10] as CompanionViewMode
 
                     val showIntegrationHome =
-                        when (companionViewMode) {
-                            CompanionViewMode.MACROPAD -> {
-                                false
-                            }
-
-                            CompanionViewMode.DASHBOARD -> {
-                                true
-                            }
-
-                            CompanionViewMode.AUTO -> {
-                                externalClientActive &&
-                                    (focusedPackage == null || activeProfile?.matches(focusedPackage, focusedRom) != true)
-                            }
-                        }
+                        companionViewMode.shouldShowIntegrationHome(
+                            focusedAppPackageName = focusedPackage,
+                            focusedRomPath = focusedRom,
+                            activeProfile = activeProfile,
+                        )
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,

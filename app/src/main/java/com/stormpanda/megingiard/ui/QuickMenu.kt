@@ -22,8 +22,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -45,6 +47,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
@@ -59,6 +62,7 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
+import com.stormpanda.megingiard.shouldShowIntegrationHome
 import java.util.UUID
 
 private const val TAG = "QuickMenu"
@@ -127,6 +131,9 @@ fun QuickMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val companionViewMode by AppStateManager.companionViewMode.collectAsState()
+    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
+    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
+    val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(focusedAppPackageName, focusedRomPath, activeProfile)
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
@@ -145,7 +152,10 @@ fun QuickMenu(
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = PM_SCRIM_ALPHA))
                     .pointerInput(Unit) {
-                        detectTapGestures(onTap = { onDismiss() })
+                        detectTapGestures(onTap = {
+                            AppStateManager.closeQuickMenu()
+                            onDismiss()
+                        })
                     },
         ) {
             // ── Top card — Mirror controls (always visible) ───────────────
@@ -207,6 +217,7 @@ fun QuickMenu(
                     onProfileSelected = { profile ->
                         AppLog.d(TAG, "profile selected: ${profile.id}")
                         MacroPadState.setActiveProfileId(profile.id)
+                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                 )
 
@@ -222,17 +233,49 @@ fun QuickMenu(
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
+                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                 )
 
-                if (companionViewMode == CompanionViewMode.MACROPAD) {
-                    Spacer(Modifier.height(PM_SECTION_SPACING))
+                Spacer(Modifier.height(PM_SECTION_SPACING))
+                HorizontalDivider(color = colors.controlOverlayBorder)
+                Spacer(Modifier.height(PM_SECTION_SPACING))
+
+                if (companionViewMode != CompanionViewMode.AUTO) {
+                    QuickMenuActionChip(
+                        label = stringResource(R.string.quick_menu_auto_mode),
+                        icon = Icons.Rounded.Autorenew,
+                        colors = colors,
+                        onClick = {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                            AppStateManager.closeQuickMenu()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
+
+                if (!showIntegrationHome) {
                     QuickMenuActionChip(
                         label = stringResource(R.string.quick_menu_show_dashboard),
-                        icon = Icons.Rounded.Home,
+                        painter = painterResource(R.drawable.ic_megingiard_logo),
                         colors = colors,
                         onClick = {
                             AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                            AppStateManager.closeQuickMenu()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    QuickMenuActionChip(
+                        label = stringResource(R.string.quick_menu_show_macropad),
+                        icon = Icons.Rounded.Gamepad,
+                        colors = colors,
+                        onClick = {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                            AppStateManager.closeQuickMenu()
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth(),

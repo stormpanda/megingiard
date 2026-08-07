@@ -1016,6 +1016,19 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_quickmenu_help_label">Hilfe (diese Ansicht)</string>
     <string name="help_quickmenu_help_desc">Öffnet dieses Hilfe-Blatt mit einer Erklärung aller Steuerelemente im Schnellmenü.</string>
 
+    <!-- Companion Hub help -->
+    <string name="help_companion_hub_title">Companion Hub — Hilfe</string>
+    <string name="help_companion_hub_intro">Der Companion Hub Bildschirm ist Ihr zentrales Dashboard auf dem Unterbildschirm für spielspezifische Makro-Steuerungen, aktiven Spielstatus und Schnellzugriff auf Begleit-Tools.</string>
+    <string name="help_companion_hub_sec_hero">Aktives Spiel &amp; Steuerungsprofil</string>
+    <string name="help_companion_hub_hero_show_desc">Öffnet das MacroPad-Touch-Layout für das aktive Spiel im Vollbildmodus auf dem unteren Bildschirm.</string>
+    <string name="help_companion_hub_hero_edit_desc">Startet den Profil- und Layout-Editor zum Anpassen von Tastenpositionen, Styles und Makro-Zuweisungen.</string>
+    <string name="help_companion_hub_hero_link_desc">Verknüpft ein benutzerdefiniertes Steuerungsprofil oder erstellt ein neues Profil für das aktuell aktive oder ausgewählte Spiel.</string>
+    <string name="help_companion_hub_sec_tools">Begleit-Tools</string>
+    <string name="help_companion_hub_macropad_desc">Schnellzugriff zum Öffnen der aktiven MacroPad-Touch-Bedienoberfläche.</string>
+    <string name="help_companion_hub_settings_desc">Zugriff auf app-weite Einstellungen wie Theme-Farben, Daemon-Status, Totzonen und Konfigurations-Backups.</string>
+    <string name="help_companion_hub_keyboard_desc">Schaltet die virtuelle Touch-Tastatur im Vollbildmodus für Texteingaben ein oder aus.</string>
+    <string name="help_companion_hub_touchpad_desc">Schaltet das virtuelle Touchpad zur präzisen Maus- und Touch-Cursor-Steuerung ein oder aus.</string>
+
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">Willkommen bei Megingiard!</string>
     <string name="welcome_desc">Megingiard ist eine Begleit-App für das AYN Thor Dual-Screen-Handheld. Sie ermöglicht die Konfiguration physischer Steuerelemente, virtueller Tastaturbelegung, Touchpads und der Bildschirmspiegelung zwischen beiden Displays.</string>
@@ -1212,12 +1225,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_no_profile_active">Kein Profil aktiv</string>
     <string name="integration_home_profile_config_title">Profil-Konfiguration</string>
     <string name="integration_home_linked_profile">Verknüpftes Profil</string>
-    <string name="integration_home_edit_layout">Layout bearbeiten</string>
+    <string name="integration_home_edit_layout">Bearbeiten</string>
     <string name="integration_home_no_profile_assigned">Noch kein Profil für diese App konfiguriert.</string>
-    <string name="integration_home_create_profile">Profil erstellen</string>
-    <string name="integration_home_link_existing">Bestehendes verknüpfen</string>
+    <string name="integration_home_create_profile">Erstellen</string>
+    <string name="integration_home_link_existing">Verknüpfen</string>
     <string name="integration_home_no_unassigned_profiles">Keine unzugewiesenen Profile</string>
-    <string name="integration_home_status_title">Status-Anzeige</string>
+    <string name="integration_home_status_title">Begleiter-Status</string>
     <string name="integration_home_status_privd">Privilegierter Daemon</string>
     <string name="integration_home_status_mirror">Bildschirm-Spiegelung</string>
     <string name="integration_home_status_accessibility">Barrierefreiheitsdienst</string>
@@ -1232,6 +1245,24 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_new_profile">Neues Profil</string>
     <string name="integration_home_default_layout">Standard</string>
     <string name="integration_home_show_macropad">Anzeigen</string>
-    <string name="quick_menu_show_dashboard">Dashboard anzeigen</string>
+    <string name="integration_home_hero_idle_title">Megingiard Begleiter-Hub</string>
+    <string name="integration_home_hero_idle_subtitle">Wähle ein Spiel auf dem oberen Bildschirm oder öffne unten ein Werkzeug.</string>
+    <string name="integration_home_launch_controls">Anzeigen</string>
+    <string name="integration_home_deck_title">Begleiter-Werkzeuge</string>
+    <string name="integration_home_macropad_desc">Gamepad &amp; Makros</string>
+    <string name="integration_home_touchpad_desc">Maus / Touch-Projektion</string>
+    <string name="integration_home_keyboard_desc">Virtuelle Tastatur</string>
+    <string name="integration_home_mirror_desc">Oberer Bildschirm-Spiegel</string>
+    <string name="integration_home_settings">Globale Einstellungen</string>
+    <string name="integration_home_help">Hilfe &amp; Tutorials</string>
+    <string name="integration_home_tool_macropad">Aktives Profil</string>
+    <string name="integration_home_tool_touchpad">Touchpad</string>
+    <string name="integration_home_tool_keyboard">Tastatur</string>
+    <string name="integration_home_tool_settings">Globale Einstellungen</string>
+    <string name="integration_home_settings_desc">App-Einstellungen</string>
+    <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
+    <string name="quick_menu_show_dashboard">Companion Hub anzeigen</string>
+    <string name="quick_menu_auto_mode">Automatischer Ansichtsmodus</string>
+    <string name="quick_menu_show_macropad">MacroPad anzeigen</string>
 </resources>
 
