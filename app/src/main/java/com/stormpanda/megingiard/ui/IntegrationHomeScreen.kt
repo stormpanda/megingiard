@@ -76,10 +76,12 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.MaterialSymbol
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.delay
 import java.io.File
 import java.time.LocalDateTime
@@ -137,6 +139,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val isGlobalSettingsOpen by AppStateManager.isGlobalSettingsOpen.collectAsState()
+    val isUpdateAvailable by UpdateManager.updateAvailable.collectAsState()
 
     val hoveredPrimaryColor by AppStateManager.hoveredAppPrimaryColor.collectAsState()
     val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
@@ -351,6 +354,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     isFullscreenKeyboardActive = isFullscreenKeyboardActive,
                     isGlobalSettingsOpen = isGlobalSettingsOpen,
                     isFullscreenMouseActive = isFullscreenMouseActive,
+                    isUpdateAvailable = isUpdateAvailable,
                     colors = colors,
                 )
             }
@@ -776,6 +780,7 @@ private fun CompanionToolsDeck(
     isFullscreenKeyboardActive: Boolean,
     isGlobalSettingsOpen: Boolean,
     isFullscreenMouseActive: Boolean,
+    isUpdateAvailable: Boolean,
     colors: AppColors,
 ) {
     Column(
@@ -801,9 +806,18 @@ private fun CompanionToolsDeck(
             // Top Right: Global Settings
             ToolCard(
                 title = stringResource(R.string.integration_home_tool_settings),
-                subtitle = stringResource(R.string.integration_home_settings_desc),
-                icon = Icons.Rounded.Settings,
-                isActive = isGlobalSettingsOpen,
+                subtitle =
+                    if (isUpdateAvailable) {
+                        stringResource(
+                            R.string.settings_update_available_short,
+                        )
+                    } else {
+                        stringResource(R.string.integration_home_settings_desc)
+                    },
+                icon = if (isUpdateAvailable) null else Icons.Rounded.Settings,
+                symbolName = if (isUpdateAvailable) "download" else null,
+                isActive = isGlobalSettingsOpen || isUpdateAvailable,
+                highlightSubtitle = isUpdateAvailable,
                 colors = colors,
                 modifier = Modifier.weight(1f),
                 onClick = { AppStateManager.setGlobalSettingsOpen(true) },
@@ -844,8 +858,10 @@ private fun CompanionToolsDeck(
 private fun ToolCard(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    symbolName: String? = null,
     isActive: Boolean,
+    highlightSubtitle: Boolean = false,
     colors: AppColors,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -871,12 +887,20 @@ private fun ToolCard(
                         .background(if (isActive) colors.accent.copy(alpha = IH_HIGHLIGHT_ALPHA) else colors.controlOverlay),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isActive) colors.accent else colors.onSurfaceSecondary,
-                    modifier = Modifier.size(IH_DECK_ICON_SIZE),
-                )
+                if (symbolName != null) {
+                    MaterialSymbol(
+                        name = symbolName,
+                        size = IH_DECK_ICON_SIZE,
+                        tint = if (isActive) colors.accent else colors.onSurfaceSecondary,
+                    )
+                } else if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isActive) colors.accent else colors.onSurfaceSecondary,
+                        modifier = Modifier.size(IH_DECK_ICON_SIZE),
+                    )
+                }
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -890,7 +914,8 @@ private fun ToolCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isActive) colors.accent else colors.onSurfaceSecondary,
+                    color = if (highlightSubtitle || isActive) colors.accent else colors.onSurfaceSecondary,
+                    fontWeight = if (highlightSubtitle) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
                 )
             }

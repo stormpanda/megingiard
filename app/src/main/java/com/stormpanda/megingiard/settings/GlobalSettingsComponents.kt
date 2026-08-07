@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MegingiardExport
@@ -499,5 +501,93 @@ internal fun ConfigSection(
         description = stringResource(R.string.settings_add_to_obtainium_desc),
         accentColor = effectiveAccent,
         onClick = onAddToObtainium,
+    )
+}
+
+@Composable
+internal fun UpdateAvailableBanner(
+    tagName: String,
+    accentColor: Color,
+    colors: AppColors,
+    onUpdateClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(accentColor.copy(alpha = 0.15f))
+                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                .padding(16.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_update_available_banner, tagName),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colors.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.settings_update_available_banner_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onSurfaceSecondary,
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Button(
+                onClick = {
+                    AppLog.d(TAG, "UpdateAvailableBanner clicked: $tagName")
+                    onUpdateClick()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_update_now_btn),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun UpdateCheckSection(
+    autoUpdateCheckEnabled: Boolean,
+    isChecking: Boolean,
+    latestTag: String,
+    updateAvailable: Boolean,
+    accentColor: Color,
+    onAutoUpdateCheckChanged: (Boolean) -> Unit,
+    onCheckForUpdates: () -> Unit,
+) {
+    RememberSettingRow(
+        label = stringResource(R.string.settings_auto_update_check),
+        description = stringResource(R.string.settings_auto_update_check_desc),
+        checked = autoUpdateCheckEnabled,
+        onCheckedChange = { enabled ->
+            AppLog.d(TAG, "autoUpdateCheckEnabled changed to $enabled")
+            onAutoUpdateCheckChanged(enabled)
+        },
+    )
+    AppDivider()
+    val descText =
+        when {
+            isChecking -> stringResource(R.string.settings_update_checking)
+            updateAvailable && latestTag.isNotBlank() -> stringResource(R.string.settings_update_available_banner, latestTag)
+            else -> stringResource(R.string.settings_update_up_to_date, BuildConfig.VERSION_NAME)
+        }
+    ConfigActionRow(
+        label = stringResource(R.string.settings_check_for_updates),
+        description = descText,
+        accentColor = accentColor,
+        onClick = {
+            AppLog.d(TAG, "UpdateCheckSection manual check clicked")
+            onCheckForUpdates()
+        },
     )
 }

@@ -1264,5 +1264,27 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="quick_menu_show_dashboard">Companion Hub anzeigen</string>
     <string name="quick_menu_auto_mode">Automatischer Ansichtsmodus</string>
     <string name="quick_menu_show_macropad">MacroPad anzeigen</string>
+
+    <!-- Update Check Strings -->
+    <string name="settings_update_available_short">Update verfügbar</string>
+    <string name="settings_auto_update_check">Automatische Update-Prüfung</string>
+    <string name="settings_auto_update_check_desc">Regelmäßig im Hintergrund auf GitHub Releases nach App-Updates suchen</string>
+    <string name="settings_check_for_updates">Nach Updates suchen</string>
+    <string name="settings_check_for_updates_desc">Manuell prüfen, ob eine neuere Version verfügbar ist</string>
+    <string name="settings_update_checking">Suche nach Updates…</string>
+    <string name="settings_update_up_to_date">App ist auf dem neuesten Stand (%1$s)</string>
+    <string name="settings_update_available_banner">Update verfügbar: %1$s</string>
+    <string name="settings_update_available_banner_desc">Eine neue Version ist auf GitHub Releases verfügbar</string>
+    <string name="settings_update_now_btn">Aktualisieren</string>
+
+    <!-- Update Prompt Dialog -->
+    <string name="update_dialog_title">Update verfügbar (%1$s)</string>
+    <string name="update_dialog_message">Version %1$s ist auf GitHub Releases verfügbar.\n\nMöchtest du deine Konfiguration sichern, bevor die Download-Seite geöffnet wird?</string>
+    <string name="update_dialog_btn_backup_and_open">Sichern &amp; Link öffnen</string>
+    <string name="update_dialog_btn_open_directly">Link direkt öffnen</string>
+    <string name="update_dialog_btn_cancel">Abbrechen</string>
+
+    <!-- Settings Help Modal Entry -->
+    <string name="help_settings_auto_update_desc">Wenn aktiviert, prüft Megingiard alle 24 Stunden lautlos im Hintergrund auf neue Releases. Wenn ein Update gefunden wird, kannst du deine Einstellungen sichern und die Release-Seite im Standardbrowser auf dem oberen Bildschirm öffnen.</string>
 </resources>
 

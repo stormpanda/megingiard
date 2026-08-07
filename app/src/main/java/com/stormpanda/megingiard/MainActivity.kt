@@ -96,6 +96,7 @@ import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
+import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -221,6 +222,12 @@ class MainActivity : ComponentActivity() {
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
+
+        // Trigger session background update check on app launch
+        UpdateManager.checkForUpdates(
+            force = false,
+            currentVersion = BuildConfig.VERSION_NAME,
+        )
 
         // Load the per-install Privd pair key before any connect() attempt.
         // The Keystore decrypt is a short hardware-backed operation (~10 ms);

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.InternalBackup
+import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -164,6 +165,7 @@ object SettingsManager {
         BackgroundSettings.init(dataStore, scope)
         MirrorSettings.init(dataStore, scope)
         MacroPadSettings.init(dataStore, scope)
+        UpdateManager.init(dataStore, scope)
 
         scope.launch {
             dataStore.data
@@ -189,6 +191,7 @@ object SettingsManager {
                     AppLog.level = _logLevel.value
                     BackgroundSettings.loadFrom(prefs)
                     MacroPadSettings.loadFrom(prefs)
+                    UpdateManager.loadFrom(prefs)
 
                     val backupsJsonStr = prefs[KEY_INTERNAL_BACKUPS]
                     if (backupsJsonStr != lastBackupsJsonStr) {
