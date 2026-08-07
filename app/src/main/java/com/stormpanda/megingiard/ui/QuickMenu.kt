@@ -89,6 +89,8 @@ internal val PM_MIRROR_LABELED_BUTTON_WIDTH = 72.dp
 internal val PM_MIRROR_CARD_V_PADDING = 10.dp
 internal val PM_SCREEN_MIRRORING_ICON_SIZE = 16.dp
 internal val PM_SCREEN_MIRRORING_SPACER_W = 6.dp
+internal val PM_SECTION_TITLE_SPACING = 6.dp
+internal val PM_ACTION_ROW_SPACING = 8.dp
 internal const val PM_SCRIM_ALPHA = 0.55f
 internal const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
@@ -198,7 +200,7 @@ fun QuickMenu(
             ) {
                 // ── Profile section ────────────────────────────────────────
                 SectionLabel(text = stringResource(R.string.quick_menu_profile_label), colors = colors)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(PM_SECTION_TITLE_SPACING))
                 ProfileRow(
                     profiles = profiles,
                     activeProfile = activeProfile,
@@ -214,7 +216,7 @@ fun QuickMenu(
 
                 // ── Layout section ─────────────────────────────────────────
                 SectionLabel(text = stringResource(R.string.quick_menu_layout_label), colors = colors)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(PM_SECTION_TITLE_SPACING))
                 LayoutRow(
                     activeProfile = activeProfile,
                     activeLayout = activeLayout,
@@ -232,7 +234,7 @@ fun QuickMenu(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(PM_ACTION_ROW_SPACING),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (!showIntegrationHome) {
@@ -281,7 +283,7 @@ fun QuickMenu(
                 // ── Action buttons ─────────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(PM_ACTION_ROW_SPACING),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     QuickMenuActionChip(

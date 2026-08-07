@@ -56,12 +56,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import java.util.Locale
 
 private const val TAG = "QuickMenuComponents"
+internal val PM_CHIP_LABEL_GAP = 6.dp
+internal val PM_AUTO_SWITCH_GAP = 8.dp
 
 @Composable
 internal fun SectionLabel(
@@ -163,7 +166,10 @@ internal fun QuickMenuActionChip(
             modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .border(PM_BORDER_WIDTH, borderColor, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .clickable(onClick = onClick)
+                .clickable(onClick = {
+                    AppLog.d(TAG, "QuickMenuActionChip clicked: $label")
+                    onClick()
+                })
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -183,7 +189,7 @@ internal fun QuickMenuActionChip(
                 modifier = Modifier.size(iconSize),
             )
         }
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(PM_CHIP_LABEL_GAP))
         Text(
             text = label,
             color = accent,
@@ -306,7 +312,10 @@ internal fun MagicalAutoToggleChip(
                     } else {
                         Modifier.border(PM_BORDER_WIDTH, colors.controlOverlayBorder, RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                     },
-                ).clickable(onClick = onClick)
+                ).clickable(onClick = {
+                    AppLog.d(TAG, "MagicalAutoToggleChip clicked: active=$active")
+                    onClick()
+                })
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -317,7 +326,7 @@ internal fun MagicalAutoToggleChip(
             tint = contentColor,
             modifier = Modifier.size(PM_NAV_ICON_SIZE),
         )
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(PM_CHIP_LABEL_GAP))
         Text(
             text = stringResource(R.string.quick_menu_auto_mode),
             color = contentColor,
@@ -326,7 +335,7 @@ internal fun MagicalAutoToggleChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(PM_AUTO_SWITCH_GAP))
         Box(
             modifier =
                 Modifier
@@ -365,7 +374,10 @@ internal fun QuickMenuIconButton(
             modifier
                 .clip(RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
                 .border(PM_BORDER_WIDTH, accent.copy(alpha = 0.5f), RoundedCornerShape(PM_ACTION_BUTTON_CORNER))
-                .clickable(onClick = onClick)
+                .clickable(onClick = {
+                    AppLog.d(TAG, "QuickMenuIconButton clicked: $contentDescription")
+                    onClick()
+                })
                 .padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
         contentAlignment = Alignment.Center,
     ) {
