@@ -78,14 +78,14 @@ the universal "go back" mechanism throughout the app.
   open (it is not conditional on mirroring being active). It contains:
   - **Screen Mirroring** action button (left side): renders as "Screen Mirroring" on screen (resource
     `R.string.quick_menu_screen_mirroring`) with an Edit icon, and opens Screen Mirroring edit mode (layout editor)
-    by setting `AppStateManager.setViewportEditActive(true)`. Disabled when not capturing.
+    by setting `AppStateManager.setViewportEditActive(true)`. Disabled when not capturing or when in Companion Hub.
   - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
     stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
-    capturing.
+    capturing. Disabled when in Companion Hub.
   - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
     icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
-    with `colors.accent` when frozen. Disabled when not capturing.
-  - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when not capturing.
+    with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
+  - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when neither capturing nor connected to privileged mode. Unchanged by Companion Hub status.
 - All icon buttons in this card MUST have a minimum touch target of **48 dp**.
 - A short text label is rendered below each icon button to improve discoverability.
 

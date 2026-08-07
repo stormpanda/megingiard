@@ -165,6 +165,7 @@ fun QuickMenu(
                 isFrozen = isFrozen,
                 isViewportEditActive = isViewportEditActive,
                 isScreenshotEnabled = isCapturing || isPrivdConnected,
+                isCompanionHub = showIntegrationHome,
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
