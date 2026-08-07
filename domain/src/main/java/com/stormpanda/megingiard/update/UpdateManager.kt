@@ -5,7 +5,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
-import com.stormpanda.megingiard.settings.KEY_LAST_UPDATE_CHECK_TIME
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_NOTES
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_URL
@@ -73,7 +72,6 @@ object UpdateManager {
         currentVersion: String = "",
     ) {
         _autoUpdateCheckEnabled.value = prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] ?: true
-        _lastCheckTime.value = prefs[KEY_LAST_UPDATE_CHECK_TIME] ?: 0L
 
         val tag = prefs[KEY_LATEST_RELEASE_TAG] ?: ""
         val url = prefs[KEY_LATEST_RELEASE_URL] ?: ""
@@ -121,7 +119,10 @@ object UpdateManager {
                 return
             }
             if (now - _lastCheckTime.value < AUTO_UPDATE_CHECK_INTERVAL_MS) {
-                AppLog.d(TAG, "Automatic update check skipped: last checked less than 24h ago (${now - _lastCheckTime.value}ms ago)")
+                AppLog.d(
+                    TAG,
+                    "Automatic update check skipped: last checked less than 24h ago in this session (${now - _lastCheckTime.value}ms ago)",
+                )
                 return
             }
         }
@@ -148,7 +149,6 @@ object UpdateManager {
                 AppLog.i(TAG, "Update check completed: latestTag=${releaseInfo.tagName}, updateAvailable=$updateIsAvail")
 
                 dataStore?.edit { prefs ->
-                    prefs[KEY_LAST_UPDATE_CHECK_TIME] = now
                     prefs[KEY_LATEST_RELEASE_TAG] = releaseInfo.tagName
                     prefs[KEY_LATEST_RELEASE_URL] = releaseInfo.htmlUrl
                     prefs[KEY_LATEST_RELEASE_NOTES] = releaseInfo.releaseNotes

@@ -103,7 +103,6 @@ internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 
 // Automatic update check settings
 internal val KEY_AUTO_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_update_check_enabled")
-internal val KEY_LAST_UPDATE_CHECK_TIME = longPreferencesKey("last_update_check_time")
 internal val KEY_LATEST_RELEASE_TAG = stringPreferencesKey("latest_release_tag")
 internal val KEY_LATEST_RELEASE_URL = stringPreferencesKey("latest_release_url")
 internal val KEY_LATEST_RELEASE_NOTES = stringPreferencesKey("latest_release_notes")
@@ -187,7 +186,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
         KEY_INTERNAL_BACKUPS,
         KEY_PRIVD_PROMPT_DISMISSED,
-        KEY_LAST_UPDATE_CHECK_TIME,
         KEY_LATEST_RELEASE_TAG,
         KEY_LATEST_RELEASE_URL,
         KEY_LATEST_RELEASE_NOTES,

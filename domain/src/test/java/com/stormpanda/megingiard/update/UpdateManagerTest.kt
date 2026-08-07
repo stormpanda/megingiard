@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.update
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import com.stormpanda.megingiard.settings.KEY_AUTO_UPDATE_CHECK_ENABLED
-import com.stormpanda.megingiard.settings.KEY_LAST_UPDATE_CHECK_TIME
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_NOTES
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_TAG
 import com.stormpanda.megingiard.settings.KEY_LATEST_RELEASE_URL
@@ -64,7 +63,6 @@ class UpdateManagerTest {
 
             testDataStore.edit { prefs ->
                 prefs[KEY_AUTO_UPDATE_CHECK_ENABLED] = true
-                prefs[KEY_LAST_UPDATE_CHECK_TIME] = 1000L
                 prefs[KEY_LATEST_RELEASE_TAG] = "v0.8.1"
                 prefs[KEY_LATEST_RELEASE_URL] = "https://github.com/stormpanda/megingiard/releases/tag/v0.8.1"
                 prefs[KEY_LATEST_RELEASE_NOTES] = "New release features"
@@ -74,7 +72,7 @@ class UpdateManagerTest {
             UpdateManager.loadFrom(prefs, currentVersion = "0.8.0")
 
             assertTrue(UpdateManager.autoUpdateCheckEnabled.value)
-            assertEquals(1000L, UpdateManager.lastCheckTime.value)
+            assertEquals(0L, UpdateManager.lastCheckTime.value)
             assertTrue(UpdateManager.updateAvailable.value)
             assertEquals("v0.8.1", UpdateManager.latestReleaseInfo.value?.tagName)
         }

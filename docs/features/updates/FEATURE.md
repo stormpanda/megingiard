@@ -16,7 +16,7 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 ### FR-U1: Non-Intrusive Background Check
 
 - The update check MUST run silently in the background on app initialization without triggering blocking popups or toasts.
-- Automatic background checks MUST be rate-limited to at most once every 24 hours.
+- Each app session starts with an automatic background check (if enabled), and subsequent automatic background checks within the same running session MUST be rate-limited to at most once every 24 hours.
 - Users MUST be able to toggle automatic update checks on or off in Global Settings.
 
 ### FR-U2: Manual Check & Status Indication
