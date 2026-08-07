@@ -591,6 +591,7 @@ class ScreenCaptureService : Service() {
             if (startGeneration != directPrivdStartGeneration) return@launch
             val surface = mirrorSurface
             if (surface == null || !surface.isValid) {
+                DirectMirrorSurfaceBridge.clearDirectSurfaces()
                 directPrivdSession?.release()
                 directPrivdSession = null
                 return@launch
@@ -698,6 +699,9 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        if (isPrivilegedMode) {
+            DirectMirrorSurfaceBridge.clearDirectSurfaces()
+        }
         directPrivdSession?.release()
         directPrivdSession = null
         recordingPrivdSession?.release()

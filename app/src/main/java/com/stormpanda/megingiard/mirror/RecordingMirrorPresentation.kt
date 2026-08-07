@@ -230,6 +230,9 @@ class RecordingMirrorPresentation(
                 override fun surfaceDestroyed(holder: SurfaceHolder) {
                     virtualDisplay?.release()
                     virtualDisplay = null
+                    if (mediaProjection == null) {
+                        DirectMirrorSurfaceBridge.clearDirectSurfaces()
+                    }
                     AppLog.d(TAG, "surfaceDestroyed → VirtualDisplay released")
                 }
             },
