@@ -227,46 +227,6 @@ internal fun MagicalAutoToggleChip(
         }
     }
 
-    val currentAngle = angleAnim.value
-    val (shimmerAlpha, solidAlpha) =
-        remember(currentAngle, isAnimating, active) {
-            if (!active) {
-                0f to 0f
-            } else if (!isAnimating || currentAngle >= 360f) {
-                0f to 1f
-            } else if (currentAngle <= 270f) {
-                1f to 0f
-            } else {
-                val progress = ((currentAngle - 270f) / 90f).coerceIn(0f, 1f)
-                (1f - progress) to progress
-            }
-        }
-
-    val magicalBrush =
-        remember(currentAngle, accentColor) {
-            val rad = Math.toRadians(currentAngle.toDouble())
-            val cos = kotlin.math.cos(rad).toFloat()
-            val sin = kotlin.math.sin(rad).toFloat()
-            val startX = 500f * (1f - cos)
-            val startY = 500f * (1f - sin)
-            val endX = 500f * (1f + cos)
-            val endY = 500f * (1f + sin)
-
-            Brush.linearGradient(
-                colorStops =
-                    arrayOf(
-                        0.0f to Color.White.copy(alpha = 0.85f),
-                        0.2f to accentColor.copy(alpha = 0.9f),
-                        0.45f to Color.White.copy(alpha = 0.25f),
-                        0.7f to Color.Transparent,
-                        0.85f to accentColor.copy(alpha = 0.5f),
-                        1.0f to Color.White.copy(alpha = 0.85f),
-                    ),
-                start = Offset(startX, startY),
-                end = Offset(endX, endY),
-            )
-        }
-
     val contentColor = if (active) colors.accent else colors.onSurfaceSecondary
 
     Row(
@@ -277,6 +237,19 @@ internal fun MagicalAutoToggleChip(
                     if (active) {
                         Modifier
                             .drawBehind {
+                                val currentAngle = angleAnim.value
+                                val (shimmerAlpha, solidAlpha) =
+                                    if (!active) {
+                                        0f to 0f
+                                    } else if (!isAnimating || currentAngle >= 360f) {
+                                        0f to 1f
+                                    } else if (currentAngle <= 270f) {
+                                        1f to 0f
+                                    } else {
+                                        val progress = ((currentAngle - 270f) / 90f).coerceIn(0f, 1f)
+                                        (1f - progress) to progress
+                                    }
+
                                 val dy = 1.dp.toPx()
                                 val dx = 2.dp.toPx()
                                 val cornerRadius = CornerRadius((PM_ACTION_BUTTON_CORNER.value + 1).dp.toPx())
@@ -301,6 +274,29 @@ internal fun MagicalAutoToggleChip(
 
                                 // Magical shimmer border fading out smoothly
                                 if (shimmerAlpha > 0.001f) {
+                                    val rad = Math.toRadians(currentAngle.toDouble())
+                                    val cos = kotlin.math.cos(rad).toFloat()
+                                    val sin = kotlin.math.sin(rad).toFloat()
+                                    val startX = size.width * (1f - cos)
+                                    val startY = size.height * (1f - sin)
+                                    val endX = size.width * (1f + cos)
+                                    val endY = size.height * (1f + sin)
+
+                                    val magicalBrush =
+                                        Brush.linearGradient(
+                                            colorStops =
+                                                arrayOf(
+                                                    0.0f to Color.White.copy(alpha = 0.85f),
+                                                    0.2f to accentColor.copy(alpha = 0.9f),
+                                                    0.45f to Color.White.copy(alpha = 0.25f),
+                                                    0.7f to Color.Transparent,
+                                                    0.85f to accentColor.copy(alpha = 0.5f),
+                                                    1.0f to Color.White.copy(alpha = 0.85f),
+                                                ),
+                                            start = Offset(startX, startY),
+                                            end = Offset(endX, endY),
+                                        )
+
                                     drawRoundRect(
                                         brush = magicalBrush,
                                         alpha = shimmerAlpha,
