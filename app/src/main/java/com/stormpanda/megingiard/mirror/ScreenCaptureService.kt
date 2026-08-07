@@ -66,15 +66,6 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // Hide the mirror / recording presentations when the user explicitly navigates
-        // away (Home button, Recents). Show them again when the user returns.
-        //
-        // We use isUserLeaving (set in onUserLeaveHint / cleared on ON_RESUME) rather
-        // than isActivityResumed to avoid a feedback loop: the Presentation window sits
-        // above the Activity on the secondary display, which causes ON_PAUSE/ON_STOP to
-        // fire immediately after show() — isActivityResumed would then toggle hide() and
-        // trigger an indefinite cycle. onUserLeaveHint is NOT called for Presentation
-        // coverage, only for genuine user navigation.
 
         scope.launch {
             AppStateManager.isPrivdPromptActive.collect { active ->
