@@ -610,6 +610,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Data / restore -->
     <string name="settings_section_data">Daten</string>
+    <string name="settings_section_updates">Updates</string>
     <string name="settings_jump_all">Alle</string>
     <string name="settings_filter_label">Filter</string>
     <string name="settings_jump_general">Allgemein</string>
@@ -617,6 +618,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_data">Daten</string>
     <string name="settings_jump_config">Konfiguration</string>
+    <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Eingabe</string>
     <string name="settings_jump_diagnostics">Diagnose</string>
     <string name="settings_section_input">Eingabe</string>
@@ -1286,5 +1288,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Settings Help Modal Entry -->
     <string name="help_settings_auto_update_desc">Wenn aktiviert, prüft Megingiard alle 24 Stunden lautlos im Hintergrund auf neue Releases. Wenn ein Update gefunden wird, kannst du deine Einstellungen sichern und die Release-Seite im Standardbrowser auf dem oberen Bildschirm öffnen.</string>
+    <string name="help_settings_check_updates_desc">Führt sofort eine manuelle Suche nach neuen Releases auf GitHub durch.</string>
 </resources>
 

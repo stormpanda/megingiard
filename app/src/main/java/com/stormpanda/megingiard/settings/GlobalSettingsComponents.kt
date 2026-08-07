@@ -73,6 +73,7 @@ internal enum class SettingsSectionFilter {
     APPEARANCE,
     DATA,
     CONFIGURATION,
+    UPDATES,
     DIAGNOSTICS,
 }
 
@@ -364,6 +365,7 @@ internal fun SectionJumpRow(
     onSelectAppearance: () -> Unit,
     onSelectData: () -> Unit,
     onSelectConfig: () -> Unit,
+    onSelectUpdates: () -> Unit,
     onSelectInput: () -> Unit,
     onSelectDiagnostics: () -> Unit,
 ) {
@@ -411,6 +413,11 @@ internal fun SectionJumpRow(
             label = stringResource(R.string.settings_jump_config),
             selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
             onClick = onSelectConfig,
+        )
+        SectionJumpChip(
+            label = stringResource(R.string.settings_jump_updates),
+            selected = selectedSectionFilter == SettingsSectionFilter.UPDATES,
+            onClick = onSelectUpdates,
         )
         SectionJumpChip(
             label = stringResource(R.string.settings_jump_diagnostics),

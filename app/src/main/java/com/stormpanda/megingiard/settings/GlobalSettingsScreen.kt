@@ -239,6 +239,7 @@ fun GlobalSettingsScreen(
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
+                    onSelectUpdates = { selectedSectionFilter = SettingsSectionFilter.UPDATES },
                     onSelectDiagnostics = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
@@ -246,16 +247,6 @@ fun GlobalSettingsScreen(
                         title = stringResource(R.string.settings_section_general),
                         colors = colors,
                     ) {
-                        UpdateCheckSection(
-                            autoUpdateCheckEnabled = autoUpdateCheckEnabled,
-                            isChecking = isCheckingUpdates,
-                            latestTag = latestReleaseInfo?.tagName ?: "",
-                            updateAvailable = updateAvailable,
-                            accentColor = effectiveAccent,
-                            onAutoUpdateCheckChanged = { viewModel.setAutoUpdateCheckEnabled(it) },
-                            onCheckForUpdates = { viewModel.checkForUpdatesManually() },
-                        )
-                        AppDivider()
                         ConfigActionRow(
                             label = stringResource(R.string.settings_start_welcome_tour),
                             description = stringResource(R.string.settings_start_welcome_tour_desc),
@@ -410,6 +401,23 @@ fun GlobalSettingsScreen(
                                     }
                                 }
                             },
+                        )
+                    }
+                }
+
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.UPDATES) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_updates),
+                        colors = colors,
+                    ) {
+                        UpdateCheckSection(
+                            autoUpdateCheckEnabled = autoUpdateCheckEnabled,
+                            isChecking = isCheckingUpdates,
+                            latestTag = latestReleaseInfo?.tagName ?: "",
+                            updateAvailable = updateAvailable,
+                            accentColor = effectiveAccent,
+                            onAutoUpdateCheckChanged = { viewModel.setAutoUpdateCheckEnabled(it) },
+                            onCheckForUpdates = { viewModel.checkForUpdatesManually() },
                         )
                     }
                 }
@@ -724,10 +732,6 @@ private fun GlobalSettingsHelpModal(
 
         HelpSection(stringResource(R.string.settings_section_general))
         HelpEntry(
-            label = stringResource(R.string.settings_auto_update_check),
-            description = stringResource(R.string.help_settings_auto_update_desc),
-        )
-        HelpEntry(
             label = stringResource(R.string.settings_start_welcome_tour),
             description = stringResource(R.string.settings_start_welcome_tour_desc),
         )
@@ -802,6 +806,16 @@ private fun GlobalSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_add_to_obtainium),
             description = stringResource(R.string.help_settings_add_to_obtainium_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_updates))
+        HelpEntry(
+            label = stringResource(R.string.settings_auto_update_check),
+            description = stringResource(R.string.help_settings_auto_update_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_check_for_updates),
+            description = stringResource(R.string.help_settings_check_updates_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_diagnostics))

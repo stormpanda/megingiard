@@ -17,12 +17,13 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 
 - The update check MUST run silently in the background on app initialization without triggering blocking popups or toasts.
 - Each app session starts with an automatic background check (if enabled), and subsequent automatic background checks within the same running session MUST be rate-limited to at most once every 24 hours.
-- Users MUST be able to toggle automatic update checks on or off in Global Settings.
+- Users MUST be able to toggle automatic update checks on or off in a dedicated "Updates" section in Global Settings (positioned after Configuration).
 
 ### FR-U2: Manual Check & Status Indication
 
-- Users MUST be able to trigger a manual check for updates anytime in Global Settings.
+- Users MUST be able to trigger a manual check for updates anytime in the dedicated "Updates" section in Global Settings.
 - The UI MUST display the current update check status (e.g. checking status, app up-to-date, or new release tag).
+- The update available banner MUST remain prominently displayed at the top of the Global Settings screen when an update is available.
 
 ### FR-U3: Pre-Update Backup Prompt & Top-Screen Launcher
 

@@ -220,6 +220,7 @@ Open Settings to create a layout.</string>
 
     <!-- Configuration export/import -->
     <string name="settings_section_config">Configuration</string>
+    <string name="settings_section_updates">Updates</string>
     <string name="settings_section_data">Data</string>
     <string name="settings_restore_defaults">Restore default profiles</string>
     <string name="settings_restore_defaults_desc">Deletes all profiles and creates a blank default profile</string>
@@ -482,6 +483,7 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
+    <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Input</string>
     <string name="settings_jump_diagnostics">Diagnostics</string>
     <string name="settings_section_input">Input</string>
@@ -1279,5 +1281,6 @@ Open Settings to create a layout.</string>
 
     <!-- Settings Help Modal Entry -->
     <string name="help_settings_auto_update_desc">When enabled, Megingiard silently checks for new releases every 24 hours. If an update is found, you can backup your settings and open the release page in your default browser on the top display.</string>
+    <string name="help_settings_check_updates_desc">Triggers a manual check for updates against the GitHub Releases repository immediately.</string>
 </resources>
 
