@@ -536,7 +536,10 @@ object AppStateManager {
                 val newId = layout?.id
                 if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
                     AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    if (_uiMode.value != UiMode.QUICK_MENU) {
+                    if (_uiMode.value != UiMode.QUICK_MENU &&
+                        _uiMode.value != UiMode.LAYOUT_EDITOR &&
+                        _uiMode.value != UiMode.BACKGROUND_SETTINGS
+                    ) {
                         closeActiveModal()
                     }
                 }

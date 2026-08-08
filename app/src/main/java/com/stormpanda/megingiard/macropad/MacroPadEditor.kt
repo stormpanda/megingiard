@@ -128,7 +128,11 @@ fun MacroPadEditor(onDone: () -> Unit) {
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
-    val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val activeLayout =
+        remember(profile) {
+            val layoutId = profile?.activeLayoutId
+            profile?.layouts?.firstOrNull { it.id == layoutId } ?: profile?.layouts?.firstOrNull()
+        }
     var showMacroListEditor by remember { mutableStateOf(false) }
     var pendingMacroEditId by remember { mutableStateOf<String?>(null) }
     var showAddButton by remember { mutableStateOf(false) }

@@ -86,6 +86,44 @@ class AppStateManagerTest {
     }
 
     @Test
+    fun `changing active layout preserves layout editor and background settings modes`() {
+        val layout1Id = UUID.randomUUID().toString()
+        val layout2Id = UUID.randomUUID().toString()
+        val profileId = UUID.randomUUID().toString()
+        val testProfile =
+            PadProfile(
+                id = profileId,
+                name = "Test Profile",
+                layouts =
+                    listOf(
+                        PadLayout(id = layout1Id, name = "Layout 1"),
+                        PadLayout(id = layout2Id, name = "Layout 2"),
+                    ),
+                activeLayoutId = layout1Id,
+            )
+
+        MacroPadState.loadFrom(listOf(testProfile), profileId)
+
+        // LAYOUT_EDITOR mode
+        AppStateManager.setEditorActive(true)
+        assertTrue(AppStateManager.isEditorActive.value)
+
+        MacroPadState.setActiveLayoutId(layout2Id)
+        assertTrue(AppStateManager.isEditorActive.value)
+
+        AppStateManager.setEditorActive(false)
+
+        // BACKGROUND_SETTINGS mode
+        AppStateManager.setBackgroundSettingsActive(true)
+        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
+
+        MacroPadState.setActiveLayoutId(layout1Id)
+        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
+
+        AppStateManager.setBackgroundSettingsActive(false)
+    }
+
+    @Test
     fun `reconnect prompt dialog stays active during transitions and auto-resets on success`() =
         runTest {
             // Reset states
