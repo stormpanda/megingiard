@@ -2,6 +2,7 @@ package com.stormpanda.megingiard
 
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
@@ -66,18 +67,6 @@ object AppStateManager {
 
     private val _isActivityResumed = MutableStateFlow(true)
     val isActivityResumed: StateFlow<Boolean> = _isActivityResumed.asStateFlow()
-
-    /**
-     * True from the moment [onUserLeaveHint][android.app.Activity.onUserLeaveHint] fires
-     * (Home button, Recents navigation) until the next [ON_RESUME][androidx.lifecycle.Lifecycle.Event.ON_RESUME].
-     *
-     * Unlike [isActivityResumed], this flag is NOT set when a [android.app.Presentation]
-     * or other window owned by the same process covers the Activity — only genuine
-     * user-initiated navigation away sets it. This makes it safe to use for
-     * hiding/showing mirror presentations without creating a feedback loop.
-     */
-    private val _isUserLeaving = MutableStateFlow(false)
-    val isUserLeaving: StateFlow<Boolean> = _isUserLeaving.asStateFlow()
 
     private val _isOnValidScreen = MutableStateFlow(true)
     val isOnValidScreen: StateFlow<Boolean> = _isOnValidScreen.asStateFlow()
@@ -188,7 +177,7 @@ object AppStateManager {
             _focusedAppPackageName.value != focusedApp ||
             _focusedRomPath.value != focusedRomPath
         ) {
-            _companionViewMode.value = CompanionViewMode.AUTO
+            AppLog.d(TAG, "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath")
         }
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
@@ -217,11 +206,6 @@ object AppStateManager {
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed
-    }
-
-    fun setUserLeaving(leaving: Boolean) {
-        AppLog.d(TAG, "setUserLeaving($leaving)")
-        _isUserLeaving.value = leaving
     }
 
     fun setOnValidScreen(valid: Boolean) {
@@ -352,9 +336,22 @@ object AppStateManager {
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
+    val showIntegrationHome: StateFlow<Boolean> =
+        combine(
+            _focusedAppPackageName,
+            _focusedRomPath,
+            MacroPadState.activeProfile,
+            _companionViewMode,
+        ) { focusedPackage, focusedRom, profile, viewMode ->
+            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile)
+        }.stateIn(scope, SharingStarted.Eagerly, false)
+
     fun setCompanionViewMode(mode: CompanionViewMode) {
         AppLog.d(TAG, "setCompanionViewMode($mode)")
         _companionViewMode.value = mode
+        if (mode == CompanionViewMode.AUTO) {
+            AutoSwitchCoordinator.reevaluateAutoState()
+        }
     }
 
     val isPrivdPromptDismissed: StateFlow<Boolean> = MacroPadSettings.privdPromptDismissed
@@ -539,7 +536,12 @@ object AppStateManager {
                 val newId = layout?.id
                 if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
                     AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    closeActiveModal()
+                    if (_uiMode.value != UiMode.QUICK_MENU &&
+                        _uiMode.value != UiMode.LAYOUT_EDITOR &&
+                        _uiMode.value != UiMode.BACKGROUND_SETTINGS
+                    ) {
+                        closeActiveModal()
+                    }
                 }
                 lastActiveLayoutId = newId
             }

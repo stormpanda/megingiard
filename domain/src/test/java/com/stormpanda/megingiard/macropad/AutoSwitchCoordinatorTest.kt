@@ -35,6 +35,7 @@ class AutoSwitchCoordinatorTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         AutoSwitchCoordinator.resetForTesting()
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
 
         // Setup mock profiles with app mappings
         val p1Id = UUID.randomUUID().toString()
@@ -66,6 +67,7 @@ class AutoSwitchCoordinatorTest {
     fun tearDown() {
         AutoSwitchCoordinator.resetForTesting()
         EmulatorDetectionFunnel.resetForTesting()
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
         AppStateManager.setExternalClientState(
             isActive = false,
             packageName = null,
@@ -332,4 +334,23 @@ class AutoSwitchCoordinatorTest {
             assertEquals("BALLxPIT.steam", AppStateManager.focusedRomPath.value)
             assertEquals(profile3.id, MacroPadState.activeProfileId.value)
         }
+
+    @Test
+    fun `onPackageChanged ignores auto profile switch when companionViewMode is not AUTO`() {
+        // Given companionViewMode is set to MACROPAD (Auto Mode OFF)
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.MACROPAD)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When a mapped app (com.citra.emu -> profile2) is opened while Auto Mode is OFF
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+
+        // Then profile remains profile1 (auto profile switch is bypassed)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When Auto Mode is re-enabled via setCompanionViewMode(AUTO)
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
+
+        // Then reevaluateAutoState triggers and switches active profile to profile2
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+    }
 }

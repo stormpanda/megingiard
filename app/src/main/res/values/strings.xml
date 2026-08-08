@@ -1002,8 +1002,12 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_screenshot_label">Take Screenshot</string>
     <string name="help_quickmenu_screenshot_desc">Takes a screenshot of the main screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
     <string name="help_quickmenu_section_macropad">MacroPad controls (bottom card)</string>
-    <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
-    <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
+    <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different game profile (deactivates Auto Switch). The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
+    <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different layout within the current profile (deactivates Auto Switch). Only layouts marked as enabled in the editor appear here.</string>
+    <string name="help_quickmenu_auto_switch_label">Auto Switch</string>
+    <string name="help_quickmenu_auto_switch_desc">Toggles dynamic profile auto-matching ON/OFF. When ON, profiles and companion views switch automatically based on the active game or emulator. When OFF, profile auto-matching is paused.</string>
+    <string name="help_quickmenu_view_switch_label">Switch to Hub / Game Profile</string>
+    <string name="help_quickmenu_view_switch_desc">Switches manually between the Companion Hub dashboard and the active Game Profile layout (deactivates Auto Switch).</string>
     <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
     <string name="help_quickmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
     <string name="help_quickmenu_shut_off_label">Shut Off App</string>
@@ -1256,9 +1260,9 @@ Open Settings to create a layout.</string>
     <string name="integration_home_tool_settings">Global Settings</string>
     <string name="integration_home_settings_desc">App Preferences</string>
     <string name="integration_home_tool_mirror">Screen Mirror</string>
-    <string name="quick_menu_show_dashboard">Show Companion Hub</string>
-    <string name="quick_menu_show_macropad">Show MacroPad</string>
-    <string name="quick_menu_auto_mode">Auto View Mode</string>
+    <string name="quick_menu_show_dashboard">Switch to Hub</string>
+    <string name="quick_menu_show_macropad">Switch to Game Profile</string>
+    <string name="quick_menu_auto_mode">Auto Switch</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update available</string>

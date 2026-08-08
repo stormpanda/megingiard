@@ -19,9 +19,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Edit
@@ -35,6 +37,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -86,6 +89,8 @@ internal val PM_MIRROR_LABELED_BUTTON_WIDTH = 72.dp
 internal val PM_MIRROR_CARD_V_PADDING = 10.dp
 internal val PM_SCREEN_MIRRORING_ICON_SIZE = 16.dp
 internal val PM_SCREEN_MIRRORING_SPACER_W = 6.dp
+internal val PM_SECTION_TITLE_SPACING = 6.dp
+internal val PM_ACTION_ROW_SPACING = 8.dp
 internal const val PM_SCRIM_ALPHA = 0.55f
 internal const val PM_NAME_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val PM_NAME_DIALOG_WIDTH_FRACTION = 0.85f
@@ -115,14 +120,13 @@ fun QuickMenu(
     val isFrozen by ScreenCaptureManager.isFrozen.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val companionViewMode by AppStateManager.companionViewMode.collectAsState()
-    val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
-    val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
-    val showIntegrationHome = companionViewMode.shouldShowIntegrationHome(focusedAppPackageName, focusedRomPath, activeProfile)
+    val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
     val privdState by PrivdClient.state.collectAsState()
     val isPrivdConnected = privdState == PrivdConnectionState.CONNECTED
     val showGlobalSettings by AppStateManager.isGlobalSettingsOpen.collectAsState()
     var showQuickMenuHelp by remember { mutableStateOf(false) }
     var showShutOffConfirm by remember { mutableStateOf(false) }
+    var autoShimmerTrigger by remember { mutableIntStateOf(0) }
 
     AnimatedVisibility(
         visible = visible,
@@ -194,7 +198,7 @@ fun QuickMenu(
             ) {
                 // ── Profile section ────────────────────────────────────────
                 SectionLabel(text = stringResource(R.string.quick_menu_profile_label), colors = colors)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(PM_SECTION_TITLE_SPACING))
                 ProfileRow(
                     profiles = profiles,
                     activeProfile = activeProfile,
@@ -210,7 +214,7 @@ fun QuickMenu(
 
                 // ── Layout section ─────────────────────────────────────────
                 SectionLabel(text = stringResource(R.string.quick_menu_layout_label), colors = colors)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(PM_SECTION_TITLE_SPACING))
                 LayoutRow(
                     activeProfile = activeProfile,
                     activeLayout = activeLayout,
@@ -226,44 +230,47 @@ fun QuickMenu(
                 HorizontalDivider(color = colors.controlOverlayBorder)
                 Spacer(Modifier.height(PM_SECTION_SPACING))
 
-                if (companionViewMode != CompanionViewMode.AUTO) {
-                    QuickMenuActionChip(
-                        label = stringResource(R.string.quick_menu_auto_mode),
-                        icon = Icons.Rounded.Autorenew,
-                        colors = colors,
-                        onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(PM_ACTION_ROW_SPACING),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (!showIntegrationHome) {
+                        QuickMenuActionChip(
+                            label = stringResource(R.string.quick_menu_show_dashboard),
+                            painter = painterResource(R.drawable.ic_megingiard_logo),
+                            colors = colors,
+                            onClick = {
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        QuickMenuActionChip(
+                            label = stringResource(R.string.quick_menu_show_macropad),
+                            icon = Icons.Rounded.Gamepad,
+                            colors = colors,
+                            onClick = {
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
 
-                if (!showIntegrationHome) {
-                    QuickMenuActionChip(
-                        label = stringResource(R.string.quick_menu_show_dashboard),
-                        painter = painterResource(R.drawable.ic_megingiard_logo),
+                    MagicalAutoToggleChip(
+                        active = companionViewMode == CompanionViewMode.AUTO,
+                        shimmerTrigger = autoShimmerTrigger,
                         colors = colors,
                         onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
+                            if (companionViewMode == CompanionViewMode.AUTO) {
+                                val targetMode = if (showIntegrationHome) CompanionViewMode.DASHBOARD else CompanionViewMode.MACROPAD
+                                AppStateManager.setCompanionViewMode(targetMode)
+                            } else {
+                                autoShimmerTrigger++
+                                AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+                            }
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    QuickMenuActionChip(
-                        label = stringResource(R.string.quick_menu_show_macropad),
-                        icon = Icons.Rounded.Gamepad,
-                        colors = colors,
-                        onClick = {
-                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                            AppStateManager.closeQuickMenu()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.wrapContentWidth(),
                     )
                 }
 
@@ -274,7 +281,7 @@ fun QuickMenu(
                 // ── Action buttons ─────────────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(PM_ACTION_ROW_SPACING),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     QuickMenuActionChip(
@@ -369,6 +376,16 @@ private fun QuickMenuHelpModal(
         HelpEntry(
             label = stringResource(R.string.quick_menu_layout_label),
             description = stringResource(R.string.help_quickmenu_layouts_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.AutoFixHigh,
+            label = stringResource(R.string.help_quickmenu_auto_switch_label),
+            description = stringResource(R.string.help_quickmenu_auto_switch_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Gamepad,
+            label = stringResource(R.string.help_quickmenu_view_switch_label),
+            description = stringResource(R.string.help_quickmenu_view_switch_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Edit,

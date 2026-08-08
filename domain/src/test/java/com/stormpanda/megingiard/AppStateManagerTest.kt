@@ -86,6 +86,44 @@ class AppStateManagerTest {
     }
 
     @Test
+    fun `changing active layout preserves layout editor and background settings modes`() {
+        val layout1Id = UUID.randomUUID().toString()
+        val layout2Id = UUID.randomUUID().toString()
+        val profileId = UUID.randomUUID().toString()
+        val testProfile =
+            PadProfile(
+                id = profileId,
+                name = "Test Profile",
+                layouts =
+                    listOf(
+                        PadLayout(id = layout1Id, name = "Layout 1"),
+                        PadLayout(id = layout2Id, name = "Layout 2"),
+                    ),
+                activeLayoutId = layout1Id,
+            )
+
+        MacroPadState.loadFrom(listOf(testProfile), profileId)
+
+        // LAYOUT_EDITOR mode
+        AppStateManager.setEditorActive(true)
+        assertTrue(AppStateManager.isEditorActive.value)
+
+        MacroPadState.setActiveLayoutId(layout2Id)
+        assertTrue(AppStateManager.isEditorActive.value)
+
+        AppStateManager.setEditorActive(false)
+
+        // BACKGROUND_SETTINGS mode
+        AppStateManager.setBackgroundSettingsActive(true)
+        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
+
+        MacroPadState.setActiveLayoutId(layout1Id)
+        assertTrue(AppStateManager.isBackgroundSettingsActive.value)
+
+        AppStateManager.setBackgroundSettingsActive(false)
+    }
+
+    @Test
     fun `reconnect prompt dialog stays active during transitions and auto-resets on success`() =
         runTest {
             // Reset states
@@ -321,7 +359,7 @@ class AppStateManagerTest {
         }
 
     @Test
-    fun `companionViewMode state and reset on focus changes`() =
+    fun `companionViewMode state persists across focus changes until explicit reset`() =
         runTest {
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
 
@@ -329,32 +367,28 @@ class AppStateManagerTest {
             AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
             assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
 
-            // Update external client state with different focusedApp -> should reset companionViewMode to AUTO
+            // Update external client state -> should preserve MACROPAD mode (sticky toggle)
             AppStateManager.setExternalClientState(
                 isActive = true,
                 packageName = "com.test.launcher",
                 focusedApp = "com.test.game",
             )
-            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
 
             // Set companionViewMode to DASHBOARD
             AppStateManager.setCompanionViewMode(CompanionViewMode.DASHBOARD)
             assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
 
-            // Update with same focusedApp -> should not reset
-            AppStateManager.setExternalClientState(
-                isActive = true,
-                packageName = "com.test.launcher",
-                focusedApp = "com.test.game",
-            )
-            assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
-
-            // Deactivate client -> should reset
+            // Deactivate client -> should preserve DASHBOARD mode
             AppStateManager.setExternalClientState(
                 isActive = false,
                 packageName = null,
                 focusedApp = null,
             )
+            assertEquals(CompanionViewMode.DASHBOARD, AppStateManager.companionViewMode.value)
+
+            // Explicitly set AUTO -> should revert to AUTO
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
         }
 
@@ -506,6 +540,32 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `activeLayout change does not side effect uiMode or close active overlay`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.openQuickMenu()
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+
+            val profile =
+                PadProfile(
+                    id = "p_test_qm",
+                    name = "Test Profile",
+                    layouts =
+                        listOf(
+                            PadLayout(id = "l_test_qm_1", name = "Layout 1"),
+                            PadLayout(id = "l_test_qm_2", name = "Layout 2"),
+                        ),
+                    activeLayoutId = "l_test_qm_1",
+                )
+            MacroPadState.addProfile(profile)
+            MacroPadState.setActiveProfileId("p_test_qm")
+            MacroPadState.setActiveLayoutId("l_test_qm_2")
+
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+            AppStateManager.closeQuickMenu()
+        }
+
+    @Test
     fun `shouldShowIntegrationHome evaluates true for launcher packages in AUTO mode`() =
         runTest {
             val autoMode = CompanionViewMode.AUTO
@@ -536,5 +596,41 @@ class AppStateManagerTest {
                     activeProfile = null,
                 ),
             )
+        }
+
+    @Test
+    fun `requestMirrorStart sets flag and consumeMirrorStartRequest resets it`() =
+        runTest {
+            assertFalse(AppStateManager.mirrorStartRequested.value)
+
+            AppStateManager.requestMirrorStart()
+            assertTrue(AppStateManager.mirrorStartRequested.value)
+
+            AppStateManager.consumeMirrorStartRequest()
+            assertFalse(AppStateManager.mirrorStartRequested.value)
+        }
+
+    @Test
+    fun `requestMirrorStop sets flag and consumeMirrorStopRequest resets it`() =
+        runTest {
+            assertFalse(AppStateManager.mirrorStopRequested.value)
+
+            AppStateManager.requestMirrorStop()
+            assertTrue(AppStateManager.mirrorStopRequested.value)
+
+            AppStateManager.consumeMirrorStopRequest()
+            assertFalse(AppStateManager.mirrorStopRequested.value)
+        }
+
+    @Test
+    fun `setPromptInFlight updates promptInFlight state flow correctly`() =
+        runTest {
+            assertFalse(AppStateManager.promptInFlight.value)
+
+            AppStateManager.setPromptInFlight(true)
+            assertTrue(AppStateManager.promptInFlight.value)
+
+            AppStateManager.setPromptInFlight(false)
+            assertFalse(AppStateManager.promptInFlight.value)
         }
 }
