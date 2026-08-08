@@ -114,10 +114,17 @@ fun GlobalSettingsScreen(
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
+
+    val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsState()
+    val updateAvailable by viewModel.updateAvailable.collectAsState()
+    val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsState()
+    val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
+
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
 
     var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
+    var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
 
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var showPresetPaletteDialog by rememberSaveable { mutableStateOf(false) }
@@ -214,6 +221,15 @@ fun GlobalSettingsScreen(
                         .padding(paddingValues)
                         .verticalScroll(rememberScrollState()),
             ) {
+                if (updateAvailable && latestReleaseInfo != null) {
+                    UpdateAvailableBanner(
+                        tagName = latestReleaseInfo!!.tagName,
+                        accentColor = effectiveAccent,
+                        colors = colors,
+                        onUpdateClick = { showUpdatePromptDialog = true },
+                    )
+                }
+
                 SectionJumpRow(
                     colors = colors,
                     selectedSectionFilter = selectedSectionFilter,
@@ -223,6 +239,7 @@ fun GlobalSettingsScreen(
                     onSelectAppearance = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
                     onSelectData = { selectedSectionFilter = SettingsSectionFilter.DATA },
                     onSelectConfig = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
+                    onSelectUpdates = { selectedSectionFilter = SettingsSectionFilter.UPDATES },
                     onSelectDiagnostics = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
                 )
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
@@ -388,6 +405,23 @@ fun GlobalSettingsScreen(
                     }
                 }
 
+                if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.UPDATES) {
+                    SettingsSection(
+                        title = stringResource(R.string.settings_section_updates),
+                        colors = colors,
+                    ) {
+                        UpdateCheckSection(
+                            autoUpdateCheckEnabled = autoUpdateCheckEnabled,
+                            isChecking = isCheckingUpdates,
+                            latestTag = latestReleaseInfo?.tagName ?: "",
+                            updateAvailable = updateAvailable,
+                            accentColor = effectiveAccent,
+                            onAutoUpdateCheckChanged = { viewModel.setAutoUpdateCheckEnabled(it) },
+                            onCheckForUpdates = { viewModel.checkForUpdatesManually() },
+                        )
+                    }
+                }
+
                 if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
                     SettingsSection(
                         title = stringResource(R.string.settings_section_diagnostics),
@@ -500,6 +534,51 @@ fun GlobalSettingsScreen(
                     )
                 },
                 onDismiss = { showExportMetadataDialog = false },
+            )
+        }
+        if (showUpdatePromptDialog) {
+            UpdatePromptDialog(
+                tagName = latestReleaseInfo?.tagName ?: "",
+                colors = colors,
+                accentColor = effectiveAccent,
+                onBackupAndOpen = {
+                    showUpdatePromptDialog = false
+                    showExportMetadataDialog = true
+                    val url =
+                        latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                            ?: "https://github.com/stormpanda/megingiard/releases"
+                    try {
+                        val intent =
+                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        context.startActivity(intent, options.toBundle())
+                        AppLog.d(TAG, "Launched release URL on top display: $url")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
+                    }
+                },
+                onOpenDirectly = {
+                    showUpdatePromptDialog = false
+                    val url =
+                        latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                            ?: "https://github.com/stormpanda/megingiard/releases"
+                    try {
+                        val intent =
+                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        context.startActivity(intent, options.toBundle())
+                        AppLog.d(TAG, "Launched release URL on top display: $url")
+                    } catch (e: Exception) {
+                        AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
+                    }
+                },
+                onDismiss = { showUpdatePromptDialog = false },
             )
         }
         if (showProfileExportDialog) {
@@ -727,6 +806,16 @@ private fun GlobalSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_add_to_obtainium),
             description = stringResource(R.string.help_settings_add_to_obtainium_desc),
+        )
+
+        HelpSection(stringResource(R.string.settings_section_updates))
+        HelpEntry(
+            label = stringResource(R.string.settings_auto_update_check),
+            description = stringResource(R.string.help_settings_auto_update_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_check_for_updates),
+            description = stringResource(R.string.help_settings_check_updates_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_diagnostics))

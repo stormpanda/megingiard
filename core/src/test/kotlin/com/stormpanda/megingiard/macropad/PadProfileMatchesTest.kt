@@ -149,6 +149,44 @@ class PadProfileMatchesTest {
     }
 
     @Test
+    fun matches_isActiveProfileTrue_returnsTrueWhenPackageMatchesEvenIfRomPathMissing() {
+        val profile =
+            PadProfile(
+                id = "test-1",
+                name = "GameNative Game",
+                association =
+                    ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "BALL x PIT.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        // When isActiveProfile is true and package matches, returns true even if focusedRomPath is null
+        assertTrue(profile.matches("app.gamenative", null, "pc", isActiveProfile = true))
+        assertTrue(profile.matches("app.gamenative", null, null, isActiveProfile = true))
+    }
+
+    @Test
+    fun matches_isActiveProfileTrue_returnsFalseWhenPackageDoesNotMatch() {
+        val profile =
+            PadProfile(
+                id = "test-1",
+                name = "GameNative Game",
+                association =
+                    ProfileAssociation(
+                        packageName = "app.gamenative",
+                        romFileName = "BALL x PIT.steam",
+                        systemId = "pc",
+                    ),
+            )
+
+        // When isActiveProfile is true but package is a launcher or different app, returns false
+        assertFalse(profile.matches("com.android.launcher3", null, null, isActiveProfile = true))
+        assertFalse(profile.matches("com.miHoYo.GenshinImpact", null, null, isActiveProfile = true))
+    }
+
+    @Test
     fun deserialize_migratesAssociatedPackageToAssociation() {
         val oldJson =
             """

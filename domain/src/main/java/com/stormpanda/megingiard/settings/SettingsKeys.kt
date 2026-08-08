@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
 /**
@@ -100,6 +101,12 @@ internal val KEY_WELCOME_TOUR_COMPLETED_VERSION = intPreferencesKey("welcome_tou
 // Internal backups storage key — isolated from SECTION_MAP export/import
 internal val KEY_INTERNAL_BACKUPS = stringPreferencesKey("internal_backups")
 
+// Automatic update check settings
+internal val KEY_AUTO_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_update_check_enabled")
+internal val KEY_LATEST_RELEASE_TAG = stringPreferencesKey("latest_release_tag")
+internal val KEY_LATEST_RELEASE_URL = stringPreferencesKey("latest_release_url")
+internal val KEY_LATEST_RELEASE_NOTES = stringPreferencesKey("latest_release_notes")
+
 // ── Section key groups for config export/import ───────────────────────────
 
 private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
@@ -113,6 +120,7 @@ private val GLOBAL_KEYS: Set<Preferences.Key<*>> =
         KEY_AUTO_SWITCH_PROFILES,
         KEY_EXCLUDE_FROM_RECENTS,
         KEY_STEAMGRIDDB_API_TOKEN,
+        KEY_AUTO_UPDATE_CHECK_ENABLED,
     )
 private val MIRROR_KEYS: Set<Preferences.Key<*>> =
     setOf(
@@ -178,6 +186,9 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_WELCOME_TOUR_COMPLETED_VERSION,
         KEY_INTERNAL_BACKUPS,
         KEY_PRIVD_PROMPT_DISMISSED,
+        KEY_LATEST_RELEASE_TAG,
+        KEY_LATEST_RELEASE_URL,
+        KEY_LATEST_RELEASE_NOTES,
     )
 
 /** Reverse lookup: DataStore key name → section name. */
@@ -220,6 +231,7 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
         KEY_SHOW_MACRO_EDITOR_TUTORIAL,
+        KEY_AUTO_UPDATE_CHECK_ENABLED,
     )
 
 internal val INT_KEYS: Set<Preferences.Key<*>> =
@@ -250,4 +262,7 @@ internal val STRING_KEYS: Set<Preferences.Key<*>> =
         KEY_LOG_LEVEL,
         KEY_MACROPAD_RECENT_COLORS,
         KEY_INTERNAL_BACKUPS,
+        KEY_LATEST_RELEASE_TAG,
+        KEY_LATEST_RELEASE_URL,
+        KEY_LATEST_RELEASE_NOTES,
     )

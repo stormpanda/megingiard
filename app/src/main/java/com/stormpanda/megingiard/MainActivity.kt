@@ -96,12 +96,12 @@ import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.paletteFor
+import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -201,18 +201,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * Called when the user explicitly navigates away from the app (Home button,
-     * Recents). NOT called when a Presentation or other same-process window covers
-     * the Activity. This is the correct signal for hiding mirror presentations
-     * without triggering the show/hide feedback loop that [isActivityResumed] causes.
-     */
-    override fun onUserLeaveHint() {
-        super.onUserLeaveHint()
-        AppLog.i(TAG, "onUserLeaveHint → user navigating away, hiding presentations")
-        AppStateManager.setUserLeaving(true)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         super.onCreate(savedInstanceState)
@@ -221,6 +209,12 @@ class MainActivity : ComponentActivity() {
         // else runs (including SignatureGuard below). SettingsManager.init() reads
         // just the log level synchronously from DataStore then continues async.
         SettingsManager.init(this)
+
+        // Trigger session background update check on app launch
+        UpdateManager.checkForUpdates(
+            force = false,
+            currentVersion = BuildConfig.VERSION_NAME,
+        )
 
         // Load the per-install Privd pair key before any connect() attempt.
         // The Keystore decrypt is a short hardware-backed operation (~10 ms);
@@ -447,8 +441,6 @@ class MainActivity : ComponentActivity() {
                             Lifecycle.Event.ON_RESUME -> {
                                 AppLog.i(TAG, "ON_RESUME isValid=${AppStateManager.isOnValidScreen.value}")
                                 AppStateManager.setActivityResumed(true)
-                                // Clear the user-leaving flag: the user has returned to the app.
-                                AppStateManager.setUserLeaving(false)
                             }
 
                             Lifecycle.Event.ON_STOP -> {
@@ -502,44 +494,18 @@ class MainActivity : ComponentActivity() {
                     }
                 combine(
                     AppStateManager.promptInFlight,
-                    AppStateManager.mirrorAutoStartSuppressedLayoutId,
                     ScreenCaptureManager.isCapturing,
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
-                    AppStateManager.isExternalClientActive,
-                    AppStateManager.focusedAppPackageName,
-                    AppStateManager.focusedRomPath,
-                    MacroPadState.activeProfile,
-                    AppStateManager.companionViewMode,
+                    AppStateManager.showIntegrationHome,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
-                    val suppressedLayoutId = values[1] as? String
-                    val capturing = values[2] as Boolean
-                    val currentLayout = values[3] as? PadLayout
-                    val onValidScreen = values[4] as Boolean
-                    val wizardActive = values[5] as Boolean
-                    val externalClientActive = values[6] as Boolean
-                    val focusedPackage = values[7] as? String
-                    val focusedRom = values[8] as? String
-                    val activeProfile = values[9] as? PadProfile
-                    val companionViewMode = values[10] as CompanionViewMode
-
-                    val showIntegrationHome =
-                        when (companionViewMode) {
-                            CompanionViewMode.MACROPAD -> {
-                                false
-                            }
-
-                            CompanionViewMode.DASHBOARD -> {
-                                true
-                            }
-
-                            CompanionViewMode.AUTO -> {
-                                externalClientActive &&
-                                    (focusedPackage == null || activeProfile?.matches(focusedPackage, focusedRom) != true)
-                            }
-                        }
+                    val capturing = values[1] as Boolean
+                    val currentLayout = values[2] as? PadLayout
+                    val onValidScreen = values[3] as Boolean
+                    val wizardActive = values[4] as Boolean
+                    val showIntegrationHome = values[5] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -547,7 +513,6 @@ class MainActivity : ComponentActivity() {
                         isCapturing = capturing,
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
-                        autoStartSuppressed = currentLayout?.id == suppressedLayoutId,
                         tutorialsActive = wizardActive,
                         showIntegrationHome = showIntegrationHome,
                     )
@@ -603,14 +568,8 @@ class MainActivity : ComponentActivity() {
                     if (!alreadyPrompting) {
                         AppStateManager.setPromptInFlight(true)
                     }
-                    val requestedLayoutId = activeLayout?.id
-                    if (requestedLayoutId != null) {
-                        val layoutId = requestedLayoutId
-                        AppStateManager.clearMirrorAutoStartSuppression(layoutId)
+                    activeLayout?.id?.let { layoutId ->
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-                        MacroPadState.activeLayout
-                            .map { layout -> layout?.id == layoutId && layout?.mirrorAutoStart == true }
-                            .first { it }
                     }
                     // Manual start bypasses the global auto-start gate — launch directly.
                     if (isOnValidScreen &&
@@ -630,7 +589,6 @@ class MainActivity : ComponentActivity() {
                     AppLog.i(TAG, "mirrorStopRequested → sending STOP to ScreenCaptureService")
                     AppStateManager.consumeMirrorStopRequest()
                     activeLayout?.id?.let { layoutId ->
-                        AppStateManager.suppressMirrorAutoStart(layoutId)
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
                     if (isCapturing) stopMirrorService()

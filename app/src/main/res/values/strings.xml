@@ -220,6 +220,7 @@ Open Settings to create a layout.</string>
 
     <!-- Configuration export/import -->
     <string name="settings_section_config">Configuration</string>
+    <string name="settings_section_updates">Updates</string>
     <string name="settings_section_data">Data</string>
     <string name="settings_restore_defaults">Restore default profiles</string>
     <string name="settings_restore_defaults_desc">Deletes all profiles and creates a blank default profile</string>
@@ -482,6 +483,7 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
     <string name="settings_jump_config">Configuration</string>
+    <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Input</string>
     <string name="settings_jump_diagnostics">Diagnostics</string>
     <string name="settings_section_input">Input</string>
@@ -1000,14 +1002,31 @@ Open Settings to create a layout.</string>
     <string name="help_quickmenu_screenshot_label">Take Screenshot</string>
     <string name="help_quickmenu_screenshot_desc">Takes a screenshot of the main screen. If mirroring is not active, this requires Privileged Mode to be connected.</string>
     <string name="help_quickmenu_section_macropad">MacroPad controls (bottom card)</string>
-    <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different macro profile. The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
-    <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different button layout within the current profile. Only layouts marked as enabled in the editor appear here.</string>
+    <string name="help_quickmenu_profiles_desc">Tap a chip to instantly switch to a different game profile (deactivates Auto Switch). The currently active profile is highlighted. Profiles and their layouts are created and managed in the Edit Profile/Layout screen.</string>
+    <string name="help_quickmenu_layouts_desc">Tap a chip to switch to a different layout within the current profile (deactivates Auto Switch). Only layouts marked as enabled in the editor appear here.</string>
+    <string name="help_quickmenu_auto_switch_label">Auto Switch</string>
+    <string name="help_quickmenu_auto_switch_desc">Toggles dynamic profile auto-matching ON/OFF. When ON, profiles and companion views switch automatically based on the active game or emulator. When OFF, profile auto-matching is paused.</string>
+    <string name="help_quickmenu_view_switch_label">Switch to Hub / Game Profile</string>
+    <string name="help_quickmenu_view_switch_desc">Switches manually between the Companion Hub dashboard and the active Game Profile layout (deactivates Auto Switch).</string>
     <string name="help_quickmenu_edit_desc">Opens the Edit Profile/Layout screen where you can add, move, and configure buttons, manage profiles and layouts, and create or edit macros.</string>
     <string name="help_quickmenu_settings_desc">Opens the Global Settings screen for app-wide configuration such as theme, accent color, mirror auto-start, and Privileged Mode setup.</string>
     <string name="help_quickmenu_shut_off_label">Shut Off App</string>
     <string name="help_quickmenu_shut_off_desc">Gracefully closes Megingiard, stopping screen mirroring and background services.</string>
     <string name="help_quickmenu_help_label">Help (this screen)</string>
     <string name="help_quickmenu_help_desc">Opens this help sheet with an explanation of every control in the Quick Menu.</string>
+
+    <!-- Companion Hub help -->
+    <string name="help_companion_hub_title">Companion Hub — Help</string>
+    <string name="help_companion_hub_intro">The Companion Hub screen is your central dashboard on the secondary display for game-specific macro controls, active game status, and rapid access to companion tools.</string>
+    <string name="help_companion_hub_sec_hero">Active Game &amp; Control Profile</string>
+    <string name="help_companion_hub_hero_show_desc">Opens the MacroPad touch layout for the active game full-screen on the bottom display.</string>
+    <string name="help_companion_hub_hero_edit_desc">Launches the profile and layout editor to customize button positions, styling, and macro assignments.</string>
+    <string name="help_companion_hub_hero_link_desc">Links a custom MacroPad control profile or creates a new dedicated profile for the currently active or selected game.</string>
+    <string name="help_companion_hub_sec_tools">Companion Tools</string>
+    <string name="help_companion_hub_macropad_desc">Quick shortcut to open the active MacroPad touch control surface.</string>
+    <string name="help_companion_hub_settings_desc">Access app-wide settings including theme colors, privileged daemon state, input deadzones, and configuration backups.</string>
+    <string name="help_companion_hub_keyboard_desc">Toggle the full-screen virtual touch keyboard overlay for text input.</string>
+    <string name="help_companion_hub_touchpad_desc">Toggle the full-screen virtual touchpad for precision mouse and touch cursor control.</string>
 
     <!-- Welcome Tutorial & Reset -->
     <string name="welcome_title">Welcome to Megingiard!</string>
@@ -1205,12 +1224,12 @@ Open Settings to create a layout.</string>
     <string name="integration_home_no_profile_active">No Profile Active</string>
     <string name="integration_home_profile_config_title">Profile Configuration</string>
     <string name="integration_home_linked_profile">Linked Profile</string>
-    <string name="integration_home_edit_layout">Edit Layout</string>
+    <string name="integration_home_edit_layout">Edit</string>
     <string name="integration_home_no_profile_assigned">No profile configured for this app yet.</string>
-    <string name="integration_home_create_profile">Create Profile</string>
-    <string name="integration_home_link_existing">Link Existing</string>
+    <string name="integration_home_create_profile">Create</string>
+    <string name="integration_home_link_existing">Link</string>
     <string name="integration_home_no_unassigned_profiles">No unassigned profiles</string>
-    <string name="integration_home_status_title">Status Panel</string>
+    <string name="integration_home_status_title">Companion Status</string>
     <string name="integration_home_status_privd">Privileged Daemon</string>
     <string name="integration_home_status_mirror">Screen Mirroring</string>
     <string name="integration_home_status_accessibility">Accessibility Service</string>
@@ -1225,6 +1244,47 @@ Open Settings to create a layout.</string>
     <string name="integration_home_new_profile">New Profile</string>
     <string name="integration_home_default_layout">Default</string>
     <string name="integration_home_show_macropad">Show</string>
-    <string name="quick_menu_show_dashboard">Show Dashboard</string>
+    <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
+    <string name="integration_home_hero_idle_subtitle">Select a game on the top screen or launch companion tools below.</string>
+    <string name="integration_home_launch_controls">Show</string>
+    <string name="integration_home_deck_title">Companion Tools</string>
+    <string name="integration_home_macropad_desc">Gamepad &amp; Macros</string>
+    <string name="integration_home_touchpad_desc">Mouse / Touch Projection</string>
+    <string name="integration_home_keyboard_desc">Virtual Keyboard</string>
+    <string name="integration_home_mirror_desc">Top Screen Mirror</string>
+    <string name="integration_home_settings">Global Settings</string>
+    <string name="integration_home_help">Help &amp; Tutorials</string>
+    <string name="integration_home_tool_macropad">Active Profile</string>
+    <string name="integration_home_tool_touchpad">Touchpad</string>
+    <string name="integration_home_tool_keyboard">Keyboard</string>
+    <string name="integration_home_tool_settings">Global Settings</string>
+    <string name="integration_home_settings_desc">App Preferences</string>
+    <string name="integration_home_tool_mirror">Screen Mirror</string>
+    <string name="quick_menu_show_dashboard">Switch to Hub</string>
+    <string name="quick_menu_show_macropad">Switch to Game Profile</string>
+    <string name="quick_menu_auto_mode">Auto Switch</string>
+
+    <!-- Update Check Strings -->
+    <string name="settings_update_available_short">Update available</string>
+    <string name="settings_auto_update_check">Automatic Update Checks</string>
+    <string name="settings_auto_update_check_desc">Periodically check GitHub Releases for app updates in the background</string>
+    <string name="settings_check_for_updates">Check for Updates</string>
+    <string name="settings_check_for_updates_desc">Manually verify if a newer release is available</string>
+    <string name="settings_update_checking">Checking for updates…</string>
+    <string name="settings_update_up_to_date">App is up to date (%1$s)</string>
+    <string name="settings_update_available_banner">Update Available: %1$s</string>
+    <string name="settings_update_available_banner_desc">A new version is available on GitHub Releases</string>
+    <string name="settings_update_now_btn">Update</string>
+
+    <!-- Update Prompt Dialog -->
+    <string name="update_dialog_title">Update Available (%1$s)</string>
+    <string name="update_dialog_message">Version %1$s is available on GitHub Releases.\n\nWould you like to back up your configuration before opening the download page?</string>
+    <string name="update_dialog_btn_backup_and_open">Backup &amp; Open Link</string>
+    <string name="update_dialog_btn_open_directly">Open Link Directly</string>
+    <string name="update_dialog_btn_cancel">Cancel</string>
+
+    <!-- Settings Help Modal Entry -->
+    <string name="help_settings_auto_update_desc">When enabled, Megingiard silently checks for new releases every 24 hours. If an update is found, you can backup your settings and open the release page in your default browser on the top display.</string>
+    <string name="help_settings_check_updates_desc">Triggers a manual check for updates against the GitHub Releases repository immediately.</string>
 </resources>
 

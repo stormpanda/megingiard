@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
@@ -126,6 +127,27 @@ object MacroPadState {
                 profile.layouts.firstOrNull { it.id == layoutId }
                     ?: profile.layouts.firstOrNull()
             }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Resolves the best matching profile for a given package name, optional ROM path, and system ID.
+     * Prefers specific ROM-file profile matches over generic package profiles.
+     */
+    fun findBestMatchingProfile(
+        packageName: String?,
+        romPath: String? = null,
+        systemId: String? = null,
+    ): PadProfile? {
+        val pkg = packageName?.trim() ?: return null
+        if (pkg.isBlank()) return null
+        val currentProfiles = _profiles.value
+        return currentProfiles.firstOrNull { profile ->
+            profile.association?.romFileName != null &&
+                profile.matches(pkg, romPath, systemId)
+        } ?: currentProfiles.firstOrNull { profile ->
+            profile.association?.romFileName == null &&
+                profile.matches(pkg, romPath, systemId)
+        }
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Load hook (called by MacroPadSettings.loadFrom)

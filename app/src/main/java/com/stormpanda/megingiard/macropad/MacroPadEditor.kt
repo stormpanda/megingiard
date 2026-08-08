@@ -57,6 +57,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.keyboard.KeyInjector
@@ -126,7 +128,11 @@ fun MacroPadEditor(onDone: () -> Unit) {
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
-    val activeLayout by MacroPadState.activeLayout.collectAsState()
+    val activeLayout =
+        remember(profile) {
+            val layoutId = profile?.activeLayoutId
+            profile?.layouts?.firstOrNull { it.id == layoutId } ?: profile?.layouts?.firstOrNull()
+        }
     var showMacroListEditor by remember { mutableStateOf(false) }
     var pendingMacroEditId by remember { mutableStateOf<String?>(null) }
     var showAddButton by remember { mutableStateOf(false) }
@@ -259,11 +265,17 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     profile = profile,
                     layout = activeLayout,
                     accentColor = colors.accent,
-                    onSelectProfile = { MacroPadState.setActiveProfileId(it) },
+                    onSelectProfile = {
+                        MacroPadState.setActiveProfileId(it)
+                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                    },
                     onNewProfile = { showNewProfileDialog = true },
                     onEditProfile = { showRenameProfileDialog = true },
                     onDeleteProfile = { showDeleteProfileConfirm = true },
-                    onSelectLayout = { MacroPadState.setActiveLayoutId(it) },
+                    onSelectLayout = {
+                        MacroPadState.setActiveLayoutId(it)
+                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                    },
                     onNewLayout = { showNewLayoutDialog = true },
                     onEditLayout = { showEditLayoutDialog = true },
                     onDeleteLayoutRequested = { lay -> layoutPendingDelete = lay },

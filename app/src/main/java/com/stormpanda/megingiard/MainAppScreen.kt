@@ -100,7 +100,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -372,21 +372,7 @@ fun MainAppScreen() {
                         }
                     },
         ) {
-            val showIntegrationHome =
-                when (companionViewMode) {
-                    CompanionViewMode.MACROPAD -> {
-                        false
-                    }
-
-                    CompanionViewMode.DASHBOARD -> {
-                        true
-                    }
-
-                    CompanionViewMode.AUTO -> {
-                        isExternalClientActive &&
-                            (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
-                    }
-                }
+            val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
 
             if (showIntegrationHome) {
                 IntegrationHomeScreen()

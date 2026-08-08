@@ -1,7 +1,10 @@
 package com.stormpanda.megingiard
 
+import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.keyboard.KbLayout
+import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
@@ -28,6 +31,33 @@ enum class CompanionViewMode {
     DASHBOARD,
 }
 
+fun CompanionViewMode.shouldShowIntegrationHome(
+    focusedAppPackageName: String?,
+    focusedRomPath: String?,
+    activeProfile: PadProfile?,
+): Boolean =
+    when (this) {
+        CompanionViewMode.MACROPAD -> {
+            false
+        }
+
+        CompanionViewMode.DASHBOARD -> {
+            true
+        }
+
+        CompanionViewMode.AUTO -> {
+            if (focusedAppPackageName == null ||
+                focusedAppPackageName.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
+                focusedAppPackageName.contains("launcher") ||
+                focusedAppPackageName.contains("home")
+            ) {
+                true
+            } else {
+                activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) != true
+            }
+        }
+    }
+
 object AppStateManager {
     // App-lifetime scope: intentionally never cancelled — this singleton lives for the
     // duration of the process. Cancellation is handled by process termination.
@@ -37,18 +67,6 @@ object AppStateManager {
 
     private val _isActivityResumed = MutableStateFlow(true)
     val isActivityResumed: StateFlow<Boolean> = _isActivityResumed.asStateFlow()
-
-    /**
-     * True from the moment [onUserLeaveHint][android.app.Activity.onUserLeaveHint] fires
-     * (Home button, Recents navigation) until the next [ON_RESUME][androidx.lifecycle.Lifecycle.Event.ON_RESUME].
-     *
-     * Unlike [isActivityResumed], this flag is NOT set when a [android.app.Presentation]
-     * or other window owned by the same process covers the Activity — only genuine
-     * user-initiated navigation away sets it. This makes it safe to use for
-     * hiding/showing mirror presentations without creating a feedback loop.
-     */
-    private val _isUserLeaving = MutableStateFlow(false)
-    val isUserLeaving: StateFlow<Boolean> = _isUserLeaving.asStateFlow()
 
     private val _isOnValidScreen = MutableStateFlow(true)
     val isOnValidScreen: StateFlow<Boolean> = _isOnValidScreen.asStateFlow()
@@ -159,7 +177,7 @@ object AppStateManager {
             _focusedAppPackageName.value != focusedApp ||
             _focusedRomPath.value != focusedRomPath
         ) {
-            _companionViewMode.value = CompanionViewMode.AUTO
+            AppLog.d(TAG, "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath")
         }
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
@@ -173,14 +191,21 @@ object AppStateManager {
         _hoveredAppSecondaryColor.value = hoveredSecondaryColor
     }
 
+    fun setStandaloneForegroundState(
+        focusedApp: String?,
+        focusedRomPath: String? = null,
+    ) {
+        if (_isExternalClientActive.value) return
+        if (_focusedAppPackageName.value != focusedApp || _focusedRomPath.value != focusedRomPath) {
+            AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath")
+            _focusedAppPackageName.value = focusedApp
+            _focusedRomPath.value = focusedRomPath
+        }
+    }
+
     fun setActivityResumed(resumed: Boolean) {
         AppLog.d(TAG, "setActivityResumed($resumed)")
         _isActivityResumed.value = resumed
-    }
-
-    fun setUserLeaving(leaving: Boolean) {
-        AppLog.d(TAG, "setUserLeaving($leaving)")
-        _isUserLeaving.value = leaving
     }
 
     fun setOnValidScreen(valid: Boolean) {
@@ -231,8 +256,37 @@ object AppStateManager {
 
     // ── Quick Menu ────────────────────────────────────────────────────────────
 
-    private val _isQuickMenuOpen = MutableStateFlow(false)
-    val isQuickMenuOpen: StateFlow<Boolean> = _isQuickMenuOpen.asStateFlow()
+    // ── Single Source of Truth for Active UI Overlay / Screen Mode ────────────
+
+    private val _uiMode = MutableStateFlow(UiMode.MACROPAD_USE)
+    val uiMode: StateFlow<UiMode> = _uiMode.asStateFlow()
+
+    val isGlobalSettingsOpen: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.GLOBAL_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isKeyboardSettingsOpen: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.KEYBOARD_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isTouchpadSettingsOpen: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.TOUCHPAD_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isBackgroundSettingsActive: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.BACKGROUND_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isEditorActive: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.LAYOUT_EDITOR }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isQuickMenuOpen: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.QUICK_MENU }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isViewportEditActive: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.VIEWPORT_EDIT }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isFullscreenKeyboardActive: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.FULLSCREEN_KEYBOARD }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    val isFullscreenMouseActive: StateFlow<Boolean> =
+        _uiMode.map { it == UiMode.FULLSCREEN_MOUSE }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun openQuickMenu() {
         if (OnboardingWizardManager.isWizardActive.value) {
@@ -240,12 +294,14 @@ object AppStateManager {
             return
         }
         AppLog.i(TAG, "openQuickMenu")
-        _isQuickMenuOpen.value = true
+        _uiMode.value = UiMode.QUICK_MENU
     }
 
     fun closeQuickMenu() {
         AppLog.i(TAG, "closeQuickMenu")
-        _isQuickMenuOpen.value = false
+        if (_uiMode.value == UiMode.QUICK_MENU) {
+            _uiMode.value = UiMode.MACROPAD_USE
+        }
     }
 
     private val _activeSwipe = MutableStateFlow<SwipeGestureProgress?>(null)
@@ -261,12 +317,6 @@ object AppStateManager {
     }
 
     // ── Modal overlay states ──────────────────────────────────────────────────
-
-    private val _isFullscreenKeyboardActive = MutableStateFlow(false)
-    val isFullscreenKeyboardActive: StateFlow<Boolean> = _isFullscreenKeyboardActive.asStateFlow()
-
-    private val _isFullscreenMouseActive = MutableStateFlow(false)
-    val isFullscreenMouseActive: StateFlow<Boolean> = _isFullscreenMouseActive.asStateFlow()
 
     private val _hasAdbCredentials = MutableStateFlow(false)
     val hasAdbCredentials: StateFlow<Boolean> = _hasAdbCredentials.asStateFlow()
@@ -286,13 +336,23 @@ object AppStateManager {
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
+    val showIntegrationHome: StateFlow<Boolean> =
+        combine(
+            _focusedAppPackageName,
+            _focusedRomPath,
+            MacroPadState.activeProfile,
+            _companionViewMode,
+        ) { focusedPackage, focusedRom, profile, viewMode ->
+            viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile)
+        }.stateIn(scope, SharingStarted.Eagerly, false)
+
     fun setCompanionViewMode(mode: CompanionViewMode) {
         AppLog.d(TAG, "setCompanionViewMode($mode)")
         _companionViewMode.value = mode
+        if (mode == CompanionViewMode.AUTO) {
+            AutoSwitchCoordinator.reevaluateAutoState()
+        }
     }
-
-    private val _isBackgroundSettingsActive = MutableStateFlow(false)
-    val isBackgroundSettingsActive: StateFlow<Boolean> = _isBackgroundSettingsActive.asStateFlow()
 
     val isPrivdPromptDismissed: StateFlow<Boolean> = MacroPadSettings.privdPromptDismissed
 
@@ -317,9 +377,6 @@ object AppStateManager {
     private val _isPrivdPromptShowing = MutableStateFlow(false)
     val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
 
-    private val _isViewportEditActive = MutableStateFlow(false)
-    val isViewportEditActive: StateFlow<Boolean> = _isViewportEditActive.asStateFlow()
-
     private val _activeCropCutoutId = MutableStateFlow<String?>(null)
     val activeCropCutoutId: StateFlow<String?> = _activeCropCutoutId.asStateFlow()
 
@@ -336,28 +393,19 @@ object AppStateManager {
         _selectedCutoutId.value = id
     }
 
-    private val _isGlobalSettingsOpen = MutableStateFlow(false)
-    val isGlobalSettingsOpen: StateFlow<Boolean> = _isGlobalSettingsOpen.asStateFlow()
-
     fun setGlobalSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setGlobalSettingsOpen($open)")
-        _isGlobalSettingsOpen.value = open
+        _uiMode.value = if (open) UiMode.GLOBAL_SETTINGS else UiMode.MACROPAD_USE
     }
-
-    private val _isKeyboardSettingsOpen = MutableStateFlow(false)
-    val isKeyboardSettingsOpen: StateFlow<Boolean> = _isKeyboardSettingsOpen.asStateFlow()
 
     fun setKeyboardSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setKeyboardSettingsOpen($open)")
-        _isKeyboardSettingsOpen.value = open
+        _uiMode.value = if (open) UiMode.KEYBOARD_SETTINGS else UiMode.MACROPAD_USE
     }
-
-    private val _isTouchpadSettingsOpen = MutableStateFlow(false)
-    val isTouchpadSettingsOpen: StateFlow<Boolean> = _isTouchpadSettingsOpen.asStateFlow()
 
     fun setTouchpadSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setTouchpadSettingsOpen($open)")
-        _isTouchpadSettingsOpen.value = open
+        _uiMode.value = if (open) UiMode.TOUCHPAD_SETTINGS else UiMode.MACROPAD_USE
     }
 
     private var wasViewportEditActiveBeforeSettings = false
@@ -370,49 +418,6 @@ object AppStateManager {
         combine(_forcedKeyboardLayout, KeyboardSettings.kbLayout) { forced, settings ->
             forced ?: settings
         }.stateIn(scope, SharingStarted.Eagerly, KeyboardSettings.kbLayout.value)
-
-    /** Whether the MacroPad layout editor is currently open. */
-    private val _isEditorActive = MutableStateFlow(false)
-    val isEditorActive: StateFlow<Boolean> = _isEditorActive.asStateFlow()
-
-    /**
-     * The app-wide active UI mode representing the screens, settings panels, or overlays currently active.
-     */
-    private val uiMode: StateFlow<UiMode> =
-        combine(
-            _isGlobalSettingsOpen,
-            _isKeyboardSettingsOpen,
-            _isTouchpadSettingsOpen,
-            _isBackgroundSettingsActive,
-            _isEditorActive,
-            _isQuickMenuOpen,
-            _isViewportEditActive,
-            _isFullscreenKeyboardActive,
-            _isFullscreenMouseActive,
-        ) { array: Array<Boolean> ->
-            val globalSettings = array[0]
-            val keyboardSettings = array[1]
-            val touchpadSettings = array[2]
-            val backgroundSettings = array[3]
-            val editor = array[4]
-            val quickMenu = array[5]
-            val viewportEdit = array[6]
-            val fullscreenKeyboard = array[7]
-            val fullscreenMouse = array[8]
-
-            when {
-                globalSettings -> UiMode.GLOBAL_SETTINGS
-                keyboardSettings -> UiMode.KEYBOARD_SETTINGS
-                touchpadSettings -> UiMode.TOUCHPAD_SETTINGS
-                backgroundSettings -> UiMode.BACKGROUND_SETTINGS
-                editor -> UiMode.LAYOUT_EDITOR
-                quickMenu -> UiMode.QUICK_MENU
-                viewportEdit -> UiMode.VIEWPORT_EDIT
-                fullscreenKeyboard -> UiMode.FULLSCREEN_KEYBOARD
-                fullscreenMouse -> UiMode.FULLSCREEN_MOUSE
-                else -> UiMode.MACROPAD_USE
-            }
-        }.stateIn(scope, SharingStarted.Eagerly, UiMode.MACROPAD_USE)
 
     /**
      * True whenever any fullscreen modal overlay is showing.
@@ -449,13 +454,10 @@ object AppStateManager {
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
         if (active) {
             _forcedKeyboardLayout.value = layout
-            _isFullscreenMouseActive.value = false
-            _isViewportEditActive.value = false
-            _isBackgroundSettingsActive.value = false
         } else {
             _forcedKeyboardLayout.value = null
         }
-        _isFullscreenKeyboardActive.value = active
+        _uiMode.value = if (active) UiMode.FULLSCREEN_KEYBOARD else UiMode.MACROPAD_USE
     }
 
     fun setFullscreenMouseActive(
@@ -469,56 +471,41 @@ object AppStateManager {
         AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
         if (active) {
             _fullscreenMouseSensitivity.value = sensitivity
-            _isFullscreenKeyboardActive.value = false
-            _isViewportEditActive.value = false
-            _isBackgroundSettingsActive.value = false
         }
-        _isFullscreenMouseActive.value = active
+        _uiMode.value = if (active) UiMode.FULLSCREEN_MOUSE else UiMode.MACROPAD_USE
     }
 
     fun setViewportEditActive(active: Boolean) {
         AppLog.i(TAG, "setViewportEditActive($active)")
         if (active) {
-            _isFullscreenKeyboardActive.value = false
-            _isFullscreenMouseActive.value = false
-            _isBackgroundSettingsActive.value = false
             ScreenCaptureManager.setFollowActive(false, persist = true)
         }
-        _isViewportEditActive.value = active
+        _uiMode.value = if (active) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
     }
 
     fun setBackgroundSettingsActive(active: Boolean) {
         AppLog.i(TAG, "setBackgroundSettingsActive($active)")
         if (active) {
-            wasViewportEditActiveBeforeSettings = _isViewportEditActive.value
-            _isFullscreenKeyboardActive.value = false
-            _isFullscreenMouseActive.value = false
-            _isViewportEditActive.value = false
+            wasViewportEditActiveBeforeSettings = (_uiMode.value == UiMode.VIEWPORT_EDIT)
             setPrivdPromptDismissed(true)
+            _uiMode.value = UiMode.BACKGROUND_SETTINGS
         } else {
-            _isViewportEditActive.value = wasViewportEditActiveBeforeSettings
+            _uiMode.value = if (wasViewportEditActiveBeforeSettings) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
         }
-        _isBackgroundSettingsActive.value = active
     }
 
     fun setEditorActive(active: Boolean) {
         AppLog.i(TAG, "setEditorActive($active)")
-        _isEditorActive.value = active
+        _uiMode.value = if (active) UiMode.LAYOUT_EDITOR else UiMode.MACROPAD_USE
     }
 
     /** Closes whichever fullscreen modal overlay is currently active. */
     fun closeActiveModal() {
         AppLog.i(
             TAG,
-            "closeActiveModal: kb=${_isFullscreenKeyboardActive.value} ms=${_isFullscreenMouseActive.value} vp=${_isViewportEditActive.value} amb=${_isBackgroundSettingsActive.value} peek=${MacroPadState.isPeekActive.value}",
+            "closeActiveModal: mode=${_uiMode.value} peek=${MacroPadState.isPeekActive.value}",
         )
-        _isFullscreenKeyboardActive.value = false
-        _isFullscreenMouseActive.value = false
-        _isViewportEditActive.value = false
-        _isBackgroundSettingsActive.value = false
-        _isGlobalSettingsOpen.value = false
-        _isKeyboardSettingsOpen.value = false
-        _isTouchpadSettingsOpen.value = false
+        _uiMode.value = UiMode.MACROPAD_USE
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
         wasViewportEditActiveBeforeSettings = false
@@ -534,10 +521,10 @@ object AppStateManager {
             AppLog.w(TAG, "handleEdgeSwipe suppressed while onboarding wizard is active")
             return
         }
-        AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${_isQuickMenuOpen.value}")
+        AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${isQuickMenuOpen.value}")
         when {
             isAnyModalActive.value -> closeActiveModal()
-            _isQuickMenuOpen.value -> closeQuickMenu()
+            isQuickMenuOpen.value -> closeQuickMenu()
             else -> openQuickMenu()
         }
     }
@@ -549,7 +536,12 @@ object AppStateManager {
                 val newId = layout?.id
                 if (lastActiveLayoutId != null && newId != lastActiveLayoutId) {
                     AppLog.d(TAG, "activeLayout changed from $lastActiveLayoutId to $newId; closing active modals")
-                    closeActiveModal()
+                    if (_uiMode.value != UiMode.QUICK_MENU &&
+                        _uiMode.value != UiMode.LAYOUT_EDITOR &&
+                        _uiMode.value != UiMode.BACKGROUND_SETTINGS
+                    ) {
+                        closeActiveModal()
+                    }
                 }
                 lastActiveLayoutId = newId
             }
@@ -559,7 +551,7 @@ object AppStateManager {
                 PrivdManager.state,
                 _hasAdbCredentials,
                 MacroPadSettings.privdPromptDismissed,
-                _isBackgroundSettingsActive,
+                isBackgroundSettingsActive,
                 _isAccessibilityActive,
             ) { array ->
                 val state = array[0] as PrivdState

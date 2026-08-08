@@ -69,7 +69,7 @@ the universal "go back" mechanism throughout the app.
 - **Global Settings** — opens `GlobalSettingsScreen` as a full-screen in-tree `AnimatedVisibility`
   overlay within the Quick Menu itself (no new Activity or Composable at a higher level).
 - **Shut Off** — icon button (`ShutOffIconButton`) rendered with an on/off power icon (`Icons.Rounded.PowerSettingsNew`) to the left of the Help icon button. Tapping it opens `ShutOffConfirmDialog`, an in-tree confirmation dialog asking the user to confirm closing the app. Upon confirmation, it triggers `AppStateManager.requestShutOff()`, stopping any active mirror capture service, disconnecting the privileged daemon, and gracefully finishing the app activity task (`finishAndRemoveTask()`).
-- **Show Dashboard** — rendered as a full-width action chip at the bottom card only when the macropad override is active (`AppStateManager.companionViewMode = CompanionViewMode.MACROPAD`). Tapping it sets `companionViewMode = CompanionViewMode.DASHBOARD` and dismisses the menu, returning the user to the integration dashboard.
+- **Switch to Hub / Switch to Game Profile & Auto Switch Toggle** — rendered as a side-by-side action row at the bottom card. The primary manual action button displays "Switch to Hub" (`R.string.quick_menu_show_dashboard`) when MacroPad is visible, and "Switch to Game Profile" (`R.string.quick_menu_show_macropad`) when Companion Hub is visible. Tapping it sets `companionViewMode` to `DASHBOARD` or `MACROPAD`, which locks the view mode and disables Auto Mode. Next to it, an "Auto Switch" (`R.string.quick_menu_auto_mode`) chip is displayed as a sticky toggle with a magic wand icon (`AutoFixHigh`). When Auto Mode is active (`companionViewMode = CompanionViewMode.AUTO`), the chip is illuminated with the primary accent color; tapping it freezes the current view mode and pauses profile auto-matching (keeping the Quick Menu open). When Auto Mode is inactive, tapping the chip re-enables `CompanionViewMode.AUTO`, triggers a single 360° magical shimmer rotation animation, and immediately re-evaluates the foreground app/emulator focus to match profiles and views dynamically.
 - **Help** — icon button (`HelpIconButton`) rendered to the right of the Shut Off button; opens `QuickMenuHelpModal` which provides an in-app guide explaining all controls in the Quick Menu.
 
 ### FR-PM5: Mirror Controls Card (Top Card)
@@ -78,14 +78,14 @@ the universal "go back" mechanism throughout the app.
   open (it is not conditional on mirroring being active). It contains:
   - **Screen Mirroring** action button (left side): renders as "Screen Mirroring" on screen (resource
     `R.string.quick_menu_screen_mirroring`) with an Edit icon, and opens Screen Mirroring edit mode (layout editor)
-    by setting `AppStateManager.setViewportEditActive(true)`. Disabled when not capturing.
+    by setting `AppStateManager.setViewportEditActive(true)`. Disabled when not capturing or when in Companion Hub.
   - **Start / Stop** icon button: starts mirroring via `AppStateManager.requestMirrorStart()` or
     stops it via `requestMirrorStop()`. Shows a Play icon when not capturing, a Stop icon when
-    capturing.
+    capturing. Disabled when in Companion Hub.
   - **Freeze / Unfreeze** icon button: toggles `ScreenCaptureManager.toggleFrozen()`. Shows a Play
     icon when frozen (to resume/unfreeze), and a Pause icon when capturing/active (to freeze). Tinted
-    with `colors.accent` when frozen. Disabled when not capturing.
-  - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when not capturing.
+    with `colors.accent` when frozen. Disabled when not capturing or when in Companion Hub.
+  - **Screenshot** icon button (rightmost): requests a screenshot via `ScreenCaptureManager.requestScreenshot()`. Renders with a CameraAlt icon. Disabled when neither capturing nor connected to privileged mode. Unchanged by Companion Hub status.
 - All icon buttons in this card MUST have a minimum touch target of **48 dp**.
 - A short text label is rendered below each icon button to improve discoverability.
 
@@ -139,7 +139,7 @@ parameter (bound to `AppStateManager.isQuickMenuOpen` at call sites):
 Both cards share the same surface style:
 
 - Background: `colors.controlOverlay`
-- Border: `PM_BORDER_WIDTH` (1 dp) using `rememberQuickMenuBezelBrush()` linear gradient featuring top-left primary light refraction highlight (25% diagonal span) and bottom-right accent light refraction highlight (16.7% diagonal span, 2/3 length), 16 dp corner radius
+- Border: `PM_BORDER_WIDTH` (1 dp) using `rememberBezelBrush()` linear gradient featuring top-left primary light refraction highlight (25% diagonal span) and bottom-right accent light refraction highlight (16.7% diagonal span, 2/3 length), 16 dp corner radius
 - Shadow elevation: 8 dp
 - Horizontal margin: 8 dp from screen edges; vertical margin: 6 dp
 

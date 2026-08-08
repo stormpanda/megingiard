@@ -308,7 +308,7 @@ Presentation visibility is driven by a combined `StateFlow` in `MirrorPresentati
 combine(
     isOnValidScreen, isCapturing,
     isFilePickerOpen, isEditorActive, isBackgroundSettingsActive,
-    isAmbientPreviewActive, isUserLeaving, recordingRequested
+    isAmbientPreviewActive, recordingRequested
 ) { values ->
     val isValid = values[0] as Boolean
     val capturing = values[1] as Boolean
@@ -316,12 +316,10 @@ combine(
     val editorActive = values[3] as Boolean
     val ambientSettingsActive = values[4] as Boolean
     val ambientPreviewActive = values[5] as Boolean
-    val userLeaving = values[6] as Boolean
-    val recordingRequested = values[7] as Boolean
+    val recordingRequested = values[6] as Boolean
     capturing && isValid &&
         !filePickerOpen && !editorActive &&
         (!ambientSettingsActive || ambientPreviewActive) &&
-        !userLeaving &&
         !recordingRequested
 }.collect { shouldShow -> if (shouldShow) show() else hide() }
 ```

@@ -250,7 +250,7 @@ fun PrivdReconnectPromptDialog(
                     .background(colors.surface)
                     .border(
                         PRD_DIALOG_BORDER_WIDTH,
-                        brush = rememberQuickMenuBezelBrush(),
+                        brush = rememberBezelBrush(),
                         shape = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS),
                     ).padding(
                         start = PRD_DIALOG_PADDING_HORIZONTAL,

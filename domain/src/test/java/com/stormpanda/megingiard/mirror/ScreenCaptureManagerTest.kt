@@ -47,4 +47,15 @@ class ScreenCaptureManagerTest {
         assertEquals(1080f, ScreenCaptureManager.surfaceWidth.value, 0.001f)
         assertEquals(1920f, ScreenCaptureManager.surfaceHeight.value, 0.001f)
     }
+
+    @Test
+    fun testSetCapturingFalseClearsFrozenState() {
+        ScreenCaptureManager.setCapturing(true)
+        ScreenCaptureManager.setFrozen(true)
+        assertTrue(ScreenCaptureManager.isFrozen.value)
+
+        ScreenCaptureManager.setCapturing(false)
+        assertFalse(ScreenCaptureManager.isCapturing.value)
+        assertFalse(ScreenCaptureManager.isFrozen.value)
+    }
 }

@@ -35,6 +35,7 @@ class AutoSwitchCoordinatorTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         AutoSwitchCoordinator.resetForTesting()
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
 
         // Setup mock profiles with app mappings
         val p1Id = UUID.randomUUID().toString()
@@ -66,6 +67,7 @@ class AutoSwitchCoordinatorTest {
     fun tearDown() {
         AutoSwitchCoordinator.resetForTesting()
         EmulatorDetectionFunnel.resetForTesting()
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
         AppStateManager.setExternalClientState(
             isActive = false,
             packageName = null,
@@ -160,10 +162,10 @@ class AutoSwitchCoordinatorTest {
         // When user switches to an unrelated app (e.g. chrome)
         AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
 
-        // Then client state is deactivated
+        // Then client state is deactivated and standalone foreground app is recorded
         assertFalse(AppStateManager.isExternalClientActive.value)
         assertEquals(null, AppStateManager.externalClientPackage.value)
-        assertEquals(null, AppStateManager.focusedAppPackageName.value)
+        assertEquals("com.android.chrome", AppStateManager.focusedAppPackageName.value)
     }
 
     @Test
@@ -179,10 +181,10 @@ class AutoSwitchCoordinatorTest {
         // When focus change event is reported for an unrelated app (Chrome)
         AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
 
-        // Then integration state is deactivated
+        // Then integration state is deactivated and standalone foreground app is recorded
         assertFalse(AppStateManager.isExternalClientActive.value)
         assertEquals(null, AppStateManager.externalClientPackage.value)
-        assertEquals(null, AppStateManager.focusedAppPackageName.value)
+        assertEquals("com.android.chrome", AppStateManager.focusedAppPackageName.value)
     }
 
     @Test
@@ -265,4 +267,90 @@ class AutoSwitchCoordinatorTest {
             // Then active profile falls back to the generic retroarch profile (profile1)
             assertEquals(profile1.id, MacroPadState.activeProfileId.value)
         }
+
+    @Test
+    fun `onPackageChanged updates AppStateManager focusedAppPackageName for standalone apps`() {
+        AutoSwitchCoordinator.onPackageChanged("org.es_de.frontend")
+        assertEquals("org.es_de.frontend", AppStateManager.focusedAppPackageName.value)
+
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+        assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
+    }
+
+    @Test
+    fun `onPackageChanged preserves active profile selection when switching to unmapped app`() {
+        // Given active profile is profile2 (associated with com.citra.emu)
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+
+        // When switching to an unmapped app (home launcher)
+        AutoSwitchCoordinator.onPackageChanged("com.android.launcher3")
+
+        // Then standalone focused app is updated to launcher, but active profile ID remains profile2
+        assertEquals("com.android.launcher3", AppStateManager.focusedAppPackageName.value)
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged preserves active ROM path when window focus ticks occur for same emulator`() =
+        kotlinx.coroutines.runBlocking {
+            val p3Id = UUID.randomUUID().toString()
+            val l3Id = UUID.randomUUID().toString()
+            val profile3 =
+                PadProfile(
+                    id = p3Id,
+                    name = "Ball x Pit",
+                    layouts = listOf(PadLayout(id = l3Id, name = "PC Layout")),
+                    activeLayoutId = l3Id,
+                    association =
+                        ProfileAssociation(
+                            packageName = "app.gamenative",
+                            romFileName = "BALL x PIT.steam",
+                            systemId = "pc",
+                        ),
+                )
+            MacroPadState.loadFrom(listOf(profile1, profile2, profile3), profile3.id)
+
+            // Given GameNative session is active with BALLxPIT.steam
+            EmulatorDetectionFunnel.setActiveSessionForTesting(
+                ActiveGameSession(
+                    packageName = "app.gamenative",
+                    systemId = "pc",
+                    romPath = "BALLxPIT.steam",
+                    gameTitle = "Ball x Pit",
+                ),
+            )
+            AutoSwitchCoordinator.onPackageChanged("app.gamenative")
+            kotlinx.coroutines.delay(150)
+
+            assertEquals("app.gamenative", AppStateManager.focusedAppPackageName.value)
+            assertEquals("BALLxPIT.steam", AppStateManager.focusedRomPath.value)
+
+            // When a window focus tick occurs for app.gamenative without active session update
+            AutoSwitchCoordinator.onPackageChanged("app.gamenative")
+
+            // Then focusedRomPath is preserved
+            assertEquals("app.gamenative", AppStateManager.focusedAppPackageName.value)
+            assertEquals("BALLxPIT.steam", AppStateManager.focusedRomPath.value)
+            assertEquals(profile3.id, MacroPadState.activeProfileId.value)
+        }
+
+    @Test
+    fun `onPackageChanged ignores auto profile switch when companionViewMode is not AUTO`() {
+        // Given companionViewMode is set to MACROPAD (Auto Mode OFF)
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.MACROPAD)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When a mapped app (com.citra.emu -> profile2) is opened while Auto Mode is OFF
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+
+        // Then profile remains profile1 (auto profile switch is bypassed)
+        assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+
+        // When Auto Mode is re-enabled via setCompanionViewMode(AUTO)
+        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
+
+        // Then reevaluateAutoState triggers and switches active profile to profile2
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+    }
 }

@@ -84,6 +84,7 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 
 | Screen | Content composable |
 |---|---|
+| `IntegrationHomeScreen.kt` | `CompanionHubHelpModal` |
 | `MacroPadEditor.kt` | `MacroPadEditorHelpModal` |
 | `MacroListEditor.kt` | `MacroListHelpModal` |
 | `MacroTimelineEditor.kt` | `MacroTimelineHelpModal` |

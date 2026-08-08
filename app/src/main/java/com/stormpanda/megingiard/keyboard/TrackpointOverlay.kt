@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 
 @Composable
 internal fun TrackpointOverlay(
@@ -47,7 +48,7 @@ internal fun TrackpointOverlay(
                     .aspectRatio(16f / 9f)
                     .alpha(trackpointAlpha)
                     .background(colors.keyBackground, RoundedCornerShape(8.dp))
-                    .border(2.dp, colors.navQuickMenuBorder, RoundedCornerShape(8.dp)),
+                    .border(1.dp, brush = rememberBezelBrush(), shape = RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Text(
