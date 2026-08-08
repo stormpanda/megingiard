@@ -163,7 +163,19 @@ val nativeCTest = tasks.register<Exec>("nativeCTest") {
     group = "verification"
     description = "Compiles and executes native C unit tests."
     workingDir = rootProject.projectDir
-    commandLine("./run_native_tests.sh")
+
+    val isWindows = System.getProperty("os.name").lowercase().contains("win")
+    if (isWindows) {
+        val gitSh = File("C:/Program Files/Git/bin/sh.exe")
+        val gitBash = File("C:/Program Files/Git/bin/bash.exe")
+        when {
+            gitSh.exists() -> commandLine(gitSh.absolutePath, "./run_native_tests.sh")
+            gitBash.exists() -> commandLine(gitBash.absolutePath, "./run_native_tests.sh")
+            else -> commandLine("cmd.exe", "/c", "echo Native C unit tests require a POSIX shell (Git Bash/sh) and clang on Windows.")
+        }
+    } else {
+        commandLine("./run_native_tests.sh")
+    }
 }
 
 // Ensure the privileged-mirror DEX asset is built before any app packaging task, and native C tests run before unit tests.

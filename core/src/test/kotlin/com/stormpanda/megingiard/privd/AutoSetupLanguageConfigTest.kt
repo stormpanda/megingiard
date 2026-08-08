@@ -155,8 +155,7 @@ class AutoSetupLanguageConfigTest {
             }
         }
 
-        // The locales that predate this field keep the shared default, so their behaviour is
-        // unchanged; Traditional Chinese overrides it because its title is not in that default.
+        // Every supported language explicitly supplies its own developerOptionsKeywords.
         org.junit.Assert.assertTrue(
             AutoSetupLanguageConfig.ENGLISH_US.developerOptionsKeywords.contains("developer options"),
         )

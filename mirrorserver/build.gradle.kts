@@ -71,9 +71,21 @@ abstract class DexTask : DefaultTask() {
     @org.gradle.api.tasks.TaskAction
     fun run() {
         val buildToolsDir = sdkRoot.get().asFile.resolve("build-tools")
-        val newest = buildToolsDir.listFiles()?.filter { it.isDirectory }?.maxByOrNull { it.name }
+        val newest = buildToolsDir.listFiles()
+            ?.filter { it.isDirectory }
+            ?.maxByOrNull { dir ->
+                dir.name.split(".").mapNotNull { it.toIntOrNull() }.let { parts ->
+                    val major = parts.getOrNull(0) ?: 0
+                    val minor = parts.getOrNull(1) ?: 0
+                    val patch = parts.getOrNull(2) ?: 0
+                    major * 10000 + minor * 100 + patch
+                }
+            }
             ?: error("No build-tools installed under $buildToolsDir")
-        val d8 = newest.resolve("d8")
+
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        val d8Executable = if (isWindows) "d8.bat" else "d8"
+        val d8 = newest.resolve(d8Executable)
         check(d8.exists()) { "d8 not found at $d8" }
 
         val out = outputDex.get().asFile
@@ -81,14 +93,24 @@ abstract class DexTask : DefaultTask() {
         val tmpDir = temporaryDir.apply { mkdirs() }
         execOps.exec {
             // Pass the JVM that Gradle itself is running on as JAVA_HOME so
-            // the d8 shell wrapper (macOS) can locate the java executable.
+            // the d8 shell wrapper can locate the java executable.
             environment("JAVA_HOME", System.getProperty("java.home"))
-            commandLine(
-                d8.absolutePath,
-                "--min-api", "33",
-                "--output", tmpDir.absolutePath,
-                inputJar.get().asFile.absolutePath
-            )
+            if (isWindows) {
+                commandLine(
+                    "cmd.exe", "/c",
+                    d8.absolutePath,
+                    "--min-api", "33",
+                    "--output", tmpDir.absolutePath,
+                    inputJar.get().asFile.absolutePath
+                )
+            } else {
+                commandLine(
+                    d8.absolutePath,
+                    "--min-api", "33",
+                    "--output", tmpDir.absolutePath,
+                    inputJar.get().asFile.absolutePath
+                )
+            }
         }
         val produced = tmpDir.resolve("classes.dex")
         check(produced.exists()) { "d8 produced no classes.dex in $tmpDir" }

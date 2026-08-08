@@ -27,23 +27,10 @@ data class AutoSetupLanguageConfig(
     val wirelessDebuggingQueryAndKeyword: String,
     val usbDebuggingQueryAndKeyword: String,
     val pairDeviceKeywords: List<String>,
-    val developerOptionsKeywords: List<String> = DEFAULT_DEVELOPER_OPTIONS_KEYWORDS,
+    val developerOptionsKeywords: List<String>,
     val allowButtonKeywords: List<String>,
 ) {
     companion object {
-        /**
-         * Developer options titles for the locales that shipped before this field existed.
-         * Kept as the default so those configs stay unchanged; a locale whose title is not
-         * listed here must pass its own [developerOptionsKeywords].
-         */
-        private val DEFAULT_DEVELOPER_OPTIONS_KEYWORDS =
-            listOf(
-                "developer options",
-                "entwickleroptionen",
-                "opciones de desarrollador",
-                "options pour les développeurs",
-            )
-
         val GERMAN_DE =
             AutoSetupLanguageConfig(
                 localeTag = "de-DE",
@@ -59,6 +46,10 @@ data class AutoSetupLanguageConfig(
                         "kopplungscode koppeln",
                         "mit kopplungscode koppeln",
                         "wlan-kopplungscode",
+                    ),
+                developerOptionsKeywords =
+                    listOf(
+                        "entwickleroptionen",
                     ),
                 allowButtonKeywords =
                     listOf(
@@ -87,6 +78,10 @@ data class AutoSetupLanguageConfig(
                         "emparejar dispositivo con un código de sincronización",
                         "código de sincronización",
                     ),
+                developerOptionsKeywords =
+                    listOf(
+                        "opciones de desarrollador",
+                    ),
                 allowButtonKeywords =
                     listOf(
                         "permitir",
@@ -114,6 +109,10 @@ data class AutoSetupLanguageConfig(
                         "code d'association",
                         "code de synchronisation",
                     ),
+                developerOptionsKeywords =
+                    listOf(
+                        "options pour les développeurs",
+                    ),
                 allowButtonKeywords =
                     listOf(
                         "autoriser",
@@ -136,6 +135,10 @@ data class AutoSetupLanguageConfig(
                     listOf(
                         "pair device with pairing code",
                         "pair with pairing code",
+                    ),
+                developerOptionsKeywords =
+                    listOf(
+                        "developer options",
                     ),
                 allowButtonKeywords =
                     listOf(
