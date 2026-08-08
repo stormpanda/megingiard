@@ -597,4 +597,40 @@ class AppStateManagerTest {
                 ),
             )
         }
+
+    @Test
+    fun `requestMirrorStart sets flag and consumeMirrorStartRequest resets it`() =
+        runTest {
+            assertFalse(AppStateManager.mirrorStartRequested.value)
+
+            AppStateManager.requestMirrorStart()
+            assertTrue(AppStateManager.mirrorStartRequested.value)
+
+            AppStateManager.consumeMirrorStartRequest()
+            assertFalse(AppStateManager.mirrorStartRequested.value)
+        }
+
+    @Test
+    fun `requestMirrorStop sets flag and consumeMirrorStopRequest resets it`() =
+        runTest {
+            assertFalse(AppStateManager.mirrorStopRequested.value)
+
+            AppStateManager.requestMirrorStop()
+            assertTrue(AppStateManager.mirrorStopRequested.value)
+
+            AppStateManager.consumeMirrorStopRequest()
+            assertFalse(AppStateManager.mirrorStopRequested.value)
+        }
+
+    @Test
+    fun `setPromptInFlight updates promptInFlight state flow correctly`() =
+        runTest {
+            assertFalse(AppStateManager.promptInFlight.value)
+
+            AppStateManager.setPromptInFlight(true)
+            assertTrue(AppStateManager.promptInFlight.value)
+
+            AppStateManager.setPromptInFlight(false)
+            assertFalse(AppStateManager.promptInFlight.value)
+        }
 }

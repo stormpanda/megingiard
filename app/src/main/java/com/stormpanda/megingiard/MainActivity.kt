@@ -102,7 +102,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -569,13 +568,8 @@ class MainActivity : ComponentActivity() {
                     if (!alreadyPrompting) {
                         AppStateManager.setPromptInFlight(true)
                     }
-                    val requestedLayoutId = activeLayout?.id
-                    if (requestedLayoutId != null) {
-                        val layoutId = requestedLayoutId
+                    activeLayout?.id?.let { layoutId ->
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, true)
-                        MacroPadState.activeLayout
-                            .map { layout -> layout?.id == layoutId && layout?.mirrorAutoStart == true }
-                            .first { it }
                     }
                     // Manual start bypasses the global auto-start gate — launch directly.
                     if (isOnValidScreen &&

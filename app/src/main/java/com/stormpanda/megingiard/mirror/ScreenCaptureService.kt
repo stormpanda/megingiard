@@ -495,6 +495,7 @@ class ScreenCaptureService : Service() {
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
         if (secondaryDisplay == null) {
             AppLog.e(TAG, "startPrivdPath: no secondary display")
+            AppStateManager.setPromptInFlight(false)
             stopSelf()
             return START_NOT_STICKY
         }
