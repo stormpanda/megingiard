@@ -11,8 +11,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -64,9 +67,6 @@ object ScreenCaptureManager {
     private val _isLocked = MutableStateFlow(false)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
-    private val _isTouchProjectionActive = MutableStateFlow(false)
-    val isTouchProjectionActive: StateFlow<Boolean> = _isTouchProjectionActive.asStateFlow()
-
     private val _isFollowActive = MutableStateFlow(false)
     val isFollowActive: StateFlow<Boolean> = _isFollowActive.asStateFlow()
 
@@ -84,6 +84,11 @@ object ScreenCaptureManager {
             field = value
             restartCollectors()
         }
+
+    val isTouchProjectionActive: StateFlow<Boolean> =
+        _cutouts
+            .map { list -> list.any { it.touchProjectionEnabled } }
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
     init {
         restartCollectors()
@@ -111,9 +116,7 @@ object ScreenCaptureManager {
         activeCutoutsJob =
             scope.launch {
                 _cutouts.collect { list ->
-                    val touchActive = list.any { it.touchProjectionEnabled }
-                    _isTouchProjectionActive.value = touchActive
-                    if (touchActive) {
+                    if (list.any { it.touchProjectionEnabled }) {
                         _isLocked.value = true
                     }
                 }
@@ -143,6 +146,10 @@ object ScreenCaptureManager {
     fun setCapturing(capturing: Boolean) {
         AppLog.i(TAG, "setCapturing($capturing)")
         _isCapturing.value = capturing
+        if (!capturing) {
+            _isFrozen.value = false
+            setFrozenBitmap(null)
+        }
     }
 
     fun setScale(scale: Float) {
@@ -222,7 +229,6 @@ object ScreenCaptureManager {
             val updated = layout.mirrorCutouts.map { it.copy(touchProjectionEnabled = active) }
             MacroPadState.updateLayout(layout.copy(mirrorCutouts = updated))
         }
-        _isTouchProjectionActive.value = active
         if (active) _isLocked.value = true
     }
 
@@ -232,7 +238,7 @@ object ScreenCaptureManager {
      */
     fun toggleLocked() {
         val newLocked = !_isLocked.value
-        AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && _isTouchProjectionActive.value) " (deactivating projection)" else ""}")
+        AppLog.d(TAG, "toggleLocked → $newLocked${if (!newLocked && isTouchProjectionActive.value) " (deactivating projection)" else ""}")
         _isLocked.value = newLocked
         if (!newLocked) {
             setTouchProjectionActive(false)
@@ -240,7 +246,7 @@ object ScreenCaptureManager {
     }
 
     fun toggleTouchProjection() {
-        setTouchProjectionActive(!_isTouchProjectionActive.value)
+        setTouchProjectionActive(!isTouchProjectionActive.value)
     }
 
     fun setFollowActive(
@@ -365,7 +371,6 @@ object ScreenCaptureManager {
     /** Resets all transient mirror session state (lock, projection, freeze, follow). */
     fun resetMirrorSessionState() {
         AppLog.i(TAG, "resetMirrorSessionState")
-        _isTouchProjectionActive.value = false
         _isLocked.value = false
         _isFrozen.value = false
         setFrozenBitmap(null)

@@ -105,7 +105,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuGestureTrialOverlay
 import com.stormpanda.megingiard.ui.QuickMenuStepContent
 import com.stormpanda.megingiard.ui.WelcomeStepContent
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Locale
@@ -263,7 +263,7 @@ fun OnboardingWizardDialog(
                     .background(colors.surface)
                     .border(
                         OW_DIALOG_BORDER_WIDTH,
-                        brush = rememberQuickMenuBezelBrush(),
+                        brush = rememberBezelBrush(),
                         shape = RoundedCornerShape(OW_DIALOG_CORNER_RADIUS),
                     ).padding(
                         start = OW_DIALOG_PADDING_HORIZONTAL,

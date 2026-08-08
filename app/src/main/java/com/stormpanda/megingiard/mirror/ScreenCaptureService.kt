@@ -33,6 +33,7 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
 import com.stormpanda.megingiard.settings.MirrorSettings
+import com.stormpanda.megingiard.shouldShowIntegrationHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,29 +66,6 @@ class ScreenCaptureService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // Hide the mirror / recording presentations when the user explicitly navigates
-        // away (Home button, Recents). Show them again when the user returns.
-        //
-        // We use isUserLeaving (set in onUserLeaveHint / cleared on ON_RESUME) rather
-        // than isActivityResumed to avoid a feedback loop: the Presentation window sits
-        // above the Activity on the secondary display, which causes ON_PAUSE/ON_STOP to
-        // fire immediately after show() — isActivityResumed would then toggle hide() and
-        // trigger an indefinite cycle. onUserLeaveHint is NOT called for Presentation
-        // coverage, only for genuine user navigation.
-        scope.launch {
-            AppStateManager.isUserLeaving.collect { leaving ->
-                AppLog.d(TAG, "isUserLeaving=$leaving → ${if (leaving) "hide" else "show"} presentations")
-                if (leaving) {
-                    mirrorPresentation?.hide()
-                    recordingPresentation?.hide()
-                } else {
-                    if (shouldShowMirrorPresentation()) {
-                        mirrorPresentation?.show()
-                    }
-                    recordingPresentation?.show()
-                }
-            }
-        }
 
         scope.launch {
             AppStateManager.isPrivdPromptActive.collect { active ->
@@ -280,29 +258,9 @@ class ScreenCaptureService : Service() {
         }
 
         scope.launch {
-            combine(
-                AppStateManager.isExternalClientActive,
-                AppStateManager.focusedAppPackageName,
-                AppStateManager.focusedRomPath,
-                MacroPadState.activeProfile,
-                AppStateManager.companionViewMode,
-            ) { active, focused, focusedRom, profile, viewMode ->
-                when (viewMode) {
-                    CompanionViewMode.MACROPAD -> {
-                        false
-                    }
-
-                    CompanionViewMode.DASHBOARD -> {
-                        true
-                    }
-
-                    CompanionViewMode.AUTO -> {
-                        active && (focused == null || profile?.matches(focused, focusedRom) != true)
-                    }
-                }
-            }.collect { showIntegrationHome ->
+            AppStateManager.showIntegrationHome.collect { showIntegrationHome ->
                 if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
-                    AppLog.i(TAG, "Companion Home screen became active -> stopping screen capture to conserve resources")
+                    AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
                     stopSelf()
                 }
             }
@@ -349,6 +307,7 @@ class ScreenCaptureService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+
         if (intent?.action == ACTION_START_PRIVD) {
             return startPrivdPath()
         }
@@ -536,6 +495,7 @@ class ScreenCaptureService : Service() {
                 .firstOrNull { it.displayId != Display.DEFAULT_DISPLAY }
         if (secondaryDisplay == null) {
             AppLog.e(TAG, "startPrivdPath: no secondary display")
+            AppStateManager.setPromptInFlight(false)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -603,6 +563,7 @@ class ScreenCaptureService : Service() {
             if (startGeneration != directPrivdStartGeneration) return@launch
             val surface = mirrorSurface
             if (surface == null || !surface.isValid) {
+                DirectMirrorSurfaceBridge.clearDirectSurfaces()
                 directPrivdSession?.release()
                 directPrivdSession = null
                 return@launch
@@ -668,42 +629,21 @@ class ScreenCaptureService : Service() {
         val editorActive = AppStateManager.isEditorActive.value
         val ambientActive = AppStateManager.isBackgroundSettingsActive.value
         val ambientPreviewActive = AmbientPreviewManager.isActive.value
-        val userLeaving = AppStateManager.isUserLeaving.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
-
-        val isExternalClientActive = AppStateManager.isExternalClientActive.value
-        val focusedAppPackageName = AppStateManager.focusedAppPackageName.value
-        val focusedRomPath = AppStateManager.focusedRomPath.value
-        val activeProfile = MacroPadState.activeProfile.value
-        val showIntegrationHome =
-            when (AppStateManager.companionViewMode.value) {
-                CompanionViewMode.MACROPAD -> {
-                    false
-                }
-
-                CompanionViewMode.DASHBOARD -> {
-                    true
-                }
-
-                CompanionViewMode.AUTO -> {
-                    isExternalClientActive &&
-                        (focusedAppPackageName == null || activeProfile?.matches(focusedAppPackageName, focusedRomPath) != true)
-                }
-            }
+        val showIntegrationHome = AppStateManager.showIntegrationHome.value
 
         val shouldShow =
             capturing && validScreen &&
                 !filePickerOpen && !editorActive &&
                 (!ambientActive || ambientPreviewActive) &&
-                !userLeaving &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
                 !showIntegrationHome
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, userLeaving=$userLeaving, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
         )
         return shouldShow
     }
@@ -724,6 +664,9 @@ class ScreenCaptureService : Service() {
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         mirrorPresentation?.dismiss()
+        if (isPrivilegedMode) {
+            DirectMirrorSurfaceBridge.clearDirectSurfaces()
+        }
         directPrivdSession?.release()
         directPrivdSession = null
         recordingPrivdSession?.release()

@@ -61,7 +61,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.Locale

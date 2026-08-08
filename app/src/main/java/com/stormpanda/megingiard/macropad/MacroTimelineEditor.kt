@@ -73,7 +73,7 @@ import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.blockPointerEvents
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 

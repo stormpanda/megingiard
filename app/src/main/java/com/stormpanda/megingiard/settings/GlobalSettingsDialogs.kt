@@ -58,7 +58,7 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.paletteFor
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import java.time.LocalDate
 
 private const val TAG = "GlobalSettingsDialogs"

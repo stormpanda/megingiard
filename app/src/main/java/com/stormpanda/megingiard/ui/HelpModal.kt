@@ -189,7 +189,7 @@ internal fun HelpModal(
                         },
                     ),
         ) {
-            val menuBezelBrush = rememberQuickMenuBezelBrush()
+            val menuBezelBrush = rememberBezelBrush()
             val sheetShape = RoundedCornerShape(topStart = HM_SHEET_CORNER, topEnd = HM_SHEET_CORNER)
 
             // Sheet — slides in from the bottom, absorbs clicks so scrim isn't fired

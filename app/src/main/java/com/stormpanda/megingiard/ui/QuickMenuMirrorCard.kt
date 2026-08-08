@@ -45,6 +45,7 @@ internal fun MirrorControlCard(
     isFrozen: Boolean,
     isViewportEditActive: Boolean,
     isScreenshotEnabled: Boolean,
+    isCompanionHub: Boolean = false,
     modifier: Modifier = Modifier,
     onStart: () -> Unit,
     onStop: () -> Unit,
@@ -52,7 +53,11 @@ internal fun MirrorControlCard(
     onToggleViewportEdit: () -> Unit,
     onTakeScreenshot: () -> Unit,
 ) {
-    val menuBezelBrush = rememberQuickMenuBezelBrush()
+    val menuBezelBrush = rememberBezelBrush()
+    val isEditEnabled = !isCompanionHub && isCapturing
+    val isStartStopEnabled = !isCompanionHub
+    val isPauseEnabled = !isCompanionHub && isCapturing
+
     Row(
         modifier =
             modifier
@@ -81,11 +86,11 @@ internal fun MirrorControlCard(
                             if (isViewportEditActive) {
                                 colors.accent
                             } else {
-                                if (isCapturing) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
+                                if (isEditEnabled) colors.accent.copy(alpha = 0.5f) else colors.onControlOverlay.copy(alpha = 0.15f)
                             },
                         shape = RoundedCornerShape(PM_ACTION_BUTTON_CORNER),
                     ).clickable(
-                        enabled = isCapturing,
+                        enabled = isEditEnabled,
                         onClick = onToggleViewportEdit,
                     ).padding(horizontal = PM_ACTION_BUTTON_H_PADDING, vertical = PM_ACTION_BUTTON_V_PADDING),
             verticalAlignment = Alignment.CenterVertically,
@@ -93,13 +98,13 @@ internal fun MirrorControlCard(
             Icon(
                 imageVector = Icons.Rounded.Edit,
                 contentDescription = stringResource(R.string.cd_viewport_edit),
-                tint = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
+                tint = if (isEditEnabled) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                 modifier = Modifier.size(PM_SCREEN_MIRRORING_ICON_SIZE),
             )
             Spacer(Modifier.width(PM_SCREEN_MIRRORING_SPACER_W))
             Text(
                 text = stringResource(R.string.quick_menu_screen_mirroring),
-                color = if (isCapturing) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
+                color = if (isEditEnabled) colors.accent else colors.onControlOverlay.copy(alpha = 0.3f),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -113,7 +118,7 @@ internal fun MirrorControlCard(
                 contentDescription = stringResource(R.string.cd_stop_mirroring),
                 label = stringResource(R.string.mirror_control_label_stop),
                 tint = colors.onControlOverlay,
-                enabled = true,
+                enabled = isStartStopEnabled,
                 colors = colors,
                 onClick = onStop,
             )
@@ -123,7 +128,7 @@ internal fun MirrorControlCard(
                 contentDescription = stringResource(R.string.cd_start_mirroring),
                 label = stringResource(R.string.mirror_control_label_start),
                 tint = colors.onControlOverlay,
-                enabled = true,
+                enabled = isStartStopEnabled,
                 colors = colors,
                 onClick = onStart,
             )
@@ -139,7 +144,7 @@ internal fun MirrorControlCard(
                     if (isFrozen) R.string.mirror_control_label_unfreeze else R.string.mirror_control_label_freeze,
                 ),
             tint = if (isFrozen) colors.accent else colors.onControlOverlay,
-            enabled = isCapturing,
+            enabled = isPauseEnabled,
             colors = colors,
             onClick = onToggleFreeze,
         )

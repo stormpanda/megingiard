@@ -46,6 +46,7 @@
 | `docs/features/privileged-mode/FEATURE.md` | Privileged Mode — on-device privileged daemon, ADB-Wireless bootstrap, per-feature flags |
 | `docs/features/theming/FEATURE.md`         | Design System — AppColors, Typography, AppDimens, ColorScheme bridge                     |
 | `docs/features/touchpad/FEATURE.md`        | Virtual Touchpad — functional requirements & technical implementation                    |
+| `docs/features/updates/FEATURE.md`         | Automatic Update Check & Browser Release Launcher — functional requirements & technical implementation |
 
 > [!IMPORTANT]
 > **Documentation language: English only.**
@@ -151,6 +152,7 @@ Before marking a task as done, verify:
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis or build compiles)
+- [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
 - [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)

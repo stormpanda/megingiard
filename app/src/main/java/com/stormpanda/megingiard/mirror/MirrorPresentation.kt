@@ -935,7 +935,6 @@ class MirrorPresentation(
                 AppStateManager.isEditorActive,
                 AppStateManager.isBackgroundSettingsActive,
                 AmbientPreviewManager.isActive,
-                AppStateManager.isUserLeaving,
                 TouchRecordingManager.recordingRequested,
             ) { values ->
                 val isValid = values[0] as Boolean
@@ -944,31 +943,10 @@ class MirrorPresentation(
                 val editorActive = values[3] as Boolean
                 val ambientSettingsActive = values[4] as Boolean
                 val ambientPreviewActive = values[5] as Boolean
-                val userLeaving = values[6] as Boolean
-                val recordingRequested = values[7] as Boolean
-                // Show based on capturing state, not on whether MainActivity is in the
-                // foreground. Using isActivityResumed here caused a feedback loop: each
-                // time the user opened the app while mirroring, show() covered the screen,
-                // pushing MainActivity to background (ON_PAUSE ~70 ms). ON_STOP then set
-                // isResumed=false → hide(), and the cycle repeated indefinitely.
-                //
-                // filePickerOpen / editorActive / ambientSettingsActive: while any of these
-                // Activity-level modals are visible we hide the Presentation so the user
-                // can interact with them.  Without this the Presentation window
-                // (TYPE_PRIVATE_PRESENTATION), which sits above regular Activities, would
-                // block input entirely.
-                // NOTE: isQuickMenuOpen intentionally excluded — QuickMenu renders inside
-                // the Presentation's own ComposeView; hiding would pause mirroring.
-                //
-                // ambientPreviewActive: during preview mode the Presentation stays visible
-                // so the user can see the live mirror + dimmed buttons behind the
-                // transparent BackgroundSettingsOverlay on the primary screen (same visual
-                // as viewport edit mode). Primary-screen input is unaffected because the
-                // Presentation sits on the secondary display.
+                val recordingRequested = values[6] as Boolean
                 capturing && isValid &&
                     !filePickerOpen && !editorActive &&
                     (!ambientSettingsActive || ambientPreviewActive) &&
-                    !userLeaving &&
                     !recordingRequested
             }.collect { shouldShow ->
                 if (shouldShow) show() else hide()

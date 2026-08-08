@@ -35,7 +35,7 @@ internal const val APP_DIALOG_WIDTH_FRACTION = 0.85f
  *
  * Provides a semi-transparent scrim with tap-to-dismiss behavior and a centered
  * surface card with elevation shadow, surface color background, and the dual-corner
- * bezel light refraction border ([rememberQuickMenuBezelBrush]).
+ * bezel light refraction border ([rememberBezelBrush]).
  *
  * @param onDismiss     Called when the scrim background is tapped.
  * @param modifier      Modifier applied to the inner card [Column].
@@ -74,7 +74,7 @@ fun AppModalDialog(
                     .fillMaxWidth(widthFraction)
                     .shadow(APP_DIALOG_ELEVATION, RoundedCornerShape(cornerRadius))
                     .background(colors.surface, RoundedCornerShape(cornerRadius))
-                    .border(1.dp, brush = rememberQuickMenuBezelBrush(), shape = RoundedCornerShape(cornerRadius))
+                    .border(1.dp, brush = rememberBezelBrush(), shape = RoundedCornerShape(cornerRadius))
                     .blockPointerEvents()
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -88,7 +88,7 @@ fun AppModalDialog(
 
 /**
  * Centralized wrapper around Material 3 [AlertDialog] that automatically applies the
- * app's dual-corner bezel light refraction border ([rememberQuickMenuBezelBrush]) and
+ * app's dual-corner bezel light refraction border ([rememberBezelBrush]) and
  * theme colors.
  *
  * @param onDismissRequest Called when the user tries to dismiss the dialog.

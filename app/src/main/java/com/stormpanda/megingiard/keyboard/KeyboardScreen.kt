@@ -53,6 +53,7 @@ import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
 private const val TAG = "KeyboardScreen"
@@ -190,18 +191,7 @@ fun KeyboardScreen(
                 val pointersInsideTouchpad = remember { HashSet<Long>() }
                 var hasActivePointers by remember { mutableStateOf(false) }
 
-                val insetBezelBrush =
-                    remember(colors) {
-                        Brush.linearGradient(
-                            colors =
-                                listOf(
-                                    Color.Black.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_DARK),
-                                    colors.onSurface.copy(alpha = KB_TOUCHPAD_BEZEL_ALPHA_LIGHT),
-                                ),
-                            start = Offset(0f, 0f),
-                            end = Offset.Infinite,
-                        )
-                    }
+                val insetBezelBrush = rememberBezelBrush()
 
                 Box(
                     modifier =

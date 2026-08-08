@@ -77,7 +77,7 @@ import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.onboarding.FinishedStepContent
 import com.stormpanda.megingiard.ui.onboarding.OnboardingStepper
-import com.stormpanda.megingiard.ui.rememberQuickMenuBezelBrush
+import com.stormpanda.megingiard.ui.rememberBezelBrush
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -220,7 +220,7 @@ internal fun PrivdSetupWizardDialog(
                     .background(colors.surface)
                     .border(
                         PRD_DIALOG_BORDER_WIDTH,
-                        brush = rememberQuickMenuBezelBrush(),
+                        brush = rememberBezelBrush(),
                         shape = RoundedCornerShape(PRD_DIALOG_CORNER_RADIUS),
                     ).padding(
                         start = PRD_DIALOG_PADDING_HORIZONTAL,

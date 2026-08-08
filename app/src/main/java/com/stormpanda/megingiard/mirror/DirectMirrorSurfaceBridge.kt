@@ -14,10 +14,6 @@ private const val TRANSACTION_SET_SURFACE = IBinder.FIRST_CALL_TRANSACTION
 internal object DirectMirrorSurfaceBridge {
     fun sendToDirectServer(surfaces: List<Triple<Surface, Int, Int>>): Boolean {
         val validSurfaces = surfaces.filter { it.first.isValid }
-        if (validSurfaces.isEmpty()) {
-            AppLog.w(TAG, "sendToDirectServer: no valid surfaces")
-            return false
-        }
         val binder =
             getService(DIRECT_SURFACE_SERVICE_NAME) ?: run {
                 AppLog.w(TAG, "sendToDirectServer: direct service not registered")
@@ -39,8 +35,9 @@ internal object DirectMirrorSurfaceBridge {
                 false
             } else {
                 reply.readException()
-                val ok = reply.readInt() == 1
-                AppLog.i(TAG, "sendToDirectServer: ok=$ok")
+                val serverResult = reply.readInt()
+                val ok = serverResult == 1 || (validSurfaces.isEmpty() && serverResult == 0)
+                AppLog.i(TAG, "sendToDirectServer: ok=$ok (validSurfaces=${validSurfaces.size}, serverResult=$serverResult)")
                 ok
             }
         } catch (e: Exception) {
@@ -51,6 +48,8 @@ internal object DirectMirrorSurfaceBridge {
             data.recycle()
         }
     }
+
+    fun clearDirectSurfaces(): Boolean = sendToDirectServer(emptyList())
 
     fun sendToDirectServer(
         surface: Surface,

@@ -25,7 +25,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                 ),
             )
 
@@ -42,7 +41,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = true,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = false,
-                    autoStartSuppressed = false,
                 ),
             )
 
@@ -59,7 +57,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = true,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                 ),
             )
 
@@ -76,7 +73,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = false,
-                    autoStartSuppressed = false,
                 ),
             )
 
@@ -93,7 +89,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                 ),
             )
 
@@ -110,7 +105,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                 ),
             )
 
@@ -127,24 +121,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = true,
                     layoutId = null,
                     layoutWantsMirror = false,
-                    autoStartSuppressed = false,
-                ),
-            )
-
-        assertEquals(MirrorRuntimeAction.NONE, decision)
-    }
-
-    @Test
-    fun `does not start when active layout auto-start is suppressed`() {
-        val decision =
-            decideMirrorRuntimeAction(
-                MirrorRuntimePolicyState(
-                    promptInFlight = false,
-                    isOnValidScreen = true,
-                    isCapturing = false,
-                    layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
-                    autoStartSuppressed = true,
                 ),
             )
 
@@ -161,7 +137,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                     privdMirrorConnecting = true,
                 ),
             )
@@ -179,7 +154,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                     privdMirrorConnecting = false,
                 ),
             )
@@ -197,7 +171,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                     tutorialsActive = true,
                 ),
             )
@@ -282,7 +255,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = true,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                     showIntegrationHome = true,
                 ),
             )
@@ -300,7 +272,6 @@ class MirrorRuntimePolicyTest {
                     isCapturing = false,
                     layoutId = LAYOUT_A,
                     layoutWantsMirror = true,
-                    autoStartSuppressed = false,
                     showIntegrationHome = true,
                 ),
             )
