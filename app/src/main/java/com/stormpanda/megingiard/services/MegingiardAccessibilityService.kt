@@ -617,20 +617,30 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
         }
 
-        // 3. Fallback: Keyword matching (multi-language fallback)
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
-        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
-        val allTitles = (titleNodes + settingsTitleNodes).distinct()
+        // 3. Fallback: Recursive Keyword matching (multi-language fallback)
+        return findAndClickPairDialogByKeywordRecursive(rootNode, pairKeywords)
+    }
 
-        for (titleNode in allTitles) {
-            val titleText = titleNode.text?.toString() ?: ""
-            val isPairItem = pairKeywords.any { kw -> titleText.contains(kw, ignoreCase = true) }
+    private fun findAndClickPairDialogByKeywordRecursive(
+        node: AccessibilityNodeInfo,
+        pairKeywords: List<String>,
+    ): Boolean {
+        val text = node.text?.toString() ?: ""
+        val contentDesc = node.contentDescription?.toString() ?: ""
+        val combined = "$text $contentDesc".lowercase()
 
-            if (isPairItem) {
-                val clickable = findClickableAncestorOrSelf(titleNode) ?: titleNode
-                AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row via keyword ('$titleText'), clicking")
-                return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        val isPairItem = pairKeywords.any { kw -> combined.contains(kw.lowercase()) }
+        if (isPairItem) {
+            val clickable = findClickableAncestorOrSelf(node) ?: node
+            AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row via recursive keyword ('$text'), clicking")
+            if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                return true
             }
+        }
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (findAndClickPairDialogByKeywordRecursive(child, pairKeywords)) return true
         }
         return false
     }
@@ -1010,11 +1020,10 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val targetStage =
-                when {
-                    !devModeActive -> AutoSetupTargetStage.STAGE_C_PAIRING
-                    !wirelessActive && !paired -> AutoSetupTargetStage.STAGE_C_PAIRING
-                    !wirelessActive && paired -> AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
-                    else -> AutoSetupTargetStage.STAGE_C_PAIRING
+                if (paired) {
+                    AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
+                } else {
+                    AutoSetupTargetStage.STAGE_C_PAIRING
                 }
 
             val initialStage =
