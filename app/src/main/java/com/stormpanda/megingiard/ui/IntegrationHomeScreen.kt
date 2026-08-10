@@ -4,7 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -73,6 +75,9 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.focus.rom.ActiveGameSession
 import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
@@ -310,15 +315,40 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // 1. Featured Hero Game / Companion Card
+                val context = LocalContext.current
                 val profiles by MacroPadState.profiles.collectAsState()
+                val installedApps by InstalledAppsManager.installedApps.collectAsState()
 
-                val targetPkg = hoveredPackage ?: activeSession?.packageName ?: lastDetectedSession?.packageName ?: focusedAppPackageName
-                val targetLabel =
-                    hoveredAppLabel ?: activeSession?.gameTitle ?: lastDetectedSession?.let { s ->
-                        s.romPath?.let { File(it).name } ?: s.gameTitle
+                val targetInfo =
+                    remember(
+                        hoveredPackage,
+                        hoveredAppLabel,
+                        hoveredRomPath,
+                        hoveredSystemId,
+                        activeSession,
+                        lastDetectedSession,
+                        focusedAppPackageName,
+                        focusedRomPath,
+                        installedApps,
+                    ) {
+                        resolveTargetAppInfo(
+                            hoveredPackage = hoveredPackage,
+                            hoveredAppLabel = hoveredAppLabel,
+                            hoveredRomPath = hoveredRomPath,
+                            hoveredSystemId = hoveredSystemId,
+                            activeSession = activeSession,
+                            lastDetectedSession = lastDetectedSession,
+                            focusedAppPackageName = focusedAppPackageName,
+                            focusedRomPath = focusedRomPath,
+                            installedApps = installedApps,
+                            resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
+                        )
                     }
-                val targetRom = hoveredRomPath ?: activeSession?.romPath ?: lastDetectedSession?.romPath ?: focusedRomPath
-                val targetSystem = hoveredSystemId ?: activeSession?.systemId ?: lastDetectedSession?.systemId
+
+                val targetPkg = targetInfo.pkg
+                val targetLabel = targetInfo.label
+                val targetRom = targetInfo.romPath
+                val targetSystem = targetInfo.systemId
 
                 val associatedProfile =
                     remember(profiles, targetPkg, targetRom, targetSystem) {
@@ -334,6 +364,15 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                             }
                         }
                     }
+
+                LaunchedEffect(targetPkg, targetRom, associatedProfile?.id) {
+                    if (targetPkg != null) {
+                        AppLog.d(
+                            TAG,
+                            "Hero target resolved: pkg=$targetPkg, rom=$targetRom, sys=$targetSystem, profile=${associatedProfile?.name}",
+                        )
+                    }
+                }
 
                 HeroCompanionCard(
                     targetPackage = targetPkg,
@@ -968,4 +1007,99 @@ private fun rememberBatteryState(): BatteryState {
         }
     }
     return batteryState
+}
+
+internal data class TargetAppInfo(
+    val pkg: String?,
+    val label: String?,
+    val romPath: String?,
+    val systemId: String?,
+)
+
+internal fun resolveTargetAppInfo(
+    hoveredPackage: String?,
+    hoveredAppLabel: String?,
+    hoveredRomPath: String?,
+    hoveredSystemId: String?,
+    activeSession: ActiveGameSession?,
+    lastDetectedSession: ActiveGameSession?,
+    focusedAppPackageName: String?,
+    focusedRomPath: String?,
+    installedApps: List<InstalledAppInfo>,
+    resolveAppLabel: (String) -> String? = { null },
+): TargetAppInfo {
+    val active = activeSession
+    val last = lastDetectedSession
+    val focused = focusedAppPackageName
+    val hovered = hoveredPackage
+
+    return if (hovered != null) {
+        val label =
+            hoveredAppLabel
+                ?: installedApps.find { it.packageName == hovered }?.label
+                ?: resolveAppLabel(hovered)
+        TargetAppInfo(
+            pkg = hovered,
+            label = label,
+            romPath = hoveredRomPath,
+            systemId = hoveredSystemId,
+        )
+    } else if (active != null) {
+        TargetAppInfo(
+            pkg = active.packageName,
+            label = active.gameTitle,
+            romPath = active.romPath,
+            systemId = active.systemId,
+        )
+    } else if (focused != null) {
+        if (last != null && focused == last.packageName) {
+            val label = last.romPath?.let { File(it).name } ?: last.gameTitle
+            TargetAppInfo(
+                pkg = focused,
+                label = label,
+                romPath = last.romPath ?: focusedRomPath,
+                systemId = last.systemId,
+            )
+        } else {
+            val label =
+                installedApps.find { it.packageName == focused }?.label
+                    ?: resolveAppLabel(focused)
+            TargetAppInfo(
+                pkg = focused,
+                label = label,
+                romPath = focusedRomPath,
+                systemId = null,
+            )
+        }
+    } else if (last != null) {
+        val label = last.romPath?.let { File(it).name } ?: last.gameTitle
+        TargetAppInfo(
+            pkg = last.packageName,
+            label = label,
+            romPath = last.romPath,
+            systemId = last.systemId,
+        )
+    } else {
+        TargetAppInfo(null, null, null, null)
+    }
+}
+
+@Suppress("DEPRECATION")
+private fun resolveAppLabel(
+    context: Context,
+    packageName: String?,
+): String? {
+    if (packageName == null) return null
+    return try {
+        val pm = context.packageManager
+        val appInfo =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(0L))
+            } else {
+                pm.getApplicationInfo(packageName, 0)
+            }
+        pm.getApplicationLabel(appInfo).toString()
+    } catch (e: Exception) {
+        packageName
+    }
 }
