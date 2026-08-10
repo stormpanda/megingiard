@@ -126,8 +126,18 @@ class AutoSwitchCoordinatorTest {
 
         // When game assistant focus occurs
         AutoSwitchCoordinator.onPackageChanged("com.odin.gameassistant")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
 
-        // Then it is ignored and foreground app state remains null
+        // When Thor dualscreen assistant focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.dualscreen.assistant")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When Thor button mapping focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.mapping")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When Thor hardware settings focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.settings")
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
     }

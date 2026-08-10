@@ -20,8 +20,17 @@ private val IGNORED_PACKAGES =
     setOf(
         "com.android.systemui",
         "android",
-        "com.odin.gameassistant",
     )
+
+private val IGNORED_PACKAGE_PREFIXES =
+    listOf(
+        "com.odin.",
+    )
+
+private fun isIgnoredPackage(packageName: String): Boolean {
+    if (packageName in IGNORED_PACKAGES) return true
+    return IGNORED_PACKAGE_PREFIXES.any { packageName.startsWith(it) }
+}
 
 /**
  * Coordinates automatic profile switching when foreground application changes are detected.
@@ -105,7 +114,7 @@ object AutoSwitchCoordinator {
             return
         }
 
-        if (normalized in IGNORED_PACKAGES) {
+        if (isIgnoredPackage(normalized)) {
             AppLog.d(TAG, "onPackageChanged: Ignoring system/transient package ($normalized)")
             return
         }

@@ -86,10 +86,18 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            val packageName = event.packageName?.toString()
-            if (!packageName.isNullOrBlank()) {
-                AppLog.d(TAG, "onAccessibilityEvent: Window state changed, package=$packageName")
-                AutoSwitchCoordinator.onPackageChanged(packageName)
+            val displayId = event.displayId
+            if (displayId == Display.DEFAULT_DISPLAY || displayId == Display.INVALID_DISPLAY) {
+                val packageName = event.packageName?.toString()
+                if (!packageName.isNullOrBlank()) {
+                    AppLog.d(TAG, "onAccessibilityEvent: Window state changed on primary display ($displayId), package=$packageName")
+                    AutoSwitchCoordinator.onPackageChanged(packageName)
+                }
+            } else {
+                AppLog.d(
+                    TAG,
+                    "onAccessibilityEvent: Ignoring window state change on secondary display (displayId=$displayId, package=${event.packageName})",
+                )
             }
         }
         handleAutoToggleEvent(event)
