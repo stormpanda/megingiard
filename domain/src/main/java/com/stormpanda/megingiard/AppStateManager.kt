@@ -46,11 +46,17 @@ fun CompanionViewMode.shouldShowIntegrationHome(
         }
 
         CompanionViewMode.AUTO -> {
-            if (focusedAppPackageName == null ||
-                focusedAppPackageName.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
-                focusedAppPackageName.contains("launcher") ||
-                focusedAppPackageName.contains("home")
-            ) {
+            val foreground = AutoSwitchCoordinator.foregroundApp.value
+            val isForegroundLauncher =
+                foreground != null &&
+                    (
+                        foreground.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
+                            foreground.contains("launcher") ||
+                            foreground.contains("home") ||
+                            foreground == "com.android.systemui"
+                    )
+
+            if (focusedAppPackageName == null || isForegroundLauncher) {
                 true
             } else {
                 activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) != true

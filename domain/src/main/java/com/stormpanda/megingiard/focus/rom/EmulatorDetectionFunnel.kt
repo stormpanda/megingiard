@@ -64,14 +64,25 @@ object EmulatorDetectionFunnel {
             pollingJob?.cancel()
 
             val initialSession = detector.detectActiveSession(packageName)
-            _activeSession.value = initialSession
-            if (initialSession != null) {
-                _lastDetectedSession.value = initialSession
+            val effectiveSession =
+                initialSession ?: run {
+                    val last = _lastDetectedSession.value
+                    if (last != null && last.packageName == packageName) {
+                        AppLog.i(TAG, "onPackageForeground: reusing last detected session for $packageName (${last.gameTitle})")
+                        last
+                    } else {
+                        null
+                    }
+                }
+
+            _activeSession.value = effectiveSession
+            if (effectiveSession != null) {
+                _lastDetectedSession.value = effectiveSession
             }
 
             pollingJob =
                 funnelScope.launch {
-                    val initialRomPath = initialSession?.romPath
+                    val initialRomPath = effectiveSession?.romPath
                     for (i in 1..POLLING_MAX_ATTEMPTS) {
                         delay(POLLING_DELAY_MS)
                         val currentSession = detector.detectActiveSession(packageName)
@@ -89,7 +100,7 @@ object EmulatorDetectionFunnel {
                     }
                 }
 
-            initialSession
+            effectiveSession
         }
 
     /**

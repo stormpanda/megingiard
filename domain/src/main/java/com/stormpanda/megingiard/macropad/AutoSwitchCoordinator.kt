@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AutoSwitchCoordinator"
 private const val APP_PACKAGE_SELF = "com.stormpanda.megingiard"
-private val coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+private val coordinatorScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
 private val IGNORED_PACKAGES =
     setOf(
@@ -30,6 +30,14 @@ private val IGNORED_PACKAGE_PREFIXES =
 private fun isIgnoredPackage(packageName: String): Boolean {
     if (packageName in IGNORED_PACKAGES) return true
     return IGNORED_PACKAGE_PREFIXES.any { packageName.startsWith(it) }
+}
+
+private fun isLauncherOrTaskSwitcher(packageName: String): Boolean {
+    val pkg = packageName.lowercase().trim()
+    return pkg.startsWith("com.stormpanda.megingiard.gamefocus") ||
+        pkg.contains("launcher") ||
+        pkg.contains("home") ||
+        pkg == "com.android.systemui"
 }
 
 /**
@@ -119,18 +127,18 @@ object AutoSwitchCoordinator {
             return
         }
 
+        AppLog.d(TAG, "onPackageChanged: foreground package changed to $normalized")
+        _foregroundApp.value = normalized
+
         val isRegisteredEmulator = EmulatorDetectionFunnel.isRegisteredEmulator(normalized)
-        AppLog.d(
-            TAG,
-            "onPackageChanged normalized=$normalized isRegisteredEmulator=$isRegisteredEmulator activeSession=${EmulatorDetectionFunnel.activeSession.value?.romPath}",
-        )
+        val isLauncherOrSwitcher = isLauncherOrTaskSwitcher(normalized)
 
         // 1. Process emulator package changes for ROM detection
         if (isRegisteredEmulator) {
             coordinatorScope.launch {
                 EmulatorDetectionFunnel.onPackageForeground(normalized)
             }
-        } else {
+        } else if (!isLauncherOrSwitcher) {
             EmulatorDetectionFunnel.clearSession()
         }
 
@@ -140,26 +148,36 @@ object AutoSwitchCoordinator {
 
         // 2. Auto-Deactivation Fallback: Deactivate integration state if switching to unrelated app
         if (clientActive && normalized != clientPackage && normalized != focusedGame) {
-            AppLog.i(
-                TAG,
-                "onPackageChanged: User switched focus away from launcher client '$clientPackage' and game '$focusedGame' to '$normalized'. Deactivating integration state.",
-            )
-            AppStateManager.setExternalClientState(
-                isActive = false,
-                packageName = null,
-                focusedApp = null,
-                hoveredPackage = null,
-                hoveredLabel = null,
-                hoveredPrimaryColor = null,
-                hoveredSecondaryColor = null,
-            )
+            if (isLauncherOrSwitcher) {
+                AppLog.d(
+                    TAG,
+                    "onPackageChanged: Task switcher/launcher '$normalized' focused. Preserving client integration state ($clientPackage -> $focusedGame).",
+                )
+            } else {
+                AppLog.i(
+                    TAG,
+                    "onPackageChanged: User switched focus away from launcher client '$clientPackage' and game '$focusedGame' to '$normalized'. Deactivating integration state.",
+                )
+                AppStateManager.setExternalClientState(
+                    isActive = false,
+                    packageName = null,
+                    focusedApp = null,
+                    hoveredPackage = null,
+                    hoveredLabel = null,
+                    hoveredPrimaryColor = null,
+                    hoveredSecondaryColor = null,
+                )
+            }
         }
 
         // 3. Sync standalone foreground package state with AppStateManager
-        if (!isRegisteredEmulator) {
+        if (isLauncherOrSwitcher) {
+            AppLog.d(TAG, "onPackageChanged: Preserving focused game state while task switcher/launcher '$normalized' is active.")
+            return
+        } else if (!isRegisteredEmulator) {
             AppStateManager.setStandaloneForegroundState(normalized, null)
         } else {
-            val session = EmulatorDetectionFunnel.activeSession.value
+            val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
             if (session != null && session.packageName == normalized) {
                 AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
             } else {
@@ -176,12 +194,9 @@ object AutoSwitchCoordinator {
             }
         }
 
-        if (_foregroundApp.value == normalized && !isRegisteredEmulator) {
-            return
-        }
-
-        if (isRegisteredEmulator && EmulatorDetectionFunnel.activeSession.value != null) {
-            val session = EmulatorDetectionFunnel.activeSession.value!!
+        // 4. Auto profile switching
+        val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
+        if (isRegisteredEmulator && session != null && session.packageName == normalized) {
             AppLog.d(TAG, "onPackageChanged: active ROM session exists for emulator '$normalized' (${session.romPath})")
             if (AppStateManager.companionViewMode.value == CompanionViewMode.AUTO) {
                 val matchedProfile =
@@ -199,26 +214,10 @@ object AutoSwitchCoordinator {
             } else {
                 AppLog.d(TAG, "onPackageChanged: auto-mode disabled, skipping profile switch for ${session.gameTitle}")
             }
-            AppStateManager.setStandaloneForegroundState(session.packageName, session.romPath)
             return
-        }
-
-        AppLog.i(TAG, "onPackageChanged: foreground package changed to $normalized")
-        _foregroundApp.value = normalized
-
-        val isGameFocusLauncher = normalized.startsWith("com.stormpanda.megingiard.gamefocus")
-
-        if (isGameFocusLauncher) {
-            AppLog.d(TAG, "onPackageChanged: foreground package is GameFocus launcher '$normalized', ignoring")
-            return
-        }
-
-        if (!isRegisteredEmulator) {
-            AppStateManager.setStandaloneForegroundState(normalized, null)
         }
 
         val directMatchedProfile = MacroPadState.findBestMatchingProfile(normalized)
-
         if (directMatchedProfile != null) {
             val currentActiveId = MacroPadState.activeProfileId.value
             if (AppStateManager.companionViewMode.value == CompanionViewMode.AUTO && directMatchedProfile.id != currentActiveId) {

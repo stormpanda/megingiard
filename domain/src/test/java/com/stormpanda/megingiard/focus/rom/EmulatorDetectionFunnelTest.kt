@@ -1,14 +1,31 @@
 package com.stormpanda.megingiard.focus.rom
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class EmulatorDetectionFunnelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         EmulatorDetectionFunnel.resetForTesting()
+    }
+
+    @After
+    fun tearDown() {
+        EmulatorDetectionFunnel.resetForTesting()
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -25,5 +42,19 @@ class EmulatorDetectionFunnelTest {
             // Unknown app does not clear lastDetectedSession
             EmulatorDetectionFunnel.onPackageForeground("com.random.app")
             assertNull(EmulatorDetectionFunnel.lastDetectedSession.value)
+        }
+
+    @Test
+    fun onPackageForeground_reusesLastDetectedSession_whenPackageMatchesAndInitialSessionIsNull() =
+        runTest {
+            val session = ActiveGameSession("com.retroarch", "snes", "/roms/z.sfc", "Zelda")
+            EmulatorDetectionFunnel.setActiveSessionForTesting(session)
+            EmulatorDetectionFunnel.clearSession()
+
+            assertNull(EmulatorDetectionFunnel.activeSession.value)
+
+            val restored = EmulatorDetectionFunnel.onPackageForeground("com.retroarch")
+            assertEquals(session, restored)
+            assertEquals(session, EmulatorDetectionFunnel.activeSession.value)
         }
 }
