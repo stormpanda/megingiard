@@ -84,6 +84,8 @@ class ScreenCaptureService : Service() {
                 TouchRecordingManager.recordingRequested,
                 AppStateManager.isPrivdPromptActive,
                 AppStateManager.showIntegrationHome,
+                AppStateManager.isFullscreenMouseActive,
+                AppStateManager.isFullscreenKeyboardActive,
             ) { values ->
                 val capturing = values[0] as Boolean
                 val validScreen = values[1] as Boolean
@@ -94,13 +96,15 @@ class ScreenCaptureService : Service() {
                 val recordingRequested = values[6] as Boolean
                 val isPrivdPromptActive = values[7] as Boolean
                 val showIntegrationHome = values[8] as Boolean
+                val isFullscreenMouseActive = values[9] as Boolean
+                val isFullscreenKeyboardActive = values[10] as Boolean
 
                 capturing && validScreen &&
                     !filePickerOpen && !editorActive &&
                     (!ambientActive || ambientPreviewActive) &&
                     !recordingRequested &&
                     !isPrivdPromptActive &&
-                    !showIntegrationHome
+                    (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
             }.distinctUntilChanged()
                 .collect { shouldShow ->
                     AppLog.d(TAG, "shouldShowMirrorPresentation changed → $shouldShow")
@@ -308,7 +312,11 @@ class ScreenCaptureService : Service() {
 
         scope.launch {
             AppStateManager.showIntegrationHome.collect { showIntegrationHome ->
-                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
+                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value &&
+                    !AppStateManager.isFullscreenMouseActive.value &&
+                    !AppStateManager.isFullscreenKeyboardActive.value &&
+                    !AppStateManager.wasMirroringStartedByTouchpad.value
+                ) {
                     AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
                     stopSelf()
                 }
@@ -707,6 +715,8 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
         val showIntegrationHome = AppStateManager.showIntegrationHome.value
+        val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
+        val isFullscreenKeyboardActive = AppStateManager.isFullscreenKeyboardActive.value
 
         val shouldShow =
             capturing && validScreen &&
@@ -714,11 +724,11 @@ class ScreenCaptureService : Service() {
                 (!ambientActive || ambientPreviewActive) &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
-                !showIntegrationHome
+                (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
         )
         return shouldShow
     }
