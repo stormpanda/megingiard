@@ -82,9 +82,11 @@ object FloatingBubbleOverlay {
     fun show(
         appName: String,
         packageName: String,
+        touchX: Float = -1f,
+        touchY: Float = -1f,
     ) {
         mainHandler.post {
-            showOnMainThread(appName, packageName)
+            showOnMainThread(appName, packageName, touchX, touchY)
         }
     }
 
@@ -97,6 +99,8 @@ object FloatingBubbleOverlay {
     private fun showOnMainThread(
         appName: String,
         packageName: String,
+        touchX: Float = -1f,
+        touchY: Float = -1f,
     ) {
         val service = MegingiardAccessibilityService.getInstance()
         if (service == null) {
@@ -124,6 +128,19 @@ object FloatingBubbleOverlay {
             val density = windowContext.resources.displayMetrics.density
             val bubbleSizePx = (FBO_BUBBLE_SIZE.value * density).toInt()
 
+            val initialX =
+                if (touchX >= 0f) {
+                    (touchX - bubbleSizePx / 2f).coerceAtLeast(0f).toInt()
+                } else {
+                    (FBO_INITIAL_X_DP * density).toInt()
+                }
+            val initialY =
+                if (touchY >= 0f) {
+                    (touchY - bubbleSizePx / 2f).coerceAtLeast(0f).toInt()
+                } else {
+                    (FBO_INITIAL_Y_DP * density).toInt()
+                }
+
             val params =
                 WindowManager.LayoutParams().apply {
                     type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
@@ -132,8 +149,8 @@ object FloatingBubbleOverlay {
                     width = bubbleSizePx
                     height = bubbleSizePx
                     gravity = Gravity.TOP or Gravity.START
-                    x = (FBO_INITIAL_X_DP * density).toInt()
-                    y = (FBO_INITIAL_Y_DP * density).toInt()
+                    x = initialX
+                    y = initialY
                 }
             layoutParams = params
 
@@ -145,8 +162,8 @@ object FloatingBubbleOverlay {
                     setViewTreeViewModelStoreOwner(owner)
                 }
 
-            var initialX = 0
-            var initialY = 0
+            var dragStartX = 0
+            var dragStartY = 0
             var initialTouchX = 0f
             var initialTouchY = 0f
             var isDragging = false
@@ -155,8 +172,8 @@ object FloatingBubbleOverlay {
             view.setOnTouchListener { _, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
+                        dragStartX = params.x
+                        dragStartY = params.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
                         isDragging = false
@@ -170,8 +187,8 @@ object FloatingBubbleOverlay {
                             isDragging = true
                         }
                         if (isDragging) {
-                            params.x = (initialX + dx).toInt()
-                            params.y = (initialY + dy).toInt()
+                            params.x = (dragStartX + dx).toInt()
+                            params.y = (dragStartY + dy).toInt()
                             wm.updateViewLayout(view, params)
                         }
                         true

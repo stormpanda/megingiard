@@ -615,9 +615,15 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 AppStateManager.pendingAppLaunchRequest.collect { req ->
                     if (req == null) return@collect
-                    AppLog.i(TAG, "pendingAppLaunchRequest → launching ${req.packageName}")
+                    AppLog.i(TAG, "pendingAppLaunchRequest → launching ${req.packageName} at (${req.touchX}, ${req.touchY})")
                     AppStateManager.consumeAppLaunchRequest()
-                    AppLauncherManager.launchApp(this@MainActivity, req.packageName, req.appName)
+                    AppLauncherManager.launchApp(
+                        context = this@MainActivity,
+                        packageName = req.packageName,
+                        appName = req.appName,
+                        touchX = req.touchX,
+                        touchY = req.touchY,
+                    )
                 }
             }
 

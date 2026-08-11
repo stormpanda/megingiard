@@ -15,6 +15,8 @@ object AppLauncherManager {
         context: Context,
         packageName: String,
         appName: String = "",
+        touchX: Float = -1f,
+        touchY: Float = -1f,
     ) {
         if (packageName.isBlank()) {
             AppLog.w(TAG, "Cannot launch app: packageName is blank")
@@ -43,11 +45,16 @@ object AppLauncherManager {
                     this.launchDisplayId = displayId
                 }
 
-            AppLog.i(TAG, "Launching package $packageName on display $displayId")
+            AppLog.i(TAG, "Launching package $packageName on display $displayId touch=($touchX, $touchY)")
             context.startActivity(launchIntent, options.toBundle())
 
-            // Display floating bubble overlay above the target application
-            FloatingBubbleOverlay.show(appName = appName, packageName = packageName)
+            // Display floating bubble overlay above the target application at pressed location
+            FloatingBubbleOverlay.show(
+                appName = appName,
+                packageName = packageName,
+                touchX = touchX,
+                touchY = touchY,
+            )
 
             // Minimize Megingiard to the background
             if (context is Activity) {
