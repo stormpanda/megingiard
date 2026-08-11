@@ -222,12 +222,21 @@ class MirrorRuntimePolicyTest {
             ),
         )
 
-        // 4. Active connection pending on OFF state should block
+        // 4. Active connection pending on OFF state should block even if hasCreds is false
         assertTrue(
             isPrivdMirrorConnecting(
                 privdState = PrivdState.OFF,
                 promptActive = false,
                 hasCreds = true,
+                dismissed = false,
+                isManuallyDisconnected = false,
+            ),
+        )
+        assertTrue(
+            isPrivdMirrorConnecting(
+                privdState = PrivdState.OFF,
+                promptActive = false,
+                hasCreds = false,
                 dismissed = false,
                 isManuallyDisconnected = false,
             ),
@@ -239,6 +248,15 @@ class MirrorRuntimePolicyTest {
                 privdState = PrivdState.OFF,
                 promptActive = false,
                 hasCreds = true,
+                dismissed = false,
+                isManuallyDisconnected = true,
+            ),
+        )
+        assertFalse(
+            isPrivdMirrorConnecting(
+                privdState = PrivdState.OFF,
+                promptActive = false,
+                hasCreds = false,
                 dismissed = false,
                 isManuallyDisconnected = true,
             ),
