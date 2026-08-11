@@ -42,6 +42,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
@@ -73,12 +74,55 @@ class ScreenCaptureService : Service() {
         super.onCreate()
 
         scope.launch {
-            AppStateManager.isPrivdPromptActive.collect { active ->
-                AppLog.d(TAG, "isPrivdPromptActive=$active → ${if (active) "hide" else "show"} mirror presentation")
-                if (active) {
+            combine(
+                ScreenCaptureManager.isCapturing,
+                AppStateManager.isOnValidScreen,
+                AppStateManager.isFilePickerOpen,
+                AppStateManager.isEditorActive,
+                AppStateManager.isBackgroundSettingsActive,
+                AmbientPreviewManager.isActive,
+                TouchRecordingManager.recordingRequested,
+                AppStateManager.isPrivdPromptActive,
+                AppStateManager.showIntegrationHome,
+            ) { values ->
+                val capturing = values[0] as Boolean
+                val validScreen = values[1] as Boolean
+                val filePickerOpen = values[2] as Boolean
+                val editorActive = values[3] as Boolean
+                val ambientActive = values[4] as Boolean
+                val ambientPreviewActive = values[5] as Boolean
+                val recordingRequested = values[6] as Boolean
+                val isPrivdPromptActive = values[7] as Boolean
+                val showIntegrationHome = values[8] as Boolean
+
+                capturing && validScreen &&
+                    !filePickerOpen && !editorActive &&
+                    (!ambientActive || ambientPreviewActive) &&
+                    !recordingRequested &&
+                    !isPrivdPromptActive &&
+                    !showIntegrationHome
+            }.distinctUntilChanged()
+                .collect { shouldShow ->
+                    AppLog.d(TAG, "shouldShowMirrorPresentation changed → $shouldShow")
+                    if (shouldShow) {
+                        mirrorPresentation?.show()
+                    } else {
+                        mirrorPresentation?.hide()
+                    }
+                }
+        }
+
+        scope.launch {
+            var wasCapturing = false
+            ScreenCaptureManager.isCapturing.collect { capturing ->
+                if (capturing) {
+                    wasCapturing = true
+                } else if (wasCapturing && !consentFallbackInFlight) {
+                    AppLog.i(TAG, "isCapturing transitioned to false → hiding mirror presentation and stopping service")
                     mirrorPresentation?.hide()
-                } else if (shouldShowMirrorPresentation()) {
-                    mirrorPresentation?.show()
+                    mirrorPresentation?.dismiss()
+                    mirrorPresentation = null
+                    stopSelf()
                 }
             }
         }
@@ -646,6 +690,7 @@ class ScreenCaptureService : Service() {
         directPrivdSession = null
         recordingPresentation?.dismiss()
         recordingPresentation = null
+        mirrorPresentation?.hide()
         mirrorPresentation?.dismiss()
         mirrorPresentation = null
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
@@ -704,7 +749,10 @@ class ScreenCaptureService : Service() {
         mirrorSurface = null
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
+        recordingPresentation = null
+        mirrorPresentation?.hide()
         mirrorPresentation?.dismiss()
+        mirrorPresentation = null
         if (isPrivilegedMode) {
             DirectMirrorSurfaceBridge.clearDirectSurfaces()
         }
