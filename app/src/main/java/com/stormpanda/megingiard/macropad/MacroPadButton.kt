@@ -45,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -345,10 +346,14 @@ internal fun AppLauncherFace(
 
     val bitmap = appIconBitmap
     if (bitmap != null) {
+        val colorFilter =
+            remember(effectiveTextTint) {
+                tintedGrayscaleFilter(effectiveTextTint)
+            }
         Image(
             bitmap = bitmap,
             contentDescription = resolvedName.ifBlank { action.packageName },
-            colorFilter = ColorFilter.tint(effectiveTextTint),
+            colorFilter = colorFilter,
             modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
         )
     } else {
@@ -358,6 +363,38 @@ internal fun AppLauncherFace(
             tint = effectiveTextTint,
         )
     }
+}
+
+private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
+    val r = tint.red
+    val g = tint.green
+    val b = tint.blue
+    val matrix =
+        ColorMatrix(
+            floatArrayOf(
+                r * 0.2136f,
+                r * 0.7152f,
+                r * 0.0722f,
+                0f,
+                0f,
+                g * 0.2136f,
+                g * 0.7152f,
+                g * 0.0722f,
+                0f,
+                0f,
+                b * 0.2136f,
+                b * 0.7152f,
+                b * 0.0722f,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                1f,
+                0f,
+            ),
+        )
+    return ColorFilter.colorMatrix(matrix)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
