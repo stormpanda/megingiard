@@ -100,6 +100,35 @@ object AppStateManager {
     private val _shutOffRequested = MutableStateFlow(false)
     val shutOffRequested: StateFlow<Boolean> = _shutOffRequested.asStateFlow()
 
+    data class AppLaunchRequest(
+        val packageName: String,
+        val appName: String = "",
+    )
+
+    private val _pendingAppLaunchRequest = MutableStateFlow<AppLaunchRequest?>(null)
+    val pendingAppLaunchRequest: StateFlow<AppLaunchRequest?> = _pendingAppLaunchRequest.asStateFlow()
+
+    private val _isFloatingBubbleActive = MutableStateFlow(false)
+    val isFloatingBubbleActive: StateFlow<Boolean> = _isFloatingBubbleActive.asStateFlow()
+
+    fun requestAppLaunch(
+        packageName: String,
+        appName: String = "",
+    ) {
+        AppLog.i(TAG, "requestAppLaunch: pkg=$packageName app=$appName")
+        _pendingAppLaunchRequest.value = AppLaunchRequest(packageName, appName)
+    }
+
+    fun consumeAppLaunchRequest() {
+        AppLog.d(TAG, "consumeAppLaunchRequest")
+        _pendingAppLaunchRequest.value = null
+    }
+
+    fun setFloatingBubbleActive(active: Boolean) {
+        AppLog.d(TAG, "setFloatingBubbleActive: $active")
+        _isFloatingBubbleActive.value = active
+    }
+
     fun requestMirrorStart() {
         AppLog.i(TAG, "requestMirrorStart")
         _mirrorStartRequested.value = true

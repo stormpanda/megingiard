@@ -116,6 +116,10 @@ internal fun ActionPicker(
                 MacroPicker(current, accentColor, onEditMacro, onChange)
             }
 
+            is PadAction.AppLauncher -> {
+                AppLauncherPicker(current, onChange)
+            }
+
             is PadAction.ScrollWheel,
             is PadAction.TrackpointMove,
             is PadAction.BackgroundPeek,

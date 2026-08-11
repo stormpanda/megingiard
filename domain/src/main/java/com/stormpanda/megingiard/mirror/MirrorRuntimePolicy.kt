@@ -40,6 +40,8 @@ data class MirrorRuntimePolicyState(
     val tutorialsActive: Boolean = false,
     /** True if the companion hub/dashboard screen is currently active. */
     val showIntegrationHome: Boolean = false,
+    /** True if an app launcher floating bubble overlay is currently active. */
+    val isFloatingBubbleActive: Boolean = false,
 )
 
 enum class MirrorRuntimeAction {
@@ -58,8 +60,8 @@ enum class MirrorRuntimeAction {
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAction {
     if (!state.isOnValidScreen || state.layoutId == null) return MirrorRuntimeAction.NONE
 
-    // If the companion integration dashboard is active, mirroring is prohibited.
-    if (state.showIntegrationHome) {
+    // If companion integration dashboard or app launcher floating bubble is active, mirroring is prohibited.
+    if (state.showIntegrationHome || state.isFloatingBubbleActive) {
         return if (state.isCapturing) MirrorRuntimeAction.STOP else MirrorRuntimeAction.NONE
     }
 

@@ -298,6 +298,14 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_touch_projection">Touch Projection</string>
     <string name="macropad_action_fullscreen_mouse">Fullscreen Mouse</string>
     <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
+    <string name="macropad_action_app_launcher">App Launcher</string>
+    <string name="macropad_display_app_launcher">App: %s</string>
+    <string name="app_launcher_picker_title">Select Application</string>
+    <string name="app_launcher_picker_search">Search applications…</string>
+    <string name="app_launcher_picker_no_apps">No applications found</string>
+    <string name="app_launcher_picker_select_app">Choose app…</string>
+    <string name="floating_bubble_cd">Megingiard Floating Bubble Overlay</string>
+    <string name="floating_bubble_tap_hint">Tap to restore Megingiard</string>
 
     <!-- MacroPad profile / layout strings -->
     <string name="settings_macropad_profile">Active Profile</string>

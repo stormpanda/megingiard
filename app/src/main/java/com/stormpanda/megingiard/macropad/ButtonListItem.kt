@@ -106,6 +106,10 @@ internal fun ButtonListItem(
             is PadAction.FullScreenKeyboard -> {
                 !enableKeyboard
             }
+
+            is PadAction.AppLauncher -> {
+                false
+            }
         }
 
     Row(

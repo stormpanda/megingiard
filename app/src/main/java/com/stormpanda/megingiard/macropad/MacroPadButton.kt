@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -8,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,22 +32,30 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 private const val TAG = "MacroPadButton"
@@ -269,6 +281,12 @@ internal fun PadButton(
                     ScrollWheelFace(accentColor = effectiveContentAccent)
                 } else if (btn.action is PadAction.BackgroundPeek) {
                     BackgroundPeekFace(accentColor = effectiveContentAccent)
+                } else if (btn.action is PadAction.AppLauncher) {
+                    AppLauncherFace(
+                        btn = btn,
+                        action = btn.action as PadAction.AppLauncher,
+                        effectiveTextTint = effectiveTextTint,
+                    )
                 } else {
                     val iconName = btn.iconName
                     if (iconName != null) {
@@ -292,6 +310,79 @@ internal fun PadButton(
         }
     }
 }
+
+@Composable
+internal fun AppLauncherFace(
+    btn: PadButton,
+    action: PadAction.AppLauncher,
+    effectiveTextTint: Color,
+) {
+    val context = LocalContext.current
+    val iconName = btn.iconName
+    var appIconBitmap by remember(action.packageName) { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(action.packageName) {
+        if (iconName == null && action.packageName.isNotBlank()) {
+            appIconBitmap =
+                withContext(Dispatchers.IO) {
+                    try {
+                        val pm = context.packageManager
+                        val appInfo = pm.getApplicationInfo(action.packageName, 0)
+                        val drawable = appInfo.loadIcon(pm)
+                        drawable?.toImageBitmap()
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+        }
+    }
+
+    val bitmap = appIconBitmap
+    if (iconName != null) {
+        MaterialSymbol(
+            name = iconName,
+            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+            tint = effectiveTextTint,
+            filled = btn.iconFilled,
+        )
+    } else if (bitmap != null) {
+        Image(
+            bitmap = bitmap,
+            contentDescription = btn.label.ifBlank { action.appName },
+            modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
+        )
+    } else {
+        val displayText = btn.label.ifBlank { action.appName.ifBlank { action.packageName } }
+        if (displayText.isNotBlank()) {
+            Text(
+                text = displayText,
+                color = effectiveTextTint,
+                fontSize = (11 * btn.buttonSize.cols).sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            MaterialSymbol(
+                name = "apps",
+                size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                tint = effectiveTextTint,
+            )
+        }
+    }
+}
+
+private fun Drawable.toImageBitmap(): ImageBitmap? =
+    try {
+        val width = if (intrinsicWidth > 0) intrinsicWidth else 48
+        val height = if (intrinsicHeight > 0) intrinsicHeight else 48
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        setBounds(0, 0, canvas.width, canvas.height)
+        draw(canvas)
+        bitmap.asImageBitmap()
+    } catch (e: Exception) {
+        null
+    }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scroll wheel face — two chevrons up + two chevrons down

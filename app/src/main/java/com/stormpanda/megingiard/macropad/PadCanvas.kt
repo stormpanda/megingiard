@@ -464,6 +464,10 @@ private fun DraggableButton(
             is PadAction.FullScreenKeyboard -> {
                 !enableKeyboard
             }
+
+            is PadAction.AppLauncher -> {
+                false
+            }
         }
     val tpMultiplier = if (isTrackpoint) (btn.action as PadAction.TrackpointMove).size.multiplier else 1f
     val chipWidthPx =

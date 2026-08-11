@@ -476,6 +476,10 @@ class MacroPadHitTestEngine(
                 is PadAction.FullScreenKeyboard -> {
                     !profile.enableKeyboard
                 }
+
+                is PadAction.AppLauncher -> {
+                    false
+                }
             }
 
         /**
@@ -530,6 +534,7 @@ class MacroPadHitTestEngine(
 
                 is PadAction.FullScreenMouse,
                 is PadAction.FullScreenKeyboard,
+                is PadAction.AppLauncher,
                 -> {
                     null
                 }

@@ -270,6 +270,15 @@ class ScreenCaptureService : Service() {
                 }
             }
         }
+
+        scope.launch {
+            AppStateManager.isFloatingBubbleActive.collect { bubbleActive ->
+                if (bubbleActive && ScreenCaptureManager.isCapturing.value) {
+                    AppLog.i(TAG, "Floating bubble overlay became active -> stopping screen capture to conserve resources")
+                    stopSelf()
+                }
+            }
+        }
     }
 
     private fun saveScreenshotToGallery(
@@ -662,6 +671,7 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
         val showIntegrationHome = AppStateManager.showIntegrationHome.value
+        val isFloatingBubbleActive = AppStateManager.isFloatingBubbleActive.value
 
         val shouldShow =
             capturing && validScreen &&
@@ -669,11 +679,12 @@ class ScreenCaptureService : Service() {
                 (!ambientActive || ambientPreviewActive) &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
-                !showIntegrationHome
+                !showIntegrationHome &&
+                !isFloatingBubbleActive
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFloatingBubbleActive=$isFloatingBubbleActive)",
         )
         return shouldShow
     }
