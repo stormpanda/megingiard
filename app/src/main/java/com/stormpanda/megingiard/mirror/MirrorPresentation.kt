@@ -130,6 +130,7 @@ import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.paletteFor
+import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -423,31 +424,16 @@ class MirrorPresentation(
                             val isGesturesEnabled =
                                 !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive &&
                                     !isWizardActive
-                            val density = LocalDensity.current
-                            val edgeZonePx = remember(density) { with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() } }
-                            val swipeThresholdPx = remember(density) { with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() } }
-                            val quickMenuBarZoneWidthPx =
-                                remember(density) { with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() } }
-
-                            val (kbBarMinX, kbBarMaxX) =
-                                remember(density) {
-                                    val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-                                    val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-                                    val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
-                                    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
-                                    val minX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
-                                    val maxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
-                                    Pair(minX, maxX)
-                                }
-
-                            val (tpBarWidthPx, tpBarEndPaddingPx, tpBarZoneWidthPx) =
-                                remember(density) {
-                                    Triple(
-                                        with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() },
-                                        with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() },
-                                        with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() },
-                                    )
-                                }
+                            val (
+                                edgeZonePx,
+                                swipeThresholdPx,
+                                quickMenuBarZoneWidthPx,
+                                kbBarMinX,
+                                kbBarMaxX,
+                                tpBarWidthPx,
+                                tpBarEndPaddingPx,
+                                tpBarZoneWidthPx,
+                            ) = rememberQuickMenuGestureMetrics()
                             val context = LocalContext.current
 
                             val projectionController =

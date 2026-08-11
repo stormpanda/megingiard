@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -38,4 +41,47 @@ object QuickMenuBarLayout {
      * Computed as: (TAB_PADDING + TAB_WIDTH / 2) - SLIDING_PILL_SIZE / 2
      */
     val SLIDING_PILL_PADDING: Dp = 36.dp
+}
+
+data class QuickMenuGestureMetrics(
+    val edgeZonePx: Float,
+    val swipeThresholdPx: Float,
+    val quickMenuBarZoneWidthPx: Float,
+    val kbBarMinX: Float,
+    val kbBarMaxX: Float,
+    val tpBarWidthPx: Float,
+    val tpBarEndPaddingPx: Float,
+    val tpBarZoneWidthPx: Float,
+)
+
+@Composable
+fun rememberQuickMenuGestureMetrics(): QuickMenuGestureMetrics {
+    val density = LocalDensity.current
+    return remember(density) {
+        val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
+        val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
+        val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+
+        val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+        val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+        val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
+        val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
+        val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
+        val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+
+        val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+        val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+        val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
+
+        QuickMenuGestureMetrics(
+            edgeZonePx = edgeZonePx,
+            swipeThresholdPx = swipeThresholdPx,
+            quickMenuBarZoneWidthPx = quickMenuBarZoneWidthPx,
+            kbBarMinX = kbBarMinX,
+            kbBarMaxX = kbBarMaxX,
+            tpBarWidthPx = tpBarWidthPx,
+            tpBarEndPaddingPx = tpBarEndPaddingPx,
+            tpBarZoneWidthPx = tpBarZoneWidthPx,
+        )
+    }
 }
