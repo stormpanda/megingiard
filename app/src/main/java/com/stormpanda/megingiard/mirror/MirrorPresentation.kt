@@ -288,11 +288,10 @@ class MirrorPresentation(
                 }
 
                 override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                    val now = System.currentTimeMillis()
+                    val now = SystemClock.elapsedRealtime()
                     val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
                     val interval = 1000L / fps
                     if (now - lastUpdateTime >= interval) {
-                        mcc.updateAccumulator(tv)
                         mcc.invalidate()
                         lastUpdateTime = now
                     }
@@ -1083,17 +1082,11 @@ class MultiCutoutContainer(
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
-            if (isFrozen || !value.any { it.motionSmoothing }) {
-                releaseAccumulator()
-            }
             invalidate()
         }
     var isFrozen: Boolean = false
         set(value) {
             field = value
-            if (value) {
-                releaseAccumulator()
-            }
             invalidate()
         }
     var frozenBitmap: Bitmap? = null
@@ -1170,7 +1163,6 @@ class MultiCutoutContainer(
     private val blackToTransparentColors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
     private val circleBlendColors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
     private val circleBlendStops = floatArrayOf(0f, 0f, 1f)
-    private val activeStrengthsSet = mutableSetOf<Int>()
 
     private val horizontalGradientShader = LinearGradient(0f, 0f, 1f, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
     private val horizontalReverseGradientShader = LinearGradient(0f, 0f, 1f, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
@@ -1183,6 +1175,7 @@ class MultiCutoutContainer(
     private var cachedCircleShader: Shader? = null
 
     private val cutoutPaint = Paint()
+    private val smoothingPaint = Paint()
     private val blendPaint =
         Paint().apply {
             isAntiAlias = true
@@ -1194,122 +1187,9 @@ class MultiCutoutContainer(
             color = Color.BLACK
         }
 
-    private var scratchBitmap: Bitmap? = null
-
-    private class Accumulator(
-        val strength: Int,
-        width: Int,
-        height: Int,
-    ) {
-        var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        var accumCanvas: Canvas? = accumulated?.let { Canvas(it) }
-        var initialized: Boolean = false
-
-        val blendPaint =
-            Paint().apply {
-                val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
-                alpha = (alphaPercent * 255f).roundToInt()
-                xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-            }
-
-        fun recycle() {
-            accumulated?.recycle()
-            accumulated = null
-            accumCanvas = null
-        }
-    }
-
-    private val accumulators = mutableMapOf<Int, Accumulator>()
-
     init {
         clipChildren = true
         setWillNotDraw(false)
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        releaseAccumulator()
-    }
-
-    fun releaseAccumulator() {
-        accumulators.values.forEach { it.recycle() }
-        accumulators.clear()
-        scratchBitmap?.recycle()
-        scratchBitmap = null
-    }
-
-    fun updateAccumulator(textureView: TextureView) {
-        activeStrengthsSet.clear()
-        if (!isFrozen) {
-            for (i in cutouts.indices) {
-                val cutout = cutouts[i]
-                if (cutout.motionSmoothing) {
-                    activeStrengthsSet.add(cutout.motionSmoothingStrength)
-                }
-            }
-        }
-        if (activeStrengthsSet.isNotEmpty() && srcWidth > 0 && srcHeight > 0) {
-            // 1. Recycle accumulators for strengths that are no longer active
-            val iterator = accumulators.iterator()
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (entry.key !in activeStrengthsSet) {
-                    entry.value.recycle()
-                    iterator.remove()
-                }
-            }
-
-            // 2. Ensure accumulators exist and have correct sizes
-            for (strength in activeStrengthsSet) {
-                val existing = accumulators[strength]
-                if (existing != null) {
-                    val acc = existing.accumulated
-                    if (acc == null || acc.width != srcWidth || acc.height != srcHeight) {
-                        existing.recycle()
-                        accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
-                    }
-                } else {
-                    accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
-                }
-            }
-
-            // 3. Ensure a valid single scratch bitmap exists
-            val currentScratch = scratchBitmap
-            val scratch =
-                if (currentScratch == null || currentScratch.width != srcWidth || currentScratch.height != srcHeight) {
-                    currentScratch?.recycle()
-                    Bitmap.createBitmap(srcWidth, srcHeight, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
-                } else {
-                    currentScratch
-                }
-
-            // 4. Capture TextureView frame once
-            try {
-                textureView.getBitmap(scratch)
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Error getting TextureView bitmap for motion smoothing", e)
-                return
-            }
-
-            // 5. Update each active accumulator with the captured frame
-            for (strength in activeStrengthsSet) {
-                val acc = accumulators[strength] ?: continue
-                val accumCanvas = acc.accumCanvas ?: continue
-                try {
-                    if (!acc.initialized) {
-                        accumCanvas.drawBitmap(scratch, 0f, 0f, null)
-                        acc.initialized = true
-                    } else {
-                        accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
-                }
-            }
-            invalidate()
-        } else {
-            releaseAccumulator()
-        }
     }
 
     override fun onLayout(
@@ -1496,11 +1376,18 @@ class MultiCutoutContainer(
 
                     if (isFrozen && frozenBitmap != null) {
                         canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
-                    } else if (cutout.motionSmoothing && accumulators[cutout.motionSmoothingStrength]?.accumulated != null) {
-                        canvas.drawBitmap(accumulators[cutout.motionSmoothingStrength]!!.accumulated!!, 0f, 0f, null)
                     } else if (masterView != null) {
-                        drawChild(canvas, masterView, drawTime)
-                        masterViewDrawn = true
+                        if (cutout.motionSmoothing) {
+                            val alphaPercent = (100 - cutout.motionSmoothingStrength).coerceAtLeast(1) / 100f
+                            smoothingPaint.alpha = (alphaPercent * 255f).roundToInt()
+                            val smoothingSaveCount = canvas.saveLayer(0f, 0f, sw, sh, smoothingPaint)
+                            drawChild(canvas, masterView, drawTime)
+                            masterViewDrawn = true
+                            canvas.restoreToCount(smoothingSaveCount)
+                        } else {
+                            drawChild(canvas, masterView, drawTime)
+                            masterViewDrawn = true
+                        }
                     }
 
                     canvas.restoreToCount(innerSaveCount)
