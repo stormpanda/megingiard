@@ -8,6 +8,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.mirror.ScreenCaptureService
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 
 private const val TAG = "CaptureRequestActivity"
 
@@ -27,10 +29,14 @@ class CaptureRequestActivity : ComponentActivity() {
                 // stays true throughout the restore — preventing MainActivity from
                 // re-triggering the capture prompt before isCapturing becomes true.
             } else {
-                AppLog.i(TAG, "RESULT_CANCELED → clearing active layout mirrorAutoStart")
-                MacroPadState.activeLayout.value?.id?.let { layoutId ->
-                    AppStateManager.suppressMirrorAutoStart(layoutId)
-                    MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+                AppLog.i(TAG, "RESULT_CANCELED → checking Privd state before updating layout mirrorAutoStart")
+                if (PrivdManager.state.value != PrivdState.RUNNING) {
+                    MacroPadState.activeLayout.value?.id?.let { layoutId ->
+                        AppStateManager.suppressMirrorAutoStart(layoutId)
+                        MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
+                    }
+                } else {
+                    AppLog.i(TAG, "RESULT_CANCELED while Privd is RUNNING → preserving layout mirrorAutoStart")
                 }
                 AppStateManager.setPromptInFlight(false)
             }

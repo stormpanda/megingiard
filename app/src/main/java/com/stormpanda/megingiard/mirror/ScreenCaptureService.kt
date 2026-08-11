@@ -32,16 +32,21 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.shouldShowIntegrationHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
+private const val DIRECT_MIRROR_MAX_RETRIES = 3
+private const val DIRECT_MIRROR_RETRY_DELAY_MS = 200L
 
 const val ACTION_START_PRIVD = "START_PRIVD"
 const val ACTION_STOP = "STOP"
@@ -587,12 +592,30 @@ class ScreenCaptureService : Service() {
             }
 
             if (startGeneration == directPrivdStartGeneration) {
-                if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
-                    AppLog.i(TAG, "direct privileged mirror session updated with master surface")
-                } else {
+                var success = false
+                for (attempt in 1..DIRECT_MIRROR_MAX_RETRIES) {
+                    if (startGeneration != directPrivdStartGeneration) return@launch
+                    if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                        AppLog.i(
+                            TAG,
+                            "direct privileged mirror session updated with master surface (attempt $attempt/$DIRECT_MIRROR_MAX_RETRIES)",
+                        )
+                        success = true
+                        break
+                    }
+                    if (attempt < DIRECT_MIRROR_MAX_RETRIES) {
+                        AppLog.w(
+                            TAG,
+                            "direct privileged mirror send attempt $attempt failed — retrying in ${DIRECT_MIRROR_RETRY_DELAY_MS}ms",
+                        )
+                        delay(DIRECT_MIRROR_RETRY_DELAY_MS)
+                    }
+                }
+
+                if (!success && startGeneration == directPrivdStartGeneration) {
                     directSession.release()
                     directPrivdSession = null
-                    launchConsentFallback("direct privileged mirror send failed")
+                    launchConsentFallback("direct privileged mirror send failed after $DIRECT_MIRROR_MAX_RETRIES attempts")
                 }
             }
         }
@@ -600,6 +623,13 @@ class ScreenCaptureService : Service() {
 
     private fun launchConsentFallback(reason: String) {
         if (consentFallbackInFlight) return
+        if (PrivdManager.state.value == PrivdState.RUNNING) {
+            AppLog.w(
+                TAG,
+                "$reason — Privd is RUNNING, skipping MediaProjection fallback to prevent permission prompt popup while privileged mode is active",
+            )
+            return
+        }
         AppLog.w(TAG, "$reason — falling back to MediaProjection consent")
         consentFallbackInFlight = true
         directPrivdStartGeneration += 1L
