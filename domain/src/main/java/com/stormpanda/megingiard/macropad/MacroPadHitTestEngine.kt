@@ -150,10 +150,8 @@ class MacroPadHitTestEngine(
                 if (act.packageName.isNotBlank()) {
                     val bx = hitButton.posX * canvasW
                     val by = hitButton.posY * canvasH
-                    val pressX = if (px >= 0f) px else bx
-                    val pressY = if (py >= 0f) py else by
-                    AppLog.d(TAG, "AppLauncher touch at ($pressX, $pressY)")
-                    AppStateManager.requestAppLaunch(act.packageName, pressX, pressY)
+                    AppLog.d(TAG, "AppLauncher button center at ($bx, $by)")
+                    AppStateManager.requestAppLaunch(act.packageName, bx, by)
                 }
                 if (hitButton.hapticStrength != HapticStrength.OFF) {
                     AppLog.d(TAG, "haptic on press: button=${hitButton.id} strength=${hitButton.hapticStrength}")
