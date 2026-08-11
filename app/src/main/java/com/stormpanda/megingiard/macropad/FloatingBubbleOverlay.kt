@@ -126,19 +126,6 @@ object FloatingBubbleOverlay {
             val density = windowContext.resources.displayMetrics.density
             val bubbleSizePx = (FBO_BUBBLE_SIZE.value * density).toInt()
 
-            val initialX =
-                if (touchX >= 0f) {
-                    (touchX - bubbleSizePx / 2f).coerceAtLeast(0f).toInt()
-                } else {
-                    (FBO_INITIAL_X_DP * density).toInt()
-                }
-            val initialY =
-                if (touchY >= 0f) {
-                    (touchY - bubbleSizePx / 2f).coerceAtLeast(0f).toInt()
-                } else {
-                    (FBO_INITIAL_Y_DP * density).toInt()
-                }
-
             val params =
                 WindowManager.LayoutParams().apply {
                     type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
@@ -147,8 +134,8 @@ object FloatingBubbleOverlay {
                     width = bubbleSizePx
                     height = bubbleSizePx
                     gravity = Gravity.TOP or Gravity.START
-                    x = initialX
-                    y = initialY
+                    x = if (touchX >= 0f) (touchX - bubbleSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_X_DP * density).toInt()
+                    y = if (touchY >= 0f) (touchY - bubbleSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_Y_DP * density).toInt()
                 }
             layoutParams = params
 
