@@ -118,7 +118,7 @@ object SettingsManager {
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
     // Logging
-    private val _logLevel = MutableStateFlow(AppLog.Level.DEBUG)
+    private val _logLevel = MutableStateFlow(AppLog.Level.WARN)
     val logLevel: StateFlow<AppLog.Level> = _logLevel.asStateFlow()
 
     fun init(context: Context) {
@@ -130,7 +130,7 @@ object SettingsManager {
         // code running immediately after init() (e.g. SignatureGuard) already
         // logs at the user-configured level.  A bounded timeout prevents ANR on
         // pathological I/O — if DataStore does not respond within the window, the
-        // default DEBUG level is retained and startup proceeds normally.
+        // default WARN level is retained and startup proceeds normally.
         runBlocking(Dispatchers.IO) {
             try {
                 val prefs =
@@ -140,7 +140,7 @@ object SettingsManager {
                 if (prefs != null) {
                     val level =
                         AppLog.Level.entries.firstOrNull { it.name == prefs[KEY_LOG_LEVEL] }
-                            ?: AppLog.Level.DEBUG
+                            ?: AppLog.Level.WARN
                     _logLevel.value = level
                     AppLog.level = level
 

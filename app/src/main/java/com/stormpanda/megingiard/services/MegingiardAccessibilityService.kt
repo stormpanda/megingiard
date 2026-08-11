@@ -201,7 +201,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 val isWirelessOn = isWirelessDebuggingActive(context)
                                 val hasLocalCreds = PrivdBootstrapper.hasCredentials(context)
 
-                                val isSubScreen = isWirelessDebuggingSubScreen(rootNode, config)
+                                val isSubScreen = isWirelessDebuggingSubScreen(rootNode, config.wirelessDebuggingQueryAndKeyword)
 
                                 if (isSubScreen) {
                                     if (isWirelessOn) {
@@ -617,30 +617,20 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
         }
 
-        // 3. Fallback: Recursive Keyword matching (multi-language fallback)
-        return findAndClickPairDialogByKeywordRecursive(rootNode, pairKeywords)
-    }
+        // 3. Fallback: Keyword matching (multi-language fallback)
+        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId("android:id/title") ?: emptyList()
+        val settingsTitleNodes = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/title") ?: emptyList()
+        val allTitles = (titleNodes + settingsTitleNodes).distinct()
 
-    private fun findAndClickPairDialogByKeywordRecursive(
-        node: AccessibilityNodeInfo,
-        pairKeywords: List<String>,
-    ): Boolean {
-        val text = node.text?.toString() ?: ""
-        val contentDesc = node.contentDescription?.toString() ?: ""
-        val combined = "$text $contentDesc".lowercase()
+        for (titleNode in allTitles) {
+            val titleText = titleNode.text?.toString() ?: ""
+            val isPairItem = pairKeywords.any { kw -> titleText.contains(kw, ignoreCase = true) }
 
-        val isPairItem = pairKeywords.any { kw -> combined.contains(kw.lowercase()) }
-        if (isPairItem) {
-            val clickable = findClickableAncestorOrSelf(node) ?: node
-            AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row via recursive keyword ('$text'), clicking")
-            if (clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                return true
+            if (isPairItem) {
+                val clickable = findClickableAncestorOrSelf(titleNode) ?: titleNode
+                AppLog.i(TAG, "findAndClickPairDialog: Found pair dialog row via keyword ('$titleText'), clicking")
+                return clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
             }
-        }
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (findAndClickPairDialogByKeywordRecursive(child, pairKeywords)) return true
         }
         return false
     }
@@ -725,19 +715,17 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     private fun isWirelessDebuggingSubScreen(
         rootNode: AccessibilityNodeInfo,
-        config: AutoSetupLanguageConfig,
+        wirelessDebuggingKeyword: String,
     ): Boolean {
         val sb = StringBuilder()
         collectAllText(rootNode, sb)
         val allText = sb.toString().lowercase()
 
-        // The Developer options screen also carries the Wireless debugging label — it is the row
-        // that leads into the sub-screen. Distinguishing the two therefore needs the Developer
-        // options title in the active system language, which lives in the language config so
-        // every supported locale stays in one place.
-        val isDevOptionsPresent = config.developerOptionsKeywords.any { kw -> allText.contains(kw.lowercase()) }
+        val devOptionsKeywords =
+            listOf("developer options", "entwickleroptionen", "opciones de desarrollador", "options pour les développeurs")
+        val isDevOptionsPresent = devOptionsKeywords.any { kw -> allText.contains(kw) }
 
-        val isWirelessDebuggingPresent = allText.contains(config.wirelessDebuggingQueryAndKeyword.lowercase())
+        val isWirelessDebuggingPresent = allText.contains(wirelessDebuggingKeyword.lowercase())
 
         return isWirelessDebuggingPresent && !isDevOptionsPresent
     }
@@ -1020,10 +1008,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
             }
 
             val targetStage =
-                if (paired) {
-                    AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
-                } else {
-                    AutoSetupTargetStage.STAGE_C_PAIRING
+                when {
+                    !devModeActive -> AutoSetupTargetStage.STAGE_C_PAIRING
+                    !wirelessActive && !paired -> AutoSetupTargetStage.STAGE_C_PAIRING
+                    !wirelessActive && paired -> AutoSetupTargetStage.STAGE_B_WIRELESS_DEBUG
+                    else -> AutoSetupTargetStage.STAGE_C_PAIRING
                 }
 
             val initialStage =

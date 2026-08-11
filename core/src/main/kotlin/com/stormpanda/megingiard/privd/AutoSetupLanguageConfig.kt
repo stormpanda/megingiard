@@ -14,10 +14,6 @@ import java.util.Locale
  * @property wirelessDebuggingQueryAndKeyword Search query and UI node matching string for Wireless Debugging.
  * @property usbDebuggingQueryAndKeyword Search query and UI node matching string for USB Debugging.
  * @property pairDeviceKeywords List of UI text keywords used to identify the "Pair device with pairing code" row.
- * @property developerOptionsKeywords Lowercased UI text keywords identifying the Developer options screen,
- *   used to tell it apart from the Wireless debugging sub-screen (both carry the wireless debugging label).
- *   Defaults to the titles of the previously supported locales, so a new locale whose title is not
- *   among them must supply its own — otherwise Auto Setup mistakes Developer options for the sub-screen.
  * @property allowButtonKeywords List of UI text keywords used to confirm network trust dialogs.
  */
 data class AutoSetupLanguageConfig(
@@ -27,7 +23,6 @@ data class AutoSetupLanguageConfig(
     val wirelessDebuggingQueryAndKeyword: String,
     val usbDebuggingQueryAndKeyword: String,
     val pairDeviceKeywords: List<String>,
-    val developerOptionsKeywords: List<String>,
     val allowButtonKeywords: List<String>,
 ) {
     companion object {
@@ -46,10 +41,6 @@ data class AutoSetupLanguageConfig(
                         "kopplungscode koppeln",
                         "mit kopplungscode koppeln",
                         "wlan-kopplungscode",
-                    ),
-                developerOptionsKeywords =
-                    listOf(
-                        "entwickleroptionen",
                     ),
                 allowButtonKeywords =
                     listOf(
@@ -78,10 +69,6 @@ data class AutoSetupLanguageConfig(
                         "emparejar dispositivo con un código de sincronización",
                         "código de sincronización",
                     ),
-                developerOptionsKeywords =
-                    listOf(
-                        "opciones de desarrollador",
-                    ),
                 allowButtonKeywords =
                     listOf(
                         "permitir",
@@ -109,10 +96,6 @@ data class AutoSetupLanguageConfig(
                         "code d'association",
                         "code de synchronisation",
                     ),
-                developerOptionsKeywords =
-                    listOf(
-                        "options pour les développeurs",
-                    ),
                 allowButtonKeywords =
                     listOf(
                         "autoriser",
@@ -136,10 +119,6 @@ data class AutoSetupLanguageConfig(
                         "pair device with pairing code",
                         "pair with pairing code",
                     ),
-                developerOptionsKeywords =
-                    listOf(
-                        "developer options",
-                    ),
                 allowButtonKeywords =
                     listOf(
                         "allow",
@@ -152,44 +131,6 @@ data class AutoSetupLanguageConfig(
         val ENGLISH_AU = ENGLISH_US.copy(localeTag = "en-AU")
 
         val ENGLISH = ENGLISH_US
-
-        val CHINESE_TW =
-            AutoSetupLanguageConfig(
-                localeTag = "zh-TW",
-                languageCode = "zh",
-                buildNumberQueryAndKeyword = "版本號碼",
-                wirelessDebuggingQueryAndKeyword = "無線偵錯",
-                usbDebuggingQueryAndKeyword = "USB 偵錯",
-                pairDeviceKeywords =
-                    listOf(
-                        "使用配對碼配對裝置",
-                        "配對碼配對",
-                        "使用配對碼",
-                        "裝置配對碼",
-                        "配對碼",
-                    ),
-                developerOptionsKeywords =
-                    listOf(
-                        "開發人員選項",
-                    ),
-                allowButtonKeywords =
-                    listOf(
-                        "允許",
-                        "確定",
-                    ),
-            )
-
-        val CHINESE_HK = CHINESE_TW.copy(localeTag = "zh-HK")
-        val CHINESE_MO = CHINESE_TW.copy(localeTag = "zh-MO")
-
-        /**
-         * Traditional Chinese only. Simplified Chinese (zh-CN, zh-SG) uses different
-         * Settings wording ("版本号", "无线调试", …) and is deliberately not mapped here,
-         * so there is no alias for a bare `CHINESE`.
-         */
-        val CHINESE_TRADITIONAL = CHINESE_TW
-
-        private val TRADITIONAL_CHINESE_SUBTAGS = setOf("tw", "hk", "mo", "hant")
 
         private val CONFIGS_BY_TAG: Map<String, AutoSetupLanguageConfig> =
             listOf(
@@ -205,20 +146,7 @@ data class AutoSetupLanguageConfig(
                 ENGLISH_GB,
                 ENGLISH_CA,
                 ENGLISH_AU,
-                CHINESE_TW,
-                CHINESE_HK,
-                CHINESE_MO,
             ).associateBy { it.localeTag.lowercase() }
-
-        /**
-         * Resolves a `zh` locale to the Traditional Chinese config only when the region or
-         * script subtag says so. Simplified Chinese must return null rather than fall back
-         * to Traditional keywords: the Settings entries it would search for do not exist on
-         * a Simplified device, so Auto Setup would stall instead of reporting the language
-         * as unsupported.
-         */
-        private fun traditionalChineseOrNull(subtags: List<String>): AutoSetupLanguageConfig? =
-            if (subtags.any { it in TRADITIONAL_CHINESE_SUBTAGS }) CHINESE_TW else null
 
         /**
          * Selects appropriate [AutoSetupLanguageConfig] for given [Locale], or null if unsupported.
@@ -236,10 +164,6 @@ data class AutoSetupLanguageConfig(
                 "es" -> SPANISH_ES
                 "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
-                "zh" ->
-                    traditionalChineseOrNull(
-                        listOf(locale.country.lowercase(), locale.script.lowercase()),
-                    )
                 else -> null
             }
         }
@@ -260,14 +184,12 @@ data class AutoSetupLanguageConfig(
                 return matchedByTag
             }
 
-            val subtags = cleanTag.split("-")
-            val primaryLang = subtags.firstOrNull() ?: ""
+            val primaryLang = cleanTag.split("-").firstOrNull() ?: ""
             return when (primaryLang) {
                 "de" -> GERMAN_DE
                 "es" -> SPANISH_ES
                 "fr" -> FRENCH_FR
                 "en" -> ENGLISH_US
-                "zh" -> traditionalChineseOrNull(subtags)
                 else -> null
             }
         }

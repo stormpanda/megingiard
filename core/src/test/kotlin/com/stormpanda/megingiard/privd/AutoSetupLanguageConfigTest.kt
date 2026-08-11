@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.privd
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Locale
 
@@ -124,83 +123,5 @@ class AutoSetupLanguageConfigTest {
         org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("es-ES"))
         org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("fr-FR"))
         org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("en-US"))
-    }
-
-    @Test
-    fun everyConfigCarriesDeveloperOptionsKeywords() {
-        // Auto Setup tells the Wireless debugging sub-screen apart from Developer options by
-        // looking for the Developer options title, because both screens show the wireless
-        // debugging label. A locale missing this keyword reports the sub-screen while still on
-        // Developer options and then scrolls forever looking for the pairing row.
-        val configs =
-            listOf(
-                AutoSetupLanguageConfig.GERMAN_DE,
-                AutoSetupLanguageConfig.SPANISH_ES,
-                AutoSetupLanguageConfig.FRENCH_FR,
-                AutoSetupLanguageConfig.ENGLISH_US,
-                AutoSetupLanguageConfig.CHINESE_TW,
-            )
-
-        configs.forEach { config ->
-            val keywords = config.developerOptionsKeywords
-            org.junit.Assert.assertTrue(
-                "${config.localeTag} has no developerOptionsKeywords",
-                keywords.isNotEmpty(),
-            )
-            keywords.forEach { keyword ->
-                org.junit.Assert.assertTrue(
-                    "${config.localeTag} keyword '$keyword' must be lowercase — matching lowercases the screen text",
-                    keyword == keyword.lowercase(),
-                )
-            }
-        }
-
-        // Every supported language explicitly supplies its own developerOptionsKeywords.
-        org.junit.Assert.assertTrue(
-            AutoSetupLanguageConfig.ENGLISH_US.developerOptionsKeywords.contains("developer options"),
-        )
-        org.junit.Assert.assertTrue(
-            AutoSetupLanguageConfig.GERMAN_DE.developerOptionsKeywords.contains("entwickleroptionen"),
-        )
-        assertEquals(listOf("開發人員選項"), AutoSetupLanguageConfig.CHINESE_TW.developerOptionsKeywords)
-    }
-
-    @Test
-    fun fromLocale_returnsRegionSpecificTraditionalChineseConfigs() {
-        val configZhTw = AutoSetupLanguageConfig.fromLocale(Locale.TRADITIONAL_CHINESE)
-        val configZhHk = AutoSetupLanguageConfig.fromLocale(Locale("zh", "HK"))
-        val configZhMo = AutoSetupLanguageConfig.fromLocale(Locale("zh", "MO"))
-
-        assertEquals("zh-TW", configZhTw.localeTag)
-        assertEquals("zh", configZhTw.languageCode)
-        assertEquals("版本號碼", configZhTw.buildNumberQueryAndKeyword)
-        assertEquals("無線偵錯", configZhTw.wirelessDebuggingQueryAndKeyword)
-        assertEquals("USB 偵錯", configZhTw.usbDebuggingQueryAndKeyword)
-
-        assertEquals("zh-HK", configZhHk.localeTag)
-        assertEquals("zh-MO", configZhMo.localeTag)
-    }
-
-    @Test
-    fun fromLanguageTag_resolvesTraditionalChineseTags() {
-        assertEquals("zh-TW", AutoSetupLanguageConfig.fromLanguageTag("zh-TW").localeTag)
-        assertEquals("zh-HK", AutoSetupLanguageConfig.fromLanguageTag("zh-HK").localeTag)
-
-        // Script subtag present but no region, and region present alongside a script subtag.
-        assertEquals("zh-TW", AutoSetupLanguageConfig.fromLanguageTag("zh-Hant").localeTag)
-        assertEquals("zh-TW", AutoSetupLanguageConfig.fromLanguageTag("zh-Hant-TW").localeTag)
-    }
-
-    @Test
-    fun simplifiedChineseStaysUnsupportedAndDoesNotFallBackToTraditional() {
-        // Simplified Settings entries read "版本号" / "无线调试", so the Traditional keywords
-        // would never match. Reporting the language as unsupported is correct; silently
-        // handing back the Traditional config would stall Auto Setup mid-flow.
-        assertNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.SIMPLIFIED_CHINESE))
-        assertNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale("zh", "SG")))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-CN"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-Hans"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-Hans-CN"))
-        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh"))
     }
 }
