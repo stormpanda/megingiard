@@ -1168,6 +1168,13 @@ class MultiCutoutContainer(
             invalidate()
         }
 
+    private val addXfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+    private val transparentToBlackColors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
+    private val blackToTransparentColors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
+    private val circleBlendColors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
+    private val circleBlendStops = floatArrayOf(0f, 0f, 1f)
+    private val activeStrengthsSet = mutableSetOf<Int>()
+
     private val cutoutPaint = Paint()
     private val blendPaint =
         Paint().apply {
@@ -1188,6 +1195,7 @@ class MultiCutoutContainer(
         height: Int,
     ) {
         var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        var accumCanvas: Canvas? = accumulated?.let { Canvas(it) }
         var initialized: Boolean = false
 
         val blendPaint =
@@ -1200,6 +1208,7 @@ class MultiCutoutContainer(
         fun recycle() {
             accumulated?.recycle()
             accumulated = null
+            accumCanvas = null
         }
     }
 
@@ -1223,20 +1232,28 @@ class MultiCutoutContainer(
     }
 
     fun updateAccumulator(textureView: TextureView) {
-        val activeStrengths = if (isFrozen) emptySet() else cutouts.filter { it.motionSmoothing }.map { it.motionSmoothingStrength }.toSet()
-        if (activeStrengths.isNotEmpty() && srcWidth > 0 && srcHeight > 0) {
+        activeStrengthsSet.clear()
+        if (!isFrozen) {
+            for (i in cutouts.indices) {
+                val cutout = cutouts[i]
+                if (cutout.motionSmoothing) {
+                    activeStrengthsSet.add(cutout.motionSmoothingStrength)
+                }
+            }
+        }
+        if (activeStrengthsSet.isNotEmpty() && srcWidth > 0 && srcHeight > 0) {
             // 1. Recycle accumulators for strengths that are no longer active
             val iterator = accumulators.iterator()
             while (iterator.hasNext()) {
                 val entry = iterator.next()
-                if (entry.key !in activeStrengths) {
+                if (entry.key !in activeStrengthsSet) {
                     entry.value.recycle()
                     iterator.remove()
                 }
             }
 
             // 2. Ensure accumulators exist and have correct sizes
-            for (strength in activeStrengths) {
+            for (strength in activeStrengthsSet) {
                 val existing = accumulators[strength]
                 if (existing != null) {
                     val acc = existing.accumulated
@@ -1268,21 +1285,18 @@ class MultiCutoutContainer(
             }
 
             // 5. Update each active accumulator with the captured frame
-            for (strength in activeStrengths) {
+            for (strength in activeStrengthsSet) {
                 val acc = accumulators[strength] ?: continue
-                val accum = acc.accumulated
-                if (accum != null) {
-                    try {
-                        val accumCanvas = Canvas(accum)
-                        if (!acc.initialized) {
-                            accumCanvas.drawBitmap(scratch, 0f, 0f, null)
-                            acc.initialized = true
-                        } else {
-                            accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
-                        }
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
+                val accumCanvas = acc.accumCanvas ?: continue
+                try {
+                    if (!acc.initialized) {
+                        accumCanvas.drawBitmap(scratch, 0f, 0f, null)
+                        acc.initialized = true
+                    } else {
+                        accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
                     }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
                 }
             }
             invalidate()
@@ -1365,13 +1379,23 @@ class MultiCutoutContainer(
                 canvas.restore()
             }
 
-            // Isolate all cutout rendering in a transparent intermediate layer.
-            // ADD blending between adjacent cutouts (edge overlap) happens entirely
-            // within this layer. When the layer is restored to the parent canvas it
-            // uses the default SRC_OVER composite so cutouts alpha-blend correctly
-            // on top of the background image instead of being added to it.
+            // Isolate cutout rendering in a transparent intermediate layer ONLY when needed for ADD edge blending.
+            // Intermediate layer is only required if edge blending is active AND at least 2 cutouts exist with touching edges.
+            var hasAnyTouchingEdge = false
+            if (edgeBlending && cutouts.size > 1) {
+                for (i in cutouts.indices) {
+                    val c = cutouts[i]
+                    if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
+                        c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
+                    ) {
+                        hasAnyTouchingEdge = true
+                        break
+                    }
+                }
+            }
+
             val cutoutsLayerSaveCount =
-                if (edgeBlending) {
+                if (hasAnyTouchingEdge) {
                     canvas.saveLayer(0f, 0f, parentW, parentH, null)
                 } else {
                     canvas.save()
@@ -1405,7 +1429,7 @@ class MultiCutoutContainer(
                     if (cutout.opacity < 1f || hasTouching) {
                         cutoutPaint.alpha = (cutout.opacity * 255).toInt()
                         if (hasTouching) {
-                            cutoutPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD)
+                            cutoutPaint.xfermode = addXfermode
                         } else {
                             cutoutPaint.xfermode = null
                         }
@@ -1478,35 +1502,40 @@ class MultiCutoutContainer(
                         if (edgeBlending) {
                             val r = min(dw, dh) / 2f
                             val stop = maxOf(0f, r - blendW) / r
-                            val colors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
-                            val stops = floatArrayOf(0f, stop, 1f)
-                            val shader = RadialGradient(dw / 2f, dh / 2f, r, colors, stops, Shader.TileMode.CLAMP)
+                            circleBlendStops[1] = stop
+                            val shader = RadialGradient(dw / 2f, dh / 2f, r, circleBlendColors, circleBlendStops, Shader.TileMode.CLAMP)
                             blendPaint.shader = shader
                             canvas.drawRect(0f, 0f, dw, dh, blendPaint)
                             blendPaint.shader = null
                         }
                     } else if (hasTouching) {
                         if (touchesLeft) {
-                            val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                            val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                            val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
                             blendPaint.shader = shader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesRight) {
-                            val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                            val shader = LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, colors, null, Shader.TileMode.CLAMP)
+                            val shader =
+                                LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
                             blendPaint.shader = shader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesTop) {
-                            val colors = intArrayOf(Color.TRANSPARENT, Color.BLACK)
-                            val shader = LinearGradient(0f, -topExt, 0f, topExt, colors, null, Shader.TileMode.CLAMP)
+                            val shader = LinearGradient(0f, -topExt, 0f, topExt, transparentToBlackColors, null, Shader.TileMode.CLAMP)
                             blendPaint.shader = shader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesBottom) {
-                            val colors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
-                            val shader = LinearGradient(0f, dh - bottomExt, 0f, dh + bottomExt, colors, null, Shader.TileMode.CLAMP)
+                            val shader =
+                                LinearGradient(
+                                    0f,
+                                    dh - bottomExt,
+                                    0f,
+                                    dh + bottomExt,
+                                    blackToTransparentColors,
+                                    null,
+                                    Shader.TileMode.CLAMP,
+                                )
                             blendPaint.shader = shader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }

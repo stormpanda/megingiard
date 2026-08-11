@@ -308,11 +308,15 @@ object ScreenCaptureManager {
             followAnimationJob?.cancel()
             followAnimationJob = null
             followAnimationCutoutId = null
-            val updated =
-                _cutouts.value.map {
-                    if (it.id == targetCutout.id) it.copy(srcX = targetSrcX, srcY = targetSrcY) else it
+            if (targetCutout.srcX != targetSrcX || targetCutout.srcY != targetSrcY) {
+                val currentList = _cutouts.value
+                val index = currentList.indexOfFirst { it.id == targetCutout.id }
+                if (index != -1) {
+                    val newList = ArrayList(currentList)
+                    newList[index] = targetCutout.copy(srcX = targetSrcX, srcY = targetSrcY)
+                    _cutouts.value = newList
                 }
-            _cutouts.value = updated
+            }
         } else {
             targetFollowX = targetSrcX
             targetFollowY = targetSrcY
@@ -334,8 +338,9 @@ object ScreenCaptureManager {
                     val currTargetY = targetFollowY
 
                     val list = _cutouts.value
-                    val curCutout = list.find { it.id == cutoutId }
-                    if (curCutout == null) break
+                    val index = list.indexOfFirst { it.id == cutoutId }
+                    if (index == -1) break
+                    val curCutout = list[index]
                     val curX = curCutout.srcX
                     val curY = curCutout.srcY
 
@@ -343,22 +348,20 @@ object ScreenCaptureManager {
                     val dy = currTargetY - curY
 
                     if (abs(dx) < epsilon && abs(dy) < epsilon) {
-                        val updated =
-                            _cutouts.value.map {
-                                if (it.id == cutoutId) it.copy(srcX = currTargetX, srcY = currTargetY) else it
-                            }
-                        _cutouts.value = updated
+                        if (curX != currTargetX || curY != currTargetY) {
+                            val newList = ArrayList(list)
+                            newList[index] = curCutout.copy(srcX = currTargetX, srcY = currTargetY)
+                            _cutouts.value = newList
+                        }
                         break
                     } else {
                         val nextX = curX + dx * lerpFactor
                         val nextY = curY + dy * lerpFactor
-                        val updated =
-                            _cutouts.value.map {
-                                if (it.id == cutoutId) it.copy(srcX = nextX, srcY = nextY) else it
-                            }
-                        _cutouts.value = updated
+                        val newList = ArrayList(list)
+                        newList[index] = curCutout.copy(srcX = nextX, srcY = nextY)
+                        _cutouts.value = newList
                     }
-                    delay(10)
+                    delay(16)
                 }
             }
     }
