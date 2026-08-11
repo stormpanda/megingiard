@@ -32,7 +32,7 @@
     <string name="settings_section_appearance">外觀</string>
     <string name="settings_global_title">設定</string>
     <string name="settings_back">返回</string>
-    <string name="settings_accent_color">強調色</string>
+    <string name="settings_accent_color">主題重點色</string>
     <string name="settings_theme">主題</string>
     <string name="theme_dark">深色</string>
     <string name="theme_dark_oled">深色 OLED</string>
@@ -63,10 +63,10 @@
     <string name="settings_accessibility_status_inactive">未啟用（點擊以啟用）</string>
     <string name="settings_accessibility_status_desc">讓 Megingiard 能夠偵測當前運行的應用程式，以便自動切換設定檔。</string>
     <string name="settings_accessibility_setup">前往設定</string>
-    <string name="settings_accent_color_picker_title">選擇強調色</string>
+    <string name="settings_accent_color_picker_title">選擇主題重點色</string>
     <string name="settings_accent_color_custom">自定義</string>
-    <string name="settings_accent_suggestions_title">推薦強調色</string>
-    <string name="settings_accent_palette_suggestions">預設強調色</string>
+    <string name="settings_accent_suggestions_title">推薦主題重點色</string>
+    <string name="settings_accent_palette_suggestions">預設主題重點色</string>
     <string name="settings_accent_suggestions_close">關閉</string>
     <string name="settings_color_brightness">亮度</string>
     <string name="settings_color_cancel">取消</string>
@@ -195,9 +195,9 @@
     <string name="macropad_icon_picker_no_results">找不到圖示</string>
     <string name="macropad_icon_picker_filled">填滿</string>
     <string name="macropad_icon_picker_currently_selected">當前選擇</string>
-    <string name="settings_section_config">配置</string>
+    <string name="settings_section_config">備份與設定檔</string>
     <string name="settings_section_updates">應用程式更新</string>
-    <string name="settings_section_data">數據</string>
+    <string name="settings_section_data">還原與重置</string>
     <string name="settings_restore_defaults">還原預設設定檔</string>
     <string name="settings_restore_defaults_desc">刪除所有設定檔並建立一個空白預設設定檔</string>
     <string name="settings_restore_defaults_confirm">這將刪除所有現有的設定檔與巨集，並建立一個空白設定檔。此操作無法撤銷。</string>
@@ -420,8 +420,8 @@
     <string name="settings_jump_general">一般</string>
     <string name="settings_jump_automation">自動化</string>
     <string name="settings_jump_appearance">外觀</string>
-    <string name="settings_jump_data">數據</string>
-    <string name="settings_jump_config">配置</string>
+    <string name="settings_jump_data">還原與重置</string>
+    <string name="settings_jump_config">備份與設定檔</string>
     <string name="settings_jump_updates">應用程式更新</string>
     <string name="settings_jump_input">輸入</string>
     <string name="settings_jump_diagnostics">診斷</string>
@@ -501,7 +501,7 @@
     <string name="layout_settings_select_border_color">選擇邊框顏色</string>
     <string name="layout_settings_select_bg_color">選擇淡出顏色</string>
     <string name="layout_settings_color_neutral">中性風格</string>
-    <string name="layout_settings_color_accent">強調色</string>
+    <string name="layout_settings_color_accent">主題重點色</string>
     <string name="layout_settings_recent_colors">最近使用的顏色</string>
     <string name="layout_settings_no_recent_colors">尚無最近使用的顏色</string>
     <string name="layout_settings_color_layout_default">配置預設值</string>
@@ -522,7 +522,7 @@
     <string name="help_layout_settings_colors_title">自訂預設顏色</string>
     <string name="help_layout_settings_colors_desc">設定此配置中所有按鈕的預設顏色（文字／圖示、外框與漸隱顏色）。個別按鈕可以各自覆寫這些預設值。</string>
     <string name="help_layout_settings_palette_title">快速調色盤</string>
-    <string name="help_layout_settings_palette_desc">點擊顏色旁邊的調色盤圖示，即可從標準的中性／強調色樣式，或最近選過的自訂顏色中挑選。</string>
+    <string name="help_layout_settings_palette_desc">點擊顏色旁邊的調色盤圖示，即可從標準的中性／主題重點色樣式，或最近選過的自訂顏色中挑選。</string>
     <string name="help_bg_settings_intro">設定此配置的背景圖片設定、調暗、抓取與遮罩選項。</string>
     <string name="help_bg_settings_dimming_title">調暗</string>
     <string name="help_bg_settings_dimming_desc">使用滑桿調暗背景圖片。範圍從 0% (不調暗) 到 90% (最大調暗)，以保持按鈕清晰可見。</string>
@@ -840,7 +840,7 @@
     <string name="help_settings_accessibility_desc">自動切換設定檔所需。Android 權限要求此服務以偵測主螢幕上當前活動的遊戲。點擊此列進行配置。</string>
     <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
     <string name="help_settings_gamepad_swap_desc">如果您偏好任天堂配置 (A 在右側，B 在底部) 而非預設的 Xbox 配置 (A 在底部，B 在右側)，請啟用此項。注入的鍵碼將保持不變。</string>
-    <string name="help_settings_accent_desc">自定義活動按鈕與分頁的強調顏色。自定義強調色套用於深色與深色 OLED 主題；點擊顏色預覽以開啟自定義選色輪，或點擊調色盤圖示以選擇預設的主題強調顏色。</string>
+    <string name="help_settings_accent_desc">自定義活動按鈕與分頁的主題重點色。自定義主題重點色套用於深色與深色 OLED 主題；點擊顏色預覽以開啟自定義選色輪，或點擊調色盤圖示以選擇預設的主題重點顏色。</string>
     <string name="help_settings_theme_desc">從 8 種獨特視覺主題中選擇，包括深色、深色 OLED、Megingiard、Mjölnir 鋼鐵、英靈殿日落、北極光、復古磷光體與皇家阿斯嘉特。</string>
     <string name="help_settings_restore_desc">如果配置錯誤，可使用此項將所有設定還原為出廠預設值。這將刪除您所有自定義的設定檔、配置與巨集。</string>
     <string name="help_settings_export_desc">建立自定義設定檔與配置的完整備份。建議在執行應用程式更新或重置設定前進行備份。</string>
@@ -875,7 +875,7 @@
     <string name="help_quickmenu_view_switch_label">切換至 Hub / 遊戲設定檔</string>
     <string name="help_quickmenu_view_switch_desc">在 Companion Hub 儀表板與當前活動遊戲設定檔版面之間手動切換（會停用自動切換）。</string>
     <string name="help_quickmenu_edit_desc">開啟「編輯設定檔／配置」畫面，您可以在此新增、移動與設定按鈕，管理設定檔與配置，以及建立或編輯巨集。</string>
-    <string name="help_quickmenu_settings_desc">開啟全域設定螢幕以進行 App 範圍配置，例如主題、強調色、投影自動啟動與特權模式設定。</string>
+    <string name="help_quickmenu_settings_desc">開啟全域設定視窗以進行 App 細部配置，例如主題、主題重點色、鏡像自動啟動與影音模式設定。</string>
     <string name="help_quickmenu_shut_off_label">關閉 App</string>
     <string name="help_quickmenu_shut_off_desc">正常關閉 Megingiard，並停止螢幕投影與背景服務。</string>
     <string name="help_quickmenu_help_label">說明 (此螢幕)</string>
@@ -913,8 +913,8 @@
     <string name="macro_tutorial_randomize_body">您可以在列表視圖底部的設定區塊下啟用時序隨機化。這會為每次播放的步驟延遲增加微小的隨機偏移，模擬人類輸入的不一致性。對於線上遊戲，強烈建議開啟此項以防止防作弊偵測。請記住，巨集旨在使您的生活更輕鬆，而不應讓其他玩家的生活更艱難；本 App 與此功能不適用於線上作弊。</string>
     <string name="macro_tutorial_btn_got_it">了解</string>
     <string name="macro_tutorial_btn_dont_show">不再顯示</string>
-    <string name="settings_start_welcome_tour">播放歡迎嚮導與快速設定</string>
-    <string name="settings_start_welcome_tour_desc">重新執行分步引導教學與邊緣手勢功能導覽</string>
+    <string name="settings_start_welcome_tour">重新開啟新手引導與快速設定</string>
+    <string name="settings_start_welcome_tour_desc">重新執行分步功能教學與邊緣手勢導覽</string>
     <string name="settings_start_welcome_tour_btn">開始</string>
     <string name="onboarding_step_welcome">歡迎使用</string>
     <string name="onboarding_step_quick_menu">邊緣手勢</string>
