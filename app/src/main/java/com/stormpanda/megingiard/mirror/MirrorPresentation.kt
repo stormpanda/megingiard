@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
@@ -25,6 +26,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
 import android.view.Surface
@@ -972,6 +974,9 @@ class MirrorPresentation(
             }
         }
         scope.launch {
+            var lastLoadedPath: String? = null
+            var cachedBitmap: Bitmap? = null
+
             MacroPadState.activeLayout.collect { layout ->
                 val path = layout?.backgroundImagePath
                 val useAsMask = layout?.useBackgroundImageAsMask == true
@@ -980,39 +985,29 @@ class MirrorPresentation(
                 val oy = layout?.bgImageOffsetY ?: 0f
                 val dim = layout?.backgroundImageDim ?: 0f
                 if (path != null) {
-                    try {
-                        val bitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                        withContext(Dispatchers.Main) {
-                            if (bitmap != null) {
-                                multiCutoutContainer?.bgImageScale = scale
-                                multiCutoutContainer?.bgImageOffsetX = ox
-                                multiCutoutContainer?.bgImageOffsetY = oy
-                                multiCutoutContainer?.bgImageDim = dim
-                                if (useAsMask) {
-                                    container.setBackgroundColor(Color.BLACK)
-                                    container.background = null
-                                    multiCutoutContainer?.useAsMask = true
-                                    multiCutoutContainer?.bgBitmap = bitmap
-                                } else {
-                                    container.setBackgroundColor(Color.BLACK)
-                                    container.background = null
-                                    multiCutoutContainer?.useAsMask = false
-                                    multiCutoutContainer?.bgBitmap = bitmap
-                                }
-                            } else {
-                                container.setBackgroundColor(Color.BLACK)
-                                container.background = null
-                                multiCutoutContainer?.bgImageScale = 1f
-                                multiCutoutContainer?.bgImageOffsetX = 0f
-                                multiCutoutContainer?.bgImageOffsetY = 0f
-                                multiCutoutContainer?.bgImageDim = 0f
-                                multiCutoutContainer?.useAsMask = false
-                                multiCutoutContainer?.bgBitmap = null
-                            }
+                    if (path != lastLoadedPath) {
+                        try {
+                            val bitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                            lastLoadedPath = path
+                            cachedBitmap = bitmap
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
+                            lastLoadedPath = null
+                            cachedBitmap = null
                         }
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
-                        withContext(Dispatchers.Main) {
+                    }
+                    val bitmap = cachedBitmap
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            multiCutoutContainer?.bgImageScale = scale
+                            multiCutoutContainer?.bgImageOffsetX = ox
+                            multiCutoutContainer?.bgImageOffsetY = oy
+                            multiCutoutContainer?.bgImageDim = dim
+                            container.setBackgroundColor(Color.BLACK)
+                            container.background = null
+                            multiCutoutContainer?.useAsMask = useAsMask
+                            multiCutoutContainer?.bgBitmap = bitmap
+                        } else {
                             container.setBackgroundColor(Color.BLACK)
                             container.background = null
                             multiCutoutContainer?.bgImageScale = 1f
@@ -1024,6 +1019,8 @@ class MirrorPresentation(
                         }
                     }
                 } else {
+                    lastLoadedPath = null
+                    cachedBitmap = null
                     withContext(Dispatchers.Main) {
                         container.setBackgroundColor(Color.BLACK)
                         container.background = null
@@ -1174,6 +1171,16 @@ class MultiCutoutContainer(
     private val circleBlendColors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
     private val circleBlendStops = floatArrayOf(0f, 0f, 1f)
     private val activeStrengthsSet = mutableSetOf<Int>()
+
+    private val horizontalGradientShader = LinearGradient(0f, 0f, 1f, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
+    private val horizontalReverseGradientShader = LinearGradient(0f, 0f, 1f, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
+    private val verticalGradientShader = LinearGradient(0f, 0f, 0f, 1f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
+    private val verticalReverseGradientShader = LinearGradient(0f, 0f, 0f, 1f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
+    private val shaderMatrix = Matrix()
+
+    private var cachedCircleRadius = -1f
+    private var cachedCircleStop = -1f
+    private var cachedCircleShader: Shader? = null
 
     private val cutoutPaint = Paint()
     private val blendPaint =
@@ -1502,41 +1509,48 @@ class MultiCutoutContainer(
                         if (edgeBlending) {
                             val r = min(dw, dh) / 2f
                             val stop = maxOf(0f, r - blendW) / r
-                            circleBlendStops[1] = stop
-                            val shader = RadialGradient(dw / 2f, dh / 2f, r, circleBlendColors, circleBlendStops, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            if (r != cachedCircleRadius || stop != cachedCircleStop) {
+                                circleBlendStops[1] = stop
+                                cachedCircleRadius = r
+                                cachedCircleStop = stop
+                                cachedCircleShader =
+                                    RadialGradient(dw / 2f, dh / 2f, r, circleBlendColors, circleBlendStops, Shader.TileMode.CLAMP)
+                            }
+                            blendPaint.shader = cachedCircleShader
                             canvas.drawRect(0f, 0f, dw, dh, blendPaint)
                             blendPaint.shader = null
                         }
                     } else if (hasTouching) {
                         if (touchesLeft) {
-                            val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(2f * leftExt, 1f)
+                            shaderMatrix.postTranslate(-leftExt, 0f)
+                            horizontalGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = horizontalGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesRight) {
-                            val shader =
-                                LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(2f * rightExt, 1f)
+                            shaderMatrix.postTranslate(dw - rightExt, 0f)
+                            horizontalReverseGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = horizontalReverseGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesTop) {
-                            val shader = LinearGradient(0f, -topExt, 0f, topExt, transparentToBlackColors, null, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(1f, 2f * topExt)
+                            shaderMatrix.postTranslate(0f, -topExt)
+                            verticalGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = verticalGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesBottom) {
-                            val shader =
-                                LinearGradient(
-                                    0f,
-                                    dh - bottomExt,
-                                    0f,
-                                    dh + bottomExt,
-                                    blackToTransparentColors,
-                                    null,
-                                    Shader.TileMode.CLAMP,
-                                )
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(1f, 2f * bottomExt)
+                            shaderMatrix.postTranslate(0f, dh - bottomExt)
+                            verticalReverseGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = verticalReverseGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         blendPaint.shader = null
@@ -1616,7 +1630,7 @@ private class ThrottledTextureView(
         }
 
     override fun invalidate() {
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime()
         val fps = maxFps.coerceAtLeast(1)
         val interval = if (fps >= 60) 0L else (1000L / fps)
         if (interval == 0L || now - lastInvalidateTime >= interval) {
