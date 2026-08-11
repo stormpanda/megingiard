@@ -199,8 +199,9 @@ class MirrorPresentation(
 
     private fun updateSurfaceRouting() {
         val master = masterSurface ?: return
+        val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
         val activeCutouts = ScreenCaptureManager.cutouts.value
-        val smoothingCutout = activeCutouts.firstOrNull { it.motionSmoothing }
+        val smoothingCutout = if (!isFullscreenMouseActive) activeCutouts.firstOrNull { it.motionSmoothing } else null
         if (smoothingCutout != null && srcWidth > 0 && srcHeight > 0) {
             val strength = smoothingCutout.motionSmoothingStrength
             val smoother = gpuMotionSmoother
@@ -349,6 +350,12 @@ class MirrorPresentation(
         scope.launch {
             ScreenCaptureManager.cutouts.collect { activeCutouts ->
                 mcc.cutouts = activeCutouts
+                updateSurfaceRouting()
+            }
+        }
+
+        scope.launch {
+            AppStateManager.isFullscreenMouseActive.collect {
                 updateSurfaceRouting()
             }
         }
