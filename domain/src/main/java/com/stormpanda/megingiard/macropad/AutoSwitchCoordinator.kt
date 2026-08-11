@@ -25,6 +25,8 @@ private val IGNORED_PACKAGES =
 private val IGNORED_PACKAGE_PREFIXES =
     listOf(
         "com.odin.",
+        "com.google.android.gms",
+        "com.google.android.play.games",
     )
 
 private fun isIgnoredPackage(packageName: String): Boolean {

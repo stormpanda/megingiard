@@ -139,6 +139,14 @@ class AutoSwitchCoordinatorTest {
         // When Thor hardware settings focus occurs
         AutoSwitchCoordinator.onPackageChanged("com.odin.settings")
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When Google Play Services or Play Games sign-in overlay occurs
+        AutoSwitchCoordinator.onPackageChanged("com.google.android.gms")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+        AutoSwitchCoordinator.onPackageChanged("com.google.android.gms.auth.api.signin")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+        AutoSwitchCoordinator.onPackageChanged("com.google.android.play.games")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
     }
 
