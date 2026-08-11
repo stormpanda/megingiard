@@ -4,6 +4,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,7 +49,7 @@ class DirectPrivdMirrorSession(
         stopping = true
         AppLog.i(TAG, "stop()")
         if (shouldStopRemote) {
-            scope.launch { runCatching { PrivdClient.stopMirror() } }
+            scope.launch(NonCancellable) { runCatching { PrivdClient.stopMirror() } }
         }
         _state.value = State.STOPPED
     }

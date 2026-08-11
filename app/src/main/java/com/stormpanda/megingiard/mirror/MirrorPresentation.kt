@@ -424,20 +424,30 @@ class MirrorPresentation(
                                 !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive &&
                                     !isWizardActive
                             val density = LocalDensity.current
-                            val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
-                            val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
-                            val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
+                            val edgeZonePx = remember(density) { with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() } }
+                            val swipeThresholdPx = remember(density) { with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() } }
+                            val quickMenuBarZoneWidthPx =
+                                remember(density) { with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() } }
 
-                            val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-                            val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-                            val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
-                            val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
-                            val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
-                            val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+                            val (kbBarMinX, kbBarMaxX) =
+                                remember(density) {
+                                    val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
+                                    val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
+                                    val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
+                                    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
+                                    val minX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
+                                    val maxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+                                    Pair(minX, maxX)
+                                }
 
-                            val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-                            val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-                            val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
+                            val (tpBarWidthPx, tpBarEndPaddingPx, tpBarZoneWidthPx) =
+                                remember(density) {
+                                    Triple(
+                                        with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() },
+                                        with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() },
+                                        with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() },
+                                    )
+                                }
                             val context = LocalContext.current
 
                             val projectionController =

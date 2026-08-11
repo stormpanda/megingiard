@@ -32,8 +32,8 @@ private const val TOUCH_STOP_FLUSH_TIMEOUT_MS = 100L
 object TouchInjector {
     // Physical dimensions of fts_ts (event6) in portrait orientation.
     // These are fixed hardware constants; they do not change with display rotation.
-    private const val PHYS_W = 1080
-    private const val PHYS_H = 1920
+    const val THOR_SENSOR_W = 1080f
+    const val THOR_SENSOR_H = 1920f
 
     private val activeClients = mutableSetOf<String>()
 
@@ -174,8 +174,8 @@ object TouchInjector {
     ) {
         val cx = normalizedX.coerceIn(-0.5f, 1.5f)
         val cy = normalizedY.coerceIn(-0.5f, 1.5f)
-        val px = ((1f - cy) * PHYS_W).toInt()
-        val py = (cx * PHYS_H).toInt()
+        val px = ((1f - cy) * THOR_SENSOR_W).toInt()
+        val py = (cx * THOR_SENSOR_H).toInt()
 
         if (usePrivd) {
             if (action == TouchAction.UP) {
