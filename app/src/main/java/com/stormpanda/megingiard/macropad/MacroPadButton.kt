@@ -383,19 +383,6 @@ private fun Drawable.toGrayscaleImageBitmap(): ImageBitmap? =
         null
     }
 
-private fun Drawable.toImageBitmap(): ImageBitmap? =
-    try {
-        val width = if (intrinsicWidth > 0) intrinsicWidth else 48
-        val height = if (intrinsicHeight > 0) intrinsicHeight else 48
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        setBounds(0, 0, canvas.width, canvas.height)
-        draw(canvas)
-        bitmap.asImageBitmap()
-    } catch (e: Exception) {
-        null
-    }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Scroll wheel face — two chevrons up + two chevrons down
 // ─────────────────────────────────────────────────────────────────────────────

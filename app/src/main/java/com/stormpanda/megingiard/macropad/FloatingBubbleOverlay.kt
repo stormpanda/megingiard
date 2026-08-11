@@ -219,9 +219,7 @@ object FloatingBubbleOverlay {
                         LocalAppColors provides appColors,
                         LocalAppDimens provides AppDimens(),
                     ) {
-                        FloatingBubbleContent(
-                            packageName = packageName,
-                        )
+                        FloatingBubbleContent()
                     }
                 }
             }
@@ -259,7 +257,7 @@ object FloatingBubbleOverlay {
 }
 
 @Composable
-private fun FloatingBubbleContent(packageName: String) {
+private fun FloatingBubbleContent() {
     val colors = LocalAppColors.current
     val context = LocalContext.current
     var visible by remember { mutableStateOf(false) }
