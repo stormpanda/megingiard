@@ -415,6 +415,7 @@ class MainActivity : ComponentActivity() {
                         AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
                         AppLanguage.EN -> LocaleList(Locale.ENGLISH)
                         AppLanguage.DE -> LocaleList(Locale.GERMAN)
+                        AppLanguage.ZH_TW -> LocaleList(Locale.TRADITIONAL_CHINESE)
                     }
                 val localeManager = getSystemService(LocaleManager::class.java)
                 if (localeManager.applicationLocales != desired) {

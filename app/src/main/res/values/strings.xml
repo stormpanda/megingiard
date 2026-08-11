@@ -349,6 +349,7 @@ Open Settings to create a layout.</string>
     <string name="settings_language_system">System default</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_zh_tw">繁體中文</string>
     <string name="settings_log_level">Log Level</string>
     <string name="settings_gamepad_swap_face_buttons">Swap face button labels (A/B and X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Display Nintendo-style labels in the gamepad picker (A↔B and X↔Y). Injected keycodes remain unchanged.</string>
@@ -968,7 +969,7 @@ Open Settings to create a layout.</string>
     <string name="help_settings_auto_profile_desc">Essential for seamless gaming. Links macro profiles to specific apps so your custom buttons switch instantly when launching a game, without manual menu navigation.</string>
     <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge quick menu bar overlay while gaming.</string>
     <string name="help_settings_accessibility_desc">Required for automatic profile switching. Android permissions require this service to detect which game is active on the primary screen. Tap this row to configure.</string>
-    <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English or German depending on your preference.</string>
+    <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English, German, or Traditional Chinese depending on your preference.</string>
     <string name="help_settings_gamepad_swap_desc">Enable this if you prefer the Nintendo layout (A on right, B on bottom) over the default Xbox layout (A on bottom, B on right) for gamepad macro actions.</string>
     <string name="help_settings_accent_desc">Customizes the highlight color for active buttons and tabs. Custom accents apply to Dark and Dark OLED themes; tap the color preview to open the custom color picker wheel or tap the palette icon to choose from preset theme accents.</string>
     <string name="help_settings_theme_desc">Choose from 8 distinct visual themes including Dark, Dark OLED, Megingiard, Mjölnir Steel, Valhalla Sunset, Aurora Borealis, Retro Phosphor, and Royal Asgard.</string>

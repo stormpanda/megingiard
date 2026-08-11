@@ -433,6 +433,7 @@ class MirrorPresentation(
                                     AppLanguage.SYSTEM -> Locale.getDefault()
                                     AppLanguage.EN -> Locale.ENGLISH
                                     AppLanguage.DE -> Locale.GERMAN
+                                    AppLanguage.ZH_TW -> Locale.TRADITIONAL_CHINESE
                                 }
                             val config = Configuration(context.resources.configuration)
                             config.setLocale(locale)
