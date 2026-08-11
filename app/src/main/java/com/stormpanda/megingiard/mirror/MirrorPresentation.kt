@@ -161,7 +161,15 @@ class MirrorPresentation(
     private val srcWidth: Int,
     private val srcHeight: Int,
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
+    private var currentRoutedSurface: Surface? = null
     var onSurfaceReady: ((Surface) -> Unit)? = null
+        set(value) {
+            field = value
+            val surface = currentRoutedSurface
+            if (surface != null && surface.isValid) {
+                value?.invoke(surface)
+            }
+        }
     var onSurfaceDestroyed: (() -> Unit)? = null
 
     private var masterTextureView: TextureView? = null
@@ -204,6 +212,7 @@ class MirrorPresentation(
                 val inSurface = newSmoother.inputSurface
                 if (inSurface != null) {
                     AppLog.i(TAG, "Routing video frames through GpuMotionSmoother (strength=$strength)")
+                    currentRoutedSurface = inSurface
                     onSurfaceReady?.invoke(inSurface)
                 }
             }
@@ -212,6 +221,10 @@ class MirrorPresentation(
                 AppLog.i(TAG, "Releasing GpuMotionSmoother, routing direct to master Surface")
                 gpuMotionSmoother?.release()
                 gpuMotionSmoother = null
+            }
+            if (currentRoutedSurface != master) {
+                AppLog.i(TAG, "Routing video frames direct to master Surface")
+                currentRoutedSurface = master
                 onSurfaceReady?.invoke(master)
             }
         }
@@ -315,6 +328,7 @@ class MirrorPresentation(
                     AppLog.d(TAG, "master TextureView surface destroyed")
                     gpuMotionSmoother?.release()
                     gpuMotionSmoother = null
+                    currentRoutedSurface = null
                     onSurfaceDestroyed?.invoke()
                     masterSurface?.release()
                     masterSurface = null
@@ -1080,7 +1094,7 @@ class MirrorPresentation(
         }
     }
 
-    fun getSurface(): Surface? = masterSurface
+    fun getSurface(): Surface? = currentRoutedSurface ?: masterSurface
 
     fun captureScreenshot(): Bitmap? {
         val frozen = ScreenCaptureManager.isFrozen.value
