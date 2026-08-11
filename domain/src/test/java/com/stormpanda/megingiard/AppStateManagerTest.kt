@@ -443,6 +443,50 @@ class AppStateManagerTest {
     }
 
     @Test
+    fun `tapping active profile button preserves AUTO mode when active package matches profile`() =
+        runTest {
+            val gameProfile =
+                PadProfile(
+                    id = "p-1",
+                    name = "AetherSX2 Profile",
+                    association =
+                        com.stormpanda.megingiard.macropad
+                            .ProfileAssociation(packageName = "com.emulator.aethersx2"),
+                )
+            com.stormpanda.megingiard.macropad.MacroPadState
+                .addProfile(gameProfile)
+            com.stormpanda.megingiard.macropad.MacroPadState
+                .setActiveProfileId(gameProfile.id)
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+            AppStateManager.setStandaloneForegroundState("com.emulator.aethersx2", null)
+
+            // When focused package matches activeProfile and mode is AUTO:
+            val currentMode = AppStateManager.companionViewMode.value
+            val focusedPkg = AppStateManager.focusedAppPackageName.value
+            val matchesFocused = gameProfile.matches(focusedPkg, null, isActiveProfile = true)
+
+            // Only switch to MACROPAD if currentMode != AUTO or !matchesFocused
+            if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            }
+
+            // Mode remains AUTO
+            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+
+            // If profile does NOT match focused package (e.g. launcher focused):
+            AppStateManager.setStandaloneForegroundState("com.android.launcher3", null)
+            val focusedLauncherPkg = AppStateManager.focusedAppPackageName.value
+            val matchesLauncher = gameProfile.matches(focusedLauncherPkg, null, isActiveProfile = true)
+
+            if (currentMode != CompanionViewMode.AUTO || !matchesLauncher) {
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            }
+
+            // Mode switches to MACROPAD
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
+        }
+
+    @Test
     fun `closeActiveModal resets all modal states and overlay selections simultaneously`() =
         runTest {
             AppStateManager.setFullscreenKeyboardActive(true)

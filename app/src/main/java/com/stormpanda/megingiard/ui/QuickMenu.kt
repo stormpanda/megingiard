@@ -206,7 +206,13 @@ fun QuickMenu(
                     onProfileSelected = { profile ->
                         AppLog.d(TAG, "profile selected: ${profile.id}")
                         MacroPadState.setActiveProfileId(profile.id)
-                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                        val currentMode = AppStateManager.companionViewMode.value
+                        val focusedPkg = AppStateManager.focusedAppPackageName.value
+                        val focusedRom = AppStateManager.focusedRomPath.value
+                        val matchesFocused = profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
+                        if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                        }
                     },
                 )
 
@@ -222,7 +228,14 @@ fun QuickMenu(
                     onLayoutSelected = { layoutId ->
                         AppLog.d(TAG, "layout selected: $layoutId")
                         MacroPadState.setActiveLayoutId(layoutId)
-                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                        val profile = MacroPadState.activeProfile.value
+                        val currentMode = AppStateManager.companionViewMode.value
+                        val focusedPkg = AppStateManager.focusedAppPackageName.value
+                        val focusedRom = AppStateManager.focusedRomPath.value
+                        val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
+                        if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
+                            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                        }
                     },
                 )
 
@@ -251,7 +264,14 @@ fun QuickMenu(
                             icon = Icons.Rounded.Gamepad,
                             colors = colors,
                             onClick = {
-                                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                                val profile = MacroPadState.activeProfile.value
+                                val currentMode = AppStateManager.companionViewMode.value
+                                val focusedPkg = AppStateManager.focusedAppPackageName.value
+                                val focusedRom = AppStateManager.focusedRomPath.value
+                                val matchesFocused = profile != null && profile.matches(focusedPkg, focusedRom, isActiveProfile = true)
+                                if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
+                                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                                }
                             },
                             modifier = Modifier.weight(1f),
                         )
