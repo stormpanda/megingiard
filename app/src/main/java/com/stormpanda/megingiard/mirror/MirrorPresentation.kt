@@ -187,6 +187,36 @@ class MirrorPresentation(
             }
         }
 
+    private var gpuMotionSmoother: GpuMotionSmoother? = null
+
+    private fun updateSurfaceRouting() {
+        val master = masterSurface ?: return
+        val activeCutouts = ScreenCaptureManager.cutouts.value
+        val smoothingCutout = activeCutouts.firstOrNull { it.motionSmoothing }
+        if (smoothingCutout != null && srcWidth > 0 && srcHeight > 0) {
+            val strength = smoothingCutout.motionSmoothingStrength
+            val smoother = gpuMotionSmoother
+            if (smoother != null) {
+                smoother.updateStrength(strength)
+            } else {
+                val newSmoother = GpuMotionSmoother(master, srcWidth, srcHeight, strength)
+                gpuMotionSmoother = newSmoother
+                val inSurface = newSmoother.inputSurface
+                if (inSurface != null) {
+                    AppLog.i(TAG, "Routing video frames through GpuMotionSmoother (strength=$strength)")
+                    onSurfaceReady?.invoke(inSurface)
+                }
+            }
+        } else {
+            if (gpuMotionSmoother != null) {
+                AppLog.i(TAG, "Releasing GpuMotionSmoother, routing direct to master Surface")
+                gpuMotionSmoother?.release()
+                gpuMotionSmoother = null
+                onSurfaceReady?.invoke(master)
+            }
+        }
+    }
+
     override fun cancel() {
         AppLog.d(TAG, "cancel → ignoring")
     }
@@ -213,6 +243,8 @@ class MirrorPresentation(
 
         setOnDismissListener {
             AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
+            gpuMotionSmoother?.release()
+            gpuMotionSmoother = null
             scope.cancel()
             lifecycleOwner.destroy()
         }
@@ -270,7 +302,7 @@ class MirrorPresentation(
                         AppLog.e(TAG, "Error setting initial surface frame rate", e)
                     }
                     AppLog.d(TAG, "master TextureView surface available")
-                    onSurfaceReady?.invoke(surface)
+                    updateSurfaceRouting()
                 }
 
                 override fun onSurfaceTextureSizeChanged(
@@ -281,6 +313,8 @@ class MirrorPresentation(
 
                 override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
                     AppLog.d(TAG, "master TextureView surface destroyed")
+                    gpuMotionSmoother?.release()
+                    gpuMotionSmoother = null
                     onSurfaceDestroyed?.invoke()
                     masterSurface?.release()
                     masterSurface = null
@@ -301,6 +335,7 @@ class MirrorPresentation(
         scope.launch {
             ScreenCaptureManager.cutouts.collect { activeCutouts ->
                 mcc.cutouts = activeCutouts
+                updateSurfaceRouting()
             }
         }
 
@@ -1175,7 +1210,6 @@ class MultiCutoutContainer(
     private var cachedCircleShader: Shader? = null
 
     private val cutoutPaint = Paint()
-    private val smoothingPaint = Paint()
     private val blendPaint =
         Paint().apply {
             isAntiAlias = true
@@ -1377,17 +1411,8 @@ class MultiCutoutContainer(
                     if (isFrozen && frozenBitmap != null) {
                         canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
                     } else if (masterView != null) {
-                        if (cutout.motionSmoothing) {
-                            val alphaPercent = (100 - cutout.motionSmoothingStrength).coerceAtLeast(1) / 100f
-                            smoothingPaint.alpha = (alphaPercent * 255f).roundToInt()
-                            val smoothingSaveCount = canvas.saveLayer(0f, 0f, sw, sh, smoothingPaint)
-                            drawChild(canvas, masterView, drawTime)
-                            masterViewDrawn = true
-                            canvas.restoreToCount(smoothingSaveCount)
-                        } else {
-                            drawChild(canvas, masterView, drawTime)
-                            masterViewDrawn = true
-                        }
+                        drawChild(canvas, masterView, drawTime)
+                        masterViewDrawn = true
                     }
 
                     canvas.restoreToCount(innerSaveCount)
