@@ -76,7 +76,6 @@ object FloatingBubbleOverlay {
     private var bubbleView: ComposeView? = null
     private var windowManager: WindowManager? = null
     private var lifecycleOwner: MirrorPresentationLifecycleOwner? = null
-    private var layoutParams: WindowManager.LayoutParams? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun show(
@@ -84,14 +83,22 @@ object FloatingBubbleOverlay {
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
-        mainHandler.post {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
             showOnMainThread(packageName, touchX, touchY)
+        } else {
+            mainHandler.post {
+                showOnMainThread(packageName, touchX, touchY)
+            }
         }
     }
 
     fun hide() {
-        mainHandler.post {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
             hideOnMainThread()
+        } else {
+            mainHandler.post {
+                hideOnMainThread()
+            }
         }
     }
 
@@ -137,7 +144,6 @@ object FloatingBubbleOverlay {
                     x = if (touchX >= 0f) (touchX - bubbleSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_X_DP * density).toInt()
                     y = if (touchY >= 0f) (touchY - bubbleSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_Y_DP * density).toInt()
                 }
-            layoutParams = params
 
             val view =
                 ComposeView(windowContext).apply {
@@ -238,7 +244,6 @@ object FloatingBubbleOverlay {
         bubbleView = null
         windowManager = null
         lifecycleOwner = null
-        layoutParams = null
         AppStateManager.setFloatingBubbleActive(false)
     }
 }
@@ -304,16 +309,3 @@ private fun FloatingBubbleContent() {
         }
     }
 }
-
-private fun Drawable.toImageBitmap(): ImageBitmap? =
-    try {
-        val width = if (intrinsicWidth > 0) intrinsicWidth else 48
-        val height = if (intrinsicHeight > 0) intrinsicHeight else 48
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        setBounds(0, 0, canvas.width, canvas.height)
-        draw(canvas)
-        bitmap.asImageBitmap()
-    } catch (e: Exception) {
-        null
-    }

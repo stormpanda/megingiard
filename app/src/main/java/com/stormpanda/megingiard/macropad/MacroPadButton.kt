@@ -331,7 +331,7 @@ internal fun AppLauncherFace(
                     val appInfo = pm.getApplicationInfo(action.packageName, 0)
                     resolvedName = pm.getApplicationLabel(appInfo).toString()
                     val drawable = appInfo.loadIcon(pm)
-                    appIconBitmap = drawable?.toGrayscaleImageBitmap()
+                    appIconBitmap = drawable?.toImageBitmap()
                 } catch (e: Exception) {
                     resolvedName = action.packageName
                     appIconBitmap = null
@@ -348,7 +348,7 @@ internal fun AppLauncherFace(
         Image(
             bitmap = bitmap,
             contentDescription = resolvedName.ifBlank { action.packageName },
-            colorFilter = ColorFilter.tint(effectiveTextTint, BlendMode.Modulate),
+            colorFilter = ColorFilter.tint(effectiveTextTint),
             modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
         )
     } else {
@@ -359,29 +359,6 @@ internal fun AppLauncherFace(
         )
     }
 }
-
-private fun Drawable.toGrayscaleImageBitmap(): ImageBitmap? =
-    try {
-        val width = if (intrinsicWidth > 0) intrinsicWidth else 48
-        val height = if (intrinsicHeight > 0) intrinsicHeight else 48
-        val srcBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(srcBitmap)
-        setBounds(0, 0, canvas.width, canvas.height)
-        draw(canvas)
-
-        val grayBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val grayCanvas = Canvas(grayBitmap)
-        val paint = android.graphics.Paint()
-        val matrix = android.graphics.ColorMatrix()
-        matrix.setSaturation(0f)
-        paint.colorFilter = android.graphics.ColorMatrixColorFilter(matrix)
-        grayCanvas.drawBitmap(srcBitmap, 0f, 0f, paint)
-        srcBitmap.recycle()
-
-        grayBitmap.asImageBitmap()
-    } catch (e: Exception) {
-        null
-    }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Scroll wheel face — two chevrons up + two chevrons down
