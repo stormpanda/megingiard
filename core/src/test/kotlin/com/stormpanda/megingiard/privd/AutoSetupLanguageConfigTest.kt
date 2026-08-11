@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.privd
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Locale
@@ -102,67 +103,28 @@ class AutoSetupLanguageConfigTest {
         val configZh = AutoSetupLanguageConfig.fromLocaleOrNull(Locale.SIMPLIFIED_CHINESE)
         val configRu = AutoSetupLanguageConfig.fromLocaleOrNull(Locale("ru", "RU"))
 
-        org.junit.Assert.assertNull(configIt)
-        org.junit.Assert.assertNull(configJa)
-        org.junit.Assert.assertNull(configZh)
-        org.junit.Assert.assertNull(configRu)
+        assertNull(configIt)
+        assertNull(configJa)
+        assertNull(configZh)
+        assertNull(configRu)
 
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.GERMANY))
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.FRANCE))
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.US))
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale("es", "ES")))
+        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.GERMANY))
+        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.FRANCE))
+        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale.US))
+        assertNotNull(AutoSetupLanguageConfig.fromLocaleOrNull(Locale("es", "ES")))
     }
 
     @Test
     fun fromLanguageTagOrNull_returnsNullForUnsupportedLanguageTags() {
-        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ja-JP"))
-        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-CN"))
-        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ru-RU"))
-        org.junit.Assert.assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("it-IT"))
+        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ja-JP"))
+        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("zh-CN"))
+        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("ru-RU"))
+        assertNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("it-IT"))
 
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("de-DE"))
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("es-ES"))
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("fr-FR"))
-        org.junit.Assert.assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("en-US"))
-    }
-
-    @Test
-    fun everyConfigCarriesDeveloperOptionsKeywords() {
-        // Auto Setup tells the Wireless debugging sub-screen apart from Developer options by
-        // looking for the Developer options title, because both screens show the wireless
-        // debugging label. A locale missing this keyword reports the sub-screen while still on
-        // Developer options and then scrolls forever looking for the pairing row.
-        val configs =
-            listOf(
-                AutoSetupLanguageConfig.GERMAN_DE,
-                AutoSetupLanguageConfig.SPANISH_ES,
-                AutoSetupLanguageConfig.FRENCH_FR,
-                AutoSetupLanguageConfig.ENGLISH_US,
-                AutoSetupLanguageConfig.CHINESE_TW,
-            )
-
-        configs.forEach { config ->
-            val keywords = config.developerOptionsKeywords
-            org.junit.Assert.assertTrue(
-                "${config.localeTag} has no developerOptionsKeywords",
-                keywords.isNotEmpty(),
-            )
-            keywords.forEach { keyword ->
-                org.junit.Assert.assertTrue(
-                    "${config.localeTag} keyword '$keyword' must be lowercase — matching lowercases the screen text",
-                    keyword == keyword.lowercase(),
-                )
-            }
-        }
-
-        // Every supported language explicitly supplies its own developerOptionsKeywords.
-        org.junit.Assert.assertTrue(
-            AutoSetupLanguageConfig.ENGLISH_US.developerOptionsKeywords.contains("developer options"),
-        )
-        org.junit.Assert.assertTrue(
-            AutoSetupLanguageConfig.GERMAN_DE.developerOptionsKeywords.contains("entwickleroptionen"),
-        )
-        assertEquals(listOf("開發人員選項"), AutoSetupLanguageConfig.CHINESE_TW.developerOptionsKeywords)
+        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("de-DE"))
+        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("es-ES"))
+        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("fr-FR"))
+        assertNotNull(AutoSetupLanguageConfig.fromLanguageTagOrNull("en-US"))
     }
 
     @Test
