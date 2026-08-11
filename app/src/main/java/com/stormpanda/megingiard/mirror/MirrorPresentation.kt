@@ -1195,6 +1195,7 @@ class MultiCutoutContainer(
         height: Int,
     ) {
         var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        var accumCanvas: Canvas? = accumulated?.let { Canvas(it) }
         var initialized: Boolean = false
 
         val blendPaint =
@@ -1207,6 +1208,7 @@ class MultiCutoutContainer(
         fun recycle() {
             accumulated?.recycle()
             accumulated = null
+            accumCanvas = null
         }
     }
 
@@ -1285,19 +1287,16 @@ class MultiCutoutContainer(
             // 5. Update each active accumulator with the captured frame
             for (strength in activeStrengthsSet) {
                 val acc = accumulators[strength] ?: continue
-                val accum = acc.accumulated
-                if (accum != null) {
-                    try {
-                        val accumCanvas = Canvas(accum)
-                        if (!acc.initialized) {
-                            accumCanvas.drawBitmap(scratch, 0f, 0f, null)
-                            acc.initialized = true
-                        } else {
-                            accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
-                        }
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
+                val accumCanvas = acc.accumCanvas ?: continue
+                try {
+                    if (!acc.initialized) {
+                        accumCanvas.drawBitmap(scratch, 0f, 0f, null)
+                        acc.initialized = true
+                    } else {
+                        accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
                     }
+                } catch (e: Exception) {
+                    AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
                 }
             }
             invalidate()
@@ -1380,13 +1379,23 @@ class MultiCutoutContainer(
                 canvas.restore()
             }
 
-            // Isolate all cutout rendering in a transparent intermediate layer.
-            // ADD blending between adjacent cutouts (edge overlap) happens entirely
-            // within this layer. When the layer is restored to the parent canvas it
-            // uses the default SRC_OVER composite so cutouts alpha-blend correctly
-            // on top of the background image instead of being added to it.
+            // Isolate cutout rendering in a transparent intermediate layer ONLY when needed for ADD edge blending.
+            // Intermediate layer is only required if edge blending is active AND at least 2 cutouts exist with touching edges.
+            var hasAnyTouchingEdge = false
+            if (edgeBlending && cutouts.size > 1) {
+                for (i in cutouts.indices) {
+                    val c = cutouts[i]
+                    if (c.destX > tolerance || c.destX + c.destWidth < 1.0f - tolerance ||
+                        c.destY > tolerance || c.destY + c.destHeight < 1.0f - tolerance
+                    ) {
+                        hasAnyTouchingEdge = true
+                        break
+                    }
+                }
+            }
+
             val cutoutsLayerSaveCount =
-                if (edgeBlending) {
+                if (hasAnyTouchingEdge) {
                     canvas.saveLayer(0f, 0f, parentW, parentH, null)
                 } else {
                     canvas.save()
