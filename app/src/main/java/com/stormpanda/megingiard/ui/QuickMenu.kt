@@ -284,7 +284,7 @@ fun QuickMenu(
                         onClick = {
                             if (companionViewMode == CompanionViewMode.AUTO) {
                                 val targetMode = if (showIntegrationHome) CompanionViewMode.DASHBOARD else CompanionViewMode.MACROPAD
-                                AppStateManager.setCompanionViewMode(targetMode)
+                                AppStateManager.setCompanionViewMode(targetMode, isAutoSwitchButton = true)
                             } else {
                                 autoShimmerTrigger++
                                 AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)

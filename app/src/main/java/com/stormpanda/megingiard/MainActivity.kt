@@ -611,6 +611,13 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
+                AppStateManager.autoSwitchOffToastEvent.collect {
+                    AppLog.i(TAG, "autoSwitchOffToastEvent received -> showing Toast")
+                    Toast.makeText(this@MainActivity, R.string.toast_auto_switch_off, Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            LaunchedEffect(Unit) {
                 ScreenCaptureManager.screenshotRequested.collect { requested ->
                     if (!requested) return@collect
                     if (!ScreenCaptureManager.isCapturing.value) {

@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -42,10 +43,12 @@ class AppStateManagerTest {
                 override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences = emptyPreferences()
             }
         KeyboardSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
     }
 
     @After
     fun tearDown() {
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
         Dispatchers.resetMain()
     }
 
@@ -390,6 +393,42 @@ class AppStateManagerTest {
             // Explicitly set AUTO -> should revert to AUTO
             AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
             assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+        }
+
+    @Test
+    fun `autoSwitchOffToastEvent emits when setCompanionViewMode turns off AUTO without button flag`() =
+        runTest {
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            val emittedEvents = mutableListOf<Unit>()
+            val job =
+                launch(UnconfinedTestDispatcher(testScheduler)) {
+                    AppStateManager.autoSwitchOffToastEvent.collect { emittedEvents.add(it) }
+                }
+
+            // Turned off by non-button (e.g. profile select, layout select, switch to hub)
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = false)
+            assertEquals(1, emittedEvents.size)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `autoSwitchOffToastEvent does not emit when setCompanionViewMode turns off AUTO with isAutoSwitchButton true`() =
+        runTest {
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            val emittedEvents = mutableListOf<Unit>()
+            val job =
+                launch(UnconfinedTestDispatcher(testScheduler)) {
+                    AppStateManager.autoSwitchOffToastEvent.collect { emittedEvents.add(it) }
+                }
+
+            // Turned off by auto switch button
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = true)
+            assertEquals(0, emittedEvents.size)
+
+            job.cancel()
         }
 
     @Test

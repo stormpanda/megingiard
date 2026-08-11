@@ -1263,6 +1263,7 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_show_dashboard">Switch to Hub</string>
     <string name="quick_menu_show_macropad">Switch to Game Profile</string>
     <string name="quick_menu_auto_mode">Auto Switch</string>
+    <string name="toast_auto_switch_off">Auto Switch: off</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update available</string>
