@@ -239,6 +239,11 @@ internal fun ButtonEditDialog(
             buttonShape = ButtonShape.CIRCLE
             return
         }
+        if (newAction is PadAction.AppLauncher) {
+            label = ""
+            iconName = null
+            return
+        }
         // For Macro: fill label from the macro name if the label field is still blank.
         if (newAction is PadAction.Macro && label.isBlank()) {
             val macroName = macros.firstOrNull { it.id == newAction.macroId }?.name
@@ -258,6 +263,10 @@ internal fun ButtonEditDialog(
         when {
             action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> {
                 true
+            }
+
+            action is PadAction.AppLauncher -> {
+                (action as PadAction.AppLauncher).packageName.isNotBlank()
             }
 
             action is PadAction.Macro -> {
@@ -357,8 +366,8 @@ internal fun ButtonEditDialog(
             ) {
                 val iconsFilled = iconFilled
 
-                // Label input and shape — hidden for ScrollWheel and TrackpointMove
-                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
+                // Label input and shape — hidden for ScrollWheel, TrackpointMove, and AppLauncher
+                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher) {
                     // ── Label + Icon selector row ──────────────────────────────────────────
                     Row(
                         verticalAlignment = Alignment.Bottom,

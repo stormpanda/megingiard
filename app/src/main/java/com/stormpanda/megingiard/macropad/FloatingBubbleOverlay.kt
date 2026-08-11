@@ -80,13 +80,12 @@ object FloatingBubbleOverlay {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun show(
-        appName: String,
         packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
         mainHandler.post {
-            showOnMainThread(appName, packageName, touchX, touchY)
+            showOnMainThread(packageName, touchX, touchY)
         }
     }
 
@@ -97,7 +96,6 @@ object FloatingBubbleOverlay {
     }
 
     private fun showOnMainThread(
-        appName: String,
         packageName: String,
         touchX: Float = -1f,
         touchY: Float = -1f,
@@ -222,7 +220,6 @@ object FloatingBubbleOverlay {
                         LocalAppDimens provides AppDimens(),
                     ) {
                         FloatingBubbleContent(
-                            appName = appName,
                             packageName = packageName,
                         )
                     }
@@ -262,10 +259,7 @@ object FloatingBubbleOverlay {
 }
 
 @Composable
-private fun FloatingBubbleContent(
-    appName: String,
-    packageName: String,
-) {
+private fun FloatingBubbleContent(packageName: String) {
     val colors = LocalAppColors.current
     val context = LocalContext.current
     var visible by remember { mutableStateOf(false) }

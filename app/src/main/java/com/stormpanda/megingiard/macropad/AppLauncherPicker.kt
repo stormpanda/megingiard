@@ -116,7 +116,7 @@ internal fun AppLauncherPicker(
             if (currentAppIcon != null) {
                 Image(
                     bitmap = currentAppIcon!!,
-                    contentDescription = current.appName,
+                    contentDescription = current.packageName,
                     modifier = Modifier.size(ALP_ICON_SIZE),
                 )
                 Spacer(Modifier.width(12.dp))
@@ -130,9 +130,10 @@ internal fun AppLauncherPicker(
             }
 
             Column(modifier = Modifier.weight(1f)) {
+                val resolvedName = resolveAppName(context, current.packageName)
                 Text(
                     text =
-                        current.appName.ifBlank {
+                        resolvedName.ifBlank {
                             current.packageName.ifBlank {
                                 stringResource(
                                     R.string.app_launcher_picker_select_app,
@@ -155,20 +156,11 @@ internal fun AppLauncherPicker(
                 }
             }
 
-            Spacer(Modifier.width(8.dp))
-
-            TextButton(
-                onClick = {
-                    AppLog.d(TAG, "Click edit app launcher button")
-                    showDialog = true
-                },
-            ) {
-                Text(
-                    text = stringResource(R.string.settings_macropad_edit),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-            }
+            MaterialSymbol(
+                name = "chevron_right",
+                size = 20.dp,
+                tint = colors.onSurfaceSecondary,
+            )
         }
     }
 
@@ -180,7 +172,7 @@ internal fun AppLauncherPicker(
             },
             onAppSelected = { appItem ->
                 AppLog.d(TAG, "Selected app: ${appItem.appName} (${appItem.packageName})")
-                onChange(PadAction.AppLauncher(packageName = appItem.packageName, appName = appItem.appName))
+                onChange(PadAction.AppLauncher(packageName = appItem.packageName))
                 showDialog = false
             },
         )

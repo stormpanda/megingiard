@@ -304,6 +304,7 @@ Open Settings to create a layout.</string>
     <string name="app_launcher_picker_search">Search applications…</string>
     <string name="app_launcher_picker_no_apps">No applications found</string>
     <string name="app_launcher_picker_select_app">Choose app…</string>
+    <string name="app_launcher_button_label_format">Open %1$s</string>
     <string name="floating_bubble_cd">Megingiard Floating Bubble Overlay</string>
     <string name="floating_bubble_tap_hint">Tap to restore Megingiard</string>
 

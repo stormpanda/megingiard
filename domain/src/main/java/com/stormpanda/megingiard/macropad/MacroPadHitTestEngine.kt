@@ -153,7 +153,7 @@ class MacroPadHitTestEngine(
                     val pressX = if (px >= 0f) px else bx
                     val pressY = if (py >= 0f) py else by
                     AppLog.d(TAG, "AppLauncher touch at ($pressX, $pressY)")
-                    AppStateManager.requestAppLaunch(act.packageName, act.appName, pressX, pressY)
+                    AppStateManager.requestAppLaunch(act.packageName, pressX, pressY)
                 }
                 if (hitButton.hapticStrength != HapticStrength.OFF) {
                     AppLog.d(TAG, "haptic on press: button=${hitButton.id} strength=${hitButton.hapticStrength}")

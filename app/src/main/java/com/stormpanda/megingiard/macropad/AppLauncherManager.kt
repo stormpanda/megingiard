@@ -14,7 +14,6 @@ object AppLauncherManager {
     fun launchApp(
         context: Context,
         packageName: String,
-        appName: String = "",
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
@@ -50,7 +49,6 @@ object AppLauncherManager {
 
             // Display floating bubble overlay above the target application at pressed location
             FloatingBubbleOverlay.show(
-                appName = appName,
                 packageName = packageName,
                 touchX = touchX,
                 touchY = touchY,

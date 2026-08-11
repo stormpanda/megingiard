@@ -42,7 +42,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -318,58 +320,68 @@ internal fun AppLauncherFace(
     effectiveTextTint: Color,
 ) {
     val context = LocalContext.current
-    val iconName = btn.iconName
     var appIconBitmap by remember(action.packageName) { mutableStateOf<ImageBitmap?>(null) }
+    var resolvedName by remember(action.packageName) { mutableStateOf("") }
 
     LaunchedEffect(action.packageName) {
-        if (iconName == null && action.packageName.isNotBlank()) {
-            appIconBitmap =
-                withContext(Dispatchers.IO) {
-                    try {
-                        val pm = context.packageManager
-                        val appInfo = pm.getApplicationInfo(action.packageName, 0)
-                        val drawable = appInfo.loadIcon(pm)
-                        drawable?.toImageBitmap()
-                    } catch (e: Exception) {
-                        null
-                    }
+        if (action.packageName.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val pm = context.packageManager
+                    val appInfo = pm.getApplicationInfo(action.packageName, 0)
+                    resolvedName = pm.getApplicationLabel(appInfo).toString()
+                    val drawable = appInfo.loadIcon(pm)
+                    appIconBitmap = drawable?.toGrayscaleImageBitmap()
+                } catch (e: Exception) {
+                    resolvedName = action.packageName
+                    appIconBitmap = null
                 }
+            }
+        } else {
+            appIconBitmap = null
+            resolvedName = ""
         }
     }
 
     val bitmap = appIconBitmap
-    if (iconName != null) {
-        MaterialSymbol(
-            name = iconName,
-            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-            tint = effectiveTextTint,
-            filled = btn.iconFilled,
-        )
-    } else if (bitmap != null) {
+    if (bitmap != null) {
         Image(
             bitmap = bitmap,
-            contentDescription = btn.label.ifBlank { action.appName },
+            contentDescription = resolvedName.ifBlank { action.packageName },
+            colorFilter = ColorFilter.tint(effectiveTextTint, BlendMode.Modulate),
             modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
         )
     } else {
-        val displayText = btn.label.ifBlank { action.appName.ifBlank { action.packageName } }
-        if (displayText.isNotBlank()) {
-            Text(
-                text = displayText,
-                color = effectiveTextTint,
-                fontSize = (11 * btn.buttonSize.cols).sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            MaterialSymbol(
-                name = "apps",
-                size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                tint = effectiveTextTint,
-            )
-        }
+        MaterialSymbol(
+            name = "apps",
+            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+            tint = effectiveTextTint,
+        )
     }
 }
+
+private fun Drawable.toGrayscaleImageBitmap(): ImageBitmap? =
+    try {
+        val width = if (intrinsicWidth > 0) intrinsicWidth else 48
+        val height = if (intrinsicHeight > 0) intrinsicHeight else 48
+        val srcBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(srcBitmap)
+        setBounds(0, 0, canvas.width, canvas.height)
+        draw(canvas)
+
+        val grayBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val grayCanvas = Canvas(grayBitmap)
+        val paint = android.graphics.Paint()
+        val matrix = android.graphics.ColorMatrix()
+        matrix.setSaturation(0f)
+        paint.colorFilter = android.graphics.ColorMatrixColorFilter(matrix)
+        grayCanvas.drawBitmap(srcBitmap, 0f, 0f, paint)
+        srcBitmap.recycle()
+
+        grayBitmap.asImageBitmap()
+    } catch (e: Exception) {
+        null
+    }
 
 private fun Drawable.toImageBitmap(): ImageBitmap? =
     try {

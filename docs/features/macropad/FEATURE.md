@@ -250,12 +250,15 @@ Each button supports one of the following actions:
 ### FR-P15: App Launcher Button & Floating Bubble Overlay
 
 - Users can add buttons of type **App Launcher** (`PadAction.AppLauncher`) to MacroPad layouts.
+- **Single-Field Persistence**: For optimal portable layout persistence, `PadAction.AppLauncher` stores **only `packageName`** in JSON layout profiles (`{"type":"app_launcher","packageName":"..."}`). The application title and launcher icon are resolved dynamically at runtime via `PackageManager`.
 - **Application Picker**: When configuring an App Launcher button in the editor, an app picker dialog lists all installed launcher applications (`PackageManager.queryIntentActivities` with `Intent.CATEGORY_LAUNCHER`), allowing the user to select an app by name or package name.
+- **Editor Simplification & Dynamic Label**: Selecting the App Launcher action automatically hides the **Label** text input field and **Icon** picker from the button edit dialog (`PadButtonEditDialog`). The button label is dynamically evaluated as `"Open <AppName>"` (`"Öffnen <AppName>"` in German) derived from `PackageManager`.
+- **Monochrome Tinted Icon Rendering**: The target application's launcher icon is converted to a monochrome graphic and rendered on the button face tinted with the user's chosen button icon color (`effectiveTextTint`).
 - **Execution & App Launch**: Tapping an App Launcher button opens the designated application on the bottom screen display using `ActivityOptions.makeBasic().setLaunchDisplayId(...)`.
+- **Touch-Positioned Floating Bubble Overlay**: Upon launching the target application, Megingiard minimizes to the background (`moveTaskToBack(true)`) and displays a floating bubble overlay centered at the exact screen coordinates where the App Launcher button was pressed.
 - **Temporary Mirroring Pause**: Triggering an App Launcher button or having an active floating bubble temporarily pauses screen capture (`ScreenCaptureService.stopSelf()`) to conserve system resources without altering the layout's saved `mirrorAutoStart` preference. Restoring Megingiard to the foreground automatically resumes screen capture.
-- **Floating Bubble Overlay**: Upon launching the target application, Megingiard minimizes to the background (`moveTaskToBack(true)`) and displays a floating bubble overlay rendered with Megingiard's app icon (`R.mipmap.ic_launcher`) hovering over the launched application.
-- **Secondary Display Attachment**: The floating bubble window uses `WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY` created via `DisplayManager` targeting the secondary display (bottom screen) and managed by `MegingiardAccessibilityService`. No extra permissions or settings prompts are required.
-- **Interactivity & Restore**: The floating bubble can be freely dragged across the screen. Tapping the floating bubble restores Megingiard (`MainActivity`) to the foreground on the bottom display with a smooth transition, dismisses the bubble, and resumes screen mirroring.
+- **Secondary Display Attachment**: The floating bubble window uses `WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY` created via `DisplayManager` targeting the secondary display (bottom screen) and managed by `MegingiardAccessibilityService`.
+- **Interactivity & Restore**: The floating bubble can be freely dragged across the screen. Tapping the floating bubble restores Megingiard (`MainActivity`) to the foreground on the bottom display, dismisses the bubble, and resumes screen mirroring.
 
 
 

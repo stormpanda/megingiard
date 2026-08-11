@@ -15,11 +15,7 @@ class AppLauncherActionTest {
 
     @Test
     fun `app launcher action survives JSON round-trip`() {
-        val action: PadAction =
-            PadAction.AppLauncher(
-                packageName = "org.retroarch",
-                appName = "RetroArch",
-            )
+        val action: PadAction = PadAction.AppLauncher(packageName = "org.retroarch")
         val encoded = json.encodeToString(action)
         val decoded = json.decodeFromString<PadAction>(encoded)
         assertEquals(action, decoded)
@@ -27,18 +23,14 @@ class AppLauncherActionTest {
 
     @Test
     fun `app launcher discriminator is stable`() {
-        val action: PadAction =
-            PadAction.AppLauncher(
-                packageName = "com.android.chrome",
-                appName = "Chrome",
-            )
+        val action: PadAction = PadAction.AppLauncher(packageName = "com.android.chrome")
         val encoded = json.encodeToString(action)
         assertTrue("app_launcher discriminator present", encoded.contains("\"app_launcher\""))
     }
 
     @Test
     fun `default icon name for app launcher is correct`() {
-        val action = PadAction.AppLauncher("com.test.app", "Test App")
+        val action = PadAction.AppLauncher("com.test.app")
         assertEquals("apps", action.defaultIconName())
     }
 }

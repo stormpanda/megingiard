@@ -409,12 +409,27 @@ internal fun PadAction.displayLabel(): String {
         }
 
         is PadAction.AppLauncher -> {
-            val name = appName.ifBlank { packageName }
-            context.getString(
-                R.string.macropad_display_app_launcher,
-                name.ifBlank { context.getString(R.string.app_launcher_picker_select_app) },
-            )
+            val name = resolveAppName(context, packageName)
+            if (name.isNotBlank()) {
+                context.getString(R.string.app_launcher_button_label_format, name)
+            } else {
+                context.getString(R.string.app_launcher_picker_select_app)
+            }
         }
+    }
+}
+
+internal fun resolveAppName(
+    context: Context,
+    packageName: String,
+): String {
+    if (packageName.isBlank()) return ""
+    return try {
+        val pm = context.packageManager
+        val info = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(info).toString()
+    } catch (e: Exception) {
+        packageName
     }
 }
 

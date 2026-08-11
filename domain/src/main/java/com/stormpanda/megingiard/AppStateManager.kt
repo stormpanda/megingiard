@@ -102,7 +102,6 @@ object AppStateManager {
 
     data class AppLaunchRequest(
         val packageName: String,
-        val appName: String = "",
         val touchX: Float = -1f,
         val touchY: Float = -1f,
     )
@@ -115,12 +114,11 @@ object AppStateManager {
 
     fun requestAppLaunch(
         packageName: String,
-        appName: String = "",
         touchX: Float = -1f,
         touchY: Float = -1f,
     ) {
-        AppLog.i(TAG, "requestAppLaunch: pkg=$packageName app=$appName touch=($touchX, $touchY)")
-        _pendingAppLaunchRequest.value = AppLaunchRequest(packageName, appName, touchX, touchY)
+        AppLog.i(TAG, "requestAppLaunch: pkg=$packageName touch=($touchX, $touchY)")
+        _pendingAppLaunchRequest.value = AppLaunchRequest(packageName, touchX, touchY)
     }
 
     fun consumeAppLaunchRequest() {

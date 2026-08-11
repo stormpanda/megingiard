@@ -258,6 +258,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="app_launcher_picker_search">Anwendungen suchen…</string>
     <string name="app_launcher_picker_no_apps">Keine Anwendungen gefunden</string>
     <string name="app_launcher_picker_select_app">App wählen…</string>
+    <string name="app_launcher_button_label_format">Öffnen %1$s</string>
     <string name="floating_bubble_cd">Megingiard Schwebendes Bubble-Overlay</string>
     <string name="floating_bubble_tap_hint">Tippen, um Megingiard wiederherzustellen</string>
 

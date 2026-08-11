@@ -266,7 +266,6 @@ sealed class PadAction {
     @SerialName("app_launcher")
     data class AppLauncher(
         val packageName: String = "",
-        val appName: String = "",
     ) : PadAction()
 }
 

@@ -110,9 +110,9 @@ fun injectActionDown(action: PadAction) {
         }
 
         is PadAction.AppLauncher -> {
-            AppLog.d(TAG, "actionDown: AppLauncher pkg=${action.packageName} app=${action.appName}")
+            AppLog.d(TAG, "actionDown: AppLauncher pkg=${action.packageName}")
             if (action.packageName.isNotBlank()) {
-                AppStateManager.requestAppLaunch(action.packageName, action.appName)
+                AppStateManager.requestAppLaunch(action.packageName)
             }
         }
     }

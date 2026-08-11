@@ -620,7 +620,6 @@ class MainActivity : ComponentActivity() {
                     AppLauncherManager.launchApp(
                         context = this@MainActivity,
                         packageName = req.packageName,
-                        appName = req.appName,
                         touchX = req.touchX,
                         touchY = req.touchY,
                     )
