@@ -53,6 +53,16 @@ private const val BLEND_FRAGMENT_SHADER_CODE = """
     }
 """
 
+private const val PASSTHROUGH_FRAGMENT_SHADER_CODE = """
+    #extension GL_OES_EGL_image_external : require
+    precision mediump float;
+    varying vec2 vOesTexCoord;
+    uniform samplerExternalOES uOesTexture;
+    void main() {
+        gl_FragColor = texture2D(uOesTexture, vOesTexCoord);
+    }
+"""
+
 private const val QUAD_VERTEX_SHADER_CODE = """
     attribute vec4 aPosition;
     attribute vec2 aTextureCoord;
@@ -115,9 +125,9 @@ class GpuMotionSmoother(
     private var eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
     private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
     private var eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
-
     private var blendProgram = 0
     private var drawProgram = 0
+    private var passthroughProgram = 0
 
     private var oesTextureId = 0
     private val fboTextureIds = IntArray(2)
@@ -139,51 +149,54 @@ class GpuMotionSmoother(
     private var released = false
 
     init {
+        val vertBb = ByteBuffer.allocateDirect(FULL_QUAD_VERTICES.size * 4).apply { order(ByteOrder.nativeOrder()) }
         vertexBuffer =
-            ByteBuffer
-                .allocateDirect(FULL_QUAD_VERTICES.size * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer()
-                .put(FULL_QUAD_VERTICES)
-        vertexBuffer.position(0)
+            vertBb.asFloatBuffer().apply {
+                put(FULL_QUAD_VERTICES)
+                position(0)
+            }
 
+        val texBb = ByteBuffer.allocateDirect(FULL_QUAD_TEX_COORDS.size * 4).apply { order(ByteOrder.nativeOrder()) }
         texCoordBuffer =
-            ByteBuffer
-                .allocateDirect(FULL_QUAD_TEX_COORDS.size * 4)
-                .order(ByteOrder.nativeOrder())
-                .asFloatBuffer()
-                .put(FULL_QUAD_TEX_COORDS)
-        texCoordBuffer.position(0)
+            texBb.asFloatBuffer().apply {
+                put(FULL_QUAD_TEX_COORDS)
+                position(0)
+            }
 
         val latch = CountDownLatch(1)
         glHandler.post {
-            initGl()
-            latch.countDown()
+            try {
+                initGL()
+            } finally {
+                latch.countDown()
+            }
         }
         try {
-            latch.await(2, TimeUnit.SECONDS)
+            latch.await(2000, TimeUnit.MILLISECONDS)
         } catch (e: Exception) {
             AppLog.e(TAG, "Timed out waiting for GL initialization", e)
         }
     }
 
     fun updateStrength(newStrength: Int) {
+        if (released) return
         glHandler.post {
             this.strength = newStrength
+            isFirstFrame = true
         }
     }
 
-    private fun initGl() {
+    private fun initGL() {
         if (released) return
         try {
             eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
-            val version = IntArray(2)
-            EGL14.eglInitialize(eglDisplay, version, 0, version, 1)
+            if (eglDisplay == EGL14.EGL_NO_DISPLAY) throw RuntimeException("eglGetDisplay failed")
 
-            val configAttribs =
+            val version = IntArray(2)
+            if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) throw RuntimeException("eglInitialize failed")
+
+            val attribList =
                 intArrayOf(
-                    EGL14.EGL_RENDERABLE_TYPE,
-                    EGL14.EGL_OPENGL_ES2_BIT,
                     EGL14.EGL_RED_SIZE,
                     8,
                     EGL14.EGL_GREEN_SIZE,
@@ -192,11 +205,13 @@ class GpuMotionSmoother(
                     8,
                     EGL14.EGL_ALPHA_SIZE,
                     8,
+                    EGL14.EGL_RENDERABLE_TYPE,
+                    EGL14.EGL_OPENGL_ES2_BIT,
                     EGL14.EGL_NONE,
                 )
             val configs = arrayOfNulls<EGLConfig>(1)
             val numConfigs = IntArray(1)
-            EGL14.eglChooseConfig(eglDisplay, configAttribs, 0, configs, 0, 1, numConfigs, 0)
+            EGL14.eglChooseConfig(eglDisplay, attribList, 0, configs, 0, 1, numConfigs, 0)
             val config = configs[0] ?: throw RuntimeException("EGL config not found")
 
             val contextAttribs = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE)
@@ -232,6 +247,14 @@ class GpuMotionSmoother(
             GLES20.glCreateProgram().also {
                 GLES20.glAttachShader(it, vertShader)
                 GLES20.glAttachShader(it, blendFragShader)
+                GLES20.glLinkProgram(it)
+            }
+
+        val passthroughFragShader = loadShader(GLES20.GL_FRAGMENT_SHADER, PASSTHROUGH_FRAGMENT_SHADER_CODE)
+        passthroughProgram =
+            GLES20.glCreateProgram().also {
+                GLES20.glAttachShader(it, vertShader)
+                GLES20.glAttachShader(it, passthroughFragShader)
                 GLES20.glLinkProgram(it)
             }
 
@@ -296,6 +319,37 @@ class GpuMotionSmoother(
             st.getTransformMatrix(stMatrix)
 
             GLES20.glViewport(0, 0, width, height)
+
+            if (strength <= 0) {
+                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
+                GLES20.glClearColor(0f, 0f, 0f, 1f)
+                GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+
+                GLES20.glUseProgram(passthroughProgram)
+
+                val aPos = GLES20.glGetAttribLocation(passthroughProgram, "aPosition")
+                val aTex = GLES20.glGetAttribLocation(passthroughProgram, "aTextureCoord")
+                val uMat = GLES20.glGetUniformLocation(passthroughProgram, "uSTMatrix")
+                val uOes = GLES20.glGetUniformLocation(passthroughProgram, "uOesTexture")
+
+                GLES20.glEnableVertexAttribArray(aPos)
+                GLES20.glVertexAttribPointer(aPos, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
+
+                GLES20.glEnableVertexAttribArray(aTex)
+                GLES20.glVertexAttribPointer(aTex, 2, GLES20.GL_FLOAT, false, 0, texCoordBuffer)
+
+                GLES20.glUniformMatrix4fv(uMat, 1, false, stMatrix, 0)
+
+                GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+                GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, oesTextureId)
+                GLES20.glUniform1i(uOes, 0)
+
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
+
+                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+                isFirstFrame = true
+                return
+            }
 
             // Pass 1: Render OES input frame + Previous FBO frame into Target FBO
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboFramebuffers[writeIndex])
@@ -386,6 +440,7 @@ class GpuMotionSmoother(
                 inputSurfaceTexture?.release()
                 if (blendProgram != 0) GLES20.glDeleteProgram(blendProgram)
                 if (drawProgram != 0) GLES20.glDeleteProgram(drawProgram)
+                if (passthroughProgram != 0) GLES20.glDeleteProgram(passthroughProgram)
                 if (oesTextureId != 0) GLES20.glDeleteTextures(1, intArrayOf(oesTextureId), 0)
                 GLES20.glDeleteTextures(2, fboTextureIds, 0)
                 GLES20.glDeleteFramebuffers(2, fboFramebuffers, 0)

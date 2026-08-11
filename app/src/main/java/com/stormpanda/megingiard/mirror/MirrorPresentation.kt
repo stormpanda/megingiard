@@ -202,31 +202,24 @@ class MirrorPresentation(
         val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
         val activeCutouts = ScreenCaptureManager.cutouts.value
         val smoothingCutout = if (!isFullscreenMouseActive) activeCutouts.firstOrNull { it.motionSmoothing } else null
-        if (smoothingCutout != null && srcWidth > 0 && srcHeight > 0) {
-            val strength = smoothingCutout.motionSmoothingStrength
-            val smoother = gpuMotionSmoother
-            if (smoother != null) {
-                smoother.updateStrength(strength)
-            } else {
-                val newSmoother = GpuMotionSmoother(master, srcWidth, srcHeight, strength)
-                gpuMotionSmoother = newSmoother
-                val inSurface = newSmoother.inputSurface
-                if (inSurface != null) {
-                    AppLog.i(TAG, "Routing video frames through GpuMotionSmoother (strength=$strength)")
-                    currentRoutedSurface = inSurface
-                    onSurfaceReady?.invoke(inSurface)
-                }
+        val effectiveStrength = smoothingCutout?.motionSmoothingStrength ?: 0
+
+        var smoother = gpuMotionSmoother
+        if (smoother == null && srcWidth > 0 && srcHeight > 0) {
+            AppLog.i(TAG, "Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)")
+            smoother = GpuMotionSmoother(master, srcWidth, srcHeight, effectiveStrength)
+            gpuMotionSmoother = smoother
+            val inSurface = smoother.inputSurface
+            if (inSurface != null) {
+                currentRoutedSurface = inSurface
+                onSurfaceReady?.invoke(inSurface)
             }
-        } else {
-            if (gpuMotionSmoother != null) {
-                AppLog.i(TAG, "Releasing GpuMotionSmoother, routing direct to master Surface")
-                gpuMotionSmoother?.release()
-                gpuMotionSmoother = null
-            }
-            if (currentRoutedSurface != master) {
-                AppLog.i(TAG, "Routing video frames direct to master Surface")
-                currentRoutedSurface = master
-                onSurfaceReady?.invoke(master)
+        } else if (smoother != null) {
+            smoother.updateStrength(effectiveStrength)
+            val inSurface = smoother.inputSurface
+            if (inSurface != null && currentRoutedSurface != inSurface) {
+                currentRoutedSurface = inSurface
+                onSurfaceReady?.invoke(inSurface)
             }
         }
     }

@@ -56,6 +56,7 @@ class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var mirrorVirtualDisplay: VirtualDisplay? = null
     private var mirrorSurface: Surface? = null
+    private var directPrivdActiveSurface: Surface? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
@@ -573,8 +574,12 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
+            AppLog.i(TAG, "presentation surface destroyed -> tearing down direct privileged session")
             mirrorSurface = null
-            updateDirectServerSurfaces()
+            directPrivdActiveSurface = null
+            DirectMirrorSurfaceBridge.clearDirectSurfaces()
+            directPrivdSession?.release()
+            directPrivdSession = null
         }
         presentation.onSurfaceReady = { surface ->
             mirrorSurface = surface
@@ -620,10 +625,18 @@ class ScreenCaptureService : Service() {
             if (startGeneration != directPrivdStartGeneration) return@launch
             val surface = mirrorSurface
             if (surface == null || !surface.isValid) {
+                directPrivdActiveSurface = null
                 DirectMirrorSurfaceBridge.clearDirectSurfaces()
                 directPrivdSession?.release()
                 directPrivdSession = null
                 return@launch
+            }
+
+            if (directPrivdActiveSurface != surface && directPrivdSession != null) {
+                AppLog.i(TAG, "target surface changed -> restarting direct privileged mirror session")
+                directPrivdSession?.release()
+                directPrivdSession = null
+                directPrivdActiveSurface = null
             }
 
             var directSession = directPrivdSession
@@ -638,6 +651,7 @@ class ScreenCaptureService : Service() {
                 if (!directStarted) {
                     directSession.release()
                     directPrivdSession = null
+                    directPrivdActiveSurface = null
                     launchConsentFallback("direct privileged mirror unavailable")
                     return@launch
                 }
@@ -648,6 +662,7 @@ class ScreenCaptureService : Service() {
                 for (attempt in 1..DIRECT_MIRROR_MAX_RETRIES) {
                     if (startGeneration != directPrivdStartGeneration) return@launch
                     if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                        directPrivdActiveSurface = surface
                         AppLog.i(
                             TAG,
                             "direct privileged mirror session updated with master surface (attempt $attempt/$DIRECT_MIRROR_MAX_RETRIES)",
@@ -746,6 +761,7 @@ class ScreenCaptureService : Service() {
         mirrorVirtualDisplay?.release()
         mirrorVirtualDisplay = null
         mirrorSurface = null
+        directPrivdActiveSurface = null
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         recordingPresentation = null
