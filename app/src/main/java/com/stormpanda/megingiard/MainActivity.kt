@@ -591,7 +591,9 @@ class MainActivity : ComponentActivity() {
                     activeLayout?.id?.let { layoutId ->
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
-                    if (isCapturing) stopMirrorService()
+                    if (ScreenCaptureManager.isCapturing.value) {
+                        stopMirrorService()
+                    }
                 }
             }
 
