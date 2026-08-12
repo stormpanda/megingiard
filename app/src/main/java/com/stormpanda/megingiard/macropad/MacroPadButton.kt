@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -278,38 +279,56 @@ internal fun PadButton(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                if (isTrackpoint) {
-                    Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
-                } else if (btn.action is PadAction.ScrollWheel) {
-                    ScrollWheelFace(accentColor = effectiveContentAccent)
-                } else if (btn.action is PadAction.BackgroundPeek) {
-                    BackgroundPeekFace(accentColor = effectiveContentAccent)
-                } else if (btn.action is PadAction.AppLauncher) {
-                    AppLauncherFace(
-                        btn = btn,
-                        action = btn.action as PadAction.AppLauncher,
-                        effectiveTextTint = effectiveTextTint,
-                    )
-                } else {
-                    val iconName = btn.iconName
-                    if (iconName != null) {
-                        MaterialSymbol(
-                            name = iconName,
-                            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                            tint = effectiveTextTint,
-                            filled = btn.iconFilled,
-                        )
-                    } else {
-                        Text(
-                            text = btn.label,
-                            color = effectiveTextTint,
-                            fontSize = (11 * btn.buttonSize.cols).sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                PadButtonContent(
+                    btn = btn,
+                    effectiveTextTint = effectiveTextTint,
+                    iconSize = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                    isTrackpoint = isTrackpoint,
+                    effectiveContentAccent = effectiveContentAccent,
+                )
             }
+        }
+    }
+}
+
+@Composable
+internal fun PadButtonContent(
+    btn: PadButton,
+    effectiveTextTint: Color,
+    iconSize: Dp,
+    isTrackpoint: Boolean = btn.action is PadAction.TrackpointMove,
+    effectiveContentAccent: Color = effectiveTextTint,
+) {
+    if (isTrackpoint) {
+        Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+    } else if (btn.action is PadAction.ScrollWheel) {
+        ScrollWheelFace(accentColor = effectiveContentAccent)
+    } else if (btn.action is PadAction.BackgroundPeek) {
+        BackgroundPeekFace(accentColor = effectiveContentAccent)
+    } else if (btn.action is PadAction.AppLauncher) {
+        AppLauncherFace(
+            btn = btn,
+            action = btn.action as PadAction.AppLauncher,
+            effectiveTextTint = effectiveTextTint,
+            iconSize = iconSize,
+        )
+    } else {
+        val iconName = btn.iconName
+        if (iconName != null) {
+            MaterialSymbol(
+                name = iconName,
+                size = iconSize,
+                tint = effectiveTextTint,
+                filled = btn.iconFilled,
+            )
+        } else {
+            Text(
+                text = btn.label,
+                color = effectiveTextTint,
+                fontSize = (11 * btn.buttonSize.cols).sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -319,6 +338,7 @@ internal fun AppLauncherFace(
     btn: PadButton,
     action: PadAction.AppLauncher,
     effectiveTextTint: Color,
+    iconSize: Dp? = null,
 ) {
     val context = LocalContext.current
     var appIconBitmap by remember(action.packageName) { mutableStateOf<ImageBitmap?>(null) }
@@ -344,6 +364,7 @@ internal fun AppLauncherFace(
         }
     }
 
+    val targetSize = iconSize ?: (MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows))
     val bitmap = appIconBitmap
     if (bitmap != null) {
         val colorFilter =
@@ -354,12 +375,12 @@ internal fun AppLauncherFace(
             bitmap = bitmap,
             contentDescription = resolvedName.ifBlank { action.packageName },
             colorFilter = colorFilter,
-            modifier = Modifier.size(MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows)),
+            modifier = Modifier.size(targetSize),
         )
     } else {
         MaterialSymbol(
             name = "apps",
-            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+            size = targetSize,
             tint = effectiveTextTint,
         )
     }

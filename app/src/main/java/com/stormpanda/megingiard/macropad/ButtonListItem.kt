@@ -141,21 +141,12 @@ internal fun ButtonListItem(
                     ),
             contentAlignment = Alignment.Center,
         ) {
-            if (isTrackpoint) {
-                Text("●", color = colors.onSurface, style = MaterialTheme.typography.labelSmall)
-            } else {
-                val iconName = btn.iconName
-                if (iconName != null) {
-                    MaterialSymbol(
-                        name = iconName,
-                        size = 18.dp,
-                        tint = colors.onSurface,
-                        filled = btn.iconFilled,
-                    )
-                } else {
-                    Text(btn.label.take(2), color = colors.onSurface, style = MaterialTheme.typography.labelSmall)
-                }
-            }
+            PadButtonContent(
+                btn = btn,
+                effectiveTextTint = colors.onSurface,
+                iconSize = 18.dp,
+                isTrackpoint = isTrackpoint,
+            )
         }
 
         Spacer(Modifier.width(12.dp))

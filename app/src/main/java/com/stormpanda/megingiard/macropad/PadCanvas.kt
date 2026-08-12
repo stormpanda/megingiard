@@ -602,60 +602,12 @@ private fun DraggableButton(
                         },
                     ),
         ) {
-            if (btn.action is PadAction.TrackpointMove) {
-                Text("●", color = effectiveTextTint, style = MaterialTheme.typography.bodyMedium)
-            } else if (btn.action is PadAction.ScrollWheel) {
-                // Show mini scroll icon in editor chip
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    Icon(
-                        Icons.Rounded.KeyboardArrowUp,
-                        contentDescription = null,
-                        tint = effectiveTextTint,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Icon(
-                        Icons.Rounded.KeyboardArrowUp,
-                        contentDescription = null,
-                        tint = effectiveTextTint.copy(alpha = 0.4f),
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Icon(
-                        Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = effectiveTextTint.copy(alpha = 0.4f),
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Icon(
-                        Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = effectiveTextTint,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
-            } else {
-                val iconName = btn.iconName
-                if (iconName != null) {
-                    MaterialSymbol(
-                        name = iconName,
-                        size = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                        tint = effectiveTextTint,
-                        filled = btn.iconFilled,
-                    )
-                } else {
-                    Text(
-                        btn.label,
-                        color = effectiveTextTint,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            PadButtonContent(
+                btn = btn,
+                effectiveTextTint = effectiveTextTint,
+                iconSize = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                isTrackpoint = isTrackpoint,
+            )
         }
         if (btn.invisible) {
             Box(
