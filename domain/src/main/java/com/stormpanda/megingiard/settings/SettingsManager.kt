@@ -42,7 +42,7 @@ private val backupsJson =
 private const val SETTINGS_DATASTORE_NAME = "megingiard_settings"
 
 /** Per-app language preference. [SYSTEM] follows the device locale. */
-enum class AppLanguage { SYSTEM, EN, DE }
+enum class AppLanguage { SYSTEM, EN, DE, ZH_TW }
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
     name = SETTINGS_DATASTORE_NAME,

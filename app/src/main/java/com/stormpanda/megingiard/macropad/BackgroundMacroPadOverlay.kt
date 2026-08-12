@@ -47,6 +47,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -93,17 +94,16 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     val isFullscreenKeyboardActive by AppStateManager.isFullscreenKeyboardActive.collectAsState()
     val isFullscreenMouseActive by AppStateManager.isFullscreenMouseActive.collectAsState()
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-    val density = LocalDensity.current
-    val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
-    val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
-
-    val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-    val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-    val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
-    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
-    val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
-    val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
+    val (
+        edgeZonePx,
+        swipeThresholdPx,
+        quickMenuBarZoneWidthPx,
+        kbBarMinX,
+        kbBarMaxX,
+        tpBarWidthPx,
+        tpBarEndPaddingPx,
+        tpBarZoneWidthPx,
+    ) = rememberQuickMenuGestureMetrics()
 
     val qmSwipe =
         remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, quickMenuBarZoneWidthPx) {
@@ -160,10 +160,6 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
                 },
             )
         }
-
-    val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-    val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-    val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
 
     val tpSwipe =
         remember(overlayAtBottom, edgeZonePx, swipeThresholdPx, tpBarWidthPx, tpBarEndPaddingPx, tpBarZoneWidthPx) {

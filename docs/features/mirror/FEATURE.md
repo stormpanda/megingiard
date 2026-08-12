@@ -211,9 +211,9 @@ Primary display layer stack (0)
 - **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
 - **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (standard MediaProjection path remains usable).
 - **Daemon control protocol** adds `MIRROR START_DIRECT w h` and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. `QUIT` and connection-end paths terminate any running mirror child.
-- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.SurfaceView` `Surface` to the server.
+- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.SurfaceView` `Surface` to the server. If the initial transaction fails right after reconnection while `PrivdManager.state` is `RUNNING`, `ScreenCaptureService` retries the surface send up to 3 times (with 200ms delay) before evaluating fallback.
 - **`DirectMirrorServer.java`** runs in the shell `app_process`, registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, receives the app-owned `Surface` over Binder, creates a hidden `SurfaceControl` display, and points that display at the app Surface with `setDisplaySurface()`. This preserves the app's `MirrorPresentation` `ComposeView` overlay without an intermediate codec stream.
-- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, while `ScreenCaptureService` sends the current app Surface to the direct server and launches the MediaProjection consent flow when either step fails.
+- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, while `ScreenCaptureService` sends the current app Surface to the direct server and launches the MediaProjection consent flow when either step fails (guarded to skip consent fallback when `PrivdManager.state` is `RUNNING` to prevent unwanted permission dialog popups).
 - **Surface-start race guard:** `ScreenCaptureService` assigns a monotonically increasing generation to each privileged `SurfaceView` ready/destroy event. Only the latest generation may complete a direct mirror start or launch the MediaProjection fallback; stale coroutine results are ignored so an older timed-out `START_DIRECT` round trip cannot tear down a newer running privileged mirror session.
 - **`ScreenCaptureService`** routes `ACTION_START_PRIVD` to a separate `startPrivdPath()` which uses `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` (vs. `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION` for the standard path). All viewport/touch-projection state is shared between the two paths.
 - **DRM caveat:** `SurfaceControl.createDisplay(name, secure=false)` produces a non-secure virtual display. DRM-protected surfaces (Widevine, Netflix, etc.) are blanked by SurfaceFlinger when composited to a non-secure target — the same behaviour as `scrcpy`. Setting `secure=true` would require `INTERNAL_SYSTEM_WINDOW`, which the shell UID does not have.
@@ -487,18 +487,14 @@ To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support 
 
 ### Motion Smoothing / Temporal Blending
 
-To stabilize mirrored UI elements against fast-moving backgrounds, we support motion smoothing:
+To stabilize mirrored UI elements against fast-moving backgrounds, we support 100% GPU-accelerated motion smoothing:
 
-1. **Temporal Accumulator**:
-   If any cutout has `motionSmoothing = true` enabled, `MultiCutoutContainer` creates and maintains a map of `Accumulator` instances for each unique active strength value. For each unique strength, a `temp` and `accumulated` master bitmap pair is allocated. On every updated surface texture callback (`onSurfaceTextureUpdated`), the current frame of the `TextureView` is read into the `temp` master bitmap and blended into the `accumulated` master bitmap using an Exponential Moving Average (EMA):
-   \[
-   B_{\text{accum}} = (1 - \alpha) B_{\text{accum}} + \alpha B_{\text{temp}}
-   \]
-   where \(\alpha = (100 - \text{strength}) / 100\). The smoothing behavior is configured per cutout using a 4-stop discrete slider in the Screen Mirroring settings menu mapping to Off (disables smoothing), Light (75%), Medium (80%), and Strong (85% temporal blending strength). The strength parameter is saved in the individual cutout's `motionSmoothingStrength` property.
-2. **Smooth Drawing**:
-   Cutouts with motion smoothing active draw directly from the `accumulated` bitmap of their respective strength in `MultiCutoutContainer.dispatchDraw()`.
-3. **Active Rendering Loop (Freeze Prevention)**:
-   If all active cutouts have motion smoothing enabled, none of them draw `masterView` directly. To prevent the hardware renderer from skipping `masterView` (which would stall the `SurfaceTexture` queue and stop `onSurfaceTextureUpdated` updates), a dummy 1x1 draw of `masterView` is forced using a clipped canvas.
+1. **Unified GPU Pipeline (`GpuMotionSmoother`)**:
+   `MirrorPresentation` routes video frames through `GpuMotionSmoother`, a 100% GPU-accelerated temporal frame blender running on a dedicated GL thread (`GpuMotionSmootherGL`). Video frames from `DirectMirrorServer` or `MediaProjection` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
+2. **0% Pass-Through Mode**:
+   When motion smoothing is disabled (0% strength or active Touchpad mode), `GpuMotionSmoother` executes a single-pass 2D quad texture copy (`drawProgram`) directly into `masterSurface`, bypassing FBO blending with ~0.05ms GPU overhead and 0 input latency.
+3. **Temporal FBO Blending (>0%)**:
+   When motion smoothing is active (e.g. 75%, 80%, 85%), `GpuMotionSmoother` blends incoming OES frames with previous frame textures inside GPU VRAM using an OpenGL ES 2.0 ping-pong FBO pipeline before outputting the smoothed result to `masterSurface`.
 
 ### Source Files
 

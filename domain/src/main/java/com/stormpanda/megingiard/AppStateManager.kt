@@ -14,9 +14,13 @@ import com.stormpanda.megingiard.settings.MacroPadSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -46,11 +50,17 @@ fun CompanionViewMode.shouldShowIntegrationHome(
         }
 
         CompanionViewMode.AUTO -> {
-            if (focusedAppPackageName == null ||
-                focusedAppPackageName.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
-                focusedAppPackageName.contains("launcher") ||
-                focusedAppPackageName.contains("home")
-            ) {
+            val foreground = AutoSwitchCoordinator.foregroundApp.value
+            val isForegroundLauncher =
+                foreground != null &&
+                    (
+                        foreground.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) ||
+                            foreground.contains("launcher") ||
+                            foreground.contains("home") ||
+                            foreground == "com.android.systemui"
+                    )
+
+            if (focusedAppPackageName == null || isForegroundLauncher) {
                 true
             } else {
                 activeProfile?.matches(focusedAppPackageName, focusedRomPath, isActiveProfile = true) != true
@@ -336,6 +346,13 @@ object AppStateManager {
     private val _companionViewMode = MutableStateFlow(CompanionViewMode.AUTO)
     val companionViewMode: StateFlow<CompanionViewMode> = _companionViewMode.asStateFlow()
 
+    private val _autoSwitchOffToastEvent =
+        MutableSharedFlow<Unit>(
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
+    val autoSwitchOffToastEvent: SharedFlow<Unit> = _autoSwitchOffToastEvent.asSharedFlow()
+
     val showIntegrationHome: StateFlow<Boolean> =
         combine(
             _focusedAppPackageName,
@@ -346,9 +363,17 @@ object AppStateManager {
             viewMode.shouldShowIntegrationHome(focusedPackage, focusedRom, profile)
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
-    fun setCompanionViewMode(mode: CompanionViewMode) {
-        AppLog.d(TAG, "setCompanionViewMode($mode)")
+    fun setCompanionViewMode(
+        mode: CompanionViewMode,
+        isAutoSwitchButton: Boolean = false,
+    ) {
+        val previousMode = _companionViewMode.value
+        AppLog.d(TAG, "setCompanionViewMode($mode, isAutoSwitchButton=$isAutoSwitchButton)")
         _companionViewMode.value = mode
+        if (previousMode == CompanionViewMode.AUTO && mode != CompanionViewMode.AUTO && !isAutoSwitchButton) {
+            AppLog.i(TAG, "Auto Switch turned off by non-button -> emitting toast signal")
+            _autoSwitchOffToastEvent.tryEmit(Unit)
+        }
         if (mode == CompanionViewMode.AUTO) {
             AutoSwitchCoordinator.reevaluateAutoState()
         }

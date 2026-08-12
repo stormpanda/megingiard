@@ -305,6 +305,7 @@
     <string name="settings_language_system">系統預設</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_zh_tw">繁體中文</string>
     <string name="settings_log_level">日誌級別</string>
     <string name="settings_gamepad_swap_face_buttons">交換面按鈕標籤 (A/B 與 X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">在手把選擇器中顯示任天堂風格標籤 (A↔B 且 X↔Y)。注入的鍵碼保持不變。</string>

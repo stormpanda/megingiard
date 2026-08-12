@@ -302,6 +302,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_language_system">Systemstandard</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_zh_tw">繁體中文</string>
     <string name="settings_log_level">Log-Level</string>
     <string name="settings_gamepad_swap_face_buttons">Face-Button-Beschriftung tauschen (A/B und X/Y)</string>
     <string name="settings_gamepad_swap_face_buttons_desc">Zeigt Nintendo-Layout-Beschriftungen im Gamepad-Picker (A↔B und X↔Y). Die gesendeten Keycodes bleiben unverändert.</string>
@@ -975,7 +976,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_auto_profile_desc">Sorgt für nahtloses Gaming. Verknüpft Makroprofile mit Apps, sodass deine Tasten beim Starten eines Spiels automatisch wechseln.</string>
     <string name="help_settings_recents_desc">Hält deine Übersicht der zuletzt geöffneten Apps aufgeräumt. Empfohlen, wenn du Megingiard komplett über die Schnellmenü-Steuerung steuerst.</string>
     <string name="help_settings_accessibility_desc">Erforderlich für automatische Profilwechsel, damit Megingiard das aktive Spiel im Vordergrund erkennen darf. Tippe zum Konfigurieren.</string>
-    <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch und Deutsch zur Auswahl.</string>
+    <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch, Deutsch und Trad. Chinesisch zur Auswahl.</string>
     <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
     <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten für die Designs Dunkel und Dunkel OLED; tippe auf die Farbvorschau für das Farbrad oder auf das Paletten-Symbol für vordefinierte Akzentfarben aus den Themen-Designs.</string>
     <string name="help_settings_theme_desc">Wähle aus 8 verschiedenen Designs darunter Dunkel, Dunkel OLED, Megingiard, Mjölnir-Stahl, Valhalla-Sonnenuntergang, Nordlicht Aurora, Retro-Phosphor und Königliches Asgard.</string>
@@ -1269,6 +1270,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="integration_home_tool_mirror">Bildschirmspiegel</string>
     <string name="quick_menu_show_dashboard">Zum Hub wechseln</string>
     <string name="quick_menu_auto_mode">Auto-Wechsel</string>
+    <string name="toast_auto_switch_off">Auto-Wechsel: Aus</string>
     <string name="quick_menu_show_macropad">Zu Spiel-Profil wechseln</string>
 
     <!-- Update Check Strings -->

@@ -415,6 +415,7 @@ class MainActivity : ComponentActivity() {
                         AppLanguage.SYSTEM -> LocaleList.getEmptyLocaleList()
                         AppLanguage.EN -> LocaleList(Locale.ENGLISH)
                         AppLanguage.DE -> LocaleList(Locale.GERMAN)
+                        AppLanguage.ZH_TW -> LocaleList(Locale.TRADITIONAL_CHINESE)
                     }
                 val localeManager = getSystemService(LocaleManager::class.java)
                 if (localeManager.applicationLocales != desired) {
@@ -499,6 +500,9 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.showIntegrationHome,
+                    AppStateManager.isFullscreenMouseActive,
+                    AppStateManager.isFullscreenKeyboardActive,
+                    AppStateManager.wasMirroringStartedByTouchpad,
                 ) { values ->
                     val promptInFlight = values[0] as Boolean
                     val capturing = values[1] as Boolean
@@ -506,6 +510,9 @@ class MainActivity : ComponentActivity() {
                     val onValidScreen = values[3] as Boolean
                     val wizardActive = values[4] as Boolean
                     val showIntegrationHome = values[5] as Boolean
+                    val isFullscreenMouseActive = values[6] as Boolean
+                    val isFullscreenKeyboardActive = values[7] as Boolean
+                    val wasMirroringStartedByTouchpad = values[8] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -515,11 +522,16 @@ class MainActivity : ComponentActivity() {
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         tutorialsActive = wizardActive,
                         showIntegrationHome = showIntegrationHome,
+                        isFullscreenMouseActive = isFullscreenMouseActive,
+                        isFullscreenKeyboardActive = isFullscreenKeyboardActive,
+                        wasMirroringStartedByTouchpad = wasMirroringStartedByTouchpad,
                     )
                 }.combine(privdMirrorConnectingFlow) { policy, connecting ->
                     policy.copy(privdMirrorConnecting = connecting)
                 }.distinctUntilChanged()
                     .collect { policy ->
+                        val action = decideMirrorRuntimeAction(policy)
+                        AppLog.d(TAG, "mirror policy evaluated: action=$action policy=$policy")
                         if (policy.layoutId != lastPolicyLayoutId) {
                             AppLog.i(
                                 TAG,
@@ -527,7 +539,7 @@ class MainActivity : ComponentActivity() {
                             )
                             lastPolicyLayoutId = policy.layoutId
                         }
-                        when (decideMirrorRuntimeAction(policy)) {
+                        when (action) {
                             MirrorRuntimeAction.START -> {
                                 // Re-read promptInFlight from the live StateFlow before
                                 // acting. The combine() snapshot may have captured a stale
@@ -591,7 +603,9 @@ class MainActivity : ComponentActivity() {
                     activeLayout?.id?.let { layoutId ->
                         MacroPadState.setLayoutMirrorAutoStart(layoutId, false)
                     }
-                    if (isCapturing) stopMirrorService()
+                    if (ScreenCaptureManager.isCapturing.value) {
+                        stopMirrorService()
+                    }
                 }
             }
 
@@ -605,6 +619,13 @@ class MainActivity : ComponentActivity() {
                     }
                     PrivdClient.disconnect()
                     finishAndRemoveTask()
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                AppStateManager.autoSwitchOffToastEvent.collect {
+                    AppLog.i(TAG, "autoSwitchOffToastEvent received -> showing Toast")
+                    Toast.makeText(this@MainActivity, R.string.toast_auto_switch_off, Toast.LENGTH_SHORT).show()
                 }
             }
 

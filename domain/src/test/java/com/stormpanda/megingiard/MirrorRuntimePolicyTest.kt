@@ -222,12 +222,21 @@ class MirrorRuntimePolicyTest {
             ),
         )
 
-        // 4. Active connection pending on OFF state should block
+        // 4. Active connection pending on OFF state should block even if hasCreds is false
         assertTrue(
             isPrivdMirrorConnecting(
                 privdState = PrivdState.OFF,
                 promptActive = false,
                 hasCreds = true,
+                dismissed = false,
+                isManuallyDisconnected = false,
+            ),
+        )
+        assertTrue(
+            isPrivdMirrorConnecting(
+                privdState = PrivdState.OFF,
+                promptActive = false,
+                hasCreds = false,
                 dismissed = false,
                 isManuallyDisconnected = false,
             ),
@@ -243,10 +252,19 @@ class MirrorRuntimePolicyTest {
                 isManuallyDisconnected = true,
             ),
         )
+        assertFalse(
+            isPrivdMirrorConnecting(
+                privdState = PrivdState.OFF,
+                promptActive = false,
+                hasCreds = false,
+                dismissed = false,
+                isManuallyDisconnected = true,
+            ),
+        )
     }
 
     @Test
-    fun `stops mirroring when showIntegrationHome is true while capturing`() {
+    fun `stops mirroring when showIntegrationHome is true while capturing without fullscreen overlays`() {
         val decision =
             decideMirrorRuntimeAction(
                 MirrorRuntimePolicyState(
@@ -263,7 +281,43 @@ class MirrorRuntimePolicyTest {
     }
 
     @Test
-    fun `does not start mirroring when showIntegrationHome is true even if layout wants mirror`() {
+    fun `does not stop mirroring when showIntegrationHome is true if isFullscreenMouseActive is true`() {
+        val decision =
+            decideMirrorRuntimeAction(
+                MirrorRuntimePolicyState(
+                    promptInFlight = false,
+                    isOnValidScreen = true,
+                    isCapturing = true,
+                    layoutId = LAYOUT_A,
+                    layoutWantsMirror = true,
+                    showIntegrationHome = true,
+                    isFullscreenMouseActive = true,
+                ),
+            )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `does not stop mirroring when showIntegrationHome is true if wasMirroringStartedByTouchpad is true`() {
+        val decision =
+            decideMirrorRuntimeAction(
+                MirrorRuntimePolicyState(
+                    promptInFlight = false,
+                    isOnValidScreen = true,
+                    isCapturing = true,
+                    layoutId = LAYOUT_A,
+                    layoutWantsMirror = false,
+                    showIntegrationHome = true,
+                    wasMirroringStartedByTouchpad = true,
+                ),
+            )
+
+        assertEquals(MirrorRuntimeAction.NONE, decision)
+    }
+
+    @Test
+    fun `starts mirroring on showIntegrationHome when touchpad overlay requests mirroring`() {
         val decision =
             decideMirrorRuntimeAction(
                 MirrorRuntimePolicyState(
@@ -271,11 +325,13 @@ class MirrorRuntimePolicyTest {
                     isOnValidScreen = true,
                     isCapturing = false,
                     layoutId = LAYOUT_A,
-                    layoutWantsMirror = true,
+                    layoutWantsMirror = false,
                     showIntegrationHome = true,
+                    isFullscreenMouseActive = true,
+                    wasMirroringStartedByTouchpad = true,
                 ),
             )
 
-        assertEquals(MirrorRuntimeAction.NONE, decision)
+        assertEquals(MirrorRuntimeAction.START, decision)
     }
 }

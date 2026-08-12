@@ -101,6 +101,7 @@ import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberBezelBrush
+import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -146,21 +147,16 @@ fun MainAppScreen() {
         }
     }
 
-    val density = LocalDensity.current
-    val edgeZonePx = with(density) { QuickMenuBarLayout.SWIPE_EDGE_ZONE.toPx() }
-    val swipeThresholdPx = with(density) { QuickMenuBarLayout.SWIPE_THRESHOLD.toPx() }
-    val quickMenuBarZoneWidthPx = with(density) { QuickMenuBarLayout.SWIPE_QM_BAR_ZONE_WIDTH.toPx() }
-
-    val kbBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-    val kbBarStartPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-    val kbBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
-    val kbBarCenterPx = kbBarStartPaddingPx + (kbBarWidthPx / 2f)
-    val kbBarMinX = kbBarCenterPx - (kbBarZoneWidthPx / 2f)
-    val kbBarMaxX = kbBarCenterPx + (kbBarZoneWidthPx / 2f)
-
-    val tpBarWidthPx = with(density) { QuickMenuBarLayout.TAB_WIDTH.toPx() }
-    val tpBarEndPaddingPx = with(density) { QuickMenuBarLayout.TAB_PADDING.toPx() }
-    val tpBarZoneWidthPx = with(density) { QuickMenuBarLayout.TAB_ZONE_WIDTH.toPx() }
+    val (
+        edgeZonePx,
+        swipeThresholdPx,
+        quickMenuBarZoneWidthPx,
+        kbBarMinX,
+        kbBarMaxX,
+        tpBarWidthPx,
+        tpBarEndPaddingPx,
+        tpBarZoneWidthPx,
+    ) = rememberQuickMenuGestureMetrics()
 
     val context = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }

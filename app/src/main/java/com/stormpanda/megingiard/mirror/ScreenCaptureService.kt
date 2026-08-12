@@ -32,16 +32,22 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MirrorSettings
 import com.stormpanda.megingiard.shouldShowIntegrationHome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 private const val TAG = "ScreenCaptureService"
+private const val DIRECT_MIRROR_MAX_RETRIES = 3
+private const val DIRECT_MIRROR_RETRY_DELAY_MS = 200L
 
 const val ACTION_START_PRIVD = "START_PRIVD"
 const val ACTION_STOP = "STOP"
@@ -50,6 +56,7 @@ class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var mirrorVirtualDisplay: VirtualDisplay? = null
     private var mirrorSurface: Surface? = null
+    private var directPrivdActiveSurface: Surface? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
@@ -68,12 +75,59 @@ class ScreenCaptureService : Service() {
         super.onCreate()
 
         scope.launch {
-            AppStateManager.isPrivdPromptActive.collect { active ->
-                AppLog.d(TAG, "isPrivdPromptActive=$active → ${if (active) "hide" else "show"} mirror presentation")
-                if (active) {
+            combine(
+                ScreenCaptureManager.isCapturing,
+                AppStateManager.isOnValidScreen,
+                AppStateManager.isFilePickerOpen,
+                AppStateManager.isEditorActive,
+                AppStateManager.isBackgroundSettingsActive,
+                AmbientPreviewManager.isActive,
+                TouchRecordingManager.recordingRequested,
+                AppStateManager.isPrivdPromptActive,
+                AppStateManager.showIntegrationHome,
+                AppStateManager.isFullscreenMouseActive,
+                AppStateManager.isFullscreenKeyboardActive,
+            ) { values ->
+                val capturing = values[0] as Boolean
+                val validScreen = values[1] as Boolean
+                val filePickerOpen = values[2] as Boolean
+                val editorActive = values[3] as Boolean
+                val ambientActive = values[4] as Boolean
+                val ambientPreviewActive = values[5] as Boolean
+                val recordingRequested = values[6] as Boolean
+                val isPrivdPromptActive = values[7] as Boolean
+                val showIntegrationHome = values[8] as Boolean
+                val isFullscreenMouseActive = values[9] as Boolean
+                val isFullscreenKeyboardActive = values[10] as Boolean
+
+                capturing && validScreen &&
+                    !filePickerOpen && !editorActive &&
+                    (!ambientActive || ambientPreviewActive) &&
+                    !recordingRequested &&
+                    !isPrivdPromptActive &&
+                    (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
+            }.distinctUntilChanged()
+                .collect { shouldShow ->
+                    AppLog.d(TAG, "shouldShowMirrorPresentation changed → $shouldShow")
+                    if (shouldShow) {
+                        mirrorPresentation?.show()
+                    } else {
+                        mirrorPresentation?.hide()
+                    }
+                }
+        }
+
+        scope.launch {
+            var wasCapturing = false
+            ScreenCaptureManager.isCapturing.collect { capturing ->
+                if (capturing) {
+                    wasCapturing = true
+                } else if (wasCapturing && !consentFallbackInFlight) {
+                    AppLog.i(TAG, "isCapturing transitioned to false → hiding mirror presentation and stopping service")
                     mirrorPresentation?.hide()
-                } else if (shouldShowMirrorPresentation()) {
-                    mirrorPresentation?.show()
+                    mirrorPresentation?.dismiss()
+                    mirrorPresentation = null
+                    stopSelf()
                 }
             }
         }
@@ -259,7 +313,11 @@ class ScreenCaptureService : Service() {
 
         scope.launch {
             AppStateManager.showIntegrationHome.collect { showIntegrationHome ->
-                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
+                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value &&
+                    !AppStateManager.isFullscreenMouseActive.value &&
+                    !AppStateManager.isFullscreenKeyboardActive.value &&
+                    !AppStateManager.wasMirroringStartedByTouchpad.value
+                ) {
                     AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
                     stopSelf()
                 }
@@ -516,8 +574,12 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
+            AppLog.i(TAG, "presentation surface destroyed -> tearing down direct privileged session")
             mirrorSurface = null
-            updateDirectServerSurfaces()
+            directPrivdActiveSurface = null
+            DirectMirrorSurfaceBridge.clearDirectSurfaces()
+            directPrivdSession?.release()
+            directPrivdSession = null
         }
         presentation.onSurfaceReady = { surface ->
             mirrorSurface = surface
@@ -563,10 +625,18 @@ class ScreenCaptureService : Service() {
             if (startGeneration != directPrivdStartGeneration) return@launch
             val surface = mirrorSurface
             if (surface == null || !surface.isValid) {
+                directPrivdActiveSurface = null
                 DirectMirrorSurfaceBridge.clearDirectSurfaces()
                 directPrivdSession?.release()
                 directPrivdSession = null
                 return@launch
+            }
+
+            if (directPrivdActiveSurface != surface && directPrivdSession != null) {
+                AppLog.i(TAG, "target surface changed -> restarting direct privileged mirror session")
+                directPrivdSession?.release()
+                directPrivdSession = null
+                directPrivdActiveSurface = null
             }
 
             var directSession = directPrivdSession
@@ -581,18 +651,38 @@ class ScreenCaptureService : Service() {
                 if (!directStarted) {
                     directSession.release()
                     directPrivdSession = null
+                    directPrivdActiveSurface = null
                     launchConsentFallback("direct privileged mirror unavailable")
                     return@launch
                 }
             }
 
             if (startGeneration == directPrivdStartGeneration) {
-                if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
-                    AppLog.i(TAG, "direct privileged mirror session updated with master surface")
-                } else {
+                var success = false
+                for (attempt in 1..DIRECT_MIRROR_MAX_RETRIES) {
+                    if (startGeneration != directPrivdStartGeneration) return@launch
+                    if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                        directPrivdActiveSurface = surface
+                        AppLog.i(
+                            TAG,
+                            "direct privileged mirror session updated with master surface (attempt $attempt/$DIRECT_MIRROR_MAX_RETRIES)",
+                        )
+                        success = true
+                        break
+                    }
+                    if (attempt < DIRECT_MIRROR_MAX_RETRIES) {
+                        AppLog.w(
+                            TAG,
+                            "direct privileged mirror send attempt $attempt failed — retrying in ${DIRECT_MIRROR_RETRY_DELAY_MS}ms",
+                        )
+                        delay(DIRECT_MIRROR_RETRY_DELAY_MS)
+                    }
+                }
+
+                if (!success && startGeneration == directPrivdStartGeneration) {
                     directSession.release()
                     directPrivdSession = null
-                    launchConsentFallback("direct privileged mirror send failed")
+                    launchConsentFallback("direct privileged mirror send failed after $DIRECT_MIRROR_MAX_RETRIES attempts")
                 }
             }
         }
@@ -600,6 +690,13 @@ class ScreenCaptureService : Service() {
 
     private fun launchConsentFallback(reason: String) {
         if (consentFallbackInFlight) return
+        if (PrivdManager.state.value == PrivdState.RUNNING) {
+            AppLog.w(
+                TAG,
+                "$reason — Privd is RUNNING, skipping MediaProjection fallback to prevent permission prompt popup while privileged mode is active",
+            )
+            return
+        }
         AppLog.w(TAG, "$reason — falling back to MediaProjection consent")
         consentFallbackInFlight = true
         directPrivdStartGeneration += 1L
@@ -607,6 +704,7 @@ class ScreenCaptureService : Service() {
         directPrivdSession = null
         recordingPresentation?.dismiss()
         recordingPresentation = null
+        mirrorPresentation?.hide()
         mirrorPresentation?.dismiss()
         mirrorPresentation = null
         if (ScreenCaptureManager.isCapturing.value) ScreenCaptureManager.setCapturing(false)
@@ -632,6 +730,8 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
         val showIntegrationHome = AppStateManager.showIntegrationHome.value
+        val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
+        val isFullscreenKeyboardActive = AppStateManager.isFullscreenKeyboardActive.value
 
         val shouldShow =
             capturing && validScreen &&
@@ -639,11 +739,11 @@ class ScreenCaptureService : Service() {
                 (!ambientActive || ambientPreviewActive) &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
-                !showIntegrationHome
+                (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
         )
         return shouldShow
     }
@@ -661,9 +761,13 @@ class ScreenCaptureService : Service() {
         mirrorVirtualDisplay?.release()
         mirrorVirtualDisplay = null
         mirrorSurface = null
+        directPrivdActiveSurface = null
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
+        recordingPresentation = null
+        mirrorPresentation?.hide()
         mirrorPresentation?.dismiss()
+        mirrorPresentation = null
         if (isPrivilegedMode) {
             DirectMirrorSurfaceBridge.clearDirectSurfaces()
         }

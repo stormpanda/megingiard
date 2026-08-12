@@ -126,8 +126,26 @@ class AutoSwitchCoordinatorTest {
 
         // When game assistant focus occurs
         AutoSwitchCoordinator.onPackageChanged("com.odin.gameassistant")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
 
-        // Then it is ignored and foreground app state remains null
+        // When Thor dualscreen assistant focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.dualscreen.assistant")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When Thor button mapping focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.mapping")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When Thor hardware settings focus occurs
+        AutoSwitchCoordinator.onPackageChanged("com.odin.settings")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+
+        // When Google Play Services or Play Games sign-in overlay occurs
+        AutoSwitchCoordinator.onPackageChanged("com.google.android.gms")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+        AutoSwitchCoordinator.onPackageChanged("com.google.android.gms.auth.api.signin")
+        assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
+        AutoSwitchCoordinator.onPackageChanged("com.google.android.play.games")
         assertEquals(null, AutoSwitchCoordinator.foregroundApp.value)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
     }
@@ -147,6 +165,25 @@ class AutoSwitchCoordinatorTest {
 
         // Then focus change event is ignored, and active profile remains retroarch (profile1)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged preserves client integration state when task switcher is opened`() {
+        // Given integration client (GameFocus) is active and Genshin is focused game
+        AppStateManager.setExternalClientState(
+            isActive = true,
+            packageName = "com.stormpanda.megingiard.gamefocus.debug",
+            focusedApp = "com.miHoYo.GenshinImpact",
+        )
+
+        // When user opens Task Switcher (com.android.launcher3)
+        AutoSwitchCoordinator.onPackageChanged("com.android.launcher3")
+
+        // Then integration state remains active, focusedApp remains Genshin, and foreground app records launcher3
+        assertTrue(AppStateManager.isExternalClientActive.value)
+        assertEquals("com.stormpanda.megingiard.gamefocus.debug", AppStateManager.externalClientPackage.value)
+        assertEquals("com.miHoYo.GenshinImpact", AppStateManager.focusedAppPackageName.value)
+        assertEquals("com.android.launcher3", AutoSwitchCoordinator.foregroundApp.value)
     }
 
     @Test
@@ -283,11 +320,26 @@ class AutoSwitchCoordinatorTest {
         AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
         assertEquals(profile2.id, MacroPadState.activeProfileId.value)
 
-        // When switching to an unmapped app (home launcher)
+        // When switching to an unmapped app (chrome)
+        AutoSwitchCoordinator.onPackageChanged("com.android.chrome")
+
+        // Then standalone focused app is updated to chrome, but active profile ID remains profile2
+        assertEquals("com.android.chrome", AppStateManager.focusedAppPackageName.value)
+        assertEquals(profile2.id, MacroPadState.activeProfileId.value)
+    }
+
+    @Test
+    fun `onPackageChanged preserves focused game state when task switcher is opened`() {
+        // Given active profile is profile2 (associated with com.citra.emu)
+        AutoSwitchCoordinator.onPackageChanged("com.citra.emu")
+        assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
+
+        // When switching to task switcher (com.android.launcher3)
         AutoSwitchCoordinator.onPackageChanged("com.android.launcher3")
 
-        // Then standalone focused app is updated to launcher, but active profile ID remains profile2
-        assertEquals("com.android.launcher3", AppStateManager.focusedAppPackageName.value)
+        // Then foreground app is set to launcher3, but focused game state remains com.citra.emu
+        assertEquals("com.android.launcher3", AutoSwitchCoordinator.foregroundApp.value)
+        assertEquals("com.citra.emu", AppStateManager.focusedAppPackageName.value)
         assertEquals(profile2.id, MacroPadState.activeProfileId.value)
     }
 
@@ -353,4 +405,52 @@ class AutoSwitchCoordinatorTest {
         // Then reevaluateAutoState triggers and switches active profile to profile2
         assertEquals(profile2.id, MacroPadState.activeProfileId.value)
     }
+
+    @Test
+    fun `onPackageChanged restores ROM session when returning to emulator from task switcher`() =
+        kotlinx.coroutines.runBlocking {
+            val p3Id = UUID.randomUUID().toString()
+            val l3Id = UUID.randomUUID().toString()
+            val profile3 =
+                PadProfile(
+                    id = p3Id,
+                    name = "Super Mario World",
+                    layouts = listOf(PadLayout(id = l3Id, name = "Mario Layout")),
+                    activeLayoutId = l3Id,
+                    association =
+                        ProfileAssociation(
+                            packageName = "com.retroarch",
+                            systemId = "snes",
+                            romFileName = "Super Mario World.sfc",
+                        ),
+                )
+            MacroPadState.loadFrom(listOf(profile1, profile2, profile3), profile3.id)
+
+            // Given RetroArch is running Super Mario World
+            val session =
+                ActiveGameSession(
+                    packageName = "com.retroarch",
+                    systemId = "snes",
+                    romPath = "/roms/snes/Super Mario World.sfc",
+                    gameTitle = "Super Mario World",
+                )
+            EmulatorDetectionFunnel.setActiveSessionForTesting(session)
+            AutoSwitchCoordinator.onPackageChanged("com.retroarch")
+            kotlinx.coroutines.delay(150)
+            assertEquals(profile3.id, MacroPadState.activeProfileId.value)
+
+            // When Task Switcher (com.android.launcher3) is opened
+            AutoSwitchCoordinator.onPackageChanged("com.android.launcher3")
+            assertEquals("com.android.launcher3", AutoSwitchCoordinator.foregroundApp.value)
+            assertEquals("com.retroarch", AppStateManager.focusedAppPackageName.value)
+
+            // When user returns to RetroArch from Task Switcher
+            AutoSwitchCoordinator.onPackageChanged("com.retroarch")
+            kotlinx.coroutines.delay(150)
+
+            // Then ROM session and active profile profile3 are restored
+            assertEquals("com.retroarch", AppStateManager.focusedAppPackageName.value)
+            assertEquals("/roms/snes/Super Mario World.sfc", AppStateManager.focusedRomPath.value)
+            assertEquals(profile3.id, MacroPadState.activeProfileId.value)
+        }
 }
