@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -354,6 +355,7 @@ internal fun AppLauncherFace(
                     val drawable = appInfo.loadIcon(pm)
                     appIconBitmap = drawable?.toImageBitmap()
                 } catch (e: Exception) {
+                    AppLog.d(TAG, "Failed to load icon/label for app launcher ${action.packageName}: ${e.message}")
                     resolvedName = action.packageName
                     appIconBitmap = null
                 }

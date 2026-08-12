@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.macropad.displayShortLabel
@@ -429,6 +430,7 @@ internal fun resolveAppName(
         val info = pm.getApplicationInfo(packageName, 0)
         pm.getApplicationLabel(info).toString()
     } catch (e: Exception) {
+        AppLog.d(TAG, "Could not resolve app name for $packageName: ${e.message}")
         packageName
     }
 }
