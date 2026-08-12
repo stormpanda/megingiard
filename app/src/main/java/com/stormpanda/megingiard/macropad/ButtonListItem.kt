@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
 
@@ -224,6 +225,7 @@ internal fun ButtonListItem(
                         )
                     },
                     onClick = {
+                        AppLog.d(TAG, "onEdit clicked for button '${btn.id}'")
                         menuExpanded = false
                         onEdit()
                     },
@@ -237,6 +239,7 @@ internal fun ButtonListItem(
                         )
                     },
                     onClick = {
+                        AppLog.d(TAG, "onDuplicate clicked for button '${btn.id}'")
                         menuExpanded = false
                         onDuplicate()
                     },
@@ -250,6 +253,7 @@ internal fun ButtonListItem(
                         )
                     },
                     onClick = {
+                        AppLog.d(TAG, "onCopyToLayout clicked for button '${btn.id}'")
                         menuExpanded = false
                         onCopyToLayout()
                     },
@@ -263,6 +267,7 @@ internal fun ButtonListItem(
                         )
                     },
                     onClick = {
+                        AppLog.d(TAG, "onDelete clicked for button '${btn.id}'")
                         menuExpanded = false
                         onDelete()
                     },
