@@ -2,10 +2,6 @@ package com.stormpanda.megingiard.macropad
 
 import android.app.ActivityOptions
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.provider.Settings
 import android.view.Display
@@ -67,6 +63,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -244,28 +241,13 @@ internal fun InlineProfileSettingsOverlay(
     val context = LocalContext.current
     val isAccessibilityActive = remember(context) { MegingiardAccessibilityService.isEnabled(context) }
 
-    var appsList by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var appsList by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
     var isLoadingApps by remember { mutableStateOf(false) }
 
     LaunchedEffect(showAppList) {
         if (showAppList) {
             isLoadingApps = true
-            appsList =
-                withContext(Dispatchers.IO) {
-                    val pm = context.packageManager
-                    val intent =
-                        Intent(Intent.ACTION_MAIN).apply {
-                            addCategory(Intent.CATEGORY_LAUNCHER)
-                        }
-                    pm
-                        .queryIntentActivities(intent, 0)
-                        .map { info ->
-                            val label = info.loadLabel(pm).toString()
-                            val pkg = info.activityInfo.packageName
-                            label to pkg
-                        }.distinctBy { it.second }
-                        .sortedBy { it.first }
-                }
+            appsList = queryInstalledLauncherApps(context)
             isLoadingApps = false
         }
     }
@@ -432,8 +414,8 @@ internal fun InlineProfileSettingsOverlay(
             } else {
                 val filtered =
                     appsList.filter {
-                        it.first.contains(searchQuery, ignoreCase = true) ||
-                            it.second.contains(searchQuery, ignoreCase = true)
+                        it.appName.contains(searchQuery, ignoreCase = true) ||
+                            it.packageName.contains(searchQuery, ignoreCase = true)
                     }
                 if (filtered.isEmpty()) {
                     Text(
@@ -448,20 +430,23 @@ internal fun InlineProfileSettingsOverlay(
                                 .fillMaxWidth()
                                 .height(200.dp),
                     ) {
-                        items(filtered) { (label, pkg) ->
-                            val isAssigned = assignedPackages.contains(pkg.trim().lowercase())
+                        items(
+                            items = filtered,
+                            key = { it.packageName },
+                        ) { appItem ->
+                            val isAssigned = assignedPackages.contains(appItem.packageName.trim().lowercase())
                             Row(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
                                         .clickable(enabled = !isAssigned) {
-                                            selectedPackage = pkg
+                                            selectedPackage = appItem.packageName
                                             showAppList = false
                                         }.padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 AppIcon(
-                                    packageName = pkg,
+                                    packageName = appItem.packageName,
                                     modifier =
                                         Modifier
                                             .padding(end = 12.dp)
@@ -473,7 +458,7 @@ internal fun InlineProfileSettingsOverlay(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = label,
+                                            text = appItem.appName,
                                             color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.5f) else colors.onSurface,
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.Medium,
@@ -488,7 +473,7 @@ internal fun InlineProfileSettingsOverlay(
                                         }
                                     }
                                     Text(
-                                        text = pkg,
+                                        text = appItem.packageName,
                                         color =
                                             if (isAssigned) {
                                                 colors.onSurfaceSecondary.copy(
@@ -507,60 +492,4 @@ internal fun InlineProfileSettingsOverlay(
             }
         }
     }
-}
-
-@Composable
-internal fun AppIcon(
-    packageName: String,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-    var imageBitmap by remember(packageName) { mutableStateOf<ImageBitmap?>(null) }
-
-    LaunchedEffect(packageName) {
-        withContext(Dispatchers.IO) {
-            try {
-                val pm = context.packageManager
-                val iconDrawable = pm.getApplicationIcon(packageName)
-                val bitmap = getDrawableBitmap(iconDrawable)
-                imageBitmap = bitmap.asImageBitmap()
-            } catch (e: Exception) {
-                // Ignore and fallback
-            }
-        }
-    }
-
-    if (imageBitmap != null) {
-        Image(
-            bitmap = imageBitmap!!,
-            contentDescription = null,
-            modifier = modifier,
-        )
-    } else {
-        Box(
-            modifier =
-                modifier.background(
-                    LocalAppColors.current.surfaceVariant,
-                    CircleShape,
-                ),
-        )
-    }
-}
-
-private fun getDrawableBitmap(drawable: Drawable): Bitmap {
-    if (drawable is BitmapDrawable) {
-        if (drawable.bitmap != null) {
-            return drawable.bitmap
-        }
-    }
-    val bitmap =
-        if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
-            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        } else {
-            Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
-        }
-    val canvas = Canvas(bitmap)
-    drawable.setBounds(0, 0, canvas.width, canvas.height)
-    drawable.draw(canvas)
-    return bitmap
 }

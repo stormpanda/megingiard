@@ -1,11 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,31 +29,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.LocalAppColors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private const val TAG = "AppLauncherPicker"
 
 private val ALP_ITEM_CORNER_RADIUS = 8.dp
 private val ALP_ICON_SIZE = 36.dp
 private val ALP_DIALOG_MAX_HEIGHT = 320.dp
-
-data class InstalledAppItem(
-    val appName: String,
-    val packageName: String,
-    val iconBitmap: ImageBitmap?,
-)
 
 @Composable
 internal fun AppLauncherPicker(
@@ -69,26 +54,6 @@ internal fun AppLauncherPicker(
     val colors = LocalAppColors.current
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
-
-    var currentAppIcon by remember(current.packageName) { mutableStateOf<ImageBitmap?>(null) }
-
-    LaunchedEffect(current.packageName) {
-        if (current.packageName.isNotBlank()) {
-            currentAppIcon =
-                withContext(Dispatchers.IO) {
-                    try {
-                        val pm = context.packageManager
-                        val appInfo = pm.getApplicationInfo(current.packageName, 0)
-                        appInfo.loadIcon(pm).toImageBitmap()
-                    } catch (e: Exception) {
-                        AppLog.d(TAG, "Failed to load icon for ${current.packageName}: ${e.message}")
-                        null
-                    }
-                }
-        } else {
-            currentAppIcon = null
-        }
-    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -113,21 +78,11 @@ internal fun AppLauncherPicker(
                         showDialog = true
                     }.padding(12.dp),
         ) {
-            if (currentAppIcon != null) {
-                Image(
-                    bitmap = currentAppIcon!!,
-                    contentDescription = current.packageName,
-                    modifier = Modifier.size(ALP_ICON_SIZE),
-                )
-                Spacer(Modifier.width(12.dp))
-            } else {
-                MaterialSymbol(
-                    name = "apps",
-                    size = ALP_ICON_SIZE,
-                    tint = colors.accent,
-                )
-                Spacer(Modifier.width(12.dp))
-            }
+            AppIcon(
+                packageName = current.packageName,
+                modifier = Modifier.size(ALP_ICON_SIZE),
+            )
+            Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 val resolvedName = resolveAppName(context, current.packageName)
@@ -191,10 +146,7 @@ private fun AppLauncherDialog(
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        installedApps =
-            withContext(Dispatchers.IO) {
-                queryInstalledLauncherApps(context)
-            }
+        installedApps = queryInstalledLauncherApps(context)
         isLoading = false
     }
 
@@ -305,19 +257,10 @@ private fun AppLauncherItemRow(
                 .clickable(onClick = onClick)
                 .padding(8.dp),
     ) {
-        if (item.iconBitmap != null) {
-            Image(
-                bitmap = item.iconBitmap,
-                contentDescription = item.appName,
-                modifier = Modifier.size(ALP_ICON_SIZE),
-            )
-        } else {
-            MaterialSymbol(
-                name = "apps",
-                size = ALP_ICON_SIZE,
-                tint = colors.onSurfaceSecondary,
-            )
-        }
+        AppIcon(
+            packageName = item.packageName,
+            modifier = Modifier.size(ALP_ICON_SIZE),
+        )
 
         Spacer(Modifier.width(12.dp))
 
@@ -338,26 +281,4 @@ private fun AppLauncherItemRow(
             )
         }
     }
-}
-
-private fun queryInstalledLauncherApps(context: Context): List<InstalledAppItem> {
-    val pm = context.packageManager
-    val intent =
-        Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-    val resolveInfos = pm.queryIntentActivities(intent, 0)
-    return resolveInfos
-        .mapNotNull { info ->
-            val pkg = info.activityInfo.packageName
-            val label = info.loadLabel(pm).toString()
-            val drawable = info.loadIcon(pm)
-            val bitmap = drawable?.toImageBitmap()
-            InstalledAppItem(
-                appName = label,
-                packageName = pkg,
-                iconBitmap = bitmap,
-            )
-        }.distinctBy { it.packageName }
-        .sortedBy { it.appName.lowercase() }
 }
