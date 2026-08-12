@@ -209,7 +209,7 @@ class MegingiardAccessibilityService : AccessibilityService() {
                                 val isWirelessOn = isWirelessDebuggingActive(context)
                                 val hasLocalCreds = PrivdBootstrapper.hasCredentials(context)
 
-                                val isSubScreen = isWirelessDebuggingSubScreen(rootNode, config.wirelessDebuggingQueryAndKeyword)
+                                val isSubScreen = isWirelessDebuggingSubScreen(rootNode, config)
 
                                 if (isSubScreen) {
                                     if (isWirelessOn) {
@@ -723,17 +723,16 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     private fun isWirelessDebuggingSubScreen(
         rootNode: AccessibilityNodeInfo,
-        wirelessDebuggingKeyword: String,
+        config: AutoSetupLanguageConfig,
     ): Boolean {
         val sb = StringBuilder()
         collectAllText(rootNode, sb)
         val allText = sb.toString().lowercase()
 
-        val devOptionsKeywords =
-            listOf("developer options", "entwickleroptionen", "opciones de desarrollador", "options pour les développeurs")
-        val isDevOptionsPresent = devOptionsKeywords.any { kw -> allText.contains(kw) }
+        val devOptionsKeywords = config.developerOptionsKeywords
+        val isDevOptionsPresent = devOptionsKeywords.any { kw -> allText.contains(kw.lowercase()) }
 
-        val isWirelessDebuggingPresent = allText.contains(wirelessDebuggingKeyword.lowercase())
+        val isWirelessDebuggingPresent = allText.contains(config.wirelessDebuggingQueryAndKeyword.lowercase())
 
         return isWirelessDebuggingPresent && !isDevOptionsPresent
     }

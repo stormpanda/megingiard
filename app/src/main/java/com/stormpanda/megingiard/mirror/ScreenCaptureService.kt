@@ -56,6 +56,7 @@ class ScreenCaptureService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var mirrorVirtualDisplay: VirtualDisplay? = null
     private var mirrorSurface: Surface? = null
+    private var directPrivdActiveSurface: Surface? = null
     private var mirrorPresentation: MirrorPresentation? = null
     private var recordingPresentation: RecordingMirrorPresentation? = null
     private var directPrivdSession: DirectPrivdMirrorSession? = null
@@ -84,6 +85,8 @@ class ScreenCaptureService : Service() {
                 TouchRecordingManager.recordingRequested,
                 AppStateManager.isPrivdPromptActive,
                 AppStateManager.showIntegrationHome,
+                AppStateManager.isFullscreenMouseActive,
+                AppStateManager.isFullscreenKeyboardActive,
             ) { values ->
                 val capturing = values[0] as Boolean
                 val validScreen = values[1] as Boolean
@@ -94,13 +97,15 @@ class ScreenCaptureService : Service() {
                 val recordingRequested = values[6] as Boolean
                 val isPrivdPromptActive = values[7] as Boolean
                 val showIntegrationHome = values[8] as Boolean
+                val isFullscreenMouseActive = values[9] as Boolean
+                val isFullscreenKeyboardActive = values[10] as Boolean
 
                 capturing && validScreen &&
                     !filePickerOpen && !editorActive &&
                     (!ambientActive || ambientPreviewActive) &&
                     !recordingRequested &&
                     !isPrivdPromptActive &&
-                    !showIntegrationHome
+                    (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
             }.distinctUntilChanged()
                 .collect { shouldShow ->
                     AppLog.d(TAG, "shouldShowMirrorPresentation changed → $shouldShow")
@@ -308,7 +313,11 @@ class ScreenCaptureService : Service() {
 
         scope.launch {
             AppStateManager.showIntegrationHome.collect { showIntegrationHome ->
-                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value) {
+                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value &&
+                    !AppStateManager.isFullscreenMouseActive.value &&
+                    !AppStateManager.isFullscreenKeyboardActive.value &&
+                    !AppStateManager.wasMirroringStartedByTouchpad.value
+                ) {
                     AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
                     stopSelf()
                 }
@@ -574,8 +583,12 @@ class ScreenCaptureService : Service() {
         mirrorPresentation = presentation
 
         presentation.onSurfaceDestroyed = {
+            AppLog.i(TAG, "presentation surface destroyed -> tearing down direct privileged session")
             mirrorSurface = null
-            updateDirectServerSurfaces()
+            directPrivdActiveSurface = null
+            DirectMirrorSurfaceBridge.clearDirectSurfaces()
+            directPrivdSession?.release()
+            directPrivdSession = null
         }
         presentation.onSurfaceReady = { surface ->
             mirrorSurface = surface
@@ -621,10 +634,18 @@ class ScreenCaptureService : Service() {
             if (startGeneration != directPrivdStartGeneration) return@launch
             val surface = mirrorSurface
             if (surface == null || !surface.isValid) {
+                directPrivdActiveSurface = null
                 DirectMirrorSurfaceBridge.clearDirectSurfaces()
                 directPrivdSession?.release()
                 directPrivdSession = null
                 return@launch
+            }
+
+            if (directPrivdActiveSurface != surface && directPrivdSession != null) {
+                AppLog.i(TAG, "target surface changed -> restarting direct privileged mirror session")
+                directPrivdSession?.release()
+                directPrivdSession = null
+                directPrivdActiveSurface = null
             }
 
             var directSession = directPrivdSession
@@ -639,6 +660,7 @@ class ScreenCaptureService : Service() {
                 if (!directStarted) {
                     directSession.release()
                     directPrivdSession = null
+                    directPrivdActiveSurface = null
                     launchConsentFallback("direct privileged mirror unavailable")
                     return@launch
                 }
@@ -649,6 +671,7 @@ class ScreenCaptureService : Service() {
                 for (attempt in 1..DIRECT_MIRROR_MAX_RETRIES) {
                     if (startGeneration != directPrivdStartGeneration) return@launch
                     if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                        directPrivdActiveSurface = surface
                         AppLog.i(
                             TAG,
                             "direct privileged mirror session updated with master surface (attempt $attempt/$DIRECT_MIRROR_MAX_RETRIES)",
@@ -717,6 +740,8 @@ class ScreenCaptureService : Service() {
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
         val showIntegrationHome = AppStateManager.showIntegrationHome.value
         val isFloatingBubbleActive = AppStateManager.isFloatingBubbleActive.value
+        val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
+        val isFullscreenKeyboardActive = AppStateManager.isFullscreenKeyboardActive.value
 
         val shouldShow =
             capturing && validScreen &&
@@ -724,12 +749,12 @@ class ScreenCaptureService : Service() {
                 (!ambientActive || ambientPreviewActive) &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
-                !showIntegrationHome &&
-                !isFloatingBubbleActive
+                !isFloatingBubbleActive &&
+                (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFloatingBubbleActive=$isFloatingBubbleActive)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFloatingBubbleActive=$isFloatingBubbleActive, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
         )
         return shouldShow
     }
@@ -747,6 +772,7 @@ class ScreenCaptureService : Service() {
         mirrorVirtualDisplay?.release()
         mirrorVirtualDisplay = null
         mirrorSurface = null
+        directPrivdActiveSurface = null
         mediaProjection?.stop()
         recordingPresentation?.dismiss()
         recordingPresentation = null

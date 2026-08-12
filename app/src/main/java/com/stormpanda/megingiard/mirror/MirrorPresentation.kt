@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.LinearGradient
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
@@ -25,6 +26,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
 import android.view.Surface
@@ -159,7 +161,15 @@ class MirrorPresentation(
     private val srcWidth: Int,
     private val srcHeight: Int,
 ) : Presentation(context, display, android.R.style.Theme_DeviceDefault_NoActionBar_Fullscreen) {
+    private var currentRoutedSurface: Surface? = null
     var onSurfaceReady: ((Surface) -> Unit)? = null
+        set(value) {
+            field = value
+            val surface = currentRoutedSurface
+            if (surface != null && surface.isValid) {
+                value?.invoke(surface)
+            }
+        }
     var onSurfaceDestroyed: (() -> Unit)? = null
 
     private var masterTextureView: TextureView? = null
@@ -184,6 +194,35 @@ class MirrorPresentation(
                 AppLog.d(TAG, "back pressed: no Compose handler → ignoring")
             }
         }
+
+    private var gpuMotionSmoother: GpuMotionSmoother? = null
+
+    private fun updateSurfaceRouting() {
+        val master = masterSurface ?: return
+        val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
+        val activeCutouts = ScreenCaptureManager.cutouts.value
+        val smoothingCutout = if (!isFullscreenMouseActive) activeCutouts.firstOrNull { it.motionSmoothing } else null
+        val effectiveStrength = smoothingCutout?.motionSmoothingStrength ?: 0
+
+        var smoother = gpuMotionSmoother
+        if (smoother == null && srcWidth > 0 && srcHeight > 0) {
+            AppLog.i(TAG, "Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)")
+            smoother = GpuMotionSmoother(master, srcWidth, srcHeight, effectiveStrength)
+            gpuMotionSmoother = smoother
+            val inSurface = smoother.inputSurface
+            if (inSurface != null) {
+                currentRoutedSurface = inSurface
+                onSurfaceReady?.invoke(inSurface)
+            }
+        } else if (smoother != null) {
+            smoother.updateStrength(effectiveStrength)
+            val inSurface = smoother.inputSurface
+            if (inSurface != null && currentRoutedSurface != inSurface) {
+                currentRoutedSurface = inSurface
+                onSurfaceReady?.invoke(inSurface)
+            }
+        }
+    }
 
     override fun cancel() {
         AppLog.d(TAG, "cancel → ignoring")
@@ -211,6 +250,8 @@ class MirrorPresentation(
 
         setOnDismissListener {
             AppLog.i(TAG, "dismissed → scope cancelled, lifecycle destroyed")
+            gpuMotionSmoother?.release()
+            gpuMotionSmoother = null
             scope.cancel()
             lifecycleOwner.destroy()
         }
@@ -268,7 +309,7 @@ class MirrorPresentation(
                         AppLog.e(TAG, "Error setting initial surface frame rate", e)
                     }
                     AppLog.d(TAG, "master TextureView surface available")
-                    onSurfaceReady?.invoke(surface)
+                    updateSurfaceRouting()
                 }
 
                 override fun onSurfaceTextureSizeChanged(
@@ -279,6 +320,9 @@ class MirrorPresentation(
 
                 override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
                     AppLog.d(TAG, "master TextureView surface destroyed")
+                    gpuMotionSmoother?.release()
+                    gpuMotionSmoother = null
+                    currentRoutedSurface = null
                     onSurfaceDestroyed?.invoke()
                     masterSurface?.release()
                     masterSurface = null
@@ -286,11 +330,10 @@ class MirrorPresentation(
                 }
 
                 override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
-                    val now = System.currentTimeMillis()
+                    val now = SystemClock.elapsedRealtime()
                     val fps = ScreenCaptureManager.maxFps.value.coerceIn(10, 60)
                     val interval = 1000L / fps
                     if (now - lastUpdateTime >= interval) {
-                        mcc.updateAccumulator(tv)
                         mcc.invalidate()
                         lastUpdateTime = now
                     }
@@ -300,6 +343,13 @@ class MirrorPresentation(
         scope.launch {
             ScreenCaptureManager.cutouts.collect { activeCutouts ->
                 mcc.cutouts = activeCutouts
+                updateSurfaceRouting()
+            }
+        }
+
+        scope.launch {
+            AppStateManager.isFullscreenMouseActive.collect {
+                updateSurfaceRouting()
             }
         }
 
@@ -383,6 +433,7 @@ class MirrorPresentation(
                                     AppLanguage.SYSTEM -> Locale.getDefault()
                                     AppLanguage.EN -> Locale.ENGLISH
                                     AppLanguage.DE -> Locale.GERMAN
+                                    AppLanguage.ZH_TW -> Locale.TRADITIONAL_CHINESE
                                 }
                             val config = Configuration(context.resources.configuration)
                             config.setLocale(locale)
@@ -972,6 +1023,9 @@ class MirrorPresentation(
             }
         }
         scope.launch {
+            var lastLoadedPath: String? = null
+            var cachedBitmap: Bitmap? = null
+
             MacroPadState.activeLayout.collect { layout ->
                 val path = layout?.backgroundImagePath
                 val useAsMask = layout?.useBackgroundImageAsMask == true
@@ -980,39 +1034,29 @@ class MirrorPresentation(
                 val oy = layout?.bgImageOffsetY ?: 0f
                 val dim = layout?.backgroundImageDim ?: 0f
                 if (path != null) {
-                    try {
-                        val bitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
-                        withContext(Dispatchers.Main) {
-                            if (bitmap != null) {
-                                multiCutoutContainer?.bgImageScale = scale
-                                multiCutoutContainer?.bgImageOffsetX = ox
-                                multiCutoutContainer?.bgImageOffsetY = oy
-                                multiCutoutContainer?.bgImageDim = dim
-                                if (useAsMask) {
-                                    container.setBackgroundColor(Color.BLACK)
-                                    container.background = null
-                                    multiCutoutContainer?.useAsMask = true
-                                    multiCutoutContainer?.bgBitmap = bitmap
-                                } else {
-                                    container.setBackgroundColor(Color.BLACK)
-                                    container.background = null
-                                    multiCutoutContainer?.useAsMask = false
-                                    multiCutoutContainer?.bgBitmap = bitmap
-                                }
-                            } else {
-                                container.setBackgroundColor(Color.BLACK)
-                                container.background = null
-                                multiCutoutContainer?.bgImageScale = 1f
-                                multiCutoutContainer?.bgImageOffsetX = 0f
-                                multiCutoutContainer?.bgImageOffsetY = 0f
-                                multiCutoutContainer?.bgImageDim = 0f
-                                multiCutoutContainer?.useAsMask = false
-                                multiCutoutContainer?.bgBitmap = null
-                            }
+                    if (path != lastLoadedPath) {
+                        try {
+                            val bitmap = MacroPadMediaRepository.loadScaledBitmap(context, path)
+                            lastLoadedPath = path
+                            cachedBitmap = bitmap
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
+                            lastLoadedPath = null
+                            cachedBitmap = null
                         }
-                    } catch (e: Exception) {
-                        AppLog.e(TAG, "Failed to load background image for MirrorPresentation", e)
-                        withContext(Dispatchers.Main) {
+                    }
+                    val bitmap = cachedBitmap
+                    withContext(Dispatchers.Main) {
+                        if (bitmap != null) {
+                            multiCutoutContainer?.bgImageScale = scale
+                            multiCutoutContainer?.bgImageOffsetX = ox
+                            multiCutoutContainer?.bgImageOffsetY = oy
+                            multiCutoutContainer?.bgImageDim = dim
+                            container.setBackgroundColor(Color.BLACK)
+                            container.background = null
+                            multiCutoutContainer?.useAsMask = useAsMask
+                            multiCutoutContainer?.bgBitmap = bitmap
+                        } else {
                             container.setBackgroundColor(Color.BLACK)
                             container.background = null
                             multiCutoutContainer?.bgImageScale = 1f
@@ -1024,6 +1068,8 @@ class MirrorPresentation(
                         }
                     }
                 } else {
+                    lastLoadedPath = null
+                    cachedBitmap = null
                     withContext(Dispatchers.Main) {
                         container.setBackgroundColor(Color.BLACK)
                         container.background = null
@@ -1049,7 +1095,7 @@ class MirrorPresentation(
         }
     }
 
-    fun getSurface(): Surface? = masterSurface
+    fun getSurface(): Surface? = currentRoutedSurface ?: masterSurface
 
     fun captureScreenshot(): Bitmap? {
         val frozen = ScreenCaptureManager.isFrozen.value
@@ -1086,17 +1132,11 @@ class MultiCutoutContainer(
     var cutouts: List<ScreenCutout> = emptyList()
         set(value) {
             field = value
-            if (isFrozen || !value.any { it.motionSmoothing }) {
-                releaseAccumulator()
-            }
             invalidate()
         }
     var isFrozen: Boolean = false
         set(value) {
             field = value
-            if (value) {
-                releaseAccumulator()
-            }
             invalidate()
         }
     var frozenBitmap: Bitmap? = null
@@ -1173,7 +1213,16 @@ class MultiCutoutContainer(
     private val blackToTransparentColors = intArrayOf(Color.BLACK, Color.TRANSPARENT)
     private val circleBlendColors = intArrayOf(Color.BLACK, Color.BLACK, Color.TRANSPARENT)
     private val circleBlendStops = floatArrayOf(0f, 0f, 1f)
-    private val activeStrengthsSet = mutableSetOf<Int>()
+
+    private val horizontalGradientShader = LinearGradient(0f, 0f, 1f, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
+    private val horizontalReverseGradientShader = LinearGradient(0f, 0f, 1f, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
+    private val verticalGradientShader = LinearGradient(0f, 0f, 0f, 1f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
+    private val verticalReverseGradientShader = LinearGradient(0f, 0f, 0f, 1f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
+    private val shaderMatrix = Matrix()
+
+    private var cachedCircleRadius = -1f
+    private var cachedCircleStop = -1f
+    private var cachedCircleShader: Shader? = null
 
     private val cutoutPaint = Paint()
     private val blendPaint =
@@ -1187,122 +1236,9 @@ class MultiCutoutContainer(
             color = Color.BLACK
         }
 
-    private var scratchBitmap: Bitmap? = null
-
-    private class Accumulator(
-        val strength: Int,
-        width: Int,
-        height: Int,
-    ) {
-        var accumulated: Bitmap? = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        var accumCanvas: Canvas? = accumulated?.let { Canvas(it) }
-        var initialized: Boolean = false
-
-        val blendPaint =
-            Paint().apply {
-                val alphaPercent = (100 - strength).coerceAtLeast(1) / 100f
-                alpha = (alphaPercent * 255f).roundToInt()
-                xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_OVER)
-            }
-
-        fun recycle() {
-            accumulated?.recycle()
-            accumulated = null
-            accumCanvas = null
-        }
-    }
-
-    private val accumulators = mutableMapOf<Int, Accumulator>()
-
     init {
         clipChildren = true
         setWillNotDraw(false)
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        releaseAccumulator()
-    }
-
-    fun releaseAccumulator() {
-        accumulators.values.forEach { it.recycle() }
-        accumulators.clear()
-        scratchBitmap?.recycle()
-        scratchBitmap = null
-    }
-
-    fun updateAccumulator(textureView: TextureView) {
-        activeStrengthsSet.clear()
-        if (!isFrozen) {
-            for (i in cutouts.indices) {
-                val cutout = cutouts[i]
-                if (cutout.motionSmoothing) {
-                    activeStrengthsSet.add(cutout.motionSmoothingStrength)
-                }
-            }
-        }
-        if (activeStrengthsSet.isNotEmpty() && srcWidth > 0 && srcHeight > 0) {
-            // 1. Recycle accumulators for strengths that are no longer active
-            val iterator = accumulators.iterator()
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (entry.key !in activeStrengthsSet) {
-                    entry.value.recycle()
-                    iterator.remove()
-                }
-            }
-
-            // 2. Ensure accumulators exist and have correct sizes
-            for (strength in activeStrengthsSet) {
-                val existing = accumulators[strength]
-                if (existing != null) {
-                    val acc = existing.accumulated
-                    if (acc == null || acc.width != srcWidth || acc.height != srcHeight) {
-                        existing.recycle()
-                        accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
-                    }
-                } else {
-                    accumulators[strength] = Accumulator(strength, srcWidth, srcHeight)
-                }
-            }
-
-            // 3. Ensure a valid single scratch bitmap exists
-            val currentScratch = scratchBitmap
-            val scratch =
-                if (currentScratch == null || currentScratch.width != srcWidth || currentScratch.height != srcHeight) {
-                    currentScratch?.recycle()
-                    Bitmap.createBitmap(srcWidth, srcHeight, Bitmap.Config.ARGB_8888).also { scratchBitmap = it }
-                } else {
-                    currentScratch
-                }
-
-            // 4. Capture TextureView frame once
-            try {
-                textureView.getBitmap(scratch)
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Error getting TextureView bitmap for motion smoothing", e)
-                return
-            }
-
-            // 5. Update each active accumulator with the captured frame
-            for (strength in activeStrengthsSet) {
-                val acc = accumulators[strength] ?: continue
-                val accumCanvas = acc.accumCanvas ?: continue
-                try {
-                    if (!acc.initialized) {
-                        accumCanvas.drawBitmap(scratch, 0f, 0f, null)
-                        acc.initialized = true
-                    } else {
-                        accumCanvas.drawBitmap(scratch, 0f, 0f, acc.blendPaint)
-                    }
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Error updating motion smoothing accumulator for strength $strength", e)
-                }
-            }
-            invalidate()
-        } else {
-            releaseAccumulator()
-        }
     }
 
     override fun onLayout(
@@ -1489,8 +1425,6 @@ class MultiCutoutContainer(
 
                     if (isFrozen && frozenBitmap != null) {
                         canvas.drawBitmap(frozenBitmap!!, 0f, 0f, null)
-                    } else if (cutout.motionSmoothing && accumulators[cutout.motionSmoothingStrength]?.accumulated != null) {
-                        canvas.drawBitmap(accumulators[cutout.motionSmoothingStrength]!!.accumulated!!, 0f, 0f, null)
                     } else if (masterView != null) {
                         drawChild(canvas, masterView, drawTime)
                         masterViewDrawn = true
@@ -1502,41 +1436,48 @@ class MultiCutoutContainer(
                         if (edgeBlending) {
                             val r = min(dw, dh) / 2f
                             val stop = maxOf(0f, r - blendW) / r
-                            circleBlendStops[1] = stop
-                            val shader = RadialGradient(dw / 2f, dh / 2f, r, circleBlendColors, circleBlendStops, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            if (r != cachedCircleRadius || stop != cachedCircleStop) {
+                                circleBlendStops[1] = stop
+                                cachedCircleRadius = r
+                                cachedCircleStop = stop
+                                cachedCircleShader =
+                                    RadialGradient(dw / 2f, dh / 2f, r, circleBlendColors, circleBlendStops, Shader.TileMode.CLAMP)
+                            }
+                            blendPaint.shader = cachedCircleShader
                             canvas.drawRect(0f, 0f, dw, dh, blendPaint)
                             blendPaint.shader = null
                         }
                     } else if (hasTouching) {
                         if (touchesLeft) {
-                            val shader = LinearGradient(-leftExt, 0f, leftExt, 0f, transparentToBlackColors, null, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(2f * leftExt, 1f)
+                            shaderMatrix.postTranslate(-leftExt, 0f)
+                            horizontalGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = horizontalGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesRight) {
-                            val shader =
-                                LinearGradient(dw - rightExt, 0f, dw + rightExt, 0f, blackToTransparentColors, null, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(2f * rightExt, 1f)
+                            shaderMatrix.postTranslate(dw - rightExt, 0f)
+                            horizontalReverseGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = horizontalReverseGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesTop) {
-                            val shader = LinearGradient(0f, -topExt, 0f, topExt, transparentToBlackColors, null, Shader.TileMode.CLAMP)
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(1f, 2f * topExt)
+                            shaderMatrix.postTranslate(0f, -topExt)
+                            verticalGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = verticalGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         if (touchesBottom) {
-                            val shader =
-                                LinearGradient(
-                                    0f,
-                                    dh - bottomExt,
-                                    0f,
-                                    dh + bottomExt,
-                                    blackToTransparentColors,
-                                    null,
-                                    Shader.TileMode.CLAMP,
-                                )
-                            blendPaint.shader = shader
+                            shaderMatrix.reset()
+                            shaderMatrix.setScale(1f, 2f * bottomExt)
+                            shaderMatrix.postTranslate(0f, dh - bottomExt)
+                            verticalReverseGradientShader.setLocalMatrix(shaderMatrix)
+                            blendPaint.shader = verticalReverseGradientShader
                             canvas.drawRect(-leftExt, -topExt, dw + rightExt, dh + bottomExt, blendPaint)
                         }
                         blendPaint.shader = null
@@ -1616,7 +1557,7 @@ private class ThrottledTextureView(
         }
 
     override fun invalidate() {
-        val now = System.currentTimeMillis()
+        val now = SystemClock.elapsedRealtime()
         val fps = maxFps.coerceAtLeast(1)
         val interval = if (fps >= 60) 0L else (1000L / fps)
         if (interval == 0L || now - lastInvalidateTime >= interval) {

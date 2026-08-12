@@ -42,6 +42,12 @@ data class MirrorRuntimePolicyState(
     val showIntegrationHome: Boolean = false,
     /** True if an app launcher floating bubble overlay is currently active. */
     val isFloatingBubbleActive: Boolean = false,
+    /** True if the fullscreen mouse/touchpad overlay is currently active. */
+    val isFullscreenMouseActive: Boolean = false,
+    /** True if the fullscreen keyboard overlay is currently active. */
+    val isFullscreenKeyboardActive: Boolean = false,
+    /** True if screen capture was explicitly initiated by the touchpad overlay. */
+    val wasMirroringStartedByTouchpad: Boolean = false,
 )
 
 enum class MirrorRuntimeAction {
@@ -60,15 +66,21 @@ enum class MirrorRuntimeAction {
 fun decideMirrorRuntimeAction(state: MirrorRuntimePolicyState): MirrorRuntimeAction {
     if (!state.isOnValidScreen || state.layoutId == null) return MirrorRuntimeAction.NONE
 
-    // If companion integration dashboard or app launcher floating bubble is active, mirroring is prohibited.
-    if (state.showIntegrationHome || state.isFloatingBubbleActive) {
+    val overlayActive =
+        state.isFullscreenMouseActive ||
+            state.isFullscreenKeyboardActive ||
+            state.wasMirroringStartedByTouchpad
+
+    // If companion integration dashboard or app launcher floating bubble is active, ambient mirroring is prohibited,
+    // unless an active fullscreen overlay (such as Touchpad in touch mode) requested mirroring.
+    if ((state.showIntegrationHome || state.isFloatingBubbleActive) && !overlayActive) {
         return if (state.isCapturing) MirrorRuntimeAction.STOP else MirrorRuntimeAction.NONE
     }
 
     return when {
-        state.isCapturing && !state.layoutWantsMirror -> MirrorRuntimeAction.STOP
+        state.isCapturing && !state.layoutWantsMirror && !overlayActive -> MirrorRuntimeAction.STOP
 
-        state.layoutWantsMirror &&
+        (state.layoutWantsMirror || overlayActive) &&
             !state.isCapturing &&
             !state.promptInFlight &&
             !state.privdMirrorConnecting &&

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Megingiard Game Focus</string>
+    <string name="focus_launcher_title">遊戲聚焦啟動器</string>
+    <string name="focus_launcher_refresh">重新整理</string>
+    <string name="focus_launcher_search_hint">搜尋應用程式與遊戲…</string>
+    <string name="focus_launcher_no_apps">找不到應用程式</string>
+    <string name="focus_change_artwork_title">更換封面圖</string>
+    <string name="settings_cancel">取消</string>
+
+    <string name="gamefocus_launch_top">主螢幕</string>
+    <string name="gamefocus_launch_bottom">底部螢幕</string>
+    <string name="gamefocus_header_android_games">Android 遊戲</string>
+    <string name="gamefocus_header_android_apps">Android 應用程式</string>
+    <string name="gamefocus_cat_all_apps">所有應用程式</string>
+    <string name="gamefocus_cat_favorites">我的最愛</string>
+    <string name="gamefocus_cat_last_used">最近使用</string>
+    <string name="gamefocus_option_add_favorite">加入我的最愛</string>
+    <string name="gamefocus_option_remove_favorite">從我的最愛移除</string>
+    <string name="gamefocus_option_hide">隱藏</string>
+    <string name="gamefocus_option_unhide">取消隱藏</string>
+    <string name="gamefocus_option_edit">編輯</string>
+    <string name="gamefocus_option_app_info">應用程式資訊</string>
+    <string name="gamefocus_option_close">關閉</string>
+    <string name="gamefocus_option_actions">動作</string>
+    <string name="gamefocus_no_favorites">尚未加入任何最愛應用程式</string>
+    <string name="gamefocus_no_last_used">沒有最近使用的應用程式</string>
+    <string name="gamefocus_no_games">找不到 Android 遊戲</string>
+    <string name="gamefocus_no_apps_category">找不到 Android 應用程式</string>
+
+    <string name="steamgriddb_token_missing_title">需要 API 金鑰</string>
+    <string name="steamgriddb_token_missing_message">SteamGridDB 抓取功能需要 API 金鑰。請在您的 SteamGridDB 帳戶偏好設定中建立 API 金鑰，並新增至 Megingiard 的全域設定中。</string>
+    <string name="steamgriddb_error_dismiss">確定</string>
+    <string name="steamgriddb_cd_search">搜尋</string>
+    <string name="steamgriddb_cd_cancel_edit">取消編輯</string>
+    <string name="steamgriddb_search_placeholder">輸入搜尋關鍵字…</string>
+    <string name="steamgriddb_preview_unavailable">無法預覽</string>
+    <string name="steamgriddb_cd_artwork_option">SteamGridDB 封面選項</string>
+    <string name="steamgriddb_status_downloading">正在下載封面圖…</string>
+    <string name="steamgriddb_status_searching">正在搜尋 SteamGridDB…</string>
+    <string name="steamgriddb_status_fetching">正在取得遊戲封面…</string>
+    <string name="gamefocus_option_change_search_term">更改搜尋關鍵字</string>
+    <string name="gamefocus_option_use_app_icon">使用應用程式圖示</string>
+
+    <string name="gamefocus_library_title">遊戲庫</string>
+    <string name="gamefocus_library_tab_all">全部</string>
+    <string name="gamefocus_library_tab_apps">Android 應用程式</string>
+    <string name="gamefocus_library_tab_games">Android 遊戲</string>
+    <string name="gamefocus_library_hint_close">按 R2 或 B 關閉</string>
+    <string name="gamefocus_nav_gallery">圖庫</string>
+    <string name="gamefocus_nav_library">遊戲庫</string>
+    <string name="gamefocus_option_add_rom_folder">新增 ROM 資料夾</string>
+    <string name="gamefocus_option_manage_rom_folders">移除 ROM 資料夾</string>
+    <string name="gamefocus_dialog_remove_rom_folder_title">移除 ROM 資料夾</string>
+    <string name="gamefocus_dialog_remove_rom_folder_msg">選擇要移除的 ROM 資料夾／系統：</string>
+    <string name="gamefocus_dialog_remove_confirm_title">確認移除</string>
+    <string name="gamefocus_dialog_remove_confirm_msg">確定要移除 ROM 系統「%1$s」嗎？已掃描到的遊戲將從啟動器中移除。</string>
+
+    <string name="gamefocus_dialog_system_recognized_title">已辨識系統</string>
+    <string name="gamefocus_dialog_system_recognized_msg">此資料夾已辨識為系統：%1$s。</string>
+    <string name="gamefocus_dialog_select_core_label">選擇 RetroArch 核心：</string>
+    <string name="gamefocus_dialog_core_default">建議（%1$s）</string>
+    <string name="gamefocus_dialog_core_save">儲存</string>
+    <string name="gamefocus_dialog_core_native_msg">此系統使用原生模擬，不需要 RetroArch 核心。</string>
+    <string name="gamefocus_dialog_core_native_close">關閉</string>
+    <string name="gamefocus_dialog_cancel">取消</string>
+    <string name="gamefocus_dialog_select">選擇</string>
+    <string name="gamefocus_dialog_unknown_system">未知系統</string>
+</resources>
+

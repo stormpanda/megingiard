@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -42,10 +43,12 @@ class AppStateManagerTest {
                 override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences = emptyPreferences()
             }
         KeyboardSettings.init(dummyDataStore, CoroutineScope(testDispatcher))
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
     }
 
     @After
     fun tearDown() {
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
         Dispatchers.resetMain()
     }
 
@@ -393,6 +396,42 @@ class AppStateManagerTest {
         }
 
     @Test
+    fun `autoSwitchOffToastEvent emits when setCompanionViewMode turns off AUTO without button flag`() =
+        runTest {
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            val emittedEvents = mutableListOf<Unit>()
+            val job =
+                launch(UnconfinedTestDispatcher(testScheduler)) {
+                    AppStateManager.autoSwitchOffToastEvent.collect { emittedEvents.add(it) }
+                }
+
+            // Turned off by non-button (e.g. profile select, layout select, switch to hub)
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = false)
+            assertEquals(1, emittedEvents.size)
+
+            job.cancel()
+        }
+
+    @Test
+    fun `autoSwitchOffToastEvent does not emit when setCompanionViewMode turns off AUTO with isAutoSwitchButton true`() =
+        runTest {
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+
+            val emittedEvents = mutableListOf<Unit>()
+            val job =
+                launch(UnconfinedTestDispatcher(testScheduler)) {
+                    AppStateManager.autoSwitchOffToastEvent.collect { emittedEvents.add(it) }
+                }
+
+            // Turned off by auto switch button
+            AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD, isAutoSwitchButton = true)
+            assertEquals(0, emittedEvents.size)
+
+            job.cancel()
+        }
+
+    @Test
     fun `shouldShowIntegrationHome returns expected values across view modes`() {
         val associatedProfile =
             PadProfile(
@@ -441,6 +480,50 @@ class AppStateManagerTest {
         // Returns true (shows Companion Hub) while gameNativeProfile remains activeProfile
         assertTrue(CompanionViewMode.AUTO.shouldShowIntegrationHome("com.android.launcher3", null, gameNativeProfile))
     }
+
+    @Test
+    fun `tapping active profile button preserves AUTO mode when active package matches profile`() =
+        runTest {
+            val gameProfile =
+                PadProfile(
+                    id = "p-1",
+                    name = "AetherSX2 Profile",
+                    association =
+                        com.stormpanda.megingiard.macropad
+                            .ProfileAssociation(packageName = "com.emulator.aethersx2"),
+                )
+            com.stormpanda.megingiard.macropad.MacroPadState
+                .addProfile(gameProfile)
+            com.stormpanda.megingiard.macropad.MacroPadState
+                .setActiveProfileId(gameProfile.id)
+            AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
+            AppStateManager.setStandaloneForegroundState("com.emulator.aethersx2", null)
+
+            // When focused package matches activeProfile and mode is AUTO:
+            val currentMode = AppStateManager.companionViewMode.value
+            val focusedPkg = AppStateManager.focusedAppPackageName.value
+            val matchesFocused = gameProfile.matches(focusedPkg, null, isActiveProfile = true)
+
+            // Only switch to MACROPAD if currentMode != AUTO or !matchesFocused
+            if (currentMode != CompanionViewMode.AUTO || !matchesFocused) {
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            }
+
+            // Mode remains AUTO
+            assertEquals(CompanionViewMode.AUTO, AppStateManager.companionViewMode.value)
+
+            // If profile does NOT match focused package (e.g. launcher focused):
+            AppStateManager.setStandaloneForegroundState("com.android.launcher3", null)
+            val focusedLauncherPkg = AppStateManager.focusedAppPackageName.value
+            val matchesLauncher = gameProfile.matches(focusedLauncherPkg, null, isActiveProfile = true)
+
+            if (currentMode != CompanionViewMode.AUTO || !matchesLauncher) {
+                AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+            }
+
+            // Mode switches to MACROPAD
+            assertEquals(CompanionViewMode.MACROPAD, AppStateManager.companionViewMode.value)
+        }
 
     @Test
     fun `closeActiveModal resets all modal states and overlay selections simultaneously`() =

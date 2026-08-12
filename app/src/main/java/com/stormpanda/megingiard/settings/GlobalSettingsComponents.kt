@@ -244,6 +244,7 @@ internal fun AppLanguage.displayNameResId(): Int =
         AppLanguage.SYSTEM -> R.string.settings_language_system
         AppLanguage.EN -> R.string.settings_language_en
         AppLanguage.DE -> R.string.settings_language_de
+        AppLanguage.ZH_TW -> R.string.settings_language_zh_tw
     }
 
 @Composable
