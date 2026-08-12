@@ -6,6 +6,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.macropad.displayShortLabel
@@ -76,6 +77,7 @@ internal fun ActionGroup.actions(): List<ActionCategory> =
 
         ActionGroup.OTHER -> {
             listOf(
+                ActionCategory.APP_LAUNCHER,
                 ActionCategory.FULLSCREEN_MOUSE,
                 ActionCategory.FULLSCREEN_KEYBOARD,
             )
@@ -99,6 +101,7 @@ internal enum class ActionCategory {
     MIRROR_TOUCH_PROJECTION,
     FULLSCREEN_MOUSE,
     FULLSCREEN_KEYBOARD,
+    APP_LAUNCHER,
 }
 
 internal fun ActionCategory.labelResId(): Int =
@@ -119,6 +122,7 @@ internal fun ActionCategory.labelResId(): Int =
         ActionCategory.MIRROR_TOUCH_PROJECTION -> R.string.macropad_action_mirror_touch_projection
         ActionCategory.FULLSCREEN_MOUSE -> R.string.macropad_action_fullscreen_mouse
         ActionCategory.FULLSCREEN_KEYBOARD -> R.string.macropad_action_fullscreen_keyboard
+        ActionCategory.APP_LAUNCHER -> R.string.macropad_action_app_launcher
     }
 
 internal fun ActionCategory.defaultAction(): PadAction =
@@ -191,6 +195,10 @@ internal fun ActionCategory.defaultAction(): PadAction =
         ActionCategory.FULLSCREEN_KEYBOARD -> {
             PadAction.FullScreenKeyboard()
         }
+
+        ActionCategory.APP_LAUNCHER -> {
+            PadAction.AppLauncher()
+        }
     }
 
 internal fun ActionCategory.group(): ActionGroup =
@@ -220,6 +228,7 @@ internal fun ActionCategory.group(): ActionGroup =
 
         ActionCategory.FULLSCREEN_MOUSE,
         ActionCategory.FULLSCREEN_KEYBOARD,
+        ActionCategory.APP_LAUNCHER,
         -> ActionGroup.OTHER
     }
 
@@ -241,6 +250,7 @@ internal fun PadAction.categoryResId(): Int =
         is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
         is PadAction.FullScreenMouse -> R.string.macropad_action_fullscreen_mouse
         is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
+        is PadAction.AppLauncher -> R.string.macropad_action_app_launcher
     }
 
 internal fun PadAction.toCategory(): ActionCategory =
@@ -261,6 +271,7 @@ internal fun PadAction.toCategory(): ActionCategory =
         is PadAction.MirrorTouchProjection -> ActionCategory.MIRROR_TOUCH_PROJECTION
         is PadAction.FullScreenMouse -> ActionCategory.FULLSCREEN_MOUSE
         is PadAction.FullScreenKeyboard -> ActionCategory.FULLSCREEN_KEYBOARD
+        is PadAction.AppLauncher -> ActionCategory.APP_LAUNCHER
     }
 
 internal fun ActionCategory.isEnabled(
@@ -293,6 +304,7 @@ internal fun ActionCategory.isEnabled(
 
         ActionCategory.FULLSCREEN_MOUSE,
         ActionCategory.FULLSCREEN_KEYBOARD,
+        ActionCategory.APP_LAUNCHER,
         -> true
     }
 
@@ -396,6 +408,30 @@ internal fun PadAction.displayLabel(): String {
         is PadAction.FullScreenKeyboard -> {
             context.getString(R.string.macropad_action_fullscreen_keyboard)
         }
+
+        is PadAction.AppLauncher -> {
+            val name = resolveAppName(context, packageName)
+            if (name.isNotBlank()) {
+                context.getString(R.string.app_launcher_button_label_format, name)
+            } else {
+                context.getString(R.string.app_launcher_picker_select_app)
+            }
+        }
+    }
+}
+
+internal fun resolveAppName(
+    context: Context,
+    packageName: String,
+): String {
+    if (packageName.isBlank()) return ""
+    return try {
+        val pm = context.packageManager
+        val info = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(info).toString()
+    } catch (e: Exception) {
+        AppLog.d(TAG, "Could not resolve app name for $packageName: ${e.message}")
+        packageName
     }
 }
 

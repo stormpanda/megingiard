@@ -232,15 +232,31 @@ data class AutoSetupLanguageConfig(
 
             val lang = locale.language.lowercase()
             return when (lang) {
-                "de" -> GERMAN_DE
-                "es" -> SPANISH_ES
-                "fr" -> FRENCH_FR
-                "en" -> ENGLISH_US
-                "zh" ->
+                "de" -> {
+                    GERMAN_DE
+                }
+
+                "es" -> {
+                    SPANISH_ES
+                }
+
+                "fr" -> {
+                    FRENCH_FR
+                }
+
+                "en" -> {
+                    ENGLISH_US
+                }
+
+                "zh" -> {
                     traditionalChineseOrNull(
                         listOf(locale.country.lowercase(), locale.script.lowercase()),
                     )
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             }
         }
 

@@ -247,6 +247,21 @@ Each button supports one of the following actions:
 - Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
 - Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), the active **MacroPad Screen** (`MacroPadScreen`), and the secondary display **Screen Mirror Overlay** (`MirrorPresentation`).
 
+### FR-P15: App Launcher Button & Floating Bubble Overlay
+
+- Users can add buttons of type **App Launcher** (`PadAction.AppLauncher`) to MacroPad layouts.
+- **Single-Field Persistence**: For optimal portable layout persistence, `PadAction.AppLauncher` stores **only `packageName`** in JSON layout profiles (`{"type":"app_launcher","packageName":"..."}`). The application title and launcher icon are resolved dynamically at runtime via `PackageManager`.
+- **Application Picker**: When configuring an App Launcher button in the editor, an app picker dialog lists all installed launcher applications (`PackageManager.queryIntentActivities` with `Intent.CATEGORY_LAUNCHER`), allowing the user to select an app by name or package name.
+- **Editor Simplification & Dynamic Label**: Selecting the App Launcher action automatically hides the **Label** text input field and **Icon** picker from the button edit dialog (`PadButtonEditDialog`). The button label is dynamically evaluated as `"Open <AppName>"` (`"Öffnen <AppName>"` in German) derived from `PackageManager`.
+- **Monochrome Tinted Icon Rendering**: The target application's launcher icon is desaturated to grayscale and rendered on the button face tinted with the user's chosen button icon color (`effectiveTextTint`).
+- **Unified Button Content Rendering**: Button face contents are rendered via a unified `PadButtonContent` composable shared across Use Mode (`MacroPadButton`), Editor Canvas (`PadCanvas`), and Sidebar Button List (`ButtonListItem`), ensuring App Launcher icons are displayed consistently across all editing and usage views.
+- **Execution & App Launch**: Tapping an App Launcher button opens the designated application on the bottom screen display using `ActivityOptions.makeBasic().setLaunchDisplayId(...)`.
+- **Touch-Positioned Floating Bubble Overlay**: Upon launching the target application, Megingiard minimizes to the background (`moveTaskToBack(true)`) and displays a floating bubble overlay centered at the exact screen coordinates where the App Launcher button was pressed.
+- **Temporary Mirroring Pause**: Triggering an App Launcher button or having an active floating bubble temporarily pauses screen capture (`ScreenCaptureService.stopSelf()`) to conserve system resources without altering the layout's saved `mirrorAutoStart` preference. Restoring Megingiard to the foreground automatically resumes screen capture.
+- **Secondary Display Attachment**: The floating bubble window uses `WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY` created via `DisplayManager` targeting the secondary display (bottom screen) and managed by `MegingiardAccessibilityService`.
+- **Interactivity & Restore**: The floating bubble can be freely dragged across the screen. Tapping the floating bubble restores Megingiard (`MainActivity`) to the foreground on the bottom display, dismisses the bubble, and resumes screen mirroring.
+
+
 
 ### FR-P10: Optional Button Icons
 

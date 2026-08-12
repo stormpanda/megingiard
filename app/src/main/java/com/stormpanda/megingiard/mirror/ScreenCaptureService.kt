@@ -323,6 +323,15 @@ class ScreenCaptureService : Service() {
                 }
             }
         }
+
+        scope.launch {
+            AppStateManager.isFloatingBubbleActive.collect { bubbleActive ->
+                if (bubbleActive && ScreenCaptureManager.isCapturing.value) {
+                    AppLog.i(TAG, "Floating bubble overlay became active -> stopping screen capture to conserve resources")
+                    stopSelf()
+                }
+            }
+        }
     }
 
     private fun saveScreenshotToGallery(
@@ -730,6 +739,7 @@ class ScreenCaptureService : Service() {
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
         val showIntegrationHome = AppStateManager.showIntegrationHome.value
+        val isFloatingBubbleActive = AppStateManager.isFloatingBubbleActive.value
         val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
         val isFullscreenKeyboardActive = AppStateManager.isFullscreenKeyboardActive.value
 
@@ -739,11 +749,12 @@ class ScreenCaptureService : Service() {
                 (!ambientActive || ambientPreviewActive) &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
+                !isFloatingBubbleActive &&
                 (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFloatingBubbleActive=$isFloatingBubbleActive, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
         )
         return shouldShow
     }

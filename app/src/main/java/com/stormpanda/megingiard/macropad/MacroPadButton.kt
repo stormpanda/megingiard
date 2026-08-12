@@ -1,5 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -8,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,22 +32,35 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 private const val TAG = "MacroPadButton"
@@ -263,34 +280,144 @@ internal fun PadButton(
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                if (isTrackpoint) {
-                    Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
-                } else if (btn.action is PadAction.ScrollWheel) {
-                    ScrollWheelFace(accentColor = effectiveContentAccent)
-                } else if (btn.action is PadAction.BackgroundPeek) {
-                    BackgroundPeekFace(accentColor = effectiveContentAccent)
-                } else {
-                    val iconName = btn.iconName
-                    if (iconName != null) {
-                        MaterialSymbol(
-                            name = iconName,
-                            size = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
-                            tint = effectiveTextTint,
-                            filled = btn.iconFilled,
-                        )
-                    } else {
-                        Text(
-                            text = btn.label,
-                            color = effectiveTextTint,
-                            fontSize = (11 * btn.buttonSize.cols).sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                PadButtonContent(
+                    btn = btn,
+                    effectiveTextTint = effectiveTextTint,
+                    iconSize = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                    isTrackpoint = isTrackpoint,
+                    effectiveContentAccent = effectiveContentAccent,
+                )
             }
         }
     }
+}
+
+@Composable
+internal fun PadButtonContent(
+    btn: PadButton,
+    effectiveTextTint: Color,
+    iconSize: Dp,
+    isTrackpoint: Boolean = btn.action is PadAction.TrackpointMove,
+    effectiveContentAccent: Color = effectiveTextTint,
+) {
+    if (isTrackpoint) {
+        Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+    } else if (btn.action is PadAction.ScrollWheel) {
+        ScrollWheelFace(accentColor = effectiveContentAccent)
+    } else if (btn.action is PadAction.BackgroundPeek) {
+        BackgroundPeekFace(accentColor = effectiveContentAccent)
+    } else if (btn.action is PadAction.AppLauncher) {
+        AppLauncherFace(
+            btn = btn,
+            action = btn.action as PadAction.AppLauncher,
+            effectiveTextTint = effectiveTextTint,
+            iconSize = iconSize,
+        )
+    } else {
+        val iconName = btn.iconName
+        if (iconName != null) {
+            MaterialSymbol(
+                name = iconName,
+                size = iconSize,
+                tint = effectiveTextTint,
+                filled = btn.iconFilled,
+            )
+        } else {
+            Text(
+                text = btn.label,
+                color = effectiveTextTint,
+                fontSize = (11 * btn.buttonSize.cols).sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun AppLauncherFace(
+    btn: PadButton,
+    action: PadAction.AppLauncher,
+    effectiveTextTint: Color,
+    iconSize: Dp? = null,
+) {
+    val context = LocalContext.current
+    var appIconBitmap by remember(action.packageName) { mutableStateOf<ImageBitmap?>(null) }
+    var resolvedName by remember(action.packageName) { mutableStateOf("") }
+
+    LaunchedEffect(action.packageName) {
+        if (action.packageName.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val pm = context.packageManager
+                    val appInfo = pm.getApplicationInfo(action.packageName, 0)
+                    resolvedName = pm.getApplicationLabel(appInfo).toString()
+                    val drawable = appInfo.loadIcon(pm)
+                    appIconBitmap = drawable?.toImageBitmap()
+                } catch (e: Exception) {
+                    AppLog.d(TAG, "Failed to load icon/label for app launcher ${action.packageName}: ${e.message}")
+                    resolvedName = action.packageName
+                    appIconBitmap = null
+                }
+            }
+        } else {
+            appIconBitmap = null
+            resolvedName = ""
+        }
+    }
+
+    val targetSize = iconSize ?: (MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows))
+    val bitmap = appIconBitmap
+    if (bitmap != null) {
+        val colorFilter =
+            remember(effectiveTextTint) {
+                tintedGrayscaleFilter(effectiveTextTint)
+            }
+        Image(
+            bitmap = bitmap,
+            contentDescription = resolvedName.ifBlank { action.packageName },
+            colorFilter = colorFilter,
+            modifier = Modifier.size(targetSize),
+        )
+    } else {
+        MaterialSymbol(
+            name = "apps",
+            size = targetSize,
+            tint = effectiveTextTint,
+        )
+    }
+}
+
+private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
+    val r = tint.red
+    val g = tint.green
+    val b = tint.blue
+    val matrix =
+        ColorMatrix(
+            floatArrayOf(
+                r * 0.2136f,
+                r * 0.7152f,
+                r * 0.0722f,
+                0f,
+                0f,
+                g * 0.2136f,
+                g * 0.7152f,
+                g * 0.0722f,
+                0f,
+                0f,
+                b * 0.2136f,
+                b * 0.7152f,
+                b * 0.0722f,
+                0f,
+                0f,
+                0f,
+                0f,
+                0f,
+                1f,
+                0f,
+            ),
+        )
+    return ColorFilter.colorMatrix(matrix)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

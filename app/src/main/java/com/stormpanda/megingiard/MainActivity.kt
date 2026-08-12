@@ -63,6 +63,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.log.LogReportManager
+import com.stormpanda.megingiard.macropad.AppLauncherManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
@@ -500,6 +501,7 @@ class MainActivity : ComponentActivity() {
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
                     AppStateManager.showIntegrationHome,
+                    AppStateManager.isFloatingBubbleActive,
                     AppStateManager.isFullscreenMouseActive,
                     AppStateManager.isFullscreenKeyboardActive,
                     AppStateManager.wasMirroringStartedByTouchpad,
@@ -510,9 +512,10 @@ class MainActivity : ComponentActivity() {
                     val onValidScreen = values[3] as Boolean
                     val wizardActive = values[4] as Boolean
                     val showIntegrationHome = values[5] as Boolean
-                    val isFullscreenMouseActive = values[6] as Boolean
-                    val isFullscreenKeyboardActive = values[7] as Boolean
-                    val wasMirroringStartedByTouchpad = values[8] as Boolean
+                    val isFloatingBubbleActive = values[6] as Boolean
+                    val isFullscreenMouseActive = values[7] as Boolean
+                    val isFullscreenKeyboardActive = values[8] as Boolean
+                    val wasMirroringStartedByTouchpad = values[9] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -522,6 +525,7 @@ class MainActivity : ComponentActivity() {
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         tutorialsActive = wizardActive,
                         showIntegrationHome = showIntegrationHome,
+                        isFloatingBubbleActive = isFloatingBubbleActive,
                         isFullscreenMouseActive = isFullscreenMouseActive,
                         isFullscreenKeyboardActive = isFullscreenKeyboardActive,
                         wasMirroringStartedByTouchpad = wasMirroringStartedByTouchpad,
@@ -619,6 +623,20 @@ class MainActivity : ComponentActivity() {
                     }
                     PrivdClient.disconnect()
                     finishAndRemoveTask()
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                AppStateManager.pendingAppLaunchRequest.collect { req ->
+                    if (req == null) return@collect
+                    AppLog.i(TAG, "pendingAppLaunchRequest → launching ${req.packageName} at (${req.touchX}, ${req.touchY})")
+                    AppStateManager.consumeAppLaunchRequest()
+                    AppLauncherManager.launchApp(
+                        context = this@MainActivity,
+                        packageName = req.packageName,
+                        touchX = req.touchX,
+                        touchY = req.touchY,
+                    )
                 }
             }
 

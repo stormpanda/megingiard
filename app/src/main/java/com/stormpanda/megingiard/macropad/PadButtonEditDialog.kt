@@ -49,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -205,6 +206,10 @@ internal fun ButtonEditDialog(
 
     var actionBeforeEdit by remember { mutableStateOf<PadAction?>(null) }
 
+    LaunchedEffect(button?.id) {
+        AppLog.d(TAG, "Opening ButtonEditDialog for button=${button?.id ?: "new"} action=$initAction")
+    }
+
     LaunchedEffect(macros) {
         val currentAction = action
         if (currentAction is PadAction.Macro) {
@@ -226,6 +231,7 @@ internal fun ButtonEditDialog(
     }
 
     fun onActionChanged(newAction: PadAction) {
+        AppLog.d(TAG, "onActionChanged: $newAction")
         action = newAction
         if (newAction is PadAction.ScrollWheel) {
             buttonSize = ButtonSize.SIZE_1X2
@@ -237,6 +243,11 @@ internal fun ButtonEditDialog(
             label = ""
             iconName = null
             buttonShape = ButtonShape.CIRCLE
+            return
+        }
+        if (newAction is PadAction.AppLauncher) {
+            label = ""
+            iconName = null
             return
         }
         // For Macro: fill label from the macro name if the label field is still blank.
@@ -258,6 +269,10 @@ internal fun ButtonEditDialog(
         when {
             action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> {
                 true
+            }
+
+            action is PadAction.AppLauncher -> {
+                (action as PadAction.AppLauncher).packageName.isNotBlank()
             }
 
             action is PadAction.Macro -> {
@@ -322,6 +337,7 @@ internal fun ButtonEditDialog(
                                     buttonBgColor = buttonBgColor,
                                     invisible = invisible,
                                 )
+                            AppLog.d(TAG, "Confirm button edit: id=${result.id} label=${result.label} action=${result.action}")
                             onConfirm(result)
                         }
                     },
@@ -357,8 +373,8 @@ internal fun ButtonEditDialog(
             ) {
                 val iconsFilled = iconFilled
 
-                // Label input and shape — hidden for ScrollWheel and TrackpointMove
-                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
+                // Label input and shape — hidden for ScrollWheel, TrackpointMove, and AppLauncher
+                if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher) {
                     // ── Label + Icon selector row ──────────────────────────────────────────
                     Row(
                         verticalAlignment = Alignment.Bottom,

@@ -260,6 +260,13 @@ sealed class PadAction {
     data class FullScreenKeyboard(
         val layout: KbLayout = KbLayout.QWERTZ,
     ) : PadAction()
+
+    /** Opens an installed Android app on the target screen and minimizes Megingiard into a floating bubble overlay. */
+    @Serializable
+    @SerialName("app_launcher")
+    data class AppLauncher(
+        val packageName: String = "",
+    ) : PadAction()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -283,6 +290,7 @@ fun PadAction.defaultIconName(): String? =
         is PadAction.MirrorTouchProjection -> "touch_app"
         is PadAction.FullScreenMouse -> "mouse"
         is PadAction.FullScreenKeyboard -> "keyboard"
+        is PadAction.AppLauncher -> "apps"
         is PadAction.Macro -> "smart_button"
         else -> null
     }

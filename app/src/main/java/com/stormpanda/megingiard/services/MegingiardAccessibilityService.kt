@@ -837,6 +837,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
          */
         fun isInstanceActive(): Boolean = instance != null
 
+        /**
+         * Returns the active service instance, or null if not bound.
+         */
+        fun getInstance(): MegingiardAccessibilityService? = instance
+
         fun isWifiActive(context: Context): Boolean =
             try {
                 val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager

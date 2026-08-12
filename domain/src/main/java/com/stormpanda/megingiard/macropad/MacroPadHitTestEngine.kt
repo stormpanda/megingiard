@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
@@ -140,6 +141,27 @@ class MacroPadHitTestEngine(
                     lastDxSign = 0f
                     lastDySign = 0f
                     TouchInjector.injectTouch(TouchAction.DOWN, unclampedCursorX, unclampedCursorY)
+                }
+            }
+
+            hitButton.action is PadAction.AppLauncher -> {
+                _pressedIds.value = _pressedIds.value + hitButton.id
+                val act = hitButton.action as PadAction.AppLauncher
+                if (act.packageName.isNotBlank()) {
+                    val bx = hitButton.posX * canvasW
+                    val by = hitButton.posY * canvasH
+                    AppLog.d(TAG, "AppLauncher button center at ($bx, $by)")
+                    AppStateManager.requestAppLaunch(act.packageName, bx, by)
+                }
+                if (hitButton.hapticStrength != HapticStrength.OFF) {
+                    AppLog.d(TAG, "haptic on press: button=${hitButton.id} strength=${hitButton.hapticStrength}")
+                    onHapticFeedback?.invoke(
+                        hitButton.id,
+                        hitButton.hapticStrength,
+                        hitButton.hapticCustomDurationMs,
+                        hitButton.hapticCustomAmplitude,
+                        0f,
+                    )
                 }
             }
 
@@ -476,6 +498,10 @@ class MacroPadHitTestEngine(
                 is PadAction.FullScreenKeyboard -> {
                     !profile.enableKeyboard
                 }
+
+                is PadAction.AppLauncher -> {
+                    false
+                }
             }
 
         /**
@@ -530,6 +556,7 @@ class MacroPadHitTestEngine(
 
                 is PadAction.FullScreenMouse,
                 is PadAction.FullScreenKeyboard,
+                is PadAction.AppLauncher,
                 -> {
                     null
                 }
