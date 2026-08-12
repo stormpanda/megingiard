@@ -67,6 +67,8 @@ import kotlin.math.abs
 private const val TAG = "FloatingBubbleOverlay"
 
 private val FBO_BUBBLE_SIZE: Dp = 56.dp
+private val FBO_OVERSHOOT_MARGIN: Dp = 12.dp
+private val FBO_WINDOW_SIZE: Dp = FBO_BUBBLE_SIZE + FBO_OVERSHOOT_MARGIN * 2
 private val FBO_BORDER_WIDTH: Dp = 2.dp
 private val FBO_ICON_SIZE: Dp = 36.dp
 private const val FBO_INITIAL_X_DP = 32
@@ -131,23 +133,23 @@ object FloatingBubbleOverlay {
             lifecycleOwner = owner
 
             val density = windowContext.resources.displayMetrics.density
-            val bubbleSizePx = (FBO_BUBBLE_SIZE.value * density).toInt()
+            val windowSizePx = (FBO_WINDOW_SIZE.value * density).toInt()
 
             val params =
                 WindowManager.LayoutParams().apply {
                     type = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
                     flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                     format = PixelFormat.TRANSLUCENT
-                    width = bubbleSizePx
-                    height = bubbleSizePx
+                    width = windowSizePx
+                    height = windowSizePx
                     gravity = Gravity.TOP or Gravity.START
-                    x = if (touchX >= 0f) (touchX - bubbleSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_X_DP * density).toInt()
-                    y = if (touchY >= 0f) (touchY - bubbleSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_Y_DP * density).toInt()
+                    x = if (touchX >= 0f) (touchX - windowSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_X_DP * density).toInt()
+                    y = if (touchY >= 0f) (touchY - windowSizePx / 2f).coerceAtLeast(0f).toInt() else (FBO_INITIAL_Y_DP * density).toInt()
                 }
 
             val view =
                 ComposeView(windowContext).apply {
-                    layoutParams = ViewGroup.LayoutParams(bubbleSizePx, bubbleSizePx)
+                    layoutParams = ViewGroup.LayoutParams(windowSizePx, windowSizePx)
                     setViewTreeLifecycleOwner(owner)
                     setViewTreeSavedStateRegistryOwner(owner)
                     setViewTreeViewModelStoreOwner(owner)
@@ -222,7 +224,7 @@ object FloatingBubbleOverlay {
             AppStateManager.setFloatingBubbleActive(true)
             AppLog.i(
                 TAG,
-                "Floating bubble overlay displayed on display ${targetDisplay.displayId} via TYPE_ACCESSIBILITY_OVERLAY (size=${bubbleSizePx}px)",
+                "Floating bubble overlay displayed on display ${targetDisplay.displayId} via TYPE_ACCESSIBILITY_OVERLAY (size=${windowSizePx}px)",
             )
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to display floating bubble overlay: ${e.message}", e)
@@ -280,32 +282,37 @@ private fun FloatingBubbleContent() {
     )
 
     Box(
+        modifier = Modifier.size(FBO_WINDOW_SIZE),
         contentAlignment = Alignment.Center,
-        modifier =
-            Modifier
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    alpha = scale.coerceIn(0f, 1f)
-                }.size(FBO_BUBBLE_SIZE)
-                .clip(CircleShape)
-                .background(colors.surface.copy(alpha = 0.95f))
-                .border(FBO_BORDER_WIDTH, colors.accent, CircleShape)
-                .padding(6.dp),
     ) {
-        val bitmap = megingiardIconBitmap
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = stringResource(R.string.floating_bubble_cd),
-                modifier = Modifier.size(FBO_ICON_SIZE),
-            )
-        } else {
-            MaterialSymbol(
-                name = "apps",
-                size = FBO_ICON_SIZE,
-                tint = colors.accent,
-            )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier =
+                Modifier
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        alpha = scale.coerceIn(0f, 1f)
+                    }.size(FBO_BUBBLE_SIZE)
+                    .clip(CircleShape)
+                    .background(colors.surface.copy(alpha = 0.95f))
+                    .border(FBO_BORDER_WIDTH, colors.accent, CircleShape)
+                    .padding(6.dp),
+        ) {
+            val bitmap = megingiardIconBitmap
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = stringResource(R.string.floating_bubble_cd),
+                    modifier = Modifier.size(FBO_ICON_SIZE),
+                )
+            } else {
+                MaterialSymbol(
+                    name = "apps",
+                    size = FBO_ICON_SIZE,
+                    tint = colors.accent,
+                )
+            }
         }
     }
 }
