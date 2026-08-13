@@ -1,8 +1,7 @@
 import java.security.MessageDigest
 
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("megingiard.android.library")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -78,12 +77,8 @@ val generateNativeBinaryHashes = tasks.register("generateNativeBinaryHashes", Ge
 
 android {
     namespace = "com.stormpanda.megingiard.companion.domain"
-    compileSdk = 35
 
     defaultConfig {
-        minSdk = 33
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -104,10 +99,6 @@ android {
             )
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
     kotlinOptions {
         // debounce() carries @FlowPreview in the binary metadata of coroutines 1.8.x
         // even though the annotation class is no longer exported publicly.
@@ -124,10 +115,6 @@ android {
 // Make every Kotlin compile + KSP-like task depend on the generator.
 tasks.matching { it.name.startsWith("compile") && it.name.contains("Kotlin") }.configureEach {
     dependsOn(generateNativeBinaryHashes)
-}
-
-kotlin {
-    jvmToolchain(17)
 }
 
 dependencies {

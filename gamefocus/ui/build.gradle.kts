@@ -1,9 +1,8 @@
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    id("megingiard.android.application")
+    id("megingiard.android.compose")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -14,16 +13,11 @@ val localProperties = Properties().also { props ->
 
 android {
     namespace = "com.stormpanda.megingiard.gamefocus"
-    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.stormpanda.megingiard.gamefocus"
-        minSdk = 33
-        targetSdk = 35
         versionCode = 9
         versionName = "0.9.0-SNAPSHOT"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -72,12 +66,7 @@ android {
         }
     }
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
     buildFeatures {
-        compose = true
         buildConfig = true
     }
     testOptions {
@@ -85,10 +74,6 @@ android {
             isIncludeAndroidResources = true
         }
     }
-}
-
-kotlin {
-    jvmToolchain(17)
 }
 
 dependencies {
