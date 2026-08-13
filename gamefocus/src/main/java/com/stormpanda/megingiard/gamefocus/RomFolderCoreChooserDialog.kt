@@ -31,8 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.focus.rom.CustomRomFolder
-import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.GamePadButton
 import com.stormpanda.megingiard.ui.GamePadButtonAction

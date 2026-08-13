@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.toBitmap
 import androidx.palette.graphics.Palette
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

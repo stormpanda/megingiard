@@ -1,5 +1,4 @@
 package com.stormpanda.megingiard.steamgriddb
-
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -63,6 +62,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.media.SteamGridDbClient
+import com.stormpanda.megingiard.media.SteamGridDbException
+import com.stormpanda.megingiard.media.SteamGridDbGame
+import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider

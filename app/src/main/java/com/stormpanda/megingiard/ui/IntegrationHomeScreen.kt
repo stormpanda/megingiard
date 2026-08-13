@@ -75,10 +75,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.focus.InstalledAppInfo
-import com.stormpanda.megingiard.focus.InstalledAppsManager
-import com.stormpanda.megingiard.focus.rom.ActiveGameSession
-import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.MaterialSymbol
@@ -86,6 +84,8 @@ import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.session.ActiveGameSession
+import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.delay
 import java.io.File

@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.gamefocus
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

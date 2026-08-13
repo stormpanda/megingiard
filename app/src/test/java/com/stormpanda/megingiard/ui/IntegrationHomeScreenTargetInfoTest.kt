@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.ui
 
-import com.stormpanda.megingiard.focus.InstalledAppInfo
-import com.stormpanda.megingiard.focus.rom.ActiveGameSession
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.session.ActiveGameSession
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

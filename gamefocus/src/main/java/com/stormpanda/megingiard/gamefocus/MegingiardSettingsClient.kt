@@ -4,12 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.focus.rom.GameNativeDetector
-import com.stormpanda.megingiard.focus.rom.RomManager
-import com.stormpanda.megingiard.focus.rom.SUPPORTED_SYSTEMS
+import com.stormpanda.megingiard.catalog.RomManager
+import com.stormpanda.megingiard.catalog.SUPPORTED_SYSTEMS
 import com.stormpanda.megingiard.ipc.IpcSettingsParser
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
 import com.stormpanda.megingiard.ipc.observeContentProvider
+import com.stormpanda.megingiard.session.GameNativeDetector
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

@@ -3,7 +3,7 @@ package com.stormpanda.megingiard.macropad
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
-import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
+import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

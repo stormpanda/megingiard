@@ -1,6 +1,6 @@
 package com.stormpanda.megingiard.gamefocus
 
-import com.stormpanda.megingiard.focus.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith

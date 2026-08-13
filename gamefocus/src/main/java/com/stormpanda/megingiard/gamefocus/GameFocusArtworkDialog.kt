@@ -1,5 +1,4 @@
 package com.stormpanda.megingiard.gamefocus
-
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -67,13 +66,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.focus.InstalledAppInfo
-import com.stormpanda.megingiard.focus.InstalledAppsManager
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.gamefocus.R
 import com.stormpanda.megingiard.math.floorMod
-import com.stormpanda.megingiard.steamgriddb.SteamGridDbClient
-import com.stormpanda.megingiard.steamgriddb.SteamGridDbGame
-import com.stormpanda.megingiard.steamgriddb.SteamGridDbImage
+import com.stormpanda.megingiard.media.SteamGridDbClient
+import com.stormpanda.megingiard.media.SteamGridDbException
+import com.stormpanda.megingiard.media.SteamGridDbGame
+import com.stormpanda.megingiard.media.SteamGridDbImage
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.CutoutLetterButton
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon

@@ -1,11 +1,11 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.focus.rom.ActiveGameSession
-import com.stormpanda.megingiard.focus.rom.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.macropad.ProfileAssociation
+import com.stormpanda.megingiard.session.ActiveGameSession
+import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

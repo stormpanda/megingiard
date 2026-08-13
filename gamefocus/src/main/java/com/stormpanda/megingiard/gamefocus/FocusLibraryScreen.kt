@@ -93,10 +93,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.focus.InstalledAppInfo
-import com.stormpanda.megingiard.focus.LibraryTab
-import com.stormpanda.megingiard.focus.rom.CustomRomFolder
-import com.stormpanda.megingiard.focus.rom.RomManager
+import com.stormpanda.megingiard.catalog.CustomRomFolder
+import com.stormpanda.megingiard.catalog.InstalledAppInfo
+import com.stormpanda.megingiard.catalog.LibraryTab
+import com.stormpanda.megingiard.catalog.RomManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.CutoutLetterCircleIcon
