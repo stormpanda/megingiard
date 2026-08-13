@@ -11,6 +11,9 @@ private const val TAG = "KeyInjector"
  * Public facade for keyboard event injection — strategy router.
  */
 object KeyInjector {
+    @Volatile
+    private var appContext: Context? = null
+
     private val router =
         InjectorBackendRouter(
             tag = TAG,
@@ -22,11 +25,13 @@ object KeyInjector {
                 }
             },
             onPrivdDisconnected = {
-                AppLog.i(TAG, "Privd disconnected while KeyInjector active")
+                AppLog.i(TAG, "Privd disconnected while KeyInjector active -> launching fallback ShellKeyInjector")
+                appContext?.let { ShellKeyInjector.start(it) }
             },
         )
 
     fun start(context: Context) {
+        appContext = context.applicationContext
         if (router.resolveBackend()) {
             PrivdClient.send("KB_START\n")
         } else {
@@ -42,6 +47,7 @@ object KeyInjector {
         } else {
             ShellKeyInjector.stop()
         }
+        appContext = null
     }
 
     val isRunning: Boolean get() = router.isRunning { ShellKeyInjector.isRunning }

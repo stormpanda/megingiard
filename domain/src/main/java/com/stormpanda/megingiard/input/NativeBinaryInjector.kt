@@ -107,6 +107,7 @@ abstract class NativeBinaryInjector<T>(
                     it.isDaemon = true
                     it.start()
                 }
+            AppLog.i(tag, "Native binary injector '$assetName' started successfully")
         } catch (e: Exception) {
             AppLog.e(
                 tag,
@@ -130,6 +131,7 @@ abstract class NativeBinaryInjector<T>(
         try {
             process?.destroy()
             process?.destroyForcibly()
+            process?.waitFor(50, TimeUnit.MILLISECONDS)
         } catch (_: Exception) {
         }
         writer = null

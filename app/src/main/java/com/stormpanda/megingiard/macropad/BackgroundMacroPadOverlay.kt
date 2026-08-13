@@ -35,27 +35,13 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.SwipeGestureProcessor
 import com.stormpanda.megingiard.SwipeGestureProgress
 import com.stormpanda.megingiard.SwipeGestureType
-import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.input.TouchInjector
-import com.stormpanda.megingiard.keyboard.KeyInjector
-import com.stormpanda.megingiard.macropad.GamepadInjector
-import com.stormpanda.megingiard.macropad.PadAction
-import com.stormpanda.megingiard.macropad.PadLayout
-import com.stormpanda.megingiard.macropad.TrackpointMode
+import com.stormpanda.megingiard.input.InjectorLifecycleManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.QuickMenuBar
-import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -64,15 +50,6 @@ import kotlin.math.sqrt
 private const val AM_SCREEN_PADDING_DP = 0
 private val AM_SCREEN_PADDING = AM_SCREEN_PADDING_DP.dp
 private const val AM_PERCENT_DIVISOR = 100f
-
-/** Mirrors MacroPadViewModel.INJECTOR_RESTART_DEBOUNCE_MS — absorbs rapid modal transitions. */
-private const val AM_INJECTOR_RESTART_DEBOUNCE_MS = 150L
-
-private data class AmbientInjectorGate(
-    val stopKeyboard: Boolean,
-    val stopMouse: Boolean,
-    val stopGamepad: Boolean,
-)
 
 private const val TAG = "BackgroundMacroPadOverlay"
 
@@ -200,126 +177,15 @@ internal fun BackgroundMacroPadOverlay(showQuickMenuBar: Boolean = true) {
     // Effective dim: overridden to 0 when peeking
     val effectiveDim = if (isPeekActive) 0f else dimAlpha
 
-    // Single watcher: stop injectors according to overlay state, restart when all closed.
-    // Mirrors MacroPadViewModel.watchInjectorLifecycle() — must use the same combine()+
-    // collectLatest+delay pattern so that rapid QuickMenu-close→Ambient-open transitions
-    // do not cause a spurious injector restart.
+    // Injector lifecycle management centralized via InjectorLifecycleManager
     LaunchedEffect(Unit) {
-        combine(
-            AppStateManager.isQuickMenuOpen,
-            AppStateManager.isEditorActive,
-            AppStateManager.isBackgroundSettingsActive,
-            AppStateManager.isFullscreenKeyboardActive,
-            AppStateManager.isFullscreenMouseActive,
-            AppStateManager.isViewportEditActive,
-            MacroPadState.activeLayout,
-        ) { array ->
-            val quickMenu = array[0] as Boolean
-            val editor = array[1] as Boolean
-            val ambient = array[2] as Boolean
-            val kb = array[3] as Boolean
-            val mouse = array[4] as Boolean
-            val vp = array[5] as Boolean
-            val activeL = array[6] as? PadLayout
-
-            val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
-            val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
-            val hasMouse =
-                activeL?.buttons?.any {
-                    it.action is PadAction.MouseButton ||
-                        it.action is PadAction.ScrollWheel ||
-                        (
-                            it.action is PadAction.TrackpointMove &&
-                                (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                        )
-                } == true || activeL?.backgroundTouchpad?.enabled == true
-
-            val blockingModal = editor || ambient || vp
-            val startKeyboard = kb || (hasKeyboard && !blockingModal)
-            val startMouse = mouse || (hasMouse && !blockingModal && !kb)
-            val startGamepad = hasGamepad && !blockingModal && !quickMenu && !kb && !mouse
-
-            AmbientInjectorGate(
-                stopKeyboard = !startKeyboard,
-                stopMouse = !startMouse,
-                stopGamepad = !startGamepad,
-            )
-        }.distinctUntilChanged()
-            .collectLatest { gate ->
-                if (gate.stopKeyboard) {
-                    AppLog.d(TAG, "stopping keyboard injector")
-                    KeyInjector.stop()
-                }
-                if (gate.stopMouse) {
-                    AppLog.d(TAG, "stopping mouse injector")
-                    MouseInjector.stop()
-                }
-                if (gate.stopGamepad) {
-                    AppLog.d(TAG, "stopping gamepad injector")
-                    GamepadInjector.stop()
-                }
-
-                // Absorb rapid transitions (e.g. QuickMenu closes then Editor opens
-                // in the same frame). collectLatest will cancel this branch
-                // if any gate flips back to stop-mode within the delay window.
-                delay(AM_INJECTOR_RESTART_DEBOUNCE_MS)
-                withContext(Dispatchers.IO) {
-                    val activeL = MacroPadState.activeLayout.value
-                    val hasKeyboard = activeL?.buttons?.any { it.action is PadAction.KeyboardKey } == true
-                    val hasGamepad = activeL?.buttons?.any { it.action is PadAction.GamepadButton || it.action is PadAction.Macro } == true
-                    val hasMouse =
-                        activeL?.buttons?.any {
-                            it.action is PadAction.MouseButton ||
-                                it.action is PadAction.ScrollWheel ||
-                                (
-                                    it.action is PadAction.TrackpointMove &&
-                                        (it.action as PadAction.TrackpointMove).mode == TrackpointMode.PHYSICAL_MOUSE
-                                )
-                        } == true || activeL?.backgroundTouchpad?.enabled == true
-                    val hasTouch =
-                        activeL?.buttons?.any {
-                            (
-                                it.action is PadAction.TrackpointMove &&
-                                    (it.action as PadAction.TrackpointMove).mode == TrackpointMode.VIRTUAL_TOUCH
-                            ) ||
-                                it.action is PadAction.Macro
-                        } == true
-
-                    val blockingModalActive =
-                        AppStateManager.isEditorActive.value || AppStateManager.isBackgroundSettingsActive.value ||
-                            AppStateManager.isViewportEditActive.value
-
-                    if (!gate.stopKeyboard && hasKeyboard) {
-                        KeyInjector.start(context)
-                    }
-                    if (!gate.stopGamepad && hasGamepad) {
-                        GamepadInjector.start(context)
-                    }
-                    if (!gate.stopMouse && hasMouse) {
-                        MouseInjector.start(context)
-                    }
-
-                    if (hasTouch) {
-                        if (!blockingModalActive) {
-                            TouchInjector.start(context, "BackgroundMacroPadOverlay")
-                        } else {
-                            TouchInjector.stop("BackgroundMacroPadOverlay")
-                        }
-                    } else {
-                        TouchInjector.stop("BackgroundMacroPadOverlay")
-                    }
-                }
-            }
+        InjectorLifecycleManager.watch(context)
     }
 
-    // Stop all injectors and reset peek state when leaving
     DisposableEffect(Unit) {
         onDispose {
-            AppLog.d(TAG, "BackgroundMacroPadOverlay disposed → all injectors stopped")
-            KeyInjector.stop()
-            GamepadInjector.stop()
-            MouseInjector.stop()
-            TouchInjector.stop("BackgroundMacroPadOverlay")
+            AppLog.d(TAG, "BackgroundMacroPadOverlay disposed → stopping injectors")
+            InjectorLifecycleManager.stopAll()
             MacroPadState.resetPeek()
         }
     }
