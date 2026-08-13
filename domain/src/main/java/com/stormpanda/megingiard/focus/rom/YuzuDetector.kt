@@ -5,12 +5,13 @@ import com.stormpanda.megingiard.privd.PrivdClient
 import java.util.Locale
 
 private const val TAG = "YuzuDetector"
-private const val TITLE_ID_LENGTH = 16
+private val LOADING_REGEX = Regex("""Loading\s+(.+)\s+\(([A-Fa-f0-9]{16})\)""")
+private val TITLE_ID_REGEX = Regex("""title_id=([A-Fa-f0-9]{16})""", RegexOption.IGNORE_CASE)
 
 /**
  * Detector implementation for Yuzu-derived Nintendo Switch emulators
  * (Citron, Yuzu, Sudachi, Suyu).
- * Reads active emulator log files and custom per-game configurations over privileged socket.
+ * Reads active emulator log files over privileged socket.
  */
 object YuzuDetector : EmulatorDetector {
     private val titleCache = mutableMapOf<String, String>()
@@ -27,15 +28,19 @@ object YuzuDetector : EmulatorDetector {
 
     override val systemId: String = "switch"
 
-    private fun getCandidateLogPaths(packageName: String): List<String> =
-        listOf(
-            "/storage/emulated/0/Android/data/$packageName/files/log/citron_log.txt",
-            "/storage/emulated/0/Android/data/$packageName/files/log/yuzu_log.txt",
-            "/storage/emulated/0/Android/data/$packageName/files/log/sudachi_log.txt",
-            "/storage/emulated/0/Android/data/$packageName/files/log/suyu_log.txt",
-            "/sdcard/Android/data/$packageName/files/log/citron_log.txt",
-            "/sdcard/Android/data/$packageName/files/log/yuzu_log.txt",
+    private fun getCandidateLogPaths(packageName: String): List<String> {
+        val logFileName =
+            when {
+                packageName.contains("citron") -> "citron_log.txt"
+                packageName.contains("sudachi") -> "sudachi_log.txt"
+                packageName.contains("suyu") -> "suyu_log.txt"
+                else -> "yuzu_log.txt"
+            }
+        return listOf(
+            "/storage/emulated/0/Android/data/$packageName/files/log/$logFileName",
+            "/sdcard/Android/data/$packageName/files/log/$logFileName",
         )
+    }
 
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
@@ -67,30 +72,14 @@ object YuzuDetector : EmulatorDetector {
 
         // Iterate through log lines from top to bottom to capture the latest loaded game
         for (line in lines) {
-            // Pattern 1: Core <Info> core/core.cpp:Load:402: Loading WILD GUNS Reloaded (0100CFC00A1D8000) ...
-            if (line.contains("Loading ") && line.contains("(") && line.contains(")")) {
-                val loadingIdx = line.lastIndexOf("Loading ")
-                if (loadingIdx != -1) {
-                    val sub = line.substring(loadingIdx + "Loading ".length)
-                    val parenStart = sub.lastIndexOf('(')
-                    val parenEnd = sub.lastIndexOf(')')
-                    if (parenStart != -1 && parenEnd > parenStart) {
-                        val titleCandidate = sub.substring(0, parenStart).trim()
-                        val idCandidate = sub.substring(parenStart + 1, parenEnd).trim().uppercase(Locale.US)
-                        if (idCandidate.length == TITLE_ID_LENGTH && idCandidate.all { it.isLetterOrDigit() }) {
-                            lastGameTitle = titleCandidate
-                            lastTitleId = idCandidate
-                        }
-                    }
-                }
-            } else if (line.contains("title_id=")) {
-                // Pattern 2: PatchExeFS for title_id=0100CFC00A1D8000
-                val titleIdIdx = line.lastIndexOf("title_id=")
-                if (titleIdIdx != -1) {
-                    val candidate = line.substring(titleIdIdx + "title_id=".length).take(TITLE_ID_LENGTH).uppercase(Locale.US)
-                    if (candidate.length == TITLE_ID_LENGTH && candidate.all { it.isLetterOrDigit() }) {
-                        lastTitleId = candidate
-                    }
+            val loadingMatch = LOADING_REGEX.find(line)
+            if (loadingMatch != null) {
+                lastGameTitle = loadingMatch.groupValues[1].trim()
+                lastTitleId = loadingMatch.groupValues[2].uppercase(Locale.US)
+            } else {
+                val titleIdMatch = TITLE_ID_REGEX.find(line)
+                if (titleIdMatch != null) {
+                    lastTitleId = titleIdMatch.groupValues[1].uppercase(Locale.US)
                 }
             }
         }
@@ -129,6 +118,7 @@ object YuzuDetector : EmulatorDetector {
             gameTitle = resolvedTitle,
             systemId = systemId,
             coreOrBackend = "yuzu",
+            titleId = lastTitleId,
         )
     }
 }

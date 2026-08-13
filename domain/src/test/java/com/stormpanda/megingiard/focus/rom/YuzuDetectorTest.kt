@@ -49,6 +49,7 @@ class YuzuDetectorTest {
         assertEquals("switch", session?.systemId)
         assertEquals("WILD GUNS Reloaded (0100CFC00A1D8000)", session?.romPath)
         assertEquals("yuzu", session?.coreOrBackend)
+        assertEquals("0100CFC00A1D8000", session?.titleId)
     }
 
     @Test
@@ -65,6 +66,7 @@ class YuzuDetectorTest {
         assertEquals("Switch Game (0100152000022800)", session?.gameTitle)
         assertEquals("switch", session?.systemId)
         assertEquals("0100152000022800", session?.romPath)
+        assertEquals("0100152000022800", session?.titleId)
     }
 
     @Test
