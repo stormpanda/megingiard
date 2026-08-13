@@ -166,12 +166,35 @@ val nativeCTest = tasks.register<Exec>("nativeCTest") {
 
     val isWindows = System.getProperty("os.name").lowercase().contains("win")
     if (isWindows) {
-        val gitSh = File("C:/Program Files/Git/bin/sh.exe")
-        val gitBash = File("C:/Program Files/Git/bin/bash.exe")
-        when {
-            gitSh.exists() -> commandLine(gitSh.absolutePath, "./run_native_tests.sh")
-            gitBash.exists() -> commandLine(gitBash.absolutePath, "./run_native_tests.sh")
-            else -> commandLine("cmd.exe", "/c", "echo Native C unit tests require a POSIX shell (Git Bash/sh) and clang on Windows.")
+        val pathEnv = System.getenv("PATH") ?: ""
+        val pathDirs = pathEnv.split(File.pathSeparator).map { File(it) }
+        val findExecutableOnPath = { names: List<String> ->
+            names.firstNotNullOfOrNull { name ->
+                pathDirs.firstNotNullOfOrNull { dir ->
+                    val file = File(dir, name)
+                    if (file.exists() && file.isFile && !file.absolutePath.equals("C:\\WINDOWS\\system32\\bash.exe", ignoreCase = true)) {
+                        file
+                    } else null
+                }
+            }
+        }
+
+        val gitShFallback = listOf(
+            File("C:/Program Files/Git/bin/sh.exe"),
+            File("C:/Program Files/Git/bin/bash.exe"),
+            File("C:/Program Files (x86)/Git/bin/sh.exe")
+        ).firstOrNull { it.exists() }
+
+        val posixShell = findExecutableOnPath(listOf("sh.exe", "bash.exe", "sh", "bash")) ?: gitShFallback
+
+        if (posixShell != null) {
+            commandLine(posixShell.absolutePath, "./run_native_tests.sh")
+        } else {
+            commandLine(
+                "cmd.exe",
+                "/c",
+                "echo Native C unit tests require a POSIX shell (Git Bash/sh) on PATH or WSL environment."
+            )
         }
     } else {
         commandLine("./run_native_tests.sh")
