@@ -36,6 +36,7 @@ object EmulatorDetectionFunnel {
         listOf(
             RetroArchDetector,
             GameNativeDetector,
+            Pcsx2AndroidDetector,
         )
 
     private val packageMap: Map<String, EmulatorDetector> by lazy {
