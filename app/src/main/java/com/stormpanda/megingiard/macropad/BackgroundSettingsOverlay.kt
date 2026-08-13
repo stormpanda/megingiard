@@ -56,8 +56,6 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.input.MouseInjector
-import com.stormpanda.megingiard.keyboard.KeyInjector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppAlertDialog
@@ -116,17 +114,11 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
 
-    // Stop all uinput virtual devices while ambient settings are open.
-    // MacroPadViewModel.watchInjectorLifecycle() detects isBackgroundSettingsActive=false
-    // and restarts injectors automatically when this screen is dismissed.
     DisposableEffect(Unit) {
-        AppLog.i(TAG, "BackgroundSettingsOverlay visible \u2192 stopping injectors")
-        KeyInjector.stop()
-        GamepadInjector.stop()
-        MouseInjector.stop()
+        AppLog.i(TAG, "BackgroundSettingsOverlay visible")
         onDispose {
             AmbientPreviewManager.setConfig(null)
-            AppLog.i(TAG, "BackgroundSettingsOverlay dismissed → injector restart handled by MacroPadViewModel watcher")
+            AppLog.i(TAG, "BackgroundSettingsOverlay dismissed")
         }
     }
 
