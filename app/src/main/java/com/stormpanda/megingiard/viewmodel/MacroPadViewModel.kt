@@ -20,9 +20,8 @@ private const val TAG = "MacroPadViewModel"
  * and hit-test engine.
  *
  * Injector lifecycle rule:
- *   - Quick Menu open: stop mouse/gamepad injectors only.
- *   - Blocking modal open (Editor/Ambient Settings) or system prompt in flight:
- *     stop all injectors including keyboard.
+ *   - Quick Menu open, blocking modal open (Editor/Ambient Settings), or system prompt in flight:
+ *     stop all background macro injectors.
  *   - Restart as soon as all guards are clear.
  *
  * [watchInjectorLifecycle] is the single authoritative restart path.

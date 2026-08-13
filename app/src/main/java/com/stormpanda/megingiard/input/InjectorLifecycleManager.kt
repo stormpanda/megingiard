@@ -100,16 +100,16 @@ object InjectorLifecycleManager {
         promptInFlight: Boolean,
         activeLayout: PadLayout?,
     ): InjectorStates {
-        val isEditorOrModal =
+        val isEditorModalOrMenu =
             uiMode == UiMode.LAYOUT_EDITOR ||
                 uiMode == UiMode.BACKGROUND_SETTINGS ||
                 uiMode == UiMode.KEYBOARD_SETTINGS ||
                 uiMode == UiMode.TOUCHPAD_SETTINGS ||
                 uiMode == UiMode.GLOBAL_SETTINGS ||
                 uiMode == UiMode.VIEWPORT_EDIT ||
+                uiMode == UiMode.QUICK_MENU ||
                 promptInFlight
 
-        val isQuickMenu = uiMode == UiMode.QUICK_MENU
         val isFullscreenKb = uiMode == UiMode.FULLSCREEN_KEYBOARD
         val isFullscreenMouse = uiMode == UiMode.FULLSCREEN_MOUSE
 
@@ -134,10 +134,10 @@ object InjectorLifecycleManager {
                 ) || it.action is PadAction.Macro
             } == true
 
-        val startKeyboard = isFullscreenKb || (hasKeyboardMacros && !isEditorOrModal)
-        val startMouse = isFullscreenMouse || (hasMouseMacros && !isEditorOrModal && !isFullscreenKb)
-        val startGamepad = hasGamepadMacros && !isEditorOrModal && !isQuickMenu && !isFullscreenKb && !isFullscreenMouse
-        val startTouch = hasTouchMacros && !isEditorOrModal
+        val startKeyboard = isFullscreenKb || (hasKeyboardMacros && !isEditorModalOrMenu)
+        val startMouse = isFullscreenMouse || (hasMouseMacros && !isEditorModalOrMenu && !isFullscreenKb)
+        val startGamepad = hasGamepadMacros && !isEditorModalOrMenu && !isFullscreenKb && !isFullscreenMouse
+        val startTouch = hasTouchMacros && !isEditorModalOrMenu
 
         return InjectorStates(
             startKeyboard = startKeyboard,
@@ -147,6 +147,7 @@ object InjectorLifecycleManager {
         )
     }
 
+    @Synchronized
     fun stopAll() {
         AppLog.i(TAG, "stopAll called")
         watcherJob?.cancel()

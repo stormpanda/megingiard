@@ -67,10 +67,7 @@ Each button supports one of the following actions:
     - `enableGamepad = true` if any button has a `GamepadButton` action.
     - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
     - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
-- Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
-- When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
-- The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
-- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while QuickMenu, file picker, editor, or background settings overlays are open because those screens may need focused app input.
+- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates `AppStateManager.uiMode`, `MacroPadState.activeLayout`, and `AppStateManager.promptInFlight`. When editor screens or settings popups are open, all injectors are stopped; when returned to MacroPad use mode, only enabled injectors for the active layout are started.
 
 ### FR-P5: Trackpoint Button
 
