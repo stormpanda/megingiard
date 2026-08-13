@@ -36,6 +36,7 @@ object EmulatorDetectionFunnel {
         listOf(
             RetroArchDetector,
             GameNativeDetector,
+            Pcsx2AndroidDetector,
         )
 
     private val packageMap: Map<String, EmulatorDetector> by lazy {
@@ -82,19 +83,21 @@ object EmulatorDetectionFunnel {
 
             pollingJob =
                 funnelScope.launch {
-                    val initialRomPath = effectiveSession?.romPath
-                    for (i in 1..POLLING_MAX_ATTEMPTS) {
+                    var lastPath = effectiveSession?.romPath
+                    var lastTitle = effectiveSession?.gameTitle
+                    while (true) {
                         delay(POLLING_DELAY_MS)
                         val currentSession = detector.detectActiveSession(packageName)
                         if (currentSession != null) {
-                            if (currentSession.romPath != initialRomPath) {
+                            if (currentSession.romPath != lastPath || currentSession.gameTitle != lastTitle) {
                                 AppLog.i(
                                     TAG,
-                                    "onPackageForeground polling: detected new session ${currentSession.gameTitle} (${currentSession.systemId})",
+                                    "onPackageForeground polling: detected in-emulator game change to ${currentSession.gameTitle} (${currentSession.systemId})",
                                 )
+                                lastPath = currentSession.romPath
+                                lastTitle = currentSession.gameTitle
                                 _activeSession.value = currentSession
                                 _lastDetectedSession.value = currentSession
-                                break
                             }
                         }
                     }
