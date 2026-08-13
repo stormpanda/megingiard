@@ -47,7 +47,7 @@ class EmulatorDetectionFunnelTest {
     @Test
     fun onPackageForeground_reusesLastDetectedSession_whenPackageMatchesAndInitialSessionIsNull() =
         runTest {
-            val session = ActiveGameSession("com.retroarch", "snes", "/roms/z.sfc", "Zelda")
+            val session = ActiveGameSession("com.retroarch", "/roms/z.sfc", "Zelda", "snes")
             EmulatorDetectionFunnel.setActiveSessionForTesting(session)
             EmulatorDetectionFunnel.clearSession()
 
@@ -56,5 +56,16 @@ class EmulatorDetectionFunnelTest {
             val restored = EmulatorDetectionFunnel.onPackageForeground("com.retroarch")
             assertEquals(session, restored)
             assertEquals(session, EmulatorDetectionFunnel.activeSession.value)
+        }
+
+    @Test
+    fun clearSession_cancelsPollingAndClearsActiveSession() =
+        runTest {
+            val session = ActiveGameSession("com.armsx2", "/roms/game.iso", "Game", "ps2")
+            EmulatorDetectionFunnel.setActiveSessionForTesting(session)
+            assertEquals(session, EmulatorDetectionFunnel.activeSession.value)
+
+            EmulatorDetectionFunnel.clearSession()
+            assertNull(EmulatorDetectionFunnel.activeSession.value)
         }
 }
