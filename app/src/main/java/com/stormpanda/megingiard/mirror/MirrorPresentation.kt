@@ -23,6 +23,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.SurfaceTexture
 import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -230,6 +231,7 @@ class MirrorPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
         AppLog.i(TAG, "onCreate display=${display.displayId} src=${srcWidth}x$srcHeight")
         setPresentationFocusMode(
             keepPrimaryFocus =
