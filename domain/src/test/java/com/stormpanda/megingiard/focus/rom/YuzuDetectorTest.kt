@@ -47,7 +47,7 @@ class YuzuDetectorTest {
         assertEquals("org.citron.citron_emu", session?.packageName)
         assertEquals("WILD GUNS Reloaded", session?.gameTitle)
         assertEquals("switch", session?.systemId)
-        assertEquals("0100CFC00A1D8000.nsp", session?.romPath)
+        assertEquals("WILD GUNS Reloaded (0100CFC00A1D8000)", session?.romPath)
         assertEquals("yuzu", session?.coreOrBackend)
     }
 
@@ -64,7 +64,7 @@ class YuzuDetectorTest {
         assertEquals("org.yuzu.yuzu_emu", session?.packageName)
         assertEquals("Switch Game (0100152000022800)", session?.gameTitle)
         assertEquals("switch", session?.systemId)
-        assertEquals("0100152000022800.nsp", session?.romPath)
+        assertEquals("0100152000022800", session?.romPath)
     }
 
     @Test

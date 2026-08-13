@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.focus.rom
 
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.privd.PrivdClient
-import java.io.File
 import java.util.Locale
 
 private const val TAG = "YuzuDetector"
@@ -98,21 +97,14 @@ object YuzuDetector : EmulatorDetector {
             return null
         }
 
-        // Try matching against RomManager to resolve exact romPath if available
-        val romApps = RomManager.romApps.value
-        val matchedApp =
-            romApps.firstOrNull { app ->
-                val romFile = app.romPath?.let { File(it) }
-                val titleUpper = lastGameTitle?.uppercase(Locale.US)
-                val idUpper = lastTitleId
-
-                (idUpper != null && app.romPath?.contains(idUpper, ignoreCase = true) == true) ||
-                    (titleUpper != null && app.label.uppercase(Locale.US) == titleUpper) ||
-                    (titleUpper != null && romFile?.nameWithoutExtension?.uppercase(Locale.US)?.contains(titleUpper) == true)
+        val resolvedTitle = lastGameTitle ?: "Switch Game ($lastTitleId)"
+        val resolvedRomPath =
+            when {
+                lastGameTitle != null && lastTitleId != null -> "$lastGameTitle ($lastTitleId)"
+                lastGameTitle != null -> lastGameTitle
+                lastTitleId != null -> lastTitleId
+                else -> ""
             }
-
-        val resolvedTitle = matchedApp?.label ?: lastGameTitle ?: "Switch Game ($lastTitleId)"
-        val resolvedRomPath = matchedApp?.romPath ?: lastTitleId?.let { "$it.nsp" } ?: ""
 
         return ActiveGameSession(
             packageName = packageName,
