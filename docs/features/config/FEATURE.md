@@ -1,7 +1,7 @@
 # Feature: Configuration Export / Import
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/config/`  
-> _(Settings UI entry points are in `app/src/main/java/com/stormpanda/megingiard/settings/`.)_
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/config/`  
+> _(Settings UI entry points are in `companion/ui/src/main/java/com/stormpanda/megingiard/settings/`.)_
 
 ---
 

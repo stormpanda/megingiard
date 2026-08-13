@@ -52,7 +52,7 @@ dependencies {
     compileOnly(files(androidJarFile))
 }
 
-val dexOutputDir: File = rootProject.projectDir.resolve("app/src/main/assets")
+val dexOutputDir: File = rootProject.projectDir.resolve("companion/ui/src/main/assets")
 val dexOutputFile: File = dexOutputDir.resolve("megingiard_mirror.dex")
 
 abstract class DexTask : DefaultTask() {

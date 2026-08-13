@@ -1,6 +1,6 @@
 # Feature: In-App Help Tutorials
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/ui/HelpModal.kt`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/ui/HelpModal.kt`
 > _(Per-screen help content composables live inside each screen's own source file.)_
 
 ---
@@ -50,7 +50,7 @@ Every menu in Megingiard displays a help icon (?) to the right of its headline. 
 
 ### Shared infrastructure — `HelpModal.kt`
 
-All help UI is built on five shared composables defined in `app/src/main/java/com/stormpanda/megingiard/ui/HelpModal.kt`:
+All help UI is built on five shared composables defined in `companion/ui/src/main/java/com/stormpanda/megingiard/ui/HelpModal.kt`:
 
 ```
 HelpIconButton            — Reusable ? icon button placed in every top bar

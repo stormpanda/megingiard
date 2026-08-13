@@ -24,8 +24,8 @@ fi
 
 CLANG="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/bin/aarch64-linux-android33-clang"
 SYSROOT="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG/sysroot"
-SRC="app/src/main/cpp/keyinjector.c"
-OUT="app/src/main/assets/keyinjector_arm64"
+SRC="companion/ui/src/main/cpp/keyinjector.c"
+OUT="companion/ui/src/main/assets/keyinjector_arm64"
 "$CLANG" --sysroot="$SYSROOT" --target=aarch64-linux-android33 -static -O2 -s -o "$OUT" "$SRC"
 echo "exit=$?"
 ls -lh "$OUT"

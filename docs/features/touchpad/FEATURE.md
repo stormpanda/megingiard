@@ -1,8 +1,8 @@
 # Feature: Virtual Touchpad
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `domain/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
-> **Native source:** `app/src/main/cpp/mouseinjector.c` (Mouse mode), `app/src/main/cpp/touchinjector.c` (Touch mode)
-> **Binary assets:** `app/src/main/assets/mouseinjector_arm64`, `app/src/main/assets/touchinjector_arm64`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/touchpad/` (UI), `companion/domain/src/main/java/com/stormpanda/megingiard/touchpad/` (gesture processing), `companion/domain/src/main/java/com/stormpanda/megingiard/input/` (shared injection infrastructure)
+> **Native source:** `companion/ui/src/main/cpp/mouseinjector.c` (Mouse mode), `companion/ui/src/main/cpp/touchinjector.c` (Touch mode)
+> **Binary assets:** `companion/ui/src/main/assets/mouseinjector_arm64`, `companion/ui/src/main/assets/touchinjector_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -179,6 +179,6 @@ Dismissal on the secondary display reuses the existing swipe-to-close path in `B
 | `TouchInjector.kt`            | `:domain` Logic | Shared absolute touch injection facade with portrait rotation scaling                 |
 | `ShellInputInjector.kt`       | `:domain` Logic | Native touch injector daemon process controller; MOVE coalescing                      |
 | `mouseinjector.c`             | C Source        | Virtual uinput mouse creation and relative input injection logic                      |
-| `mouseinjector_arm64`         | Native Asset    | Pre-built relative mouse injector binary asset (`app/src/main/assets/`)               |
+| `mouseinjector_arm64`         | Native Asset    | Pre-built relative mouse injector binary asset (`companion/ui/src/main/assets/`)               |
 | `touchinjector.c`             | C Source        | Direct `/dev/input/event6` raw event injection logic                                  |
-| `touchinjector_arm64`         | Native Asset    | Pre-built absolute touch injector binary asset (`app/src/main/assets/`)               |
+| `touchinjector_arm64`         | Native Asset    | Pre-built absolute touch injector binary asset (`companion/ui/src/main/assets/`)               |

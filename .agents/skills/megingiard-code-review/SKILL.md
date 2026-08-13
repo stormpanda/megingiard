@@ -1,7 +1,7 @@
 ---
 name: megingiard-code-review
 description: "Conduct a thorough code review of the current Git branch or specific files in Megingiard. Evaluates architecture compliance (:app, :domain, :core), AGENTS.md rules, Compose performance (re-compositions, LaunchedEffect keys, draw scopes), state management, thread safety, unit test coverage, documentation sync (FEATURE.md), and provides a structured implementation plan for any findings."
-argument-hint: 'Optional git reference or scope (e.g. "feature/ocr-privd-mode" or "app/src/main/java/com/stormpanda/megingiard/privd/")'
+argument-hint: 'Optional git reference or scope (e.g. "feature/ocr-privd-mode" or "companion/ui/src/main/java/com/stormpanda/megingiard/privd/")'
 ---
 
 # Skill: Megingiard Code Review
@@ -103,7 +103,7 @@ Audit every line of code against §8 of `AGENTS.md`:
 ### 6. ✅ Unit Test & Documentation Sync Audit
 
 - **Test Suite Execution (§3)**: Run `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` to verify test suite health (MUST always be run with the sandbox bypass enabled, i.e., `BypassSandbox: true` / unsandboxed).
-- **Test Set Placement**: Ensure pure JVM tests are placed in `:core/src/test/` or `:domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
+- **Test Set Placement**: Ensure pure JVM tests are placed in `:shared/core/src/test/` or `:companion/domain/src/test/`. If a unit test has no Android SDK dependencies, prefer fast pure JUnit over Robolectric.
 - **Documentation Sync (§2 & §5)**: Identify which `docs/features/<feature>/FEATURE.md` owns the modified code. Ensure Functional Requirements and Technical Implementation details accurately reflect all behavioral changes.
   - *Requirements Discrepancy:* If the codebase diverges from requirements, evaluate whether the implementation is correct and the *documentation* should be updated, rather than assuming code is wrong.
 

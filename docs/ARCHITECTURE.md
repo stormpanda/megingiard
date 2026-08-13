@@ -10,6 +10,53 @@ This document provides a high-level overview of the system architecture and key 
 
 ---
 
+## Modular Architecture
+
+Megingiard is structured as a **Feature-First Modular Architecture** split across 9 focused Gradle modules:
+
+```
+                  ┌─────────────────┐       ┌─────────────────┐
+                  │  :companion:ui  │       │  :gamefocus:ui  │
+                  └────────┬────────┘       └────────┬────────┘
+                           │                         │
+                  ┌────────▼────────┐       ┌────────▼────────┐
+                  │:companion:domain│       │:gamefocus:domain│
+                  └────────┬────────┘       └────────┬────────┘
+                           │                         │
+         ┌─────────────────┼─────────────────────────┼─────────────────┐
+         │                 │                         │                 │
+┌────────▼────────┐┌───────▼────────┐       ┌────────▼────────┐┌───────▼────────┐
+│ :shared:catalog ││ :shared:media  │       │ :shared:session ││ :mirrorserver  │
+└────────┬────────┘└───────┬────────┘       └────────┬────────┘└────────────────┘
+         │                 │                         │
+         └─────────────────┼─────────────────────────┘
+                           │
+                  ┌────────▼────────┐
+                  │  :shared:core   │
+                  └─────────────────┘
+```
+
+### Module Responsibilities
+
+1. **App Modules (Executables)**
+   - **`:companion:ui`** — Main companion app UI layer (`com.stormpanda.megingiard`). Houses Activities, viewmodels, custom Compose views, and secondary screen presentations.
+   - **`:gamefocus:ui`** — Standalone launcher application (`com.stormpanda.megingiard.gamefocus`). Houses 2:3 game poster carousel, SteamGridDB scraping triggers, and gamepad browsing views.
+
+2. **App Domain Modules (Feature Logic)**
+   - **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
+   - **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
+
+3. **Shared Domain & Core Modules**
+   - **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
+   - **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
+   - **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`).
+   - **`:shared:core`** — Pure JVM/Kotlin data models, serializable schemas, logging facade (`AppLog`), constants, and math helpers (`ViewportMath`).
+
+4. **Auxiliary Standalone Modules**
+   - **`:mirrorserver`** — Standalone shell-UID DEX executable loaded via `/system/bin/app_process` for un-throttled privileged display mirroring.
+
+---
+
 ## Dual-Display Layout
 
 Megingiard runs on the AYN Thor, an Android gaming handheld with two physical displays. The app lives on the **secondary (bottom) display** and provides tools that assist the user while the primary (top) display runs games or other applications.

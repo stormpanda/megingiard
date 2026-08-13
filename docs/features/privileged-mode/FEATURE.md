@@ -1,8 +1,8 @@
 # Feature: Privileged Mode
 
-> **Related source:** `domain/src/main/java/com/stormpanda/megingiard/privd/`, `app/src/main/java/com/stormpanda/megingiard/privd/`
-> **Native source:** `app/src/main/cpp/megingiard_privd.c`
-> **Binary asset:** `app/src/main/assets/megingiard_privd_arm64`
+> **Related source:** `companion/domain/src/main/java/com/stormpanda/megingiard/privd/`, `companion/ui/src/main/java/com/stormpanda/megingiard/privd/`
+> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c`
+> **Binary asset:** `companion/ui/src/main/assets/megingiard_privd_arm64`
 > **Build instructions:** [`docs/BUILD_NATIVE.md`](../../BUILD_NATIVE.md)
 
 ---
@@ -462,8 +462,8 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 | File                                                     | Responsibility                                                                                                                             |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream)                          |
-| `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
+| `companion/ui/src/main/cpp/megingiard_privd.c`                    | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream)                          |
+| `companion/ui/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
 | `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
 | `domain/.../privd/PrivdClient.kt`                        | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                        |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |

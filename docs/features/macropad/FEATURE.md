@@ -1,8 +1,8 @@
 # Feature: MacroPad
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/macropad/`
-> **Native source:** `app/src/main/cpp/gamepadinjector.c`, `app/src/main/cpp/mouseinjector.c`
-> **Binary assets:** `app/src/main/assets/gamepadinjector_arm64`, `app/src/main/assets/mouseinjector_arm64`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/macropad/`
+> **Native source:** `companion/ui/src/main/cpp/gamepadinjector.c`, `companion/ui/src/main/cpp/mouseinjector.c`
+> **Binary assets:** `companion/ui/src/main/assets/gamepadinjector_arm64`, `companion/ui/src/main/assets/mouseinjector_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -541,7 +541,7 @@ PadProfile
 ### Icon Rendering — Material Symbols Font
 
 Icons are rendered using the **Material Symbols Rounded** variable font bundled at
-`app/src/main/res/font/material_symbols_rounded.ttf`.
+`companion/ui/src/main/res/font/material_symbols_rounded.ttf`.
 
 **How it works:**
 The font uses OpenType GSUB ligature substitution (type 4, wrapped in type-7 Extension
@@ -581,7 +581,7 @@ python3 scripts/generate_icon_names.py
 ```
 
 The script (`scripts/generate_icon_names.py`) reads every GSUB ligature entry from
-`app/src/main/res/font/material_symbols_rounded.ttf`, filters entries matching
+`companion/ui/src/main/res/font/material_symbols_rounded.ttf`, filters entries matching
 `[a-z][a-z0-9_]+`, and writes the sorted snake_case list to `RoundedIconNames.kt`.
 The generated file is version-controlled; the script only needs to be re-run when
 the font file is updated.

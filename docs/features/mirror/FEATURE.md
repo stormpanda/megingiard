@@ -1,6 +1,6 @@
 # Feature: Screen Mirror
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/mirror/`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/mirror/`
 
 ---
 
@@ -208,7 +208,7 @@ Primary display layer stack (0)
                                                 Compose / Macro overlays stay above it
 ```
 
-- **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `app/src/main/assets/`.
+- **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `companion/ui/src/main/assets/`.
 - **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (standard MediaProjection path remains usable).
 - **Daemon control protocol** adds `MIRROR START_DIRECT w h` and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. `QUIT` and connection-end paths terminate any running mirror child.
 - **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.SurfaceView` `Surface` to the server. If the initial transaction fails right after reconnection while `PrivdManager.state` is `RUNNING`, `ScreenCaptureService` retries the surface send up to 3 times (with 200ms delay) before evaluating fallback.

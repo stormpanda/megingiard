@@ -1,7 +1,7 @@
 # Feature: Quick Menu Bar & Quick Menu
 
-> Related source: [QuickMenuBar.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt),
-> [QuickMenu.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt)
+> Related source: [QuickMenuBar.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt),
+> [QuickMenu.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt)
 
 ---
 
@@ -186,11 +186,11 @@ handler reads `isAnyModalActive` to decide whether to close the active modal ins
 
 | File | Responsibility |
 | --- | --- |
-| [QuickMenuBar.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab; `QUICK_MENU_BAR_INSET` constant for screen edge inset; renders visual sliding gesture pills |
-| [QuickMenu.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt) | Full-screen Quick Menu overlay: state coordinator and overlays orchestrator |
-| [QuickMenuComponents.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
-| [QuickMenuDialogs.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
-| [QuickMenuMirrorCard.kt](../../../app/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
-| [AppStateManager.kt](../../../domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
-| [SwipeGestureProcessor.kt](../../../domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
-| [SwipeGestureProgress.kt](../../../core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |
+| [QuickMenuBar.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab; `QUICK_MENU_BAR_INSET` constant for screen edge inset; renders visual sliding gesture pills |
+| [QuickMenu.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt) | Full-screen Quick Menu overlay: state coordinator and overlays orchestrator |
+| [QuickMenuComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
+| [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
+| [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
+| [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
+| [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
+| [SwipeGestureProgress.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |

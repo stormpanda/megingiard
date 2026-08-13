@@ -2,12 +2,12 @@
 
 <!-- Replace {Feature Name} with the name of the feature (e.g. "Virtual Keyboard"). -->
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/{feature}/`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/{feature}/`
 > _(Add additional source paths for any shared infrastructure packages, e.g. `input/`.)_
 
 <!-- If the feature uses a native binary, uncomment and fill in the three lines below: -->
-<!-- > **Native source:** `app/src/main/cpp/{source}.c` -->
-<!-- > **Binary asset:** `app/src/main/assets/{binary}_arm64` -->
+<!-- > **Native source:** `companion/ui/src/main/cpp/{source}.c` -->
+<!-- > **Binary asset:** `companion/ui/src/main/assets/{binary}_arm64` -->
 <!-- > **Build instructions:** [`docs/BUILD_NATIVE.md`](../BUILD_NATIVE.md) -->
 
 ---

@@ -1,6 +1,6 @@
 # Feature: Megingiard Integration API
 
-> **Related source:** `domain/src/main/java/com/stormpanda/megingiard/ipc/`, `app/src/main/java/com/stormpanda/megingiard/provider/`
+> **Related source:** `companion/domain/src/main/java/com/stormpanda/megingiard/ipc/`, `companion/ui/src/main/java/com/stormpanda/megingiard/provider/`
 
 ---
 
@@ -107,7 +107,7 @@ Clients query configured profiles by invoking `query()` on `content://com.stormp
 
 | File | Responsibility |
 | --- | --- |
-| [`MegingiardIpcContract.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/domain/src/main/java/com/stormpanda/megingiard/ipc/MegingiardIpcContract.kt) | Defines shared URIs, paths, and column constants for IPC. |
-| [`AppStateManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | Maintains live StateFlows for integration client presence and focused apps. |
-| [`MegingiardSettingsProvider.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/app/src/main/java/com/stormpanda/megingiard/provider/MegingiardSettingsProvider.kt) | Handles database queries for profiles and method calls for state changes. |
-| [`IntegrationHomeScreen.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/app/src/main/java/com/stormpanda/megingiard/ui/IntegrationHomeScreen.kt) | Renders the redesigned Companion Home Hub featuring a Hero Game Context Card, Companion Tools Quick Deck (MacroPad, Touchpad, Keyboard, Screen Mirror), and Companion Status panel. |
+| [`MegingiardIpcContract.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/ipc/MegingiardIpcContract.kt) | Defines shared URIs, paths, and column constants for IPC. |
+| [`AppStateManager.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | Maintains live StateFlows for integration client presence and focused apps. |
+| [`MegingiardSettingsProvider.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/provider/MegingiardSettingsProvider.kt) | Handles database queries for profiles and method calls for state changes. |
+| [`IntegrationHomeScreen.kt`](file:///Users/maikthomalla/AndroidStudioProjects/Megingiard/companion/ui/src/main/java/com/stormpanda/megingiard/ui/IntegrationHomeScreen.kt) | Renders the redesigned Companion Home Hub featuring a Hero Game Context Card, Companion Tools Quick Deck (MacroPad, Touchpad, Keyboard, Screen Mirror), and Companion Status panel. |
