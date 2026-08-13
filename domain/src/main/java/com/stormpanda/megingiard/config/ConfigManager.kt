@@ -9,6 +9,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadAction
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.security.HmacUtil
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
@@ -23,7 +24,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.time.Instant
@@ -517,7 +521,7 @@ object ConfigManager {
         if (export.schemaVersion < MIN_SUPPORTED_SCHEMA || export.schemaVersion > SCHEMA_VERSION) {
             error("Unsupported schema version ${export.schemaVersion} — expected $MIN_SUPPORTED_SCHEMA..$SCHEMA_VERSION")
         }
-        if (!verifyChecksum(export, extractedImages)) {
+        if (!verifyChecksum(export, extractedImages, json)) {
             error("Checksum mismatch — the file may be corrupted or tampered")
         }
         AppLog.i(TAG, "parseAndVerify: OK schema=${export.schemaVersion}")
@@ -695,29 +699,50 @@ object ConfigManager {
         imageHashes: Map<String, String> = emptyMap(),
     ): String {
         val payload = checksumJson.encodeToString(ChecksumPayload(settings, profiles, imageHashes))
-        val hex =
-            com.stormpanda.megingiard.security.HmacUtil
-                .sha256Hex(payload.toByteArray(Charsets.UTF_8))
-                .lowercase()
+        val hex = HmacUtil.sha256Hex(payload.toByteArray(Charsets.UTF_8)).lowercase()
         return "sha256:$hex"
     }
 
     private fun verifyChecksum(
         export: MegingiardExport,
         extractedImages: Map<String, ByteArray> = emptyMap(),
+        rawJson: String? = null,
     ): Boolean {
-        val expectedWithoutImages = computeChecksum(export.settings, export.profiles, emptyMap())
-        if (expectedWithoutImages == export.checksum) return true
-
         val imageHashes =
             extractedImages
                 .mapKeys { (k, _) ->
                     if (k.startsWith("bg_")) k else "bg_${k.removePrefix("backgrounds/").removePrefix("bg_")}"
                 }.mapValues { (_, bytes) ->
-                    com.stormpanda.megingiard.security.HmacUtil
+                    HmacUtil
                         .sha256Hex(bytes)
                         .lowercase()
                 }
+
+        if (!rawJson.isNullOrEmpty()) {
+            runCatching {
+                val rootObj = importJson.parseToJsonElement(rawJson).jsonObject
+                val rawSettings = rootObj["settings"] ?: JsonObject(emptyMap())
+                val rawProfiles = rootObj["profiles"] ?: JsonArray(emptyList())
+
+                val rawPayloadNoImages =
+                    checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, emptyMap()))
+                val hexNoImages = HmacUtil.sha256Hex(rawPayloadNoImages.toByteArray(Charsets.UTF_8)).lowercase()
+                if ("sha256:$hexNoImages" == export.checksum) return true
+
+                if (imageHashes.isNotEmpty()) {
+                    val rawPayloadWithImages =
+                        checksumJson.encodeToString(RawChecksumPayload(rawSettings, rawProfiles, imageHashes))
+                    val hexWithImages = HmacUtil.sha256Hex(rawPayloadWithImages.toByteArray(Charsets.UTF_8)).lowercase()
+                    if ("sha256:$hexWithImages" == export.checksum) return true
+                }
+            }.onFailure { e ->
+                AppLog.w(TAG, "Raw JSON checksum verification failed: ${e.message}")
+            }
+        }
+
+        val expectedWithoutImages = computeChecksum(export.settings, export.profiles, emptyMap())
+        if (expectedWithoutImages == export.checksum) return true
+
         val expectedWithImages = computeChecksum(export.settings, export.profiles, imageHashes)
         return expectedWithImages == export.checksum
     }
@@ -726,6 +751,13 @@ object ConfigManager {
     private data class ChecksumPayload(
         val settings: Map<String, Map<String, JsonElement>>,
         val profiles: List<PadProfile>,
+        val imageHashes: Map<String, String> = emptyMap(),
+    )
+
+    @Serializable
+    private data class RawChecksumPayload(
+        val settings: JsonElement,
+        val profiles: JsonElement,
         val imageHashes: Map<String, String> = emptyMap(),
     )
 }

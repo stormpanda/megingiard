@@ -151,6 +151,41 @@ class ConfigExportImportStructureTest {
     }
 
     @Test
+    fun `testParseAndVerifyOlderSchemaVersionJsonWithoutNewerFields`() {
+        val legacyProfilesJson = """[{"id":"legacy-p1","name":"Legacy Profile","layouts":[{"id":"l1","name":"Main","buttons":[]}]}]"""
+        val legacySettingsJson = "{}"
+        val imageHashesJson = "{}"
+
+        val payload = """{"settings":$legacySettingsJson,"profiles":$legacyProfilesJson,"imageHashes":$imageHashesJson}"""
+        val hex =
+            com.stormpanda.megingiard.security.HmacUtil
+                .sha256Hex(payload.toByteArray(Charsets.UTF_8))
+                .lowercase()
+        val expectedChecksum = "sha256:$hex"
+
+        val legacyExportJson =
+            """
+            {
+              "schemaVersion": 3,
+              "metadata": {
+                "exportedAt": "2025-01-01T00:00:00Z",
+                "appVersionName": "0.5.0",
+                "appVersionCode": 5
+              },
+              "checksum": "$expectedChecksum",
+              "settings": $legacySettingsJson,
+              "profiles": $legacyProfilesJson
+            }
+            """.trimIndent()
+
+        val parsed = ConfigManager.parseAndVerify(legacyExportJson)
+        assertEquals(3, parsed.schemaVersion)
+        assertEquals(expectedChecksum, parsed.checksum)
+        assertEquals(1, parsed.profiles.size)
+        assertEquals("Legacy Profile", parsed.profiles.first().name)
+    }
+
+    @Test
     fun testImportSettingsTypeSafety() =
         runBlocking {
             val testDispatcher = StandardTestDispatcher()
