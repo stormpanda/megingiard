@@ -1,6 +1,6 @@
 package com.stormpanda.megingiard.onboarding
 
-import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
+import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.settings.SettingsManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

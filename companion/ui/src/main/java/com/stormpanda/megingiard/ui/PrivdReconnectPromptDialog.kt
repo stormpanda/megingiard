@@ -55,8 +55,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
-import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
+import com.stormpanda.megingiard.onboarding.OnboardingStepId
+import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState

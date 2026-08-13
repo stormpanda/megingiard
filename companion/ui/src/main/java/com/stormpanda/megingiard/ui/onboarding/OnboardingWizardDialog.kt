@@ -88,8 +88,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.core.onboarding.OnboardingStepId
-import com.stormpanda.megingiard.core.onboarding.OnboardingStepState
+import com.stormpanda.megingiard.onboarding.OnboardingStepId
+import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.AutoSetupLanguageConfig
 import com.stormpanda.megingiard.privd.PrivdBootstrapper

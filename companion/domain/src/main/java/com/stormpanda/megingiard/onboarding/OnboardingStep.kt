@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.core.onboarding
+package com.stormpanda.megingiard.onboarding
 
 /**
  * Unique identifiers for each step in the onboarding welcome tour.
