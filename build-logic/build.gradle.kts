@@ -34,5 +34,9 @@ gradlePlugin {
             id = "megingiard.kotlin.jvm"
             implementationClass = "KotlinJvmConventionPlugin"
         }
+        register("architectureVerifier") {
+            id = "megingiard.architecture.verifier"
+            implementationClass = "ArchitectureVerifierPlugin"
+        }
     }
 }
