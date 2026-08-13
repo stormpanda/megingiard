@@ -390,5 +390,11 @@ val SUPPORTED_SYSTEMS =
                 extensions = setOf("steam", "steamappid"),
                 emulatorId = "gamenative",
             ),
+            RomSystemDef(
+                id = "switch",
+                displayName = "Nintendo Switch",
+                extensions = setOf("nsp", "xci", "nca", "xcz", "nsz"),
+                emulatorId = "yuzu",
+            ),
         )
     }
