@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 3
+#define PRIVD_VERSION 5
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -908,7 +908,7 @@ static void handle_read_file(int client_fd, const char *path) {
         return;
     }
 
-    const size_t MAX_READ_BYTES = 128 * 1024;
+    const size_t MAX_READ_BYTES = 32 * 1024;
     fseek(fp, 0, SEEK_END);
     long file_size = ftell(fp);
     if (file_size > (long)MAX_READ_BYTES) {

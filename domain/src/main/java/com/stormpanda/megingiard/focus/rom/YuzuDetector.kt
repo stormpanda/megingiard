@@ -13,6 +13,8 @@ private const val TITLE_ID_LENGTH = 16
  * Reads active emulator log files and custom per-game configurations over privileged socket.
  */
 object YuzuDetector : EmulatorDetector {
+    private val titleCache = mutableMapOf<String, String>()
+
     override val supportedPackages: Set<String> =
         setOf(
             "org.citron.citron_emu",
@@ -97,11 +99,26 @@ object YuzuDetector : EmulatorDetector {
             return null
         }
 
-        val resolvedTitle = lastGameTitle ?: "Switch Game ($lastTitleId)"
+        if (lastGameTitle != null && lastTitleId != null) {
+            synchronized(titleCache) {
+                titleCache[lastTitleId] = lastGameTitle
+            }
+        }
+
+        val knownTitle =
+            lastGameTitle ?: lastTitleId?.let { id ->
+                synchronized(titleCache) { titleCache[id] }
+                    ?: RomManager.romApps.value
+                        .firstOrNull { app ->
+                            app.romPath?.contains(id, ignoreCase = true) == true
+                        }?.label
+            }
+
+        val resolvedTitle = knownTitle ?: "Switch Game ($lastTitleId)"
         val resolvedRomPath =
             when {
-                lastGameTitle != null && lastTitleId != null -> "$lastGameTitle ($lastTitleId)"
-                lastGameTitle != null -> lastGameTitle
+                knownTitle != null && lastTitleId != null -> "$knownTitle ($lastTitleId)"
+                knownTitle != null -> knownTitle
                 lastTitleId != null -> lastTitleId
                 else -> ""
             }
