@@ -6,6 +6,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val TAG = "PpssppDetector"
+private const val DEFAULT_REMOTE_DEBUGGER_PORT = 8080
+private const val TITLE_MATCH_RATIO = 0.5
+private const val MIN_WORD_LEN_FOR_MATCH = 3
 
 /**
  * Detector implementation for standalone PPSSPP (PlayStation Portable) emulator instances.
@@ -24,7 +27,7 @@ object PpssppDetector : EmulatorDetector {
 
     override val systemId: String = "psp"
 
-    var webSocketPort: Int = 8080
+    var webSocketPort: Int = DEFAULT_REMOTE_DEBUGGER_PORT
 
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? =
         withContext(Dispatchers.IO) {
@@ -111,10 +114,10 @@ object PpssppDetector : EmulatorDetector {
 
         if (normCandidate.contains(normActive) || normActive.contains(normCandidate)) return true
 
-        val activeWords = activeTitle.lowercase().split(Regex("[^a-z0-9]+")).filter { it.length >= 3 }
+        val activeWords = activeTitle.lowercase().split(Regex("[^a-z0-9]+")).filter { it.length >= MIN_WORD_LEN_FOR_MATCH }
         if (activeWords.isNotEmpty()) {
             val matchCount = activeWords.count { normCandidate.contains(it) }
-            return matchCount >= (activeWords.size * 0.5).toInt().coerceAtLeast(1)
+            return matchCount >= (activeWords.size * TITLE_MATCH_RATIO).toInt().coerceAtLeast(1)
         }
         return false
     }
@@ -132,7 +135,7 @@ object PpssppDetector : EmulatorDetector {
                         updated = updated.replace("RemoteDebuggerOnStartup = False", "RemoteDebuggerOnStartup = True")
                     }
                     if (updated.contains("RemoteISOPort = 0")) {
-                        updated = updated.replace("RemoteISOPort = 0", "RemoteISOPort = 8080")
+                        updated = updated.replace("RemoteISOPort = 0", "RemoteISOPort = $DEFAULT_REMOTE_DEBUGGER_PORT")
                     }
                     if (updated != content) {
                         file.writeText(updated)

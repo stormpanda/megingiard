@@ -12,6 +12,16 @@ import java.net.Socket
 
 private const val TAG = "PpssppWebSocketClient"
 
+private const val WS_OPCODE_TEXT_FIN: Byte = 0x81.toByte()
+private const val WS_MASK_BIT = 0x80
+private const val WS_LEN_MASK = 0x7F
+private const val WS_PAYLOAD_EXT16 = 126
+private const val WS_HEADER_LEN = 6
+private const val CONNECT_TIMEOUT_MS = 500
+private const val SOCKET_TIMEOUT_MS = 1000
+private const val MAX_FRAMES_TO_READ = 5
+const val DEFAULT_PPSSPP_PORT = 8080
+
 /**
  * Pure Kotlin client for PPSSPP's native embedded WebSocket Debugger API (`debugger.ppsspp.org`).
  * Operates over `ws://127.0.0.1:8080/debugger` without requiring root or Privileged Mode.
@@ -21,13 +31,13 @@ object PpssppWebSocketClient {
 
     suspend fun queryActiveSession(
         packageName: String,
-        port: Int = 8080,
+        port: Int = DEFAULT_PPSSPP_PORT,
     ): ActiveGameSession? =
         withContext(Dispatchers.IO) {
             val socket = Socket()
             try {
-                socket.connect(InetSocketAddress("127.0.0.1", port), 500)
-                socket.soTimeout = 1000
+                socket.connect(InetSocketAddress("127.0.0.1", port), CONNECT_TIMEOUT_MS)
+                socket.soTimeout = SOCKET_TIMEOUT_MS
 
                 val out = socket.getOutputStream()
                 val inp = socket.getInputStream()
@@ -54,14 +64,14 @@ object PpssppWebSocketClient {
                 // Step 2: Send {"event":"game.status"} masked text frame
                 val payload = "{\"event\":\"game.status\"}".toByteArray(Charsets.UTF_8)
                 val len = payload.size
-                val frame = ByteArray(6 + len)
-                frame[0] = 0x81.toByte()
-                frame[1] = (0x80 or len).toByte()
+                val frame = ByteArray(WS_HEADER_LEN + len)
+                frame[0] = WS_OPCODE_TEXT_FIN
+                frame[1] = (WS_MASK_BIT or len).toByte()
                 frame[2] = 0 // Mask key byte 0
                 frame[3] = 0 // Mask key byte 1
                 frame[4] = 0 // Mask key byte 2
                 frame[5] = 0 // Mask key byte 3
-                System.arraycopy(payload, 0, frame, 6, len)
+                System.arraycopy(payload, 0, frame, WS_HEADER_LEN, len)
 
                 out.write(frame)
                 out.flush()
@@ -110,28 +120,33 @@ object PpssppWebSocketClient {
     }
 
     private fun readWebSocketTextFrame(inp: InputStream): String? {
-        val b0 = inp.read()
-        if (b0 == -1) return null
-        val b1 = inp.read()
-        if (b1 == -1) return null
+        for (i in 0 until MAX_FRAMES_TO_READ) {
+            val b0 = inp.read()
+            if (b0 == -1) return null
+            val b1 = inp.read()
+            if (b1 == -1) return null
 
-        var len = b1 and 0x7F
-        if (len == 126) {
-            val h = inp.read()
-            val l = inp.read()
-            if (h == -1 || l == -1) return null
-            len = (h shl 8) or l
+            var len = b1 and WS_LEN_MASK
+            if (len == WS_PAYLOAD_EXT16) {
+                val h = inp.read()
+                val l = inp.read()
+                if (h == -1 || l == -1) return null
+                len = (h shl 8) or l
+            }
+
+            val payload = ByteArray(len)
+            var totalRead = 0
+            while (totalRead < len) {
+                val n = inp.read(payload, totalRead, len - totalRead)
+                if (n == -1) break
+                totalRead += n
+            }
+
+            val text = String(payload, Charsets.UTF_8)
+            if (text.contains("\"event\":\"game.status\"")) {
+                return text
+            }
         }
-
-        val payload = ByteArray(len)
-        var totalRead = 0
-        while (totalRead < len) {
-            val n = inp.read(payload, totalRead, len - totalRead)
-            if (n == -1) break
-            totalRead += n
-        }
-
-        val text = String(payload, Charsets.UTF_8)
-        return if (text.contains("\"event\":\"game.status\"")) text else null
+        return null
     }
 }

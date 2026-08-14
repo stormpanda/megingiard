@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 
 private const val TAG = "Pcsx2AndroidDetector"
 

@@ -1,9 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppStateManager
-import com.stormpanda.megingiard.macropad.PadLayout
-import com.stormpanda.megingiard.macropad.PadProfile
-import com.stormpanda.megingiard.macropad.ProfileAssociation
+import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -35,7 +33,7 @@ class AutoSwitchCoordinatorTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         AutoSwitchCoordinator.resetForTesting()
-        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
 
         // Setup mock profiles with app mappings
         val p1Id = UUID.randomUUID().toString()
@@ -67,7 +65,7 @@ class AutoSwitchCoordinatorTest {
     fun tearDown() {
         AutoSwitchCoordinator.resetForTesting()
         EmulatorDetectionFunnel.resetForTesting()
-        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
         AppStateManager.setExternalClientState(
             isActive = false,
             packageName = null,
@@ -391,7 +389,7 @@ class AutoSwitchCoordinatorTest {
     @Test
     fun `onPackageChanged ignores auto profile switch when companionViewMode is not AUTO`() {
         // Given companionViewMode is set to MACROPAD (Auto Mode OFF)
-        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.MACROPAD)
+        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
 
         // When a mapped app (com.citra.emu -> profile2) is opened while Auto Mode is OFF
@@ -401,7 +399,7 @@ class AutoSwitchCoordinatorTest {
         assertEquals(profile1.id, MacroPadState.activeProfileId.value)
 
         // When Auto Mode is re-enabled via setCompanionViewMode(AUTO)
-        AppStateManager.setCompanionViewMode(com.stormpanda.megingiard.CompanionViewMode.AUTO)
+        AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
 
         // Then reevaluateAutoState triggers and switches active profile to profile2
         assertEquals(profile2.id, MacroPadState.activeProfileId.value)
