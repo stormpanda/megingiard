@@ -150,11 +150,13 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
     val hoveredSecondaryColor by AppStateManager.hoveredAppSecondaryColor.collectAsState()
     val hoveredPackage by AppStateManager.hoveredAppPackageName.collectAsState()
     val hoveredRomPath by AppStateManager.hoveredRomPath.collectAsState()
+    val hoveredRomIdentifier by AppStateManager.hoveredRomIdentifier.collectAsState()
     val hoveredSystemId by AppStateManager.hoveredSystemId.collectAsState()
     val activeSession by EmulatorDetectionFunnel.activeSession.collectAsState()
     val lastDetectedSession by EmulatorDetectionFunnel.lastDetectedSession.collectAsState()
     val focusedAppPackageName by AppStateManager.focusedAppPackageName.collectAsState()
     val focusedRomPath by AppStateManager.focusedRomPath.collectAsState()
+    val focusedRomIdentifier by AppStateManager.focusedRomIdentifier.collectAsState()
 
     val isGameFocus = isClientActive && clientPackage?.startsWith(MegingiardIpcContract.GAMEFOCUS_PACKAGE) == true
 
@@ -324,22 +326,26 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                         hoveredPackage,
                         hoveredAppLabel,
                         hoveredRomPath,
+                        hoveredRomIdentifier,
                         hoveredSystemId,
                         activeSession,
                         lastDetectedSession,
                         focusedAppPackageName,
                         focusedRomPath,
+                        focusedRomIdentifier,
                         installedApps,
                     ) {
                         resolveTargetAppInfo(
                             hoveredPackage = hoveredPackage,
                             hoveredAppLabel = hoveredAppLabel,
                             hoveredRomPath = hoveredRomPath,
+                            hoveredRomIdentifier = hoveredRomIdentifier,
                             hoveredSystemId = hoveredSystemId,
                             activeSession = activeSession,
                             lastDetectedSession = lastDetectedSession,
                             focusedAppPackageName = focusedAppPackageName,
                             focusedRomPath = focusedRomPath,
+                            focusedRomIdentifier = focusedRomIdentifier,
                             installedApps = installedApps,
                             resolveAppLabel = { pkg -> resolveAppLabel(context, pkg) },
                         )
@@ -1046,11 +1052,13 @@ internal fun resolveTargetAppInfo(
     hoveredPackage: String?,
     hoveredAppLabel: String?,
     hoveredRomPath: String?,
+    hoveredRomIdentifier: String? = null,
     hoveredSystemId: String?,
     activeSession: ActiveGameSession?,
     lastDetectedSession: ActiveGameSession?,
     focusedAppPackageName: String?,
     focusedRomPath: String?,
+    focusedRomIdentifier: String? = null,
     installedApps: List<InstalledAppInfo>,
     resolveAppLabel: (String) -> String? = { null },
 ): TargetAppInfo {
@@ -1068,7 +1076,7 @@ internal fun resolveTargetAppInfo(
             pkg = hovered,
             label = label,
             romPath = hoveredRomPath,
-            romIdentifier = hoveredRomPath?.substringAfterLast('/'),
+            romIdentifier = hoveredRomIdentifier ?: hoveredRomPath?.substringAfterLast('/'),
             systemId = hoveredSystemId,
         )
     } else if (active != null) {
@@ -1086,7 +1094,7 @@ internal fun resolveTargetAppInfo(
                 pkg = focused,
                 label = label,
                 romPath = last.romPath ?: focusedRomPath,
-                romIdentifier = last.romIdentifier ?: (last.romPath ?: focusedRomPath)?.substringAfterLast('/'),
+                romIdentifier = last.romIdentifier ?: focusedRomIdentifier ?: (last.romPath ?: focusedRomPath)?.substringAfterLast('/'),
                 systemId = last.systemId,
             )
         } else {
@@ -1097,7 +1105,7 @@ internal fun resolveTargetAppInfo(
                 pkg = focused,
                 label = label,
                 romPath = focusedRomPath,
-                romIdentifier = focusedRomPath?.substringAfterLast('/'),
+                romIdentifier = focusedRomIdentifier ?: focusedRomPath?.substringAfterLast('/'),
                 systemId = null,
             )
         }

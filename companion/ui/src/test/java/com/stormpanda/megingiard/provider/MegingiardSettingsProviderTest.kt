@@ -95,8 +95,10 @@ class MegingiardSettingsProviderTest {
                 putString(MegingiardIpcContract.COLUMN_CLIENT_PACKAGE, "com.my.launcher")
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, true)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, "com.my.game")
+                putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_IDENTIFIER, "game.iso")
                 putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, "com.my.hover")
                 putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, "Hovered Game")
+                putString(MegingiardIpcContract.COLUMN_HOVERED_ROM_IDENTIFIER, "hovered.iso")
                 putInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR, 0xFF112233.toInt())
                 putInt(MegingiardIpcContract.COLUMN_HOVERED_SECONDARY_COLOR, 0xFF445566.toInt())
             }
@@ -112,8 +114,10 @@ class MegingiardSettingsProviderTest {
         assertTrue(AppStateManager.isExternalClientActive.value)
         assertEquals("com.my.launcher", AppStateManager.externalClientPackage.value)
         assertEquals("com.my.game", AppStateManager.focusedAppPackageName.value)
+        assertEquals("game.iso", AppStateManager.focusedRomIdentifier.value)
         assertEquals("com.my.hover", AppStateManager.hoveredAppPackageName.value)
         assertEquals("Hovered Game", AppStateManager.hoveredAppLabel.value)
+        assertEquals("hovered.iso", AppStateManager.hoveredRomIdentifier.value)
         assertEquals(0xFF112233.toInt(), AppStateManager.hoveredAppPrimaryColor.value)
         assertEquals(0xFF445566.toInt(), AppStateManager.hoveredAppSecondaryColor.value)
     }

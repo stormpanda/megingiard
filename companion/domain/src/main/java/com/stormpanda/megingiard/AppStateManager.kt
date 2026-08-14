@@ -180,6 +180,9 @@ object AppStateManager {
     private val _focusedRomPath = MutableStateFlow<String?>(null)
     val focusedRomPath: StateFlow<String?> = _focusedRomPath.asStateFlow()
 
+    private val _focusedRomIdentifier = MutableStateFlow<String?>(null)
+    val focusedRomIdentifier: StateFlow<String?> = _focusedRomIdentifier.asStateFlow()
+
     private val _hoveredAppPackageName = MutableStateFlow<String?>(null)
     val hoveredAppPackageName: StateFlow<String?> = _hoveredAppPackageName.asStateFlow()
 
@@ -188,6 +191,9 @@ object AppStateManager {
 
     private val _hoveredRomPath = MutableStateFlow<String?>(null)
     val hoveredRomPath: StateFlow<String?> = _hoveredRomPath.asStateFlow()
+
+    private val _hoveredRomIdentifier = MutableStateFlow<String?>(null)
+    val hoveredRomIdentifier: StateFlow<String?> = _hoveredRomIdentifier.asStateFlow()
 
     private val _hoveredSystemId = MutableStateFlow<String?>(null)
     val hoveredSystemId: StateFlow<String?> = _hoveredSystemId.asStateFlow()
@@ -203,30 +209,38 @@ object AppStateManager {
         packageName: String?,
         focusedApp: String?,
         focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
         hoveredPackage: String? = null,
         hoveredLabel: String? = null,
         hoveredRomPath: String? = null,
+        hoveredRomIdentifier: String? = null,
         hoveredSystemId: String? = null,
         hoveredPrimaryColor: Int? = null,
         hoveredSecondaryColor: Int? = null,
     ) {
         AppLog.d(
             TAG,
-            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
+            "setExternalClientState: active=$isActive package=$packageName focused=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier hovered=$hoveredLabel ($hoveredPackage) romPath=$hoveredRomPath romId=$hoveredRomIdentifier systemId=$hoveredSystemId primary=$hoveredPrimaryColor secondary=$hoveredSecondaryColor",
         )
         if (_isExternalClientActive.value != isActive ||
             _focusedAppPackageName.value != focusedApp ||
-            _focusedRomPath.value != focusedRomPath
+            _focusedRomPath.value != focusedRomPath ||
+            _focusedRomIdentifier.value != focusedRomIdentifier
         ) {
-            AppLog.d(TAG, "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath")
+            AppLog.d(
+                TAG,
+                "setExternalClientState focus updated: active=$isActive focusedApp=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier",
+            )
         }
         _isExternalClientActive.value = isActive
         _externalClientPackage.value = packageName
         _focusedAppPackageName.value = focusedApp
         _focusedRomPath.value = focusedRomPath
+        _focusedRomIdentifier.value = focusedRomIdentifier
         _hoveredAppPackageName.value = hoveredPackage
         _hoveredAppLabel.value = hoveredLabel
         _hoveredRomPath.value = hoveredRomPath
+        _hoveredRomIdentifier.value = hoveredRomIdentifier
         _hoveredSystemId.value = hoveredSystemId
         _hoveredAppPrimaryColor.value = hoveredPrimaryColor
         _hoveredAppSecondaryColor.value = hoveredSecondaryColor
@@ -235,13 +249,18 @@ object AppStateManager {
     fun setStandaloneForegroundState(
         focusedApp: String?,
         focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
     ) {
         if (_isExternalClientActive.value) return
-        if (_focusedAppPackageName.value != focusedApp || _focusedRomPath.value != focusedRomPath) {
-            AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath")
-            _focusedAppPackageName.value = focusedApp
-            _focusedRomPath.value = focusedRomPath
+        if (_focusedAppPackageName.value != focusedApp ||
+            _focusedRomPath.value != focusedRomPath ||
+            _focusedRomIdentifier.value != focusedRomIdentifier
+        ) {
+            AppLog.d(TAG, "setStandaloneForegroundState: focusedApp=$focusedApp focusedRom=$focusedRomPath focusedId=$focusedRomIdentifier")
         }
+        _focusedAppPackageName.value = focusedApp
+        _focusedRomPath.value = focusedRomPath
+        _focusedRomIdentifier.value = focusedRomIdentifier
     }
 
     fun setActivityResumed(resumed: Boolean) {
