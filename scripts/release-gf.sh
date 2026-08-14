@@ -11,7 +11,7 @@ set -e
 
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
-GRADLE_FILE="$PROJECT_ROOT/gamefocus/build.gradle.kts"
+GRADLE_FILE="$PROJECT_ROOT/gamefocus/ui/build.gradle.kts"
 LOCAL_PROPERTIES="$PROJECT_ROOT/local.properties"
 
 # Ensure running from project root
@@ -51,9 +51,9 @@ build_release_apk() {
     release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
     log_info "Building Game Focus release APK for version $release_version..."
-    ./gradlew :gamefocus:assembleRelease
+    ./gradlew :gamefocus:ui:assembleRelease
 
-    generated_apk="gamefocus/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
+    generated_apk="gamefocus/ui/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
     if [[ ! -f "$generated_apk" ]]; then
         log_error "Generated Game Focus release APK not found at $generated_apk"
         exit 1

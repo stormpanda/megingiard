@@ -14,8 +14,8 @@ set -e
 
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
-GRADLE_FILE="$PROJECT_ROOT/app/build.gradle.kts"
-GF_GRADLE_FILE="$PROJECT_ROOT/gamefocus/build.gradle.kts"
+GRADLE_FILE="$PROJECT_ROOT/companion/ui/build.gradle.kts"
+GF_GRADLE_FILE="$PROJECT_ROOT/gamefocus/ui/build.gradle.kts"
 LOCAL_PROPERTIES="$PROJECT_ROOT/local.properties"
 
 # Ensure we are running from project root
@@ -66,12 +66,12 @@ build_release_apk() {
     release_version=$(echo "$version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
     log_info "Building release APKs for version $release_version..."
-    ./gradlew :app:assembleRelease :gamefocus:assembleRelease
+    ./gradlew :companion:ui:assembleRelease :gamefocus:ui:assembleRelease
 
     # Ensure output dir exists, clean old artifacts, and copy the APKs
     rm -f app/release/*.apk(N) app/release/*-checksum-*.txt(N)
     mkdir -p app/release
-    generated_apk="app/build/outputs/apk/release/Megingiard-v${release_version}.apk"
+    generated_apk="companion/ui/build/outputs/apk/release/Megingiard-v${release_version}.apk"
     copied_apk="app/release/Megingiard-v${release_version}.apk"
 
     if [[ ! -f "$generated_apk" ]]; then
@@ -82,7 +82,7 @@ build_release_apk() {
     cp "$generated_apk" "$copied_apk"
     log_info "Copied APK to $copied_apk"
 
-    gf_generated_apk="gamefocus/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
+    gf_generated_apk="gamefocus/ui/build/outputs/apk/release/Megingiard-GameFocus-v${release_version}.apk"
     if [[ -f "$gf_generated_apk" ]]; then
         gf_copied_apk="app/release/Megingiard-GameFocus-v${release_version}.apk"
         cp "$gf_generated_apk" "$gf_copied_apk"
@@ -304,10 +304,10 @@ case "$1" in
         # Attempt no-ff merge
         if ! git merge --no-ff "$release_branch" -m "chore(release): merge $release_branch into main"; then
             log_info "Merge conflict detected during merge of $release_branch into main."
-            if git status --porcelain | grep -q "app/build.gradle.kts"; then
-                log_info "Resolving app/build.gradle.kts conflict by favoring main's version configuration..."
-                git checkout --ours app/build.gradle.kts
-                git add app/build.gradle.kts
+            if git status --porcelain | grep -q "companion/ui/build.gradle.kts"; then
+                log_info "Resolving companion/ui/build.gradle.kts conflict by favoring main's version configuration..."
+                git checkout --ours companion/ui/build.gradle.kts
+                git add companion/ui/build.gradle.kts
                 git commit -m "chore(release): merge $release_branch into main (resolved build.gradle.kts)"
             else
                 log_error "Merge conflict could not be automatically resolved. Please resolve conflicts manually."

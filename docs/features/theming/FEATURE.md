@@ -1,6 +1,6 @@
 # Feature: App Theming
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/ui/AppTheme.kt`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/ui/AppTheme.kt`
 > _(Settings persistence in `settings/SettingsManager.kt`. Theme provider wired in `MainActivity.kt`.)_
 
 ---
@@ -157,7 +157,7 @@ MaterialTheme(
 
 For external applications (such as the standalone Megingiard Game Focus launcher app `:gamefocus`), theme settings are shared across process boundaries via Android's `ContentProvider` and `ContentObserver` architecture:
 
-- **IPC Contract & Parsing (`domain/src/main/java/com/stormpanda/megingiard/ipc/`):** Defines `MegingiardIpcContract` (`content://com.stormpanda.megingiard.provider/theme`), `IpcThemeParser`, `IpcSettingsParser`, and the generic `observeContentProvider` reactive Flow extension.
+- **IPC Contract & Parsing (`companion/domain/src/main/java/com/stormpanda/megingiard/ipc/`):** Defines `MegingiardIpcContract` (`content://com.stormpanda.megingiard.provider/theme`), `IpcThemeParser`, `IpcSettingsParser`, and the generic `observeContentProvider` reactive Flow extension.
 - **Provider Host (`MegingiardSettingsProvider.kt` in `:app`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
 - **Observer Client (`MegingiardThemeClient.kt` in `:gamefocus`):** Consumes `observeContentProvider()` to query initial state synchronously on launch and reactively update `LocalAppColors` whenever theme change notifications arrive.
 
@@ -216,7 +216,7 @@ Default:       ThemeMode.DARK
 
 ### Source Files
 
-`design/app-icon/` contains the app icon design assets. Only the two PNG files below are the authoritative inputs to `scripts/generate_icon_assets.py`:
+`assets/design/app-icon/` contains the app icon design assets. Only the two PNG files below are the authoritative inputs to `scripts/generate_icon_assets.py`:
 
 | File                                 | Purpose                                                                           |
 | ------------------------------------ | --------------------------------------------------------------------------------- |
@@ -238,16 +238,16 @@ pip install Pillow
 
 ```bash
 python3 scripts/generate_icon_assets.py \
-  "design/app-icon/Megingiard_App_Icon_Foreground.png" \
-  "design/app-icon/Megingiard_App_Icon_Background.png"
+  "assets/design/app-icon/Megingiard_App_Icon_Foreground.png" \
+  "assets/design/app-icon/Megingiard_App_Icon_Background.png"
 ```
 
 **What the script does:**
 
 1. Removes the white background from the foreground PNG → transparent RGBA.
 2. Samples the average center color of the background PNG.
-3. Writes `app/src/main/res/drawable/ic_launcher_foreground.png` (432×432 px adaptive layer) and removes the old `ic_launcher_foreground.xml` so Android resolves the PNG.
-4. Overwrites `app/src/main/res/drawable/ic_launcher_background.xml` with the sampled hex color.
+3. Writes `companion/ui/src/main/res/drawable/ic_launcher_foreground.png` (432×432 px adaptive layer) and removes the old `ic_launcher_foreground.xml` so Android resolves the PNG.
+4. Overwrites `companion/ui/src/main/res/drawable/ic_launcher_background.xml` with the sampled hex color.
 5. Composites and saves square + round WebP launcher icons for all five density buckets (`mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}`).
 
 **After running:** do **File → Sync Project with Gradle Files** in Android Studio so the new assets are picked up by the resource merger.
@@ -255,7 +255,7 @@ python3 scripts/generate_icon_assets.py \
 ### Generated Outputs (never edit manually)
 
 ```
-app/src/main/res/
+companion/ui/src/main/res/
   drawable/
     ic_launcher_foreground.png       ← adaptive icon foreground layer
     ic_launcher_background.xml       ← solid background fill color

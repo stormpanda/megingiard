@@ -1,7 +1,7 @@
 # Feature: Configuration Export / Import
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/config/`  
-> _(Settings UI entry points are in `app/src/main/java/com/stormpanda/megingiard/settings/`.)_
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/config/`  
+> _(Settings UI entry points are in `companion/ui/src/main/java/com/stormpanda/megingiard/settings/`.)_
 
 ---
 
@@ -213,7 +213,9 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
   `encodeDefaults = true`) of settings and profiles only.
   Key order is determined by the declaration order of the `@Serializable` data class fields —
   no additional sorting or canonicalization is applied. Metadata changes do not invalidate the
-  checksum.
+  checksum. On import, verification first attempts raw JSON element payload evaluation to preserve
+  hash fidelity for legacy/older exports created before new default fields were introduced, falling back to
+  re-encoded object graph verification.
 
 ### Source Files
 

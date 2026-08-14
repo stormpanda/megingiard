@@ -1,8 +1,8 @@
 # Feature: MacroPad
 
-> **Related source:** `app/src/main/java/com/stormpanda/megingiard/macropad/`
-> **Native source:** `app/src/main/cpp/gamepadinjector.c`, `app/src/main/cpp/mouseinjector.c`
-> **Binary assets:** `app/src/main/assets/gamepadinjector_arm64`, `app/src/main/assets/mouseinjector_arm64`
+> **Related source:** `companion/ui/src/main/java/com/stormpanda/megingiard/macropad/`
+> **Native source:** `companion/ui/src/main/cpp/gamepadinjector.c`, `companion/ui/src/main/cpp/mouseinjector.c`
+> **Binary assets:** `companion/ui/src/main/assets/gamepadinjector_arm64`, `companion/ui/src/main/assets/mouseinjector_arm64`
 > **Build instructions:** [BUILD_NATIVE.md](../../BUILD_NATIVE.md)
 
 ---
@@ -67,10 +67,7 @@ Each button supports one of the following actions:
     - `enableGamepad = true` if any button has a `GamepadButton` action.
     - `enableMouse = true` if any button has a `MouseButton`, `ScrollWheel`, or `TrackpointMove` (with `PHYSICAL_MOUSE` tracking mode) action. (Note: `MirrorTouchProjection` is explicitly excluded from this derivation because the screen mirror presentation manages its own touch injector lifecycle).
     - `enableTouch = true` if any button has a `TrackpointMove` (with `VIRTUAL_TOUCH` tracking mode) action.
-- Recomputation happens in `MacroPadState.updateProfile()` (via `withSyncedDeviceFlags()`) and during initial load in `loadFrom()`, so the flags are always consistent with the stored button list.
-- When entering MacroPad mode, only the injectors whose corresponding flag is `true` are started; unused injectors remain stopped.
-- The `DisposableEffect` in `MacroPadEditor` restarts only the enabled injectors when the editor is dismissed.
-- During normal MacroPad use on the secondary display, the hosting Activity window is marked `FLAG_NOT_FOCUSABLE` so touch input on the MacroPad does not steal focus from a primary-display game that owns Android pointer capture. The flag is cleared while QuickMenu, file picker, editor, or background settings overlays are open because those screens may need focused app input.
+- Injector start and stop lifecycle is centrally managed by `InjectorLifecycleManager`, which evaluates `AppStateManager.uiMode`, `MacroPadState.activeLayout`, and `AppStateManager.promptInFlight`. When editor screens or settings popups are open, all injectors are stopped; when returned to MacroPad use mode, only enabled injectors for the active layout are started.
 
 ### FR-P5: Trackpoint Button
 
@@ -247,6 +244,21 @@ Each button supports one of the following actions:
 - Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
 - Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), the active **MacroPad Screen** (`MacroPadScreen`), and the secondary display **Screen Mirror Overlay** (`MirrorPresentation`).
 
+### FR-P15: App Launcher Button & Floating Bubble Overlay
+
+- Users can add buttons of type **App Launcher** (`PadAction.AppLauncher`) to MacroPad layouts.
+- **Single-Field Persistence**: For optimal portable layout persistence, `PadAction.AppLauncher` stores **only `packageName`** in JSON layout profiles (`{"type":"app_launcher","packageName":"..."}`). The application title and launcher icon are resolved dynamically at runtime via `PackageManager`.
+- **Application Picker**: When configuring an App Launcher button in the editor, an app picker dialog lists all installed launcher applications (`PackageManager.queryIntentActivities` with `Intent.CATEGORY_LAUNCHER`), allowing the user to select an app by name or package name.
+- **Editor Simplification & Dynamic Label**: Selecting the App Launcher action automatically hides the **Label** text input field and **Icon** picker from the button edit dialog (`PadButtonEditDialog`). The button label is dynamically evaluated as `"Open <AppName>"` (`"Öffnen <AppName>"` in German) derived from `PackageManager`.
+- **Monochrome Tinted Icon Rendering**: The target application's launcher icon is desaturated to grayscale and rendered on the button face tinted with the user's chosen button icon color (`effectiveTextTint`).
+- **Unified Button Content Rendering**: Button face contents are rendered via a unified `PadButtonContent` composable shared across Use Mode (`MacroPadButton`), Editor Canvas (`PadCanvas`), and Sidebar Button List (`ButtonListItem`), ensuring App Launcher icons are displayed consistently across all editing and usage views.
+- **Execution & App Launch**: Tapping an App Launcher button opens the designated application on the bottom screen display using `ActivityOptions.makeBasic().setLaunchDisplayId(...)`.
+- **Touch-Positioned Floating Bubble Overlay**: Upon launching the target application, Megingiard minimizes to the background (`moveTaskToBack(true)`) and displays a floating bubble overlay centered at the exact screen coordinates where the App Launcher button was pressed.
+- **Temporary Mirroring Pause**: Triggering an App Launcher button or having an active floating bubble temporarily pauses screen capture (`ScreenCaptureService.stopSelf()`) to conserve system resources without altering the layout's saved `mirrorAutoStart` preference. Restoring Megingiard to the foreground automatically resumes screen capture.
+- **Secondary Display Attachment**: The floating bubble window uses `WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY` created via `DisplayManager` targeting the secondary display (bottom screen) and managed by `MegingiardAccessibilityService`.
+- **Interactivity & Restore**: The floating bubble can be freely dragged across the screen. Tapping the floating bubble restores Megingiard (`MainActivity`) to the foreground on the bottom display, dismisses the bubble, and resumes screen mirroring.
+
+
 
 ### FR-P10: Optional Button Icons
 
@@ -354,7 +366,7 @@ Each button supports one of the following actions:
 - **Emulator Detection Funnel & ROM-Aware Switching:**
   - Automatic profile switching supports **Emulator & ROM Granularity** via `EmulatorDetectionFunnel` (`:domain`).
   - When a registered emulator or container package (e.g. `com.retroarch`, `app.gamenative`) enters the foreground, `MegingiardAccessibilityService` routes the package to `EmulatorDetectionFunnel`.
-  - `EmulatorDetectionFunnel` forwards the event to either `RetroArchDetector` (which queries `content_history.lpl` playlist files) or `GameNativeDetector` (which queries active processes via the privileged daemon's `LIST_PROCESSES` command, falling back to reading `wine_logs/wine.log` logs via `PrivdClient` to parse the active Steam app ID or container game name if the daemon is unavailable).
+  - `EmulatorDetectionFunnel` forwards the event to `RetroArchDetector` (which queries `content_history.lpl` playlist files), `Pcsx2AndroidDetector` (which queries `recent_games.json` files for PCSX2-derived PS2 emulators like ARMSX2, AetherSX2, and NetherSX2), or `GameNativeDetector` (which queries active processes via the privileged daemon's `LIST_PROCESSES` command, falling back to reading `wine_logs/wine.log` logs via `PrivdClient` to parse the active Steam app ID or container game name if the daemon is unavailable).
   - `AutoSwitchCoordinator` performs cascading matching using `PadProfile.matches`: it searches for ROM-specific profile associations matching `packageName`, `systemId` and `romFileName` first, and falls back to generic app profiles (matching `packageName` with a null `romFileName`).
 - **Service Verification & Direct Setup:** The Global Settings UI displays the active accessibility service status using a premium indicator bubble mirroring the Privileged Mode card. The system service status is polled exactly once upon accessing or resuming the Global Settings screen, and provides a manual refresh button if the service is currently inactive. The entire settings row remains clickable in all states to navigate directly to Android's system Accessibility settings screen.
 - **Launcher App Picker Overlay:** The Profile Editor inside the MacroPad Editor replaces the simple text rename dialog with a unified `InlineProfileSettingsOverlay`. The overlay includes a search-filtered list of launcher applications compiled in the background (using `PackageManager.queryIntentActivities` with `Intent.CATEGORY_LAUNCHER`) to exclude internal services and background system apps. If the accessibility service is currently inactive, the app mapping picker area is greyed out and displays a descriptive warning: *"Accessibility service must be activated in Global Settings"*, preventing further application assignments until the service is active. Tapping a listed launcher application binds its package to the profile, and a "Clear App Mapping" option is available to remove the mapping.
@@ -529,7 +541,7 @@ PadProfile
 ### Icon Rendering — Material Symbols Font
 
 Icons are rendered using the **Material Symbols Rounded** variable font bundled at
-`app/src/main/res/font/material_symbols_rounded.ttf`.
+`companion/ui/src/main/res/font/material_symbols_rounded.ttf`.
 
 **How it works:**
 The font uses OpenType GSUB ligature substitution (type 4, wrapped in type-7 Extension
@@ -569,7 +581,7 @@ python3 scripts/generate_icon_names.py
 ```
 
 The script (`scripts/generate_icon_names.py`) reads every GSUB ligature entry from
-`app/src/main/res/font/material_symbols_rounded.ttf`, filters entries matching
+`companion/ui/src/main/res/font/material_symbols_rounded.ttf`, filters entries matching
 `[a-z][a-z0-9_]+`, and writes the sorted snake_case list to `RoundedIconNames.kt`.
 The generated file is version-controlled; the script only needs to be re-run when
 the font file is updated.

@@ -6,7 +6,7 @@ display touchscreen on the AYN Thor). It bypasses the Android input
 stack entirely, reducing per-event latency from ~7 ms
 (`input motionevent` via Binder IPC) to ~0.37 ms.
 
-The pre-built binary lives at `app/src/main/assets/touchinjector_arm64`.
+The pre-built binary lives at `companion/ui/src/main/assets/touchinjector_arm64`.
 It is checked in so that a normal Gradle build requires **no NDK
 installation**. Rebuild only if you change `touchinjector.c`.
 
@@ -18,22 +18,22 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 
 | Source file                           | Output asset                                 | Build script                                                                                                                                          |
 | ------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/src/main/cpp/touchinjector.c`    | `app/src/main/assets/touchinjector_arm64`    | `./build_touchinjector.sh`                                                                                                                            |
-| `app/src/main/cpp/keyinjector.c`      | `app/src/main/assets/keyinjector_arm64`      | `./build_keyinjector.sh`                                                                                                                              |
-| `app/src/main/cpp/mouseinjector.c`    | `app/src/main/assets/mouseinjector_arm64`    | `./build_mouseinjector.sh`                                                                                                                            |
-| `app/src/main/cpp/gamepadinjector.c`  | `app/src/main/assets/gamepadinjector_arm64`  | `./build_gamepadinjector.sh`                                                                                                                          |
-| `app/src/main/cpp/megingiard_privd.c` | `app/src/main/assets/megingiard_privd_arm64` | `./build_megingiard_privd.sh`                                                                                                                         |
+| `companion/ui/src/main/cpp/touchinjector.c`    | `companion/ui/src/main/assets/touchinjector_arm64`    | `./scripts/build_touchinjector.sh`                                                                                                                    |
+| `companion/ui/src/main/cpp/keyinjector.c`      | `companion/ui/src/main/assets/keyinjector_arm64`      | `./scripts/build_keyinjector.sh`                                                                                                                      |
+| `companion/ui/src/main/cpp/mouseinjector.c`    | `companion/ui/src/main/assets/mouseinjector_arm64`    | `./scripts/build_mouseinjector.sh`                                                                                                                    |
+| `companion/ui/src/main/cpp/gamepadinjector.c`  | `companion/ui/src/main/assets/gamepadinjector_arm64`  | `./scripts/build_gamepadinjector.sh`                                                                                                                  |
+| `companion/ui/src/main/cpp/megingiard_privd.c` | `companion/ui/src/main/assets/megingiard_privd_arm64` | `./scripts/build_megingiard_privd.sh`                                                                                                                 |
 
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
 
-> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `app/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
+> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./scripts/build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
 
 ---
 
 ## Native Asset Integrity
 
-Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `app/src/main/assets/` through the `:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
+Megingiard treats native helpers and the privileged mirror DEX as pinned assets. A normal Gradle build generates `NativeBinaryHashes.kt` from the bytes in `companion/ui/src/main/assets/` through the `:domain:generateNativeBinaryHashes` task. The generated map contains SHA-256 values for:
 
 - `touchinjector_arm64`
 - `mouseinjector_arm64`
@@ -59,13 +59,13 @@ Native helpers follow a pre-exec verification sequence in `NativeBinaryInjector`
 
 ### Privd Authentication Key
 
-The `megingiard_privd` daemon no longer uses a compile-time key. The per-install HMAC key is generated on the device during Privileged Mode bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/FEATURE.md#per-install-key-scheme)). No key needs to be set in `local.properties` or passed to `build_megingiard_privd.sh`.
+The `megingiard_privd` daemon no longer uses a compile-time key. The per-install HMAC key is generated on the device during Privileged Mode bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/FEATURE.md#per-install-key-scheme)). No key needs to be set in `local.properties` or passed to `scripts/build_megingiard_privd.sh`.
 
 ---
 
 ## Source
 
-`app/src/main/cpp/touchinjector.c`
+`companion/ui/src/main/cpp/touchinjector.c`
 
 ---
 
@@ -103,7 +103,7 @@ $TOOLCHAIN/bin/aarch64-linux-android35-clang \
     -O2 \
     -s \
     -o /tmp/touchinjector_arm64 \
-    app/src/main/cpp/touchinjector.c
+    companion/ui/src/main/cpp/touchinjector.c
 ```
 
 For **Linux hosts** replace `darwin-x86_64` with `linux-x86_64` in the
@@ -117,7 +117,7 @@ Copy the compiled binary over the checked-in one:
 
 ```bash
 cp /tmp/touchinjector_arm64 \
-   app/src/main/assets/touchinjector_arm64
+   companion/ui/src/main/assets/touchinjector_arm64
 ```
 
 Then rebuild and install the APK normally (`./gradlew installDebug`).
@@ -191,17 +191,17 @@ the device node.
 
 ### Source
 
-`app/src/main/cpp/keyinjector.c`
+`companion/ui/src/main/cpp/keyinjector.c`
 
 Creates a virtual keyboard via `/dev/uinput`, then reads `KD`/`KU` commands from stdin
 and writes `EV_KEY` events into the kernel input subsystem.
 
 ### Compile
 
-Same NDK setup as above. Use the same `build_keyinjector.sh` script at the workspace root:
+Same NDK setup as above. Use the same `build_keyinjector.sh` script located in `scripts/`:
 
 ```bash
-sh build_keyinjector.sh
+sh scripts/build_keyinjector.sh
 ```
 
 Or manually:
@@ -217,8 +217,8 @@ TOOLCHAIN="$NDK_ROOT/toolchains/llvm/prebuilt/$HOST_TAG"
     --sysroot="$TOOLCHAIN/sysroot" \
     --target=aarch64-linux-android33 \
     -static -O2 -s \
-    -o app/src/main/assets/keyinjector_arm64 \
-    app/src/main/cpp/keyinjector.c
+    -o companion/ui/src/main/assets/keyinjector_arm64 \
+    companion/ui/src/main/cpp/keyinjector.c
 ```
 
 ### Binary protocol
@@ -244,7 +244,7 @@ device is created. On stdin EOF it destroys the virtual device and exits.
 
 ### Source
 
-`app/src/main/cpp/gamepadinjector.c`
+`companion/ui/src/main/cpp/gamepadinjector.c`
 
 Creates a virtual gamepad via `/dev/uinput` that exposes face buttons (A/B/X/Y),
 shoulder buttons (L1/R1/L2/R2), thumbstick-click buttons (L3/R3), Start/Select/Guide,
@@ -253,7 +253,7 @@ and a D-Pad (ABS_HAT0X / ABS_HAT0Y). Used by the MacroPad tool.
 ### Compile
 
 ```bash
-sh build_gamepadinjector.sh
+sh scripts/build_gamepadinjector.sh
 ```
 
 Or manually (same NDK as above):
@@ -266,8 +266,8 @@ $TOOLCHAIN/bin/aarch64-linux-android35-clang \
     --sysroot=$TOOLCHAIN/sysroot \
     --target=aarch64-linux-android35 \
     -static -O2 -s \
-    -o app/src/main/assets/gamepadinjector_arm64 \
-    app/src/main/cpp/gamepadinjector.c
+    -o companion/ui/src/main/assets/gamepadinjector_arm64 \
+    companion/ui/src/main/cpp/gamepadinjector.c
 ```
 
 ### Binary protocol
@@ -305,7 +305,7 @@ On stdin EOF it destroys the virtual device and exits.
 
 ### Source
 
-`app/src/main/cpp/mouseinjector.c`
+`companion/ui/src/main/cpp/mouseinjector.c`
 
 Creates a virtual mouse via `/dev/uinput` that exposes BTN_LEFT/RIGHT/MIDDLE and
 relative axes REL_X, REL_Y, REL_WHEEL. Used by the MacroPad tool for mouse-click
@@ -314,7 +314,7 @@ buttons and the relative-movement trackpoint.
 ### Compile
 
 ```bash
-sh build_mouseinjector.sh
+sh scripts/build_mouseinjector.sh
 ```
 
 Or manually:
@@ -327,8 +327,8 @@ $TOOLCHAIN/bin/aarch64-linux-android35-clang \
     --sysroot=$TOOLCHAIN/sysroot \
     --target=aarch64-linux-android35 \
     -static -O2 -s \
-    -o app/src/main/assets/mouseinjector_arm64 \
-    app/src/main/cpp/mouseinjector.c
+    -o companion/ui/src/main/assets/mouseinjector_arm64 \
+    companion/ui/src/main/cpp/mouseinjector.c
 ```
 
 ### Binary protocol
@@ -372,7 +372,7 @@ mirrorserver/src/main/java/com/stormpanda/megingiard/mirrorserver/
 2. A custom `DexTask` invokes the SDK's `d8` with `--min-api 33`, packaging the
    compiled `.class` files into a single classes.dex.
 3. The dex output is written directly to
-   `app/src/main/assets/megingiard_mirror.dex`, where it is bundled with the APK.
+   `companion/ui/src/main/assets/megingiard_mirror.dex`, where it is bundled with the APK.
 4. `app/build.gradle.kts` declares `dependsOn(":mirrorserver:dex")` on the relevant
    asset/package tasks, so a normal `./gradlew :app:assembleDebug` always produces a
    fresh DEX.

@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -27,8 +28,13 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Megingiard"
-include(":app")
-include(":gamefocus")
-include(":domain")
-include(":core")
+
+include(":shared:core")
+include(":shared:catalog")
+include(":shared:media")
+include(":shared:session")
+include(":gamefocus:domain")
+include(":gamefocus:ui")
+include(":companion:domain")
+include(":companion:ui")
 include(":mirrorserver")

@@ -28,11 +28,11 @@ except ImportError:
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FONT_FILE = os.path.join(
     SCRIPT_DIR,
-    "../app/src/main/res/font/material_symbols_rounded.ttf",
+    "../companion/ui/src/main/res/font/material_symbols_rounded.ttf",
 )
 OUTPUT_FILE = os.path.join(
     SCRIPT_DIR,
-    "../app/src/main/java/com/stormpanda/megingiard/macropad/RoundedIconNames.kt",
+    "../companion/ui/src/main/java/com/stormpanda/megingiard/macropad/RoundedIconNames.kt",
 )
 
 # Valid Material Symbols ligature: lowercase letters, digits, underscores; ≥ 2 chars
