@@ -266,6 +266,15 @@
     <string name="macropad_action_mirror_touch_projection">觸控投影</string>
     <string name="macropad_action_fullscreen_mouse">全螢幕滑鼠</string>
     <string name="macropad_action_fullscreen_keyboard">全螢幕鍵盤</string>
+    <string name="macropad_action_app_launcher">啟動應用程式</string>
+    <string name="macropad_display_app_launcher">應用程式: %s</string>
+    <string name="app_launcher_picker_title">選擇應用程式</string>
+    <string name="app_launcher_picker_search">搜尋應用程式…</string>
+    <string name="app_launcher_picker_no_apps">找不到應用程式</string>
+    <string name="app_launcher_picker_select_app">選擇應用程式…</string>
+    <string name="app_launcher_button_label_format">開啟 %1$s</string>
+    <string name="floating_bubble_cd">Megingiard 浮動球覆蓋層</string>
+    <string name="floating_bubble_tap_hint">輕觸以返回 Megingiard</string>
     <string name="settings_macropad_profile">活動設定檔</string>
     <string name="settings_macropad_new_profile">新設定檔…</string>
     <string name="settings_macropad_pad_shape">Pad 形狀</string>
@@ -763,8 +772,8 @@
     <string name="help_macrolist_tap_desc">開啟該巨集的時間軸編輯器，以便您查看或編輯其步驟。</string>
     <string name="help_macrolist_menu_label">選項選單</string>
     <string name="help_macrolist_menu_desc">每列巨集都有一個選項選單 (三個點)，可進行重新命名、重複、複製到設定檔或刪除巨集。刪除是永久性的。</string>
-    <string name="help_macrolist_drag_label">拖曳把手</string>
-    <string name="help_macrolist_drag_desc">長按巨集列右側的拖曳把手並移動，以重新排序列表中的巨集。此處的順序僅供美觀參考，不影響執行。</string>
+    <string name="help_macrolist_drag_label">拖曳控點</string>
+    <string name="help_macrolist_drag_desc">長按巨集列右側的拖曳控點並移動，以重新排列列表中的巨集順序。此處的順序僅供瀏覽參考，不影響執行。</string>
     <string name="help_timeline_title">巨集編輯器 — 說明</string>
     <string name="help_timeline_intro">時間軸編輯器是用來建構巨集執行的確切輸入序列。步驟會依序從上到下執行。時序可以精確錄製或手動輸入。</string>
     <string name="help_timeline_section_topbar">頂端欄控制</string>
@@ -992,6 +1001,10 @@
     <string name="steamgriddb_error_generic_message">發生非預期的錯誤。請重試。</string>
     <string name="steamgriddb_error_dismiss">確定</string>
     <string name="focus_change_artwork_title">更換封面圖</string>
+    <string name="keyboard_mode_ergo">簡易</string>
+    <string name="keyboard_mode_full">完整</string>
+    <string name="touchpad_mode_mouse">滑鼠</string>
+    <string name="touchpad_mode_touch">觸控</string>
     <string name="settings_touchpad_title">觸控板設定</string>
     <string name="settings_section_relative_mouse">手勢與點擊設定</string>
     <string name="settings_section_absolute_touch">絕對觸控模式</string>
@@ -1111,6 +1124,7 @@
     <string name="quick_menu_show_dashboard">顯示儀表板</string>
     <string name="quick_menu_show_macropad">切換至遊戲設定檔</string>
     <string name="quick_menu_auto_mode">自動切換</string>
+    <string name="toast_auto_switch_off">自動切換：關閉</string>
     <string name="settings_update_available_short">有可用更新</string>
     <string name="settings_auto_update_check">自動檢查更新</string>
     <string name="settings_auto_update_check_desc">在背景定期檢查 GitHub Releases 以取得應用程式更新</string>

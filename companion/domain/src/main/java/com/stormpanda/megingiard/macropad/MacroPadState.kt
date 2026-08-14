@@ -14,12 +14,20 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.Locale
 import java.util.UUID
 
 private const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
 private const val DUPLICATE_BUTTON_OFFSET = 0.05f
+
+private fun defaultInitialName(): String =
+    when (Locale.getDefault().language.lowercase()) {
+        "zh" -> "預設"
+        "de" -> "Standard"
+        else -> "Default"
+    }
 
 private fun List<String>.nextUniqueName(
     baseName: String,
@@ -170,13 +178,14 @@ object MacroPadState {
                 needsSave = true
                 val defaultId = UUID.randomUUID().toString()
                 val defaultLayoutId = UUID.randomUUID().toString()
+                val initialName = defaultInitialName()
                 listOf(
                     PadProfile(
                         id = defaultId,
-                        name = "Default",
+                        name = initialName,
                         layouts =
                             listOf(
-                                PadLayout(id = defaultLayoutId, name = "Default", mirrorCutouts = listOf(ScreenCutout.createDefault())),
+                                PadLayout(id = defaultLayoutId, name = initialName, mirrorCutouts = listOf(ScreenCutout.createDefault())),
                             ),
                         activeLayoutId = defaultLayoutId,
                     ),
@@ -337,11 +346,12 @@ object MacroPadState {
     fun restoreDefaults() {
         val defaultId = UUID.randomUUID().toString()
         val defaultLayoutId = UUID.randomUUID().toString()
+        val initialName = defaultInitialName()
         val defaultProfile =
             PadProfile(
                 id = defaultId,
-                name = "Default",
-                layouts = listOf(PadLayout(id = defaultLayoutId, name = "Default", mirrorCutouts = listOf(ScreenCutout.createDefault()))),
+                name = initialName,
+                layouts = listOf(PadLayout(id = defaultLayoutId, name = initialName, mirrorCutouts = listOf(ScreenCutout.createDefault()))),
                 activeLayoutId = defaultLayoutId,
             )
         _profiles.value = listOf(defaultProfile)

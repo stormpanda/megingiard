@@ -734,7 +734,7 @@ private fun ModeToggleButton(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "Mouse",
+                        text = stringResource(R.string.touchpad_mode_mouse),
                         color = mouseColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -767,7 +767,7 @@ private fun ModeToggleButton(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Touch",
+                        text = stringResource(R.string.touchpad_mode_touch),
                         color = touchColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,

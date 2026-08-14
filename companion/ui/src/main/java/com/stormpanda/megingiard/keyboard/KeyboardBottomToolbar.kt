@@ -183,7 +183,7 @@ private fun KeyboardModeToggleButton(
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        text = "Ergo",
+                        text = stringResource(R.string.keyboard_mode_ergo),
                         color = ergoColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
@@ -216,7 +216,7 @@ private fun KeyboardModeToggleButton(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Full",
+                        text = stringResource(R.string.keyboard_mode_full),
                         color = fullColor,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
