@@ -34,10 +34,10 @@ object Pcsx2AndroidRecentGamesParser {
             val entries = json.decodeFromString<List<Pcsx2AndroidRecentEntry>>(jsonContent)
             val first = entries.firstOrNull() ?: return null
 
-            val romPath = resolveFilePath(first.uri)
+            val romPath = SafPathResolver.resolveFilePath(first.uri)
             val gameTitle =
                 first.title?.trim()?.takeIf { it.isNotBlank() }
-                    ?: deriveTitleFromUri(first.uri)
+                    ?: SafPathResolver.deriveGameTitle(romPath ?: first.uri ?: "", first.uri)
                     ?: first.serial?.trim()?.takeIf { it.isNotBlank() }
                     ?: return null
 
@@ -52,42 +52,5 @@ object Pcsx2AndroidRecentGamesParser {
             AppLog.w(TAG, "parseMostRecentSession: failed to parse PCSX2-Android recent_games JSON - $e")
             null
         }
-    }
-
-    private fun resolveFilePath(uriStr: String?): String? {
-        if (uriStr.isNullOrBlank()) return null
-        if (uriStr.startsWith("/")) return uriStr
-
-        return try {
-            val decoded = java.net.URLDecoder.decode(uriStr, "UTF-8")
-            val rawPath =
-                when {
-                    decoded.contains("/document/") -> decoded.substringAfter("/document/")
-                    decoded.contains("/tree/") -> decoded.substringAfter("/tree/")
-                    else -> decoded
-                }
-
-            when {
-                rawPath.startsWith("/") -> rawPath
-                rawPath.startsWith("primary:") -> "/storage/emulated/0/${rawPath.substringAfter("primary:")}"
-                rawPath.contains(":") -> "/storage/${rawPath.replaceFirst(":", "/")}"
-                else -> rawPath
-            }
-        } catch (e: Exception) {
-            uriStr
-        }
-    }
-
-    private fun deriveTitleFromUri(uriStr: String?): String? {
-        if (uriStr.isNullOrBlank()) return null
-        val decoded =
-            try {
-                java.net.URLDecoder.decode(uriStr, "UTF-8")
-            } catch (e: Exception) {
-                uriStr
-            }
-        val fileName = decoded.substringAfterLast('/').substringAfterLast('\\')
-        val nameWithoutExt = fileName.substringBeforeLast('.')
-        return nameWithoutExt.trim().takeIf { it.isNotBlank() }
     }
 }

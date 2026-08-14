@@ -1,13 +1,13 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 
 private const val TAG = "PpssppDetector"
 
 /**
  * Detector implementation for standalone PPSSPP (PlayStation Portable) emulator instances.
- * Reads `ppsspp.ini` over privileged socket (or fallback storage paths) to parse active game.
+ * Resolves active game sessions in real-time by inspecting logcat boot events (`[BOOT] Booted <path>`)
+ * streamed exclusively via the privileged daemon (`LOGCAT:PPSSPP`).
  */
 object PpssppDetector : EmulatorDetector {
     override val supportedPackages: Set<String> =
@@ -21,32 +21,19 @@ object PpssppDetector : EmulatorDetector {
 
     override val systemId: String = "psp"
 
-    private fun getCandidateIniPaths(packageName: String): List<String> =
-        listOf(
-            "/storage/emulated/0/PSP/SYSTEM/ppsspp.ini",
-            "/sdcard/PSP/SYSTEM/ppsspp.ini",
-            "/storage/emulated/0/Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
-            "/sdcard/Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
-            "/storage/emulated/0/PPSSPP/PSP/SYSTEM/ppsspp.ini",
-            "/sdcard/PPSSPP/PSP/SYSTEM/ppsspp.ini",
-        )
-
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
 
-        val iniPaths = getCandidateIniPaths(packageName)
-        for (path in iniPaths) {
-            val iniContent = ProcessCmdlineProvider.readTextFile(path)
-            if (!iniContent.isNullOrBlank()) {
-                val session = PpssppIniParser.parseMostRecentSession(packageName, iniContent)
-                if (session != null) {
-                    AppLog.i(TAG, "Resolved session via ini file '$path': ${session.gameTitle} (${session.systemId})")
-                    return session
-                }
+        val logcatContent = ProcessCmdlineProvider.readTextFile("LOGCAT:PPSSPP")
+        if (!logcatContent.isNullOrBlank()) {
+            val session = PpssppLogcatParser.parseLatestBootedSession(packageName, logcatContent)
+            if (session != null) {
+                AppLog.i(TAG, "Resolved active session via Privd logcat stream: ${session.gameTitle} (${session.systemId})")
+                return session
             }
         }
 
-        AppLog.d(TAG, "No active session could be parsed from ppsspp.ini for $packageName")
+        AppLog.d(TAG, "No active session could be resolved via Privd logcat stream for $packageName")
         return null
     }
 }
