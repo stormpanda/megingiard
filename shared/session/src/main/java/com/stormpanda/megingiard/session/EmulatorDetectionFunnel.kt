@@ -109,6 +109,7 @@ object EmulatorDetectionFunnel {
                             lastPath = null
                             lastTitle = null
                             _activeSession.value = null
+                            _lastDetectedSession.value = null
                         }
                     }
                 }
