@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.session
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 import java.io.File
 
 private const val TAG = "GameNativeDetector"
