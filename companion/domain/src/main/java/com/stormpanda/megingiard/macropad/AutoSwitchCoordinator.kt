@@ -75,7 +75,11 @@ object AutoSwitchCoordinator {
                     } else {
                         AppLog.d(TAG, "activeSession observed: auto-mode disabled, skipping profile switch for ${session.gameTitle}")
                     }
-                    AppStateManager.setStandaloneForegroundState(session.packageName, session.romIdentifier ?: session.romPath)
+                    AppStateManager.setStandaloneForegroundState(
+                        focusedApp = session.packageName,
+                        focusedRomPath = session.romPath ?: session.romIdentifier,
+                        focusedRomIdentifier = session.romIdentifier ?: session.romPath,
+                    )
                 } else {
                     val currentForeground = _foregroundApp.value
                     if (currentForeground != null) {
@@ -189,7 +193,11 @@ object AutoSwitchCoordinator {
         } else {
             val session = EmulatorDetectionFunnel.activeSession.value ?: EmulatorDetectionFunnel.lastDetectedSession.value
             if (session != null && session.packageName == normalized) {
-                AppStateManager.setStandaloneForegroundState(session.packageName, session.romIdentifier ?: session.romPath)
+                AppStateManager.setStandaloneForegroundState(
+                    focusedApp = session.packageName,
+                    focusedRomPath = session.romPath ?: session.romIdentifier,
+                    focusedRomIdentifier = session.romIdentifier ?: session.romPath,
+                )
             } else {
                 val currentFocusedPkg = AppStateManager.focusedAppPackageName.value
                 val currentFocusedRom = AppStateManager.focusedRomPath.value

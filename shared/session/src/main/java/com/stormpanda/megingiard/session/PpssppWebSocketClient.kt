@@ -132,9 +132,6 @@ object PpssppWebSocketClient {
         }
 
         val text = String(payload, Charsets.UTF_8)
-        if (text.contains("\"event\":\"game.status\"")) {
-            return text
-        }
-        return text
+        return if (text.contains("\"event\":\"game.status\"")) text else null
     }
 }
