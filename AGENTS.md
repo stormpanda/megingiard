@@ -288,6 +288,10 @@ PixelCopy.request(sv, bitmap, { result ->
 }, Handler(Looper.getMainLooper()))
 ```
 
+### 7.4 Active Game Session Integrity
+
+- **NO SYNTHETIC FALLBACK ROM PATHS EVER:** When constructing an `ActiveGameSession`, `ActiveGameSession.romPath` MUST contain either an exact, verified file path/name (e.g. `Tactics Ogre (USA).iso` or `/storage/.../game.iso`) or `null` if the exact file path cannot be resolved directly from the emulator or SAF URI. **Never** populate `romPath` with synthetic, guessed, or fake fallback filenames (such as `"$derivedTitle.iso"`).
+
 ---
 
 ## 8 Kotlin Conventions

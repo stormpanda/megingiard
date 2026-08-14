@@ -43,9 +43,16 @@ class PpssppDetectorTest {
         }
 
     @Test
-    fun detectActiveSession_serverNotRunning_returnsNull() =
-        runBlocking {
-            val result = PpssppDetector.detectActiveSession("org.ppsspp.ppsspp")
-            assertNull(result)
-        }
+    fun isTitleMatching_matchingTitle_returnsTrue() {
+        val candidate = "God of War - Chains of Olympus (Europe, Australia) (En,Fr,De,Es,It).iso"
+        val activeTitle = "God of War: Chains of Olympus"
+        assertTrue(PpssppDetector.isTitleMatching(candidate, activeTitle))
+    }
+
+    @Test
+    fun isTitleMatching_staleDifferentGame_returnsFalse() {
+        val candidate = "Virtua Tennis - World Tour (Europe).iso"
+        val activeTitle = "God of War: Chains of Olympus"
+        assertFalse(PpssppDetector.isTitleMatching(candidate, activeTitle))
+    }
 }
