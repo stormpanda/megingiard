@@ -94,20 +94,20 @@
 
 > **Native binary rebuild policy:** Whenever a native C source file is modified, the
 > agent **must** immediately run the corresponding build script to rebuild the bundled
-> binary. The scripts are at the workspace root:
+> binary. The scripts are located in `scripts/`:
 >
 > | Source file                           | Build script                                                             |
 > | ------------------------------------- | ------------------------------------------------------------------------ |
-> | `companion/ui/src/main/cpp/megingiard_privd.c` | `./build_megingiard_privd.sh`                                            |
-> | `companion/ui/src/main/cpp/touchinjector.c`    | Manual compile in `docs/BUILD_NATIVE.md` until a dedicated script exists |
-> | `companion/ui/src/main/cpp/keyinjector.c`      | `./build_keyinjector.sh`                                                 |
-> | `companion/ui/src/main/cpp/mouseinjector.c`    | `./build_mouseinjector.sh`                                               |
-> | `companion/ui/src/main/cpp/gamepadinjector.c`  | `./build_gamepadinjector.sh`                                             |
+> | `companion/ui/src/main/cpp/megingiard_privd.c` | `./scripts/build_megingiard_privd.sh`                                   |
+> | `companion/ui/src/main/cpp/touchinjector.c`    | `./scripts/build_touchinjector.sh`                                      |
+> | `companion/ui/src/main/cpp/keyinjector.c`      | `./scripts/build_keyinjector.sh`                                        |
+> | `companion/ui/src/main/cpp/mouseinjector.c`    | `./scripts/build_mouseinjector.sh`                                      |
+> | `companion/ui/src/main/cpp/gamepadinjector.c`  | `./scripts/build_gamepadinjector.sh`                                    |
 >
 > Run the script **before** proposing the commit message. If the build fails, fix the
 > source error before proceeding. The scripts must be run from the workspace root.
 >
-> **Daemon Versioning Rule:** Whenever modifying `megingiard_privd.c` (or daemon protocol logic), you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/.../privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild via `./build_megingiard_privd.sh`. This ensures the app detects version mismatches and triggers automatic daemon updates.
+> **Daemon Versioning Rule:** Whenever modifying `megingiard_privd.c` (or daemon protocol logic), you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/.../privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild via `./scripts/build_megingiard_privd.sh`. This ensures the app detects version mismatches and triggers automatic daemon updates.
 
 > **Unit test policy:** After every implementation — feature, bug fix, or refactor —
 > the agent **must**:

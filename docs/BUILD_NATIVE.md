@@ -18,16 +18,16 @@ The checked-in asset binaries are part of the trusted runtime surface. Whenever 
 
 | Source file                           | Output asset                                 | Build script                                                                                                                                          |
 | ------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `companion/ui/src/main/cpp/touchinjector.c`    | `companion/ui/src/main/assets/touchinjector_arm64`    | `./build_touchinjector.sh`                                                                                                                            |
-| `companion/ui/src/main/cpp/keyinjector.c`      | `companion/ui/src/main/assets/keyinjector_arm64`      | `./build_keyinjector.sh`                                                                                                                              |
-| `companion/ui/src/main/cpp/mouseinjector.c`    | `companion/ui/src/main/assets/mouseinjector_arm64`    | `./build_mouseinjector.sh`                                                                                                                            |
-| `companion/ui/src/main/cpp/gamepadinjector.c`  | `companion/ui/src/main/assets/gamepadinjector_arm64`  | `./build_gamepadinjector.sh`                                                                                                                          |
-| `companion/ui/src/main/cpp/megingiard_privd.c` | `companion/ui/src/main/assets/megingiard_privd_arm64` | `./build_megingiard_privd.sh`                                                                                                                         |
+| `companion/ui/src/main/cpp/touchinjector.c`    | `companion/ui/src/main/assets/touchinjector_arm64`    | `./scripts/build_touchinjector.sh`                                                                                                                    |
+| `companion/ui/src/main/cpp/keyinjector.c`      | `companion/ui/src/main/assets/keyinjector_arm64`      | `./scripts/build_keyinjector.sh`                                                                                                                      |
+| `companion/ui/src/main/cpp/mouseinjector.c`    | `companion/ui/src/main/assets/mouseinjector_arm64`    | `./scripts/build_mouseinjector.sh`                                                                                                                    |
+| `companion/ui/src/main/cpp/gamepadinjector.c`  | `companion/ui/src/main/assets/gamepadinjector_arm64`  | `./scripts/build_gamepadinjector.sh`                                                                                                                  |
+| `companion/ui/src/main/cpp/megingiard_privd.c` | `companion/ui/src/main/assets/megingiard_privd_arm64` | `./scripts/build_megingiard_privd.sh`                                                                                                                 |
 
 
 The agent workflow in [AGENTS.md](../AGENTS.md#3-checklist-for-every-change) mirrors this policy. If a script fails, fix the source error before proceeding. If a source file has no dedicated script yet, use the manual compile command documented in that binary's section and record the gap as follow-up work.
 
-> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
+> **Daemon Versioning Mandatory Requirement:** Whenever `megingiard_privd.c` or any daemon protocol behavior is modified, you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `shared/core/src/main/kotlin/com/stormpanda/megingiard/privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then run `./scripts/build_megingiard_privd.sh`. This guarantees that the app detects version mismatches on already-running daemons after updates, failing the socket handshake and initiating an automatic binary update/re-push sequence.
 
 ---
 
@@ -198,10 +198,10 @@ and writes `EV_KEY` events into the kernel input subsystem.
 
 ### Compile
 
-Same NDK setup as above. Use the same `build_keyinjector.sh` script at the workspace root:
+Same NDK setup as above. Use the same `build_keyinjector.sh` script located in `scripts/`:
 
 ```bash
-sh build_keyinjector.sh
+sh scripts/build_keyinjector.sh
 ```
 
 Or manually:
@@ -253,7 +253,7 @@ and a D-Pad (ABS_HAT0X / ABS_HAT0Y). Used by the MacroPad tool.
 ### Compile
 
 ```bash
-sh build_gamepadinjector.sh
+sh scripts/build_gamepadinjector.sh
 ```
 
 Or manually (same NDK as above):
@@ -314,7 +314,7 @@ buttons and the relative-movement trackpoint.
 ### Compile
 
 ```bash
-sh build_mouseinjector.sh
+sh scripts/build_mouseinjector.sh
 ```
 
 Or manually:

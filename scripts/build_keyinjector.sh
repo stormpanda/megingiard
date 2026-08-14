@@ -1,4 +1,7 @@
 #!/bin/sh
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
 # Prefer ANDROID_NDK_HOME / NDK env vars; fall back to the original Homebrew path.
 NDK_ROOT="${ANDROID_NDK_HOME:-${NDK:-/opt/homebrew/Caskroom/android-ndk/29/AndroidNDK14206865.app/Contents/NDK}}"
 
