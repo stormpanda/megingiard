@@ -53,15 +53,7 @@ object PpssppDetector : EmulatorDetector {
         packageName: String,
         activeTitle: String? = null,
     ): String? {
-        val iniPaths =
-            listOf(
-                "/storage/6914-318F/ppsspp/PSP/SYSTEM/ppsspp.ini",
-                "/storage/emulated/0/PSP/SYSTEM/ppsspp.ini",
-                "/storage/emulated/0/ppsspp/PSP/SYSTEM/ppsspp.ini",
-                "/sdcard/PSP/SYSTEM/ppsspp.ini",
-                "/sdcard/ppsspp/PSP/SYSTEM/ppsspp.ini",
-                "/storage/emulated/0/Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
-            )
+        val iniPaths = getIniPaths(packageName)
 
         for (path in iniPaths) {
             val file = File(path)
@@ -122,15 +114,7 @@ object PpssppDetector : EmulatorDetector {
     }
 
     private fun ensureRemoteDebuggerEnabled(packageName: String) {
-        val iniPaths =
-            listOf(
-                "/storage/6914-318F/ppsspp/PSP/SYSTEM/ppsspp.ini",
-                "/storage/emulated/0/PSP/SYSTEM/ppsspp.ini",
-                "/storage/emulated/0/ppsspp/PSP/SYSTEM/ppsspp.ini",
-                "/sdcard/PSP/SYSTEM/ppsspp.ini",
-                "/sdcard/ppsspp/PSP/SYSTEM/ppsspp.ini",
-                "/storage/emulated/0/Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
-            )
+        val iniPaths = getIniPaths(packageName)
 
         for (path in iniPaths) {
             val file = File(path)
@@ -154,4 +138,14 @@ object PpssppDetector : EmulatorDetector {
             }
         }
     }
+
+    private fun getIniPaths(packageName: String): List<String> =
+        listOf(
+            "/storage/6914-318F/ppsspp/PSP/SYSTEM/ppsspp.ini",
+            "/storage/emulated/0/PSP/SYSTEM/ppsspp.ini",
+            "/storage/emulated/0/ppsspp/PSP/SYSTEM/ppsspp.ini",
+            "/sdcard/PSP/SYSTEM/ppsspp.ini",
+            "/sdcard/ppsspp/PSP/SYSTEM/ppsspp.ini",
+            "/storage/emulated/0/Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
+        )
 }

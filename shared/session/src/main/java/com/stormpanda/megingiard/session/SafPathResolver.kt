@@ -1,7 +1,11 @@
 package com.stormpanda.megingiard.session
 
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomManager
 import java.io.File
+import java.net.URLDecoder
+
+private const val TAG = "SafPathResolver"
 
 /**
  * Shared utility for resolving Android Storage Access Framework (SAF) content URIs
@@ -17,7 +21,7 @@ object SafPathResolver {
         if (uriStr.startsWith("/")) return uriStr
 
         return try {
-            val decoded = java.net.URLDecoder.decode(uriStr, "UTF-8")
+            val decoded = URLDecoder.decode(uriStr, "UTF-8")
             val rawPath =
                 when {
                     decoded.contains("/document/") -> decoded.substringAfter("/document/")
@@ -32,6 +36,7 @@ object SafPathResolver {
                 else -> rawPath
             }
         } catch (e: Exception) {
+            AppLog.w(TAG, "resolveFilePath: failed to decode URI '$uriStr' - $e")
             uriStr
         }
     }
