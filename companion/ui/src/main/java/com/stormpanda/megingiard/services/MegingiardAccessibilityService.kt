@@ -32,6 +32,7 @@ import com.stormpanda.megingiard.privd.PrivdError
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdPairScreenTextScanner
 import com.stormpanda.megingiard.privd.PrivdState
+import org.lsposed.hiddenapibypass.HiddenApiBypass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -79,6 +80,11 @@ class MegingiardAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            runCatching {
+                HiddenApiBypass.addHiddenApiExemptions("L")
+            }
+        }
         instance = this
         AppLog.i(TAG, "onServiceConnected: Megingiard Accessibility Service is active")
         AppStateManager.setAccessibilityActive(true)

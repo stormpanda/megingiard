@@ -194,6 +194,7 @@ dependencies {
     implementation(libs.androidx.palette.ktx)
     implementation(libs.reorderable)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.hiddenapibypass)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

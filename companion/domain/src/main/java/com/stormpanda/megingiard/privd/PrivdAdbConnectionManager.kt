@@ -19,6 +19,7 @@ import android.sun.security.x509.X509CertImpl
 import android.sun.security.x509.X509CertInfo
 import com.stormpanda.megingiard.AppLog
 import io.github.muntashirakon.adb.AbsAdbConnectionManager
+import org.lsposed.hiddenapibypass.HiddenApiBypass
 import java.io.File
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
@@ -99,8 +100,20 @@ internal class PrivdAdbConnectionManager private constructor(
             }
         }
 
+        private fun ensureHiddenApiExemptions() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                runCatching {
+                    HiddenApiBypass.addHiddenApiExemptions("L")
+                    AppLog.i(TAG, "ensureHiddenApiExemptions: HiddenApi exemptions applied successfully")
+                }.onFailure { e ->
+                    AppLog.w(TAG, "ensureHiddenApiExemptions: Failed to apply HiddenApi exemptions: $e")
+                }
+            }
+        }
+
         @Synchronized
         fun getInstance(context: Context): PrivdAdbConnectionManager {
+            ensureHiddenApiExemptions()
             instance?.let { return it }
             val (keyAndCert, name) = loadOrCreateCredentials(context.applicationContext)
             return PrivdAdbConnectionManager(keyAndCert.first, keyAndCert.second, name).also { instance = it }
