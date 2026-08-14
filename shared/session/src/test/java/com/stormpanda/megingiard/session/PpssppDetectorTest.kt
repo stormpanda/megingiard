@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -44,22 +43,9 @@ class PpssppDetectorTest {
         }
 
     @Test
-    fun detectActiveSession_viaPrivdLogcatStream_returnsActiveSession() =
+    fun detectActiveSession_serverNotRunning_returnsNull() =
         runBlocking {
-            ProcessCmdlineProvider.textFileReader = { path ->
-                if (path == "LOGCAT:PPSSPP") {
-                    "08-14 15:00:00.000 I/PPSSPP: [BOOT] Booted /storage/emulated/0/ROMs/psp/Ridge Racer.iso..."
-                } else {
-                    null
-                }
-            }
-
-            val session = PpssppDetector.detectActiveSession("org.ppsspp.ppsspp")
-            assertNotNull(session)
-            assertEquals("org.ppsspp.ppsspp", session?.packageName)
-            assertEquals("Ridge Racer", session?.gameTitle)
-            assertEquals("/storage/emulated/0/ROMs/psp/Ridge Racer.iso", session?.romPath)
-            assertEquals("psp", session?.systemId)
-            assertEquals("PPSSPP", session?.coreOrBackend)
+            val result = PpssppDetector.detectActiveSession("org.ppsspp.ppsspp")
+            assertNull(result)
         }
 }

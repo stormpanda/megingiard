@@ -65,7 +65,7 @@
 #include <dirent.h>
 #include "cmd_parsers.h"
 
-#define PRIVD_VERSION 6
+#define PRIVD_VERSION 5
 
 static int g_port_start = 51234;
 #define SCAN_MAX 32
@@ -901,23 +901,7 @@ static int authenticate_client(int client_fd) {
 
 static void handle_read_file(int client_fd, const char *path) {
     pthread_mutex_lock(&g_send_mutex);
-    FILE *fp = NULL;
-    int is_popen = 0;
-
-    if (strncmp(path, "LOGCAT:", 7) == 0) {
-        const char *tag = path + 7;
-        char cmd[256];
-        if (strlen(tag) > 0) {
-            snprintf(cmd, sizeof(cmd), "logcat -d -v time %s:V *:S", tag);
-        } else {
-            snprintf(cmd, sizeof(cmd), "logcat -d -v time");
-        }
-        fp = popen(cmd, "r");
-        is_popen = 1;
-    } else {
-        fp = fopen(path, "r");
-    }
-
+    FILE *fp = fopen(path, "r");
     if (!fp) {
         (void)write(client_fd, "READ_ERR FILE_NOT_FOUND\n", 24);
         pthread_mutex_unlock(&g_send_mutex);
@@ -925,14 +909,12 @@ static void handle_read_file(int client_fd, const char *path) {
     }
 
     const size_t MAX_READ_BYTES = 32 * 1024;
-    if (!is_popen) {
-        fseek(fp, 0, SEEK_END);
-        long file_size = ftell(fp);
-        if (file_size > (long)MAX_READ_BYTES) {
-            fseek(fp, file_size - (long)MAX_READ_BYTES, SEEK_SET);
-        } else {
-            fseek(fp, 0, SEEK_SET);
-        }
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    if (file_size > (long)MAX_READ_BYTES) {
+        fseek(fp, file_size - (long)MAX_READ_BYTES, SEEK_SET);
+    } else {
+        fseek(fp, 0, SEEK_SET);
     }
 
     (void)write(client_fd, "READ_BEGIN\n", 11);
@@ -944,12 +926,7 @@ static void handle_read_file(int client_fd, const char *path) {
         (void)write(client_fd, buf, n);
         total_read += n;
     }
-
-    if (is_popen) {
-        pclose(fp);
-    } else {
-        fclose(fp);
-    }
+    fclose(fp);
 
     (void)write(client_fd, "\nREAD_END\n", 10);
     pthread_mutex_unlock(&g_send_mutex);

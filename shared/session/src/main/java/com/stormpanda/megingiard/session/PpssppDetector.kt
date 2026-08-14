@@ -8,8 +8,7 @@ private const val TAG = "PpssppDetector"
 /**
  * Detector implementation for standalone PPSSPP (PlayStation Portable) emulator instances.
  * Dynamically resolves active game sessions in real-time using PPSSPP's native embedded
- * WebSocket Debugger API (`ws://127.0.0.1:8080/debugger`) without requiring Privileged Mode,
- * and falls back to Privd logcat streaming (`LOGCAT:PPSSPP`).
+ * WebSocket Debugger API (`ws://127.0.0.1:8080/debugger`) without requiring Privileged Mode.
  */
 object PpssppDetector : EmulatorDetector {
     override val supportedPackages: Set<String> =
@@ -31,21 +30,11 @@ object PpssppDetector : EmulatorDetector {
         // Auto-configure ppsspp.ini to enable RemoteDebuggerOnStartup if needed
         ensureRemoteDebuggerEnabled(packageName)
 
-        // Strategy 1: Native PPSSPP WebSocket Debugger Server (Unprivileged, 100% Standalone)
+        // Native PPSSPP WebSocket Debugger Server (Unprivileged, 100% Standalone)
         val wsSession = PpssppWebSocketClient.queryActiveSession(packageName, port = webSocketPort)
         if (wsSession != null) {
             AppLog.i(TAG, "Resolved active session via native WebSocket debugger: ${wsSession.gameTitle} (${wsSession.systemId})")
             return wsSession
-        }
-
-        // Strategy 2: Fall back to Privd daemon logcat stream
-        val logcatContent = ProcessCmdlineProvider.readTextFile("LOGCAT:PPSSPP")
-        if (!logcatContent.isNullOrBlank()) {
-            val session = PpssppLogcatParser.parseLatestBootedSession(packageName, logcatContent)
-            if (session != null) {
-                AppLog.i(TAG, "Resolved active session via Privd logcat stream: ${session.gameTitle} (${session.systemId})")
-                return session
-            }
         }
 
         AppLog.d(TAG, "No active session could be resolved for $packageName")
