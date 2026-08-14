@@ -134,6 +134,7 @@ Before marking a task as done, verify:
 - [ ] No `MutableStateFlow` exposed outside its owning singleton
 - [ ] No FQN references inline — all moved to imports
 - [ ] No magic numbers — all extracted to named constants
+- [ ] No hardcoded device volume UUID paths (e.g. `/storage/6914-318F`) — all storage volume roots resolved dynamically via `SafPathResolver.getStorageVolumeRoots()`
 - [ ] No `android.util.Log` calls outside `AppLog.kt` — all logging via `AppLog`
 - [ ] Every new file has `private const val TAG = "ClassName"` and uses `AppLog` per §8.4 Coverage Requirements
 - [ ] All user-visible strings in `strings.xml`
@@ -324,6 +325,7 @@ PixelCopy.request(sv, bitmap, { result ->
   private val GS_BG = Color(0xFF121212)
   private val GS_SURFACE = Color(0xFF1C1C1E)
   ```
+- **No hardcoded hardware volume UUIDs:** Never hardcode specific MicroSD card volume UUID paths (such as `/storage/6914-318F/...` or `/storage/1234-5678/...`). Use dynamic volume resolution via `SafPathResolver.getStorageVolumeRoots()` to discover mounted storage locations dynamically on any device.
 
 ### 8.4 Logging
 

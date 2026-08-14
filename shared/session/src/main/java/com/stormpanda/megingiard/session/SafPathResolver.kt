@@ -13,8 +13,36 @@ private const val TAG = "SafPathResolver"
  */
 object SafPathResolver {
     /**
+     * Resolves all root storage directory paths available on the device,
+     * including primary internal storage (`/storage/emulated/0`, `/sdcard`)
+     * and any dynamically mounted external MicroSD card volumes (e.g. `/storage/A1B2-C3D4`).
+     */
+    fun getStorageVolumeRoots(): List<String> {
+        val roots =
+            mutableListOf(
+                "/storage/emulated/0",
+                "/sdcard",
+            )
+        val storageDir = File("/storage")
+        if (storageDir.exists() && storageDir.isDirectory) {
+            val volumes = storageDir.listFiles()
+            if (volumes != null) {
+                for (volume in volumes) {
+                    if (volume.isDirectory && volume.name != "emulated" && volume.name != "self") {
+                        val path = volume.absolutePath
+                        if (!roots.contains(path)) {
+                            roots.add(path)
+                        }
+                    }
+                }
+            }
+        }
+        return roots
+    }
+
+    /**
      * Converts SAF percent-encoded tree/document content URIs or relative volume paths
-     * into absolute file paths (e.g. `/storage/6914-318F/ROMs/psp/Game.iso`).
+     * into absolute file paths (e.g. `/storage/XXXX-XXXX/ROMs/psp/Game.iso`).
      */
     fun resolveFilePath(uriStr: String?): String? {
         if (uriStr.isNullOrBlank()) return null

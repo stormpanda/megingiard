@@ -145,13 +145,15 @@ object PpssppDetector : EmulatorDetector {
         }
     }
 
-    private fun getIniPaths(packageName: String): List<String> =
-        listOf(
-            "/storage/6914-318F/ppsspp/PSP/SYSTEM/ppsspp.ini",
-            "/storage/emulated/0/PSP/SYSTEM/ppsspp.ini",
-            "/storage/emulated/0/ppsspp/PSP/SYSTEM/ppsspp.ini",
-            "/sdcard/PSP/SYSTEM/ppsspp.ini",
-            "/sdcard/ppsspp/PSP/SYSTEM/ppsspp.ini",
-            "/storage/emulated/0/Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
-        )
+    private fun getIniPaths(packageName: String): List<String> {
+        val relativeSubPaths =
+            listOf(
+                "PSP/SYSTEM/ppsspp.ini",
+                "ppsspp/PSP/SYSTEM/ppsspp.ini",
+                "Android/data/$packageName/files/PSP/SYSTEM/ppsspp.ini",
+            )
+        return SafPathResolver.getStorageVolumeRoots().flatMap { root ->
+            relativeSubPaths.map { subPath -> "$root/$subPath" }
+        }
+    }
 }
