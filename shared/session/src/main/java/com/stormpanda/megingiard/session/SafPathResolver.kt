@@ -76,7 +76,6 @@ object SafPathResolver {
     fun deriveGameTitle(
         romPath: String,
         rawUri: String? = null,
-        knownExtensions: Set<String> = emptySet(),
     ): String? {
         val romApps = RomManager.romApps.value
         val matchedApp =

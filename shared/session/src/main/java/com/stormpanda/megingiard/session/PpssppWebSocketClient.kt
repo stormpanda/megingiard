@@ -20,7 +20,7 @@ private const val WS_HEADER_LEN = 6
 private const val CONNECT_TIMEOUT_MS = 500
 private const val SOCKET_TIMEOUT_MS = 1000
 private const val MAX_FRAMES_TO_READ = 5
-const val DEFAULT_PPSSPP_PORT = 8080
+private const val DEFAULT_PPSSPP_PORT = 8080
 
 /**
  * Pure Kotlin client for PPSSPP's native embedded WebSocket Debugger API (`debugger.ppsspp.org`).

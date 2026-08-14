@@ -21,16 +21,15 @@ class SafPathResolverTest {
 
     @Test
     fun deriveGameTitle_handlesVariousExtensionsAndPathSeparators() {
-        val extensions = setOf("iso", "cso", "pbp", "elf")
-        assertEquals("Tekken 6", SafPathResolver.deriveGameTitle("/storage/sdcard/roms/psp/Tekken 6.cso", knownExtensions = extensions))
+        assertEquals("Tekken 6", SafPathResolver.deriveGameTitle("/storage/sdcard/roms/psp/Tekken 6.cso"))
         assertEquals(
             "Persona 3 Portable",
-            SafPathResolver.deriveGameTitle("C:\\Emulators\\PSP\\ROMs\\Persona 3 Portable.iso", knownExtensions = extensions),
+            SafPathResolver.deriveGameTitle("C:\\Emulators\\PSP\\ROMs\\Persona 3 Portable.iso"),
         )
         assertEquals(
             "Castlevania - Dracula X Chronicles",
-            SafPathResolver.deriveGameTitle("/roms/Castlevania - Dracula X Chronicles.pbp", knownExtensions = extensions),
+            SafPathResolver.deriveGameTitle("/roms/Castlevania - Dracula X Chronicles.pbp"),
         )
-        assertEquals("Homebrew", SafPathResolver.deriveGameTitle("/roms/Homebrew.elf", knownExtensions = extensions))
+        assertEquals("Homebrew", SafPathResolver.deriveGameTitle("/roms/Homebrew.elf"))
     }
 }
