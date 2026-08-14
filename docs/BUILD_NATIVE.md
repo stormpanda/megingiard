@@ -59,7 +59,7 @@ Native helpers follow a pre-exec verification sequence in `NativeBinaryInjector`
 
 ### Privd Authentication Key
 
-The `megingiard_privd` daemon no longer uses a compile-time key. The per-install HMAC key is generated on the device during Privileged Mode bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/FEATURE.md#per-install-key-scheme)). No key needs to be set in `local.properties` or passed to `build_megingiard_privd.sh`.
+The `megingiard_privd` daemon no longer uses a compile-time key. The per-install HMAC key is generated on the device during Privileged Mode bootstrap and provisioned to the daemon over the ADB TLS channel (see [Privileged Mode — Per-install Key Scheme](features/privileged-mode/FEATURE.md#per-install-key-scheme)). No key needs to be set in `local.properties` or passed to `scripts/build_megingiard_privd.sh`.
 
 ---
 

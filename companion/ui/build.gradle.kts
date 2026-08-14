@@ -153,7 +153,7 @@ val nativeCTest = tasks.register<Exec>("nativeCTest") {
     group = "verification"
     description = "Compiles and executes native C unit tests."
     workingDir = rootProject.projectDir
-    commandLine("./run_native_tests.sh")
+    commandLine("./scripts/run_native_tests.sh")
 }
 
 // Ensure the privileged-mirror DEX asset is built before any app packaging task, and native C tests run before unit tests.
