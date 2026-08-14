@@ -348,28 +348,29 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                 val targetPkg = targetInfo.pkg
                 val targetLabel = targetInfo.label
                 val targetRom = targetInfo.romPath
+                val targetRomIdentifier = targetInfo.romIdentifier ?: targetInfo.romPath
                 val targetSystem = targetInfo.systemId
 
                 val associatedProfile =
-                    remember(profiles, targetPkg, targetRom, targetSystem) {
+                    remember(profiles, targetPkg, targetRomIdentifier, targetSystem) {
                         if (targetPkg == null) {
                             null
                         } else {
                             profiles.firstOrNull { profile ->
                                 profile.association?.romFileName != null &&
-                                    profile.matches(targetPkg, targetRom, targetSystem)
+                                    profile.matches(targetPkg, targetRomIdentifier, targetSystem)
                             } ?: profiles.firstOrNull { profile ->
                                 profile.association?.romFileName == null &&
-                                    profile.matches(targetPkg, targetRom, targetSystem)
+                                    profile.matches(targetPkg, targetRomIdentifier, targetSystem)
                             }
                         }
                     }
 
-                LaunchedEffect(targetPkg, targetRom, associatedProfile?.id) {
+                LaunchedEffect(targetPkg, targetRomIdentifier, associatedProfile?.id) {
                     if (targetPkg != null) {
                         AppLog.d(
                             TAG,
-                            "Hero target resolved: pkg=$targetPkg, rom=$targetRom, sys=$targetSystem, profile=${associatedProfile?.name}",
+                            "Hero target resolved: pkg=$targetPkg, rom=$targetRom, romId=$targetRomIdentifier, sys=$targetSystem, profile=${associatedProfile?.name}",
                         )
                     }
                 }
@@ -378,6 +379,7 @@ fun IntegrationHomeScreen(modifier: Modifier = Modifier) {
                     targetPackage = targetPkg,
                     targetLabel = targetLabel,
                     targetRomPath = targetRom,
+                    targetRomIdentifier = targetRomIdentifier,
                     targetSystemId = targetSystem,
                     associatedProfile = associatedProfile,
                     activeProfile = activeProfile,
@@ -464,6 +466,7 @@ private fun HeroCompanionCard(
     targetPackage: String?,
     targetLabel: String?,
     targetRomPath: String?,
+    targetRomIdentifier: String? = null,
     targetSystemId: String?,
     associatedProfile: PadProfile?,
     activeProfile: PadProfile?,
@@ -529,10 +532,11 @@ private fun HeroCompanionCard(
                     )
 
                     if (hasActiveGame) {
+                        val romDisplay = targetRomIdentifier ?: targetRomPath?.substringAfterLast('/')
                         val sysInfo =
                             listOfNotNull(
                                 targetSystemId?.uppercase(),
-                                targetRomPath?.substringAfterLast('/'),
+                                romDisplay,
                             ).joinToString(" • ")
                         if (sysInfo.isNotEmpty()) {
                             Text(
@@ -1034,6 +1038,7 @@ internal data class TargetAppInfo(
     val pkg: String?,
     val label: String?,
     val romPath: String?,
+    val romIdentifier: String? = null,
     val systemId: String?,
 )
 
@@ -1063,6 +1068,7 @@ internal fun resolveTargetAppInfo(
             pkg = hovered,
             label = label,
             romPath = hoveredRomPath,
+            romIdentifier = hoveredRomPath?.substringAfterLast('/'),
             systemId = hoveredSystemId,
         )
     } else if (active != null) {
@@ -1070,6 +1076,7 @@ internal fun resolveTargetAppInfo(
             pkg = active.packageName,
             label = active.gameTitle,
             romPath = active.romPath,
+            romIdentifier = active.romIdentifier ?: active.romPath?.let { File(it).name } ?: active.titleId,
             systemId = active.systemId,
         )
     } else if (focused != null) {
@@ -1079,6 +1086,7 @@ internal fun resolveTargetAppInfo(
                 pkg = focused,
                 label = label,
                 romPath = last.romPath ?: focusedRomPath,
+                romIdentifier = last.romIdentifier ?: (last.romPath ?: focusedRomPath)?.substringAfterLast('/'),
                 systemId = last.systemId,
             )
         } else {
@@ -1089,6 +1097,7 @@ internal fun resolveTargetAppInfo(
                 pkg = focused,
                 label = label,
                 romPath = focusedRomPath,
+                romIdentifier = focusedRomPath?.substringAfterLast('/'),
                 systemId = null,
             )
         }
@@ -1098,10 +1107,11 @@ internal fun resolveTargetAppInfo(
             pkg = last.packageName,
             label = label,
             romPath = last.romPath,
+            romIdentifier = last.romIdentifier ?: last.romPath?.substringAfterLast('/'),
             systemId = last.systemId,
         )
     } else {
-        TargetAppInfo(null, null, null, null)
+        TargetAppInfo(null, null, null, null, null)
     }
 }
 

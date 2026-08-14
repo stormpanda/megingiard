@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.session
 import com.stormpanda.megingiard.AppLog
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
 
 private const val TAG = "Pcsx2AndroidRecentGamesParser"
 
@@ -34,10 +35,13 @@ object Pcsx2AndroidRecentGamesParser {
             val entries = json.decodeFromString<List<Pcsx2AndroidRecentEntry>>(jsonContent)
             val first = entries.firstOrNull() ?: return null
 
-            val romPath = SafPathResolver.resolveFilePath(first.uri)
+            val resolvedPath = SafPathResolver.resolveFilePath(first.uri)
+            val romPath = resolvedPath?.takeIf { it.startsWith("/") }
+            val romIdentifier = romPath?.let { File(it).name } ?: first.title ?: first.serial
+
             val gameTitle =
                 first.title?.trim()?.takeIf { it.isNotBlank() }
-                    ?: SafPathResolver.deriveGameTitle(romPath ?: first.uri ?: "", first.uri)
+                    ?: SafPathResolver.deriveGameTitle(resolvedPath ?: first.uri ?: "", first.uri)
                     ?: first.serial?.trim()?.takeIf { it.isNotBlank() }
                     ?: return null
 
@@ -46,7 +50,9 @@ object Pcsx2AndroidRecentGamesParser {
                 romPath = romPath,
                 gameTitle = gameTitle,
                 systemId = "ps2",
+                romIdentifier = romIdentifier,
                 coreOrBackend = "PCSX2",
+                titleId = first.serial,
             )
         } catch (e: Exception) {
             AppLog.w(TAG, "parseMostRecentSession: failed to parse PCSX2-Android recent_games JSON - $e")

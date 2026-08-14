@@ -21,7 +21,8 @@ class GameNativeDetectorTest {
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
         assertEquals("pc", session?.systemId)
-        assertEquals("Baba Is You.steam", session?.romPath)
+        assertNull(session?.romPath)
+        assertEquals("Baba Is You.steam", session?.romIdentifier)
         assertEquals("Baba Is You", session?.gameTitle)
     }
 
@@ -40,7 +41,8 @@ class GameNativeDetectorTest {
         assertNotNull(session)
         assertEquals("app.gamenative", session?.packageName)
         assertEquals("pc", session?.systemId)
-        assertEquals("BALL x PIT.steam", session?.romPath)
+        assertNull(session?.romPath)
+        assertEquals("BALL x PIT.steam", session?.romIdentifier)
         assertEquals("BALL x PIT", session?.gameTitle)
     }
 

@@ -368,7 +368,8 @@ class AutoSwitchCoordinatorTest {
                 ActiveGameSession(
                     packageName = "app.gamenative",
                     systemId = "pc",
-                    romPath = "BALLxPIT.steam",
+                    romPath = null,
+                    romIdentifier = "BALLxPIT.steam",
                     gameTitle = "Ball x Pit",
                 ),
             )

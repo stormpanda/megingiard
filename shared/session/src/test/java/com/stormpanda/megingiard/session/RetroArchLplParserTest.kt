@@ -40,6 +40,7 @@ class RetroArchLplParserTest {
             "/storage/6914-318F/ROMs/SNES/Legend of Zelda, The - A Link to the Past (Germany).sfc",
             session?.romPath,
         )
+        assertEquals("Legend of Zelda, The - A Link to the Past (Germany).sfc", session?.romIdentifier)
     }
 
     @Test

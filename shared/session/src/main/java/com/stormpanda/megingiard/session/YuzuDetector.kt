@@ -103,20 +103,15 @@ object YuzuDetector : EmulatorDetector {
                         }?.label
             }
 
-        val resolvedTitle = knownTitle ?: "Switch Game ($lastTitleId)"
-        val resolvedRomPath =
-            when {
-                knownTitle != null && lastTitleId != null -> "$knownTitle ($lastTitleId)"
-                knownTitle != null -> knownTitle
-                lastTitleId != null -> lastTitleId
-                else -> ""
-            }
+        val resolvedTitle = knownTitle ?: "Switch Game (${lastTitleId ?: ""})".trim()
+        val resolvedRomIdentifier = lastTitleId ?: knownTitle
 
         return ActiveGameSession(
             packageName = packageName,
-            romPath = resolvedRomPath,
+            romPath = null,
             gameTitle = resolvedTitle,
             systemId = systemId,
+            romIdentifier = resolvedRomIdentifier,
             coreOrBackend = "yuzu",
             titleId = lastTitleId,
         )

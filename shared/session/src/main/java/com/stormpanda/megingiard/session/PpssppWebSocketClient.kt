@@ -83,7 +83,9 @@ object PpssppWebSocketClient {
                     romPath = null,
                     gameTitle = derivedTitle,
                     systemId = "psp",
+                    romIdentifier = discId ?: derivedTitle,
                     coreOrBackend = "PPSSPP",
+                    titleId = discId,
                 )
             } catch (e: Exception) {
                 AppLog.d(TAG, "queryActiveSession: websocket query to 127.0.0.1:$port failed - $e")

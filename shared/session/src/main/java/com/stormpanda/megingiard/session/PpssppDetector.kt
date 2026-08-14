@@ -36,11 +36,17 @@ object PpssppDetector : EmulatorDetector {
             // Native PPSSPP WebSocket Debugger Server (Unprivileged, 100% Standalone)
             val wsSession = PpssppWebSocketClient.queryActiveSession(packageName, port = webSocketPort)
             if (wsSession != null) {
-                val finalRomPath = wsSession.romPath ?: readRecentFileNameFromIni(packageName, wsSession.gameTitle)
-                val resolvedSession = wsSession.copy(romPath = finalRomPath)
+                val iniResolvedPath = readRecentPathFromIni(packageName, wsSession.gameTitle)
+                val finalRomPath = iniResolvedPath?.takeIf { it.startsWith("/") && File(it).exists() }
+                val finalRomIdentifier = iniResolvedPath?.let { File(it).name } ?: wsSession.romIdentifier
+                val resolvedSession =
+                    wsSession.copy(
+                        romPath = finalRomPath,
+                        romIdentifier = finalRomIdentifier,
+                    )
                 AppLog.i(
                     TAG,
-                    "Resolved active session via native WebSocket debugger: ${resolvedSession.gameTitle} (romPath='${resolvedSession.romPath}')",
+                    "Resolved active session via native WebSocket debugger: ${resolvedSession.gameTitle} (romPath='${resolvedSession.romPath}', romIdentifier='${resolvedSession.romIdentifier}')",
                 )
                 return@withContext resolvedSession
             }
@@ -49,7 +55,7 @@ object PpssppDetector : EmulatorDetector {
             return@withContext null
         }
 
-    fun readRecentFileNameFromIni(
+    fun readRecentPathFromIni(
         packageName: String,
         activeTitle: String? = null,
     ): String? {
@@ -74,19 +80,19 @@ object PpssppDetector : EmulatorDetector {
                             if (activeTitle == null || isTitleMatching(fileName, activeTitle)) {
                                 AppLog.i(
                                     TAG,
-                                    "readRecentFileNameFromIni: resolved matching ROM filename from '$path': '$fileName' for active title '$activeTitle'",
+                                    "readRecentPathFromIni: resolved matching ROM path from '$path': '$resolvedPath' for active title '$activeTitle'",
                                 )
-                                return fileName
+                                return resolvedPath ?: fileName
                             } else {
                                 AppLog.d(
                                     TAG,
-                                    "readRecentFileNameFromIni: rejected stale candidate '$fileName' (does not match active title '$activeTitle')",
+                                    "readRecentPathFromIni: rejected stale candidate '$fileName' (does not match active title '$activeTitle')",
                                 )
                             }
                         }
                     }
                 } catch (e: Exception) {
-                    AppLog.d(TAG, "readRecentFileNameFromIni: failed to read '$path' - $e")
+                    AppLog.d(TAG, "readRecentPathFromIni: failed to read '$path' - $e")
                 }
             }
         }
