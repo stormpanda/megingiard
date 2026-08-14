@@ -1,14 +1,26 @@
 package com.stormpanda.megingiard.session
 
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class PpssppDetectorTest {
+    @Before
+    fun setUp() {
+        PpssppDetector.webSocketPort = 59999
+    }
+
+    @After
+    fun tearDown() {
+        PpssppDetector.webSocketPort = 8080
+    }
+
     @Test
     fun supportedPackages_containsAllPPSSPPVariants() {
         assertTrue(PpssppDetector.supportedPackages.contains("org.ppsspp.ppsspp"))

@@ -23,6 +23,8 @@ object PpssppDetector : EmulatorDetector {
 
     override val systemId: String = "psp"
 
+    var webSocketPort: Int = 8080
+
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null
 
@@ -30,7 +32,7 @@ object PpssppDetector : EmulatorDetector {
         ensureRemoteDebuggerEnabled(packageName)
 
         // Strategy 1: Native PPSSPP WebSocket Debugger Server (Unprivileged, 100% Standalone)
-        val wsSession = PpssppWebSocketClient.queryActiveSession(packageName)
+        val wsSession = PpssppWebSocketClient.queryActiveSession(packageName, port = webSocketPort)
         if (wsSession != null) {
             AppLog.i(TAG, "Resolved active session via native WebSocket debugger: ${wsSession.gameTitle} (${wsSession.systemId})")
             return wsSession

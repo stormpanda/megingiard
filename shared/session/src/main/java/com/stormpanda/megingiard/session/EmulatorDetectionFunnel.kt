@@ -101,6 +101,14 @@ object EmulatorDetectionFunnel {
                                 _activeSession.value = currentSession
                                 _lastDetectedSession.value = currentSession
                             }
+                        } else if (lastPath != null) {
+                            AppLog.i(
+                                TAG,
+                                "onPackageForeground polling: detected game closed in $packageName",
+                            )
+                            lastPath = null
+                            lastTitle = null
+                            _activeSession.value = null
                         }
                     }
                 }
