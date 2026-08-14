@@ -738,37 +738,57 @@ class MegingiardAccessibilityService : AccessibilityService() {
     }
 
     private fun findAndToggleMainSwitchOnSubScreen(rootNode: AccessibilityNodeInfo): Boolean {
-        val mainSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch") ?: emptyList()
         val settingsSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/switch_widget") ?: emptyList()
         val genericSwitches = rootNode.findAccessibilityNodeInfosByViewId("android:id/switch_widget") ?: emptyList()
-        val allSwitches = (mainSwitches + settingsSwitches + genericSwitches).distinct()
+        val switchBarSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/switch_bar") ?: emptyList()
+        val mainSwitches = rootNode.findAccessibilityNodeInfosByViewId("com.android.settings:id/main_switch") ?: emptyList()
+        val allSwitches = (settingsSwitches + genericSwitches + switchBarSwitches + mainSwitches).distinct()
+
+        val isWirelessOn = isWirelessDebuggingActive(applicationContext)
 
         for (switchNode in allSwitches) {
-            if (switchNode.isCheckable) {
-                if (!switchNode.isChecked) {
+            val targetSwitch = findCheckableLeafOrSelf(switchNode) ?: switchNode
+            if (targetSwitch.isCheckable) {
+                if (!targetSwitch.isChecked) {
                     AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Main switch is OFF, toggling ON")
-                    val target = findClickableAncestorOrSelf(switchNode) ?: switchNode
-                    return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                } else {
-                    AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Main switch is already ON")
-                    return true
-                }
-            }
-            for (i in 0 until switchNode.childCount) {
-                val child = switchNode.getChild(i) ?: continue
-                if (child.isCheckable) {
-                    if (!child.isChecked) {
-                        AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Child switch is OFF, toggling ON")
-                        val target = findClickableAncestorOrSelf(child) ?: child
-                        return target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    } else {
-                        AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Child switch is already ON")
-                        return true
+                    val target = findClickableAncestorOrSelf(targetSwitch) ?: targetSwitch
+                    val clicked = target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    if (!clicked && target != targetSwitch) {
+                        return targetSwitch.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     }
+                    return clicked
+                } else if (!isWirelessOn) {
+                    AppLog.i(
+                        TAG,
+                        "findAndToggleMainSwitchOnSubScreen: Switch reported ON but ADB Wireless is inactive — performing click to refresh state",
+                    )
+                    val target = findClickableAncestorOrSelf(targetSwitch) ?: targetSwitch
+                    val clicked = target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    if (!clicked && target != targetSwitch) {
+                        return targetSwitch.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    }
+                    return clicked
+                } else {
+                    AppLog.i(TAG, "findAndToggleMainSwitchOnSubScreen: Main switch is already ON and service is active")
+                    return true
                 }
             }
         }
         return false
+    }
+
+    private fun findCheckableLeafOrSelf(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isCheckable && node.childCount == 0) {
+            return node
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val leaf = findCheckableLeafOrSelf(child)
+            if (leaf != null) {
+                return leaf
+            }
+        }
+        return if (node.isCheckable) node else null
     }
 
     private fun collectAllText(
