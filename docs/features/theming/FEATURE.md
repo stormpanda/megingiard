@@ -216,7 +216,7 @@ Default:       ThemeMode.DARK
 
 ### Source Files
 
-`design/app-icon/` contains the app icon design assets. Only the two PNG files below are the authoritative inputs to `scripts/generate_icon_assets.py`:
+`assets/design/app-icon/` contains the app icon design assets. Only the two PNG files below are the authoritative inputs to `scripts/generate_icon_assets.py`:
 
 | File                                 | Purpose                                                                           |
 | ------------------------------------ | --------------------------------------------------------------------------------- |
@@ -238,8 +238,8 @@ pip install Pillow
 
 ```bash
 python3 scripts/generate_icon_assets.py \
-  "design/app-icon/Megingiard_App_Icon_Foreground.png" \
-  "design/app-icon/Megingiard_App_Icon_Background.png"
+  "assets/design/app-icon/Megingiard_App_Icon_Foreground.png" \
+  "assets/design/app-icon/Megingiard_App_Icon_Background.png"
 ```
 
 **What the script does:**
