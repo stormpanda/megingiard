@@ -94,20 +94,20 @@
 
 > **Native binary rebuild policy:** Whenever a native C source file is modified, the
 > agent **must** immediately run the corresponding build script to rebuild the bundled
-> binary. The scripts are at the workspace root:
+> binary. The scripts are located in `scripts/`:
 >
 > | Source file                           | Build script                                                             |
 > | ------------------------------------- | ------------------------------------------------------------------------ |
-> | `app/src/main/cpp/megingiard_privd.c` | `./build_megingiard_privd.sh`                                            |
-> | `app/src/main/cpp/touchinjector.c`    | Manual compile in `docs/BUILD_NATIVE.md` until a dedicated script exists |
-> | `app/src/main/cpp/keyinjector.c`      | `./build_keyinjector.sh`                                                 |
-> | `app/src/main/cpp/mouseinjector.c`    | `./build_mouseinjector.sh`                                               |
-> | `app/src/main/cpp/gamepadinjector.c`  | `./build_gamepadinjector.sh`                                             |
+> | `companion/ui/src/main/cpp/megingiard_privd.c` | `./scripts/build_megingiard_privd.sh`                                   |
+> | `companion/ui/src/main/cpp/touchinjector.c`    | `./scripts/build_touchinjector.sh`                                      |
+> | `companion/ui/src/main/cpp/keyinjector.c`      | `./scripts/build_keyinjector.sh`                                        |
+> | `companion/ui/src/main/cpp/mouseinjector.c`    | `./scripts/build_mouseinjector.sh`                                      |
+> | `companion/ui/src/main/cpp/gamepadinjector.c`  | `./scripts/build_gamepadinjector.sh`                                    |
 >
 > Run the script **before** proposing the commit message. If the build fails, fix the
 > source error before proceeding. The scripts must be run from the workspace root.
 >
-> **Daemon Versioning Rule:** Whenever modifying `megingiard_privd.c` (or daemon protocol logic), you **must** increment `PRIVD_VERSION` in both `app/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/.../privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild via `./build_megingiard_privd.sh`. This ensures the app detects version mismatches and triggers automatic daemon updates.
+> **Daemon Versioning Rule:** Whenever modifying `megingiard_privd.c` (or daemon protocol logic), you **must** increment `PRIVD_VERSION` in both `companion/ui/src/main/cpp/megingiard_privd.c` (`#define PRIVD_VERSION <N>`) and `core/.../privd/PrivdConstants.kt` (`const val PRIVD_VERSION = <N>`), then rebuild via `./scripts/build_megingiard_privd.sh`. This ensures the app detects version mismatches and triggers automatic daemon updates.
 
 > **Unit test policy:** After every implementation — feature, bug fix, or refactor —
 > the agent **must**:
@@ -120,8 +120,8 @@
 >
 > Tests must be placed in the correct source set:
 >
-> - `:core` pure-JVM tests → `core/src/test/kotlin/`
-> - `:domain` local tests → `domain/src/test/java/`
+> - `:core` pure-JVM tests → `shared/core/src/test/kotlin/`
+> - `:domain` local tests → `companion/domain/src/test/java/`
 >
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
@@ -207,22 +207,35 @@ affect runtime behaviour or user-facing interactions.
 
 ## 6 Package Structure
 
-The project is split into four Gradle modules:
+The project is structured into 9 Feature-First Gradle modules:
 
-* **`:app`** — Main Android companion app UI layer (Activities, viewmodels, custom Compose views, and secondary screen presentations).
-* **`:gamefocus`** — Standalone Android launcher application (`com.stormpanda.megingiard.gamefocus`) providing top-screen 2:3 game poster browsing, SteamGridDB artwork scraping, and inter-process theme syncing.
-* **`:domain`** — Platform-free business logic, device managers, input injection facades, and singleton state holders. Must **never** import Android UI or Composable dependencies.
-* **`:core`** — Pure JVM/Kotlin data models, serializable schemas, constants, and math helpers. Must **never** have Android dependencies.
+### App Modules (Executables)
+* **`:companion:ui`** — Main Android companion app UI layer (`com.stormpanda.megingiard`). Contains Activities, viewmodels, custom Compose views, and secondary screen presentations.
+* **`:gamefocus:ui`** — Standalone Android launcher application (`com.stormpanda.megingiard.gamefocus`) providing top-screen 2:3 game poster browsing, SteamGridDB artwork scraping, and inter-process theme syncing.
+
+### App Domain Modules (Feature Logic)
+* **`:companion:domain`** — Companion business logic, device managers, input injection facades (Touchpad, MacroPad, Keyboard, Mirror, Privd).
+* **`:gamefocus:domain`** — Standalone launcher domain logic and ROM launcher implementations (`RetroArchLauncher`, `GameNativeLauncher`).
+
+### Shared Domain & Core Modules
+* **`:shared:catalog`** — Installed app index, ROM file scanning, system definitions (`InstalledAppsManager`, `RomManager`, `DisplayDetector`, `RomLauncherRegistry`).
+* **`:shared:media`** — External artwork fetchers, HTTP clients, and caching layers (`SteamGridDbClient`).
+* **`:shared:session`** — Active game detection engines (`EmulatorDetectionFunnel`, `GameNativeDetector`, `RetroArchDetector`, `Pcsx2AndroidDetector`, `YuzuDetector`).
+* **`:shared:core`** — Pure JVM/Kotlin data models, serializable schemas, logging facade (`AppLog`), constants, and math helpers (`ViewportMath`). Must **never** have Android dependencies.
+
+### Auxiliary Standalone Modules
+* **`:mirrorserver`** — Standalone shell-UID DEX executable loaded via `/system/bin/app_process` for un-throttled privileged display mirroring.
 
 ### Core Architectural Directories
 Across all modules, files are organized into feature-centric packages. Keep these structural rules in mind:
-* `macropad/` — Profiles, layout configurations, macro engines, and injection coordinator flows.
-* `mirror/` — Screen mirroring presentation views, viewport math, and capture-session managers.
-* `keyboard/` — Virtual keyboard Composable layouts, key caps, and key injector services.
-* `input/` / `privd/` — Local socket IPC clients, ADB-Wireless wizards, and evdev/uinput wrappers.
+* `macropad/` — Profiles, layout configurations, macro engines, and injection coordinator flows (`:companion:domain`, `:companion:ui`).
+* `mirror/` — Screen mirroring presentation views, viewport math, and capture-session managers (`:companion:domain`, `:companion:ui`).
+* `keyboard/` — Virtual keyboard Composable layouts, key caps, and key injector services (`:companion:domain`, `:companion:ui`).
+* `input/` / `privd/` — Local socket IPC clients, ADB-Wireless wizards, and evdev/uinput wrappers (`:companion:domain`).
+* `catalog/` / `media/` / `session/` — Shared app/game indexing, poster artwork scraping, and active game session tracking (`:shared:catalog`, `:shared:media`, `:shared:session`).
 * `ui/` — Design system constants, AppTheme palette factories, and reusable edge overlay quick menu bars.
 
-**Rule:** New feature modules get their own sub-package. Shared UI components belong in `:app/.../ui/`. Business logic with no Android UI dependency belongs in `:domain`. Pure data types and constants belong in `:core`.
+**Rule:** Shared business logic belongs in `:shared:catalog`, `:shared:media`, or `:shared:session`. Pure data types, math helpers, and logging facades belong in `:shared:core`. Feature-specific app logic belongs in `:companion:domain` or `:gamefocus:domain`. UI components belong in `:companion:ui` or `:gamefocus:ui`.
 
 ---
 

@@ -14,7 +14,7 @@ What this script does:
     1. Removes the white background from the foreground PNG → transparent RGBA.
     2. Samples the average center color of background.png.
     3. Saves the transparent foreground as:
-           app/src/main/res/drawable/ic_launcher_foreground.png
+           companion/ui/src/main/res/drawable/ic_launcher_foreground.png
        and removes ic_launcher_foreground.xml so Android resolves the PNG instead.
     4. Updates ic_launcher_background.xml with the exact sampled color.
     5. Generates composited WebP launcher icons for all five density buckets:

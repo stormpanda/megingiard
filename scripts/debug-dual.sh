@@ -11,8 +11,8 @@ set -e
 
 SCRIPT_DIR="${0:A:h}"
 PROJECT_ROOT="$SCRIPT_DIR/.."
-APP_GRADLE_FILE="$PROJECT_ROOT/app/build.gradle.kts"
-GF_GRADLE_FILE="$PROJECT_ROOT/gamefocus/build.gradle.kts"
+APP_GRADLE_FILE="$PROJECT_ROOT/companion/ui/build.gradle.kts"
+GF_GRADLE_FILE="$PROJECT_ROOT/gamefocus/ui/build.gradle.kts"
 
 # Ensure running from project root
 cd "$PROJECT_ROOT"
@@ -41,25 +41,25 @@ build_debug_apks() {
     gf_version=$(echo "$gf_version_line" | sed -E 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]*)".*/\1/')
 
     log_info "Building Megingiard companion ($app_version) & Game Focus ($gf_version) debug APKs..."
-    ./gradlew :app:assembleDebug :gamefocus:assembleDebug
+    ./gradlew :companion:ui:assembleDebug :gamefocus:ui:assembleDebug
 
-    generated_app_apk="app/build/outputs/apk/debug/app-debug.apk"
+    generated_app_apk="companion/ui/build/outputs/apk/debug/ui-debug.apk"
     if [[ ! -f "$generated_app_apk" ]]; then
-        generated_app_apk=$(ls app/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
+        generated_app_apk=$(ls companion/ui/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
     fi
 
-    generated_gf_apk="gamefocus/build/outputs/apk/debug/gamefocus-debug.apk"
+    generated_gf_apk="gamefocus/ui/build/outputs/apk/debug/ui-debug.apk"
     if [[ ! -f "$generated_gf_apk" ]]; then
-        generated_gf_apk=$(ls gamefocus/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
+        generated_gf_apk=$(ls gamefocus/ui/build/outputs/apk/debug/*.apk 2>/dev/null | head -n 1 || true)
     fi
 
     if [[ ! -f "$generated_app_apk" ]]; then
-        log_error "Generated Megingiard companion debug APK not found at app/build/outputs/apk/debug/"
+        log_error "Generated Megingiard companion debug APK not found at companion/ui/build/outputs/apk/debug/"
         exit 1
     fi
 
     if [[ ! -f "$generated_gf_apk" ]]; then
-        log_error "Generated Game Focus debug APK not found at gamefocus/build/outputs/apk/debug/"
+        log_error "Generated Game Focus debug APK not found at gamefocus/ui/build/outputs/apk/debug/"
         exit 1
     fi
 

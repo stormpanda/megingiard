@@ -1,9 +1,9 @@
 # Feature: Automatic Update Check & Browser Release Launcher
 
 > **Related source:**
-> - `core/src/main/kotlin/com/stormpanda/megingiard/update/`
-> - `domain/src/main/java/com/stormpanda/megingiard/update/`
-> - `app/src/main/java/com/stormpanda/megingiard/settings/`
+> - `shared/core/src/main/kotlin/com/stormpanda/megingiard/update/`
+> - `companion/domain/src/main/java/com/stormpanda/megingiard/update/`
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/`
 
 ---
 

@@ -2,10 +2,10 @@
 
 > **Related source:**
 >
-> - `domain/src/main/java/com/stormpanda/megingiard/log/` — coordinator singleton
-> - `app/src/main/java/com/stormpanda/megingiard/MainActivity.kt` — SAF launcher + write
-> - `app/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt` — UI entry point
-> - `app/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsComponents.kt` — row composable
+> - `companion/domain/src/main/java/com/stormpanda/megingiard/log/` — coordinator singleton
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt` — SAF launcher + write
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt` — UI entry point
+> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsComponents.kt` — row composable
 
 ---
 
@@ -98,4 +98,4 @@ GlobalSettingsScreen (collectAsState) → InTreeMessageDialog feedback
 
 `LogReportManagerTest` covers `buildReportFilename` and `buildReportHeader` on the JVM
 without any Android framework dependency. Located at
-`domain/src/test/java/com/stormpanda/megingiard/log/LogReportManagerTest.kt`.
+`companion/domain/src/test/java/com/stormpanda/megingiard/log/LogReportManagerTest.kt`.

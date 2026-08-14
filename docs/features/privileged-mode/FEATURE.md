@@ -1,8 +1,8 @@
 # Feature: Privileged Mode
 
-> **Related source:** `domain/src/main/java/com/stormpanda/megingiard/privd/`, `app/src/main/java/com/stormpanda/megingiard/privd/`
-> **Native source:** `app/src/main/cpp/megingiard_privd.c`
-> **Binary asset:** `app/src/main/assets/megingiard_privd_arm64`
+> **Related source:** `companion/domain/src/main/java/com/stormpanda/megingiard/privd/`, `companion/ui/src/main/java/com/stormpanda/megingiard/privd/`
+> **Native source:** `companion/ui/src/main/cpp/megingiard_privd.c`
+> **Binary asset:** `companion/ui/src/main/assets/megingiard_privd_arm64`
 > **Build instructions:** [`docs/BUILD_NATIVE.md`](../../BUILD_NATIVE.md)
 
 ---
@@ -305,7 +305,7 @@ The first half (`CHAL/AUTH/OK`) proves the app knows the key before the daemon a
   - Legacy pre-versioning daemons ignore `VERSION` and produce no `VERSION_OK` response; the app's 1-second version read times out and treats the connection as failed.
   - Legacy pre-versioning apps fail to issue `VERSION` as their initial command; new daemons reject unverified initial commands with `VERSION_MISMATCH` and close the socket.
 - **Auto-Update & Reconnect Prompt**: Connection failure triggers background auto-rebootstrap (or `PrivdState.FAILED` with `PrivdError.VERSION_MISMATCH`), guiding daemon replacement during app upgrades or downgrades.
-- **Mandatory Version Increment Rule**: Whenever the daemon source code (`megingiard_privd.c`) or protocol behavior is updated, developers and agents **must** increment `PRIVD_VERSION` in both `megingiard_privd.c` and `PrivdConstants.kt` and run `./build_megingiard_privd.sh`.
+- **Mandatory Version Increment Rule**: Whenever the daemon source code (`megingiard_privd.c`) or protocol behavior is updated, developers and agents **must** increment `PRIVD_VERSION` in both `megingiard_privd.c` and `PrivdConstants.kt` and run `./scripts/build_megingiard_privd.sh`.
 
 Malformed messages, missing messages, wrong HMAC values, version mismatch, or timeout expiration fail closed and close the socket. The handshake read timeout is 5 seconds for HMAC and 1 second for version check, and is reset to normal blocking I/O only after the full exchange succeeds.
 
@@ -462,8 +462,8 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 
 | File                                                     | Responsibility                                                                                                                             |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app/src/main/cpp/megingiard_privd.c`                    | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream)                          |
-| `app/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
+| `companion/ui/src/main/cpp/megingiard_privd.c`                    | Native daemon source (TCP socket loopback server, evdev writer, passive read-only physical gamepad event stream)                          |
+| `companion/ui/src/main/assets/megingiard_privd_arm64`             | Pre-built static daemon binary                                                                                                             |
 | `domain/.../privd/PrivdPairKey.kt`                       | Per-install Keystore-encrypted HMAC key: `generateAndStore()`, `load()`, `delete()`                                                        |
 | `domain/.../privd/PrivdClient.kt`                        | TCP Socket transport singleton (writer + reader threads, ping support, physical evdev event stream)                                        |
 | `domain/.../privd/PrivdConnectionState.kt`               | Connection-state enum (DISCONNECTED / CONNECTING / CONNECTED)                                                                              |
