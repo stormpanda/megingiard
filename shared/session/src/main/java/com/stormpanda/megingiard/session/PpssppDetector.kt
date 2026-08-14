@@ -141,18 +141,12 @@ object PpssppDetector : EmulatorDetector {
                     if (updated.contains("RemoteDebuggerOnStartup = False")) {
                         updated = updated.replace("RemoteDebuggerOnStartup = False", "RemoteDebuggerOnStartup = True")
                     }
-                    if (updated.contains("RemoteShareOnStartup = False")) {
-                        updated = updated.replace("RemoteShareOnStartup = False", "RemoteShareOnStartup = True")
-                    }
                     if (updated.contains("RemoteISOPort = 0")) {
                         updated = updated.replace("RemoteISOPort = 0", "RemoteISOPort = 8080")
                     }
-                    if (updated.contains("RemoteISOShareType = 0")) {
-                        updated = updated.replace("RemoteISOShareType = 0", "RemoteISOShareType = 1")
-                    }
                     if (updated != content) {
                         file.writeText(updated)
-                        AppLog.i(TAG, "Auto-configured RemoteDebuggerOnStartup, RemoteShareOnStartup & RemoteISOShareType in '$path'")
+                        AppLog.i(TAG, "Auto-configured RemoteDebuggerOnStartup in '$path'")
                     }
                 } catch (e: Exception) {
                     AppLog.d(TAG, "ensureRemoteDebuggerEnabled: failed to write '$path' - $e")

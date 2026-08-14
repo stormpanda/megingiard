@@ -64,13 +64,7 @@ object SafPathResolver {
             }
 
         val fileName = pathToUse.substringAfterLast('/').substringAfterLast('\\')
-        val ext = fileName.substringAfterLast('.', "").lowercase()
-        val nameWithoutExt =
-            if (knownExtensions.isNotEmpty() && ext in knownExtensions) {
-                fileName.substringBeforeLast('.')
-            } else {
-                fileName.substringBeforeLast('.')
-            }
+        val nameWithoutExt = fileName.substringBeforeLast('.')
 
         return nameWithoutExt.trim().takeIf { it.isNotBlank() }
     }

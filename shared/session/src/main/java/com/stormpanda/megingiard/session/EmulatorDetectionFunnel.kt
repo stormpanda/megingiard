@@ -14,7 +14,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "EmulatorDetectionFunnel"
-private const val POLLING_MAX_ATTEMPTS = 5
 private const val POLLING_DELAY_MS = 1000L
 
 /**
