@@ -725,11 +725,35 @@ class AppStateManagerTest {
 
             AppStateManager.openPrimaryModal(PrimaryModalType.GLOBAL_SETTINGS)
             assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(UiMode.GLOBAL_SETTINGS, AppStateManager.uiMode.value)
             assertTrue(AppStateManager.isAnyModalActive.value)
             assertTrue(AppStateManager.isAnyMenuOpen.value)
 
             AppStateManager.closePrimaryModal()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertFalse(AppStateManager.isAnyModalActive.value)
+            assertFalse(AppStateManager.isAnyMenuOpen.value)
+        }
+
+    @Test
+    fun `closePrimaryModal resets isEditorActive and uiMode when closing editor`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            assertFalse(AppStateManager.isEditorActive.value)
+
+            AppStateManager.setEditorActive(true)
+            assertTrue(AppStateManager.isEditorActive.value)
+            assertEquals(PrimaryModalType.MACROPAD_EDITOR, AppStateManager.activePrimaryModal.value?.type)
+            assertEquals(UiMode.LAYOUT_EDITOR, AppStateManager.uiMode.value)
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+
+            AppStateManager.closePrimaryModal()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertFalse(AppStateManager.isEditorActive.value)
+            assertFalse(AppStateManager.isAnyMenuOpen.value)
+            assertFalse(AppStateManager.isAnyModalActive.value)
         }
 
     @Test

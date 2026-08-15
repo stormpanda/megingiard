@@ -176,10 +176,9 @@ precedence to the Quick Menu Bar navigation.
 | `SettingsManager.overlayFadeOut` | `SettingsManager` | Global Settings toggle |
 
 `isAnyModalActive` in `AppStateManager` is a derived `StateFlow` that is `true` whenever any of the
-interactive overlays (`isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
-`isBackgroundSettingsActive`, or `MacroPadState.isPeekActive`) are active. `isEditorActive` is
-intentionally excluded since the Quick Menu Bar is hidden entirely while the editor is open. The edge-swipe
-handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu.
+interactive overlays (`activePrimaryModal != null`, `isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `isViewportEditActive`,
+`isBackgroundSettingsActive`, `isGlobalSettingsOpen`, `isKeyboardSettingsOpen`, `isTouchpadSettingsOpen`, or `MacroPadState.isPeekActive`) are active. The edge-swipe
+handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu. `closePrimaryModal()` resets `_uiMode` back to `MACROPAD_USE` ensuring the secondary display's Quick Menu Bar and edge-swipe gesture interactions are immediately restored upon dismissing top-screen dialogs.
 
 ### Primary Screen Overlay Gamepad Navigation & Gamepad-First UI Design
 

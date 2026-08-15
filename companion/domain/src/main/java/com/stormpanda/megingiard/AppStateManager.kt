@@ -466,6 +466,29 @@ object AppStateManager {
     fun openPrimaryModal(config: PrimaryModalConfig) {
         AppLog.i(TAG, "openPrimaryModal: type=${config.type}")
         _activePrimaryModal.value = config
+        when (config.type) {
+            PrimaryModalType.GLOBAL_SETTINGS -> {
+                _uiMode.value = UiMode.GLOBAL_SETTINGS
+            }
+
+            PrimaryModalType.KEYBOARD_SETTINGS -> {
+                _uiMode.value = UiMode.KEYBOARD_SETTINGS
+            }
+
+            PrimaryModalType.TOUCHPAD_SETTINGS -> {
+                _uiMode.value = UiMode.TOUCHPAD_SETTINGS
+            }
+
+            PrimaryModalType.BACKGROUND_SETTINGS -> {
+                _uiMode.value = UiMode.BACKGROUND_SETTINGS
+            }
+
+            PrimaryModalType.MACROPAD_EDITOR -> {
+                _uiMode.value = UiMode.LAYOUT_EDITOR
+            }
+
+            else -> {}
+        }
     }
 
     fun openPrimaryModal(type: PrimaryModalType) {
@@ -473,8 +496,19 @@ object AppStateManager {
     }
 
     fun closePrimaryModal() {
-        AppLog.i(TAG, "closePrimaryModal")
+        AppLog.i(TAG, "closePrimaryModal: currentModal=${_activePrimaryModal.value?.type} currentUiMode=${_uiMode.value}")
         _activePrimaryModal.value = null
+        _activeCropCutoutId.value = null
+        _selectedCutoutId.value = null
+        wasViewportEditActiveBeforeSettings = false
+        if (_uiMode.value == UiMode.LAYOUT_EDITOR ||
+            _uiMode.value == UiMode.GLOBAL_SETTINGS ||
+            _uiMode.value == UiMode.KEYBOARD_SETTINGS ||
+            _uiMode.value == UiMode.TOUCHPAD_SETTINGS ||
+            _uiMode.value == UiMode.BACKGROUND_SETTINGS
+        ) {
+            _uiMode.value = UiMode.MACROPAD_USE
+        }
     }
 
     fun setActiveCropCutoutId(id: String?) {

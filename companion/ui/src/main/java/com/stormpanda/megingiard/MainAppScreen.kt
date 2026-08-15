@@ -435,10 +435,11 @@ fun MainAppScreen() {
                 )
             }
 
-            // Quick Menu Bar + Quick Menu overlay — hidden while editor or ambient settings
-            // are open because those modals render their own full-screen chrome.
-            // Also hidden when fullscreen keyboard is active.
-            if (!isEditorActive && !isBackgroundSettingsActive && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
+            // Quick Menu Bar + Quick Menu overlay — rendered on secondary display,
+            // suppressed only if a single-screen fallback settings overlay is covering
+            // the display or when fullscreen keyboard/mouse is active.
+            val isSingleScreenModalActive = !isDualScreen && isAnyMenuOpen
+            if (!isSingleScreenModalActive && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                 QuickMenuBar()
             }
 
