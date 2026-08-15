@@ -16,21 +16,21 @@ Instead of rendering heavy configuration dialogs, inspector panels, and settings
 ```
                   ┌────────────────────────────────────────────────────────┐
                   │                    AppStateManager                     │
-                  │   activePrimaryModal: StateFlow<PrimaryModalType?>     │
+                  │   activePrimaryModal: StateFlow<PrimaryModalConfig?>   │
                   └───────────┬────────────────────────────────┬───────────┘
                               │                                │
-             (Observes & Launches Activity)       (Controls & Updates State)
+             (Renders WindowManager Overlay)      (Controls & Updates State)
                               │                                │
                               ▼                                ▼
                ┌──────────────────────────────┐  ┌─────────────────────────┐
-               │    PrimaryOverlayActivity    │  │      MainActivity       │
-               │     (Display 0 - Top)        │  │   (Display 4 - Bottom)  │
+               │    PrimaryOverlayManager     │  │      MainActivity       │
+               │  (Display 0 - WindowManager) │  │   (Display 4 - Bottom)  │
                ├──────────────────────────────┤  ├─────────────────────────┤
                │ - GlobalSettingsContent      │  │ - MacroPad Canvas       │
                │ - LayoutInspectorContent     │  │ - Mirror Surface        │
                │ - MacroEditorContent         │  │ - Quick Menu Bar        │
                │ - HelpModalContent           │  │ - Keyboard / Touchpad   │
-               │ (Translucent Window + Scrim) │  │ (Always interactive)    │
+               │ (Zero-Pause Window + Scrim)  │  │ (Always interactive)    │
                └──────────────────────────────┘  └─────────────────────────┘
 ```
 
@@ -103,10 +103,14 @@ On a handheld device, the user should never be forced to reach up and touch the 
   - `X / Y` Buttons: Contextual actions (e.g. Reset to default, Preview).
 * **Visual Focus Rings**: Prominent accent-colored outlines or glow effects on the currently focused item.
 
-### 4.2 Capture Recursion Prevention
-* Android's `MediaProjection` captures everything rendered to Display 0.
-* If a menu opens on Display 0 while live mirroring is active, the mirror feed on the bottom screen would capture the menu itself.
-* **Rule**: Whenever any primary overlay activity opens, automatically trigger `ScreenCaptureManager.setFrozen(true)`. Unfreeze upon dismissal.
+### 4.2 Zero-Pause WindowManager Overlay Architecture
+* In standard Android, launching an `Activity` on Display 0 moves the game to the background stack and calls `onPause()`, which causes emulators and Android games to pause audio and stop their rendering loop.
+* **Solution**: `PrimaryOverlayManager` renders configuration dialogs as non-Activity **WindowManager overlays** using `TYPE_ACCESSIBILITY_OVERLAY` (via `MegingiardAccessibilityService`) or `TYPE_APPLICATION_OVERLAY` (via `SYSTEM_ALERT_WINDOW`).
+* Because the overlay is attached directly to the WindowManager above Display 0 rather than being pushed onto the activity task stack:
+  - The game/emulator Activity remains in the `RESUMED` state on Display 0.
+  - `onPause()` and `onStop()` are **never** called on the game.
+  - Emulation, 60/120 FPS game rendering, and game audio continue running seamlessly in the background behind the translucent frosted acrylic dialog scrim.
+  - Screen capture and mirroring continue streaming smoothly without artificial pauses.
 
 ### 4.3 Dual-Screen Touch Concurrency & Non-Modal Windows
 * Android supports simultaneous touch events across separate physical displays.

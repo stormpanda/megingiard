@@ -21,7 +21,6 @@ import androidx.lifecycle.lifecycleScope
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
-import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -36,16 +35,9 @@ private const val TAG = "PrimaryOverlayActivity"
  * display to remain an unobstructed, live interactive action deck.
  */
 class PrimaryOverlayActivity : ComponentActivity() {
-    private var wasFrozenInitially = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppLog.i(TAG, "onCreate: started on display=${display?.displayId}")
-
-        wasFrozenInitially = savedInstanceState?.getBoolean("wasFrozenInitially") ?: ScreenCaptureManager.isFrozen.value
-        if (savedInstanceState == null && !wasFrozenInitially) {
-            ScreenCaptureManager.setFrozen(true)
-        }
 
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
@@ -124,20 +116,12 @@ class PrimaryOverlayActivity : ComponentActivity() {
         return super.onKeyDown(keyCode, event)
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putBoolean("wasFrozenInitially", wasFrozenInitially)
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         AppLog.i(TAG, "onDestroy: isFinishing=$isFinishing")
         if (isFinishing) {
             AppStateManager.closePrimaryModal()
             AppStateManager.setActiveCropCutoutId(null)
-            if (!wasFrozenInitially) {
-                ScreenCaptureManager.setFrozen(false)
-            }
         }
     }
 }
