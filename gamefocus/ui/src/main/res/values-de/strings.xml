@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Megingiard Game Focus</string>
-    <string name="focus_launcher_title">Game Focus Launcher</string>
-    <string name="focus_launcher_refresh">Aktualisieren</string>
-    <string name="focus_launcher_search_hint">Apps &amp; Spiele suchen…</string>
     <string name="focus_launcher_no_apps">Keine Apps gefunden</string>
     <string name="focus_change_artwork_title">Cover-Motiv ändern</string>
     <string name="settings_cancel">Abbrechen</string>
@@ -12,7 +9,6 @@
     <string name="gamefocus_launch_bottom">Unterer Bildschirm</string>
     <string name="gamefocus_header_android_games">Android-Spiele</string>
     <string name="gamefocus_header_android_apps">Android-Apps</string>
-    <string name="gamefocus_cat_all_apps">Alle Apps</string>
     <string name="gamefocus_cat_favorites">Favoriten</string>
     <string name="gamefocus_cat_last_used">Zuletzt verwendet</string>
     <string name="gamefocus_option_add_favorite">Zu Favoriten hinzufügen</string>
@@ -42,11 +38,8 @@
     <string name="gamefocus_option_change_search_term">Suchbegriff ändern</string>
     <string name="gamefocus_option_use_app_icon">App-Icon verwenden</string>
 
-    <string name="gamefocus_library_title">Bibliothek</string>
-    <string name="gamefocus_library_tab_all">Alle</string>
     <string name="gamefocus_library_tab_apps">Android-Apps</string>
     <string name="gamefocus_library_tab_games">Android-Spiele</string>
-    <string name="gamefocus_library_hint_close">R2 oder B drücken zum Schließen</string>
     <string name="gamefocus_nav_gallery">Galerie</string>
     <string name="gamefocus_nav_library">Bibliothek</string>
     <string name="gamefocus_option_add_rom_folder">ROM-Ordner hinzufügen</string>
