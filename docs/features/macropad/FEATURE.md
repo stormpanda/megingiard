@@ -683,7 +683,7 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Layout Editor
 
-`MacroPadEditor` is rendered inside a centered `PrimaryOverlayContainer` dialog modal, aligned with the design language of Global Settings. It utilizes a **Two-Pane Console Sidebar + Content Deck** layout optimized for physical gamepad and handheld navigation:
+`MacroPadEditor` is rendered inside a bottom-anchored `PrimaryOverlayContainer` modal sheet, aligned with the design language of Global Settings. It utilizes a **Two-Pane Console Sidebar + Content Deck** layout optimized for physical gamepad and handheld navigation:
 - **Left Category Sidebar (210 dp):** Features category navigation tiles with illuminated focus borders and L1/R1 bumper tab switching:
   - **Overview (`All`):** Unified overview displaying active Profile and Layout carousel pickers, canvas preview, quick action shortcuts, and button deck.
   - **Profiles (`Folder`):** Active profile carousel selector, New Profile, Rename/Edit Profile, Duplicate Profile, Reorder Profiles, Delete Profile, and Macros.

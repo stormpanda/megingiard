@@ -4,12 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,13 +39,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -177,8 +167,8 @@ internal fun HelpModal(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut(),
+        enter = modalOverlayScrimEnter(),
+        exit = modalOverlayScrimExit(),
         modifier = Modifier.fillMaxSize(),
     ) {
         // Scrim
@@ -207,8 +197,8 @@ internal fun HelpModal(
                         .fillMaxWidth()
                         .fillMaxSize(HM_SHEET_HEIGHT_FRACTION)
                         .animateEnterExit(
-                            enter = slideInVertically { it },
-                            exit = slideOutVertically { it },
+                            enter = modalOverlaySheetEnter(),
+                            exit = modalOverlaySheetExit(),
                         ).offset { IntOffset(0, offsetY.value.roundToInt()) }
                         .padding(horizontal = PM_PANEL_H_PADDING)
                         .clip(sheetShape)
@@ -399,43 +389,3 @@ internal fun HelpIntro(text: String) {
         style = MaterialTheme.typography.bodyMedium,
     )
 }
-
-/**
- * Draws a 3-sided bezel border (left, top-left arc, top, top-right arc, right) leaving the
- * bottom edge open. Used by [HelpModal] so the bottom sheet sits flush with the bottom screen edge.
- */
-private fun Modifier.topAndSideBezelBorder(
-    strokeWidth: Dp,
-    brush: Brush,
-    topCornerRadius: Dp,
-): Modifier =
-    this.drawWithContent {
-        drawContent()
-        val sw = strokeWidth.toPx()
-        val inset = sw / 2f
-        val r = topCornerRadius.toPx()
-        val path =
-            Path().apply {
-                moveTo(inset, size.height)
-                lineTo(inset, r)
-                arcTo(
-                    rect = Rect(inset, inset, 2 * r - inset, 2 * r - inset),
-                    startAngleDegrees = 180f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(size.width - r, inset)
-                arcTo(
-                    rect = Rect(size.width - 2 * r + inset, inset, size.width - inset, 2 * r - inset),
-                    startAngleDegrees = 270f,
-                    sweepAngleDegrees = 90f,
-                    forceMoveTo = false,
-                )
-                lineTo(size.width - inset, size.height)
-            }
-        drawPath(
-            path = path,
-            brush = brush,
-            style = Stroke(width = sw),
-        )
-    }
