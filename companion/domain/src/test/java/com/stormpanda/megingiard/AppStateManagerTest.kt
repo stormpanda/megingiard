@@ -766,4 +766,28 @@ class AppStateManagerTest {
             assertEquals(null, AppStateManager.activePrimaryModal.value)
             assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
         }
+
+    @Test
+    fun `setPrivdSetupWizardOpen updates isPrivdSetupWizardActive and suppresses quick menu`() =
+        runTest {
+            AppStateManager.closeActiveModal()
+            AppStateManager.setPrivdSetupWizardOpen(false)
+            assertFalse(AppStateManager.isPrivdSetupWizardActive.value)
+
+            AppStateManager.setPrivdSetupWizardOpen(true)
+            assertTrue(AppStateManager.isPrivdSetupWizardActive.value)
+
+            // Attempt to open quick menu while wizard is active -> should be suppressed
+            AppStateManager.openQuickMenu()
+            assertFalse(AppStateManager.isQuickMenuOpen.value)
+
+            // Close wizard
+            AppStateManager.setPrivdSetupWizardOpen(false)
+            assertFalse(AppStateManager.isPrivdSetupWizardActive.value)
+
+            // Now quick menu can open
+            AppStateManager.openQuickMenu()
+            assertTrue(AppStateManager.isQuickMenuOpen.value)
+            AppStateManager.closeQuickMenu()
+        }
 }

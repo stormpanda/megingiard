@@ -84,6 +84,7 @@ class ScreenCaptureService : Service() {
                 AmbientPreviewManager.isActive,
                 TouchRecordingManager.recordingRequested,
                 AppStateManager.isPrivdPromptActive,
+                AppStateManager.isPrivdSetupWizardActive,
                 AppStateManager.showIntegrationHome,
                 AppStateManager.isFullscreenMouseActive,
                 AppStateManager.isFullscreenKeyboardActive,
@@ -96,15 +97,17 @@ class ScreenCaptureService : Service() {
                 val ambientPreviewActive = values[5] as Boolean
                 val recordingRequested = values[6] as Boolean
                 val isPrivdPromptActive = values[7] as Boolean
-                val showIntegrationHome = values[8] as Boolean
-                val isFullscreenMouseActive = values[9] as Boolean
-                val isFullscreenKeyboardActive = values[10] as Boolean
+                val isPrivdSetupWizardActive = values[8] as Boolean
+                val showIntegrationHome = values[9] as Boolean
+                val isFullscreenMouseActive = values[10] as Boolean
+                val isFullscreenKeyboardActive = values[11] as Boolean
 
                 capturing && validScreen &&
                     !filePickerOpen && !editorActive &&
                     (!ambientActive || ambientPreviewActive) &&
                     !recordingRequested &&
                     !isPrivdPromptActive &&
+                    !isPrivdSetupWizardActive &&
                     (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
             }.distinctUntilChanged()
                 .collect { shouldShow ->
@@ -738,6 +741,7 @@ class ScreenCaptureService : Service() {
         val ambientPreviewActive = AmbientPreviewManager.isActive.value
         val recordingRequested = TouchRecordingManager.recordingRequested.value
         val isPrivdPromptActive = AppStateManager.isPrivdPromptActive.value
+        val isPrivdSetupWizardActive = AppStateManager.isPrivdSetupWizardActive.value
         val showIntegrationHome = AppStateManager.showIntegrationHome.value
         val isFloatingBubbleActive = AppStateManager.isFloatingBubbleActive.value
         val isFullscreenMouseActive = AppStateManager.isFullscreenMouseActive.value
@@ -749,12 +753,13 @@ class ScreenCaptureService : Service() {
                 (!ambientActive || ambientPreviewActive) &&
                 !recordingRequested &&
                 !isPrivdPromptActive &&
+                !isPrivdSetupWizardActive &&
                 !isFloatingBubbleActive &&
                 (!showIntegrationHome || isFullscreenMouseActive || isFullscreenKeyboardActive)
 
         AppLog.d(
             TAG,
-            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, showIntegrationHome=$showIntegrationHome, isFloatingBubbleActive=$isFloatingBubbleActive, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
+            "shouldShowMirrorPresentation evaluated to $shouldShow (capturing=$capturing, validScreen=$validScreen, filePickerOpen=$filePickerOpen, editorActive=$editorActive, ambientActive=$ambientActive, ambientPreviewActive=$ambientPreviewActive, recordingRequested=$recordingRequested, isPrivdPromptActive=$isPrivdPromptActive, isPrivdSetupWizardActive=$isPrivdSetupWizardActive, showIntegrationHome=$showIntegrationHome, isFloatingBubbleActive=$isFloatingBubbleActive, isFullscreenMouseActive=$isFullscreenMouseActive, isFullscreenKeyboardActive=$isFullscreenKeyboardActive)",
         )
         return shouldShow
     }

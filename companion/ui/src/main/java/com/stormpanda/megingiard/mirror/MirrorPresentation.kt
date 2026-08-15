@@ -113,6 +113,7 @@ import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -465,9 +466,10 @@ class MirrorPresentation(
                             val isQuickMenuOpen by AppStateManager.isQuickMenuOpen.collectAsState()
                             val isAnyMenuOpen by AppStateManager.isAnyMenuOpen.collectAsState()
                             val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+                            val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsState()
                             val isGesturesEnabled =
                                 !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive &&
-                                    !isWizardActive
+                                    !isWizardActive && !isPrivdSetupWizardActive
                             val (
                                 edgeZonePx,
                                 swipeThresholdPx,
@@ -848,6 +850,14 @@ class MirrorPresentation(
                                             val active = MegingiardAccessibilityService.isEnabled(context)
                                             AppStateManager.setAccessibilityActive(active)
                                             AppStateManager.setPrivdPromptDismissed(true)
+                                        },
+                                    )
+                                }
+
+                                if (isPrivdSetupWizardActive && !isWizardActive) {
+                                    PrivdSetupWizardDialog(
+                                        onDismiss = {
+                                            AppStateManager.setPrivdSetupWizardOpen(false)
                                         },
                                     )
                                 }

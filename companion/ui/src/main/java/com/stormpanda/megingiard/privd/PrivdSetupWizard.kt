@@ -70,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
@@ -113,7 +114,7 @@ private val SW_CHECKLIST_ICON_SIZE = 18.dp
  */
 @Composable
 internal fun PrivdSetupWizardDialog(
-    viewModel: GlobalSettingsViewModel,
+    viewModel: GlobalSettingsViewModel = viewModel(),
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current

@@ -94,7 +94,6 @@ import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.DeadzoneDialog
-import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.AppColors
@@ -185,7 +184,6 @@ fun GlobalSettingsScreen(
 
     val context = LocalContext.current
     var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
-    var showPrivdWizard by rememberSaveable { mutableStateOf(false) }
     var showDeadzoneDialog by rememberSaveable { mutableStateOf(false) }
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -310,7 +308,11 @@ fun GlobalSettingsScreen(
                     description = stringResource(R.string.help_settings_privd_desc),
                     actionText = stringResource(R.string.gamepad_action_setup),
                     icon = Icons.Rounded.Security,
-                    onClick = { showPrivdWizard = true },
+                    onClick = {
+                        AppStateManager.closeActiveModal()
+                        AppStateManager.setPrivdSetupWizardOpen(true)
+                        onBack()
+                    },
                 )
 
                 val allLangs = remember { AppLanguage.entries }
@@ -634,12 +636,6 @@ fun GlobalSettingsScreen(
         },
     )
 
-    if (showPrivdWizard) {
-        PrivdSetupWizardDialog(
-            viewModel = viewModel,
-            onDismiss = { showPrivdWizard = false },
-        )
-    }
     if (showDeadzoneDialog) {
         val deadzoneLeftVal by viewModel.privdDeadzoneLeft.collectAsState()
         val deadzoneRightVal by viewModel.privdDeadzoneRight.collectAsState()

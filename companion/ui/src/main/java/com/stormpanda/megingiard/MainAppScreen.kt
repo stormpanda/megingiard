@@ -85,6 +85,7 @@ import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -209,6 +210,7 @@ fun MainAppScreen() {
         BackHandler { showExitDialog = true }
 
         val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
+        val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsState()
 
         Box(
             modifier =
@@ -221,8 +223,9 @@ fun MainAppScreen() {
                         kbBarMaxX,
                         isGesturesEnabled,
                         isWizardActive,
+                        isPrivdSetupWizardActive,
                     ) {
-                        if (!isGesturesEnabled || isWizardActive) return@pointerInput
+                        if (!isGesturesEnabled || isWizardActive || isPrivdSetupWizardActive) return@pointerInput
                         val qmSwipe =
                             SwipeGestureProcessor(
                                 edgeZonePx = edgeZonePx,
@@ -556,6 +559,14 @@ fun MainAppScreen() {
                     val active = MegingiardAccessibilityService.isEnabled(context)
                     AppStateManager.setAccessibilityActive(active)
                     AppStateManager.setPrivdPromptDismissed(true)
+                },
+            )
+        }
+
+        if (isPrivdSetupWizardActive && !isWizardActive) {
+            PrivdSetupWizardDialog(
+                onDismiss = {
+                    AppStateManager.setPrivdSetupWizardOpen(false)
                 },
             )
         }

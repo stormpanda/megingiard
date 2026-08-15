@@ -66,7 +66,7 @@ every device since Android 11 (API 30).
 
 ### FR-PV8: 4-Step Manual Setup Wizard & Connect Port Entry
 
-- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions):
+- The manual setup wizard (`PrivdSetupWizardDialog`) renders a 4-step modal dialog on the secondary display (bottom screen) using the Welcome Tour styling (`OnboardingStepper`, `FinishedStepContent`, dark backdrop scrim, bezel card container, and smooth horizontal step transitions). When triggered from Global Settings, the primary display (top screen) settings modal is automatically closed so that Android Developer Options and Wireless Debugging on Display 0 remain visible and unobstructed:
   - **Step 1 (Menu Description)**: Displays instructions for navigating to Developer Options -> Wireless Debugging with an "Open system settings" button.
   - **Step 2 (Connect Port)**: Provides an input field for the Wireless Debugging **Connect Port** (5 digits).
   - **Step 3 (Pairing Code & Pairing Port)**: Provides input fields for **WiFi pairing code** (6 digits) and **Pairing port** (5 digits), triggering pairing and bootstrapping with live stage progress checklist.
@@ -472,7 +472,7 @@ mid-game requires a leave-and-re-enter of the MacroPad mode.
 | `domain/.../privd/PrivdAdbConnectionManager.kt`          | `AbsAdbConnectionManager` subclass: persistent RSA key + X.509 cert in `filesDir`, `pair`/`connect`                                        |
 | `domain/.../privd/PrivdBootstrapper.kt`                  | `BootstrapStage` state flow + pair / push (`sync:` + byte-size verification) / spawn (detached) / verify orchestration                     |
 | `app/.../privd/PrivdSettingsCard.kt`                     | Compose card: status badge, connect/test buttons, wizard trigger, auto-connect Switch                                                     |
-| `app/.../privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; state hoisted to `GlobalSettingsScreen` |
+| `companion/ui/src/main/java/com/stormpanda/megingiard/privd/PrivdSetupWizard.kt`                      | `PrivdSetupWizardDialog` — in-tree modal dialog (scrim + centered card) hosting the 4-step wizard; hosted on the secondary display (bottom screen) via `MainAppScreen` / `AppStateManager` |
 | `app/.../MainActivity.kt`                                | Auto-connect hook (`combine(privdAutoConnect, state)` one-shot)                                                                            |
 | `domain/.../macropad/GamepadInjector.kt`                 | Strategy router between virtual uinput and Privd merge backends                                                                            |
 | `domain/.../macropad/PhysicalGamepadRecordingManager.kt` | Converts physical evdev events into macro steps while recording (`GamepadButtonTap`, `DPadTap`, `JoystickPath`)                            |

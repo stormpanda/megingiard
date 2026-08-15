@@ -351,8 +351,8 @@ object AppStateManager {
         _uiMode.map { it == UiMode.FULLSCREEN_MOUSE }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun openQuickMenu() {
-        if (OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "openQuickMenu suppressed while onboarding wizard is active")
+        if (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value) {
+            AppLog.w(TAG, "openQuickMenu suppressed while wizard is active")
             return
         }
         AppLog.i(TAG, "openQuickMenu")
@@ -453,6 +453,14 @@ object AppStateManager {
 
     private val _isPrivdPromptShowing = MutableStateFlow(false)
     val isPrivdPromptActive: StateFlow<Boolean> = _isPrivdPromptShowing.asStateFlow()
+
+    private val _isPrivdSetupWizardActive = MutableStateFlow(false)
+    val isPrivdSetupWizardActive: StateFlow<Boolean> = _isPrivdSetupWizardActive.asStateFlow()
+
+    fun setPrivdSetupWizardOpen(open: Boolean) {
+        AppLog.d(TAG, "setPrivdSetupWizardOpen($open)")
+        _isPrivdSetupWizardActive.value = open
+    }
 
     private val _activeCropCutoutId = MutableStateFlow<String?>(null)
     val activeCropCutoutId: StateFlow<String?> = _activeCropCutoutId.asStateFlow()
@@ -589,8 +597,8 @@ object AppStateManager {
         active: Boolean,
         layout: KbLayout? = null,
     ) {
-        if (active && OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "setFullscreenKeyboardActive suppressed while onboarding wizard is active")
+        if (active && (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value)) {
+            AppLog.w(TAG, "setFullscreenKeyboardActive suppressed while wizard is active")
             return
         }
         AppLog.i(TAG, "setFullscreenKeyboardActive($active, layout=$layout)")
@@ -606,8 +614,8 @@ object AppStateManager {
         active: Boolean,
         sensitivity: Float = 1.0f,
     ) {
-        if (active && OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "setFullscreenMouseActive suppressed while onboarding wizard is active")
+        if (active && (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value)) {
+            AppLog.w(TAG, "setFullscreenMouseActive suppressed while wizard is active")
             return
         }
         AppLog.i(TAG, "setFullscreenMouseActive($active, sensitivity=$sensitivity)")
@@ -669,8 +677,8 @@ object AppStateManager {
      * Dispatches to the correct action based on current navigation state.
      */
     fun handleEdgeSwipe() {
-        if (OnboardingWizardManager.isWizardActive.value) {
-            AppLog.w(TAG, "handleEdgeSwipe suppressed while onboarding wizard is active")
+        if (OnboardingWizardManager.isWizardActive.value || _isPrivdSetupWizardActive.value) {
+            AppLog.w(TAG, "handleEdgeSwipe suppressed while wizard is active")
             return
         }
         AppLog.d(TAG, "handleEdgeSwipe: modal=${isAnyModalActive.value} quickMenu=${isQuickMenuOpen.value}")

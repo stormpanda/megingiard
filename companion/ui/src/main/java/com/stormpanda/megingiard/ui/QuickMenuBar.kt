@@ -92,7 +92,8 @@ fun QuickMenuBar(modifier: Modifier = Modifier) {
     val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isViewportEditActive by AppStateManager.isViewportEditActive.collectAsState()
     val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
-    if (previewConfig != null || isViewportEditActive || isWizardActive) return
+    val isPrivdSetupWizardActive by AppStateManager.isPrivdSetupWizardActive.collectAsState()
+    if (previewConfig != null || isViewportEditActive || isWizardActive || isPrivdSetupWizardActive) return
 
     val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
     val overlayFadeOut by SettingsManager.overlayFadeOut.collectAsState()
