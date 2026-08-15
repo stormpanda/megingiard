@@ -112,13 +112,10 @@ On a handheld device, the user should never be forced to reach up and touch the 
   - Emulation, 60/120 FPS game rendering, and game audio continue running seamlessly in the background behind the translucent frosted acrylic dialog scrim.
   - Screen capture and mirroring continue streaming smoothly without artificial pauses.
 
-### 4.3 Dual-Screen Touch Concurrency & Non-Modal Windows
-* Android supports simultaneous touch events across separate physical displays.
-* By specifying `WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL`, the top overlay activity will not swallow touches landing on the bottom screen.
-* **Interactive Collaborative Workflow**:
-  - The user taps a button or cutout on the **bottom screen** to select it.
-  - The **top screen** immediately populates with that item's property inspector.
-  - The user adjusts values on the top screen while observing live changes on the bottom canvas.
+### 4.3 Static Dual-Screen Focus Invariant
+* **Primary Screen (Display 0): Always Focusable.** Both background games and `PrimaryOverlayManager` modal overlays are focusable. When a modal opens on Display 0, it receives gamepad D-pad, controller buttons (A/B/X/Y), and keyboard events directly.
+* **Secondary Screen (Display 4): Always `FLAG_NOT_FOCUSABLE`.** `MainActivity` and `MirrorPresentation` unconditionally maintain `FLAG_NOT_FOCUSABLE` (and `FLAG_ALT_FOCUSABLE_IM`) at all times. The companion screen operates purely via touch event dispatch (`MotionEvent`), guaranteeing that MacroPad presses, QuickMenu swipes, and Touchpad actions NEVER steal window focus from the top-screen game.
+* **Dual-Screen Touch Concurrency:** By specifying `WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL` on the top overlay, both screens receive touch events concurrently without interference.
 
 ### 4.4 16:9 Widescreen Master-Detail Layouts
 The primary display has ample width (1920×1080). Single-column phone-style vertical lists waste horizontal space and require excessive scrolling.

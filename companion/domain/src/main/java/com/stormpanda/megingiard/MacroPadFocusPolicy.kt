@@ -15,25 +15,20 @@ data class MacroPadFocusPolicyState(
 )
 
 /**
- * Returns true when the hosting Android window should be NOT_FOCUSABLE so the
- * primary-display game keeps pointer capture while the secondary-display MacroPad
- * still receives touch input.
+ * Returns true when the secondary display companion window should have FLAG_NOT_FOCUSABLE.
+ *
+ * In the primary-screen heavy architecture, ALL interactive settings, dialogs, editors,
+ * and wizards render on Display 0 (Primary Display). Consequently, the companion window
+ * on Display 4 (Secondary Display) is ALWAYS marked FLAG_NOT_FOCUSABLE in dual-screen mode,
+ * ensuring the background game or primary overlay maintains uninterrupted window focus.
  */
-fun shouldKeepPrimaryGameFocus(state: MacroPadFocusPolicyState): Boolean {
-    val hasInteractiveOverlay =
-        state.isQuickMenuOpen ||
-            state.isFilePickerOpen ||
-            state.isEditorActive ||
-            state.isBackgroundSettingsActive ||
-            state.isGlobalSettingsOpen ||
-            state.isKeyboardSettingsOpen ||
-            state.isTouchpadSettingsOpen
-    val keepFocus =
-        state.isFullscreenKeyboardActive ||
-            (state.isMacroPadSurfaceActive && !hasInteractiveOverlay)
-    AppLog.d(
-        TAG,
-        "shouldKeepPrimaryGameFocus=$keepFocus (macroPadActive=${state.isMacroPadSurfaceActive}, overlayActive=$hasInteractiveOverlay)",
-    )
-    return keepFocus
+fun shouldKeepPrimaryGameFocus(isDualScreen: Boolean = true): Boolean {
+    AppLog.d(TAG, "shouldKeepPrimaryGameFocus=$isDualScreen (static dual-screen invariant)")
+    return isDualScreen
 }
+
+/**
+ * Legacy compatibility overload evaluating [MacroPadFocusPolicyState].
+ * In dual-screen mode, returns true as the secondary screen never steals focus.
+ */
+fun shouldKeepPrimaryGameFocus(state: MacroPadFocusPolicyState): Boolean = true

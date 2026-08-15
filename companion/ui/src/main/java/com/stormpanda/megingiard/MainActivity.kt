@@ -203,7 +203,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        val isDual = DisplayDetector.findSecondaryDisplay(this) != null
+        if (isDual) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+        }
         super.onCreate(savedInstanceState)
 
         // Init settings first so the persisted log level is active before anything
@@ -348,46 +351,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-        }
-        // Keep the normal MacroPad use surface non-focusable on the secondary display so
-        // touch input does not steal focus from a primary-display game that owns pointer
-        // capture. Focus is restored for app overlays that need text/input focus.
-        lifecycleScope.launch {
-            combine(
-                AppStateManager.isFullscreenKeyboardActive,
-                AppStateManager.isOnValidScreen,
-                AppStateManager.isQuickMenuOpen,
-                AppStateManager.isFilePickerOpen,
-                AppStateManager.isEditorActive,
-                AppStateManager.isBackgroundSettingsActive,
-                AppStateManager.isGlobalSettingsOpen,
-                AppStateManager.isKeyboardSettingsOpen,
-                AppStateManager.isTouchpadSettingsOpen,
-            ) { values ->
-                val fullscreenKeyboard = values[0] as Boolean
-                val onValidScreen = values[1] as Boolean
-                val quickMenuOpen = values[2] as Boolean
-                val filePickerOpen = values[3] as Boolean
-                val editorActive = values[4] as Boolean
-                val ambientSettingsActive = values[5] as Boolean
-                val globalSettingsOpen = values[6] as Boolean
-                val keyboardSettingsOpen = values[7] as Boolean
-                val touchpadSettingsOpen = values[8] as Boolean
-                shouldKeepPrimaryGameFocus(
-                    MacroPadFocusPolicyState(
-                        isMacroPadSurfaceActive = onValidScreen,
-                        isFullscreenKeyboardActive = fullscreenKeyboard,
-                        isQuickMenuOpen = quickMenuOpen,
-                        isFilePickerOpen = filePickerOpen,
-                        isEditorActive = editorActive,
-                        isBackgroundSettingsActive = ambientSettingsActive,
-                        isGlobalSettingsOpen = globalSettingsOpen,
-                        isKeyboardSettingsOpen = keyboardSettingsOpen,
-                        isTouchpadSettingsOpen = touchpadSettingsOpen,
-                    ),
-                )
-            }.distinctUntilChanged()
-                .collect { keepPrimaryFocus -> setActivityFocusMode(keepPrimaryFocus) }
         }
         // Auto-connect Privileged Mode if the user previously bootstrapped the daemon.
         // The daemon survives app restarts (it's a separate shell-UID process); we just
@@ -719,22 +682,10 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             MainAppScreen()
-
-                            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun setActivityFocusMode(keepPrimaryFocus: Boolean) {
-        if (keepPrimaryFocus) {
-            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE added (macropad use surface)")
-            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-        } else {
-            AppLog.d(TAG, "FLAG_NOT_FOCUSABLE cleared (interactive app overlay)")
-            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
         }
     }
 
