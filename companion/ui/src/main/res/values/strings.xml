@@ -19,6 +19,7 @@
     <string name="settings_global_title">Settings</string>
     <string name="settings_back">Back</string>
     <string name="settings_accent_color">Accent color</string>
+    <string name="settings_accent_color_desc">Choose from preset colors or open the color wheel for a custom accent</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_dark_oled">Dark OLED</string>

@@ -17,6 +17,7 @@
     <string name="settings_global_title">設定</string>
     <string name="settings_back">返回</string>
     <string name="settings_accent_color">主題重點色</string>
+    <string name="settings_accent_color_desc">從預設顏色中選擇，或開啟選色輪以自定義重點色</string>
     <string name="settings_theme">主題</string>
     <string name="theme_dark">深色</string>
     <string name="theme_dark_oled">深色 OLED</string>

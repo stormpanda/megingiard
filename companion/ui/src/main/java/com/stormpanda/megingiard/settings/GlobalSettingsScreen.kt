@@ -410,17 +410,12 @@ fun GlobalSettingsScreen(
                 if (themeMode.supportsCustomAccent) {
                     GamepadColorPaletteCard(
                         title = stringResource(R.string.settings_accent_color),
+                        description = stringResource(R.string.settings_accent_color_desc),
+                        icon = Icons.Rounded.Colorize,
                         paletteColors = ACCENT_PALETTE_PRESETS,
                         selectedColor = accentColor,
                         onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
-                    )
-
-                    GamepadActionCard(
-                        title = stringResource(R.string.settings_accent_wheel_title),
-                        description = stringResource(R.string.settings_accent_wheel_desc),
-                        actionText = stringResource(R.string.gamepad_action_wheel),
-                        icon = Icons.Rounded.Colorize,
-                        onClick = { showColorPicker = true },
+                        onOpenColorPicker = { showColorPicker = true },
                     )
                 }
 

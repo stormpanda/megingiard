@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -36,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -847,6 +849,7 @@ fun GamepadColorPaletteCard(
     paletteColors: List<Color>,
     selectedColor: Color,
     onColorSelected: (Color) -> Unit,
+    onOpenColorPicker: () -> Unit,
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
@@ -855,29 +858,30 @@ fun GamepadColorPaletteCard(
     val colors = LocalAppColors.current
     var isAdjusting by remember { mutableStateOf(false) }
 
-    val onPreviousColor = {
-        if (paletteColors.isNotEmpty()) {
-            val currentIndex = paletteColors.indexOf(selectedColor)
-            val prevIndex =
-                if (currentIndex <= 0) {
-                    paletteColors.size - 1
-                } else {
-                    currentIndex - 1
-                }
-            onColorSelected(paletteColors[prevIndex])
+    val isCustomActive = selectedColor !in paletteColors
+    val totalCount = paletteColors.size + 1
+    val currentSelectedIdx = if (isCustomActive) paletteColors.size else paletteColors.indexOf(selectedColor)
+    var focusedIndex by remember(isAdjusting) {
+        mutableIntStateOf(if (currentSelectedIdx >= 0) currentSelectedIdx else 0)
+    }
+
+    val onPreviousItem = {
+        if (totalCount > 0) {
+            val prevIndex = (focusedIndex - 1 + totalCount) % totalCount
+            focusedIndex = prevIndex
+            if (prevIndex < paletteColors.size) {
+                onColorSelected(paletteColors[prevIndex])
+            }
         }
     }
 
-    val onNextColor = {
-        if (paletteColors.isNotEmpty()) {
-            val currentIndex = paletteColors.indexOf(selectedColor)
-            val nextIndex =
-                if (currentIndex == -1 || currentIndex >= paletteColors.size - 1) {
-                    0
-                } else {
-                    currentIndex + 1
-                }
-            onColorSelected(paletteColors[nextIndex])
+    val onNextItem = {
+        if (totalCount > 0) {
+            val nextIndex = (focusedIndex + 1) % totalCount
+            focusedIndex = nextIndex
+            if (nextIndex < paletteColors.size) {
+                onColorSelected(paletteColors[nextIndex])
+            }
         }
     }
 
@@ -887,19 +891,80 @@ fun GamepadColorPaletteCard(
                 val nextState = !isAdjusting
                 AppLog.d(TAG, "GamepadColorPaletteCard: '$title' adjustment mode=$nextState")
                 isAdjusting = nextState
+                if (nextState) {
+                    focusedIndex = if (isCustomActive) paletteColors.size else paletteColors.indexOf(selectedColor)
+                }
             }
         },
         enabled = enabled,
         modifier = modifier,
         isAdjusting = isAdjusting,
         onCustomKeyEvent = { keyEvent ->
-            handleAdjustmentKeyEvent(
-                keyEvent = keyEvent,
-                isAdjusting = isAdjusting,
-                onAdjustLeft = onPreviousColor,
-                onAdjustRight = onNextColor,
-                onDismissAdjustment = { isAdjusting = false },
-            )
+            if (!isAdjusting) return@GamepadFocusCard false
+            val keyCode = keyEvent.nativeKeyEvent.keyCode
+            if (keyEvent.type == KeyEventType.KeyDown) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        onPreviousItem()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        onNextItem()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    -> {
+                        if (focusedIndex == paletteColors.size) {
+                            AppLog.d(TAG, "GamepadColorPaletteCard: opening custom color wheel picker")
+                            isAdjusting = false
+                            onOpenColorPicker()
+                        } else {
+                            AppLog.d(TAG, "GamepadColorPaletteCard: confirmed color selection at index=$focusedIndex")
+                            isAdjusting = false
+                        }
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    -> {
+                        AppLog.d(TAG, "GamepadColorPaletteCard: dismissing adjustment mode on keyCode=$keyCode")
+                        isAdjusting = false
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    -> {
+                        AppLog.d(TAG, "GamepadColorPaletteCard: navigating away from adjustment mode on keyCode=$keyCode")
+                        isAdjusting = false
+                        false
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            } else if (keyEvent.type == KeyEventType.KeyUp) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    -> true
+
+                    else -> false
+                }
+            } else {
+                false
+            }
         },
         onFocusChanged = { focused ->
             if (!focused) {
@@ -930,10 +995,12 @@ fun GamepadColorPaletteCard(
                 paletteColors = paletteColors,
                 selectedColor = selectedColor,
                 onColorSelected = onColorSelected,
-                onPrevious = onPreviousColor,
-                onNext = onNextColor,
+                onOpenColorPicker = onOpenColorPicker,
+                onPrevious = onPreviousItem,
+                onNext = onNextItem,
                 isAdjusting = isAdjusting,
                 isFocused = isFocused,
+                focusedIndex = if (isAdjusting) focusedIndex else -1,
                 enabled = enabled,
             )
         }
@@ -941,18 +1008,20 @@ fun GamepadColorPaletteCard(
 }
 
 /**
- * 2D Gamepad Color Palette Grid with navigation chevrons.
+ * 2D Gamepad Color Palette Grid with preset swatches, custom wheel button, and navigation chevrons.
  */
 @Composable
 fun GamepadColorPaletteGrid(
     paletteColors: List<Color>,
     selectedColor: Color,
     onColorSelected: (Color) -> Unit,
+    onOpenColorPicker: () -> Unit,
     modifier: Modifier = Modifier,
     onPrevious: (() -> Unit)? = null,
     onNext: (() -> Unit)? = null,
     isAdjusting: Boolean = false,
     isFocused: Boolean = false,
+    focusedIndex: Int = -1,
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
@@ -961,6 +1030,10 @@ fun GamepadColorPaletteGrid(
         if (isAdjusting) GC_PALETTE_CONTAINER_BORDER_ADJUSTING else GC_PALETTE_CONTAINER_BORDER_DEFAULT
     val containerBg = if (isAdjusting) colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA) else colors.surfaceVariant
     val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
+
+    val isCustomActive = selectedColor !in paletteColors
+    val swatchSelectedDesc = stringResource(R.string.gamepad_color_selected)
+    val wheelDesc = stringResource(R.string.settings_accent_wheel_title)
 
     Row(
         modifier =
@@ -991,7 +1064,7 @@ fun GamepadColorPaletteGrid(
 
         paletteColors.forEachIndexed { index, color ->
             val isSelected = color == selectedColor
-            val isHighlighted = isSelected && isAdjusting
+            val isHighlighted = isAdjusting && (focusedIndex == index || (focusedIndex == -1 && isSelected))
             val colorDesc = stringResource(R.string.gamepad_color_option, index + 1)
             val swatchBorderWidth = if (isHighlighted) GC_SWATCH_BORDER_WIDTH_ADJUSTING else GC_SWATCH_BORDER_WIDTH_DEFAULT
             val swatchBorderColor =
@@ -1019,11 +1092,53 @@ fun GamepadColorPaletteGrid(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Rounded.Check,
-                        contentDescription = stringResource(R.string.gamepad_color_selected),
+                        contentDescription = swatchSelectedDesc,
                         tint = Color.White,
                         modifier = Modifier.size(GC_SWATCH_CHECK_ICON_SIZE),
                     )
                 }
+            }
+        }
+
+        // 11th Item: Custom Color Wheel / Swatch
+        val isWheelHighlighted = isAdjusting && (focusedIndex == paletteColors.size || (focusedIndex == -1 && isCustomActive))
+        val wheelBorderWidth = if (isWheelHighlighted) GC_SWATCH_BORDER_WIDTH_ADJUSTING else GC_SWATCH_BORDER_WIDTH_DEFAULT
+        val wheelBorderColor =
+            if (isWheelHighlighted) colors.onSurface else Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA)
+
+        Box(
+            modifier =
+                Modifier
+                    .size(GC_SWATCH_SIZE)
+                    .clip(CircleShape)
+                    .background(if (isCustomActive) selectedColor else colors.surfaceVariant)
+                    .border(
+                        wheelBorderWidth,
+                        wheelBorderColor,
+                        CircleShape,
+                    ).semantics {
+                        contentDescription = if (isCustomActive) swatchSelectedDesc else wheelDesc
+                        selected = isCustomActive
+                    }.clickable(
+                        enabled = enabled,
+                        onClick = onOpenColorPicker,
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isCustomActive) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = swatchSelectedDesc,
+                    tint = Color.White,
+                    modifier = Modifier.size(GC_SWATCH_CHECK_ICON_SIZE),
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.Colorize,
+                    contentDescription = wheelDesc,
+                    tint = if (isWheelHighlighted || isFocused) colors.accent else colors.onSurfaceSecondary,
+                    modifier = Modifier.size(GC_SWATCH_CHECK_ICON_SIZE),
+                )
             }
         }
 

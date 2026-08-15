@@ -194,8 +194,8 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
   - `GamepadStepperCard`: Stepper card with `◀ Value ▶` adjustment controls navigable with D-pad Left/Right.
   - `GamepadChoiceCard`: Option carousel with `◀ Choice ▶` cycling through enum / list options without requiring submenu navigation.
   - `GamepadActionCard`: Compact action trigger card with focus activation.
-  - `GamepadColorPaletteCard`: Two-tier focusable color palette card for accent color selection (`[Left/Right]` selects preset colors, `[A]` enters adjustment mode).
-  - `GamepadColorPaletteGrid`: Color swatch grid with checkmark selection indicators and touch click support.
+  - `GamepadColorPaletteCard`: Two-tier focusable color palette card for accent color selection (`[Left/Right]` cycles preset colors and custom color wheel, `[A]` confirms or launches wheel).
+  - `GamepadColorPaletteGrid`: Color swatch grid with preset swatches, custom wheel button, checkmark selection indicators, and touch click support.
 - **Multi-Modal Input Synchronization & Focus Recovery:**
   - **Pointer-to-Focus Sync:** Tapping with touchscreen or clicking with mouse on category tiles (`GamepadCategoryTile`) or content cards (`GamepadFocusCard`) automatically requests 2D focus for that element, synchronizing cursor state across input methods.
   - **Focus Recovery Dispatcher:** If pointer interaction clears focus or switches Compose to `InputMode.Touch`, subsequent gamepad D-Pad, Analog Stick, or Button A inputs that are unhandled are captured by `PrimaryOverlayManager` / `PrimaryOverlayActivity` and forwarded to `PrimaryOverlayInputBridge.sendFocusRecovery()`.
