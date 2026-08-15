@@ -118,6 +118,7 @@ import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 private const val TAG = "GlobalSettingsScreen"
 
@@ -372,7 +373,12 @@ fun GlobalSettingsScreen(
 
                 GamepadActionCard(
                     title = stringResource(R.string.privd_deadzone_title),
-                    description = stringResource(R.string.privd_deadzone_summary, deadzoneLeft, deadzoneRight),
+                    description =
+                        stringResource(
+                            R.string.privd_deadzone_summary,
+                            (deadzoneLeft * 100f).roundToInt(),
+                            (deadzoneRight * 100f).roundToInt(),
+                        ),
                     actionText = stringResource(R.string.gamepad_action_deadzones),
                     icon = Icons.Rounded.Games,
                     onClick = { showDeadzoneDialog = true },
