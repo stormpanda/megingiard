@@ -103,9 +103,31 @@ private val GC_SIDEBAR_WIDTH = 210.dp
 private val GC_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GC_SIDEBAR_CORNER = 10.dp
 private val GC_SIDEBAR_ICON_SIZE = 20.dp
+private val GC_EMPTY_STATE_ICON_BOX_SIZE = 56.dp
+private val GC_EMPTY_STATE_ICON_SIZE = 28.dp
+private val GC_EMPTY_STATE_PADDING = 24.dp
+private val GC_SLIDER_HEIGHT = 24.dp
+private val GC_ROW_CONTENT_SPACING = 12.dp
+private val GC_SEARCH_ICON_SIZE = 20.dp
+private val GC_SEARCH_CLEAR_SIZE = 18.dp
+private val GC_TEXT_SIZE_GLYPH = 11.sp
+private val GC_TEXT_SIZE_PILL = 12.sp
+private val GC_TEXT_SIZE_CAPSULE = 13.sp
+
+private const val GC_CARD_FOCUSED_BG_ALPHA = 0.95f
+private const val GC_CARD_UNFOCUSED_BG_ALPHA = 0.55f
+private const val GC_FOOTER_BG_ALPHA = 0.85f
+private const val GC_SIDEBAR_BG_ALPHA = 0.5f
+private const val GC_SIDEBAR_SELECTED_FOCUSED_ALPHA = 0.35f
+private const val GC_SIDEBAR_SELECTED_ALPHA = 0.2f
+private const val GC_ACCENT_TINT_ALPHA = 0.2f
+private const val GC_DESTRUCTIVE_BG_ALPHA = 0.15f
+private const val GC_DESTRUCTIVE_BORDER_ALPHA = 0.6f
+private const val GC_SWATCH_BORDER_ALPHA = 0.3f
 private const val GC_ANIM_DURATION_MS = 150
 private const val GC_INITIAL_FOCUS_DELAY_MS = 50L
 private const val GC_UNFOCUSED_MAX_LINES = 2
+private const val GC_DEFAULT_SLIDER_STEP = 0.05f
 
 /**
  * Standard gamepad button glyph descriptors.
@@ -156,7 +178,7 @@ fun GamePadGlyphBadge(
         Text(
             text = glyph.label,
             color = tint,
-            fontSize = 11.sp,
+            fontSize = GC_TEXT_SIZE_GLYPH,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )
@@ -215,7 +237,7 @@ fun PrimaryOverlayFooter(
             modifier
                 .fillMaxWidth()
                 .height(GC_FOOTER_HEIGHT)
-                .background(colors.surfaceVariant.copy(alpha = 0.85f))
+                .background(colors.surfaceVariant.copy(alpha = GC_FOOTER_BG_ALPHA))
                 .border(GC_DEFAULT_BORDER_WIDTH, colors.subduedBorder)
                 .padding(horizontal = GC_FOOTER_H_PADDING),
         verticalAlignment = Alignment.CenterVertically,
@@ -269,9 +291,9 @@ fun GamepadFocusCard(
     val animatedBgColor by animateColorAsState(
         targetValue =
             if (isFocused) {
-                colors.surface.copy(alpha = 0.95f)
+                colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
             } else {
-                colors.surface.copy(alpha = 0.55f)
+                colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
             },
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBgColor",
@@ -448,8 +470,8 @@ fun GamepadCardIcon(
     val colors = LocalAppColors.current
     val bg =
         when {
-            isDestructive -> colors.error.copy(alpha = 0.2f)
-            isFocused -> colors.accent.copy(alpha = 0.2f)
+            isDestructive -> colors.error.copy(alpha = GC_ACCENT_TINT_ALPHA)
+            isFocused -> colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA)
             else -> colors.surfaceVariant
         }
     val tint =
@@ -523,9 +545,9 @@ fun GamepadPill(
     val colors = LocalAppColors.current
     val pillBg =
         when {
-            isDestructive -> colors.error.copy(alpha = 0.15f)
+            isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
             isAccent -> colors.accent
-            isHighlighted -> colors.accent.copy(alpha = 0.2f)
+            isHighlighted -> colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA)
             else -> colors.surfaceVariant
         }
     val pillTextColor =
@@ -537,7 +559,7 @@ fun GamepadPill(
         }
     val pillBorderColor =
         when {
-            isDestructive -> colors.error.copy(alpha = 0.6f)
+            isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
             isHighlighted -> colors.accent
             else -> colors.subduedBorder
         }
@@ -554,7 +576,7 @@ fun GamepadPill(
         Text(
             text = text,
             color = pillTextColor,
-            fontSize = 12.sp,
+            fontSize = GC_TEXT_SIZE_PILL,
             fontWeight = FontWeight.Bold,
         )
     }
@@ -600,7 +622,7 @@ fun GamepadAdjustableCapsule(
     val colors = LocalAppColors.current
     val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
     val capsuleBorderWidth = if (isAdjusting) 2.dp else 1.dp
-    val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
+    val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA) else colors.surfaceVariant
     val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
     Row(
@@ -624,7 +646,7 @@ fun GamepadAdjustableCapsule(
         Text(
             text = valueText,
             color = if (isAdjusting) colors.accent else colors.onSurface,
-            fontSize = 13.sp,
+            fontSize = GC_TEXT_SIZE_CAPSULE,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 8.dp),
         )
@@ -661,7 +683,7 @@ fun GamepadCardRow(
                 isFocused = isFocused,
                 isDestructive = isDestructive,
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
         }
 
         GamepadCardText(
@@ -673,7 +695,7 @@ fun GamepadCardRow(
         )
 
         if (trailingContent != null) {
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
             trailingContent()
         }
     }
@@ -897,12 +919,12 @@ fun GamepadActionCard(
                             modifier =
                                 Modifier
                                     .background(
-                                        if (isDestructive) colors.error.copy(alpha = 0.15f) else colors.surfaceVariant,
+                                        if (isDestructive) colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA) else colors.surfaceVariant,
                                         RoundedCornerShape(GC_STATUS_PILL_CORNER),
                                     ).border(
                                         1.dp,
                                         if (isDestructive) {
-                                            colors.error.copy(alpha = 0.6f)
+                                            colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
                                         } else {
                                             colors.subduedBorder
                                         },
@@ -921,7 +943,7 @@ fun GamepadActionCard(
                                 Text(
                                     text = actionText,
                                     color = if (isDestructive) colors.error else colors.onSurface,
-                                    fontSize = 12.sp,
+                                    fontSize = GC_TEXT_SIZE_PILL,
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
@@ -961,7 +983,7 @@ fun GamepadColorPaletteGrid(
                         .background(color)
                         .border(
                             if (isSelected) 3.dp else 1.5.dp,
-                            if (isSelected) colors.onSurface else Color.White.copy(alpha = 0.3f),
+                            if (isSelected) colors.onSurface else Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA),
                             CircleShape,
                         ).primaryOverlayFocusable(
                             onClick = { onColorSelected(color) },
@@ -1017,9 +1039,9 @@ fun GamepadCategoryTile(
     val animatedBg by animateColorAsState(
         targetValue =
             when {
-                selected && isFocused -> colors.accent.copy(alpha = 0.35f)
-                selected -> colors.accent.copy(alpha = 0.2f)
-                isFocused -> colors.surface.copy(alpha = 0.95f)
+                selected && isFocused -> colors.accent.copy(alpha = GC_SIDEBAR_SELECTED_FOCUSED_ALPHA)
+                selected -> colors.accent.copy(alpha = GC_SIDEBAR_SELECTED_ALPHA)
+                isFocused -> colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
                 else -> Color.Transparent
             },
         label = "catBg",
@@ -1187,7 +1209,7 @@ fun GamepadTwoPaneScaffold(
                         Modifier
                             .width(sidebarWidth)
                             .fillMaxHeight()
-                            .background(colors.surfaceVariant.copy(alpha = 0.5f))
+                            .background(colors.surfaceVariant.copy(alpha = GC_SIDEBAR_BG_ALPHA))
                             .padding(8.dp)
                             .onKeyEvent { keyEvent ->
                                 if (keyEvent.type == KeyEventType.KeyDown &&
@@ -1297,7 +1319,7 @@ fun GamepadSliderCard(
     description: String? = null,
     icon: ImageVector? = null,
     valueLabel: String = "%.0f%%".format(value * 100f),
-    step: Float = 0.05f,
+    step: Float = GC_DEFAULT_SLIDER_STEP,
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
@@ -1361,7 +1383,7 @@ fun GamepadSliderCard(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(24.dp),
+                        .height(GC_SLIDER_HEIGHT),
             )
         }
     }
@@ -1417,7 +1439,7 @@ fun <T> GamepadSearchBar(
                     imageVector = Icons.Rounded.Search,
                     contentDescription = null,
                     tint = colors.onSurfaceSecondary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(GC_SEARCH_ICON_SIZE),
                 )
             },
             trailingIcon = {
@@ -1427,7 +1449,7 @@ fun <T> GamepadSearchBar(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = stringResource(R.string.gamepad_search_clear),
                             tint = colors.onSurfaceSecondary,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(GC_SEARCH_CLEAR_SIZE),
                         )
                     }
                 }
@@ -1526,14 +1548,14 @@ fun GamepadEmptyState(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(GC_EMPTY_STATE_PADDING),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier =
                 Modifier
-                    .size(56.dp)
+                    .size(GC_EMPTY_STATE_ICON_BOX_SIZE)
                     .background(colors.surfaceVariant, CircleShape)
                     .border(1.dp, colors.subduedBorder, CircleShape),
             contentAlignment = Alignment.Center,
@@ -1542,7 +1564,7 @@ fun GamepadEmptyState(
                 imageVector = icon,
                 contentDescription = null,
                 tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(GC_EMPTY_STATE_ICON_SIZE),
             )
         }
         Text(
