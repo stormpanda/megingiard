@@ -1298,5 +1298,12 @@ Open Settings to create a layout.</string>
     <!-- Settings Help Modal Entry -->
     <string name="help_settings_auto_update_desc">When enabled, Megingiard silently checks for new releases every 24 hours. If an update is found, you can backup your settings and open the release page in your default browser on the top display.</string>
     <string name="help_settings_check_updates_desc">Triggers a manual check for updates against the GitHub Releases repository immediately.</string>
+
+    <!-- Gamepad Components -->
+    <string name="gamepad_search_placeholder">Search…</string>
+    <string name="gamepad_search_clear">Clear</string>
+    <string name="gamepad_category_all">All</string>
+    <string name="gamepad_confirm_dialog_confirm">Confirm</string>
+    <string name="gamepad_confirm_dialog_cancel">Cancel</string>
 </resources>
 

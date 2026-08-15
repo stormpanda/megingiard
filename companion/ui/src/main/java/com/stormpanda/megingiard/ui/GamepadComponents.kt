@@ -67,6 +67,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.R
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -1373,7 +1375,7 @@ fun GamepadSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search...",
+    placeholder: String = stringResource(R.string.gamepad_search_placeholder),
 ) {
     GamepadSearchBar<String>(
         query = query,
@@ -1392,7 +1394,7 @@ fun <T> GamepadSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search...",
+    placeholder: String = stringResource(R.string.gamepad_search_placeholder),
     categories: List<T> = emptyList(),
     selectedCategory: T? = null,
     onCategorySelected: ((T?) -> Unit)? = null,
@@ -1423,7 +1425,7 @@ fun <T> GamepadSearchBar(
                     IconButton(onClick = { onQueryChange("") }) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
-                            contentDescription = "Clear",
+                            contentDescription = stringResource(R.string.gamepad_search_clear),
                             tint = colors.onSurfaceSecondary,
                             modifier = Modifier.size(18.dp),
                         )
@@ -1442,7 +1444,7 @@ fun <T> GamepadSearchBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 AppSelectableChip(
-                    text = "All",
+                    text = stringResource(R.string.gamepad_category_all),
                     selected = selectedCategory == null,
                     onClick = { onCategorySelected(null) },
                 )
@@ -1467,8 +1469,8 @@ fun GamepadConfirmDialog(
     message: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    confirmText: String = "Confirm",
-    cancelText: String = "Cancel",
+    confirmText: String = stringResource(R.string.gamepad_confirm_dialog_confirm),
+    cancelText: String = stringResource(R.string.gamepad_confirm_dialog_cancel),
     isDestructive: Boolean = false,
 ) {
     val colors = LocalAppColors.current
