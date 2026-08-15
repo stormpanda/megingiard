@@ -40,11 +40,14 @@ object RetroArchLplParser {
             val gameTitle = deriveGameTitle(label, path) ?: return null
             val systemId = resolveSystemId(path, corePath, coreName)
 
+            val romIdentifier = path.substringAfterLast('/').substringAfterLast('\\').takeIf { it.isNotBlank() }
+
             ActiveGameSession(
                 packageName = packageName,
-                romPath = path,
+                romPath = path.takeIf { it.startsWith("/") },
                 gameTitle = gameTitle,
                 systemId = systemId,
+                romIdentifier = romIdentifier,
                 coreOrBackend = coreName ?: corePath ?: "unknown",
             )
         } catch (e: Exception) {

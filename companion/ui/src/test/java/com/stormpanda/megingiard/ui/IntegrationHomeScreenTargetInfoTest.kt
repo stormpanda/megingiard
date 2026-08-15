@@ -43,6 +43,7 @@ class IntegrationHomeScreenTargetInfoTest {
                 hoveredPackage = "com.example.game",
                 hoveredAppLabel = "Hovered Title",
                 hoveredRomPath = "/roms/hovered.sfc",
+                hoveredRomIdentifier = "hovered.sfc",
                 hoveredSystemId = "snes",
                 activeSession = activeGameSession,
                 lastDetectedSession = lastGameSession,
@@ -54,6 +55,7 @@ class IntegrationHomeScreenTargetInfoTest {
         assertEquals("com.example.game", target.pkg)
         assertEquals("Hovered Title", target.label)
         assertEquals("/roms/hovered.sfc", target.romPath)
+        assertEquals("hovered.sfc", target.romIdentifier)
         assertEquals("snes", target.systemId)
     }
 

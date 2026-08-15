@@ -177,9 +177,11 @@ class MegingiardSettingsProvider : ContentProvider() {
                 val isActive = extras.getBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, false)
                 val focusedPackage = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE)
                 val romPath = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH)
+                val focusedRomIdentifier = extras.getString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_IDENTIFIER)
                 val hoveredPackage = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE)
                 val hoveredLabel = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_LABEL)
                 val hoveredRomPath = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_ROM_PATH)
+                val hoveredRomIdentifier = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_ROM_IDENTIFIER)
                 val hoveredSystemId = extras.getString(MegingiardIpcContract.COLUMN_HOVERED_SYSTEM_ID)
 
                 val hoveredPrimary =
@@ -200,9 +202,11 @@ class MegingiardSettingsProvider : ContentProvider() {
                     packageName = clientPackage,
                     focusedApp = focusedPackage,
                     focusedRomPath = romPath,
+                    focusedRomIdentifier = focusedRomIdentifier,
                     hoveredPackage = hoveredPackage,
                     hoveredLabel = hoveredLabel,
                     hoveredRomPath = hoveredRomPath,
+                    hoveredRomIdentifier = hoveredRomIdentifier,
                     hoveredSystemId = hoveredSystemId,
                     hoveredPrimaryColor = hoveredPrimary,
                     hoveredSecondaryColor = hoveredSecondary,

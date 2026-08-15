@@ -1,7 +1,7 @@
 package com.stormpanda.megingiard.session
+
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.catalog.RomManager
-import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 import java.util.Locale
 
 private const val TAG = "YuzuDetector"
@@ -103,20 +103,15 @@ object YuzuDetector : EmulatorDetector {
                         }?.label
             }
 
-        val resolvedTitle = knownTitle ?: "Switch Game ($lastTitleId)"
-        val resolvedRomPath =
-            when {
-                knownTitle != null && lastTitleId != null -> "$knownTitle ($lastTitleId)"
-                knownTitle != null -> knownTitle
-                lastTitleId != null -> lastTitleId
-                else -> ""
-            }
+        val resolvedTitle = knownTitle ?: "Switch Game (${lastTitleId ?: ""})".trim()
+        val resolvedRomIdentifier = lastTitleId ?: knownTitle
 
         return ActiveGameSession(
             packageName = packageName,
-            romPath = resolvedRomPath,
+            romPath = null,
             gameTitle = resolvedTitle,
             systemId = systemId,
+            romIdentifier = resolvedRomIdentifier,
             coreOrBackend = "yuzu",
             titleId = lastTitleId,
         )
