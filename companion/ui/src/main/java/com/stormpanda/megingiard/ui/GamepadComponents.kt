@@ -83,7 +83,6 @@ private val GC_CARD_CORNER = 12.dp
 private val GC_CARD_MIN_HEIGHT = 56.dp
 private val GC_CARD_H_PADDING = 16.dp
 private val GC_CARD_V_PADDING = 12.dp
-private val GC_CARD_SPACING = 8.dp
 private val GC_FOCUS_BORDER_WIDTH = 2.5.dp
 private val GC_DEFAULT_BORDER_WIDTH = 1.dp
 private val GC_FOCUS_ELEVATION = 6.dp
@@ -399,6 +398,7 @@ internal fun handleAdjustmentKeyEvent(
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER,
             -> {
+                AppLog.d(TAG, "handleAdjustmentKeyEvent: dismissing adjustment mode on keyCode=$keyCode")
                 onDismissAdjustment()
                 true
             }
@@ -406,6 +406,7 @@ internal fun handleAdjustmentKeyEvent(
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_DPAD_DOWN,
             -> {
+                AppLog.d(TAG, "handleAdjustmentKeyEvent: navigating away from adjustment mode on keyCode=$keyCode")
                 onDismissAdjustment()
                 false
             }
@@ -736,7 +737,9 @@ fun GamepadAdjustableCard(
             if (onClick != null) {
                 onClick()
             } else {
-                isAdjusting = !isAdjusting
+                val nextState = !isAdjusting
+                AppLog.d(TAG, "GamepadAdjustableCard: '$title' adjustment mode=$nextState")
+                isAdjusting = nextState
             }
         },
         enabled = enabled,
@@ -1115,6 +1118,7 @@ fun GamepadTwoPaneScaffold(
         if (target != null) {
             try {
                 target.requestFocus()
+                AppLog.d(TAG, "transferFocusToDeck: restored focus to last focused content deck item")
                 handled = true
             } catch (_: IllegalStateException) {
                 lastFocusedContentRequester = null
@@ -1123,6 +1127,7 @@ fun GamepadTwoPaneScaffold(
         if (!handled) {
             try {
                 firstContentRequester.requestFocus()
+                AppLog.d(TAG, "transferFocusToDeck: focused first content deck item")
             } catch (_: IllegalStateException) {
                 try {
                     activeCategoryRequester.requestFocus()
@@ -1144,6 +1149,7 @@ fun GamepadTwoPaneScaffold(
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 activeCategoryRequester.requestFocus()
+                AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
             } catch (_: Exception) {
                 // Initial focus fallback
             }
@@ -1151,6 +1157,7 @@ fun GamepadTwoPaneScaffold(
 
         LaunchedEffect(Unit) {
             PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
+                AppLog.d(TAG, "GamepadTwoPaneScaffold: focusRecoveryEvent keyCode=$keyCode")
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
