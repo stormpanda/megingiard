@@ -127,6 +127,7 @@ import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
+import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.paletteFor
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.CoroutineScope
@@ -847,6 +848,18 @@ class MirrorPresentation(
                                             val active = MegingiardAccessibilityService.isEnabled(context)
                                             AppStateManager.setAccessibilityActive(active)
                                             AppStateManager.setPrivdPromptDismissed(true)
+                                        },
+                                    )
+                                }
+
+                                if (isWizardActive) {
+                                    OnboardingWizardDialog(
+                                        overlayAtBottom = overlayAtBottom,
+                                        onDismiss = {
+                                            OnboardingWizardManager.finishWizard()
+                                            val active = MegingiardAccessibilityService.isEnabled(context)
+                                            AppStateManager.setAccessibilityActive(active)
+                                            AppStateManager.resetPrivdPromptState()
                                         },
                                     )
                                 }

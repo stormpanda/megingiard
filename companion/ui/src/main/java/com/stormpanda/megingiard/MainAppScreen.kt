@@ -532,7 +532,7 @@ fun MainAppScreen() {
             }
         }
 
-        if (isWizardActive && !isDualScreen) {
+        if (isWizardActive) {
             OnboardingWizardDialog(
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {

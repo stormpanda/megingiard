@@ -23,9 +23,7 @@ import com.stormpanda.megingiard.macropad.MacroTimelineEditor
 import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
-import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
-import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 
 private const val PMH_BUMPER_HINT_TABS = "LB / RB: Tabs"
 
@@ -240,14 +238,6 @@ fun PrimaryModalHost(
                     )
                 }
             }
-        }
-
-        PrimaryModalType.ONBOARDING_WIZARD -> {
-            val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
-            OnboardingWizardDialog(
-                overlayAtBottom = overlayAtBottom,
-                onDismiss = onDismiss,
-            )
         }
 
         PrimaryModalType.HELP_TUTORIAL -> {

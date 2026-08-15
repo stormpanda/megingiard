@@ -5,7 +5,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.onboarding.OnboardingStepId
 import com.stormpanda.megingiard.onboarding.OnboardingStepState
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,7 +63,6 @@ object OnboardingWizardManager {
         _activeStepIndex.value = 0
         updateStepStates(0)
         _isWizardActive.value = true
-        AppStateManager.openPrimaryModal(PrimaryModalType.ONBOARDING_WIZARD)
     }
 
     fun nextStep() {
@@ -88,28 +86,20 @@ object OnboardingWizardManager {
     }
 
     fun skipWizard() {
-        AppLog.d(TAG, "Dismissing onboarding wizard without storing completion")
+        AppLog.d(TAG, "Dismissing onboarding wizard and marking completed")
+        SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         _isWizardActive.value = false
-        if (AppStateManager.activePrimaryModal.value?.type == PrimaryModalType.ONBOARDING_WIZARD) {
-            AppStateManager.closePrimaryModal()
-        }
     }
 
     fun finishWizard() {
         AppLog.d(TAG, "Finishing onboarding wizard via explicit Finish button")
         SettingsManager.setWelcomeTourCompletedVersion(SettingsManager.CURRENT_WELCOME_TOUR_VERSION)
         _isWizardActive.value = false
-        if (AppStateManager.activePrimaryModal.value?.type == PrimaryModalType.ONBOARDING_WIZARD) {
-            AppStateManager.closePrimaryModal()
-        }
     }
 
     fun resetWizardForTest() {
         _activeStepIndex.value = 0
         _isWizardActive.value = false
-        if (AppStateManager.activePrimaryModal.value?.type == PrimaryModalType.ONBOARDING_WIZARD) {
-            AppStateManager.closePrimaryModal()
-        }
         updateStepStates(0)
     }
 
