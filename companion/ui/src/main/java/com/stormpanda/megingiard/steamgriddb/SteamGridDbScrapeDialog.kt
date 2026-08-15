@@ -532,7 +532,7 @@ internal fun SteamGridDbScrapeDialog(
                         GamepadEmptyState(
                             icon = Icons.Rounded.Search,
                             title = stringResource(R.string.steamgriddb_scrape_no_games_found),
-                            subtitle = "Try searching for a different game title",
+                            description = "Try searching for a different game title",
                         )
                     }
                 } else if (imagesList.isEmpty() && selectedGame != null) {
@@ -540,7 +540,7 @@ internal fun SteamGridDbScrapeDialog(
                         GamepadEmptyState(
                             icon = Icons.Rounded.Image,
                             title = stringResource(R.string.steamgriddb_scrape_no_images_found),
-                            subtitle = "No images found for this category",
+                            description = "No images found for this category",
                         )
                     }
                 } else {

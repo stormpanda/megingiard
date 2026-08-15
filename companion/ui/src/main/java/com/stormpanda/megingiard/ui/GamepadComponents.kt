@@ -1284,7 +1284,7 @@ fun GamepadSliderCard(
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    subtitle: String? = null,
+    description: String? = null,
     icon: ImageVector? = null,
     valueLabel: String = "%.0f%%".format(value * 100f),
     step: Float = 0.05f,
@@ -1326,7 +1326,7 @@ fun GamepadSliderCard(
         ) {
             GamepadCardRow(
                 title = title,
-                description = subtitle,
+                description = description,
                 icon = icon,
                 isFocused = focused,
                 trailingContent = {
@@ -1507,7 +1507,7 @@ fun GamepadEmptyState(
     icon: ImageVector,
     title: String,
     modifier: Modifier = Modifier,
-    subtitle: String? = null,
+    description: String? = null,
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
@@ -1541,9 +1541,9 @@ fun GamepadEmptyState(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
-        if (subtitle != null) {
+        if (description != null) {
             Text(
-                text = subtitle,
+                text = description,
                 color = colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,

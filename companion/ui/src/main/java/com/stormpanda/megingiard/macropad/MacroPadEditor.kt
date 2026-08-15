@@ -1195,7 +1195,7 @@ private fun EditorTwoPaneBody(
                     GamepadEmptyState(
                         icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                         title = "No macros created yet",
-                        subtitle = "Create and edit input macro sequences",
+                        description = "Create and edit input macro sequences",
                         actionText = "Create Macro",
                         onAction = onManageMacros,
                     )

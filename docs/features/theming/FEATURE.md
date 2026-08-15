@@ -367,7 +367,7 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | `GamepadSliderCard` | Two-tier focusable slider card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (`[Left/Right]` adjusts value, `[B]` exits). | Deadzone, opacity, volume sliders |
 | `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
 | `GamepadConfirmDialog` | Standard modal confirmation dialog with gamepad controller hints and destructive styling. | `InlineConfirmDeleteOverlay`, step delete |
-| `GamepadEmptyState` | Empty state layout with circular icon backdrop, title, subtitle, and optional call-to-action button. | Empty search results, empty macro/step lists |
+| `GamepadEmptyState` | Empty state layout with circular icon backdrop, title, description, and optional call-to-action button. | Empty search results, empty macro/step lists |
 
 ### Two-Tier Handheld Focus & Navigation Model
 

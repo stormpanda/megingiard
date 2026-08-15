@@ -473,7 +473,7 @@ internal fun MacroTimelineEditor(
                         GamepadEmptyState(
                             icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                             title = stringResource(R.string.macropad_macro_no_steps),
-                            subtitle = "Add a step below or record touch/gamepad inputs",
+                            description = "Add a step below or record touch/gamepad inputs",
                             actionText = stringResource(R.string.macropad_macro_add_step),
                             onAction = { showAddStep = true },
                         )
@@ -537,7 +537,7 @@ internal fun MacroTimelineEditor(
                         GamepadEmptyState(
                             icon = Icons.Rounded.Timeline,
                             title = stringResource(R.string.macropad_macro_no_steps),
-                            subtitle = "Add a step or record input sequences",
+                            description = "Add a step or record input sequences",
                             actionText = stringResource(R.string.macropad_macro_add_step),
                             onAction = { showAddStep = true },
                         )
