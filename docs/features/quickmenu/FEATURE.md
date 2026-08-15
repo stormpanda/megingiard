@@ -181,6 +181,15 @@ interactive overlays (`isFullscreenKeyboardActive`, `isFullscreenMouseActive`, `
 intentionally excluded since the Quick Menu Bar is hidden entirely while the editor is open. The edge-swipe
 handler reads `isAnyModalActive` to decide whether to close the active modal instead of toggling the Quick Menu.
 
+### Primary Screen Overlay Gamepad Navigation
+
+Dialogs and configuration overlays presented on the primary display (Display 0) support full physical gamepad navigation:
+- **Window Focus Management:** `PrimaryOverlayManager` requests window input focus post-attachment (`view.post { view.requestFocus() }`) so hardware input events route to the overlay rather than background apps.
+- **Analog Stick & Hat Switch Translation:** `PrimaryOverlayInputBridge` processes `MotionEvent` axis streams (`AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y`) with a $0.5f$ deadzone and $180\text{ ms}$ repeat throttling, synthesizing discrete `KEYCODE_DPAD_*` key events for 2D focus traversal.
+- **Button A & Enter Activation:** `Modifier.primaryOverlayFocusable` ensures that physical controller `KEYCODE_BUTTON_A` (96) and `KEYCODE_DPAD_CENTER` trigger item clicks across rows, buttons, and selectable chips.
+- **Bumper Tab Switching:** Pressing `[L1]` (102) or `[R1]` (103) dispatches `BumperDirection.PREV` / `NEXT` events via `PrimaryOverlayInputBridge.bumperEvents`, cycling active tabs and category filters in `GlobalSettingsScreen`.
+- **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers the back-press dispatcher or closes active modals.
+
 ### Source Files
 
 | File | Responsibility |
@@ -190,6 +199,9 @@ handler reads `isAnyModalActive` to decide whether to close the active modal ins
 | [QuickMenuComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
 | [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
 | [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
+| [PrimaryOverlayContainer.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen elevated modal dialog container with bezel border, bumper badges, and auto-focus initialization |
+| [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
+| [PrimaryOverlayInputBridge.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
 | [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
 | [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
 | [SwipeGestureProgress.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |

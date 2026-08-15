@@ -74,12 +74,14 @@ import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppSettingsRow
 import com.stormpanda.megingiard.ui.AppTextField
+import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -158,6 +160,32 @@ fun GlobalSettingsScreen(
     }
 
     var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
+
+    val filterList =
+        remember {
+            listOf(
+                null,
+                SettingsSectionFilter.GENERAL,
+                SettingsSectionFilter.INPUT,
+                SettingsSectionFilter.APPEARANCE,
+                SettingsSectionFilter.DATA,
+                SettingsSectionFilter.CONFIGURATION,
+                SettingsSectionFilter.UPDATES,
+                SettingsSectionFilter.DIAGNOSTICS,
+            )
+        }
+
+    LaunchedEffect(Unit) {
+        PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
+            val currentIndex = filterList.indexOf(selectedSectionFilter).coerceAtLeast(0)
+            val nextIndex =
+                when (direction) {
+                    BumperDirection.PREV -> (currentIndex - 1 + filterList.size) % filterList.size
+                    BumperDirection.NEXT -> (currentIndex + 1) % filterList.size
+                }
+            selectedSectionFilter = filterList[nextIndex]
+        }
+    }
 
     Box(
         modifier =

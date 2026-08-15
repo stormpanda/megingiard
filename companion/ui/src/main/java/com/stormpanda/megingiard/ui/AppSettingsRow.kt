@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,6 +20,7 @@ private const val TAG = "AppSettingsRow"
 private val SETTINGS_ROW_H_PADDING = 16.dp
 private val SETTINGS_ROW_V_PADDING = 12.dp
 private val SETTINGS_ROW_MIN_HEIGHT = 48.dp
+private val SETTINGS_ROW_CORNER = 8.dp
 
 /**
  * Transparent settings row container. Provides consistent horizontal / vertical padding,
@@ -42,7 +44,10 @@ fun AppSettingsRow(
 ) {
     val clickModifier =
         if (onClick != null) {
-            Modifier.clickable(enabled = enabled, onClick = onClick)
+            Modifier.primaryOverlayFocusable(
+                onClick = if (enabled) onClick else null,
+                shape = RoundedCornerShape(SETTINGS_ROW_CORNER),
+            )
         } else {
             Modifier
         }

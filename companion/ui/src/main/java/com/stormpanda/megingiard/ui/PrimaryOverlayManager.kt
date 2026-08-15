@@ -188,20 +188,56 @@ object PrimaryOverlayManager {
                     isFocusable = true
                     isFocusableInTouchMode = true
 
+                    setOnGenericMotionListener { _, motionEvent ->
+                        PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { dpadKeyCode ->
+                            val down = KeyEvent(KeyEvent.ACTION_DOWN, dpadKeyCode)
+                            val up = KeyEvent(KeyEvent.ACTION_UP, dpadKeyCode)
+                            dispatchKeyEvent(down)
+                            dispatchKeyEvent(up)
+                        }
+                    }
+
                     setOnKeyListener { _, keyCode, event ->
-                        if (event.action == KeyEvent.ACTION_DOWN &&
-                            (keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_BACK)
-                        ) {
-                            AppLog.i(TAG, "Back / B-Button pressed in PrimaryOverlay -> handling back")
-                            if (owner.onBackPressedDispatcher.hasEnabledCallbacks()) {
-                                owner.onBackPressedDispatcher.onBackPressed()
-                            } else {
-                                AppStateManager.closePrimaryModal()
-                                AppStateManager.setActiveCropCutoutId(null)
+                        when {
+                            event.action == KeyEvent.ACTION_DOWN &&
+                                (
+                                    keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_BACK ||
+                                        keyCode == KeyEvent.KEYCODE_ESCAPE
+                                ) -> {
+                                AppLog.i(TAG, "Back / B-Button pressed in PrimaryOverlay -> handling back")
+                                if (owner.onBackPressedDispatcher.hasEnabledCallbacks()) {
+                                    owner.onBackPressedDispatcher.onBackPressed()
+                                } else {
+                                    AppStateManager.closePrimaryModal()
+                                    AppStateManager.setActiveCropCutoutId(null)
+                                }
+                                true
                             }
-                            true
-                        } else {
-                            false
+
+                            event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BUTTON_L1 -> {
+                                AppLog.d(TAG, "L1 pressed -> Bumper PREV")
+                                PrimaryOverlayInputBridge.sendBumper(BumperDirection.PREV)
+                                true
+                            }
+
+                            event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BUTTON_R1 -> {
+                                AppLog.d(TAG, "R1 pressed -> Bumper NEXT")
+                                PrimaryOverlayInputBridge.sendBumper(BumperDirection.NEXT)
+                                true
+                            }
+
+                            event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BUTTON_A -> {
+                                AppLog.d(TAG, "Button A pressed -> Forwarding as DPAD_CENTER")
+                                val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+                                val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
+                                dispatchKeyEvent(dpadCenterDown)
+                                dispatchKeyEvent(dpadCenterUp)
+                                true
+                            }
+
+                            else -> {
+                                false
+                            }
                         }
                     }
 
@@ -270,7 +306,9 @@ object PrimaryOverlayManager {
                 }
 
             wm.addView(view, params)
-            view.requestFocus()
+            view.post {
+                view.requestFocus()
+            }
             overlayView = view
             AppLog.i(TAG, "Primary overlay window successfully attached to Display 0 WindowManager (non-activity)")
         } catch (e: Exception) {
@@ -288,6 +326,7 @@ object PrimaryOverlayManager {
         } catch (e: Exception) {
             AppLog.e(TAG, "Error removing primary overlay view: ${e.message}", e)
         } finally {
+            PrimaryOverlayInputBridge.resetJoystickState()
             overlayView = null
             overlayWindowManager = null
             lifecycleOwner?.destroy()

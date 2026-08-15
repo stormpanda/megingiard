@@ -27,10 +27,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -38,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
+import kotlinx.coroutines.delay
 
 private val POC_CARD_CORNER = 16.dp
 private val POC_CARD_ELEVATION = 16.dp
@@ -79,10 +83,33 @@ fun PrimaryOverlayContainer(
     icon: ImageVector? = null,
     categorySubtitle: String? = null,
     bumperHint: String? = null,
+    onBumperPrev: (() -> Unit)? = null,
+    onBumperNext: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
+    val contentFocusRequester = remember { FocusRequester() }
+
+    if (onBumperPrev != null || onBumperNext != null) {
+        LaunchedEffect(Unit) {
+            PrimaryOverlayInputBridge.bumperEvents.collect { dir ->
+                when (dir) {
+                    BumperDirection.PREV -> onBumperPrev?.invoke()
+                    BumperDirection.NEXT -> onBumperNext?.invoke()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        delay(50L)
+        try {
+            contentFocusRequester.requestFocus()
+        } catch (_: Exception) {
+            // Focus hierarchy initialized
+        }
+    }
 
     Box(
         modifier =
@@ -196,7 +223,8 @@ fun PrimaryOverlayContainer(
                             Modifier
                                 .size(POC_CLOSE_BTN_SIZE)
                                 .background(colors.surface, CircleShape)
-                                .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape),
+                                .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape)
+                                .primaryOverlayFocusable(onClick = onDismiss, shape = CircleShape),
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -212,7 +240,8 @@ fun PrimaryOverlayContainer(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .weight(1f),
+                            .weight(1f)
+                            .focusRequester(contentFocusRequester),
                 ) {
                     content()
                 }

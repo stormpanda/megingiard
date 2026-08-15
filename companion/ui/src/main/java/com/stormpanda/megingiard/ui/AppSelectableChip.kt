@@ -83,8 +83,10 @@ fun AppSelectableChip(
                     (if (selected) colors.accent else colors.controlOverlayBorder)
                         .copy(alpha = effectiveAlpha),
                     RoundedCornerShape(CHIP_CORNER),
-                ).clickable(enabled = enabled, onClick = onClick)
-                .padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
+                ).primaryOverlayFocusable(
+                    onClick = if (enabled) onClick else null,
+                    shape = RoundedCornerShape(CHIP_CORNER),
+                ).padding(horizontal = CHIP_H_PADDING, vertical = CHIP_V_PADDING),
     ) {
         if (leadingIcon != null || trailingContent != null) {
             Row(

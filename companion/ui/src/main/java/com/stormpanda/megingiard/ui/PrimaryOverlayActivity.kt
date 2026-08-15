@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.ui
 
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -103,15 +104,51 @@ class PrimaryOverlayActivity : ComponentActivity() {
         }
     }
 
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (PrimaryOverlayInputBridge.processGenericMotionEvent(event) { dpadKeyCode ->
+                val down = KeyEvent(KeyEvent.ACTION_DOWN, dpadKeyCode)
+                val up = KeyEvent(KeyEvent.ACTION_UP, dpadKeyCode)
+                dispatchKeyEvent(down)
+                dispatchKeyEvent(up)
+            }
+        ) {
+            return true
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
     override fun onKeyDown(
         keyCode: Int,
         event: KeyEvent?,
     ): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_BACK) {
-            AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> closing primary modal")
-            AppStateManager.closePrimaryModal()
-            AppStateManager.setActiveCropCutoutId(null)
-            return true
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
+                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> closing primary modal")
+                AppStateManager.closePrimaryModal()
+                AppStateManager.setActiveCropCutoutId(null)
+                return true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_L1 -> {
+                AppLog.d(TAG, "onKeyDown: L1 pressed -> Bumper PREV")
+                PrimaryOverlayInputBridge.sendBumper(BumperDirection.PREV)
+                return true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_R1 -> {
+                AppLog.d(TAG, "onKeyDown: R1 pressed -> Bumper NEXT")
+                PrimaryOverlayInputBridge.sendBumper(BumperDirection.NEXT)
+                return true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                AppLog.d(TAG, "onKeyDown: Button A pressed -> Forwarding as DPAD_CENTER")
+                val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+                val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
+                dispatchKeyEvent(dpadCenterDown)
+                dispatchKeyEvent(dpadCenterUp)
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
