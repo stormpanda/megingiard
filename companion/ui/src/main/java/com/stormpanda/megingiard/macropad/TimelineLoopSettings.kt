@@ -50,7 +50,7 @@ internal fun MtLoopSection(
     ) {
         GamepadToggleCard(
             title = stringResource(R.string.macropad_macro_loop_toggle),
-            description = "Continuously restart execution from step 1 after sequence finishes",
+            description = stringResource(R.string.macro_loop_continuous_desc),
             checked = loopEnabled,
             icon = Icons.Rounded.Repeat,
             onCheckedChange = onLoopEnabledChange,
@@ -59,7 +59,7 @@ internal fun MtLoopSection(
         if (loopEnabled) {
             GamepadStepperCard(
                 title = stringResource(R.string.macropad_macro_loop_pause_label),
-                description = "Delay before starting next cycle",
+                description = stringResource(R.string.macro_loop_pause_desc),
                 valueText = "$loopPauseMs ms",
                 icon = Icons.Rounded.Timer,
                 onDecrement = {
@@ -103,7 +103,7 @@ internal fun MtRandomizationSection(
         if (randomizeEnabled) {
             GamepadStepperCard(
                 title = stringResource(R.string.macropad_macro_randomize_range_label),
-                description = "Random jitter applied to start times and tap lengths",
+                description = stringResource(R.string.macro_loop_randomize_desc),
                 valueText = "±$randomizeRangeMs ms",
                 icon = Icons.Rounded.Shuffle,
                 onDecrement = {

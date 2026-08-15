@@ -306,7 +306,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.privd_title),
                     description = stringResource(R.string.help_settings_privd_desc),
-                    actionText = "Setup",
+                    actionText = stringResource(R.string.gamepad_action_setup),
                     icon = Icons.Rounded.Security,
                     onClick = { showPrivdWizard = true },
                 )
@@ -342,11 +342,11 @@ fun GlobalSettingsScreen(
                     title = stringResource(R.string.settings_steamgriddb_token),
                     description =
                         if (steamGridDbApiToken.isNotBlank()) {
-                            "API Token Configured (${steamGridDbApiToken.take(6)}...)"
+                            stringResource(R.string.settings_steamgriddb_token_configured, steamGridDbApiToken.take(6))
                         } else {
                             stringResource(R.string.settings_steamgriddb_token_desc)
                         },
-                    actionText = "Edit",
+                    actionText = stringResource(R.string.gamepad_action_edit),
                     icon = Icons.Rounded.Key,
                     onClick = { showSteamGridDbDialog = true },
                 )
@@ -372,8 +372,8 @@ fun GlobalSettingsScreen(
 
                 GamepadActionCard(
                     title = stringResource(R.string.privd_deadzone_title),
-                    description = "Left: $deadzoneLeft% • Right: $deadzoneRight%",
-                    actionText = "Deadzones",
+                    description = stringResource(R.string.privd_deadzone_summary, deadzoneLeft, deadzoneRight),
+                    actionText = stringResource(R.string.gamepad_action_deadzones),
                     icon = Icons.Rounded.Games,
                     onClick = { showDeadzoneDialog = true },
                 )
@@ -426,9 +426,9 @@ fun GlobalSettingsScreen(
                     }
 
                     GamepadActionCard(
-                        title = "Custom Accent Color Wheel",
-                        description = "Pick any custom RGB/HSV accent color",
-                        actionText = "Wheel",
+                        title = stringResource(R.string.settings_accent_wheel_title),
+                        description = stringResource(R.string.settings_accent_wheel_desc),
+                        actionText = stringResource(R.string.gamepad_action_wheel),
                         icon = Icons.Rounded.Colorize,
                         onClick = { showColorPicker = true },
                     )
@@ -463,7 +463,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.settings_restore_defaults),
                     description = stringResource(R.string.settings_restore_defaults_desc),
-                    actionText = "Restore",
+                    actionText = stringResource(R.string.gamepad_action_restore),
                     isDestructive = true,
                     icon = Icons.Rounded.Restore,
                     onClick = { showRestoreDefaultsConfirm = true },
@@ -473,7 +473,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.settings_reset_tutorials),
                     description = stringResource(R.string.settings_reset_tutorials_desc),
-                    actionText = "Reset",
+                    actionText = stringResource(R.string.gamepad_action_reset),
                     icon = Icons.AutoMirrored.Rounded.HelpOutline,
                     onClick = {
                         viewModel.resetAllTutorials()
@@ -499,7 +499,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.settings_config_export),
                     description = stringResource(R.string.help_settings_export_desc),
-                    actionText = "Export",
+                    actionText = stringResource(R.string.gamepad_action_export),
                     icon = Icons.Rounded.FileDownload,
                     onClick = { showExportMetadataDialog = true },
                     modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION),
@@ -507,8 +507,8 @@ fun GlobalSettingsScreen(
 
                 GamepadActionCard(
                     title = stringResource(R.string.settings_config_import),
-                    description = "Restore configuration from an existing .mgrd backup",
-                    actionText = "Restore",
+                    description = stringResource(R.string.settings_config_import_card_desc),
+                    actionText = stringResource(R.string.gamepad_action_restore),
                     icon = Icons.Rounded.FileUpload,
                     onClick = { showRestoreBackupDialog = true },
                 )
@@ -516,7 +516,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.settings_config_export_profile),
                     description = stringResource(R.string.help_settings_export_profile_desc),
-                    actionText = "Export",
+                    actionText = stringResource(R.string.gamepad_action_export),
                     icon = Icons.Rounded.Share,
                     onClick = { showProfileExportDialog = true },
                 )
@@ -524,7 +524,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.settings_add_to_obtainium),
                     description = stringResource(R.string.help_settings_add_to_obtainium_desc),
-                    actionText = "Add",
+                    actionText = stringResource(R.string.gamepad_action_add),
                     icon = Icons.Rounded.Download,
                     onClick = {
                         val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
@@ -577,11 +577,18 @@ fun GlobalSettingsScreen(
                     title = stringResource(R.string.settings_check_for_updates),
                     description =
                         if (updateAvailable) {
-                            "Update available: ${latestReleaseInfo?.tagName}"
+                            stringResource(R.string.settings_update_available_tag, latestReleaseInfo?.tagName ?: "")
                         } else {
-                            "Version ${BuildConfig.VERSION_NAME}"
+                            stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME)
                         },
-                    actionText = if (isCheckingUpdates) "Checking..." else "Check",
+                    actionText =
+                        if (isCheckingUpdates) {
+                            stringResource(
+                                R.string.gamepad_action_checking,
+                            )
+                        } else {
+                            stringResource(R.string.gamepad_action_check)
+                        },
                     icon = Icons.Rounded.Refresh,
                     onClick = { viewModel.checkForUpdatesManually() },
                 )
@@ -612,7 +619,7 @@ fun GlobalSettingsScreen(
                 GamepadActionCard(
                     title = stringResource(R.string.settings_save_log_report),
                     description = stringResource(R.string.help_settings_save_log_desc),
-                    actionText = "Save",
+                    actionText = stringResource(R.string.gamepad_action_save),
                     icon = Icons.Rounded.SaveAlt,
                     onClick = { viewModel.requestSaveLogReport() },
                 )

@@ -1299,17 +1299,148 @@ Open Settings to create a layout.</string>
     <string name="help_settings_auto_update_desc">When enabled, Megingiard silently checks for new releases every 24 hours. If an update is found, you can backup your settings and open the release page in your default browser on the top display.</string>
     <string name="help_settings_check_updates_desc">Triggers a manual check for updates against the GitHub Releases repository immediately.</string>
 
-    <!-- Gamepad Components -->
+    <!-- Gamepad Action Buttons -->
+    <string name="gamepad_action_setup">Setup</string>
+    <string name="gamepad_action_edit">Edit</string>
+    <string name="gamepad_action_deadzones">Deadzones</string>
+    <string name="gamepad_action_wheel">Wheel</string>
+    <string name="gamepad_action_color_wheel">Color Wheel</string>
+    <string name="gamepad_action_restore">Restore</string>
+    <string name="gamepad_action_reset">Reset</string>
+    <string name="gamepad_action_export">Export</string>
+    <string name="gamepad_action_add">Add</string>
+    <string name="gamepad_action_save">Save</string>
+    <string name="gamepad_action_check">Check</string>
+    <string name="gamepad_action_checking">Checking…</string>
+    <string name="gamepad_action_new">New</string>
+    <string name="gamepad_action_duplicate">Duplicate</string>
+    <string name="gamepad_action_reorder">Reorder</string>
+    <string name="gamepad_action_delete">Delete</string>
+    <string name="gamepad_action_appearance">Appearance</string>
+    <string name="gamepad_action_background">Background</string>
+    <string name="gamepad_action_touchpad">Touchpad</string>
+    <string name="gamepad_action_copy">Copy</string>
+    <string name="gamepad_action_search">Search</string>
+    <string name="gamepad_action_browse">Browse</string>
+    <string name="gamepad_action_crop">Crop</string>
+    <string name="gamepad_action_open">Open</string>
+    <string name="gamepad_action_create_macro">Create Macro</string>
+    <string name="gamepad_action_clear">Clear</string>
+    <string name="gamepad_action_choose_app">Choose App</string>
+    <string name="gamepad_action_rename">Rename</string>
+
+    <!-- Gamepad Settings Screen -->
+    <string name="privd_deadzone_summary">Left: %1$d%% • Right: %2$d%%</string>
+    <string name="settings_steamgriddb_token_configured">API Token Configured (%1$s…)</string>
+    <string name="settings_accent_wheel_title">Custom Accent Color Wheel</string>
+    <string name="settings_accent_wheel_desc">Pick any custom RGB/HSV accent color</string>
+    <string name="settings_config_import_card_desc">Restore configuration from an existing .mgrd backup</string>
+    <string name="settings_update_available_tag">Update available: %1$s</string>
+    <string name="settings_app_version">Version %1$s</string>
+
+    <!-- MacroPad Editor Screen -->
+    <string name="macropad_editor_active_profile_desc">Current active profile</string>
+    <string name="macropad_editor_new_profile_desc">Create a new profile with custom layouts and macros</string>
+    <string name="macropad_editor_edit_profile_desc">Rename profile or edit app package association</string>
+    <string name="macropad_editor_duplicate_profile_desc">Create a full copy of \'%1$s\' with all layouts and assets</string>
+    <string name="macropad_editor_reorder_profiles_desc">Change the display order of profiles in the switcher</string>
+    <string name="macropad_editor_delete_profile_desc">Permanently delete \'%1$s\' and all its layouts</string>
+    <string name="macropad_editor_active_layout_desc">Active layout in \'%1$s\'</string>
+    <string name="macropad_editor_none">None</string>
+    <string name="macropad_editor_new_layout_desc">Add a new button layout to this profile</string>
+    <string name="macropad_editor_appearance_title">Layout Appearance &amp; Colors</string>
+    <string name="macropad_editor_appearance_desc">Customize button text, border, and background color styling</string>
+    <string name="macropad_editor_background_desc">Set background artwork, scaling, dimming, and mask effects</string>
+    <string name="macropad_editor_touchpad_desc">Configure background touchpad and touch projection cutouts</string>
+    <string name="macropad_editor_duplicate_layout_desc">Duplicate active layout inside this profile</string>
+    <string name="macropad_editor_copy_layout_desc">Copy this layout to another profile</string>
+    <string name="macropad_editor_reorder_layouts_desc">Change the order of layouts in this profile</string>
+    <string name="macropad_editor_delete_layout_desc">Delete \'%1$s\' from this profile</string>
+    <string name="macropad_editor_section_canvas_controls">Canvas Controls</string>
+    <string name="macropad_editor_lock_canvas">Lock Canvas Dragging</string>
+    <string name="macropad_editor_canvas_locked_desc">Canvas is locked (buttons cannot be accidentally moved)</string>
+    <string name="macropad_editor_canvas_unlocked_desc">Drag buttons freely on the canvas to reposition</string>
+    <string name="macropad_editor_snap_grid">Snap Grid Mode</string>
+    <string name="macropad_editor_snap_grid_desc">Display alignment grid on canvas</string>
+    <string name="macropad_editor_grid_off_label">Off</string>
+    <string name="macropad_editor_grid_rectangular_label">Rectangular</string>
+    <string name="macropad_editor_grid_radial_label">Radial</string>
+    <string name="macropad_editor_add_button_card_desc">Create a new button and place it on this canvas</string>
+    <string name="macropad_editor_create_button_desc">Create and configure a new interactive button</string>
+    <string name="macropad_editor_no_buttons_in_layout">No buttons in this layout yet.</string>
+    <string name="macropad_editor_open_timeline_title">Open Macro Timeline Editor</string>
+    <string name="macropad_editor_open_timeline_desc">Create, record, and edit timed input macro sequences</string>
+    <string name="macropad_editor_no_macros_title">No macros created yet</string>
+    <string name="macropad_editor_no_macros_desc">Create and edit input macro sequences</string>
+    <string name="macropad_macro_step_count_single">1 step</string>
+    <string name="macropad_macro_step_count_multiple">%1$d steps</string>
+
+    <!-- Layout Settings Editor -->
+    <string name="macropad_editor_section_layout_identity">Layout Identity</string>
+    <string name="macropad_editor_color_palette_desc">Choose default, theme accent, or custom palette</string>
+    <string name="macropad_editor_text_color_title">Text Custom Color / Palette</string>
+    <string name="macropad_editor_border_color_title">Border Custom Color / Palette</string>
+    <string name="macropad_editor_bg_color_title">Background Custom Color / Palette</string>
+    <string name="macropad_editor_color_wheel_desc">Open color wheel or recent color palette</string>
+    <string name="macropad_editor_border_style_desc">Button edge ring outline styling</string>
+    <string name="macropad_editor_fill_style_desc">Button cap fill background tint</string>
+    <string name="macropad_editor_section_visibility_behavior">Visibility &amp; Behavior</string>
+
+    <!-- Background Settings Editor -->
+    <string name="macropad_editor_section_artwork_source">Artwork Source</string>
+    <string name="macropad_editor_bg_steamgriddb_desc">Search game banners and posters from SteamGridDB</string>
+    <string name="macropad_editor_bg_storage_desc">Pick an image from your device storage</string>
+    <string name="macropad_editor_section_adjustments_effects">Adjustments &amp; Effects</string>
+    <string name="macropad_editor_bg_crop_desc">Scale and reposition artwork relative to bottom screen</string>
+    <string name="macropad_editor_bg_dim_desc">Dim background to keep buttons readable</string>
+    <string name="macropad_editor_bg_delete_desc">Remove background artwork from this layout</string>
+
+    <!-- Pad Button Edit Dialog -->
+    <string name="macropad_btn_shape_desc">Geometry of the interactive button cap</string>
+    <string name="macropad_btn_size_desc">Grid width and height footprint</string>
+    <string name="macropad_btn_haptic_desc">Vibration feedback triggered on tap</string>
+    <string name="macropad_btn_haptic_duration_desc">Duration in milliseconds</string>
+    <string name="macropad_btn_haptic_amplitude_desc">Vibration motor power percentage</string>
+
+    <!-- Macro Step Edit Dialog -->
+    <string name="macro_step_action_type_title">Step Action Type</string>
+    <string name="macro_step_action_type_desc">Input signal injected during macro execution</string>
+    <string name="macro_step_gamepad_button_title">Gamepad Button</string>
+    <string name="macro_step_gamepad_button_desc">Target controller keycode or trigger</string>
+    <string name="macro_step_target_stick_title">Target Stick</string>
+    <string name="macro_step_target_stick_desc">Choose between left and right analog stick</string>
+    <string name="macro_step_stick_deflection_desc">Stick tilt deflection percentage</string>
+    <string name="macro_step_offset_desc">Offset from start of macro sequence</string>
+    <string name="macro_step_hold_duration_desc">Hold duration for button/stick actuation</string>
+    <string name="macro_step_ripple_desc">Automatically ripple timing changes to later steps</string>
+
+    <!-- Dialogs & Overlays -->
+    <string name="macropad_cutout_rename_title">Rename Cutout</string>
+    <string name="macropad_cutout_rename_desc">Change the display name of this mirror viewport</string>
+    <string name="macropad_profile_app_association_title">Automatic App Association</string>
+    <string name="macropad_profile_app_association_desc">Auto-activate profile when target app or game opens</string>
+    <string name="macropad_icon_picker_empty_desc">Try searching for a different keyword</string>
+    <string name="steamgriddb_empty_games_desc">Try searching for a different game title</string>
+    <string name="steamgriddb_empty_images_desc">No images found for this category</string>
+    <string name="steamgriddb_cd_back_to_top">Back to Top</string>
+    <string name="steamgriddb_cd_error_thumbnail">Error loading thumbnail</string>
+    <string name="macro_timeline_empty_desc">Add a step below or record touch/gamepad inputs</string>
+    <string name="macro_timeline_list_empty_desc">Add a step or record input sequences</string>
+    <string name="macro_loop_continuous_desc">Continuously restart execution from step 1 after sequence finishes</string>
+    <string name="macro_loop_pause_desc">Delay before starting next cycle</string>
+    <string name="macro_loop_randomize_desc">Random jitter applied to start times and tap lengths</string>
+
+    <!-- Gamepad Core Components -->
+    <string name="gamepad_previous">Previous</string>
+    <string name="gamepad_next">Next</string>
+    <string name="gamepad_toggle_on">ON</string>
+    <string name="gamepad_toggle_off">OFF</string>
+    <string name="gamepad_color_option">Color option %1$d</string>
+    <string name="gamepad_color_selected">Selected</string>
     <string name="gamepad_search_placeholder">Search…</string>
-    <string name="gamepad_search_clear">Clear</string>
+    <string name="gamepad_search_clear">Clear search</string>
     <string name="gamepad_category_all">All</string>
     <string name="gamepad_confirm_dialog_confirm">Confirm</string>
     <string name="gamepad_confirm_dialog_cancel">Cancel</string>
-    <string name="gamepad_previous">Previous</string>
-    <string name="gamepad_next">Next</string>
-    <string name="gamepad_toggle_on">ON ●</string>
-    <string name="gamepad_toggle_off">OFF ○</string>
-    <string name="gamepad_color_option">Color option %1$d</string>
-    <string name="gamepad_color_selected">Selected</string>
 </resources>
 

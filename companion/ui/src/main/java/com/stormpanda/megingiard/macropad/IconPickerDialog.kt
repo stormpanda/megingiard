@@ -218,7 +218,7 @@ internal fun IconPickerDialog(
                 GamepadEmptyState(
                     icon = Icons.Rounded.Search,
                     title = stringResource(R.string.macropad_icon_picker_no_results),
-                    description = "Try searching for a different keyword",
+                    description = stringResource(R.string.macropad_icon_picker_empty_desc),
                 )
             }
         } else {

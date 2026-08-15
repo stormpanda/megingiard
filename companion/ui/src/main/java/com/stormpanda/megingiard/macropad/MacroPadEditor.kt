@@ -885,7 +885,7 @@ private fun EditorTwoPaneBody(
                 val profileIdx = profiles.indexOf(profile).coerceAtLeast(0)
                 GamepadChoiceCard(
                     title = stringResource(R.string.quick_menu_profile_label),
-                    description = "Current active profile",
+                    description = stringResource(R.string.macropad_editor_active_profile_desc),
                     selectedText = profile.name,
                     icon = Icons.Rounded.Folder,
                     onPrevious = {
@@ -901,24 +901,24 @@ private fun EditorTwoPaneBody(
 
                 GamepadActionCard(
                     title = stringResource(R.string.settings_macropad_new_profile),
-                    description = "Create a new profile with custom layouts and macros",
-                    actionText = "New",
+                    description = stringResource(R.string.macropad_editor_new_profile_desc),
+                    actionText = stringResource(R.string.gamepad_action_new),
                     icon = Icons.Rounded.Add,
                     onClick = onNewProfile,
                 )
 
                 GamepadActionCard(
                     title = stringResource(R.string.profile_settings_title),
-                    description = "Rename profile or edit app package association",
-                    actionText = "Edit",
+                    description = stringResource(R.string.macropad_editor_edit_profile_desc),
+                    actionText = stringResource(R.string.gamepad_action_edit),
                     icon = Icons.Rounded.Edit,
                     onClick = onEditProfile,
                 )
 
                 GamepadActionCard(
-                    title = "Duplicate Profile",
-                    description = "Create a full copy of '${profile.name}' with all layouts and assets",
-                    actionText = "Duplicate",
+                    title = stringResource(R.string.macropad_duplicate_profile),
+                    description = stringResource(R.string.macropad_editor_duplicate_profile_desc, profile.name),
+                    actionText = stringResource(R.string.gamepad_action_duplicate),
                     icon = Icons.Rounded.ContentCopy,
                     onClick = {
                         val originalProfile = profile
@@ -939,17 +939,17 @@ private fun EditorTwoPaneBody(
                 )
 
                 GamepadActionCard(
-                    title = "Reorder Profiles",
-                    description = "Change the display order of profiles in the switcher",
-                    actionText = "Reorder",
+                    title = stringResource(R.string.macropad_reorder_profiles),
+                    description = stringResource(R.string.macropad_editor_reorder_profiles_desc),
+                    actionText = stringResource(R.string.gamepad_action_reorder),
                     icon = Icons.Rounded.SwapVert,
                     onClick = onReorderProfiles,
                 )
 
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_delete_profile),
-                    description = "Permanently delete '${profile.name}' and all its layouts",
-                    actionText = "Delete",
+                    description = stringResource(R.string.macropad_editor_delete_profile_desc, profile.name),
+                    actionText = stringResource(R.string.gamepad_action_delete),
                     isDestructive = true,
                     icon = Icons.Rounded.Delete,
                     onClick = onDeleteProfile,
@@ -969,8 +969,8 @@ private fun EditorTwoPaneBody(
                 val layoutIdx = layouts.indexOf(layout).coerceAtLeast(0)
                 GamepadChoiceCard(
                     title = stringResource(R.string.macropad_editor_section_layout),
-                    description = "Active layout in '${profile.name}'",
-                    selectedText = layout?.name ?: "None",
+                    description = stringResource(R.string.macropad_editor_active_layout_desc, profile.name),
+                    selectedText = layout?.name ?: stringResource(R.string.macropad_editor_none),
                     icon = Icons.AutoMirrored.Rounded.ViewQuilt,
                     enabled = layouts.isNotEmpty(),
                     onPrevious = {
@@ -990,40 +990,40 @@ private fun EditorTwoPaneBody(
 
                 GamepadActionCard(
                     title = stringResource(R.string.settings_macropad_new_layout),
-                    description = "Add a new button layout to this profile",
-                    actionText = "New",
+                    description = stringResource(R.string.macropad_editor_new_layout_desc),
+                    actionText = stringResource(R.string.gamepad_action_new),
                     icon = Icons.Rounded.Add,
                     onClick = onNewLayout,
                 )
 
                 GamepadActionCard(
-                    title = "Layout Appearance & Colors",
-                    description = "Customize button text, border, and background color styling",
-                    actionText = "Appearance",
+                    title = stringResource(R.string.macropad_editor_appearance_title),
+                    description = stringResource(R.string.macropad_editor_appearance_desc),
+                    actionText = stringResource(R.string.gamepad_action_appearance),
                     icon = Icons.Rounded.Palette,
                     onClick = onEditLayout,
                 )
 
                 GamepadActionCard(
                     title = stringResource(R.string.layout_settings_bg_section_title),
-                    description = "Set background artwork, scaling, dimming, and mask effects",
-                    actionText = "Background",
+                    description = stringResource(R.string.macropad_editor_background_desc),
+                    actionText = stringResource(R.string.gamepad_action_background),
                     icon = Icons.Rounded.Wallpaper,
                     onClick = onManageBackground,
                 )
 
                 GamepadActionCard(
                     title = stringResource(R.string.settings_touchpad_title),
-                    description = "Configure background touchpad and touch projection cutouts",
-                    actionText = "Touchpad",
+                    description = stringResource(R.string.macropad_editor_touchpad_desc),
+                    actionText = stringResource(R.string.gamepad_action_touchpad),
                     icon = Icons.Rounded.Mouse,
                     onClick = onManageTouchpadSettings,
                 )
 
                 GamepadActionCard(
-                    title = "Duplicate Layout",
-                    description = "Duplicate active layout inside this profile",
-                    actionText = "Duplicate",
+                    title = stringResource(R.string.macropad_duplicate_layout),
+                    description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
+                    actionText = stringResource(R.string.gamepad_action_duplicate),
                     icon = Icons.Rounded.ContentCopy,
                     onClick = {
                         val originalLayout = layout
@@ -1039,24 +1039,24 @@ private fun EditorTwoPaneBody(
 
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_copy_profile_select),
-                    description = "Copy this layout to another profile",
-                    actionText = "Copy",
+                    description = stringResource(R.string.macropad_editor_copy_layout_desc),
+                    actionText = stringResource(R.string.gamepad_action_copy),
                     icon = Icons.Rounded.Share,
                     onClick = onCopyToProfile,
                 )
 
                 GamepadActionCard(
-                    title = "Reorder Layouts",
-                    description = "Change the order of layouts in this profile",
-                    actionText = "Reorder",
+                    title = stringResource(R.string.macropad_reorder_layouts),
+                    description = stringResource(R.string.macropad_editor_reorder_layouts_desc),
+                    actionText = stringResource(R.string.gamepad_action_reorder),
                     icon = Icons.Rounded.SwapVert,
                     onClick = onReorderLayouts,
                 )
 
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_delete_layout),
-                    description = "Delete '${layout?.name}' from this profile",
-                    actionText = "Delete",
+                    description = stringResource(R.string.macropad_editor_delete_layout_desc, layout?.name ?: ""),
+                    actionText = stringResource(R.string.gamepad_action_delete),
                     isDestructive = true,
                     icon = Icons.Rounded.Delete,
                     onClick = { layout?.let { onDeleteLayoutRequested(it) } },
@@ -1066,13 +1066,20 @@ private fun EditorTwoPaneBody(
             // CANVAS DECK
             if (selectedSection == EditorSection.CANVAS) {
                 GamepadSectionHeader(
-                    text = "CANVAS CONTROLS",
+                    text = stringResource(R.string.macropad_editor_section_canvas_controls),
                     color = accentColor,
                 )
 
                 GamepadToggleCard(
-                    title = "Lock Canvas Dragging",
-                    description = if (isCanvasLocked) "Canvas is locked (buttons cannot be accidentally moved)" else "Drag buttons freely on the canvas to reposition",
+                    title = stringResource(R.string.macropad_editor_lock_canvas),
+                    description =
+                        if (isCanvasLocked) {
+                            stringResource(
+                                R.string.macropad_editor_canvas_locked_desc,
+                            )
+                        } else {
+                            stringResource(R.string.macropad_editor_canvas_unlocked_desc)
+                        },
                     checked = isCanvasLocked,
                     icon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                     onCheckedChange = { onToggleCanvasLock() },
@@ -1082,13 +1089,13 @@ private fun EditorTwoPaneBody(
                 val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
                 val gridIdx = gridModes.indexOf(gridMode)
                 GamepadChoiceCard(
-                    title = "Snap Grid Mode",
-                    description = "Display alignment grid on canvas",
+                    title = stringResource(R.string.macropad_editor_snap_grid),
+                    description = stringResource(R.string.macropad_editor_snap_grid_desc),
                     selectedText =
                         when (gridMode) {
-                            GridMode.OFF -> "Off"
-                            GridMode.RECTANGULAR -> "Rectangular"
-                            GridMode.RADIAL -> "Radial"
+                            GridMode.OFF -> stringResource(R.string.macropad_editor_grid_off_label)
+                            GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular_label)
+                            GridMode.RADIAL -> stringResource(R.string.macropad_editor_grid_radial_label)
                         },
                     icon = Icons.Rounded.Grid4x4,
                     onPrevious = { gridMode = gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size] },
@@ -1097,8 +1104,8 @@ private fun EditorTwoPaneBody(
 
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_add_button),
-                    description = "Create a new button and place it on this canvas",
-                    actionText = "Add",
+                    description = stringResource(R.string.macropad_editor_add_button_card_desc),
+                    actionText = stringResource(R.string.gamepad_action_add),
                     icon = Icons.Rounded.Add,
                     onClick = onAddButton,
                 )
@@ -1126,8 +1133,8 @@ private fun EditorTwoPaneBody(
 
                 GamepadActionCard(
                     title = stringResource(R.string.macropad_editor_add_button),
-                    description = "Create and configure a new interactive button",
-                    actionText = "Add",
+                    description = stringResource(R.string.macropad_editor_create_button_desc),
+                    actionText = stringResource(R.string.gamepad_action_add),
                     icon = Icons.Rounded.Add,
                     onClick = onAddButton,
                     modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.BUTTONS),
@@ -1136,7 +1143,7 @@ private fun EditorTwoPaneBody(
                 val buttons = layout?.buttons ?: emptyList()
                 if (buttons.isEmpty()) {
                     Text(
-                        text = "No buttons in this layout yet.",
+                        text = stringResource(R.string.macropad_editor_no_buttons_in_layout),
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(vertical = 12.dp),
@@ -1182,9 +1189,9 @@ private fun EditorTwoPaneBody(
                 )
 
                 GamepadActionCard(
-                    title = "Open Macro Timeline Editor",
-                    description = "Create, record, and edit timed input macro sequences",
-                    actionText = "Open",
+                    title = stringResource(R.string.macropad_editor_open_timeline_title),
+                    description = stringResource(R.string.macropad_editor_open_timeline_desc),
+                    actionText = stringResource(R.string.gamepad_action_open),
                     icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                     onClick = onManageMacros,
                     modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.MACROS),
@@ -1194,17 +1201,23 @@ private fun EditorTwoPaneBody(
                 if (macros.isEmpty()) {
                     GamepadEmptyState(
                         icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-                        title = "No macros created yet",
-                        description = "Create and edit input macro sequences",
-                        actionText = "Create Macro",
+                        title = stringResource(R.string.macropad_editor_no_macros_title),
+                        description = stringResource(R.string.macropad_editor_no_macros_desc),
+                        actionText = stringResource(R.string.gamepad_action_create_macro),
                         onAction = onManageMacros,
                     )
                 } else {
                     macros.forEach { macro ->
+                        val stepCountDesc =
+                            if (macro.steps.size == 1) {
+                                stringResource(R.string.macropad_macro_step_count_single)
+                            } else {
+                                stringResource(R.string.macropad_macro_step_count_multiple, macro.steps.size)
+                            }
                         GamepadActionCard(
                             title = macro.name,
-                            description = "${macro.steps.size} step${if (macro.steps.size != 1) "s" else ""}",
-                            actionText = "Edit",
+                            description = stepCountDesc,
+                            actionText = stringResource(R.string.gamepad_action_edit),
                             icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                             onClick = onManageMacros,
                         )

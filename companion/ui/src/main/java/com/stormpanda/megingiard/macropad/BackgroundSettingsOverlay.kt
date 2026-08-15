@@ -293,9 +293,9 @@ internal fun BackgroundSettingsOverlay(
                         )
 
                         GamepadActionCard(
-                            title = "Rename Cutout",
-                            description = "Change the display name of this mirror viewport",
-                            actionText = "Rename",
+                            title = stringResource(R.string.macropad_cutout_rename_title),
+                            description = stringResource(R.string.macropad_cutout_rename_desc),
+                            actionText = stringResource(R.string.gamepad_action_rename),
                             icon = Icons.Rounded.Edit,
                             onClick = { renamingCutout = cutout },
                         )
@@ -322,7 +322,7 @@ internal fun BackgroundSettingsOverlay(
 
                         GamepadChoiceCard(
                             title = stringResource(R.string.settings_mirror_follow_smoothing),
-                            description = "Smooth camera panning when following touch",
+                            description = stringResource(R.string.settings_mirror_follow_smoothing_desc),
                             selectedText = smoothingModes[currentSmoothIdx],
                             icon = Icons.Rounded.Tune,
                             onPrevious = {

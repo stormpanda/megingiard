@@ -158,7 +158,7 @@ internal fun LayoutSettingsEditor(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "LAYOUT IDENTITY",
+                    text = stringResource(R.string.macropad_editor_section_layout_identity).uppercase(),
                     color = accentColor,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -191,7 +191,7 @@ internal fun LayoutSettingsEditor(
                 val colorOptionsList = listOf(ColorOption.Neutral, ColorOption.Accent)
                 GamepadChoiceCard(
                     title = stringResource(R.string.layout_settings_color_text),
-                    description = "Choose default, theme accent, or custom palette",
+                    description = stringResource(R.string.macropad_editor_color_palette_desc),
                     selectedText = colorOptionLabel(textColorOption),
                     icon = Icons.Rounded.FormatColorText,
                     onPrevious = {
@@ -207,9 +207,9 @@ internal fun LayoutSettingsEditor(
                 )
 
                 GamepadActionCard(
-                    title = "Text Custom Color / Palette",
-                    description = "Open color wheel or recent color palette",
-                    actionText = "Color Wheel",
+                    title = stringResource(R.string.macropad_editor_text_color_title),
+                    description = stringResource(R.string.macropad_editor_color_wheel_desc),
+                    actionText = stringResource(R.string.gamepad_action_color_wheel),
                     icon = Icons.Rounded.Palette,
                     onClick = { activeColorPickerTarget = ColorPickerTarget.TEXT },
                 )
@@ -217,7 +217,7 @@ internal fun LayoutSettingsEditor(
                 // Border Color
                 GamepadChoiceCard(
                     title = stringResource(R.string.layout_settings_color_border),
-                    description = "Button edge ring outline styling",
+                    description = stringResource(R.string.macropad_editor_border_style_desc),
                     selectedText = colorOptionLabel(borderColorOption),
                     icon = Icons.Rounded.Palette,
                     onPrevious = {
@@ -233,9 +233,9 @@ internal fun LayoutSettingsEditor(
                 )
 
                 GamepadActionCard(
-                    title = "Border Custom Color / Palette",
-                    description = "Open color wheel or recent color palette",
-                    actionText = "Color Wheel",
+                    title = stringResource(R.string.macropad_editor_border_color_title),
+                    description = stringResource(R.string.macropad_editor_color_wheel_desc),
+                    actionText = stringResource(R.string.gamepad_action_color_wheel),
                     icon = Icons.Rounded.Palette,
                     onClick = { activeColorPickerTarget = ColorPickerTarget.BORDER },
                 )
@@ -243,7 +243,7 @@ internal fun LayoutSettingsEditor(
                 // Background Color
                 GamepadChoiceCard(
                     title = stringResource(R.string.layout_settings_color_bg),
-                    description = "Button cap fill background tint",
+                    description = stringResource(R.string.macropad_editor_fill_style_desc),
                     selectedText = colorOptionLabel(bgColorOption),
                     icon = Icons.Rounded.Palette,
                     onPrevious = {
@@ -259,15 +259,15 @@ internal fun LayoutSettingsEditor(
                 )
 
                 GamepadActionCard(
-                    title = "Background Custom Color / Palette",
-                    description = "Open color wheel or recent color palette",
-                    actionText = "Color Wheel",
+                    title = stringResource(R.string.macropad_editor_bg_color_title),
+                    description = stringResource(R.string.macropad_editor_color_wheel_desc),
+                    actionText = stringResource(R.string.gamepad_action_color_wheel),
                     icon = Icons.Rounded.Palette,
                     onClick = { activeColorPickerTarget = ColorPickerTarget.BG },
                 )
 
                 Text(
-                    text = "VISIBILITY & BEHAVIOR",
+                    text = stringResource(R.string.macropad_editor_section_visibility_behavior).uppercase(),
                     color = accentColor,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,

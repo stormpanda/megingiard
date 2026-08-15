@@ -361,7 +361,7 @@ internal fun BackgroundSettingsEditor(
                 Spacer(Modifier.height(BSE_SPACING_16))
 
                 Text(
-                    text = "ARTWORK SOURCE",
+                    text = stringResource(R.string.macropad_editor_section_artwork_source).uppercase(),
                     color = accentColor,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -369,8 +369,8 @@ internal fun BackgroundSettingsEditor(
 
                 GamepadActionCard(
                     title = stringResource(R.string.layout_settings_bg_image_scrape),
-                    description = "Search game banners and posters from SteamGridDB",
-                    actionText = "Search",
+                    description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
+                    actionText = stringResource(R.string.gamepad_action_search),
                     icon = Icons.Rounded.Search,
                     onClick = {
                         val token = SettingsManager.steamGridDbApiToken.value
@@ -384,15 +384,15 @@ internal fun BackgroundSettingsEditor(
 
                 GamepadActionCard(
                     title = stringResource(R.string.layout_settings_bg_image_browse_local),
-                    description = "Pick an image from your device storage",
-                    actionText = "Browse",
+                    description = stringResource(R.string.macropad_editor_bg_storage_desc),
+                    actionText = stringResource(R.string.gamepad_action_browse),
                     icon = Icons.Rounded.Image,
                     onClick = { launcher.launch("image/*") },
                 )
 
                 if (previewBitmap != null) {
                     Text(
-                        text = "ADJUSTMENTS & EFFECTS",
+                        text = stringResource(R.string.macropad_editor_section_adjustments_effects).uppercase(),
                         color = accentColor,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
@@ -401,8 +401,8 @@ internal fun BackgroundSettingsEditor(
 
                     GamepadActionCard(
                         title = stringResource(R.string.layout_settings_bg_image_crop),
-                        description = "Scale and reposition artwork relative to bottom screen",
-                        actionText = "Crop",
+                        description = stringResource(R.string.macropad_editor_bg_crop_desc),
+                        actionText = stringResource(R.string.gamepad_action_crop),
                         icon = Icons.Rounded.Crop,
                         onClick = { showPreviewModal = true },
                     )
@@ -417,7 +417,7 @@ internal fun BackgroundSettingsEditor(
 
                     GamepadStepperCard(
                         title = stringResource(R.string.layout_settings_bg_image_dimming_title),
-                        description = "Dim background to keep buttons readable",
+                        description = stringResource(R.string.macropad_editor_bg_dim_desc),
                         valueText = "${(bgImageDim * 100).roundToInt()}%",
                         icon = Icons.Rounded.Crop,
                         onDecrement = {
@@ -430,8 +430,8 @@ internal fun BackgroundSettingsEditor(
 
                     GamepadActionCard(
                         title = stringResource(R.string.macropad_editor_delete_button),
-                        description = "Remove background artwork from this layout",
-                        actionText = "Delete",
+                        description = stringResource(R.string.macropad_editor_bg_delete_desc),
+                        actionText = stringResource(R.string.gamepad_action_delete),
                         isDestructive = true,
                         icon = Icons.Rounded.Delete,
                         onClick = {

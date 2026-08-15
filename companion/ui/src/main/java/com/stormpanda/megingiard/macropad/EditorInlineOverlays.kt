@@ -344,16 +344,16 @@ internal fun InlineProfileSettingsOverlay(
                     GamepadActionCard(
                         title = selectedAppName,
                         description = selectedPackage!!,
-                        actionText = "Clear",
+                        actionText = stringResource(R.string.gamepad_action_clear),
                         isDestructive = true,
                         icon = Icons.Rounded.Delete,
                         onClick = { selectedPackage = null },
                     )
                 } else {
                     GamepadActionCard(
-                        title = "Automatic App Association",
-                        description = "Auto-activate profile when target app or game opens",
-                        actionText = "Choose App",
+                        title = stringResource(R.string.macropad_profile_app_association_title),
+                        description = stringResource(R.string.macropad_profile_app_association_desc),
+                        actionText = stringResource(R.string.gamepad_action_choose_app),
                         onClick = { showAppList = true },
                     )
                 }

@@ -336,8 +336,8 @@ internal fun MacroStepEditDialog(
                 }
 
             GamepadChoiceCard(
-                title = "Step Action Type",
-                description = "Input signal injected during macro execution",
+                title = stringResource(R.string.macro_step_action_type_title),
+                description = stringResource(R.string.macro_step_action_type_desc),
                 selectedText = typeLabels[currentTypeIdx],
                 icon = Icons.Rounded.SportsEsports,
                 enabled = availableTypes.size > 1,
@@ -357,8 +357,8 @@ internal fun MacroStepEditDialog(
                     val presets = GamepadKeycodes.PRESETS
                     val presetIdx = presets.indexOf(selectedPreset).coerceAtLeast(0)
                     GamepadChoiceCard(
-                        title = "Gamepad Button",
-                        description = "Target controller keycode or trigger",
+                        title = stringResource(R.string.macro_step_gamepad_button_title),
+                        description = stringResource(R.string.macro_step_gamepad_button_desc),
                         selectedText = selectedPreset.localizedDisplayLabel(swapFaceButtons),
                         icon = Icons.Rounded.SportsEsports,
                         onPrevious = {
@@ -381,8 +381,8 @@ internal fun MacroStepEditDialog(
                         )
                     val stickIdx = sticks.indexOf(joyStick).coerceAtLeast(0)
                     GamepadChoiceCard(
-                        title = "Target Stick",
-                        description = "Choose between left and right analog stick",
+                        title = stringResource(R.string.macro_step_target_stick_title),
+                        description = stringResource(R.string.macro_step_target_stick_desc),
                         selectedText = stickLabels[stickIdx],
                         icon = Icons.Rounded.SportsEsports,
                         onPrevious = {
@@ -412,7 +412,7 @@ internal fun MacroStepEditDialog(
 
                     GamepadStepperCard(
                         title = stringResource(R.string.macropad_macro_step_magnitude, joyMagnitude),
-                        description = "Stick tilt deflection percentage",
+                        description = stringResource(R.string.macro_step_stick_deflection_desc),
                         valueText = "${(joyMagnitude * 100).roundToInt()}%",
                         icon = Icons.Rounded.SportsEsports,
                         onDecrement = {
@@ -515,7 +515,7 @@ internal fun MacroStepEditDialog(
             // Timing
             GamepadStepperCard(
                 title = stringResource(R.string.macropad_macro_step_start_ms),
-                description = "Offset from start of macro sequence",
+                description = stringResource(R.string.macro_step_offset_desc),
                 valueText = "$startMs ms",
                 icon = Icons.Rounded.Timer,
                 onDecrement = {
@@ -528,7 +528,7 @@ internal fun MacroStepEditDialog(
 
             GamepadStepperCard(
                 title = stringResource(R.string.macropad_macro_step_duration_ms),
-                description = "Hold duration for button/stick actuation",
+                description = stringResource(R.string.macro_step_hold_duration_desc),
                 valueText = "$durMs ms",
                 icon = Icons.Rounded.Timer,
                 onDecrement = {
@@ -549,7 +549,7 @@ internal fun MacroStepEditDialog(
             val shiftIdx = shiftModes.indexOf(shiftMode).coerceAtLeast(0)
             GamepadChoiceCard(
                 title = stringResource(R.string.macropad_macro_editor_shift_subsequent),
-                description = "Automatically ripple timing changes to later steps",
+                description = stringResource(R.string.macro_step_ripple_desc),
                 selectedText = shiftLabels[shiftIdx],
                 icon = Icons.Rounded.Repeat,
                 onPrevious = {

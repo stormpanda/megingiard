@@ -1306,17 +1306,148 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_settings_auto_update_desc">Wenn aktiviert, prüft Megingiard alle 24 Stunden lautlos im Hintergrund auf neue Releases. Wenn ein Update gefunden wird, kannst du deine Einstellungen sichern und die Release-Seite im Standardbrowser auf dem oberen Bildschirm öffnen.</string>
     <string name="help_settings_check_updates_desc">Führt sofort eine manuelle Suche nach neuen Releases auf GitHub durch.</string>
 
-    <!-- Gamepad Components -->
+    <!-- Gamepad Action Buttons -->
+    <string name="gamepad_action_setup">Einrichten</string>
+    <string name="gamepad_action_edit">Bearbeiten</string>
+    <string name="gamepad_action_deadzones">Totzonen</string>
+    <string name="gamepad_action_wheel">Farbrad</string>
+    <string name="gamepad_action_color_wheel">Farbrad</string>
+    <string name="gamepad_action_restore">Wiederherstellen</string>
+    <string name="gamepad_action_reset">Zurücksetzen</string>
+    <string name="gamepad_action_export">Exportieren</string>
+    <string name="gamepad_action_add">Hinzufügen</string>
+    <string name="gamepad_action_save">Speichern</string>
+    <string name="gamepad_action_check">Prüfen</string>
+    <string name="gamepad_action_checking">Prüfe…</string>
+    <string name="gamepad_action_new">Neu</string>
+    <string name="gamepad_action_duplicate">Duplizieren</string>
+    <string name="gamepad_action_reorder">Neu anordnen</string>
+    <string name="gamepad_action_delete">Löschen</string>
+    <string name="gamepad_action_appearance">Aussehen</string>
+    <string name="gamepad_action_background">Hintergrund</string>
+    <string name="gamepad_action_touchpad">Touchpad</string>
+    <string name="gamepad_action_copy">Kopieren</string>
+    <string name="gamepad_action_search">Suchen</string>
+    <string name="gamepad_action_browse">Durchsuchen</string>
+    <string name="gamepad_action_crop">Zuschneiden</string>
+    <string name="gamepad_action_open">Öffnen</string>
+    <string name="gamepad_action_create_macro">Makro erstellen</string>
+    <string name="gamepad_action_clear">Entfernen</string>
+    <string name="gamepad_action_choose_app">App wählen</string>
+    <string name="gamepad_action_rename">Umbenennen</string>
+
+    <!-- Gamepad Settings Screen -->
+    <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>
+    <string name="settings_steamgriddb_token_configured">API-Token konfiguriert (%1$s…)</string>
+    <string name="settings_accent_wheel_title">Eigenes Farbrad</string>
+    <string name="settings_accent_wheel_desc">Wähle eine benutzerdefinierte RGB/HSV-Akzentfarbe</string>
+    <string name="settings_config_import_card_desc">Konfiguration aus einer bestehenden .mgrd-Sicherungsdatei wiederherstellen</string>
+    <string name="settings_update_available_tag">Update verfügbar: %1$s</string>
+    <string name="settings_app_version">Version %1$s</string>
+
+    <!-- MacroPad Editor Screen -->
+    <string name="macropad_editor_active_profile_desc">Aktuell aktives Profil</string>
+    <string name="macropad_editor_new_profile_desc">Neues Profil mit eigenen Layouts und Makros erstellen</string>
+    <string name="macropad_editor_edit_profile_desc">Profil umbenennen oder verknüpfte App anpassen</string>
+    <string name="macropad_editor_duplicate_profile_desc">Erstelle eine vollständige Kopie von \'%1$s\' mit allen Layouts und Assets</string>
+    <string name="macropad_editor_reorder_profiles_desc">Reihenfolge der Profile im Auswahldialog ändern</string>
+    <string name="macropad_editor_delete_profile_desc">Löscht \'%1$s\' und alle zugehörigen Layouts dauerhaft</string>
+    <string name="macropad_editor_active_layout_desc">Aktives Layout in \'%1$s\'</string>
+    <string name="macropad_editor_none">Keines</string>
+    <string name="macropad_editor_new_layout_desc">Ein neues Tastenlayout zu diesem Profil hinzufügen</string>
+    <string name="macropad_editor_appearance_title">Layout-Darstellung &amp; Farben</string>
+    <string name="macropad_editor_appearance_desc">Schrift-, Rahmen- und Hintergrundfarben der Tasten anpassen</string>
+    <string name="macropad_editor_background_desc">Hintergrundbild, Skalierung, Abdunklung und Maskierungseffekte festlegen</string>
+    <string name="macropad_editor_touchpad_desc">Hintergrund-Touchpad und Touch-Projektionsbereiche konfigurieren</string>
+    <string name="macropad_editor_duplicate_layout_desc">Aktives Layout innerhalb dieses Profils duplizieren</string>
+    <string name="macropad_editor_copy_layout_desc">Dieses Layout in ein anderes Profil kopieren</string>
+    <string name="macropad_editor_reorder_layouts_desc">Reihenfolge der Layouts in diesem Profil ändern</string>
+    <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
+    <string name="macropad_editor_section_canvas_controls">Arbeitsflächen-Steuerung</string>
+    <string name="macropad_editor_lock_canvas">Arbeitsfläche sperren</string>
+    <string name="macropad_editor_canvas_locked_desc">Arbeitsfläche gesperrt (Tasten können nicht verschoben werden)</string>
+    <string name="macropad_editor_canvas_unlocked_desc">Tasten frei auf der Arbeitsfläche verschieben</string>
+    <string name="macropad_editor_snap_grid">Raster-Modus</string>
+    <string name="macropad_editor_snap_grid_desc">Ausrichtungsraster auf der Arbeitsfläche anzeigen</string>
+    <string name="macropad_editor_grid_off_label">Aus</string>
+    <string name="macropad_editor_grid_rectangular_label">Rechteckig</string>
+    <string name="macropad_editor_grid_radial_label">Radial</string>
+    <string name="macropad_editor_add_button_card_desc">Neue Taste erstellen und auf der Arbeitsfläche platzieren</string>
+    <string name="macropad_editor_create_button_desc">Neue interaktive Taste erstellen und konfigurieren</string>
+    <string name="macropad_editor_no_buttons_in_layout">Noch keine Tasten in diesem Layout vorhanden.</string>
+    <string name="macropad_editor_open_timeline_title">Makro-Timeline-Editor öffnen</string>
+    <string name="macropad_editor_open_timeline_desc">Zeitgesteuerte Eingabemakro-Sequenzen erstellen, aufnehmen und bearbeiten</string>
+    <string name="macropad_editor_no_macros_title">Noch keine Makros erstellt</string>
+    <string name="macropad_editor_no_macros_desc">Eingabemakro-Sequenzen erstellen und bearbeiten</string>
+    <string name="macropad_macro_step_count_single">1 Schritt</string>
+    <string name="macropad_macro_step_count_multiple">%1$d Schritte</string>
+
+    <!-- Layout Settings Editor -->
+    <string name="macropad_editor_section_layout_identity">Layout-Identität</string>
+    <string name="macropad_editor_color_palette_desc">Standard-, Akzent- oder eigene Farbpalette wählen</string>
+    <string name="macropad_editor_text_color_title">Eigene Textfarbe / Palette</string>
+    <string name="macropad_editor_border_color_title">Eigene Rahmenfarbe / Palette</string>
+    <string name="macropad_editor_bg_color_title">Eigene Hintergrundfarbe / Palette</string>
+    <string name="macropad_editor_color_wheel_desc">Farbrad oder zuletzt verwendete Farbpalette öffnen</string>
+    <string name="macropad_editor_border_style_desc">Konturstil der Tastenränder</string>
+    <string name="macropad_editor_fill_style_desc">Hintergrundfüllung der Tastenkappen</string>
+    <string name="macropad_editor_section_visibility_behavior">Sichtbarkeit &amp; Verhalten</string>
+
+    <!-- Background Settings Editor -->
+    <string name="macropad_editor_section_artwork_source">Bildquelle</string>
+    <string name="macropad_editor_bg_steamgriddb_desc">Spielbanner und Poster auf SteamGridDB suchen</string>
+    <string name="macropad_editor_bg_storage_desc">Bild aus dem Gerätespeicher wählen</string>
+    <string name="macropad_editor_section_adjustments_effects">Anpassungen &amp; Effekte</string>
+    <string name="macropad_editor_bg_crop_desc">Bild skalieren und relativ zum unteren Bildschirm positionieren</string>
+    <string name="macropad_editor_bg_dim_desc">Hintergrund abdunkeln, um Tasten lesbar zu halten</string>
+    <string name="macropad_editor_bg_delete_desc">Hintergrundbild aus diesem Layout entfernen</string>
+
+    <!-- Pad Button Edit Dialog -->
+    <string name="macropad_btn_shape_desc">Geometrie der interaktiven Tastenkappe</string>
+    <string name="macropad_btn_size_desc">Breite und Höhe im Raster</string>
+    <string name="macropad_btn_haptic_desc">Vibrationsfeedback beim Antippen</string>
+    <string name="macropad_btn_haptic_duration_desc">Dauer in Millisekunden</string>
+    <string name="macropad_btn_haptic_amplitude_desc">Stärke des Vibrationsmotors in Prozent</string>
+
+    <!-- Macro Step Edit Dialog -->
+    <string name="macro_step_action_type_title">Aktionstyp des Schritts</string>
+    <string name="macro_step_action_type_desc">Eingabesignal während der Makroausführung</string>
+    <string name="macro_step_gamepad_button_title">Gamepad-Taste</string>
+    <string name="macro_step_gamepad_button_desc">Ziel-Tastencode oder Trigger des Controllers</string>
+    <string name="macro_step_target_stick_title">Ziel-Stick</string>
+    <string name="macro_step_target_stick_desc">Zwischen linkem und rechtem Analogstick wählen</string>
+    <string name="macro_step_stick_deflection_desc">Neigungswinkel des Sticks in Prozent</string>
+    <string name="macro_step_offset_desc">Verzögerung ab Beginn der Makrosequenz</string>
+    <string name="macro_step_hold_duration_desc">Haltedauer der Tasten- oder Stick-Betätigung</string>
+    <string name="macro_step_ripple_desc">Zeitliche Änderungen automatisch auf nachfolgende Schritte anwenden</string>
+
+    <!-- Dialogs & Overlays -->
+    <string name="macropad_cutout_rename_title">Ausschnitt umbenennen</string>
+    <string name="macropad_cutout_rename_desc">Anzeigenamen dieses Spiegelungsbereichs ändern</string>
+    <string name="macropad_profile_app_association_title">Automatische App-Verknüpfung</string>
+    <string name="macropad_profile_app_association_desc">Profil automatisch aktivieren, wenn Ziel-App oder Spiel gestartet wird</string>
+    <string name="macropad_icon_picker_empty_desc">Versuche es mit einem anderen Suchbegriff</string>
+    <string name="steamgriddb_empty_games_desc">Versuche nach einem anderen Spieletitel zu suchen</string>
+    <string name="steamgriddb_empty_images_desc">Keine Bilder für diese Kategorie gefunden</string>
+    <string name="steamgriddb_cd_back_to_top">Nach oben scrollen</string>
+    <string name="steamgriddb_cd_error_thumbnail">Fehler beim Laden des Vorschaubilds</string>
+    <string name="macro_timeline_empty_desc">Schritt unten hinzufügen oder Touch-/Gamepad-Eingaben aufnehmen</string>
+    <string name="macro_timeline_list_empty_desc">Schritt hinzufügen oder Eingabesequenzen aufnehmen</string>
+    <string name="macro_loop_continuous_desc">Nach Ablauf der Sequenz fortlaufend ab Schritt 1 neu starten</string>
+    <string name="macro_loop_pause_desc">Verzögerung vor Beginn des nächsten Durchlaufs</string>
+    <string name="macro_loop_randomize_desc">Zufällige Abweichung bei Startzeiten und Haltedauern</string>
+
+    <!-- Gamepad Core Components -->
+    <string name="gamepad_previous">Vorheriges</string>
+    <string name="gamepad_next">Nächstes</string>
+    <string name="gamepad_toggle_on">AN</string>
+    <string name="gamepad_toggle_off">AUS</string>
+    <string name="gamepad_color_option">Farboption %1$d</string>
+    <string name="gamepad_color_selected">Ausgewählt</string>
     <string name="gamepad_search_placeholder">Suchen…</string>
-    <string name="gamepad_search_clear">Löschen</string>
+    <string name="gamepad_search_clear">Suche löschen</string>
     <string name="gamepad_category_all">Alle</string>
     <string name="gamepad_confirm_dialog_confirm">Bestätigen</string>
     <string name="gamepad_confirm_dialog_cancel">Abbrechen</string>
-    <string name="gamepad_previous">Zurück</string>
-    <string name="gamepad_next">Weiter</string>
-    <string name="gamepad_toggle_on">EIN ●</string>
-    <string name="gamepad_toggle_off">AUS ○</string>
-    <string name="gamepad_color_option">Farboption %1$d</string>
-    <string name="gamepad_color_selected">Ausgewählt</string>
 </resources>
 

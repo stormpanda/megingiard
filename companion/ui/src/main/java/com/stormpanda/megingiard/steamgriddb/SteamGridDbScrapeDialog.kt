@@ -532,7 +532,7 @@ internal fun SteamGridDbScrapeDialog(
                         GamepadEmptyState(
                             icon = Icons.Rounded.Search,
                             title = stringResource(R.string.steamgriddb_scrape_no_games_found),
-                            description = "Try searching for a different game title",
+                            description = stringResource(R.string.steamgriddb_empty_games_desc),
                         )
                     }
                 } else if (imagesList.isEmpty() && selectedGame != null) {
@@ -540,7 +540,7 @@ internal fun SteamGridDbScrapeDialog(
                         GamepadEmptyState(
                             icon = Icons.Rounded.Image,
                             title = stringResource(R.string.steamgriddb_scrape_no_images_found),
-                            description = "No images found for this category",
+                            description = stringResource(R.string.steamgriddb_empty_images_desc),
                         )
                     }
                 } else {
@@ -604,7 +604,7 @@ internal fun SteamGridDbScrapeDialog(
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.ArrowUpward,
-                            contentDescription = "Back to Top",
+                            contentDescription = stringResource(R.string.steamgriddb_cd_back_to_top),
                         )
                     }
                 }
@@ -723,7 +723,7 @@ private fun SteamGridDbImageThumbnail(
         } else if (isError || bitmap == null) {
             Icon(
                 imageVector = Icons.Rounded.Warning,
-                contentDescription = "Error loading thumbnail",
+                contentDescription = stringResource(R.string.steamgriddb_cd_error_thumbnail),
                 tint = colors.error,
             )
         } else {

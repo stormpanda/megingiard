@@ -444,7 +444,7 @@ internal fun ButtonEditDialog(
                     val shapeIdx = shapeEntries.indexOf(buttonShape).coerceAtLeast(0)
                     GamepadChoiceCard(
                         title = stringResource(R.string.macropad_editor_button_shape),
-                        description = "Geometry of the interactive button cap",
+                        description = stringResource(R.string.macropad_btn_shape_desc),
                         selectedText = shapeLabels[shapeIdx],
                         icon = Icons.Rounded.Palette,
                         onPrevious = {
@@ -461,7 +461,7 @@ internal fun ButtonEditDialog(
                     val sizeIdx = sizeEntries.indexOf(buttonSize).coerceAtLeast(0)
                     GamepadChoiceCard(
                         title = stringResource(R.string.macropad_editor_button_size),
-                        description = "Grid width and height footprint",
+                        description = stringResource(R.string.macropad_btn_size_desc),
                         selectedText = sizeEntries[sizeIdx].displayLabel(),
                         icon = Icons.Rounded.Palette,
                         onPrevious = {
@@ -486,7 +486,7 @@ internal fun ButtonEditDialog(
                     val hapticIdx = hapticEntries.indexOf(hapticStrength).coerceAtLeast(0)
                     GamepadChoiceCard(
                         title = stringResource(R.string.macropad_editor_section_haptic),
-                        description = "Vibration feedback triggered on tap",
+                        description = stringResource(R.string.macropad_btn_haptic_desc),
                         selectedText = hapticLabels[hapticIdx],
                         icon = Icons.Rounded.Palette,
                         onPrevious = {
@@ -541,7 +541,7 @@ internal fun ButtonEditDialog(
                 if (hapticStrength == HapticStrength.CUSTOM) {
                     GamepadStepperCard(
                         title = stringResource(R.string.macropad_haptic_custom_duration),
-                        description = "Duration in milliseconds",
+                        description = stringResource(R.string.macropad_btn_haptic_duration_desc),
                         valueText = "$hapticCustomDurationMs ms",
                         icon = Icons.Rounded.Palette,
                         onDecrement = {
@@ -554,7 +554,7 @@ internal fun ButtonEditDialog(
 
                     GamepadStepperCard(
                         title = stringResource(R.string.macropad_haptic_custom_amplitude),
-                        description = "Vibration motor power percentage",
+                        description = stringResource(R.string.macropad_btn_haptic_amplitude_desc),
                         valueText = "$hapticCustomAmplitude%",
                         icon = Icons.Rounded.Palette,
                         onDecrement = {

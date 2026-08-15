@@ -192,7 +192,7 @@ internal fun BackgroundTouchpadSettingsEditor(
 
                 GamepadStepperCard(
                     title = stringResource(R.string.settings_touchpad_sensitivity),
-                    description = "Cursor tracking speed on primary screen",
+                    description = stringResource(R.string.settings_touchpad_sensitivity_desc),
                     valueText = "${(sensitivity * 10f).roundToInt() / 10f}x",
                     icon = Icons.Rounded.Speed,
                     onDecrement = {
@@ -263,7 +263,7 @@ internal fun BackgroundTouchpadSettingsEditor(
 
                 GamepadStepperCard(
                     title = stringResource(R.string.settings_touchpad_scroll_speed),
-                    description = "Two-finger scroll speed multiplier",
+                    description = stringResource(R.string.settings_touchpad_scroll_speed_desc),
                     valueText = "${(scrollSpeed * 10f).roundToInt() / 10f}x",
                     icon = Icons.Rounded.Speed,
                     onDecrement = {
