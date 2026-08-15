@@ -1,30 +1,13 @@
 package com.stormpanda.megingiard.macropad
 
-import android.content.Context
-import android.graphics.BitmapFactory
-import android.net.Uri
-import android.view.WindowManager
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,83 +18,53 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Pinch
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
 
 private const val TAG = "LayoutSettingsEditor"
+private val LSE_PREVIEW_BUTTON_SIZE = 54.dp
+private val LSE_RECENT_COLORS_GRID_HEIGHT = 120.dp
 
-private val LSE_THUMBNAIL_SIZE = 40.dp
-private val LSE_THUMBNAIL_ROUNDING = 6.dp
-private val LSE_PREVIEW_BUTTON_SIZE = 60.dp
-private val LSE_RECENT_COLORS_GRID_HEIGHT = 128.dp
+private enum class ColorPickerTarget { TEXT, BORDER, BG }
 
 @Composable
 internal fun LayoutSettingsEditor(
@@ -148,6 +101,13 @@ internal fun LayoutSettingsEditor(
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
+    fun colorOptionLabel(option: ColorOption): String =
+        when (option) {
+            ColorOption.Neutral -> "Default Neutral"
+            ColorOption.Accent -> "Global Theme Accent"
+            is ColorOption.Custom -> "Custom Color"
+        }
+
     BackHandler(onBack = onDismiss)
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -179,7 +139,7 @@ internal fun LayoutSettingsEditor(
                             Text(
                                 text = stringResource(R.string.macropad_editor_done),
                                 color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                             )
                         }
                         Spacer(Modifier.width(8.dp))
@@ -193,12 +153,17 @@ internal fun LayoutSettingsEditor(
                     Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        .padding(horizontal = 16.dp)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "LAYOUT IDENTITY",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
 
-                // Layout Name
                 AppTextField(
                     value = nameText,
                     onValueChange = { nameText = it },
@@ -214,70 +179,110 @@ internal fun LayoutSettingsEditor(
                     },
                 )
 
-                Spacer(Modifier.height(24.dp))
-
-                SectionLabel(stringResource(R.string.layout_settings_colors_section_title), accentColor)
-                Spacer(Modifier.height(16.dp))
-
-                // Color Option Rows
-                ColorPickerRow(
-                    label = stringResource(R.string.layout_settings_color_text),
-                    option = textColorOption,
-                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
-                    globalAccentColor = globalAccentColor,
-                    onWheelClick = { activeColorPickerTarget = ColorPickerTarget.TEXT },
-                    onPaletteClick = { activePaletteDialogTarget = ColorPickerTarget.TEXT },
+                Text(
+                    text = stringResource(R.string.layout_settings_colors_section_title).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
                 )
 
-                Spacer(Modifier.height(20.dp))
-
-                ColorPickerRow(
-                    label = stringResource(R.string.layout_settings_color_border),
-                    option = borderColorOption,
-                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
-                    globalAccentColor = globalAccentColor,
-                    onWheelClick = { activeColorPickerTarget = ColorPickerTarget.BORDER },
-                    onPaletteClick = { activePaletteDialogTarget = ColorPickerTarget.BORDER },
+                // Text Color
+                val colorOptionsList = listOf(ColorOption.Neutral, ColorOption.Accent)
+                GamepadChoiceCard(
+                    title = stringResource(R.string.layout_settings_color_text),
+                    description = "Choose default, theme accent, or custom palette",
+                    selectedText = colorOptionLabel(textColorOption),
+                    icon = Icons.Rounded.FormatColorText,
+                    onPrevious = {
+                        val curIdx = if (textColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(textColorOption)
+                        val nextIdx = (curIdx - 1 + colorOptionsList.size) % colorOptionsList.size
+                        textColorOption = colorOptionsList[nextIdx]
+                    },
+                    onNext = {
+                        val curIdx = if (textColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(textColorOption)
+                        val nextIdx = (curIdx + 1) % colorOptionsList.size
+                        textColorOption = colorOptionsList[nextIdx]
+                    },
                 )
 
-                Spacer(Modifier.height(20.dp))
-
-                ColorPickerRow(
-                    label = stringResource(R.string.layout_settings_color_bg),
-                    option = bgColorOption,
-                    defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
-                    globalAccentColor = globalAccentColor,
-                    onWheelClick = { activeColorPickerTarget = ColorPickerTarget.BG },
-                    onPaletteClick = { activePaletteDialogTarget = ColorPickerTarget.BG },
+                GamepadActionCard(
+                    title = "Text Custom Color / Palette",
+                    description = "Open color wheel or recent color palette",
+                    actionText = "Color Wheel",
+                    icon = Icons.Rounded.Palette,
+                    onClick = { activeColorPickerTarget = ColorPickerTarget.TEXT },
                 )
 
-                Spacer(Modifier.height(20.dp))
+                // Border Color
+                GamepadChoiceCard(
+                    title = stringResource(R.string.layout_settings_color_border),
+                    description = "Button edge ring outline styling",
+                    selectedText = colorOptionLabel(borderColorOption),
+                    icon = Icons.Rounded.Palette,
+                    onPrevious = {
+                        val curIdx = if (borderColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(borderColorOption)
+                        val nextIdx = (curIdx - 1 + colorOptionsList.size) % colorOptionsList.size
+                        borderColorOption = colorOptionsList[nextIdx]
+                    },
+                    onNext = {
+                        val curIdx = if (borderColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(borderColorOption)
+                        val nextIdx = (curIdx + 1) % colorOptionsList.size
+                        borderColorOption = colorOptionsList[nextIdx]
+                    },
+                )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.layout_settings_invisible_buttons),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = stringResource(R.string.layout_settings_invisible_buttons_desc),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    Switch(
-                        checked = invisibleButtons,
-                        onCheckedChange = { invisibleButtons = it },
-                        colors = appSwitchColors(),
-                    )
-                }
+                GamepadActionCard(
+                    title = "Border Custom Color / Palette",
+                    description = "Open color wheel or recent color palette",
+                    actionText = "Color Wheel",
+                    icon = Icons.Rounded.Palette,
+                    onClick = { activeColorPickerTarget = ColorPickerTarget.BORDER },
+                )
 
-                Spacer(Modifier.height(40.dp))
+                // Background Color
+                GamepadChoiceCard(
+                    title = stringResource(R.string.layout_settings_color_bg),
+                    description = "Button cap fill background tint",
+                    selectedText = colorOptionLabel(bgColorOption),
+                    icon = Icons.Rounded.Palette,
+                    onPrevious = {
+                        val curIdx = if (bgColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(bgColorOption)
+                        val nextIdx = (curIdx - 1 + colorOptionsList.size) % colorOptionsList.size
+                        bgColorOption = colorOptionsList[nextIdx]
+                    },
+                    onNext = {
+                        val curIdx = if (bgColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(bgColorOption)
+                        val nextIdx = (curIdx + 1) % colorOptionsList.size
+                        bgColorOption = colorOptionsList[nextIdx]
+                    },
+                )
+
+                GamepadActionCard(
+                    title = "Background Custom Color / Palette",
+                    description = "Open color wheel or recent color palette",
+                    actionText = "Color Wheel",
+                    icon = Icons.Rounded.Palette,
+                    onClick = { activeColorPickerTarget = ColorPickerTarget.BG },
+                )
+
+                Text(
+                    text = "VISIBILITY & BEHAVIOR",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.layout_settings_invisible_buttons),
+                    description = stringResource(R.string.layout_settings_invisible_buttons_desc),
+                    checked = invisibleButtons,
+                    icon = Icons.Rounded.VisibilityOff,
+                    onCheckedChange = { invisibleButtons = it },
+                )
+
+                Spacer(Modifier.height(32.dp))
             }
         }
 
@@ -380,74 +385,6 @@ internal fun LayoutSettingsEditor(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Components & Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-private enum class ColorPickerTarget { TEXT, BORDER, BG }
-
-@Composable
-private fun ColorPickerRow(
-    label: String,
-    option: ColorOption,
-    defaultNeutralColor: Color,
-    globalAccentColor: Color,
-    onWheelClick: () -> Unit,
-    onPaletteClick: () -> Unit,
-) {
-    val colors = LocalAppColors.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
-        )
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val previewColor =
-                when (option) {
-                    ColorOption.Neutral -> defaultNeutralColor
-                    ColorOption.Accent -> globalAccentColor
-                    is ColorOption.Custom -> Color(option.argb)
-                }
-            // Circular color wheel button (click to open color wheel)
-            Box(
-                modifier =
-                    Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(previewColor)
-                        .border(1.dp, colors.accentBorder, CircleShape)
-                        .clickable(onClick = onWheelClick),
-            )
-
-            Spacer(Modifier.width(12.dp))
-
-            // Palette button (click to open quick select dialog)
-            IconButton(
-                onClick = onPaletteClick,
-                modifier =
-                    Modifier
-                        .size(36.dp)
-                        .background(colors.surfaceVariant, CircleShape),
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Palette,
-                    contentDescription = null,
-                    tint = colors.onSurface,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun QuickColorSelectionDialog(
     title: String,
@@ -473,12 +410,10 @@ private fun QuickColorSelectionDialog(
 
         Spacer(Modifier.height(16.dp))
 
-        // System Styles
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Neutral option
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier =
@@ -502,7 +437,6 @@ private fun QuickColorSelectionDialog(
                 )
             }
 
-            // Accent option
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier =

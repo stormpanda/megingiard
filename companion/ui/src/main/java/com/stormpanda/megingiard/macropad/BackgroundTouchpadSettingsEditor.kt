@@ -9,11 +9,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,11 +41,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.RememberSettingRow
-import com.stormpanda.megingiard.settings.SettingsSection
-import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.ui.AppAlertDialog
-import com.stormpanda.megingiard.ui.AppDivider
+import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlin.math.roundToInt
 
@@ -129,147 +132,169 @@ internal fun BackgroundTouchpadSettingsEditor(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // Master Switch Section
-            SettingsSection(
-                title = stringResource(R.string.settings_section_master_touchpad),
-                colors = colors,
-            ) {
-                RememberSettingRow(
-                    label = stringResource(R.string.layout_settings_touchpad_enable),
-                    description = stringResource(R.string.layout_settings_touchpad_enable_desc),
-                    checked = enabled,
-                    onCheckedChange = { targetState ->
-                        if (targetState && hasTouchProjection) {
-                            showConflictDialog = true
-                        } else {
-                            enabled = targetState
-                        }
-                    },
-                )
-                if (hasTouchProjection) {
-                    AppDivider()
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .background(colors.error.copy(alpha = 0.15f))
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Warning,
-                            contentDescription = null,
-                            tint = colors.error,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
-                            color = colors.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+            Text(
+                text = stringResource(R.string.settings_section_master_touchpad).uppercase(),
+                color = accentColor,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            GamepadToggleCard(
+                title = stringResource(R.string.layout_settings_touchpad_enable),
+                description = stringResource(R.string.layout_settings_touchpad_enable_desc),
+                checked = enabled,
+                icon = Icons.Rounded.Mouse,
+                onCheckedChange = { targetState ->
+                    if (targetState && hasTouchProjection) {
+                        showConflictDialog = true
+                    } else {
+                        enabled = targetState
                     }
+                },
+            )
+
+            if (hasTouchProjection) {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.error.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = colors.error,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.layout_settings_touchpad_incompatible_warning),
+                        color = colors.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
             }
 
             if (enabled) {
-                // Pointer Speed Section
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_pointer_speed),
-                    colors = colors,
-                ) {
-                    SliderSettingRow(
-                        label = stringResource(R.string.settings_touchpad_sensitivity),
-                        value = sensitivity,
-                        valueRange = 0.1f..3.0f,
-                        formatLabel = { "${(it * 10f).roundToInt() / 10f}x" },
-                        onValueChange = { sensitivity = (it * 10f).roundToInt() / 10f },
-                    )
-                }
+                Text(
+                    text = stringResource(R.string.settings_section_pointer_speed).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
 
-                // Gestures Section
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_gestures),
-                    colors = colors,
-                ) {
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_tap_to_click),
-                        description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-                        checked = tapToClick,
-                        onCheckedChange = { tapToClick = it },
-                    )
-                    AppDivider()
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_two_finger_tap),
-                        description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-                        checked = twoFingerTap,
-                        onCheckedChange = { twoFingerTap = it },
-                    )
-                    AppDivider()
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_three_finger_tap),
-                        description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
-                        checked = threeFingerTap,
-                        onCheckedChange = { threeFingerTap = it },
-                    )
-                    AppDivider()
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_tap_drag),
-                        description = stringResource(R.string.settings_touchpad_tap_drag_desc),
-                        checked = tapDrag,
-                        onCheckedChange = { tapDrag = it },
-                    )
-                }
+                GamepadStepperCard(
+                    title = stringResource(R.string.settings_touchpad_sensitivity),
+                    description = "Cursor tracking speed on primary screen",
+                    valueText = "${(sensitivity * 10f).roundToInt() / 10f}x",
+                    icon = Icons.Rounded.Speed,
+                    onDecrement = {
+                        val newVal = ((sensitivity - 0.1f) * 10f).roundToInt() / 10f
+                        sensitivity = newVal.coerceIn(0.1f, 3.0f)
+                    },
+                    onIncrement = {
+                        val newVal = ((sensitivity + 0.1f) * 10f).roundToInt() / 10f
+                        sensitivity = newVal.coerceIn(0.1f, 3.0f)
+                    },
+                )
 
-                // Scrolling Section
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_scrolling),
-                    colors = colors,
-                ) {
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_two_finger_scroll),
-                        description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-                        checked = twoFingerScroll,
-                        onCheckedChange = { twoFingerScroll = it },
-                    )
-                    if (twoFingerScroll) {
-                        AppDivider()
-                        RememberSettingRow(
-                            label = stringResource(R.string.settings_touchpad_natural_scroll),
-                            description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
-                            checked = naturalScroll,
-                            onCheckedChange = { naturalScroll = it },
-                        )
-                        AppDivider()
-                        SliderSettingRow(
-                            label = stringResource(R.string.settings_touchpad_scroll_speed),
-                            value = scrollSpeed,
-                            valueRange = 0.5f..3.0f,
-                            formatLabel = { "${(it * 10f).roundToInt() / 10f}x" },
-                            onValueChange = { scrollSpeed = (it * 10f).roundToInt() / 10f },
-                        )
-                    }
-                }
+                Text(
+                    text = stringResource(R.string.settings_section_gestures).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
 
-                // Haptics Section
-                SettingsSection(
-                    title = stringResource(R.string.settings_section_feedback),
-                    colors = colors,
-                ) {
-                    RememberSettingRow(
-                        label = stringResource(R.string.settings_touchpad_haptics),
-                        description = stringResource(R.string.settings_touchpad_haptics_desc),
-                        checked = hapticsEnabled,
-                        onCheckedChange = { hapticsEnabled = it },
-                    )
-                }
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_tap_to_click),
+                    description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
+                    checked = tapToClick,
+                    icon = Icons.Rounded.TouchApp,
+                    onCheckedChange = { tapToClick = it },
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_two_finger_tap),
+                    description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
+                    checked = twoFingerTap,
+                    icon = Icons.Rounded.TouchApp,
+                    onCheckedChange = { twoFingerTap = it },
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_three_finger_tap),
+                    description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
+                    checked = threeFingerTap,
+                    icon = Icons.Rounded.TouchApp,
+                    onCheckedChange = { threeFingerTap = it },
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_tap_drag),
+                    description = stringResource(R.string.settings_touchpad_tap_drag_desc),
+                    checked = tapDrag,
+                    icon = Icons.Rounded.TouchApp,
+                    onCheckedChange = { tapDrag = it },
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_two_finger_scroll),
+                    description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
+                    checked = twoFingerScroll,
+                    icon = Icons.Rounded.SwapVert,
+                    onCheckedChange = { twoFingerScroll = it },
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_natural_scroll),
+                    description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
+                    checked = naturalScroll,
+                    icon = Icons.Rounded.SwapVert,
+                    onCheckedChange = { naturalScroll = it },
+                )
+
+                GamepadStepperCard(
+                    title = stringResource(R.string.settings_touchpad_scroll_speed),
+                    description = "Two-finger scroll speed multiplier",
+                    valueText = "${(scrollSpeed * 10f).roundToInt() / 10f}x",
+                    icon = Icons.Rounded.Speed,
+                    onDecrement = {
+                        val newVal = ((scrollSpeed - 0.1f) * 10f).roundToInt() / 10f
+                        scrollSpeed = newVal.coerceIn(0.1f, 3.0f)
+                    },
+                    onIncrement = {
+                        val newVal = ((scrollSpeed + 0.1f) * 10f).roundToInt() / 10f
+                        scrollSpeed = newVal.coerceIn(0.1f, 3.0f)
+                    },
+                )
+
+                Text(
+                    text = stringResource(R.string.settings_section_feedback).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+
+                GamepadToggleCard(
+                    title = stringResource(R.string.settings_touchpad_haptics),
+                    description = stringResource(R.string.settings_touchpad_haptics_desc),
+                    checked = hapticsEnabled,
+                    icon = Icons.Rounded.Vibration,
+                    onCheckedChange = { hapticsEnabled = it },
+                )
             }
         }
     }
 
-    // Confirmation dialog when enabling Background Touchpad while Touch Projection is active
     if (showConflictDialog) {
         AppAlertDialog(
             onDismissRequest = { showConflictDialog = false },
@@ -288,8 +313,8 @@ internal fun BackgroundTouchpadSettingsEditor(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        enabled = true
                         touchProjectionCleared = true
+                        enabled = true
                         showConflictDialog = false
                     },
                 ) {

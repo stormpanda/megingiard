@@ -99,6 +99,9 @@ import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -319,198 +322,127 @@ internal fun BackgroundSettingsEditor(
 
                 val configuration = LocalConfiguration.current
                 val screenHeight = configuration.screenHeightDp.dp
-                val previewHeight = screenHeight * 0.4f
+                val previewHeight = screenHeight * 0.35f
 
-                // 1. Preview and Action Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16),
-                    verticalAlignment = Alignment.CenterVertically,
+                // 1. Preview Frame
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(previewHeight)
+                            .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                            .background(colors.surfaceVariant)
+                            .border(
+                                BSE_BORDER_WIDTH_1,
+                                colors.divider.copy(alpha = 0.5f),
+                                RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
+                            ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    // Left: Preview Frame
-                    Box(
-                        modifier =
-                            Modifier
-                                .height(previewHeight)
-                                .aspectRatio(aspectRatio)
-                                .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                                .background(colors.surfaceVariant)
-                                .border(
-                                    BSE_BORDER_WIDTH_1,
-                                    colors.divider.copy(alpha = 0.5f),
-                                    RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        val bitmap = previewBitmap
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
-                                contentScale = ContentScale.Fit,
-                                colorFilter = bgImageDimFilter,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Rounded.Image,
-                                contentDescription = stringResource(R.string.layout_settings_bg_image_none),
-                                tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                                modifier = Modifier.size(BSE_ICON_SIZE_48),
-                            )
-                        }
-                    }
-
-                    // Right: Column of buttons
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .height(previewHeight),
-                        verticalArrangement = Arrangement.spacedBy(BSE_SPACING_8, Alignment.CenterVertically),
-                    ) {
-                        // 1. Scrape from SteamGridDB
-                        Button(
-                            onClick = {
-                                val token = SettingsManager.steamGridDbApiToken.value
-                                if (token.isBlank()) {
-                                    showApiTokenMissingDialog = true
-                                } else {
-                                    showScrapeDialog = true
-                                }
-                            },
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = accentColor,
-                                    contentColor = colors.onAccent,
-                                ),
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                        ) {
-                            Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
-                            Spacer(Modifier.width(BSE_SPACING_8))
-                            Text(stringResource(R.string.layout_settings_bg_image_scrape), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-
-                        // 2. Browse local images
-                        Button(
-                            onClick = { launcher.launch("image/*") },
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = accentColor,
-                                    contentColor = colors.onAccent,
-                                ),
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                        ) {
-                            Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
-                            Spacer(Modifier.width(BSE_SPACING_8))
-                            Text(
-                                text = stringResource(R.string.layout_settings_bg_image_browse_local),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-
-                        // 3. Crop button
-                        Button(
-                            onClick = { showPreviewModal = true },
-                            enabled = previewBitmap != null,
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = colors.surfaceVariant,
-                                    contentColor = colors.onSurface,
-                                ),
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                        ) {
-                            Icon(Icons.Rounded.Crop, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
-                            Spacer(Modifier.width(BSE_SPACING_8))
-                            Text(stringResource(R.string.layout_settings_bg_image_crop), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-
-                        // 4. Delete button
-                        Button(
-                            onClick = {
-                                pendingImageUri = null
-                                currentBgPath = null
-                                useAsMask = false
-                                bgScale = 1f
-                                bgOffsetX = 0f
-                                bgOffsetY = 0f
-                            },
-                            enabled = previewBitmap != null,
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = colors.error.copy(alpha = 0.15f),
-                                    contentColor = colors.error,
-                                ),
-                            modifier = Modifier.fillMaxWidth().weight(1f),
-                        ) {
-                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(BSE_ICON_SIZE_18))
-                            Spacer(Modifier.width(BSE_SPACING_8))
-                            Text(stringResource(R.string.macropad_editor_delete_button), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                    val bitmap = previewBitmap
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                            contentScale = ContentScale.Fit,
+                            colorFilter = bgImageDimFilter,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Rounded.Image,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
+                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(BSE_ICON_SIZE_48),
+                        )
                     }
                 }
 
                 Spacer(Modifier.height(BSE_SPACING_16))
 
-                // 3. Mask option
-                if (pendingImageUri != null || currentBgPath != null) {
-                    Spacer(Modifier.height(BSE_SPACING_8))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.layout_settings_bg_image_use_as_mask),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                text = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        Switch(
-                            checked = useAsMask,
-                            onCheckedChange = { useAsMask = it },
-                            colors = appSwitchColors(),
-                        )
-                    }
+                Text(
+                    text = "ARTWORK SOURCE",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
 
-                    Spacer(Modifier.height(BSE_SPACING_16))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.layout_settings_bg_image_dimming_title),
-                                color = colors.onSurface,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                text = "${(bgImageDim * 100).roundToInt()}%",
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                GamepadActionCard(
+                    title = stringResource(R.string.layout_settings_bg_image_scrape),
+                    description = "Search game banners and posters from SteamGridDB",
+                    actionText = "Search",
+                    icon = Icons.Rounded.Search,
+                    onClick = {
+                        val token = SettingsManager.steamGridDbApiToken.value
+                        if (token.isBlank()) {
+                            showApiTokenMissingDialog = true
+                        } else {
+                            showScrapeDialog = true
                         }
-                        Slider(
-                            value = bgImageDim,
-                            onValueChange = { bgImageDim = it },
-                            valueRange = 0f..0.9f,
-                            modifier = Modifier.weight(1.5f),
-                            colors =
-                                SliderDefaults.colors(
-                                    thumbColor = accentColor,
-                                    activeTrackColor = accentColor,
-                                    inactiveTrackColor = colors.divider,
-                                ),
-                        )
-                    }
+                    },
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.layout_settings_bg_image_browse_local),
+                    description = "Pick an image from your device storage",
+                    actionText = "Browse",
+                    icon = Icons.Rounded.Image,
+                    onClick = { launcher.launch("image/*") },
+                )
+
+                if (previewBitmap != null) {
+                    Text(
+                        text = "ADJUSTMENTS & EFFECTS",
+                        color = accentColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+
+                    GamepadActionCard(
+                        title = stringResource(R.string.layout_settings_bg_image_crop),
+                        description = "Scale and reposition artwork relative to bottom screen",
+                        actionText = "Crop",
+                        icon = Icons.Rounded.Crop,
+                        onClick = { showPreviewModal = true },
+                    )
+
+                    GamepadToggleCard(
+                        title = stringResource(R.string.layout_settings_bg_image_use_as_mask),
+                        description = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
+                        checked = useAsMask,
+                        icon = Icons.Rounded.Pinch,
+                        onCheckedChange = { useAsMask = it },
+                    )
+
+                    GamepadStepperCard(
+                        title = stringResource(R.string.layout_settings_bg_image_dimming_title),
+                        description = "Dim background to keep buttons readable",
+                        valueText = "${(bgImageDim * 100).roundToInt()}%",
+                        icon = Icons.Rounded.Crop,
+                        onDecrement = {
+                            bgImageDim = (bgImageDim - 0.05f).coerceIn(0f, 0.9f)
+                        },
+                        onIncrement = {
+                            bgImageDim = (bgImageDim + 0.05f).coerceIn(0f, 0.9f)
+                        },
+                    )
+
+                    GamepadActionCard(
+                        title = stringResource(R.string.macropad_editor_delete_button),
+                        description = "Remove background artwork from this layout",
+                        actionText = "Delete",
+                        isDestructive = true,
+                        icon = Icons.Rounded.Delete,
+                        onClick = {
+                            pendingImageUri = null
+                            currentBgPath = null
+                            useAsMask = false
+                            bgScale = 1f
+                            bgOffsetX = 0f
+                            bgOffsetY = 0f
+                        },
+                    )
                 }
 
                 Spacer(Modifier.height(BSE_SPACING_40))

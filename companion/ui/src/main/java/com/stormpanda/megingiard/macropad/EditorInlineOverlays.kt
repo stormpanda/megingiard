@@ -66,6 +66,7 @@ import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
+import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -311,9 +312,10 @@ internal fun InlineProfileSettingsOverlay(
             Spacer(Modifier.height(12.dp))
 
             Text(
-                text = stringResource(R.string.profile_settings_app_mapping),
-                color = colors.onSurfaceSecondary,
+                text = stringResource(R.string.profile_settings_app_mapping).uppercase(),
+                color = accentColor,
                 style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(4.dp))
 
@@ -344,50 +346,22 @@ internal fun InlineProfileSettingsOverlay(
                             },
                 )
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (selectedPackage != null) {
-                        Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            AppIcon(
-                                packageName = selectedPackage!!,
-                                modifier =
-                                    Modifier
-                                        .padding(end = 8.dp)
-                                        .size(36.dp),
-                            )
-                            Text(
-                                text = selectedAppName,
-                                color = accentColor,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        TextButton(onClick = { selectedPackage = null }) {
-                            Text(
-                                text = stringResource(R.string.profile_settings_clear_app),
-                                color = colors.error,
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(R.string.macropad_modifier_none),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(onClick = { showAppList = true }) {
-                            Text(
-                                text = stringResource(R.string.profile_settings_select_app),
-                                color = accentColor,
-                            )
-                        }
-                    }
+                if (selectedPackage != null) {
+                    GamepadActionCard(
+                        title = selectedAppName,
+                        description = selectedPackage!!,
+                        actionText = "Clear",
+                        isDestructive = true,
+                        icon = Icons.Rounded.Delete,
+                        onClick = { selectedPackage = null },
+                    )
+                } else {
+                    GamepadActionCard(
+                        title = "Automatic App Association",
+                        description = "Auto-activate profile when target app or game opens",
+                        actionText = "Choose App",
+                        onClick = { showAppList = true },
+                    )
                 }
             }
         } else {

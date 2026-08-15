@@ -60,6 +60,9 @@ import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
@@ -431,361 +434,136 @@ internal fun ButtonEditDialog(
                 )
 
                 if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove) {
-                    // ── Shape + Size + Haptic side by side ──────────────────────────────────────────────
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_button_shape), accentColor)
-                            AppDropdown(
-                                selected = buttonShape,
-                                options = ButtonShape.entries,
-                                optionText = { shape ->
-                                    when (shape) {
-                                        ButtonShape.CIRCLE -> stringResource(R.string.macropad_editor_shape_circle)
-                                        ButtonShape.SQUARE -> stringResource(R.string.macropad_editor_shape_square)
-                                        ButtonShape.ICON_ONLY -> stringResource(R.string.macropad_editor_shape_icon_only)
-                                    }
-                                },
-                                onSelected = { shape -> buttonShape = shape },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                            AppDropdown(
-                                selected = buttonSize,
-                                options = ButtonSize.entries,
-                                optionText = { size -> size.displayLabel() },
-                                onSelected = { size -> buttonSize = size },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                            AppDropdown(
-                                selected = hapticStrength,
-                                options = HapticStrength.entries,
-                                optionText = { strength ->
-                                    when (strength) {
-                                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                                    }
-                                },
-                                onSelected = { strength ->
-                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
-                                    when (strength) {
-                                        HapticStrength.LIGHT -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_LIGHT_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.MEDIUM -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_MEDIUM_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.STRONG -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_STRONG_AMPLITUDE_USER
-                                        }
-
-                                        else -> { /* OFF / CUSTOM → keep current slider values */ }
-                                    }
-                                    hapticStrength = strength
-                                },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                    }
-                } else if (action is PadAction.TrackpointMove) {
-                    // ── Trackpoint size picker + Haptic side by side ────────────────────────
-                    val tpAction = action as PadAction.TrackpointMove
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1.5f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_trackpoint_size), accentColor)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TrackpointSize.entries.forEach { sz ->
-                                    val selected = sz == tpAction.size
-                                    val szLabel =
-                                        when (sz) {
-                                            TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
-                                            TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
-                                            TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
-                                        }
-                                    Box(
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        AppSelectableChip(
-                                            text = szLabel,
-                                            selected = selected,
-                                            onClick = { action = PadAction.TrackpointMove(sz, tpAction.mode) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                            AppDropdown(
-                                selected = hapticStrength,
-                                options = HapticStrength.entries,
-                                optionText = { strength ->
-                                    when (strength) {
-                                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                                    }
-                                },
-                                onSelected = { strength ->
-                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
-                                    when (strength) {
-                                        HapticStrength.LIGHT -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_LIGHT_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.MEDIUM -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_MEDIUM_AMPLITUDE_USER
-                                        }
-
-                                        HapticStrength.STRONG -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_STRONG_AMPLITUDE_USER
-                                        }
-
-                                        else -> { /* OFF / CUSTOM → keep current slider values */ }
-                                    }
-                                    hapticStrength = strength
-                                },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        SectionLabel(stringResource(R.string.macropad_editor_trackpoint_mode), accentColor)
-                        AppDropdown(
-                            selected = tpAction.mode,
-                            options = TrackpointMode.entries,
-                            optionText = { mode ->
-                                when (mode) {
-                                    TrackpointMode.PHYSICAL_MOUSE -> stringResource(R.string.macropad_trackpoint_mode_physical)
-                                    TrackpointMode.VIRTUAL_TOUCH -> stringResource(R.string.macropad_trackpoint_mode_touch)
-                                }
-                            },
-                            onSelected = { newMode ->
-                                action = PadAction.TrackpointMove(tpAction.size, newMode)
-                            },
-                            horizontalPadding = 16.dp,
-                            verticalPadding = 10.dp,
-                            fillMaxWidth = true,
+                    val shapeEntries = ButtonShape.entries
+                    val shapeLabels =
+                        listOf(
+                            stringResource(R.string.macropad_editor_shape_circle),
+                            stringResource(R.string.macropad_editor_shape_square),
+                            stringResource(R.string.macropad_editor_shape_icon_only),
                         )
-                        val explainerRes =
-                            when (tpAction.mode) {
-                                TrackpointMode.PHYSICAL_MOUSE -> R.string.macropad_trackpoint_mode_physical_desc
-                                TrackpointMode.VIRTUAL_TOUCH -> R.string.macropad_trackpoint_mode_touch_desc
-                            }
-                        Text(
-                            text = stringResource(explainerRes),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                    val shapeIdx = shapeEntries.indexOf(buttonShape).coerceAtLeast(0)
+                    GamepadChoiceCard(
+                        title = stringResource(R.string.macropad_editor_button_shape),
+                        description = "Geometry of the interactive button cap",
+                        selectedText = shapeLabels[shapeIdx],
+                        icon = Icons.Rounded.Palette,
+                        onPrevious = {
+                            val nextIdx = (shapeIdx - 1 + shapeEntries.size) % shapeEntries.size
+                            buttonShape = shapeEntries[nextIdx]
+                        },
+                        onNext = {
+                            val nextIdx = (shapeIdx + 1) % shapeEntries.size
+                            buttonShape = shapeEntries[nextIdx]
+                        },
+                    )
+
+                    val sizeEntries = ButtonSize.entries
+                    val sizeIdx = sizeEntries.indexOf(buttonSize).coerceAtLeast(0)
+                    GamepadChoiceCard(
+                        title = stringResource(R.string.macropad_editor_button_size),
+                        description = "Grid width and height footprint",
+                        selectedText = sizeEntries[sizeIdx].displayLabel(),
+                        icon = Icons.Rounded.Palette,
+                        onPrevious = {
+                            val nextIdx = (sizeIdx - 1 + sizeEntries.size) % sizeEntries.size
+                            buttonSize = sizeEntries[nextIdx]
+                        },
+                        onNext = {
+                            val nextIdx = (sizeIdx + 1) % sizeEntries.size
+                            buttonSize = sizeEntries[nextIdx]
+                        },
+                    )
+
+                    val hapticEntries = HapticStrength.entries
+                    val hapticLabels =
+                        listOf(
+                            stringResource(R.string.macropad_haptic_off),
+                            stringResource(R.string.macropad_haptic_light),
+                            stringResource(R.string.macropad_haptic_medium),
+                            stringResource(R.string.macropad_haptic_strong),
+                            stringResource(R.string.macropad_haptic_custom),
                         )
-                    }
-                } else if (action is PadAction.ScrollWheel) {
-                    // ── ScrollWheel: size locked to 1×2 + Haptic side by side ────────────────────
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.Bottom,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_button_size), accentColor)
-                            Text(
-                                text = ButtonSize.SIZE_1X2.displayLabel(),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            SectionLabel(stringResource(R.string.macropad_editor_section_haptic), accentColor)
-                            AppDropdown(
-                                selected = hapticStrength,
-                                options = HapticStrength.entries,
-                                optionText = { strength ->
-                                    when (strength) {
-                                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
-                                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
-                                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
-                                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
-                                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
-                                    }
-                                },
-                                onSelected = { strength ->
-                                    // Snap sliders to preset values; CUSTOM/OFF leave sliders unchanged
-                                    when (strength) {
-                                        HapticStrength.LIGHT -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_LIGHT_AMPLITUDE_USER
-                                        }
+                    val hapticIdx = hapticEntries.indexOf(hapticStrength).coerceAtLeast(0)
+                    GamepadChoiceCard(
+                        title = stringResource(R.string.macropad_editor_section_haptic),
+                        description = "Vibration feedback triggered on tap",
+                        selectedText = hapticLabels[hapticIdx],
+                        icon = Icons.Rounded.Palette,
+                        onPrevious = {
+                            val nextIdx = (hapticIdx - 1 + hapticEntries.size) % hapticEntries.size
+                            val selectedStrength = hapticEntries[nextIdx]
+                            when (selectedStrength) {
+                                HapticStrength.LIGHT -> {
+                                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                                    hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
+                                }
 
-                                        HapticStrength.MEDIUM -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_MEDIUM_AMPLITUDE_USER
-                                        }
+                                HapticStrength.MEDIUM -> {
+                                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                                    hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
+                                }
 
-                                        HapticStrength.STRONG -> {
-                                            hapticCustomDurationMs = HF_PRESET_DURATION_MS
-                                            hapticCustomAmplitude =
-                                                HF_STRONG_AMPLITUDE_USER
-                                        }
+                                HapticStrength.STRONG -> {
+                                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                                    hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
+                                }
 
-                                        else -> { /* OFF / CUSTOM → keep current slider values */ }
-                                    }
-                                    hapticStrength = strength
-                                },
-                                horizontalPadding = 16.dp,
-                                verticalPadding = 10.dp,
-                                fillMaxWidth = true,
-                            )
-                        }
-                    }
+                                else -> {}
+                            }
+                            hapticStrength = selectedStrength
+                        },
+                        onNext = {
+                            val nextIdx = (hapticIdx + 1) % hapticEntries.size
+                            val selectedStrength = hapticEntries[nextIdx]
+                            when (selectedStrength) {
+                                HapticStrength.LIGHT -> {
+                                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                                    hapticCustomAmplitude = HF_LIGHT_AMPLITUDE_USER
+                                }
+
+                                HapticStrength.MEDIUM -> {
+                                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                                    hapticCustomAmplitude = HF_MEDIUM_AMPLITUDE_USER
+                                }
+
+                                HapticStrength.STRONG -> {
+                                    hapticCustomDurationMs = HF_PRESET_DURATION_MS
+                                    hapticCustomAmplitude = HF_STRONG_AMPLITUDE_USER
+                                }
+
+                                else -> {}
+                            }
+                            hapticStrength = selectedStrength
+                        },
+                    )
                 }
-                // Sliders always visible; dragging either slider auto-selects CUSTOM
-                if (hapticStrength != HapticStrength.OFF) {
-                    Column(
-                        modifier = Modifier.padding(top = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.width(96.dp)) {
-                                Text(
-                                    text = stringResource(R.string.macropad_haptic_custom_duration),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text(
-                                    text = "$hapticCustomDurationMs ms",
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            Slider(
-                                modifier = Modifier.weight(1f),
-                                value = hapticCustomDurationMs.toFloat(),
-                                onValueChange = {
-                                    hapticCustomDurationMs = it.toInt()
-                                    hapticStrength = HapticStrength.CUSTOM
-                                },
-                                valueRange = 1f..200f,
-                                steps = 198, // 1..200 → 200 values = 198 interior steps
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.width(96.dp)) {
-                                Text(
-                                    text = stringResource(R.string.macropad_haptic_custom_amplitude),
-                                    color = colors.onSurfaceSecondary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                Text(
-                                    text = "$hapticCustomAmplitude",
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            Slider(
-                                modifier = Modifier.weight(1f),
-                                value = hapticCustomAmplitude.toFloat(),
-                                onValueChange = {
-                                    hapticCustomAmplitude = (it / 5).toInt() * 5
-                                    hapticStrength = HapticStrength.CUSTOM
-                                },
-                                valueRange = 5f..100f,
-                                steps = 18, // 5,10,15,…,100 → 20 values = 18 interior steps
-                            )
-                        }
-                        val vibrator = LocalContext.current.getSystemService(Vibrator::class.java)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    triggerHaptic(
-                                        vibrator = vibrator,
-                                        strength = HapticStrength.CUSTOM,
-                                        customDurationMs = hapticCustomDurationMs,
-                                        customAmplitude = hapticCustomAmplitude,
-                                    )
-                                },
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.macropad_haptic_custom_test),
-                                    color = accentColor,
-                                    style = MaterialTheme.typography.labelLarge,
-                                )
-                            }
-                        }
-                    }
+
+                if (hapticStrength == HapticStrength.CUSTOM) {
+                    GamepadStepperCard(
+                        title = stringResource(R.string.macropad_haptic_custom_duration),
+                        description = "Duration in milliseconds",
+                        valueText = "$hapticCustomDurationMs ms",
+                        icon = Icons.Rounded.Palette,
+                        onDecrement = {
+                            hapticCustomDurationMs = (hapticCustomDurationMs - 10).coerceIn(10, 200)
+                        },
+                        onIncrement = {
+                            hapticCustomDurationMs = (hapticCustomDurationMs + 10).coerceIn(10, 200)
+                        },
+                    )
+
+                    GamepadStepperCard(
+                        title = stringResource(R.string.macropad_haptic_custom_amplitude),
+                        description = "Vibration motor power percentage",
+                        valueText = "$hapticCustomAmplitude%",
+                        icon = Icons.Rounded.Palette,
+                        onDecrement = {
+                            hapticCustomAmplitude = (hapticCustomAmplitude - 5).coerceIn(5, 100)
+                        },
+                        onIncrement = {
+                            hapticCustomAmplitude = (hapticCustomAmplitude + 5).coerceIn(5, 100)
+                        },
+                    )
                 }
 
                 AppDivider()
@@ -821,29 +599,13 @@ internal fun ButtonEditDialog(
                     onPaletteClick = { activePaletteDialogTarget = ButtonColorPickerTarget.BG },
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.layout_settings_invisible_buttons),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            text = stringResource(R.string.layout_settings_invisible_buttons_desc),
-                            color = colors.onSurfaceSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    Switch(
-                        checked = invisible,
-                        onCheckedChange = { invisible = it },
-                        colors = appSwitchColors(),
-                    )
-                }
+                GamepadToggleCard(
+                    title = stringResource(R.string.layout_settings_invisible_buttons),
+                    description = stringResource(R.string.layout_settings_invisible_buttons_desc),
+                    checked = invisible,
+                    icon = Icons.Rounded.Palette,
+                    onCheckedChange = { invisible = it },
+                )
             }
         }
 
