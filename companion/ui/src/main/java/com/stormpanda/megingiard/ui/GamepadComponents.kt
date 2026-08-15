@@ -557,6 +557,30 @@ fun GamepadPill(
     }
 }
 
+@Composable
+private fun CapsuleArrowButton(
+    icon: ImageVector,
+    tint: Color,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(GC_STEPPER_BTN_SIZE)
+                .clip(CircleShape)
+                .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+        )
+    }
+}
+
 /**
  * Shared interactive stepper / choice capsule with left & right navigation buttons.
  */
@@ -574,6 +598,7 @@ fun GamepadAdjustableCapsule(
     val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
     val capsuleBorderWidth = if (isAdjusting) 2.dp else 1.dp
     val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
+    val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
     Row(
         modifier =
@@ -586,20 +611,12 @@ fun GamepadAdjustableCapsule(
                 ).padding(horizontal = 4.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(GC_STEPPER_BTN_SIZE)
-                    .clip(CircleShape)
-                    .clickable(enabled = enabled) { onPrevious() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                contentDescription = null,
-                tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
-            )
-        }
+        CapsuleArrowButton(
+            icon = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+            tint = arrowTint,
+            onClick = onPrevious,
+            enabled = enabled,
+        )
 
         Text(
             text = valueText,
@@ -609,20 +626,12 @@ fun GamepadAdjustableCapsule(
             modifier = Modifier.padding(horizontal = 8.dp),
         )
 
-        Box(
-            modifier =
-                Modifier
-                    .size(GC_STEPPER_BTN_SIZE)
-                    .clip(CircleShape)
-                    .clickable(enabled = enabled) { onNext() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                contentDescription = null,
-                tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
-            )
-        }
+        CapsuleArrowButton(
+            icon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            tint = arrowTint,
+            onClick = onNext,
+            enabled = enabled,
+        )
     }
 }
 
@@ -1100,6 +1109,30 @@ fun GamepadTwoPaneScaffold(
     val firstContentRequester = remember { FocusRequester() }
     var lastFocusedContentRequester by remember { mutableStateOf<FocusRequester?>(null) }
 
+    val transferFocusToDeck: () -> Unit = {
+        var handled = false
+        val target = lastFocusedContentRequester
+        if (target != null) {
+            try {
+                target.requestFocus()
+                handled = true
+            } catch (_: IllegalStateException) {
+                lastFocusedContentRequester = null
+            }
+        }
+        if (!handled) {
+            try {
+                firstContentRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+                try {
+                    activeCategoryRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                    // Focus fallback
+                }
+            }
+        }
+    }
+
     CompositionLocalProvider(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
@@ -1121,23 +1154,7 @@ fun GamepadTwoPaneScaffold(
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 when (keyCode) {
                     KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        var handled = false
-                        val target = lastFocusedContentRequester
-                        if (target != null) {
-                            try {
-                                target.requestFocus()
-                                handled = true
-                            } catch (_: Exception) {
-                                lastFocusedContentRequester = null
-                            }
-                        }
-                        if (!handled) {
-                            try {
-                                firstContentRequester.requestFocus()
-                            } catch (_: Exception) {
-                                activeCategoryRequester.requestFocus()
-                            }
-                        }
+                        transferFocusToDeck()
                     }
 
                     else -> {
@@ -1167,23 +1184,7 @@ fun GamepadTwoPaneScaffold(
                                 if (keyEvent.type == KeyEventType.KeyDown &&
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                                 ) {
-                                    var handled = false
-                                    val target = lastFocusedContentRequester
-                                    if (target != null) {
-                                        try {
-                                            target.requestFocus()
-                                            handled = true
-                                        } catch (_: Exception) {
-                                            lastFocusedContentRequester = null
-                                        }
-                                    }
-                                    if (!handled) {
-                                        try {
-                                            firstContentRequester.requestFocus()
-                                        } catch (_: Exception) {
-                                            // Focus fallback
-                                        }
-                                    }
+                                    transferFocusToDeck()
                                     true
                                 } else {
                                     false
