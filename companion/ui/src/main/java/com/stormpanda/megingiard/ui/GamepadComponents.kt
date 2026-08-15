@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.ui
 
 import android.view.KeyEvent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -103,6 +104,7 @@ private val GC_SIDEBAR_CORNER = 10.dp
 private val GC_SIDEBAR_ICON_SIZE = 20.dp
 private const val GC_ANIM_DURATION_MS = 150
 private const val GC_INITIAL_FOCUS_DELAY_MS = 50L
+private const val GC_UNFOCUSED_MAX_LINES = 1
 
 /**
  * Standard gamepad button glyph descriptors.
@@ -417,7 +419,12 @@ fun GamepadToggleCard(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .animateContentSize(),
+            ) {
                 Text(
                     text = title,
                     color = colors.onSurface,
@@ -430,8 +437,8 @@ fun GamepadToggleCard(
                         text = description,
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -591,7 +598,12 @@ fun GamepadStepperCard(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .animateContentSize(),
+            ) {
                 Text(
                     text = title,
                     color = colors.onSurface,
@@ -604,8 +616,8 @@ fun GamepadStepperCard(
                         text = description,
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -796,7 +808,12 @@ fun GamepadChoiceCard(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .animateContentSize(),
+            ) {
                 Text(
                     text = title,
                     color = colors.onSurface,
@@ -809,8 +826,8 @@ fun GamepadChoiceCard(
                         text = description,
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -935,7 +952,12 @@ fun GamepadActionCard(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .animateContentSize(),
+            ) {
                 Text(
                     text = title,
                     color = if (isDestructive) colors.error else colors.onSurface,
@@ -948,8 +970,8 @@ fun GamepadActionCard(
                         text = description,
                         color = colors.onSurfaceSecondary,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
+                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -1461,7 +1483,7 @@ fun GamepadSliderCard(
                             modifier = Modifier.size(GC_ICON_SIZE),
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.animateContentSize()) {
                         Text(
                             text = title,
                             color = colors.onSurface,
@@ -1473,6 +1495,8 @@ fun GamepadSliderCard(
                                 text = subtitle,
                                 color = colors.onSurfaceSecondary,
                                 style = MaterialTheme.typography.labelSmall,
+                                maxLines = if (focused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                                overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
                             )
                         }
                     }
