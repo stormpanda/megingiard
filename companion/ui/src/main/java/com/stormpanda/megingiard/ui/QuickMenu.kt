@@ -57,15 +57,17 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.privd.PrivdClient
 import com.stormpanda.megingiard.privd.PrivdConnectionState
-import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.shouldShowIntegrationHome
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import java.util.UUID
 
 private const val TAG = "QuickMenu"
@@ -309,7 +311,12 @@ fun QuickMenu(
                         icon = Icons.Rounded.Edit,
                         colors = colors,
                         onClick = {
-                            AppStateManager.setEditorActive(true)
+                            val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                            if (isDual) {
+                                AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
+                            } else {
+                                AppStateManager.setEditorActive(true)
+                            }
                             onDismiss()
                         },
                         modifier = Modifier.weight(1f),
@@ -318,7 +325,10 @@ fun QuickMenu(
                         label = stringResource(R.string.quick_menu_global_settings),
                         icon = Icons.Rounded.Settings,
                         colors = colors,
-                        onClick = { AppStateManager.setGlobalSettingsOpen(true) },
+                        onClick = {
+                            AppStateManager.setGlobalSettingsOpen(true)
+                            onDismiss()
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     ShutOffIconButton(
@@ -329,7 +339,15 @@ fun QuickMenu(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
                         contentDescription = stringResource(R.string.help_open_cd),
                         colors = colors,
-                        onClick = { showQuickMenuHelp = true },
+                        onClick = {
+                            val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                            if (isDual) {
+                                AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.HELP_TUTORIAL))
+                                onDismiss()
+                            } else {
+                                showQuickMenuHelp = true
+                            }
+                        },
                     )
                 }
             }

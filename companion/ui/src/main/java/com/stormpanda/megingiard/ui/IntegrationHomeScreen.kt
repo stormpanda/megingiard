@@ -75,6 +75,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.catalog.InstalledAppInfo
 import com.stormpanda.megingiard.catalog.InstalledAppsManager
 import com.stormpanda.megingiard.ipc.MegingiardIpcContract
@@ -86,6 +87,8 @@ import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.session.ActiveGameSession
 import com.stormpanda.megingiard.session.EmulatorDetectionFunnel
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.update.UpdateManager
 import kotlinx.coroutines.delay
 import java.io.File
@@ -626,7 +629,12 @@ private fun HeroCompanionCard(
                             OutlinedButton(
                                 onClick = {
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
-                                    AppStateManager.setEditorActive(true)
+                                    val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                                    if (isDual) {
+                                        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
+                                    } else {
+                                        AppStateManager.setEditorActive(true)
+                                    }
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
@@ -681,7 +689,12 @@ private fun HeroCompanionCard(
                                         )
                                     MacroPadState.addProfile(newProfile)
                                     MacroPadState.setActiveProfileId(newProfileId)
-                                    AppStateManager.setEditorActive(true)
+                                    val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                                    if (isDual) {
+                                        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
+                                    } else {
+                                        AppStateManager.setEditorActive(true)
+                                    }
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =

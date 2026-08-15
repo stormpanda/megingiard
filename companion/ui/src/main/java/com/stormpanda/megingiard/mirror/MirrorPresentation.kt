@@ -104,7 +104,6 @@ import com.stormpanda.megingiard.SwipeGestureProgress
 import com.stormpanda.megingiard.SwipeGestureType
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
-import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.AmbientPreviewManager
 import com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay
 import com.stormpanda.megingiard.macropad.HapticStrength
@@ -116,12 +115,10 @@ import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
-import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.shouldKeepPrimaryGameFocus
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
-import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
@@ -131,7 +128,6 @@ import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
-import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.paletteFor
 import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import kotlinx.coroutines.CoroutineScope
@@ -843,50 +839,6 @@ class MirrorPresentation(
                                 }
 
                                 ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
-
-                                AnimatedVisibility(
-                                    visible = isGlobalSettingsOpen,
-                                    enter = slideInVertically { it } + fadeIn(),
-                                    exit = slideOutVertically { it } + fadeOut(),
-                                    modifier = Modifier.fillMaxSize(),
-                                ) {
-                                    GlobalSettingsScreen(
-                                        onBack = { AppStateManager.setGlobalSettingsOpen(false) },
-                                    )
-                                }
-
-                                AnimatedVisibility(
-                                    visible = isKeyboardSettingsOpen,
-                                    enter = slideInVertically { it } + fadeIn(),
-                                    exit = slideOutVertically { it } + fadeOut(),
-                                    modifier = Modifier.fillMaxSize(),
-                                ) {
-                                    KeyboardSettingsOverlay(
-                                        onBack = { AppStateManager.setKeyboardSettingsOpen(false) },
-                                    )
-                                }
-
-                                AnimatedVisibility(
-                                    visible = isTouchpadSettingsOpen,
-                                    enter = slideInVertically { it } + fadeIn(),
-                                    exit = slideOutVertically { it } + fadeOut(),
-                                    modifier = Modifier.fillMaxSize(),
-                                ) {
-                                    TouchpadSettingsOverlay(
-                                        onBack = { AppStateManager.setTouchpadSettingsOpen(false) },
-                                    )
-                                }
-
-                                val isWizardActive by OnboardingWizardManager.isWizardActive.collectAsState()
-                                if (isWizardActive) {
-                                    OnboardingWizardDialog(
-                                        overlayAtBottom = overlayAtBottom,
-                                        onDismiss = {
-                                            OnboardingWizardManager.finishWizard()
-                                            AppStateManager.resetPrivdPromptState()
-                                        },
-                                    )
-                                }
 
                                 val isPrivdPromptActive by AppStateManager.isPrivdPromptActive.collectAsState()
 

@@ -415,7 +415,7 @@ fun MainAppScreen() {
                 )
             }
             AnimatedVisibility(
-                visible = isEditorActive,
+                visible = isEditorActive && !isDualScreen,
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
@@ -425,7 +425,7 @@ fun MainAppScreen() {
                 )
             }
             AnimatedVisibility(
-                visible = isBackgroundSettingsActive,
+                visible = isBackgroundSettingsActive && !isDualScreen,
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
@@ -532,7 +532,7 @@ fun MainAppScreen() {
             }
         }
 
-        if (isWizardActive) {
+        if (isWizardActive && !isDualScreen) {
             OnboardingWizardDialog(
                 overlayAtBottom = overlayAtBottom,
                 onDismiss = {

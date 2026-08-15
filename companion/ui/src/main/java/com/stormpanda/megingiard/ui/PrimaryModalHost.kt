@@ -16,9 +16,11 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.ButtonEditDialog
+import com.stormpanda.megingiard.macropad.InlineProfileSettingsOverlay
 import com.stormpanda.megingiard.macropad.LayoutSettingsEditor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.MacroTimelineEditor
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -171,6 +173,43 @@ fun PrimaryModalHost(
                                     invisibleButtons = inv,
                                 ),
                             )
+                            onDismiss()
+                        },
+                        onDismiss = onDismiss,
+                    )
+                }
+            }
+        }
+
+        PrimaryModalType.PROFILE_SETTINGS -> {
+            val activeProfile by MacroPadState.activeProfile.collectAsState()
+            val profiles by MacroPadState.profiles.collectAsState()
+            activeProfile?.let { profile ->
+                PrimaryOverlayContainer(
+                    title = stringResource(R.string.profile_settings_title),
+                    icon = Icons.Rounded.Tune,
+                    onDismiss = onDismiss,
+                    modifier = modifier,
+                ) {
+                    InlineProfileSettingsOverlay(
+                        title = stringResource(R.string.profile_settings_title),
+                        initialName = profile.name,
+                        initialPackage = profile.association?.packageName,
+                        accentColor = colors.accent,
+                        existingNames = profiles.filter { it.id != profile.id }.map { it.name },
+                        onConfirm = { name, pkg ->
+                            val assoc =
+                                if (pkg != null) {
+                                    val existing = profile.association
+                                    if (existing != null && existing.packageName.equals(pkg, ignoreCase = true)) {
+                                        existing
+                                    } else {
+                                        ProfileAssociation(packageName = pkg)
+                                    }
+                                } else {
+                                    null
+                                }
+                            MacroPadState.renameProfile(profile.id, name, assoc)
                             onDismiss()
                         },
                         onDismiss = onDismiss,

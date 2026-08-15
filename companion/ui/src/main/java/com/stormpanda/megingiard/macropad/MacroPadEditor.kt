@@ -263,7 +263,14 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                     onNewProfile = { showNewProfileDialog = true },
-                    onEditProfile = { showRenameProfileDialog = true },
+                    onEditProfile = {
+                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                        if (isDual) {
+                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.PROFILE_SETTINGS))
+                        } else {
+                            showRenameProfileDialog = true
+                        }
+                    },
                     onDeleteProfile = { showDeleteProfileConfirm = true },
                     onSelectLayout = {
                         MacroPadState.setActiveLayoutId(it)
@@ -758,7 +765,7 @@ private fun EditorTopBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.macropad_editor_title_edit_profile),
+                text = stringResource(R.string.macropad_editor_title),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
