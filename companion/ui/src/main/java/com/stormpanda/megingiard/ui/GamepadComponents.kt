@@ -372,7 +372,7 @@ fun GamepadFocusCard(
 /**
  * Handles standardized gamepad adjustment key events (D-pad Left/Right adjustment, A/B/Enter dismiss).
  */
-private fun handleAdjustmentKeyEvent(
+internal fun handleAdjustmentKeyEvent(
     keyEvent: androidx.compose.ui.input.key.KeyEvent,
     isAdjusting: Boolean,
     onAdjustLeft: () -> Unit,
@@ -706,99 +706,12 @@ fun GamepadToggleCard(
 }
 
 /**
- * Gamepad-first stepper card for adjusting numeric values directly with D-pad Left/Right.
- *
- * In Tier 1 (Row Navigation):
- * - D-Pad Left: passes through to navigate back to the sidebar
- * - D-Pad Up / Down: moves strictly to adjacent card
- * - Button A: enters Tier 2 (Value Adjustment Mode)
- *
- * In Tier 2 (Value Adjustment Mode):
- * - Stepper capsule illuminates with glowing accent border
- * - D-Pad Left: calls onDecrement()
- * - D-Pad Right: calls onIncrement()
- * - Button A: confirms value and exits adjustment
- * - Button B / Back: cancels/exits adjustment without dismissing overlay
- * - D-Pad Up / Down: exits adjustment and moves to adjacent card
+ * Shared base card for adjustable components (steppers, choices) supporting 2-tier D-pad navigation.
  */
 @Composable
-fun GamepadStepperCard(
+fun GamepadAdjustableCard(
     title: String,
     valueText: String,
-    onDecrement: () -> Unit,
-    onIncrement: () -> Unit,
-    modifier: Modifier = Modifier,
-    description: String? = null,
-    icon: ImageVector? = null,
-    onValueClick: (() -> Unit)? = null,
-    enabled: Boolean = true,
-) {
-    var isAdjusting by remember { mutableStateOf(false) }
-
-    GamepadFocusCard(
-        onClick = {
-            if (onValueClick != null) {
-                onValueClick()
-            } else {
-                isAdjusting = !isAdjusting
-            }
-        },
-        enabled = enabled,
-        modifier = modifier,
-        onCustomKeyEvent = { keyEvent ->
-            handleAdjustmentKeyEvent(
-                keyEvent = keyEvent,
-                isAdjusting = isAdjusting,
-                onAdjustLeft = onDecrement,
-                onAdjustRight = onIncrement,
-                onDismissAdjustment = { isAdjusting = false },
-            )
-        },
-        onFocusChanged = { focused ->
-            if (!focused) {
-                isAdjusting = false
-            }
-        },
-    ) { isFocused ->
-        GamepadCardRow(
-            title = title,
-            description = description,
-            icon = icon,
-            isFocused = isFocused,
-            trailingContent = {
-                GamepadAdjustableCapsule(
-                    valueText = valueText,
-                    onPrevious = onDecrement,
-                    onNext = onIncrement,
-                    isAdjusting = isAdjusting,
-                    isFocused = isFocused,
-                    enabled = enabled,
-                )
-            },
-        )
-    }
-}
-
-/**
- * Gamepad-first inline carousel choice card.
- *
- * In Tier 1 (Row Navigation):
- * - D-Pad Left: passes through to navigate back to the sidebar
- * - D-Pad Up / Down: moves strictly to adjacent card
- * - Button A: enters Tier 2 (Value Adjustment Mode)
- *
- * In Tier 2 (Value Adjustment Mode):
- * - Choice capsule illuminates with glowing accent border
- * - D-Pad Left: calls onPrevious()
- * - D-Pad Right: calls onNext()
- * - Button A: confirms value and exits adjustment
- * - Button B / Back: cancels/exits adjustment without dismissing overlay
- * - D-Pad Up / Down: exits adjustment and moves to adjacent card
- */
-@Composable
-fun GamepadChoiceCard(
-    title: String,
-    selectedText: String,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
@@ -841,7 +754,7 @@ fun GamepadChoiceCard(
             isFocused = isFocused,
             trailingContent = {
                 GamepadAdjustableCapsule(
-                    valueText = selectedText,
+                    valueText = valueText,
                     onPrevious = onPrevious,
                     onNext = onNext,
                     isAdjusting = isAdjusting,
@@ -851,6 +764,88 @@ fun GamepadChoiceCard(
             },
         )
     }
+}
+
+/**
+ * Gamepad-first stepper card for adjusting numeric values directly with D-pad Left/Right.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A: enters Tier 2 (Value Adjustment Mode)
+ *
+ * In Tier 2 (Value Adjustment Mode):
+ * - Stepper capsule illuminates with glowing accent border
+ * - D-Pad Left: calls onDecrement()
+ * - D-Pad Right: calls onIncrement()
+ * - Button A: confirms value and exits adjustment
+ * - Button B / Back: cancels/exits adjustment without dismissing overlay
+ * - D-Pad Up / Down: exits adjustment and moves to adjacent card
+ */
+@Composable
+fun GamepadStepperCard(
+    title: String,
+    valueText: String,
+    onDecrement: () -> Unit,
+    onIncrement: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector? = null,
+    onValueClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+) {
+    GamepadAdjustableCard(
+        title = title,
+        valueText = valueText,
+        onPrevious = onDecrement,
+        onNext = onIncrement,
+        modifier = modifier,
+        description = description,
+        icon = icon,
+        onClick = onValueClick,
+        enabled = enabled,
+    )
+}
+
+/**
+ * Gamepad-first inline carousel choice card.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A: enters Tier 2 (Value Adjustment Mode)
+ *
+ * In Tier 2 (Value Adjustment Mode):
+ * - Choice capsule illuminates with glowing accent border
+ * - D-Pad Left: calls onPrevious()
+ * - D-Pad Right: calls onNext()
+ * - Button A: confirms value and exits adjustment
+ * - Button B / Back: cancels/exits adjustment without dismissing overlay
+ * - D-Pad Up / Down: exits adjustment and moves to adjacent card
+ */
+@Composable
+fun GamepadChoiceCard(
+    title: String,
+    selectedText: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector? = null,
+    onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+) {
+    GamepadAdjustableCard(
+        title = title,
+        valueText = selectedText,
+        onPrevious = onPrevious,
+        onNext = onNext,
+        modifier = modifier,
+        description = description,
+        icon = icon,
+        onClick = onClick,
+        enabled = enabled,
+    )
 }
 
 /**
