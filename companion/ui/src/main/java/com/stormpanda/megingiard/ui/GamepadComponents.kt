@@ -1049,6 +1049,7 @@ fun GamepadCategoryTile(
                 .primaryOverlayFocusable(
                     onClick = wrappedOnClick,
                     shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
+                    borderWidth = 0.dp,
                     interactionSource = interactionSource,
                 ),
         shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
