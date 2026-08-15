@@ -654,7 +654,7 @@ fun GamepadActionCard(
     description: String? = null,
     icon: ImageVector? = null,
     actionText: String? = null,
-    actionGlyph: GamePadGlyph = GamePadGlyph.BTN_A,
+    actionGlyph: GamePadGlyph? = null,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
 ) {
@@ -722,40 +722,44 @@ fun GamepadActionCard(
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            if (actionText != null || actionGlyph != null) {
+                Spacer(modifier = Modifier.width(12.dp))
 
-            // Action Badge (A) Action
-            Row(
-                modifier =
-                    Modifier
-                        .background(
-                            if (isDestructive) colors.error.copy(alpha = 0.15f) else colors.surfaceVariant,
-                            RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                        ).border(
-                            1.dp,
-                            if (isDestructive) {
-                                colors.error
-                            } else if (isFocused) {
-                                colors.accent
-                            } else {
-                                colors.controlOverlayBorder
-                            },
-                            RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                        ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                GamePadGlyphBadge(
-                    glyph = actionGlyph,
-                    tint = if (isDestructive) colors.error else colors.accent,
-                )
-                if (actionText != null) {
-                    Text(
-                        text = actionText,
-                        color = if (isDestructive) colors.error else colors.onSurface,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                // Action Badge / Button
+                Row(
+                    modifier =
+                        Modifier
+                            .background(
+                                if (isDestructive) colors.error.copy(alpha = 0.15f) else colors.surfaceVariant,
+                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                            ).border(
+                                1.dp,
+                                if (isDestructive) {
+                                    colors.error
+                                } else if (isFocused) {
+                                    colors.accent
+                                } else {
+                                    colors.controlOverlayBorder
+                                },
+                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (actionGlyph != null) {
+                        GamePadGlyphBadge(
+                            glyph = actionGlyph,
+                            tint = if (isDestructive) colors.error else colors.accent,
+                        )
+                    }
+                    if (actionText != null) {
+                        Text(
+                            text = actionText,
+                            color = if (isDestructive) colors.error else colors.onSurface,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }

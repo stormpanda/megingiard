@@ -103,6 +103,7 @@ import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteGrid
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
+import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
@@ -332,12 +333,7 @@ fun GlobalSettingsScreen(
                                 shape = RoundedCornerShape(GS_SIDEBAR_CORNER),
                             ),
                 )
-                GamepadActionCard(
-                    title = "",
-                    actionText = "?",
-                    onClick = { showSettingsHelp = true },
-                    modifier = Modifier.width(48.dp),
-                )
+                HelpIconButton(onClick = { showSettingsHelp = true })
             }
         }
 

@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,6 +37,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -58,14 +62,10 @@ private val POC_HEADER_PADDING_H = 20.dp
 private val POC_ICON_SIZE = 24.dp
 private val POC_CLOSE_BTN_SIZE = 36.dp
 private val POC_CLOSE_ICON_SIZE = 18.dp
-private val POC_BADGE_CORNER = 6.dp
-private val POC_BADGE_PADDING_H = 8.dp
-private val POC_BADGE_PADDING_V = 3.dp
 private val POC_SPACER_SMALL = 8.dp
 private val POC_SPACER_MEDIUM = 12.dp
 private const val POC_TITLE_FONT_SIZE_SP = 18
 private const val POC_SUBTITLE_FONT_SIZE_SP = 14
-private const val POC_BADGE_FONT_SIZE_SP = 11
 private const val POC_SUBTITLE_DOT = "•"
 
 /**
@@ -73,7 +73,7 @@ private const val POC_SUBTITLE_DOT = "•"
  *
  * Provides a dark frosted acrylic background scrim, centered elevated surface card with
  * dual-corner bezel brush border ([rememberBezelBrush]), structured header with category
- * title, gamepad bumper navigation hints ([L1] / [R1]), and dismissal controls.
+ * title, gamepad B-button dismissal, and focus initialization.
  */
 @Composable
 fun PrimaryOverlayContainer(
@@ -82,16 +82,9 @@ fun PrimaryOverlayContainer(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     categorySubtitle: String? = null,
-    bumperHint: String? = null,
     onBumperPrev: (() -> Unit)? = null,
     onBumperNext: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
-    footerActions: List<Pair<GamePadGlyph, String>>? =
-        listOf(
-            GamePadGlyph.NAV to "Navigate",
-            GamePadGlyph.BTN_A to "Select / Toggle",
-            GamePadGlyph.BTN_B to "Back",
-        ),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -122,7 +115,20 @@ fun PrimaryOverlayContainer(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = POC_SCRIM_ALPHA))
-                .clickable(
+                .onPreviewKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown &&
+                        (
+                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
+                        )
+                    ) {
+                        onDismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onDismiss,
@@ -192,25 +198,6 @@ fun PrimaryOverlayContainer(
                         }
                     }
 
-                    // Gamepad Bumper Hint Badge
-                    if (bumperHint != null) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .background(colors.surface, RoundedCornerShape(POC_BADGE_CORNER))
-                                    .border(POC_BORDER_THIN, colors.controlOverlayBorder, RoundedCornerShape(POC_BADGE_CORNER))
-                                    .padding(horizontal = POC_BADGE_PADDING_H, vertical = POC_BADGE_PADDING_V),
-                        ) {
-                            Text(
-                                text = bumperHint,
-                                color = colors.onSurfaceSecondary,
-                                fontSize = POC_BADGE_FONT_SIZE_SP.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(POC_SPACER_MEDIUM))
-                    }
-
                     // Custom Actions
                     if (actions != null) {
                         Row(
@@ -250,11 +237,6 @@ fun PrimaryOverlayContainer(
                             .focusRequester(contentFocusRequester),
                 ) {
                     content()
-                }
-
-                // Gamepad Footer Action Bar
-                if (footerActions != null && footerActions.isNotEmpty()) {
-                    PrimaryOverlayFooter(actions = footerActions)
                 }
             }
         }

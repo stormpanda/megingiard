@@ -26,8 +26,6 @@ import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
 
-private const val PMH_BUMPER_HINT_TABS = "LB / RB: Tabs"
-
 /**
  * Composable dispatcher that renders the appropriate content for a given [PrimaryModalConfig].
  */
@@ -44,7 +42,6 @@ fun PrimaryModalHost(
             PrimaryOverlayContainer(
                 title = stringResource(R.string.settings_global_title),
                 icon = Icons.Rounded.Settings,
-                bumperHint = PMH_BUMPER_HINT_TABS,
                 onDismiss = onDismiss,
                 modifier = modifier,
             ) {

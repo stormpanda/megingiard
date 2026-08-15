@@ -188,18 +188,17 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 - **Analog Stick & Hat Switch Translation:** `PrimaryOverlayInputBridge` processes `MotionEvent` axis streams (`AXIS_X`, `AXIS_Y`, `AXIS_HAT_X`, `AXIS_HAT_Y`) with a $0.5f$ deadzone and $180\text{ ms}$ repeat throttling, synthesizing discrete `KEYCODE_DPAD_*` key events for 2D focus traversal.
 - **Button A & Enter Activation:** `Modifier.primaryOverlayFocusable` ensures that physical controller `KEYCODE_BUTTON_A` (96) and `KEYCODE_DPAD_CENTER` trigger item clicks across rows, buttons, and selectable chips.
 - **Bumper Tab Switching:** Pressing `[L1]` (102) or `[R1]` (103) dispatches `BumperDirection.PREV` / `NEXT` events via `PrimaryOverlayInputBridge.bumperEvents`, cycling active tabs and category sidebar filters.
-- **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers the back-press dispatcher or closes active modals.
+- **Button B / Back Dismissal:** Pressing `[B]` (97) or `BACK` triggers `onPreviewKeyEvent` / back-press dispatcher to close active dialogs and modals immediately.
 - **Gamepad-First Control Cards (`GamepadComponents.kt`):**
   - `GamepadFocusCard`: Base elevated card container with high-contrast animated accent border, subtle background tint elevation on focus, and D-pad click/stepper key interceptors.
   - `GamepadToggleCard`: Binary toggle switch card with illuminated `[ ON ● ]` / `[ OFF ○ ]` status pill.
   - `GamepadStepperCard`: Stepper card with `◀ Value ▶` adjustment controls navigable with D-pad Left/Right.
   - `GamepadChoiceCard`: Option carousel with `◀ Choice ▶` cycling through enum / list options without requiring submenu navigation.
-  - `GamepadActionCard`: Action trigger card with an `(A) Action` glyph badge.
+  - `GamepadActionCard`: Compact action trigger card with focus activation.
   - `GamepadColorPaletteGrid`: 2D focusable color palette grid for accent color selection.
-  - `PrimaryOverlayFooter`: Contextual bottom controller guide displaying active button prompts (`[Stick / D-Pad] Navigate   (A) Select / Toggle   (B) Back   [L1 / R1] Category`).
 - **Two-Pane Console Sidebar Layout (`GlobalSettingsScreen`):**
   - Left pane features a 210 dp category rail with category tiles (All, General, Input, Appearance, Data, Config, Updates, Diagnostics).
-  - Right pane presents the active category's settings deck using gamepad cards.
+  - Right pane presents the active category's settings deck using gamepad cards without space-consuming footer bars.
 
 ### Source Files
 

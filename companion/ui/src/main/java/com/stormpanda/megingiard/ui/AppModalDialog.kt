@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.ui
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -59,7 +63,20 @@ fun AppModalDialog(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = scrimAlpha))
-                .clickable(
+                .onPreviewKeyEvent { keyEvent ->
+                    if (keyEvent.type == KeyEventType.KeyDown &&
+                        (
+                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
+                        )
+                    ) {
+                        onDismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }.clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onDismiss,
