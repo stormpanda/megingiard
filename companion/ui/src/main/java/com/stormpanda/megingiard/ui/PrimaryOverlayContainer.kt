@@ -86,6 +86,12 @@ fun PrimaryOverlayContainer(
     onBumperPrev: (() -> Unit)? = null,
     onBumperNext: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null,
+    footerActions: List<Pair<GamePadGlyph, String>>? =
+        listOf(
+            GamePadGlyph.NAV to "Navigate",
+            GamePadGlyph.BTN_A to "Select / Toggle",
+            GamePadGlyph.BTN_B to "Back",
+        ),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -244,6 +250,11 @@ fun PrimaryOverlayContainer(
                             .focusRequester(contentFocusRequester),
                 ) {
                     content()
+                }
+
+                // Gamepad Footer Action Bar
+                if (footerActions != null && footerActions.isNotEmpty()) {
+                    PrimaryOverlayFooter(actions = footerActions)
                 }
             }
         }

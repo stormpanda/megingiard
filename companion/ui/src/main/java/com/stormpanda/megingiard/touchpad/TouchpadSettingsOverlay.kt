@@ -1,21 +1,23 @@
 package com.stormpanda.megingiard.touchpad
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.PanTool
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.Videocam
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -24,25 +26,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.RememberSettingRow
-import com.stormpanda.megingiard.settings.SettingsSection
-import com.stormpanda.megingiard.settings.SliderSettingRow
 import com.stormpanda.megingiard.settings.TouchpadSettings
+import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.SettingsOverlayScaffold
+import java.util.Locale
 
 private const val TAG = "TouchpadSettingsOverlay"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val colors = LocalAppColors.current
@@ -68,100 +68,131 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
         }
     }
 
-    SettingsOverlayScaffold(
-        title = stringResource(R.string.settings_touchpad_title),
-        onBack = onBack,
-        onHelpClick = { showHelp = true },
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(colors.appBackground)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        SettingsSection(
-            title = stringResource(R.string.settings_section_relative_mouse),
-            colors = colors,
-        ) {
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_tap_to_click),
-                description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-                checked = touchpadTapToClick,
-                onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
+        Text(
+            text = stringResource(R.string.settings_section_relative_mouse).uppercase(),
+            color = colors.accent,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_tap_to_click),
+            description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
+            checked = touchpadTapToClick,
+            icon = Icons.Rounded.TouchApp,
+            onCheckedChange = { TouchpadSettings.setTouchpadTapToClick(it) },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_two_finger_tap),
+            description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
+            checked = touchpadTwoFingerTap,
+            icon = Icons.Rounded.PanTool,
+            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_three_finger_tap),
+            description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
+            checked = touchpadThreeFingerTap,
+            icon = Icons.Rounded.PanTool,
+            onCheckedChange = { TouchpadSettings.setTouchpadThreeFingerTap(it) },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_tap_drag),
+            description = stringResource(R.string.settings_touchpad_tap_drag_desc),
+            checked = touchpadTapDrag,
+            icon = Icons.Rounded.TouchApp,
+            onCheckedChange = { TouchpadSettings.setTouchpadTapDrag(it) },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_two_finger_scroll),
+            description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
+            checked = touchpadTwoFingerScroll,
+            icon = Icons.Rounded.SwapVert,
+            onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
+        )
+
+        if (touchpadTwoFingerScroll) {
+            GamepadToggleCard(
+                title = stringResource(R.string.settings_touchpad_natural_scroll),
+                description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
+                checked = touchpadNaturalScroll,
+                icon = Icons.Rounded.SwapVert,
+                onCheckedChange = { TouchpadSettings.setTouchpadNaturalScroll(it) },
             )
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_two_finger_tap),
-                description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-                checked = touchpadTwoFingerTap,
-                onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerTap(it) },
-            )
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_three_finger_tap),
-                description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
-                checked = touchpadThreeFingerTap,
-                onCheckedChange = { TouchpadSettings.setTouchpadThreeFingerTap(it) },
-            )
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_tap_drag),
-                description = stringResource(R.string.settings_touchpad_tap_drag_desc),
-                checked = touchpadTapDrag,
-                onCheckedChange = { TouchpadSettings.setTouchpadTapDrag(it) },
-            )
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_two_finger_scroll),
-                description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-                checked = touchpadTwoFingerScroll,
-                onCheckedChange = { TouchpadSettings.setTouchpadTwoFingerScroll(it) },
-            )
-            if (touchpadTwoFingerScroll) {
-                RememberSettingRow(
-                    label = stringResource(R.string.settings_touchpad_natural_scroll),
-                    description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
-                    checked = touchpadNaturalScroll,
-                    onCheckedChange = { TouchpadSettings.setTouchpadNaturalScroll(it) },
-                )
-                SliderSettingRow(
-                    label = stringResource(R.string.settings_touchpad_scroll_speed),
-                    value = touchpadScrollSpeed,
-                    valueRange = 0.5f..3.0f,
-                    formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
-                    onValueChange = { TouchpadSettings.setTouchpadScrollSpeed(it) },
-                )
-            }
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_mouse_4_5),
-                description = stringResource(R.string.settings_touchpad_mouse_4_5_desc),
-                checked = touchpadMouse45Enabled,
-                onCheckedChange = { TouchpadSettings.setTouchpadMouse45Enabled(it) },
-            )
-            SliderSettingRow(
-                label = stringResource(R.string.settings_touchpad_sensitivity),
-                value = touchpadSensitivity,
-                valueRange = 0.1f..3.0f,
-                formatLabel = { String.format(java.util.Locale.US, "%.1fx", it) },
-                onValueChange = { TouchpadSettings.setTouchpadSensitivity(it) },
-            )
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_haptics),
-                description = stringResource(R.string.settings_touchpad_haptics_desc),
-                checked = touchpadHapticsEnabled,
-                onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
+
+            GamepadStepperCard(
+                title = stringResource(R.string.settings_touchpad_scroll_speed),
+                description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
+                valueText = String.format(Locale.US, "%.1fx", touchpadScrollSpeed),
+                icon = Icons.Rounded.Speed,
+                onDecrement = { TouchpadSettings.setTouchpadScrollSpeed((touchpadScrollSpeed - 0.2f).coerceAtLeast(0.5f)) },
+                onIncrement = { TouchpadSettings.setTouchpadScrollSpeed((touchpadScrollSpeed + 0.2f).coerceAtMost(3.0f)) },
             )
         }
 
-        SettingsSection(
-            title = stringResource(R.string.settings_section_absolute_touch),
-            colors = colors,
-        ) {
-            RememberSettingRow(
-                label = stringResource(R.string.settings_touchpad_mirroring),
-                description = stringResource(R.string.settings_touchpad_mirroring_desc),
-                checked = touchpadMirroringEnabled,
-                onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
+        GamepadStepperCard(
+            title = stringResource(R.string.settings_touchpad_sensitivity),
+            description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
+            valueText = String.format(Locale.US, "%.1fx", touchpadSensitivity),
+            icon = Icons.Rounded.Speed,
+            onDecrement = { TouchpadSettings.setTouchpadSensitivity((touchpadSensitivity - 0.2f).coerceAtLeast(0.2f)) },
+            onIncrement = { TouchpadSettings.setTouchpadSensitivity((touchpadSensitivity + 0.2f).coerceAtMost(3.0f)) },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_mouse_4_5),
+            description = stringResource(R.string.settings_touchpad_mouse_4_5_desc),
+            checked = touchpadMouse45Enabled,
+            icon = Icons.Rounded.Mouse,
+            onCheckedChange = { TouchpadSettings.setTouchpadMouse45Enabled(it) },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_haptics),
+            description = stringResource(R.string.settings_touchpad_haptics_desc),
+            checked = touchpadHapticsEnabled,
+            icon = Icons.Rounded.Vibration,
+            onCheckedChange = { TouchpadSettings.setTouchpadHapticsEnabled(it) },
+        )
+
+        Text(
+            text = stringResource(R.string.settings_section_absolute_touch).uppercase(),
+            color = colors.accent,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.settings_touchpad_mirroring),
+            description = stringResource(R.string.settings_touchpad_mirroring_desc),
+            checked = touchpadMirroringEnabled,
+            icon = Icons.Rounded.Videocam,
+            onCheckedChange = { TouchpadSettings.setTouchpadMirroringEnabled(it) },
+        )
+
+        if (touchpadMirroringEnabled) {
+            GamepadStepperCard(
+                title = stringResource(R.string.settings_touchpad_mirror_dim),
+                description = stringResource(R.string.help_touchpad_settings_mirror_dim_desc),
+                valueText = "$touchpadMirrorDim%",
+                icon = Icons.Rounded.BrightnessMedium,
+                onDecrement = { TouchpadSettings.setTouchpadMirrorDim((touchpadMirrorDim - 10).coerceAtLeast(0)) },
+                onIncrement = { TouchpadSettings.setTouchpadMirrorDim((touchpadMirrorDim + 10).coerceAtMost(90)) },
             )
-            if (touchpadMirroringEnabled) {
-                SliderSettingRow(
-                    label = stringResource(R.string.settings_touchpad_mirror_dim),
-                    value = touchpadMirrorDim.toFloat(),
-                    valueRange = 0f..90f,
-                    formatLabel = { "${it.toInt()}%" },
-                    onValueChange = { TouchpadSettings.setTouchpadMirrorDim(it.toInt()) },
-                )
-            }
         }
     }
 
