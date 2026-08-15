@@ -146,6 +146,8 @@ private val ACCENT_PALETTE_PRESETS =
 @Composable
 fun GlobalSettingsScreen(
     onBack: () -> Unit,
+    showHelp: Boolean = false,
+    onDismissHelp: () -> Unit = {},
     viewModel: GlobalSettingsViewModel = viewModel(),
 ) {
     val accentColorArgb by viewModel.accentColor.collectAsState()
@@ -194,6 +196,7 @@ fun GlobalSettingsScreen(
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
 
     var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
+    val effectiveShowHelp = showHelp || showSettingsHelp
     LaunchedEffect(showRestoreDefaultsConfirm) {
         if (showRestoreDefaultsConfirm) {
             restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
@@ -282,42 +285,6 @@ fun GlobalSettingsScreen(
                 selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
             )
-        },
-        sidebarFooter = {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.support_me_on_kofi_dark),
-                    contentDescription = stringResource(R.string.settings_support_app),
-                    modifier =
-                        Modifier
-                            .height(GS_KOFI_BUTTON_HEIGHT)
-                            .primaryOverlayFocusable(
-                                onClick = {
-                                    val url = "https://ko-fi.com/stormpanda"
-                                    try {
-                                        val intent =
-                                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                        val options = ActivityOptions.makeBasic()
-                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                        context.startActivity(intent, options.toBundle())
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
-                                    }
-                                },
-                                shape = RoundedCornerShape(GS_KOFI_CORNER),
-                            ),
-                )
-                HelpIconButton(onClick = { showSettingsHelp = true })
-            }
         },
         content = {
             if (updateAvailable && latestReleaseInfo != null) {
@@ -950,8 +917,11 @@ fun GlobalSettingsScreen(
     }
 
     GlobalSettingsHelpModal(
-        visible = showSettingsHelp,
-        onDismiss = { showSettingsHelp = false },
+        visible = effectiveShowHelp,
+        onDismiss = {
+            showSettingsHelp = false
+            onDismissHelp()
+        },
     )
 }
 

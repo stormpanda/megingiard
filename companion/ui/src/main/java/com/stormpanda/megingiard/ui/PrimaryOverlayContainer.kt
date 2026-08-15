@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,13 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -88,7 +89,7 @@ fun PrimaryOverlayContainer(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val contentFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     if (onBumperPrev != null || onBumperNext != null) {
         LaunchedEffect(Unit) {
@@ -102,9 +103,9 @@ fun PrimaryOverlayContainer(
     }
 
     LaunchedEffect(Unit) {
-        delay(50L)
+        delay(100L)
         try {
-            contentFocusRequester.requestFocus()
+            focusManager.moveFocus(FocusDirection.Next)
         } catch (_: Exception) {
             // Focus hierarchy initialized
         }
@@ -115,7 +116,7 @@ fun PrimaryOverlayContainer(
             Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = POC_SCRIM_ALPHA))
-                .onPreviewKeyEvent { keyEvent ->
+                .onKeyEvent { keyEvent ->
                     if (keyEvent.type == KeyEventType.KeyDown &&
                         (
                             keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
@@ -216,8 +217,7 @@ fun PrimaryOverlayContainer(
                             Modifier
                                 .size(POC_CLOSE_BTN_SIZE)
                                 .background(colors.surface, CircleShape)
-                                .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape)
-                                .primaryOverlayFocusable(onClick = onDismiss, shape = CircleShape),
+                                .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape),
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
@@ -234,7 +234,7 @@ fun PrimaryOverlayContainer(
                         Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .focusRequester(contentFocusRequester),
+                            .focusGroup(),
                 ) {
                     content()
                 }

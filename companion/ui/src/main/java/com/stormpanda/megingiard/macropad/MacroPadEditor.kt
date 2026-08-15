@@ -131,6 +131,8 @@ internal enum class EditorSection {
 fun MacroPadEditor(
     onDone: () -> Unit,
     showTopBar: Boolean = true,
+    showHelp: Boolean = false,
+    onDismissHelp: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -168,7 +170,8 @@ fun MacroPadEditor(
     var isCanvasLocked by remember { mutableStateOf(true) }
     var showCopyLayoutProfileDialog by remember { mutableStateOf(false) }
     var showCopyButtonLayoutDialog by remember { mutableStateOf(false) }
-    var showEditorHelp by remember { mutableStateOf(false) }
+    var internalShowEditorHelp by remember { mutableStateOf(false) }
+    val effectiveShowHelp = showHelp || internalShowEditorHelp
 
     // Intercept system Back when an overlay is visible
     val anyOverlayVisible =
@@ -302,7 +305,6 @@ fun MacroPadEditor(
                 onToggleCanvasLock = { isCanvasLocked = !isCanvasLocked },
                 onManageBackground = { showBackgroundSettingsDialog = true },
                 onManageTouchpadSettings = { showTouchpadSettingsDialog = true },
-                onHelpClick = { showEditorHelp = true },
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -315,7 +317,7 @@ fun MacroPadEditor(
                 topBar = {
                     EditorTopBar(
                         onDone = onDone,
-                        onHelpClick = { showEditorHelp = true },
+                        onHelpClick = { internalShowEditorHelp = true },
                     )
                 },
             ) { innerPadding ->
@@ -326,8 +328,11 @@ fun MacroPadEditor(
         }
 
         MacroPadEditorHelpModal(
-            visible = showEditorHelp,
-            onDismiss = { showEditorHelp = false },
+            visible = effectiveShowHelp,
+            onDismiss = {
+                internalShowEditorHelp = false
+                onDismissHelp()
+            },
         )
 
         // Add button overlay
@@ -801,7 +806,6 @@ private fun EditorTwoPaneBody(
     onToggleCanvasLock: () -> Unit,
     onManageBackground: () -> Unit,
     onManageTouchpadSettings: () -> Unit,
-    onHelpClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -856,12 +860,6 @@ private fun EditorTwoPaneBody(
                 onClick = { selectedSection = EditorSection.LAYOUTS },
             )
             GamepadCategoryTile(
-                title = "Canvas",
-                icon = Icons.Rounded.Preview,
-                selected = selectedSection == EditorSection.CANVAS,
-                onClick = { selectedSection = EditorSection.CANVAS },
-            )
-            GamepadCategoryTile(
                 title = stringResource(R.string.macropad_editor_section_buttons),
                 icon = Icons.Rounded.SmartButton,
                 selected = selectedSection == EditorSection.BUTTONS,
@@ -873,18 +871,6 @@ private fun EditorTwoPaneBody(
                 selected = selectedSection == EditorSection.MACROS,
                 onClick = { selectedSection = EditorSection.MACROS },
             )
-        },
-        sidebarFooter = {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                HelpIconButton(onClick = onHelpClick)
-            }
         },
         content = {
             // PROFILES & LAYOUTS CHOOSER (Available in OVERVIEW)

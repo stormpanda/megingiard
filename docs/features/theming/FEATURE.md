@@ -361,11 +361,18 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsScreen`, `MacroPadEditor`, `MacroTimelineEditor` |
 | `GamepadCategoryTile` | Focusable navigation tile for sidebar category rails with subtle background highlight and icon/label layout. | `GamepadTwoPaneScaffold` sidebars |
 | `GamepadFocusCard` | Standard focusable card container with animated scaling, glowing accent border on focus, and click handling. | Base for all gamepad cards |
-| `GamepadToggleCard` | Focusable toggle card with switch control, title, description, and icon. | Settings switches, lock toggles |
-| `GamepadChoiceCard` | Focusable value carousel card with left/right bump navigation and value badge pill. | Enums, presets, log levels |
-| `GamepadActionCard` | Focusable actionable item card with action pill and icon. | Buttons, macros, edit actions |
-| `GamepadSliderCard` | Focusable slider card with LB/RB step increment controls, formatted value pill readout, and accent track. | Deadzone, opacity, volume sliders |
+| `GamepadToggleCard` | Focusable toggle card with switch control, title, description, and icon. Pressing `[A]` directly toggles the setting; `[Left]` moves back to sidebar rail. | Settings switches, lock toggles |
+| `GamepadChoiceCard` | Two-tier focusable value carousel card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (capsule glows, `[Left/Right]` changes value, `[B]` exits without closing dialog). | Enums, presets, log levels |
+| `GamepadActionCard` | Focusable actionable item card with action pill and icon. Pressing `[A]` executes action; `[Left]` returns to sidebar rail. | Buttons, macros, edit actions |
+| `GamepadSliderCard` | Two-tier focusable slider card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (`[Left/Right]` adjusts value, `[B]` exits). | Deadzone, opacity, volume sliders |
 | `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
 | `GamepadConfirmDialog` | Standard modal confirmation dialog with gamepad controller hints and destructive styling. | `InlineConfirmDeleteOverlay`, step delete |
 | `GamepadEmptyState` | Empty state layout with circular icon backdrop, title, subtitle, and optional call-to-action button. | Empty search results, empty macro/step lists |
+
+### Two-Tier Handheld Focus & Navigation Model
+
+All two-pane primary screen overlays adhere to a strict two-tier gamepad focus architecture:
+1. **Left Category Rail:** Navigating `[D-Pad Up / Down]` automatically selects and switches categories on focus (`onFocusChanged`). Pressing `[D-Pad Right]` transitions focus into the right content deck.
+2. **Tier 1 — Row Selection Mode:** The entire card is outlined with an accent border. `[D-Pad Up / Down]` navigates strictly to the adjacent card above or below without diagonal jumping. Pressing `[D-Pad Left]` navigates back to the left category sidebar.
+3. **Tier 2 — Value Adjustment Mode (Choice / Stepper / Slider):** Pressing `[Button A]` activates in-place value adjustment (the value capsule illuminates). `[D-Pad Left / Right]` modifies the value. Pressing `[Button B]` cancels/exits value adjustment without closing the overlay dialog. Pressing `[D-Pad Up / Down]` commits the value, exits adjustment mode, and navigates to the adjacent row.
 

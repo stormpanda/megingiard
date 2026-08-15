@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -42,12 +43,16 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -219,13 +224,19 @@ fun GamepadFocusCard(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
+    onCustomKeyEvent: ((androidx.compose.ui.input.key.KeyEvent) -> Boolean)? = null,
     onLeftKey: (() -> Unit)? = null,
     onRightKey: (() -> Unit)? = null,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
     content: @Composable (isFocused: Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+
+    LaunchedEffect(isFocused) {
+        onFocusChanged?.invoke(isFocused)
+    }
 
     val animatedBorderWidth by animateDpAsState(
         targetValue = if (isFocused) GC_FOCUS_BORDER_WIDTH else GC_DEFAULT_BORDER_WIDTH,
@@ -255,6 +266,9 @@ fun GamepadFocusCard(
 
     val keyModifier =
         Modifier.onKeyEvent { keyEvent ->
+            if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
+                return@onKeyEvent true
+            }
             if (keyEvent.type == KeyEventType.KeyUp) {
                 when (keyEvent.nativeKeyEvent.keyCode) {
                     KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
@@ -295,14 +309,16 @@ fun GamepadFocusCard(
 
     val clickModifier =
         if (onClick != null) {
-            Modifier.clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
+            Modifier
+                .focusable(enabled = enabled, interactionSource = interactionSource)
+                .clickable(
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                )
         } else {
-            Modifier.primaryOverlayFocusable(interactionSource = interactionSource, shape = shape)
+            Modifier.primaryOverlayFocusable(interactionSource = interactionSource, shape = shape, enabled = enabled)
         }
 
     Surface(
@@ -430,6 +446,19 @@ fun GamepadToggleCard(
 
 /**
  * Gamepad-first stepper card for adjusting numeric values directly with D-pad Left/Right.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A: enters Tier 2 (Value Adjustment Mode)
+ *
+ * In Tier 2 (Value Adjustment Mode):
+ * - Stepper capsule illuminates with glowing accent border
+ * - D-Pad Left: calls onDecrement()
+ * - D-Pad Right: calls onIncrement()
+ * - Button A: confirms value and exits adjustment
+ * - Button B / Back: cancels/exits adjustment without dismissing overlay
+ * - D-Pad Up / Down: exits adjustment and moves to adjacent card
  */
 @Composable
 fun GamepadStepperCard(
@@ -444,13 +473,77 @@ fun GamepadStepperCard(
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
+    var isAdjusting by remember { mutableStateOf(false) }
 
     GamepadFocusCard(
-        onClick = onValueClick,
+        onClick = {
+            if (onValueClick != null) {
+                onValueClick()
+            } else {
+                isAdjusting = !isAdjusting
+            }
+        },
         enabled = enabled,
-        onLeftKey = onDecrement,
-        onRightKey = onIncrement,
         modifier = modifier,
+        onCustomKeyEvent = { keyEvent ->
+            if (!isAdjusting) {
+                false
+            } else {
+                val keyCode = keyEvent.nativeKeyEvent.keyCode
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            onDecrement()
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            onIncrement()
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> {
+                            isAdjusting = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            isAdjusting = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            isAdjusting = false
+                            false
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                } else if (keyEvent.type == KeyEventType.KeyUp) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_B,
+                        KeyEvent.KEYCODE_BACK,
+                        KeyEvent.KEYCODE_BUTTON_A,
+                        KeyEvent.KEYCODE_DPAD_CENTER,
+                        KeyEvent.KEYCODE_ENTER,
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT,
+                        -> true
+
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
+        },
+        onFocusChanged = { focused ->
+            if (!focused) {
+                isAdjusting = false
+            }
+        },
     ) { isFocused ->
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -499,44 +592,56 @@ fun GamepadStepperCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             // Stepper Pill ◀ Value ▶
+            val pillBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+            val pillBorderWidth = if (isAdjusting) 2.dp else 1.dp
+            val pillBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
+
             Row(
                 modifier =
                     Modifier
-                        .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                        .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
-                            1.dp,
-                            colors.subduedBorder,
+                            pillBorderWidth,
+                            pillBorderColor,
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(
-                    onClick = onDecrement,
-                    modifier = Modifier.size(GC_STEPPER_BTN_SIZE),
+                Box(
+                    modifier =
+                        Modifier
+                            .size(GC_STEPPER_BTN_SIZE)
+                            .clip(CircleShape)
+                            .clickable(enabled = enabled) { onDecrement() },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
                         contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
+                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
                     )
                 }
 
                 Text(
                     text = valueText,
-                    color = colors.onSurface,
+                    color = if (isAdjusting) colors.accent else colors.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
 
-                IconButton(
-                    onClick = onIncrement,
-                    modifier = Modifier.size(GC_STEPPER_BTN_SIZE),
+                Box(
+                    modifier =
+                        Modifier
+                            .size(GC_STEPPER_BTN_SIZE)
+                            .clip(CircleShape)
+                            .clickable(enabled = enabled) { onIncrement() },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
+                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
                     )
                 }
             }
@@ -546,6 +651,19 @@ fun GamepadStepperCard(
 
 /**
  * Gamepad-first inline carousel choice card.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A: enters Tier 2 (Value Adjustment Mode)
+ *
+ * In Tier 2 (Value Adjustment Mode):
+ * - Choice capsule illuminates with glowing accent border
+ * - D-Pad Left: calls onPrevious()
+ * - D-Pad Right: calls onNext()
+ * - Button A: confirms value and exits adjustment
+ * - Button B / Back: cancels/exits adjustment without dismissing overlay
+ * - D-Pad Up / Down: exits adjustment and moves to adjacent card
  */
 @Composable
 fun GamepadChoiceCard(
@@ -560,13 +678,77 @@ fun GamepadChoiceCard(
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
+    var isAdjusting by remember { mutableStateOf(false) }
 
     GamepadFocusCard(
-        onClick = onClick,
+        onClick = {
+            if (onClick != null) {
+                onClick()
+            } else {
+                isAdjusting = !isAdjusting
+            }
+        },
         enabled = enabled,
-        onLeftKey = onPrevious,
-        onRightKey = onNext,
         modifier = modifier,
+        onCustomKeyEvent = { keyEvent ->
+            if (!isAdjusting) {
+                false
+            } else {
+                val keyCode = keyEvent.nativeKeyEvent.keyCode
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            onPrevious()
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            onNext()
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> {
+                            isAdjusting = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            isAdjusting = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            isAdjusting = false
+                            false
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                } else if (keyEvent.type == KeyEventType.KeyUp) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_B,
+                        KeyEvent.KEYCODE_BACK,
+                        KeyEvent.KEYCODE_BUTTON_A,
+                        KeyEvent.KEYCODE_DPAD_CENTER,
+                        KeyEvent.KEYCODE_ENTER,
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT,
+                        -> true
+
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
+        },
+        onFocusChanged = { focused ->
+            if (!focused) {
+                isAdjusting = false
+            }
+        },
     ) { isFocused ->
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -615,44 +797,56 @@ fun GamepadChoiceCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             // Choice Capsule ◀ Option ▶
+            val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+            val capsuleBorderWidth = if (isAdjusting) 2.dp else 1.dp
+            val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
+
             Row(
                 modifier =
                     Modifier
-                        .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                        .background(capsuleBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
-                            1.dp,
-                            colors.subduedBorder,
+                            capsuleBorderWidth,
+                            capsuleBorderColor,
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(
-                    onClick = onPrevious,
-                    modifier = Modifier.size(GC_STEPPER_BTN_SIZE),
+                Box(
+                    modifier =
+                        Modifier
+                            .size(GC_STEPPER_BTN_SIZE)
+                            .clip(CircleShape)
+                            .clickable(enabled = enabled) { onPrevious() },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
                         contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
+                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
                     )
                 }
 
                 Text(
                     text = selectedText,
-                    color = colors.onSurface,
+                    color = if (isAdjusting) colors.accent else colors.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
 
-                IconButton(
-                    onClick = onNext,
-                    modifier = Modifier.size(GC_STEPPER_BTN_SIZE),
+                Box(
+                    modifier =
+                        Modifier
+                            .size(GC_STEPPER_BTN_SIZE)
+                            .clip(CircleShape)
+                            .clickable(enabled = enabled) { onNext() },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                         contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
+                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
                     )
                 }
             }
@@ -839,6 +1033,7 @@ fun GamepadCategoryTile(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onSelect: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -866,7 +1061,11 @@ fun GamepadCategoryTile(
                 .height(GC_SIDEBAR_ITEM_HEIGHT)
                 .background(animatedBg, RoundedCornerShape(GC_SIDEBAR_CORNER))
                 .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GC_SIDEBAR_CORNER))
-                .primaryOverlayFocusable(
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        onSelect?.invoke() ?: onClick()
+                    }
+                }.primaryOverlayFocusable(
                     onClick = onClick,
                     shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
                     interactionSource = interactionSource,
@@ -985,6 +1184,19 @@ fun GamepadSectionHeader(
 /**
  * Gamepad-first slider card with continuous value adjustment, LB/RB bumper steps,
  * and glowing focus outline.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A: enters Tier 2 (Value Adjustment Mode)
+ *
+ * In Tier 2 (Value Adjustment Mode):
+ * - Readout pill illuminates with glowing accent border
+ * - D-Pad Left: decrements value by step
+ * - D-Pad Right: increments value by step
+ * - Button A: confirms value and exits adjustment
+ * - Button B / Back: cancels/exits adjustment without dismissing overlay
+ * - D-Pad Up / Down: exits adjustment and moves to adjacent card
  */
 @Composable
 fun GamepadSliderCard(
@@ -1000,20 +1212,74 @@ fun GamepadSliderCard(
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
+    var isAdjusting by remember { mutableStateOf(false) }
 
     GamepadFocusCard(
-        onClick = null,
+        onClick = {
+            isAdjusting = !isAdjusting
+        },
         modifier = modifier,
         enabled = enabled,
-        onLeftKey = {
-            val newVal = (value - step).coerceIn(valueRange.start, valueRange.endInclusive)
-            onValueChange(newVal)
+        onCustomKeyEvent = { keyEvent ->
+            if (!isAdjusting) {
+                false
+            } else {
+                val keyCode = keyEvent.nativeKeyEvent.keyCode
+                if (keyEvent.type == KeyEventType.KeyDown) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            val newVal = (value - step).coerceIn(valueRange.start, valueRange.endInclusive)
+                            onValueChange(newVal)
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            val newVal = (value + step).coerceIn(valueRange.start, valueRange.endInclusive)
+                            onValueChange(newVal)
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> {
+                            isAdjusting = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            isAdjusting = false
+                            true
+                        }
+
+                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                            isAdjusting = false
+                            false
+                        }
+
+                        else -> {
+                            false
+                        }
+                    }
+                } else if (keyEvent.type == KeyEventType.KeyUp) {
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_BUTTON_B,
+                        KeyEvent.KEYCODE_BACK,
+                        KeyEvent.KEYCODE_BUTTON_A,
+                        KeyEvent.KEYCODE_DPAD_CENTER,
+                        KeyEvent.KEYCODE_ENTER,
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT,
+                        -> true
+
+                        else -> false
+                    }
+                } else {
+                    false
+                }
+            }
         },
-        onRightKey = {
-            val newVal = (value + step).coerceIn(valueRange.start, valueRange.endInclusive)
-            onValueChange(newVal)
+        onFocusChanged = { focused ->
+            if (!focused) {
+                isAdjusting = false
+            }
         },
     ) { focused ->
         Column(
@@ -1059,17 +1325,21 @@ fun GamepadSliderCard(
                 }
 
                 // Value readout pill
+                val pillBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+                val pillBorderWidth = if (isAdjusting) 2.dp else 1.dp
+                val pillBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
+
                 Box(
                     modifier =
                         Modifier
-                            .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                            .border(1.dp, colors.subduedBorder, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                            .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                            .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                             .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = valueLabel,
-                        color = if (focused) colors.accent else colors.onSurface,
+                        color = if (isAdjusting || focused) colors.accent else colors.onSurface,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1083,7 +1353,7 @@ fun GamepadSliderCard(
                 enabled = enabled,
                 colors =
                     SliderDefaults.colors(
-                        thumbColor = if (focused) colors.accent else colors.onSurface,
+                        thumbColor = if (isAdjusting) colors.accent else colors.onSurface,
                         activeTrackColor = colors.accent,
                         inactiveTrackColor = colors.subduedBorder,
                     ),

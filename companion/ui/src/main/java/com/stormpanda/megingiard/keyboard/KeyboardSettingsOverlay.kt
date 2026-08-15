@@ -37,12 +37,15 @@ private const val TAG = "KbSettingsOverlay"
 @Composable
 fun KeyboardSettingsOverlay(
     onBack: () -> Unit,
+    showHelp: Boolean = false,
+    onDismissHelp: () -> Unit = {},
     viewModel: KeyboardViewModel = viewModel(),
 ) {
     val colors = LocalAppColors.current
     val currentLayout by viewModel.kbLayout.collectAsState()
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
-    var showHelp by remember { mutableStateOf(false) }
+    var internalShowHelp by remember { mutableStateOf(false) }
+    val effectiveShowHelp = showHelp || internalShowHelp
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "KeyboardSettingsOverlay composed")
@@ -82,8 +85,11 @@ fun KeyboardSettingsOverlay(
     }
 
     KeyboardSettingsHelpModal(
-        visible = showHelp,
-        onDismiss = { showHelp = false },
+        visible = effectiveShowHelp,
+        onDismiss = {
+            internalShowHelp = false
+            onDismissHelp()
+        },
     )
 }
 

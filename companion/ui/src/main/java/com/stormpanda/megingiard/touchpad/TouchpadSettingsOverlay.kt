@@ -44,7 +44,11 @@ import java.util.Locale
 private const val TAG = "TouchpadSettingsOverlay"
 
 @Composable
-fun TouchpadSettingsOverlay(onBack: () -> Unit) {
+fun TouchpadSettingsOverlay(
+    onBack: () -> Unit,
+    showHelp: Boolean = false,
+    onDismissHelp: () -> Unit = {},
+) {
     val colors = LocalAppColors.current
 
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
@@ -59,7 +63,8 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
     val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
     val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
-    var showHelp by remember { mutableStateOf(false) }
+    var internalShowHelp by remember { mutableStateOf(false) }
+    val effectiveShowHelp = showHelp || internalShowHelp
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "TouchpadSettingsOverlay composed")
@@ -136,7 +141,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
             GamepadStepperCard(
                 title = stringResource(R.string.settings_touchpad_scroll_speed),
                 description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
-                valueText = String.format(Locale.US, "%.1fx", touchpadScrollSpeed),
+                valueText = "%.1fx".format(Locale.US, touchpadScrollSpeed),
                 icon = Icons.Rounded.Speed,
                 onDecrement = { TouchpadSettings.setTouchpadScrollSpeed((touchpadScrollSpeed - 0.2f).coerceAtLeast(0.5f)) },
                 onIncrement = { TouchpadSettings.setTouchpadScrollSpeed((touchpadScrollSpeed + 0.2f).coerceAtMost(3.0f)) },
@@ -146,7 +151,7 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
         GamepadStepperCard(
             title = stringResource(R.string.settings_touchpad_sensitivity),
             description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
-            valueText = String.format(Locale.US, "%.1fx", touchpadSensitivity),
+            valueText = "%.1fx".format(Locale.US, touchpadSensitivity),
             icon = Icons.Rounded.Speed,
             onDecrement = { TouchpadSettings.setTouchpadSensitivity((touchpadSensitivity - 0.2f).coerceAtLeast(0.2f)) },
             onIncrement = { TouchpadSettings.setTouchpadSensitivity((touchpadSensitivity + 0.2f).coerceAtMost(3.0f)) },
@@ -197,8 +202,11 @@ fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     }
 
     TouchpadSettingsHelpModal(
-        visible = showHelp,
-        onDismiss = { showHelp = false },
+        visible = effectiveShowHelp,
+        onDismiss = {
+            internalShowHelp = false
+            onDismissHelp()
+        },
     )
 }
 
@@ -259,10 +267,14 @@ private fun TouchpadSettingsHelpModal(
             label = stringResource(R.string.settings_touchpad_mouse_4_5),
             description = stringResource(R.string.help_touchpad_settings_mouse_4_5_desc),
         )
+
+        HelpSection(stringResource(R.string.settings_touchpad_sensitivity))
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_sensitivity),
             description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
         )
+
+        HelpSection(stringResource(R.string.settings_touchpad_haptics))
         HelpEntry(
             label = stringResource(R.string.settings_touchpad_haptics),
             description = stringResource(R.string.help_touchpad_settings_haptics_desc),

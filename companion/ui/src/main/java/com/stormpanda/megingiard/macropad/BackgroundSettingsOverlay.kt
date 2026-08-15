@@ -89,7 +89,11 @@ private const val ASO_SMOOTHING_VAL_MEDIUM = 80
 private const val ASO_SMOOTHING_VAL_STRONG = 85
 
 @Composable
-internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
+internal fun BackgroundSettingsOverlay(
+    onDone: () -> Unit,
+    showHelp: Boolean = false,
+    onDismissHelp: () -> Unit = {},
+) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
@@ -113,8 +117,6 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     var renamingCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     var renameText by remember(renamingCutout) { mutableStateOf(renamingCutout?.name ?: "") }
     var pendingProjectionCutout by remember { mutableStateOf<ScreenCutout?>(null) }
-    val localSmoothingValues = remember(currentLayout.id) { mutableStateMapOf<String, Float>() }
-
     val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isInPreview = previewConfig != null
 
@@ -150,7 +152,8 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
         }
     }
 
-    var showAmbientHelp by remember { mutableStateOf(false) }
+    var internalShowAmbientHelp by remember { mutableStateOf(false) }
+    val effectiveShowHelp = showHelp || internalShowAmbientHelp
 
     Box(
         modifier =
@@ -169,19 +172,12 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // GENERAL SECTION
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_section_general).uppercase(),
-                        color = colors.accent,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    HelpIconButton(onClick = { showAmbientHelp = true })
-                }
+                Text(
+                    text = stringResource(R.string.settings_section_general).uppercase(),
+                    color = colors.accent,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
 
                 GamepadStepperCard(
                     title = labelDim,
@@ -505,8 +501,11 @@ internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     }
 
     BackgroundSettingsHelpModal(
-        visible = showAmbientHelp,
-        onDismiss = { showAmbientHelp = false },
+        visible = effectiveShowHelp,
+        onDismiss = {
+            internalShowAmbientHelp = false
+            onDismissHelp()
+        },
     )
 }
 

@@ -132,6 +132,7 @@ fun Modifier.primaryOverlayFocusable(
     shape: Shape = RoundedCornerShape(FOCUS_CORNER_RADIUS),
     borderWidth: Dp = FOCUS_BORDER_WIDTH,
     interactionSource: MutableInteractionSource? = null,
+    enabled: Boolean = true,
 ): Modifier =
     composed {
         val colors = LocalAppColors.current
@@ -168,15 +169,23 @@ fun Modifier.primaryOverlayFocusable(
         val clickModifier =
             if (onClick != null) {
                 Modifier.clickable(
+                    enabled = enabled,
                     interactionSource = effectiveInteractionSource,
                     indication = null,
                     onClick = onClick,
                 )
             } else {
-                Modifier.focusable(interactionSource = effectiveInteractionSource)
+                Modifier
             }
 
+        val focusableModifier =
+            Modifier.focusable(
+                enabled = enabled,
+                interactionSource = effectiveInteractionSource,
+            )
+
         this
+            .then(focusableModifier)
             .then(clickModifier)
             .then(focusBorderModifier)
             .then(keyHandlerModifier)
