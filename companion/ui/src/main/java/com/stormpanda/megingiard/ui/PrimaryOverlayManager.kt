@@ -4,6 +4,7 @@ import android.app.ActivityOptions
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.os.Handler
@@ -14,15 +15,18 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowManager
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
@@ -32,12 +36,14 @@ import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.mirror.MirrorPresentationLifecycleOwner
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
+import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private const val TAG = "PrimaryOverlayManager"
 
@@ -149,7 +155,11 @@ object PrimaryOverlayManager {
             val wm = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             overlayWindowManager = wm
 
-            val owner = MirrorPresentationLifecycleOwner(app)
+            val owner =
+                MirrorPresentationLifecycleOwner(app) {
+                    AppStateManager.closePrimaryModal()
+                    AppStateManager.setActiveCropCutoutId(null)
+                }
             lifecycleOwner = owner
 
             val params =
@@ -182,9 +192,13 @@ object PrimaryOverlayManager {
                         if (event.action == KeyEvent.ACTION_DOWN &&
                             (keyCode == KeyEvent.KEYCODE_BUTTON_B || keyCode == KeyEvent.KEYCODE_BACK)
                         ) {
-                            AppLog.i(TAG, "Back / B-Button pressed in PrimaryOverlay -> closing modal")
-                            AppStateManager.closePrimaryModal()
-                            AppStateManager.setActiveCropCutoutId(null)
+                            AppLog.i(TAG, "Back / B-Button pressed in PrimaryOverlay -> handling back")
+                            if (owner.onBackPressedDispatcher.hasEnabledCallbacks()) {
+                                owner.onBackPressedDispatcher.onBackPressed()
+                            } else {
+                                AppStateManager.closePrimaryModal()
+                                AppStateManager.setActiveCropCutoutId(null)
+                            }
                             true
                         } else {
                             false
@@ -198,13 +212,30 @@ object PrimaryOverlayManager {
                         val activeModal by AppStateManager.activePrimaryModal.collectAsState()
                         val activeCropCutoutId by AppStateManager.activeCropCutoutId.collectAsState()
 
-                        MaterialTheme(
-                            colorScheme = colorSchemeFor(appColors, themeMode),
-                            typography = megingiardTypography,
+                        val appLanguage by SettingsManager.appLanguage.collectAsState()
+                        val localeContext =
+                            remember(appLanguage) {
+                                val locale: Locale =
+                                    when (appLanguage) {
+                                        AppLanguage.SYSTEM -> Locale.getDefault()
+                                        AppLanguage.EN -> Locale.ENGLISH
+                                        AppLanguage.DE -> Locale.GERMAN
+                                        AppLanguage.ZH_TW -> Locale.TRADITIONAL_CHINESE
+                                    }
+                                val config = Configuration(windowContext.resources.configuration)
+                                config.setLocale(locale)
+                                windowContext.createConfigurationContext(config)
+                            }
+
+                        CompositionLocalProvider(
+                            LocalContext provides localeContext,
+                            LocalOnBackPressedDispatcherOwner provides owner,
+                            LocalAppColors provides appColors,
+                            LocalAppDimens provides AppDimens(),
                         ) {
-                            CompositionLocalProvider(
-                                LocalAppColors provides appColors,
-                                LocalAppDimens provides AppDimens(),
+                            MaterialTheme(
+                                colorScheme = colorSchemeFor(appColors, themeMode),
+                                typography = megingiardTypography,
                             ) {
                                 Surface(
                                     modifier = Modifier.fillMaxSize(),

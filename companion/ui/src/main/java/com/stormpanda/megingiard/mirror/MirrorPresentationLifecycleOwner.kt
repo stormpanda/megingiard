@@ -1,6 +1,8 @@
 package com.stormpanda.megingiard.mirror
 
 import android.app.Application
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.lifecycle.HasDefaultViewModelProviderFactory
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -19,17 +21,24 @@ private const val TAG = "MPresentationLifecycle"
 
 class MirrorPresentationLifecycleOwner(
     private val application: Application,
+    private val onFallbackBackPressed: (() -> Unit)? = null,
 ) : LifecycleOwner,
     SavedStateRegistryOwner,
     ViewModelStoreOwner,
-    HasDefaultViewModelProviderFactory {
+    HasDefaultViewModelProviderFactory,
+    OnBackPressedDispatcherOwner {
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
     private val store = ViewModelStore()
+    private val dispatcher =
+        OnBackPressedDispatcher {
+            onFallbackBackPressed?.invoke()
+        }
 
     override val lifecycle: Lifecycle get() = lifecycleRegistry
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
     override val viewModelStore: ViewModelStore get() = store
+    override val onBackPressedDispatcher: OnBackPressedDispatcher get() = dispatcher
     override val defaultViewModelProviderFactory: ViewModelProvider.Factory =
         ViewModelProvider.AndroidViewModelFactory.getInstance(application)
     override val defaultViewModelCreationExtras: CreationExtras
