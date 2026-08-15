@@ -677,8 +677,8 @@
     <string name="macropad_editor_copy_profile_select">選擇目標設定檔</string>
     <string name="macropad_editor_copy_layout_select">選擇目標配置</string>
     <string name="macropad_editor_copy_button_duplicate">重複按鈕</string>
-    <string name="macropad_duplicate_profile">重複設定檔</string>
-    <string name="macropad_duplicate_layout">重複配置</string>
+    <string name="macropad_duplicate_profile">複製設定檔</string>
+    <string name="macropad_duplicate_layout">複製配置</string>
     <string name="macropad_copy_no_profiles_available">沒有其他可用的設定檔。</string>
     <string name="macropad_copy_no_layouts_available">沒有其他可用的配置。</string>
     <string name="mirror_crop_editor_title">定義裁切區域</string>
