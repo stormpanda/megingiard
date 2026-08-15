@@ -1051,7 +1051,18 @@ private fun EditorBody(
 
         // 4. Pad canvas
         item(key = "canvas") {
-            PadCanvas(profile = profile, layout = layout, accentColor = accentColor, gridMode = gridMode, isLocked = isCanvasLocked)
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                PadCanvas(
+                    profile = profile,
+                    layout = layout,
+                    accentColor = accentColor,
+                    gridMode = gridMode,
+                    isLocked = isCanvasLocked,
+                )
+            }
         }
 
         // 5. Buttons section header

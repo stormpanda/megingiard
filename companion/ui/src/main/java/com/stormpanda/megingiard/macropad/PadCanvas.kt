@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.macropad
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.view.WindowManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -82,6 +81,9 @@ private val ED_BTN_SQUARE_RADIUS = 4.dp
 private val PC_SCREEN_PADDING = MP_SCREEN_PADDING
 private const val ED_EDGE_MARGIN = 0.05f
 
+private const val PC_BOTTOM_SCREEN_WIDTH_PX = 1240
+private const val PC_BOTTOM_SCREEN_HEIGHT_PX = 1080
+
 // Grid: half a button unit — two steps apart = buttons touch exactly
 private val PC_GRID_STEP_DP = 30.dp
 private const val PC_GRID_LINE_ALPHA = 0.35f
@@ -121,10 +123,8 @@ internal fun PadCanvas(
     val colors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
-    val windowManager = remember { context.getSystemService(Context.WINDOW_SERVICE) as WindowManager }
-    val bounds = windowManager.currentWindowMetrics.bounds
-    val padWidth = with(density) { bounds.width().toDp() } - PC_SCREEN_PADDING * 2
-    val padHeight = with(density) { bounds.height().toDp() } - PC_SCREEN_PADDING * 2
+    val padWidth = with(density) { PC_BOTTOM_SCREEN_WIDTH_PX.toDp() } - PC_SCREEN_PADDING * 2
+    val padHeight = with(density) { PC_BOTTOM_SCREEN_HEIGHT_PX.toDp() } - PC_SCREEN_PADDING * 2
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
 
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
