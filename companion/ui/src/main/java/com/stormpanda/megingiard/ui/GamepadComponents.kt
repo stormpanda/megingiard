@@ -87,9 +87,12 @@ private val GC_STATUS_PILL_V_PADDING = 4.dp
 private val GC_STEPPER_BTN_SIZE = 32.dp
 private val GC_SWATCH_SIZE = 28.dp
 private val GC_SWATCH_CHECK_ICON_SIZE = 16.dp
-private val GC_SWATCH_BORDER_WIDTH_ADJUSTING = 3.5.dp
-private val GC_SWATCH_BORDER_WIDTH_SELECTED = 3.dp
-private val GC_SWATCH_BORDER_WIDTH_DEFAULT = 1.5.dp
+private val GC_SWATCH_BORDER_WIDTH_ADJUSTING = 3.dp
+private val GC_SWATCH_BORDER_WIDTH_DEFAULT = 1.dp
+private val GC_PALETTE_CONTAINER_H_PADDING = 8.dp
+private val GC_PALETTE_CONTAINER_V_PADDING = 6.dp
+private val GC_PALETTE_CONTAINER_BORDER_ADJUSTING = 2.dp
+private val GC_PALETTE_CONTAINER_BORDER_DEFAULT = 1.dp
 private val GC_COLOR_CARD_CONTENT_SPACING = 8.dp
 private val GC_SLIDER_HEIGHT = 24.dp
 private val GC_ROW_CONTENT_SPACING = 12.dp
@@ -953,10 +956,25 @@ fun GamepadColorPaletteGrid(
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
+    val containerBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+    val containerBorderWidth =
+        if (isAdjusting) GC_PALETTE_CONTAINER_BORDER_ADJUSTING else GC_PALETTE_CONTAINER_BORDER_DEFAULT
+    val containerBg = if (isAdjusting) colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA) else colors.surfaceVariant
     val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(containerBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .border(
+                    containerBorderWidth,
+                    containerBorderColor,
+                    RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                ).padding(
+                    horizontal = GC_PALETTE_CONTAINER_H_PADDING,
+                    vertical = GC_PALETTE_CONTAINER_V_PADDING,
+                ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -973,18 +991,11 @@ fun GamepadColorPaletteGrid(
 
         paletteColors.forEachIndexed { index, color ->
             val isSelected = color == selectedColor
+            val isHighlighted = isSelected && isAdjusting
             val colorDesc = stringResource(R.string.gamepad_color_option, index + 1)
-            val swatchBorderWidth =
-                when {
-                    isSelected && isAdjusting -> GC_SWATCH_BORDER_WIDTH_ADJUSTING
-                    isSelected -> GC_SWATCH_BORDER_WIDTH_SELECTED
-                    else -> GC_SWATCH_BORDER_WIDTH_DEFAULT
-                }
+            val swatchBorderWidth = if (isHighlighted) GC_SWATCH_BORDER_WIDTH_ADJUSTING else GC_SWATCH_BORDER_WIDTH_DEFAULT
             val swatchBorderColor =
-                when {
-                    isSelected -> colors.onSurface
-                    else -> Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA)
-                }
+                if (isHighlighted) colors.onSurface else Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA)
 
             Box(
                 modifier =
