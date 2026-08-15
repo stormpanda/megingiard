@@ -103,6 +103,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -894,6 +895,7 @@ private fun EditorTwoPaneBody(
                         val next = profiles[(profileIdx + 1) % profiles.size]
                         onSelectProfile(next.id)
                     },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.OVERVIEW),
                 )
 
                 val layouts = profile.layouts
@@ -1000,6 +1002,7 @@ private fun EditorTwoPaneBody(
                         val next = profiles[(profileIdx + 1) % profiles.size]
                         onSelectProfile(next.id)
                     },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.PROFILES),
                 )
 
                 GamepadActionCard(
@@ -1088,6 +1091,7 @@ private fun EditorTwoPaneBody(
                             onSelectLayout(next.id)
                         }
                     },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.LAYOUTS),
                 )
 
                 GamepadActionCard(
@@ -1178,6 +1182,7 @@ private fun EditorTwoPaneBody(
                     checked = isCanvasLocked,
                     icon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                     onCheckedChange = { onToggleCanvasLock() },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.CANVAS),
                 )
 
                 val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
@@ -1231,6 +1236,7 @@ private fun EditorTwoPaneBody(
                     actionText = "Add",
                     icon = Icons.Rounded.Add,
                     onClick = onAddButton,
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.BUTTONS),
                 )
 
                 val buttons = layout?.buttons ?: emptyList()
@@ -1287,6 +1293,7 @@ private fun EditorTwoPaneBody(
                     actionText = "Open",
                     icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                     onClick = onManageMacros,
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.MACROS),
                 )
 
                 val macros = profile.macros

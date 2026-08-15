@@ -43,7 +43,9 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -1023,6 +1027,18 @@ fun GamepadColorPaletteGrid(
     }
 }
 
+val LocalActiveCategoryRequester = compositionLocalOf<FocusRequester?> { null }
+val LocalFirstContentRequester = compositionLocalOf<FocusRequester?> { null }
+
+/**
+ * Modifier extension to mark a composable card as the primary focus target when entering the right deck from the sidebar.
+ */
+@Composable
+fun Modifier.firstDeckItem(isFirst: Boolean = true): Modifier {
+    val requester = LocalFirstContentRequester.current
+    return if (requester != null && isFirst) this.focusRequester(requester) else this
+}
+
 /**
  * Unified gamepad-first category sidebar item tile used across split-screen dialogs and editors.
  */
@@ -1038,6 +1054,7 @@ fun GamepadCategoryTile(
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val activeCategoryRequester = LocalActiveCategoryRequester.current
 
     val animatedBg by animateColorAsState(
         targetValue =
@@ -1054,6 +1071,13 @@ fun GamepadCategoryTile(
         label = "catBorder",
     )
 
+    val requesterModifier =
+        if (activeCategoryRequester != null && selected) {
+            Modifier.focusRequester(activeCategoryRequester)
+        } else {
+            Modifier
+        }
+
     Surface(
         modifier =
             modifier
@@ -1065,7 +1089,8 @@ fun GamepadCategoryTile(
                     if (focusState.isFocused) {
                         onSelect?.invoke() ?: onClick()
                     }
-                }.primaryOverlayFocusable(
+                }.then(requesterModifier)
+                .primaryOverlayFocusable(
                     onClick = onClick,
                     shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
                     interactionSource = interactionSource,
@@ -1112,49 +1137,84 @@ fun GamepadTwoPaneScaffold(
     sidebarWidth: Dp = GC_SIDEBAR_WIDTH,
 ) {
     val colors = LocalAppColors.current
-    Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
-        Row(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-        ) {
-            // Left Category Sidebar Rail
-            Column(
-                modifier =
-                    Modifier
-                        .width(sidebarWidth)
-                        .fillMaxHeight()
-                        .background(colors.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(8.dp),
+    val activeCategoryRequester = remember { FocusRequester() }
+    val firstContentRequester = remember { FocusRequester() }
+
+    CompositionLocalProvider(
+        LocalActiveCategoryRequester provides activeCategoryRequester,
+        LocalFirstContentRequester provides firstContentRequester,
+    ) {
+        Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
+            Row(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
+                // Left Category Sidebar Rail
+                Column(
+                    modifier =
+                        Modifier
+                            .width(sidebarWidth)
+                            .fillMaxHeight()
+                            .background(colors.surfaceVariant.copy(alpha = 0.5f))
+                            .padding(8.dp)
+                            .onKeyEvent { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown &&
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                                ) {
+                                    try {
+                                        firstContentRequester.requestFocus()
+                                    } catch (_: Exception) {
+                                        // Focus fallback
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                ) {
+                    Column(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        sidebarContent()
+                    }
+                    if (sidebarFooter != null) {
+                        sidebarFooter()
+                    }
+                }
+
+                // Right Content Deck
                 Column(
                     modifier =
                         Modifier
                             .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                            .fillMaxHeight()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .onKeyEvent { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown &&
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                                ) {
+                                    try {
+                                        activeCategoryRequester.requestFocus()
+                                    } catch (_: Exception) {
+                                        // Focus fallback
+                                    }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    sidebarContent()
-                }
-                if (sidebarFooter != null) {
-                    sidebarFooter()
+                    content()
                 }
             }
-
-            // Right Content Deck
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                content()
+            if (footerContent != null) {
+                footerContent()
             }
-        }
-        if (footerContent != null) {
-            footerContent()
         }
     }
 }

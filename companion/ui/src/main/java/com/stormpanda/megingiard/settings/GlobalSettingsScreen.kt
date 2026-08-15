@@ -113,6 +113,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
@@ -294,6 +295,7 @@ fun GlobalSettingsScreen(
                     actionText = stringResource(R.string.settings_update_now_btn),
                     icon = Icons.Rounded.SystemUpdate,
                     onClick = { showUpdatePromptDialog = true },
+                    modifier = Modifier.firstDeckItem(),
                 )
             }
 
@@ -316,6 +318,7 @@ fun GlobalSettingsScreen(
                         OnboardingWizardManager.startWizard(force = true)
                         onBack()
                     },
+                    modifier = Modifier.firstDeckItem(isFirst = !updateAvailable || latestReleaseInfo == null),
                 )
 
                 GamepadActionCard(
@@ -383,6 +386,7 @@ fun GlobalSettingsScreen(
                     checked = gamepadSwapFaceButtons,
                     icon = Icons.Rounded.SwapHoriz,
                     onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.INPUT),
                 )
 
                 GamepadActionCard(
@@ -415,6 +419,7 @@ fun GlobalSettingsScreen(
                     icon = Icons.Rounded.Palette,
                     onPrevious = { viewModel.setThemeMode(allThemes[(currentThemeIdx - 1 + allThemes.size) % allThemes.size]) },
                     onNext = { viewModel.setThemeMode(allThemes[(currentThemeIdx + 1) % allThemes.size]) },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.APPEARANCE),
                 )
 
                 if (themeMode.supportsCustomAccent) {
@@ -483,6 +488,7 @@ fun GlobalSettingsScreen(
                     isDestructive = true,
                     icon = Icons.Rounded.Restore,
                     onClick = { showRestoreDefaultsConfirm = true },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.DATA),
                 )
 
                 GamepadActionCard(
@@ -518,6 +524,7 @@ fun GlobalSettingsScreen(
                     actionText = "Export",
                     icon = Icons.Rounded.FileDownload,
                     onClick = { showExportMetadataDialog = true },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION),
                 )
 
                 GamepadActionCard(
@@ -586,6 +593,7 @@ fun GlobalSettingsScreen(
                     checked = autoUpdateCheckEnabled,
                     icon = Icons.Rounded.Update,
                     onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.UPDATES),
                 )
 
                 GamepadActionCard(
@@ -622,6 +630,7 @@ fun GlobalSettingsScreen(
                     icon = Icons.Rounded.BugReport,
                     onPrevious = { viewModel.setLogLevel(allLogLevels[(currentLogLevelIdx - 1 + allLogLevels.size) % allLogLevels.size]) },
                     onNext = { viewModel.setLogLevel(allLogLevels[(currentLogLevelIdx + 1) % allLogLevels.size]) },
+                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS),
                 )
 
                 GamepadActionCard(
