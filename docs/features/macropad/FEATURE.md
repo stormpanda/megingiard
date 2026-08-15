@@ -683,17 +683,16 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
 
 ### Layout Editor
 
-`MacroPadEditor` is rendered as a full-screen in-tree overlay (`Box` inside the same composition), controlled by UI state in the hosting screen. No separate `Dialog` window is created — this is intentional so that the editor works correctly both in the main `Activity` and inside `MirrorPresentation` (secondary display), where `AlertDialog`/`Dialog` would crash with `BadTokenException` due to a null window token. All confirmation, selection, and name-input overlays inside `MacroPadEditor` (delete button, delete profile, rename profile, new profile, new layout, edit layout, and profile/layout selection for copies) follow the same pattern: in-tree `Box` composables (`InlineConfirmDeleteOverlay`, `InlineNameInputOverlay`, `InlineLayoutSettingsOverlay`, `ReorderProfilesOverlay`, `ReorderLayoutsOverlay`, `InlineProfileSelectionOverlay`, `InlineLayoutSelectionOverlay`) instead of `AlertDialog`, unified using a common `InlineDialogOverlay` container to ensure a consistent appearance, scrim interaction, and input blocking. Profile-level settings (shape, size) are also available directly in `MacroPadToolSettings` without opening the full editor. The editor features horizontally scrollable chip rows for both profile and layout selection (`EditorProfileChipsBar` and `EditorLayoutChipsBar`). Next to each row of chips is a "..." menu button that opens a contextual dropdown menu, enabling actions such as editing properties, duplicating, copying, deleting (when more than one item exists), and initiating full-screen drag-reordering (`ReorderProfilesOverlay` or `ReorderLayoutsOverlay`). In the profiles section, a dedicated **"Macros…"** button row (represented by an `EditorActionChip` using a playlist-play icon) is rendered directly below the profiles chips bar to manage the profile's macro library. The vertical margin between the chips and their action buttons is closely grouped for both layout and profile sections. If a profile or layout is the only one in existence, it cannot be deleted; the delete option in the "..." dropdown menu is disabled and styled with `0.38f` alpha. The Add button (plus icon) has been moved into the right-hand side of the Profile, Layout, and Buttons section separators as a premium clickable `Row` showing "+ Add", colored with the active accent color. Layout chips support drag-reordering via long press. The layout-level settings (the two button color options: no-mirror and mirror styles) are configured directly inside `InlineLayoutSettingsOverlay` rather than in the main list, and are saved atomically upon confirmation.
-
-The editor list features an action toolbar (`EditorToolbar`) containing two rows of compact action chips:
-1. **First Row**:
-   - **Add Button** — opens the button configuration dialog.
-   - **Change Background** — opens the dedicated background settings editor overlay to choose or delete background images, scrape cover art from SteamGridDB, crop/scale the background, or toggle mask mode.
-2. **Second Row**:
-   - **Unlock Buttons / Lock Buttons** — controls layout canvas editing. By default, the layout canvas is **locked** so that buttons cannot be accidentally moved or dragged. Tapping "Unlock Buttons" (displays a locked lock icon) changes the wording to "Lock Buttons" (displays an unlocked lock icon), enabling real-time drag-repositioning of buttons on the canvas.
-   - **Change Grid** (styled with the active accent color at all times) — toggles grid snapping modes (`OFF`, `RECTANGULAR`, `RADIAL`).
-
-The editor list is scrollable via `LazyColumn`.
+`MacroPadEditor` is rendered inside a centered `PrimaryOverlayContainer` dialog modal, aligned with the design language of Global Settings. It utilizes a **Two-Pane Console Sidebar + Content Deck** layout optimized for physical gamepad and handheld navigation:
+- **Left Category Sidebar (210 dp):** Features category navigation tiles with illuminated focus borders and L1/R1 bumper tab switching:
+  - **Overview (`All`):** Unified overview displaying active Profile and Layout carousel pickers, canvas preview, quick action shortcuts, and button deck.
+  - **Profiles (`Folder`):** Active profile carousel selector, New Profile, Rename/Edit Profile, Duplicate Profile, Reorder Profiles, Delete Profile, and Macros.
+  - **Layouts (`ViewQuilt`):** Active layout carousel selector, New Layout, Layout Colors & Appearance, Background Image & Mask, Touchpad Integration, Duplicate Layout, Copy Layout to Profile, Reorder Layouts, and Delete Layout.
+  - **Canvas (`Preview`):** Canvas Drag Lock toggle, Snap Grid Mode carousel (Off, Rectangular, Radial), Add Button action, and pixel-precise static 1240x1080 canvas preview.
+  - **Buttons (`SmartButton`):** Add Button trigger and reorderable button list with edit, duplicate, copy to layout, and delete actions.
+  - **Macros (`PlaylistPlay`):** Macro Library launcher and list of active profile macros with step count badges.
+- **Right Content Deck:** Dynamically presents gamepad-first cards (`GamepadChoiceCard`, `GamepadToggleCard`, `GamepadActionCard`) and lists for the selected category.
+- **In-Tree Subdialogs:** All secondary modals (ButtonEditDialog, BackgroundSettingsEditor, BackgroundTouchpadSettingsEditor, MacroListEditor, ReorderOverlays, InlineProfileSettingsOverlay, LayoutSettingsEditor, InlineConfirmDeleteOverlay) render within the same composition tree with full `onPreviewKeyEvent` B-button dismissal support.
 
 ### Grid Snap Overlay
 

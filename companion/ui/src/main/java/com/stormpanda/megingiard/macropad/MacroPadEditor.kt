@@ -2,47 +2,68 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Preview
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,36 +74,37 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
-import com.stormpanda.megingiard.ui.AppDropdown
+import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.PrimaryModalConfig
-import com.stormpanda.megingiard.ui.PrimaryModalType
+import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
+import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.io.File
 import java.util.UUID
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
 
 private const val TAG = "MacroPadEditor"
 
@@ -92,22 +114,20 @@ internal val MPE_ITEM_PADDING = 12.dp
 internal val MPE_GRID_TOGGLE_SIZE = 36.dp
 internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Entry point
-// ─────────────────────────────────────────────────────────────────────────────
+private val MPE_SIDEBAR_WIDTH = 210.dp
+private val MPE_SIDEBAR_ITEM_HEIGHT = 44.dp
+private val MPE_SIDEBAR_ICON_SIZE = 18.dp
+private val MPE_SIDEBAR_CORNER = 8.dp
 
-/**
- * Full-screen MacroPad layout editor.
- *
- * Opened from the Quick Menu. Allows the user to:
- * - Create, rename, and delete profiles
- * - Add, configure, reposition, and delete buttons
- * - Toggle the trackpoint area
- *
- * All changes are persisted immediately via [MacroPadState].
- *
- * @param onDone  Called when the user taps "Done" to close the editor.
- */
+internal enum class EditorSection {
+    OVERVIEW,
+    PROFILES,
+    LAYOUTS,
+    CANVAS,
+    BUTTONS,
+    MACROS,
+}
+
 @Composable
 fun MacroPadEditor(
     onDone: () -> Unit,
@@ -151,8 +171,7 @@ fun MacroPadEditor(
     var showCopyButtonLayoutDialog by remember { mutableStateOf(false) }
     var showEditorHelp by remember { mutableStateOf(false) }
 
-    // Intercept system Back when an overlay is visible, so Back closes the overlay
-    // instead of dismissing the whole editor dialog.
+    // Intercept system Back when an overlay is visible
     val anyOverlayVisible =
         showMacroListEditor || showAddButton ||
             editingButtonActive || buttonPendingDelete != null ||
@@ -232,7 +251,6 @@ fun MacroPadEditor(
 
     val editorContent: @Composable (PaddingValues) -> Unit = { innerPadding ->
         if (profile == null) {
-            // No profile yet — show prompt
             Box(
                 modifier =
                     Modifier
@@ -248,7 +266,7 @@ fun MacroPadEditor(
                 )
             }
         } else {
-            EditorBody(
+            EditorTwoPaneBody(
                 profiles = profiles,
                 profile = profile,
                 layout = activeLayout,
@@ -285,6 +303,7 @@ fun MacroPadEditor(
                 onToggleCanvasLock = { isCanvasLocked = !isCanvasLocked },
                 onManageBackground = { showBackgroundSettingsDialog = true },
                 onManageTouchpadSettings = { showTouchpadSettingsDialog = true },
+                onHelpClick = { showEditorHelp = true },
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -368,7 +387,7 @@ fun MacroPadEditor(
             }
         }
 
-        // Delete button confirmation (in-tree — no Dialog window, works in Presentation)
+        // Delete button confirmation
         if (buttonPendingDelete != null && profile != null) {
             val pendingBtn = buttonPendingDelete!!
             InlineConfirmDeleteOverlay(
@@ -392,7 +411,7 @@ fun MacroPadEditor(
             )
         }
 
-        // New layout (name input + visibility + background + button colors)
+        // New layout
         if (showNewLayoutDialog && profile != null) {
             val newLayoutId = remember(showNewLayoutDialog) { UUID.randomUUID().toString() }
             LayoutSettingsEditor(
@@ -453,7 +472,6 @@ fun MacroPadEditor(
                 title = stringResource(R.string.macropad_editor_delete_layout),
                 body = pendingLayout.name,
                 onConfirm = {
-                    // Delete background file if it exists
                     pendingLayout.backgroundImagePath?.let { path ->
                         val file = File(context.filesDir, path)
                         if (file.exists()) {
@@ -471,7 +489,7 @@ fun MacroPadEditor(
             )
         }
 
-        // New profile (in-tree input overlay — no Dialog window)
+        // New profile
         if (showNewProfileDialog) {
             InlineProfileSettingsOverlay(
                 title = stringResource(R.string.settings_macropad_new_profile),
@@ -489,7 +507,7 @@ fun MacroPadEditor(
             )
         }
 
-        // Rename profile (in-tree input overlay — no Dialog window)
+        // Rename profile
         if (showRenameProfileDialog && profile != null) {
             InlineProfileSettingsOverlay(
                 title = stringResource(R.string.profile_settings_title),
@@ -516,14 +534,13 @@ fun MacroPadEditor(
             )
         }
 
-        // Delete profile confirmation (in-tree — no Dialog window)
+        // Delete profile confirmation
         if (showDeleteProfileConfirm && profile != null) {
             val activeProfile = profile
             InlineConfirmDeleteOverlay(
                 title = stringResource(R.string.macropad_editor_delete_profile),
                 body = stringResource(R.string.macropad_editor_confirm_delete),
                 onConfirm = {
-                    // Delete background files for all layouts in this profile
                     activeProfile.layouts.forEach { layout ->
                         layout.backgroundImagePath?.let { path ->
                             val file = File(context.filesDir, path)
@@ -629,7 +646,7 @@ fun MacroPadEditor(
             )
         }
 
-        // Render ReorderProfilesOverlay
+        // ReorderProfilesOverlay
         AnimatedVisibility(
             visible = showReorderProfilesOverlay,
             enter = slideInVertically { it } + fadeIn(),
@@ -642,7 +659,7 @@ fun MacroPadEditor(
             )
         }
 
-        // Render ReorderLayoutsOverlay
+        // ReorderLayoutsOverlay
         AnimatedVisibility(
             visible = showReorderLayoutsOverlay && profile != null,
             enter = slideInVertically { it } + fadeIn(),
@@ -657,7 +674,7 @@ fun MacroPadEditor(
             }
         }
 
-        // Render MacroListEditor as a full-screen inline overlay (same window — no nested Dialog)
+        // MacroListEditor
         AnimatedVisibility(
             visible = showMacroListEditor,
             enter = slideInVertically { it } + fadeIn(),
@@ -693,7 +710,7 @@ fun MacroPadEditor(
             )
         }
 
-        // Copy layout selection overlay
+        // Copy layout selection
         if (showCopyLayoutProfileDialog && activeLayout != null && profile != null) {
             val curLayout = activeLayout!!
             InlineProfileSelectionOverlay(
@@ -708,7 +725,7 @@ fun MacroPadEditor(
             )
         }
 
-        // Copy button selection overlay
+        // Copy button selection
         if (showCopyButtonLayoutDialog && editingButton != null && profile != null) {
             val curButton = editingButton!!
             InlineLayoutSelectionOverlay(
@@ -724,12 +741,8 @@ fun MacroPadEditor(
                 onDismiss = { showCopyButtonLayoutDialog = false },
             )
         }
-    } // end Box
+    }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Top bar
-// ─────────────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -764,6 +777,668 @@ private fun EditorTopBar(
 }
 
 @Composable
+private fun EditorSidebarTile(
+    title: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val animatedBg by animateColorAsState(
+        targetValue =
+            when {
+                selected && isFocused -> colors.accent.copy(alpha = 0.35f)
+                selected -> colors.accent.copy(alpha = 0.2f)
+                isFocused -> colors.surface.copy(alpha = 0.95f)
+                else -> Color.Transparent
+            },
+        label = "tileBg",
+    )
+    val animatedBorderColor by animateColorAsState(
+        targetValue =
+            when {
+                isFocused -> colors.accent
+                selected -> colors.accent.copy(alpha = 0.5f)
+                else -> Color.Transparent
+            },
+        label = "tileBorder",
+    )
+
+    Surface(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(MPE_SIDEBAR_ITEM_HEIGHT)
+                .background(animatedBg, RoundedCornerShape(MPE_SIDEBAR_CORNER))
+                .border(if (isFocused || selected) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(MPE_SIDEBAR_CORNER))
+                .primaryOverlayFocusable(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(MPE_SIDEBAR_CORNER),
+                    interactionSource = interactionSource,
+                ),
+        shape = RoundedCornerShape(MPE_SIDEBAR_CORNER),
+        color = Color.Transparent,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected || isFocused) colors.accent else colors.onSurfaceSecondary,
+                modifier = Modifier.size(MPE_SIDEBAR_ICON_SIZE),
+            )
+            Text(
+                text = title,
+                color = if (selected || isFocused) colors.onSurface else colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected || isFocused) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditorTwoPaneBody(
+    profiles: List<PadProfile>,
+    profile: PadProfile,
+    layout: PadLayout?,
+    accentColor: Color,
+    onSelectProfile: (String) -> Unit,
+    onNewProfile: () -> Unit,
+    onEditProfile: () -> Unit,
+    onDeleteProfile: () -> Unit,
+    onSelectLayout: (String) -> Unit,
+    onNewLayout: () -> Unit,
+    onEditLayout: () -> Unit,
+    onDeleteLayoutRequested: (PadLayout) -> Unit,
+    onManageMacros: () -> Unit,
+    onAddButton: () -> Unit,
+    onEditButton: (PadButton) -> Unit,
+    onCopyToProfile: () -> Unit,
+    onCopyToLayout: (PadButton) -> Unit,
+    onDeleteRequested: (PadButton) -> Unit,
+    onReorderProfiles: () -> Unit,
+    onReorderLayouts: () -> Unit,
+    isCanvasLocked: Boolean,
+    onToggleCanvasLock: () -> Unit,
+    onManageBackground: () -> Unit,
+    onManageTouchpadSettings: () -> Unit,
+    onHelpClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var selectedSection by remember { mutableStateOf(EditorSection.OVERVIEW) }
+    var gridMode by remember { mutableStateOf(GridMode.OFF) }
+
+    val lazyListState = rememberLazyListState()
+    val reorderState =
+        rememberReorderableLazyListState(lazyListState) { from, to ->
+            val curLayout = layout
+            if (curLayout != null) {
+                val newButtons = curLayout.buttons.toMutableList()
+                val fromIdx = from.index.coerceIn(0, newButtons.lastIndex)
+                val toIdx = to.index.coerceIn(0, newButtons.lastIndex)
+                newButtons.add(toIdx, newButtons.removeAt(fromIdx))
+                MacroPadState.updateLayout(curLayout.copy(buttons = newButtons))
+            }
+        }
+
+    LaunchedEffect(Unit) {
+        PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
+            val currentIndex = EditorSection.entries.indexOf(selectedSection)
+            val nextIndex =
+                when (direction) {
+                    BumperDirection.PREV -> (currentIndex - 1 + EditorSection.entries.size) % EditorSection.entries.size
+                    BumperDirection.NEXT -> (currentIndex + 1) % EditorSection.entries.size
+                }
+            selectedSection = EditorSection.entries[nextIndex]
+        }
+    }
+
+    Row(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(colors.appBackground),
+    ) {
+        // Left Category Rail Sidebar
+        Column(
+            modifier =
+                Modifier
+                    .width(MPE_SIDEBAR_WIDTH)
+                    .fillMaxHeight()
+                    .background(colors.surfaceVariant.copy(alpha = 0.5f))
+                    .border(1.dp, colors.controlOverlayBorder.copy(alpha = 0.6f))
+                    .verticalScroll(rememberScrollState())
+                    .padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            EditorSidebarTile(
+                title = stringResource(R.string.settings_jump_all),
+                icon = Icons.Rounded.Dashboard,
+                selected = selectedSection == EditorSection.OVERVIEW,
+                onClick = { selectedSection = EditorSection.OVERVIEW },
+            )
+            EditorSidebarTile(
+                title = stringResource(R.string.quick_menu_profile_label),
+                icon = Icons.Rounded.Folder,
+                selected = selectedSection == EditorSection.PROFILES,
+                onClick = { selectedSection = EditorSection.PROFILES },
+            )
+            EditorSidebarTile(
+                title = stringResource(R.string.macropad_editor_section_layout),
+                icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                selected = selectedSection == EditorSection.LAYOUTS,
+                onClick = { selectedSection = EditorSection.LAYOUTS },
+            )
+            EditorSidebarTile(
+                title = "Canvas",
+                icon = Icons.Rounded.Preview,
+                selected = selectedSection == EditorSection.CANVAS,
+                onClick = { selectedSection = EditorSection.CANVAS },
+            )
+            EditorSidebarTile(
+                title = stringResource(R.string.macropad_editor_section_buttons),
+                icon = Icons.Rounded.SmartButton,
+                selected = selectedSection == EditorSection.BUTTONS,
+                onClick = { selectedSection = EditorSection.BUTTONS },
+            )
+            EditorSidebarTile(
+                title = stringResource(R.string.macropad_editor_manage_macros),
+                icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                selected = selectedSection == EditorSection.MACROS,
+                onClick = { selectedSection = EditorSection.MACROS },
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HelpIconButton(onClick = onHelpClick)
+            }
+        }
+
+        // Right Settings Content Deck
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // PROFILES & LAYOUTS CHOOSER (Available in OVERVIEW)
+            if (selectedSection == EditorSection.OVERVIEW) {
+                Text(
+                    text = "ACTIVE CONFIGURATION",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                val profileIdx = profiles.indexOf(profile).coerceAtLeast(0)
+                GamepadChoiceCard(
+                    title = stringResource(R.string.quick_menu_profile_label),
+                    description = "Active MacroPad profile",
+                    selectedText = profile.name,
+                    icon = Icons.Rounded.Folder,
+                    onPrevious = {
+                        val next = profiles[(profileIdx - 1 + profiles.size) % profiles.size]
+                        onSelectProfile(next.id)
+                    },
+                    onNext = {
+                        val next = profiles[(profileIdx + 1) % profiles.size]
+                        onSelectProfile(next.id)
+                    },
+                )
+
+                val layouts = profile.layouts
+                val layoutIdx = layouts.indexOf(layout).coerceAtLeast(0)
+                GamepadChoiceCard(
+                    title = stringResource(R.string.macropad_editor_section_layout),
+                    description = "Active button layout",
+                    selectedText = layout?.name ?: "None",
+                    icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                    enabled = layouts.isNotEmpty(),
+                    onPrevious = {
+                        if (layouts.isNotEmpty()) {
+                            val next = layouts[(layoutIdx - 1 + layouts.size) % layouts.size]
+                            onSelectLayout(next.id)
+                        }
+                    },
+                    onNext = {
+                        if (layouts.isNotEmpty()) {
+                            val next = layouts[(layoutIdx + 1) % layouts.size]
+                            onSelectLayout(next.id)
+                        }
+                    },
+                )
+
+                Text(
+                    text = "CANVAS PREVIEW",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+
+                GamepadToggleCard(
+                    title = "Lock Canvas Drag",
+                    description = if (isCanvasLocked) "Canvas is locked (buttons cannot be moved)" else "Drag buttons freely on the canvas below",
+                    checked = isCanvasLocked,
+                    icon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                    onCheckedChange = { onToggleCanvasLock() },
+                )
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PadCanvas(
+                        profile = profile,
+                        layout = layout,
+                        accentColor = accentColor,
+                        gridMode = gridMode,
+                        isLocked = isCanvasLocked,
+                    )
+                }
+
+                Text(
+                    text = "QUICK ACTIONS",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_add_button),
+                    description = "Create and position a new interactive button",
+                    actionText = "Add",
+                    icon = Icons.Rounded.Add,
+                    onClick = onAddButton,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.layout_settings_bg_section_title),
+                    description = "Background image, transparency mask, scaling, and dimming",
+                    actionText = "Background",
+                    icon = Icons.Rounded.Wallpaper,
+                    onClick = onManageBackground,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.settings_touchpad_title),
+                    description = "Background virtual touchpad & touch projection settings",
+                    actionText = "Touchpad",
+                    icon = Icons.Rounded.Mouse,
+                    onClick = onManageTouchpadSettings,
+                )
+            }
+
+            // PROFILES DECK
+            if (selectedSection == EditorSection.PROFILES) {
+                Text(
+                    text = stringResource(R.string.quick_menu_profile_label).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                val profileIdx = profiles.indexOf(profile).coerceAtLeast(0)
+                GamepadChoiceCard(
+                    title = stringResource(R.string.quick_menu_profile_label),
+                    description = "Current active profile",
+                    selectedText = profile.name,
+                    icon = Icons.Rounded.Folder,
+                    onPrevious = {
+                        val next = profiles[(profileIdx - 1 + profiles.size) % profiles.size]
+                        onSelectProfile(next.id)
+                    },
+                    onNext = {
+                        val next = profiles[(profileIdx + 1) % profiles.size]
+                        onSelectProfile(next.id)
+                    },
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.settings_macropad_new_profile),
+                    description = "Create a new profile with custom layouts and macros",
+                    actionText = "New",
+                    icon = Icons.Rounded.Add,
+                    onClick = onNewProfile,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.profile_settings_title),
+                    description = "Rename profile or edit app package association",
+                    actionText = "Edit",
+                    icon = Icons.Rounded.Edit,
+                    onClick = onEditProfile,
+                )
+
+                GamepadActionCard(
+                    title = "Duplicate Profile",
+                    description = "Create a full copy of '${profile.name}' with all layouts and assets",
+                    actionText = "Duplicate",
+                    icon = Icons.Rounded.ContentCopy,
+                    onClick = {
+                        val originalProfile = profile
+                        val originalLayouts = originalProfile.layouts
+                        val layoutMapping = MacroPadState.duplicateProfile(originalProfile.id)
+                        if (layoutMapping != null) {
+                            for (origLayout in originalLayouts) {
+                                val originalPath = origLayout.backgroundImagePath
+                                val newLayoutId = layoutMapping[origLayout.id]
+                                if (originalPath != null && newLayoutId != null) {
+                                    scope.launch {
+                                        MacroPadMediaRepository.duplicateBackgroundImage(context, origLayout.id, newLayoutId)
+                                    }
+                                }
+                            }
+                        }
+                    },
+                )
+
+                GamepadActionCard(
+                    title = "Reorder Profiles",
+                    description = "Change the display order of profiles in the switcher",
+                    actionText = "Reorder",
+                    icon = Icons.Rounded.SwapVert,
+                    onClick = onReorderProfiles,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_delete_profile),
+                    description = "Permanently delete '${profile.name}' and all its layouts",
+                    actionText = "Delete",
+                    isDestructive = true,
+                    icon = Icons.Rounded.Delete,
+                    onClick = onDeleteProfile,
+                )
+            }
+
+            // LAYOUTS DECK
+            if (selectedSection == EditorSection.LAYOUTS) {
+                Text(
+                    text = stringResource(R.string.macropad_editor_section_layout).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                val layouts = profile.layouts
+                val layoutIdx = layouts.indexOf(layout).coerceAtLeast(0)
+                GamepadChoiceCard(
+                    title = stringResource(R.string.macropad_editor_section_layout),
+                    description = "Active layout in '${profile.name}'",
+                    selectedText = layout?.name ?: "None",
+                    icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                    enabled = layouts.isNotEmpty(),
+                    onPrevious = {
+                        if (layouts.isNotEmpty()) {
+                            val next = layouts[(layoutIdx - 1 + layouts.size) % layouts.size]
+                            onSelectLayout(next.id)
+                        }
+                    },
+                    onNext = {
+                        if (layouts.isNotEmpty()) {
+                            val next = layouts[(layoutIdx + 1) % layouts.size]
+                            onSelectLayout(next.id)
+                        }
+                    },
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.settings_macropad_new_layout),
+                    description = "Add a new button layout to this profile",
+                    actionText = "New",
+                    icon = Icons.Rounded.Add,
+                    onClick = onNewLayout,
+                )
+
+                GamepadActionCard(
+                    title = "Layout Appearance & Colors",
+                    description = "Customize button text, border, and background color styling",
+                    actionText = "Appearance",
+                    icon = Icons.Rounded.Palette,
+                    onClick = onEditLayout,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.layout_settings_bg_section_title),
+                    description = "Set background artwork, scaling, dimming, and mask effects",
+                    actionText = "Background",
+                    icon = Icons.Rounded.Wallpaper,
+                    onClick = onManageBackground,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.settings_touchpad_title),
+                    description = "Configure background touchpad and touch projection cutouts",
+                    actionText = "Touchpad",
+                    icon = Icons.Rounded.Mouse,
+                    onClick = onManageTouchpadSettings,
+                )
+
+                GamepadActionCard(
+                    title = "Duplicate Layout",
+                    description = "Duplicate active layout inside this profile",
+                    actionText = "Duplicate",
+                    icon = Icons.Rounded.ContentCopy,
+                    onClick = {
+                        val originalLayout = layout
+                        val originalPath = originalLayout?.backgroundImagePath
+                        val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
+                        if (originalLayout != null && originalPath != null && newLayoutId != null) {
+                            scope.launch {
+                                MacroPadMediaRepository.duplicateBackgroundImage(context, originalLayout.id, newLayoutId)
+                            }
+                        }
+                    },
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_copy_profile_select),
+                    description = "Copy this layout to another profile",
+                    actionText = "Copy",
+                    icon = Icons.Rounded.Share,
+                    onClick = onCopyToProfile,
+                )
+
+                GamepadActionCard(
+                    title = "Reorder Layouts",
+                    description = "Change the order of layouts in this profile",
+                    actionText = "Reorder",
+                    icon = Icons.Rounded.SwapVert,
+                    onClick = onReorderLayouts,
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_delete_layout),
+                    description = "Delete '${layout?.name}' from this profile",
+                    actionText = "Delete",
+                    isDestructive = true,
+                    icon = Icons.Rounded.Delete,
+                    onClick = { layout?.let { onDeleteLayoutRequested(it) } },
+                )
+            }
+
+            // CANVAS DECK
+            if (selectedSection == EditorSection.CANVAS) {
+                Text(
+                    text = "CANVAS CONTROLS",
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                GamepadToggleCard(
+                    title = "Lock Canvas Dragging",
+                    description = if (isCanvasLocked) "Canvas is locked (buttons cannot be accidentally moved)" else "Drag buttons freely on the canvas to reposition",
+                    checked = isCanvasLocked,
+                    icon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                    onCheckedChange = { onToggleCanvasLock() },
+                )
+
+                val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
+                val gridIdx = gridModes.indexOf(gridMode)
+                GamepadChoiceCard(
+                    title = "Snap Grid Mode",
+                    description = "Display alignment grid on canvas",
+                    selectedText =
+                        when (gridMode) {
+                            GridMode.OFF -> "Off"
+                            GridMode.RECTANGULAR -> "Rectangular"
+                            GridMode.RADIAL -> "Radial"
+                        },
+                    icon = Icons.Rounded.Grid4x4,
+                    onPrevious = { gridMode = gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size] },
+                    onNext = { gridMode = gridModes[(gridIdx + 1) % gridModes.size] },
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_add_button),
+                    description = "Create a new button and place it on this canvas",
+                    actionText = "Add",
+                    icon = Icons.Rounded.Add,
+                    onClick = onAddButton,
+                )
+
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    PadCanvas(
+                        profile = profile,
+                        layout = layout,
+                        accentColor = accentColor,
+                        gridMode = gridMode,
+                        isLocked = isCanvasLocked,
+                    )
+                }
+            }
+
+            // BUTTONS DECK
+            if (selectedSection == EditorSection.BUTTONS || selectedSection == EditorSection.OVERVIEW) {
+                Text(
+                    text = stringResource(R.string.macropad_editor_section_buttons).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = if (selectedSection == EditorSection.OVERVIEW) 8.dp else 0.dp),
+                )
+
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_add_button),
+                    description = "Create and configure a new interactive button",
+                    actionText = "Add",
+                    icon = Icons.Rounded.Add,
+                    onClick = onAddButton,
+                )
+
+                val buttons = layout?.buttons ?: emptyList()
+                if (buttons.isEmpty()) {
+                    Text(
+                        text = "No buttons in this layout yet.",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 12.dp),
+                    )
+                } else {
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height((buttons.size * 72).coerceAtMost(480).dp),
+                    ) {
+                        itemsIndexed(buttons, key = { _, btn -> btn.id }) { _, btn ->
+                            ReorderableItem(reorderState, key = btn.id) { isDragging ->
+                                ButtonListItem(
+                                    btn = btn,
+                                    accentColor = accentColor,
+                                    enableKeyboard = profile.enableKeyboard,
+                                    enableGamepad = profile.enableGamepad,
+                                    enableMouse = profile.enableMouse,
+                                    enableTouch = profile.enableTouch,
+                                    isDragging = isDragging,
+                                    onEdit = { onEditButton(btn) },
+                                    onDuplicate = { MacroPadState.duplicateButtonInLayout(btn, layout?.id ?: "") },
+                                    onCopyToLayout = { onCopyToLayout(btn) },
+                                    onDelete = { onDeleteRequested(btn) },
+                                    dragHandleModifier = Modifier.draggableHandle(),
+                                )
+                                AppDivider(modifier = Modifier.padding(horizontal = 8.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // MACROS DECK
+            if (selectedSection == EditorSection.MACROS) {
+                Text(
+                    text = stringResource(R.string.macropad_editor_manage_macros).uppercase(),
+                    color = accentColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                GamepadActionCard(
+                    title = "Open Macro Timeline Editor",
+                    description = "Create, record, and edit timed input macro sequences",
+                    actionText = "Open",
+                    icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                    onClick = onManageMacros,
+                )
+
+                val macros = profile.macros
+                if (macros.isEmpty()) {
+                    Text(
+                        text = "No macros created for this profile yet.",
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 12.dp),
+                    )
+                } else {
+                    macros.forEach { macro ->
+                        GamepadActionCard(
+                            title = macro.name,
+                            description = "${macro.steps.size} step${if (macro.steps.size != 1) "s" else ""}",
+                            actionText = "Edit",
+                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                            onClick = onManageMacros,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun MacroPadEditorHelpModal(
     visible: Boolean,
     onDismiss: () -> Unit,
@@ -777,7 +1452,6 @@ private fun MacroPadEditorHelpModal(
 
         HelpSection(stringResource(R.string.help_editor_section_profiles))
         HelpEntry(
-            icon = null,
             label = stringResource(R.string.help_editor_profiles_label),
             description = stringResource(R.string.help_editor_profiles_desc),
         )
@@ -791,15 +1465,9 @@ private fun MacroPadEditorHelpModal(
             label = stringResource(R.string.help_editor_profile_macros_label),
             description = stringResource(R.string.help_editor_profile_macros_desc),
         )
-        HelpEntry(
-            icon = Icons.Rounded.MoreVert,
-            label = stringResource(R.string.help_editor_profile_options_label),
-            description = stringResource(R.string.help_editor_profile_options_desc),
-        )
 
         HelpSection(stringResource(R.string.help_editor_section_layouts))
         HelpEntry(
-            icon = null,
             label = stringResource(R.string.help_editor_layouts_label),
             description = stringResource(R.string.help_editor_layouts_desc),
         )
@@ -807,11 +1475,6 @@ private fun MacroPadEditorHelpModal(
             icon = Icons.Rounded.Add,
             label = stringResource(R.string.help_editor_add_layout_label),
             description = stringResource(R.string.help_editor_add_layout_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.MoreVert,
-            label = stringResource(R.string.help_editor_layout_options_label),
-            description = stringResource(R.string.help_editor_layout_options_desc),
         )
 
         HelpSection(stringResource(R.string.help_editor_section_toolbar))
@@ -857,257 +1520,5 @@ private fun MacroPadEditorHelpModal(
             label = stringResource(R.string.help_editor_button_reorder_label),
             description = stringResource(R.string.help_editor_button_reorder_desc),
         )
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Body
-// ─────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun EditorBody(
-    profiles: List<PadProfile>,
-    profile: PadProfile,
-    layout: PadLayout?,
-    accentColor: Color,
-    onSelectProfile: (String) -> Unit,
-    onNewProfile: () -> Unit,
-    onEditProfile: () -> Unit,
-    onDeleteProfile: () -> Unit,
-    onSelectLayout: (String) -> Unit,
-    onNewLayout: () -> Unit,
-    onEditLayout: () -> Unit,
-    onDeleteLayoutRequested: (PadLayout) -> Unit,
-    onManageMacros: () -> Unit,
-    onAddButton: () -> Unit,
-    onEditButton: (PadButton) -> Unit,
-    onCopyToProfile: () -> Unit,
-    onCopyToLayout: (PadButton) -> Unit,
-    onDeleteRequested: (PadButton) -> Unit,
-    onReorderProfiles: () -> Unit,
-    onReorderLayouts: () -> Unit,
-    isCanvasLocked: Boolean,
-    onToggleCanvasLock: () -> Unit,
-    onManageBackground: () -> Unit,
-    onManageTouchpadSettings: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var gridMode by remember { mutableStateOf(GridMode.OFF) }
-    val profileRef by rememberUpdatedState(profile)
-    val layoutRef by rememberUpdatedState(layout)
-
-    val lazyListState = rememberLazyListState()
-    // Items before buttons: section_profile(0), profiles(1), section_layout(2), layouts(3),
-    // toolbar(4), canvas(5), section_buttons(6) → offset = 7
-    val reorderState =
-        rememberReorderableLazyListState(lazyListState) { from, to ->
-            val offset = 7
-            val curLayout = layoutRef
-            if (curLayout != null) {
-                val newButtons = curLayout.buttons.toMutableList()
-                val fromIdx = (from.index - offset).coerceIn(0, newButtons.lastIndex)
-                val toIdx = (to.index - offset).coerceIn(0, newButtons.lastIndex)
-                newButtons.add(toIdx, newButtons.removeAt(fromIdx))
-                MacroPadState.updateLayout(curLayout.copy(buttons = newButtons))
-            }
-        }
-
-    LazyColumn(
-        state = lazyListState,
-        modifier = modifier.fillMaxSize(),
-    ) {
-        // 1. Profile section header
-        item(key = "section_profile") {
-            EditorSectionHeader(
-                textRes = R.string.quick_menu_profile_label,
-                actionIcon = Icons.Rounded.Add,
-                actionContentDescription = stringResource(R.string.settings_macropad_new_profile),
-                onActionClick = onNewProfile,
-            )
-        }
-
-        // 2. Profile management bar
-        item(key = "profiles") {
-            EditorProfileChipsBar(
-                profiles = profiles,
-                activeProfile = profile,
-                onSelectProfile = onSelectProfile,
-                onEditProfile = onEditProfile,
-                onDuplicateProfile = {
-                    val originalProfile = profile
-                    val originalLayouts = originalProfile?.layouts ?: emptyList()
-                    val layoutMapping = originalProfile?.id?.let { MacroPadState.duplicateProfile(it) }
-                    if (layoutMapping != null) {
-                        for (origLayout in originalLayouts) {
-                            val originalPath = origLayout.backgroundImagePath
-                            val newLayoutId = layoutMapping[origLayout.id]
-                            if (originalPath != null && newLayoutId != null) {
-                                scope.launch {
-                                    MacroPadMediaRepository.duplicateBackgroundImage(context, origLayout.id, newLayoutId)
-                                }
-                            }
-                        }
-                    }
-                },
-                onReorderProfiles = onReorderProfiles,
-                onDeleteProfile = onDeleteProfile,
-                modifier =
-                    Modifier
-                        .background(colors.surface)
-                        .padding(horizontal = MPE_PADDING)
-                        .padding(top = MPE_PADDING, bottom = 4.dp),
-            )
-        }
-
-        // 2b. Profile Action Toolbar (Macros button row)
-        item(key = "profile_toolbar") {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(colors.surface)
-                        .padding(horizontal = MPE_PADDING)
-                        .padding(top = 4.dp, bottom = MPE_PADDING),
-                horizontalArrangement = Arrangement.spacedBy(MPE_ITEM_PADDING),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                EditorActionChip(
-                    label = stringResource(R.string.macropad_editor_manage_macros),
-                    icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-                    accentColor = accentColor,
-                    onClick = onManageMacros,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-
-        // 3. Layout section header
-        item(key = "section_layout") {
-            EditorSectionHeader(
-                textRes = R.string.macropad_editor_section_layout,
-                actionIcon = Icons.Rounded.Add,
-                actionContentDescription = stringResource(R.string.settings_macropad_new_layout),
-                onActionClick = onNewLayout,
-            )
-        }
-
-        // 4. Layout management bar
-        item(key = "layouts") {
-            EditorLayoutChipsBar(
-                layouts = profile.layouts,
-                activeLayout = layout,
-                onSelectLayout = onSelectLayout,
-                onEditLayout = onEditLayout,
-                onDuplicateLayout = {
-                    val originalLayout = layout
-                    val originalPath = originalLayout?.backgroundImagePath
-                    val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
-                    if (originalLayout != null && originalPath != null && newLayoutId != null) {
-                        scope.launch {
-                            MacroPadMediaRepository.duplicateBackgroundImage(context, originalLayout.id, newLayoutId)
-                        }
-                    }
-                },
-                onCopyToProfile = onCopyToProfile,
-                onReorderLayouts = onReorderLayouts,
-                onDeleteLayout = { layout?.let { onDeleteLayoutRequested(it) } },
-                modifier =
-                    Modifier
-                        .background(colors.surface)
-                        .padding(horizontal = MPE_PADDING)
-                        .padding(top = MPE_PADDING, bottom = 4.dp),
-            )
-        }
-
-        // 3. Action toolbar (Add Button / Grid toggle)
-        item(key = "toolbar") {
-            EditorToolbar(
-                profile = profile,
-                accentColor = accentColor,
-                gridMode = gridMode,
-                isCanvasLocked = isCanvasLocked,
-                onToggleCanvasLock = onToggleCanvasLock,
-                onAddButton = onAddButton,
-                onGridModeChange = {
-                    gridMode =
-                        when (gridMode) {
-                            GridMode.OFF -> GridMode.RECTANGULAR
-                            GridMode.RECTANGULAR -> GridMode.RADIAL
-                            GridMode.RADIAL -> GridMode.OFF
-                        }
-                },
-                onManageBackground = onManageBackground,
-                onManageTouchpadSettings = onManageTouchpadSettings,
-                modifier =
-                    Modifier
-                        .background(colors.surface)
-                        .padding(horizontal = MPE_PADDING)
-                        .padding(top = 4.dp, bottom = MPE_PADDING),
-            )
-        }
-
-        // 4. Pad canvas
-        item(key = "canvas") {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                PadCanvas(
-                    profile = profile,
-                    layout = layout,
-                    accentColor = accentColor,
-                    gridMode = gridMode,
-                    isLocked = isCanvasLocked,
-                )
-            }
-        }
-
-        // 5. Buttons section header
-        item(key = "section_buttons") {
-            EditorSectionHeader(
-                textRes = R.string.macropad_editor_section_buttons,
-                actionIcon = Icons.Rounded.Add,
-                actionContentDescription = stringResource(R.string.macropad_editor_add_button),
-                onActionClick = onAddButton,
-            )
-        }
-
-        // 6. Button list — tap to edit, drag handle to reorder
-        if (layout?.buttons.isNullOrEmpty()) {
-            item(key = "empty") {
-                Text(
-                    text = stringResource(R.string.macropad_editor_add_button),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier =
-                        Modifier
-                            .padding(horizontal = MPE_PADDING)
-                            .padding(vertical = 8.dp),
-                )
-            }
-        } else {
-            itemsIndexed(layout?.buttons ?: emptyList(), key = { _, btn -> btn.id }) { _, btn ->
-                ReorderableItem(reorderState, key = btn.id) { isDragging ->
-                    ButtonListItem(
-                        btn = btn,
-                        accentColor = accentColor,
-                        enableKeyboard = profile.enableKeyboard,
-                        enableGamepad = profile.enableGamepad,
-                        enableMouse = profile.enableMouse,
-                        enableTouch = profile.enableTouch,
-                        isDragging = isDragging,
-                        onEdit = { onEditButton(btn) },
-                        onDuplicate = { MacroPadState.duplicateButtonInLayout(btn, layout.id) },
-                        onCopyToLayout = { onCopyToLayout(btn) },
-                        onDelete = { onDeleteRequested(btn) },
-                        dragHandleModifier = Modifier.draggableHandle(),
-                    )
-                    AppDivider(modifier = Modifier.padding(horizontal = MPE_PADDING))
-                }
-            }
-        }
     }
 }
