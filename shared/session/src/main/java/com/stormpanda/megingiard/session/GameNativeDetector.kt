@@ -124,17 +124,21 @@ object GameNativeDetector : EmulatorDetector {
                                 }
 
                             return if (matchedApp != null) {
+                                val matchPath = matchedApp.romPath?.takeIf { it.startsWith("/") }
+                                val matchIdentifier = matchedApp.romPath?.let { File(it).name } ?: "$folderName.steam"
                                 ActiveGameSession(
                                     packageName = packageName,
                                     systemId = "pc",
-                                    romPath = matchedApp.romPath ?: "",
+                                    romPath = matchPath,
+                                    romIdentifier = matchIdentifier,
                                     gameTitle = matchedApp.label,
                                 )
                             } else {
                                 ActiveGameSession(
                                     packageName = packageName,
                                     systemId = "pc",
-                                    romPath = "$folderName.steam",
+                                    romPath = null,
+                                    romIdentifier = "$folderName.steam",
                                     gameTitle = folderName,
                                 )
                             }

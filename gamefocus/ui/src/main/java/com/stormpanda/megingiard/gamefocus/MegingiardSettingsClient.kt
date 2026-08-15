@@ -12,6 +12,7 @@ import com.stormpanda.megingiard.ipc.observeContentProvider
 import com.stormpanda.megingiard.session.GameNativeDetector
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.io.File
 
 object MegingiardSettingsClient {
     private const val TAG = "MegingiardSettingsClient"
@@ -36,9 +37,11 @@ object MegingiardSettingsClient {
         isActive: Boolean,
         focusedPackage: String? = null,
         focusedRomPath: String? = null,
+        focusedRomIdentifier: String? = null,
         hoveredPackage: String? = null,
         hoveredLabel: String? = null,
         hoveredRomPath: String? = null,
+        hoveredRomIdentifier: String? = null,
         hoveredSystemId: String? = null,
         hoveredPrimaryColor: Int? = null,
         hoveredSecondaryColor: Int? = null,
@@ -54,6 +57,8 @@ object MegingiardSettingsClient {
             }
         val finalFocusedPackage = focusedRomApp?.let { getActualPackageName(context, it.systemId) } ?: focusedPackage
         val finalFocusedRomPath = focusedRomApp?.romPath ?: focusedRomPath
+        val finalFocusedRomIdentifier =
+            focusedRomIdentifier ?: finalFocusedRomPath?.let { File(it).name }
 
         val hoveredRomApp =
             if (hoveredPackage != null && hoveredPackage.startsWith("rom.")) {
@@ -63,6 +68,8 @@ object MegingiardSettingsClient {
             }
         val finalHoveredPackage = hoveredRomApp?.let { getActualPackageName(context, it.systemId) } ?: hoveredPackage
         val finalHoveredRomPath = hoveredRomApp?.romPath ?: hoveredRomPath
+        val finalHoveredRomIdentifier =
+            hoveredRomIdentifier ?: finalHoveredRomPath?.let { File(it).name }
         val finalHoveredSystemId = hoveredRomApp?.systemId ?: hoveredSystemId
         val finalHoveredLabel = hoveredRomApp?.label ?: hoveredLabel
 
@@ -77,9 +84,11 @@ object MegingiardSettingsClient {
                 putBoolean(MegingiardIpcContract.COLUMN_IS_ACTIVE, isActive)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_PACKAGE, finalFocusedPackage)
                 putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_PATH, finalFocusedRomPath)
+                putString(MegingiardIpcContract.COLUMN_FOCUSED_ROM_IDENTIFIER, finalFocusedRomIdentifier)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_PACKAGE, finalHoveredPackage)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_LABEL, finalHoveredLabel)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_ROM_PATH, finalHoveredRomPath)
+                putString(MegingiardIpcContract.COLUMN_HOVERED_ROM_IDENTIFIER, finalHoveredRomIdentifier)
                 putString(MegingiardIpcContract.COLUMN_HOVERED_SYSTEM_ID, finalHoveredSystemId)
                 if (hoveredPrimaryColor != null) {
                     putInt(MegingiardIpcContract.COLUMN_HOVERED_PRIMARY_COLOR, hoveredPrimaryColor)

@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.session
 
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.session.ProcessCmdlineProvider
 
 private const val TAG = "Pcsx2AndroidDetector"
 
@@ -20,12 +19,10 @@ object Pcsx2AndroidDetector : EmulatorDetector {
 
     override val systemId: String = "ps2"
 
-    private fun getCandidatePaths(packageName: String): List<String> =
-        listOf(
-            "/storage/emulated/0/Android/data/$packageName/files/recent_games.json",
-            "/sdcard/Android/data/$packageName/files/recent_games.json",
-            "/storage/6914-318F/Android/data/$packageName/files/recent_games.json",
-        )
+    private fun getCandidatePaths(packageName: String): List<String> {
+        val relativeSubPath = "Android/data/$packageName/files/recent_games.json"
+        return SafPathResolver.getStorageVolumeRoots().map { root -> "$root/$relativeSubPath" }
+    }
 
     override suspend fun detectActiveSession(packageName: String): ActiveGameSession? {
         if (!supportedPackages.contains(packageName)) return null

@@ -36,6 +36,7 @@ class Pcsx2AndroidRecentGamesParserTest {
         assertEquals("ps2", session?.systemId)
         assertEquals("PCSX2", session?.coreOrBackend)
         assertEquals("/storage/6914-318F/ROMs/ps2/Marvel vs. Capcom 2 - New Age of Heroes (Europe).bin", session?.romPath)
+        assertEquals("Marvel vs. Capcom 2 - New Age of Heroes (Europe).bin", session?.romIdentifier)
     }
 
     @Test

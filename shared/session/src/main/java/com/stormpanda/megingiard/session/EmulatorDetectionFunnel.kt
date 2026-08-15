@@ -14,7 +14,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 private const val TAG = "EmulatorDetectionFunnel"
-private const val POLLING_MAX_ATTEMPTS = 5
 private const val POLLING_DELAY_MS = 1000L
 
 /**
@@ -38,6 +37,7 @@ object EmulatorDetectionFunnel {
             GameNativeDetector,
             Pcsx2AndroidDetector,
             YuzuDetector,
+            PpssppDetector,
         )
 
     private val packageMap: Map<String, EmulatorDetector> by lazy {
@@ -84,22 +84,28 @@ object EmulatorDetectionFunnel {
 
             pollingJob =
                 funnelScope.launch {
-                    var lastPath = effectiveSession?.romPath
-                    var lastTitle = effectiveSession?.gameTitle
+                    var lastSession = effectiveSession
                     while (true) {
                         delay(POLLING_DELAY_MS)
                         val currentSession = detector.detectActiveSession(packageName)
                         if (currentSession != null) {
-                            if (currentSession.romPath != lastPath || currentSession.gameTitle != lastTitle) {
+                            if (currentSession != lastSession) {
                                 AppLog.i(
                                     TAG,
                                     "onPackageForeground polling: detected in-emulator game change to ${currentSession.gameTitle} (${currentSession.systemId})",
                                 )
-                                lastPath = currentSession.romPath
-                                lastTitle = currentSession.gameTitle
+                                lastSession = currentSession
                                 _activeSession.value = currentSession
                                 _lastDetectedSession.value = currentSession
                             }
+                        } else if (lastSession != null) {
+                            AppLog.i(
+                                TAG,
+                                "onPackageForeground polling: detected game closed in $packageName",
+                            )
+                            lastSession = null
+                            _activeSession.value = null
+                            _lastDetectedSession.value = null
                         }
                     }
                 }
