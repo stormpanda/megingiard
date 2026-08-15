@@ -727,7 +727,7 @@ private fun EditorTopBar(
     TopAppBar(
         title = {
             Text(
-                text = stringResource(R.string.macropad_editor_title_edit_profile),
+                text = stringResource(R.string.quick_menu_edit_layout),
                 color = colors.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
