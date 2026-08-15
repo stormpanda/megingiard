@@ -238,7 +238,13 @@ fun GamepadFocusCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
+    val cardFocusRequester = remember { FocusRequester() }
+    val recordLastFocused = LocalLastFocusedDeckTracker.current
+
     LaunchedEffect(isFocused) {
+        if (isFocused) {
+            recordLastFocused?.invoke(cardFocusRequester)
+        }
         onFocusChanged?.invoke(isFocused)
     }
 
@@ -333,6 +339,7 @@ fun GamepadFocusCard(
                 .shadow(animatedElevation, shape)
                 .background(animatedBgColor, shape)
                 .border(animatedBorderWidth, animatedBorderColor, shape)
+                .focusRequester(cardFocusRequester)
                 .then(keyModifier)
                 .then(clickModifier),
         shape = shape,
@@ -1029,6 +1036,8 @@ fun GamepadColorPaletteGrid(
 
 val LocalActiveCategoryRequester = compositionLocalOf<FocusRequester?> { null }
 val LocalFirstContentRequester = compositionLocalOf<FocusRequester?> { null }
+val LocalLastFocusedDeckTracker = compositionLocalOf<((FocusRequester) -> Unit)?> { null }
+val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
 
 /**
  * Modifier extension to mark a composable card as the primary focus target when entering the right deck from the sidebar.
@@ -1055,6 +1064,7 @@ fun GamepadCategoryTile(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val activeCategoryRequester = LocalActiveCategoryRequester.current
+    val resetLastFocused = LocalResetLastFocusedTracker.current
 
     val animatedBg by animateColorAsState(
         targetValue =
@@ -1087,6 +1097,9 @@ fun GamepadCategoryTile(
                 .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GC_SIDEBAR_CORNER))
                 .onFocusChanged { focusState ->
                     if (focusState.isFocused) {
+                        if (!selected) {
+                            resetLastFocused?.invoke()
+                        }
                         onSelect?.invoke() ?: onClick()
                     }
                 }.then(requesterModifier)
@@ -1139,10 +1152,13 @@ fun GamepadTwoPaneScaffold(
     val colors = LocalAppColors.current
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
+    var lastFocusedContentRequester by remember { mutableStateOf<FocusRequester?>(null) }
 
     CompositionLocalProvider(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
+        LocalLastFocusedDeckTracker provides { req -> lastFocusedContentRequester = req },
+        LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
     ) {
         Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
             Row(
@@ -1160,10 +1176,22 @@ fun GamepadTwoPaneScaffold(
                                 if (keyEvent.type == KeyEventType.KeyDown &&
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                                 ) {
-                                    try {
-                                        firstContentRequester.requestFocus()
-                                    } catch (_: Exception) {
-                                        // Focus fallback
+                                    var handled = false
+                                    val target = lastFocusedContentRequester
+                                    if (target != null) {
+                                        try {
+                                            target.requestFocus()
+                                            handled = true
+                                        } catch (_: Exception) {
+                                            lastFocusedContentRequester = null
+                                        }
+                                    }
+                                    if (!handled) {
+                                        try {
+                                            firstContentRequester.requestFocus()
+                                        } catch (_: Exception) {
+                                            // Focus fallback
+                                        }
                                     }
                                     true
                                 } else {
