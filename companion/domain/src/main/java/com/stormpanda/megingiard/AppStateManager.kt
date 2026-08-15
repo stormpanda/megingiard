@@ -610,8 +610,8 @@ object AppStateManager {
         AppLog.i(TAG, "setEditorActive($active)")
         _uiMode.value = if (active) UiMode.LAYOUT_EDITOR else UiMode.MACROPAD_USE
         if (active) {
-            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.MACROPAD_INSPECTOR)
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.MACROPAD_INSPECTOR) {
+            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.MACROPAD_EDITOR)
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.MACROPAD_EDITOR) {
             _activePrimaryModal.value = null
         }
     }

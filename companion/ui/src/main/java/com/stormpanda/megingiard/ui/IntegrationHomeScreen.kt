@@ -629,12 +629,7 @@ private fun HeroCompanionCard(
                             OutlinedButton(
                                 onClick = {
                                     MacroPadState.setActiveProfileId(associatedProfile.id)
-                                    val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                                    if (isDual) {
-                                        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
-                                    } else {
-                                        AppStateManager.setEditorActive(true)
-                                    }
+                                    AppStateManager.setEditorActive(true)
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 border = BorderStroke(IH_BORDER_WIDTH, colors.controlOverlayBorder),
@@ -689,12 +684,7 @@ private fun HeroCompanionCard(
                                         )
                                     MacroPadState.addProfile(newProfile)
                                     MacroPadState.setActiveProfileId(newProfileId)
-                                    val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                                    if (isDual) {
-                                        AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
-                                    } else {
-                                        AppStateManager.setEditorActive(true)
-                                    }
+                                    AppStateManager.setEditorActive(true)
                                 },
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
                                 colors =

@@ -18,6 +18,7 @@ import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
 import com.stormpanda.megingiard.macropad.ButtonEditDialog
 import com.stormpanda.megingiard.macropad.InlineProfileSettingsOverlay
 import com.stormpanda.megingiard.macropad.LayoutSettingsEditor
+import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.MacroTimelineEditor
 import com.stormpanda.megingiard.macropad.ProfileAssociation
@@ -81,6 +82,20 @@ fun PrimaryModalHost(
                 modifier = modifier,
             ) {
                 BackgroundSettingsOverlay(onDone = onDismiss)
+            }
+        }
+
+        PrimaryModalType.MACROPAD_EDITOR -> {
+            PrimaryOverlayContainer(
+                title = stringResource(R.string.macropad_editor_title),
+                icon = Icons.Rounded.Widgets,
+                onDismiss = onDismiss,
+                modifier = modifier,
+            ) {
+                MacroPadEditor(
+                    onDone = onDismiss,
+                    showTopBar = false,
+                )
             }
         }
 

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -108,7 +109,10 @@ internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
  * @param onDone  Called when the user taps "Done" to close the editor.
  */
 @Composable
-fun MacroPadEditor(onDone: () -> Unit) {
+fun MacroPadEditor(
+    onDone: () -> Unit,
+    showTopBar: Boolean = true,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val profiles by MacroPadState.profiles.collectAsState()
@@ -226,108 +230,81 @@ fun MacroPadEditor(onDone: () -> Unit) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = colors.appBackground,
-            topBar = {
-                EditorTopBar(
-                    onDone = onDone,
-                    onHelpClick = { showEditorHelp = true },
-                )
-            },
-        ) { innerPadding ->
-            if (profile == null) {
-                // No profile yet — show prompt
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_no_profile),
-                        color = colors.onSurfaceSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(MPE_PADDING),
-                    )
-                }
-            } else {
-                EditorBody(
-                    profiles = profiles,
-                    profile = profile,
-                    layout = activeLayout,
-                    accentColor = colors.accent,
-                    onSelectProfile = {
-                        MacroPadState.setActiveProfileId(it)
-                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                    },
-                    onNewProfile = { showNewProfileDialog = true },
-                    onEditProfile = {
-                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                        if (isDual) {
-                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.PROFILE_SETTINGS))
-                        } else {
-                            showRenameProfileDialog = true
-                        }
-                    },
-                    onDeleteProfile = { showDeleteProfileConfirm = true },
-                    onSelectLayout = {
-                        MacroPadState.setActiveLayoutId(it)
-                        AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
-                    },
-                    onNewLayout = { showNewLayoutDialog = true },
-                    onEditLayout = {
-                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                        if (isDual) {
-                            MacroPadState.setSelectedButtonId(null)
-                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
-                        } else {
-                            showEditLayoutDialog = true
-                        }
-                    },
-                    onDeleteLayoutRequested = { lay -> layoutPendingDelete = lay },
-                    onManageMacros = { showMacroListEditor = true },
-                    onAddButton = { showAddButton = true },
-                    onEditButton = { btn ->
-                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                        if (isDual) {
-                            MacroPadState.setSelectedButtonId(btn.id)
-                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.MACROPAD_INSPECTOR))
-                        } else {
-                            editingButton = btn
-                            editingButtonActive = true
-                        }
-                    },
-                    onCopyToProfile = { showCopyLayoutProfileDialog = true },
-                    onCopyToLayout = { btn ->
-                        editingButton = btn
-                        showCopyButtonLayoutDialog = true
-                    },
-                    onDeleteRequested = { btn -> buttonPendingDelete = btn },
-                    onReorderProfiles = { showReorderProfilesOverlay = true },
-                    onReorderLayouts = { showReorderLayoutsOverlay = true },
-                    isCanvasLocked = isCanvasLocked,
-                    onToggleCanvasLock = { isCanvasLocked = !isCanvasLocked },
-                    onManageBackground = {
-                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                        if (isDual) {
-                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.BACKGROUND_SETTINGS))
-                        } else {
-                            showBackgroundSettingsDialog = true
-                        }
-                    },
-                    onManageTouchpadSettings = {
-                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                        if (isDual) {
-                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.TOUCHPAD_SETTINGS))
-                        } else {
-                            showTouchpadSettingsDialog = true
-                        }
-                    },
-                    modifier = Modifier.padding(innerPadding),
+    val editorContent: @Composable (PaddingValues) -> Unit = { innerPadding ->
+        if (profile == null) {
+            // No profile yet — show prompt
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.macropad_no_profile),
+                    color = colors.onSurfaceSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(MPE_PADDING),
                 )
             }
+        } else {
+            EditorBody(
+                profiles = profiles,
+                profile = profile,
+                layout = activeLayout,
+                accentColor = colors.accent,
+                onSelectProfile = {
+                    MacroPadState.setActiveProfileId(it)
+                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                },
+                onNewProfile = { showNewProfileDialog = true },
+                onEditProfile = { showRenameProfileDialog = true },
+                onDeleteProfile = { showDeleteProfileConfirm = true },
+                onSelectLayout = {
+                    MacroPadState.setActiveLayoutId(it)
+                    AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
+                },
+                onNewLayout = { showNewLayoutDialog = true },
+                onEditLayout = { showEditLayoutDialog = true },
+                onDeleteLayoutRequested = { lay -> layoutPendingDelete = lay },
+                onManageMacros = { showMacroListEditor = true },
+                onAddButton = { showAddButton = true },
+                onEditButton = { btn ->
+                    editingButton = btn
+                    editingButtonActive = true
+                },
+                onCopyToProfile = { showCopyLayoutProfileDialog = true },
+                onCopyToLayout = { btn ->
+                    editingButton = btn
+                    showCopyButtonLayoutDialog = true
+                },
+                onDeleteRequested = { btn -> buttonPendingDelete = btn },
+                onReorderProfiles = { showReorderProfilesOverlay = true },
+                onReorderLayouts = { showReorderLayoutsOverlay = true },
+                isCanvasLocked = isCanvasLocked,
+                onToggleCanvasLock = { isCanvasLocked = !isCanvasLocked },
+                onManageBackground = { showBackgroundSettingsDialog = true },
+                onManageTouchpadSettings = { showTouchpadSettingsDialog = true },
+                modifier = Modifier.padding(innerPadding),
+            )
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (showTopBar) {
+            Scaffold(
+                containerColor = colors.appBackground,
+                topBar = {
+                    EditorTopBar(
+                        onDone = onDone,
+                        onHelpClick = { showEditorHelp = true },
+                    )
+                },
+            ) { innerPadding ->
+                editorContent(innerPadding)
+            }
+        } else {
+            editorContent(PaddingValues(0.dp))
         }
 
         MacroPadEditorHelpModal(

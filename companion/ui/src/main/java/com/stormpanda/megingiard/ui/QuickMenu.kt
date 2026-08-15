@@ -311,12 +311,7 @@ fun QuickMenu(
                         icon = Icons.Rounded.Edit,
                         colors = colors,
                         onClick = {
-                            val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                            if (isDual) {
-                                AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
-                            } else {
-                                AppStateManager.setEditorActive(true)
-                            }
+                            AppStateManager.setEditorActive(true)
                             onDismiss()
                         },
                         modifier = Modifier.weight(1f),
