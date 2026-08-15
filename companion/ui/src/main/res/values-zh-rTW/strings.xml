@@ -5,8 +5,8 @@
     <string name="focus_launcher_search_hint">搜尋應用程式與遊戲…</string>
     <string name="focus_launcher_no_apps">找不到應用程式</string>
     <string name="mirror_waiting_permission">正在等待螢幕投影授權\u2026</string>
-    <string name="wrong_screen_message">Megingiard 必須在底部螢幕運行。\n請移動應用程式以繼續。</string>
-    <string name="cd_wrong_screen_arrow">指向底部螢幕的箭頭</string>
+    <string name="wrong_screen_message">Megingiard 必須在副螢幕運行。\n請移動應用程式以繼續。</string>
+    <string name="cd_wrong_screen_arrow">指向副螢幕的箭頭</string>
     <string name="mirror_start_button">開始投影</string>
     <string name="cd_previous_tool">上一個工具</string>
     <string name="cd_next_tool">下一個工具</string>
@@ -395,7 +395,7 @@
     <string name="privd_wizard_autofill_read_screen">自動填入（讀取螢幕）</string>
     <string name="privd_wizard_autofill_scanning">正在掃描螢幕…</string>
     <string name="privd_wizard_autofill_success">已自動填入配對資訊！</string>
-    <string name="privd_wizard_autofill_not_found">無法在螢幕上偵測到完整的配對資訊。請確認上螢幕已開啟無線偵錯選單或「配對裝置」對話視窗。</string>
+    <string name="privd_wizard_autofill_not_found">無法在螢幕上偵測到完整的配對資訊。請確認主螢幕已開啟無線偵錯選單或「配對裝置」對話視窗。</string>
     <string name="privd_wizard_autofill_accessibility_disabled">請在系統設定中啟用無障礙服務，才能透過讀取螢幕文字自動填入。</string>
     <string name="privd_wizard_step3_intro">Megingiard 現在將推送助手 daemon 執行檔到 /data/local/tmp 並啟動它。Daemon 以 ADB shell 使用者身份運行，直到您重啟設備為止。</string>
     <string name="privd_wizard_step3_start">推送並啟動 daemon</string>
@@ -443,8 +443,8 @@
     <string name="settings_name_error_duplicate">此名稱已存在。</string>
     <string name="wrong_screen_retry">重試偵測</string>
     <string name="wrong_screen_help_title">設定與放置說明</string>
-    <string name="wrong_screen_help_step1">1. 在次螢幕重新開啟 Megingiard，然後點擊「重試」。</string>
-    <string name="wrong_screen_help_step2">2. 建議：如果您的啟動器支援，請將 Megingiard 固定在底部螢幕以保持其位置。</string>
+    <string name="wrong_screen_help_step1">1. 在副螢幕重新開啟 Megingiard，然後點擊「重試」。</string>
+    <string name="wrong_screen_help_step2">2. 建議：如果您的啟動器支援，請將 Megingiard 固定在副螢幕以保持其位置。</string>
     <string name="wrong_screen_help_step3">3. 焦點模式：由於 Megingiard 僅使用觸控控制，請在 AYN 設定中將焦點模式設為「主螢幕」。</string>
     <string name="mirror_control_label_start">開始</string>
     <string name="mirror_control_label_stop">停止</string>
@@ -558,7 +558,7 @@
     <string name="macropad_macro_step_delete_title">刪除步驟</string>
     <string name="macropad_macro_step_delete_confirm">從巨集中移除此步驟？</string>
     <string name="macropad_macro_record_gamepad_title">錄製手把輸入</string>
-    <string name="macropad_macro_record_gamepad_hint">觸碰螢幕上的控制器。輸入將被錄製並即時轉發到上方螢幕。</string>
+    <string name="macropad_macro_record_gamepad_hint">觸碰螢幕上的控制器。輸入將被錄製並即時轉發到主螢幕。</string>
     <string name="macropad_macro_record_gamepad_stop">完成</string>
     <string name="macropad_macro_record_gamepad_cancel">取消</string>
     <string name="macropad_macro_record_gamepad_left_stick">左搖桿</string>
@@ -570,7 +570,7 @@
     <string name="macropad_macro_record_gamepad_start">ST</string>
     <string name="macropad_macro_record_gamepad_dialog_confirm">開始</string>
     <string name="macropad_macro_record_gamepad_dialog_title">開始手把錄製</string>
-    <string name="macropad_macro_record_gamepad_dialog_message">此螢幕上將開啟觸控手把覆蓋層。您的觸碰將被錄製為巨集步驟，並透過虛擬手把即時轉發到上方螢幕。</string>
+    <string name="macropad_macro_record_gamepad_dialog_message">此螢幕上將開啟觸控手把覆蓋層。您的觸碰將被錄製為巨集步驟，並透過虛擬手把即時轉發到主螢幕。</string>
     <string name="macropad_macro_record_gamepad_dialog_dont_show_again">不再顯示</string>
     <string name="macropad_macro_record_gamepad_error_title">手把錄製不可用</string>
     <string name="macropad_macro_record_gamepad_error_start">無法啟動虛擬手把。錄製未開始。</string>
@@ -653,7 +653,7 @@
     <string name="cd_layout_prev">上一個配置</string>
     <string name="cd_layout_next">下一個配置</string>
     <string name="cd_viewport_edit">編輯視窗</string>
-    <string name="touchpad_hint">點擊此處控制上方螢幕</string>
+    <string name="touchpad_hint">點擊此處控制主螢幕</string>
     <string name="touchpad_hint_mouse">拖曳移動 · 輕點點擊</string>
     <string name="macropad_action_group_keyboard">鍵盤</string>
     <string name="macropad_action_group_gamepad">手把</string>
@@ -814,9 +814,9 @@
     <string name="help_timeline_randomise_label">隨機化時序</string>
     <string name="help_timeline_randomise_desc">每次執行時為每個步驟的時序新增一個微小的隨機偏移 (±範圍)。這使巨集感覺不那麼機械化，並有助於避免某些應用程式中的自動偵測模式。</string>
     <string name="help_ambient_title">螢幕投影設定 — 說明</string>
-    <string name="help_ambient_intro">這些設定控制投影的上方螢幕圖像在背景模式下的外觀 — 即當 Megingiard 在按鈕後方背景運行時。所有變更僅套用於當前活動的配置。</string>
+    <string name="help_ambient_intro">這些設定控制投影的主螢幕圖像在背景模式下的外觀 — 即當 Megingiard 在按鈕後方背景運行時。所有變更僅套用於當前活動的配置。</string>
     <string name="help_ambient_dim_label">調暗</string>
-    <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色蒙版來降低投影圖像的亮度。0% 表示不調暗；90% 幾乎為全黑。使用眼睛圖示可在次螢幕上即時預覽效果而不儲存。</string>
+    <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色蒙版來降低投影圖像的亮度。0% 表示不調暗；90% 幾乎為全黑。使用眼睛圖示可在副螢幕上即時預覽效果而不儲存。</string>
     <string name="help_ambient_blend_label">邊緣融合</string>
     <string name="help_ambient_blend_desc">使投影圖像的邊緣向內淡出，讓投影內容與背景平滑過渡而非生硬切斷。較高的值會產生更強的暈影效果。</string>
     <string name="help_ambient_follow_touch_desc">將投影視窗中心對齊您在主螢幕上最後觸碰的位置。從下拉選單中選擇一個區塊以啟用，或選擇「關閉」以禁用。</string>
@@ -826,14 +826,14 @@
     <string name="help_ambient_smoothing_desc">套用運動平滑於區塊平移 (關閉、輕微、中等或強烈)。較高的值會使視窗移動在平移過程中更加平滑，但可能會增加極少量的延遲。</string>
     <string name="help_ambient_touch_projection_desc">將投影區塊區域上的觸控輸入轉換回主螢幕。啟用後，區塊內的觸碰會觸發主螢幕上相應的動作。</string>
     <string name="help_ambient_preview_label">預覽</string>
-    <string name="help_ambient_preview_desc">在次螢幕上啟用該滑桿值的即時預覽。與次螢幕的控制項互動以確認或取消該值。這讓您無需離開當前頁面即可看到效果。</string>
+    <string name="help_ambient_preview_desc">在副螢幕上啟用該滑桿值的即時預覽。與副螢幕的控制項互動以確認或取消該值。這讓您無需離開當前頁面即可看到效果。</string>
     <string name="help_mirror_editor_title">投影編輯器 — 說明</string>
-    <string name="help_mirror_editor_intro">投影編輯器讓您在投影過程中，於次螢幕上新增、定位、調整大小與設定視窗區塊。點擊螢幕上的區塊即可選取，然後使用下方的工具列按鈕進行操作。</string>
+    <string name="help_mirror_editor_intro">投影編輯器讓您在投影過程中，於副螢幕上新增、定位、調整大小與設定視窗區塊。點擊螢幕上的區塊即可選取，然後使用下方的工具列按鈕進行操作。</string>
     <string name="help_mirror_editor_section_global">全域動作</string>
-    <string name="help_mirror_editor_add_desc">在次螢幕的空閒位置建立新的視窗區塊。每個配置最多允許 10 個區塊。新區塊會自動被選取。</string>
+    <string name="help_mirror_editor_add_desc">在副螢幕的空閒位置建立新的視窗區塊。每個配置最多允許 10 個區塊。新區塊會自動被選取。</string>
     <string name="help_mirror_editor_settings_desc">開啟該配置的環境顯示設定（亮度、邊緣融合、平滑度）。變更僅套用於目前使用中的配置。</string>
     <string name="help_mirror_editor_section_selected">所選區塊</string>
-    <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「頂部」— 鎖定長寬比以匹配主螢幕的裁切。「底部」— 鎖定長寬比以匹配次螢幕的區塊。</string>
+    <string name="help_mirror_editor_aspect_desc">為所選區塊循環切換三種長寬比模式。「自由」— 無限制，可獨立調整大小。「主螢幕」— 鎖定長寬比以匹配主螢幕的裁切。「副螢幕」— 鎖定長寬比以匹配副螢幕的區塊。</string>
     <string name="help_mirror_editor_shape_label">形狀</string>
     <string name="help_mirror_editor_shape_desc">在矩形與圓形之間切換所選區塊的形狀。適用於遊戲小地圖或圓形儀表，圓形裁切外觀更佳。</string>
     <string name="help_mirror_editor_crop_desc">開啟所選區塊的裁切選擇器，讓您在主螢幕拖曳框架以選擇投影到此區塊的區域。</string>
@@ -874,7 +874,7 @@
     <string name="help_quickmenu_start_desc">開始或停止螢幕投影擷取。投影進行時，頂端卡片會展開以顯示更多控制項。</string>
     <string name="help_quickmenu_freeze_label">凍結 / 解除凍結</string>
     <string name="help_quickmenu_freeze_desc">凍結投影影像，使其顯示靜態畫面而非即時畫面。適合在您需要仔細閱讀遊戲畫面時暫停。</string>
-    <string name="help_quickmenu_viewport_desc">在次螢幕開啟區塊配置編輯器，讓您在投影覆蓋層中調整大小、移動或新增透明區塊視窗。</string>
+    <string name="help_quickmenu_viewport_desc">在副螢幕開啟區塊配置編輯器，讓您在投影覆蓋層中調整大小、移動或新增透明區塊視窗。</string>
     <string name="help_quickmenu_screenshot_label">擷取螢幕截圖</string>
     <string name="help_quickmenu_screenshot_desc">擷取主螢幕的截圖。若未在投影中，則需要特權模式已連接。</string>
     <string name="help_quickmenu_section_macropad">MacroPad 控制項 (底端卡片)</string>
@@ -882,18 +882,18 @@
     <string name="help_quickmenu_layouts_desc">點擊標籤即可切換到目前設定檔中的不同按鈕配置。此處只會顯示在編輯器中標記為啟用的配置。</string>
     <string name="help_quickmenu_auto_switch_label">自動切換</string>
     <string name="help_quickmenu_auto_switch_desc">切換動態設定檔自動比對開啟/關閉。開啟時，設定檔與副螢幕檢視將根據當前活動遊戲或模擬器自動切換。關閉時，設定檔自動比對將會暫停。</string>
-    <string name="help_quickmenu_view_switch_label">切換至 Hub / 遊戲設定檔</string>
-    <string name="help_quickmenu_view_switch_desc">在 Companion Hub 儀表板與當前活動遊戲設定檔版面之間手動切換（會停用自動切換）。</string>
+    <string name="help_quickmenu_view_switch_label">切換至輔助中心／遊戲設定檔</string>
+    <string name="help_quickmenu_view_switch_desc">在副螢幕輔助中心與當前活動遊戲設定檔配置之間手動切換（會停用自動切換）。</string>
     <string name="help_quickmenu_edit_desc">開啟「編輯設定檔／配置」畫面，您可以在此新增、移動與設定按鈕，管理設定檔與配置，以及建立或編輯巨集。</string>
     <string name="help_quickmenu_settings_desc">開啟全域設定視窗以進行 App 細部配置，例如主題、主題重點色、鏡像自動啟動與影音模式設定。</string>
     <string name="help_quickmenu_shut_off_label">關閉 App</string>
     <string name="help_quickmenu_shut_off_desc">正常關閉 Megingiard，並停止螢幕投影與背景服務。</string>
     <string name="help_quickmenu_help_label">說明 (此螢幕)</string>
     <string name="help_quickmenu_help_desc">開啟此說明工作表，其中包含快速選單中每個控制項的解釋。</string>
-    <string name="help_companion_hub_title">Companion Hub — 說明</string>
-    <string name="help_companion_hub_intro">Companion Hub 畫面是您在副螢幕上的中央控制儀表板，用於管理特定遊戲的巨集控制、查看活動遊戲狀態，以及快速存取副螢幕工具。</string>
+    <string name="help_companion_hub_title">副螢幕輔助中心 — 說明</string>
+    <string name="help_companion_hub_intro">副螢幕輔助中心是您在副螢幕上的中央控制儀表板，用於管理特定遊戲的巨集控制、查看活動遊戲狀態，以及快速存取副螢幕工具。</string>
     <string name="help_companion_hub_sec_hero">活動遊戲與控制設定檔</string>
-    <string name="help_companion_hub_hero_show_desc">在下方螢幕全螢幕開啟當前活動遊戲的 MacroPad 觸控版面。</string>
+    <string name="help_companion_hub_hero_show_desc">在副螢幕全螢幕開啟當前活動遊戲的 MacroPad 觸控配置。</string>
     <string name="help_companion_hub_hero_edit_desc">開啟設定檔與版面編輯器，以自訂按鈕位置、樣式及巨集設定。</string>
     <string name="help_companion_hub_hero_link_desc">將自訂 MacroPad 控制設定檔連結至當前活動或選取的遊戲，或為其建立專屬設定檔。</string>
     <string name="help_companion_hub_sec_tools">副螢幕工具</string>
@@ -1106,13 +1106,13 @@
     <string name="integration_home_default_layout">預設</string>
     <string name="integration_home_show_macropad">顯示</string>
     <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
-    <string name="integration_home_hero_idle_subtitle">請在上螢幕選擇遊戲，或在下方啟動副螢幕工具。</string>
+    <string name="integration_home_hero_idle_subtitle">請在主螢幕選擇遊戲，或在此啟動副螢幕工具。</string>
     <string name="integration_home_launch_controls">顯示</string>
     <string name="integration_home_deck_title">副螢幕工具</string>
     <string name="integration_home_macropad_desc">手把與巨集</string>
     <string name="integration_home_touchpad_desc">滑鼠 / 觸控投影</string>
     <string name="integration_home_keyboard_desc">虛擬鍵盤</string>
-    <string name="integration_home_mirror_desc">上螢幕鏡射</string>
+    <string name="integration_home_mirror_desc">主螢幕投影</string>
     <string name="integration_home_settings">全域設定</string>
     <string name="integration_home_help">說明與教學</string>
     <string name="integration_home_tool_macropad">當前設定檔</string>
@@ -1140,6 +1140,6 @@
     <string name="update_dialog_btn_backup_and_open">備份並開啟連結</string>
     <string name="update_dialog_btn_open_directly">直接開啟連結</string>
     <string name="update_dialog_btn_cancel">取消</string>
-    <string name="help_settings_auto_update_desc">啟用時，Megingiard 會每 24 小時靜默檢查一次新版本。若發現更新，您可以備份設定並在上方螢幕的預設瀏覽器中開啟發布頁面。</string>
+    <string name="help_settings_auto_update_desc">啟用時，Megingiard 會每 24 小時靜默檢查一次新版本。若發現更新，您可以備份設定並在主螢幕的預設瀏覽器中開啟發布頁面。</string>
     <string name="help_settings_check_updates_desc">立即手動觸發對 GitHub Releases 儲存庫的更新檢查。</string>
 </resources>

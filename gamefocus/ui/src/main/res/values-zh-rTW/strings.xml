@@ -9,7 +9,7 @@
     <string name="settings_cancel">取消</string>
 
     <string name="gamefocus_launch_top">主螢幕</string>
-    <string name="gamefocus_launch_bottom">底部螢幕</string>
+    <string name="gamefocus_launch_bottom">副螢幕</string>
     <string name="gamefocus_header_android_games">Android 遊戲</string>
     <string name="gamefocus_header_android_apps">Android 應用程式</string>
     <string name="gamefocus_cat_all_apps">所有應用程式</string>
