@@ -22,7 +22,7 @@
     <string name="settings_global_title">Einstellungen</string>
     <string name="settings_back">Zurück</string>
     <string name="settings_accent_color">Akzentfarbe</string>
-    <string name="settings_accent_color_desc">Wähle eine vordefinierte Farbe oder öffne das Farbrad für einen eigenen Akzent</string>
+    <string name="settings_accent_color_desc">Wähle aus vordefinierten Themen-Akzentfarben</string>
     <string name="settings_theme">Design</string>
     <string name="theme_dark">Dunkel</string>
     <string name="theme_dark_oled">Dunkel OLED</string>

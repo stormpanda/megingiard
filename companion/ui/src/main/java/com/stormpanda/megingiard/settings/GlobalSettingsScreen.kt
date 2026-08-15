@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Games
 import androidx.compose.material.icons.rounded.HealthAndSafety
@@ -104,6 +105,7 @@ import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
+import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -408,14 +410,34 @@ fun GlobalSettingsScreen(
                 )
 
                 if (themeMode.supportsCustomAccent) {
+                    val isCustomAccent = accentColor !in ACCENT_PALETTE_PRESETS
+
                     GamepadColorPaletteCard(
                         title = stringResource(R.string.settings_accent_color),
                         description = stringResource(R.string.settings_accent_color_desc),
-                        icon = Icons.Rounded.Colorize,
+                        icon = Icons.Rounded.FormatColorFill,
                         paletteColors = ACCENT_PALETTE_PRESETS,
                         selectedColor = accentColor,
                         onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
-                        onOpenColorPicker = { showColorPicker = true },
+                    )
+
+                    GamepadActionCard(
+                        title = stringResource(R.string.settings_accent_wheel_title),
+                        description = stringResource(R.string.settings_accent_wheel_desc),
+                        actionText = stringResource(R.string.gamepad_action_wheel),
+                        icon = Icons.Rounded.Colorize,
+                        actionLeadingContent =
+                            if (isCustomAccent) {
+                                {
+                                    GamepadColorSwatch(
+                                        color = accentColor,
+                                        isSelected = true,
+                                    )
+                                }
+                            } else {
+                                null
+                            },
+                        onClick = { showColorPicker = true },
                     )
                 }
 
