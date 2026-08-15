@@ -358,7 +358,7 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | Component | Description | Primary Usage |
 | --------- | ----------- | ------------- |
 | `GamepadTwoPaneScaffold` | Split-screen scaffold with fixed `210.dp` category sidebar, scrollable content deck, sticky sidebar footer, and bottom prompt bar. | `GlobalSettingsScreen`, `MacroPadEditor` |
-| `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsComponents`, `MacroPadEditor`, `MacroTimelineEditor` |
+| `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsScreen`, `MacroPadEditor`, `MacroTimelineEditor` |
 | `GamepadCategoryTile` | Focusable navigation tile for sidebar category rails with subtle background highlight and icon/label layout. | `GamepadTwoPaneScaffold` sidebars |
 | `GamepadFocusCard` | Standard focusable card container with animated scaling, glowing accent border on focus, and click handling. | Base for all gamepad cards |
 | `GamepadToggleCard` | Focusable toggle card with switch control, title, description, and icon. | Settings switches, lock toggles |

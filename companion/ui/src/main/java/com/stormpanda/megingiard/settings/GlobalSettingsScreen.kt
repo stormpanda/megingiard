@@ -321,11 +321,12 @@ fun GlobalSettingsScreen(
         },
         content = {
             if (updateAvailable && latestReleaseInfo != null) {
-                UpdateAvailableBanner(
-                    tagName = latestReleaseInfo!!.tagName,
-                    accentColor = effectiveAccent,
-                    colors = colors,
-                    onUpdateClick = { showUpdatePromptDialog = true },
+                GamepadActionCard(
+                    title = stringResource(R.string.settings_update_available_banner, latestReleaseInfo?.tagName ?: ""),
+                    description = stringResource(R.string.settings_update_available_banner_desc),
+                    actionText = stringResource(R.string.settings_update_now_btn),
+                    icon = Icons.Rounded.SystemUpdate,
+                    onClick = { showUpdatePromptDialog = true },
                 )
             }
 

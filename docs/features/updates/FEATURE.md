@@ -69,5 +69,4 @@ GlobalSettingsViewModel / GlobalSettingsScreen (:app)
 | `SemVerComparator.kt` | Version string parser and semver comparison logic |
 | `UpdateManager.kt` | Background fetcher, rate-limiter, and DataStore state persistence |
 | `UpdatePromptDialog.kt` | Pre-update backup prompt dialog |
-| `GlobalSettingsComponents.kt` | Renders `UpdateCheckSection` and `UpdateAvailableBanner` |
-| `GlobalSettingsScreen.kt` | Global Settings UI integration & top-screen browser launcher |
+| `GlobalSettingsScreen.kt` | Renders update checking controls and update available banner in Global Settings |

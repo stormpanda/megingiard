@@ -5,7 +5,6 @@
 > - `companion/domain/src/main/java/com/stormpanda/megingiard/log/` — coordinator singleton
 > - `companion/ui/src/main/java/com/stormpanda/megingiard/MainActivity.kt` — SAF launcher + write
 > - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsScreen.kt` — UI entry point
-> - `companion/ui/src/main/java/com/stormpanda/megingiard/settings/GlobalSettingsComponents.kt` — row composable
 
 ---
 

@@ -207,7 +207,7 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 | [QuickMenuBar.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuBar.kt) | Always-visible quick menu bar tab; `QUICK_MENU_BAR_INSET` constant for screen edge inset; renders visual sliding gesture pills |
 | [QuickMenu.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenu.kt) | Full-screen Quick Menu overlay: state coordinator and overlays orchestrator |
 | [QuickMenuComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuComponents.kt) | ProfileRow, LayoutRow, SectionLabel, and QuickMenuActionChip composables |
-| [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | InTreeNameInputDialog dialog helper for new profile/layout creation |
+| [QuickMenuDialogs.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuDialogs.kt) | `ShutOffConfirmDialog` modal confirmation dialog for app shutdown |
 | [QuickMenuMirrorCard.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/QuickMenuMirrorCard.kt) | Slide-in MirrorControlCard and MirrorControlIconButton composables |
 | [PrimaryOverlayContainer.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen elevated modal dialog container with bezel border, bumper badges, footer action prompt bar, and auto-focus initialization |
 | [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
