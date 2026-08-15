@@ -29,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
 private const val TAG = "GamepadDialogs"
@@ -94,7 +95,10 @@ fun <T> GamepadSearchBar(
             },
             trailingIcon = {
                 if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) {
+                    IconButton(onClick = {
+                        AppLog.d(TAG, "GamepadSearchBar: query cleared")
+                        onQueryChange("")
+                    }) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = stringResource(R.string.gamepad_search_clear),
@@ -118,13 +122,20 @@ fun <T> GamepadSearchBar(
                 AppSelectableChip(
                     text = stringResource(R.string.gamepad_category_all),
                     selected = selectedCategory == null,
-                    onClick = { onCategorySelected(null) },
+                    onClick = {
+                        AppLog.d(TAG, "GamepadSearchBar: category selected='All'")
+                        onCategorySelected(null)
+                    },
                 )
                 categories.forEach { category ->
+                    val label = categoryLabel(category)
                     AppSelectableChip(
-                        text = categoryLabel(category),
+                        text = label,
                         selected = selectedCategory == category,
-                        onClick = { onCategorySelected(category) },
+                        onClick = {
+                            AppLog.d(TAG, "GamepadSearchBar: category selected='$label'")
+                            onCategorySelected(category)
+                        },
                     )
                 }
             }
@@ -166,7 +177,10 @@ fun GamepadConfirmDialog(
         confirmButton = {
             GamepadActionCard(
                 title = confirmText,
-                onClick = onConfirm,
+                onClick = {
+                    AppLog.d(TAG, "GamepadConfirmDialog: confirmed '$title'")
+                    onConfirm()
+                },
                 actionGlyph = GamePadGlyph.BTN_A,
                 isDestructive = isDestructive,
             )
@@ -174,7 +188,10 @@ fun GamepadConfirmDialog(
         dismissButton = {
             GamepadActionCard(
                 title = cancelText,
-                onClick = onDismiss,
+                onClick = {
+                    AppLog.d(TAG, "GamepadConfirmDialog: dismissed '$title'")
+                    onDismiss()
+                },
                 actionGlyph = GamePadGlyph.BTN_B,
             )
         },
@@ -235,7 +252,10 @@ fun GamepadEmptyState(
             Spacer(modifier = Modifier.height(4.dp))
             GamepadActionCard(
                 title = actionText,
-                onClick = onAction,
+                onClick = {
+                    AppLog.d(TAG, "GamepadEmptyState: action clicked '$actionText'")
+                    onAction()
+                },
                 actionGlyph = GamePadGlyph.BTN_A,
             )
         }

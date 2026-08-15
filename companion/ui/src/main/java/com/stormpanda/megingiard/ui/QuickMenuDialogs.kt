@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 
 private const val TAG = "QuickMenuDialogs"
@@ -24,7 +25,10 @@ internal fun ShutOffConfirmDialog(
     onDismiss: () -> Unit,
 ) {
     AppModalDialog(
-        onDismiss = onDismiss,
+        onDismiss = {
+            AppLog.d(TAG, "ShutOffConfirmDialog dismissed via scrim")
+            onDismiss()
+        },
         widthFraction = PM_NAME_DIALOG_WIDTH_FRACTION,
         cornerRadius = PM_PANEL_CORNER,
         contentPadding = PM_CONTENT_PADDING,
@@ -46,11 +50,17 @@ internal fun ShutOffConfirmDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                AppLog.d(TAG, "ShutOffConfirmDialog cancelled")
+                onDismiss()
+            }) {
                 Text(stringResource(R.string.settings_color_cancel), color = colors.onSurfaceSecondary)
             }
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = {
+                AppLog.d(TAG, "ShutOffConfirmDialog confirmed")
+                onConfirm()
+            }) {
                 Text(stringResource(R.string.shut_off_dialog_confirm), color = colors.error)
             }
         }

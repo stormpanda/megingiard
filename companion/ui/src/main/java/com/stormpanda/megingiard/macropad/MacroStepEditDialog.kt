@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.AppDropdown
@@ -234,7 +235,13 @@ internal fun MacroStepEditDialog(
                     R.string.macropad_macro_step_edit
                 },
             )
-        FullScreenTopBar(title = topBarTitle, onDismiss = onDismiss) {
+        FullScreenTopBar(
+            title = topBarTitle,
+            onDismiss = {
+                AppLog.d(TAG, "MacroStepEditDialog: dismissed")
+                onDismiss()
+            },
+        ) {
             TextButton(
                 onClick = {
                     val builtStep =
@@ -294,6 +301,10 @@ internal fun MacroStepEditDialog(
                                 }
                             }
                         }
+                    AppLog.d(
+                        TAG,
+                        "MacroStepEditDialog: confirmed step type=${builtStep::class.simpleName} start=${builtStep.startTimeMs} duration=${builtStep.durationMs}",
+                    )
                     onConfirm(builtStep, shiftMode)
                 },
                 enabled = isConfirmEnabled,

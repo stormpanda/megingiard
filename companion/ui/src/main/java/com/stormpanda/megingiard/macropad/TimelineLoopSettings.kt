@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -53,7 +54,10 @@ internal fun MtLoopSection(
             description = stringResource(R.string.macro_loop_continuous_desc),
             checked = loopEnabled,
             icon = Icons.Rounded.Repeat,
-            onCheckedChange = onLoopEnabledChange,
+            onCheckedChange = {
+                AppLog.d(TAG, "MtLoopSection: loopEnabled changed to $it")
+                onLoopEnabledChange(it)
+            },
         )
 
         if (loopEnabled) {
@@ -64,12 +68,14 @@ internal fun MtLoopSection(
                 icon = Icons.Rounded.Timer,
                 onDecrement = {
                     val next = (loopPauseMs - 100).coerceAtLeast(0)
+                    AppLog.d(TAG, "MtLoopSection: loopPauseMs decremented to $next")
                     onLoopPauseMsChange(next)
                 },
                 onIncrement = {
                     val next = loopPauseMs + 100
                     val nextMax = mtExpandLoopScale(loopPauseMaxMs, next)
                     if (nextMax != loopPauseMaxMs) onLoopPauseMaxMsChange(nextMax)
+                    AppLog.d(TAG, "MtLoopSection: loopPauseMs incremented to $next")
                     onLoopPauseMsChange(next)
                 },
             )
@@ -97,7 +103,10 @@ internal fun MtRandomizationSection(
             description = stringResource(R.string.macropad_macro_randomize_desc),
             checked = randomizeEnabled,
             icon = Icons.Rounded.Shuffle,
-            onCheckedChange = onRandomizeEnabledChange,
+            onCheckedChange = {
+                AppLog.d(TAG, "MtRandomizationSection: randomizeEnabled changed to $it")
+                onRandomizeEnabledChange(it)
+            },
         )
 
         if (randomizeEnabled) {
@@ -108,10 +117,12 @@ internal fun MtRandomizationSection(
                 icon = Icons.Rounded.Shuffle,
                 onDecrement = {
                     val next = (randomizeRangeMs - 10).coerceIn(10, 100)
+                    AppLog.d(TAG, "MtRandomizationSection: randomizeRangeMs decremented to $next")
                     onRandomizeRangeMsChange(next)
                 },
                 onIncrement = {
                     val next = (randomizeRangeMs + 10).coerceIn(10, 100)
+                    AppLog.d(TAG, "MtRandomizationSection: randomizeRangeMs incremented to $next")
                     onRandomizeRangeMsChange(next)
                 },
             )

@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.GamepadStepperCard
@@ -87,7 +88,10 @@ internal fun BackgroundTouchpadSettingsEditor(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(onClick = {
+                        AppLog.d(TAG, "BackgroundTouchpadSettingsEditor: dismissed for layout='${layout.id}'")
+                        onDismiss()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = stringResource(R.string.settings_back),
@@ -112,6 +116,10 @@ internal fun BackgroundTouchpadSettingsEditor(
                                     hapticsEnabled = hapticsEnabled,
                                 )
                             val disableProjection = touchProjectionCleared || (enabled && initialHasTouchProjection)
+                            AppLog.d(
+                                TAG,
+                                "BackgroundTouchpadSettingsEditor: confirmed for layout='${layout.id}', enabled=$enabled, disableProjection=$disableProjection",
+                            )
                             onConfirm(updated, disableProjection)
                         },
                     ) {

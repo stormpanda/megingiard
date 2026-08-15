@@ -14,7 +14,6 @@ enum class PrimaryModalType {
     PROFILE_SETTINGS,
     MACRO_TIMELINE_EDITOR,
     HELP_TUTORIAL,
-    CONFIG_IMPORT_EXPORT,
     CROP_SELECTOR,
 }
 

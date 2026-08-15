@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "GamepadGlyphs"
 
@@ -107,7 +108,10 @@ fun GamePadActionPrompt(
             Modifier.clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick,
+                onClick = {
+                    AppLog.d(TAG, "GamePadActionPrompt clicked: '$text' (${glyph.name})")
+                    onClick()
+                },
             )
         } else {
             Modifier

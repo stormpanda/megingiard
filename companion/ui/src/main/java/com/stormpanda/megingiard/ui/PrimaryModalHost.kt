@@ -344,47 +344,6 @@ fun PrimaryModalHost(
             }
         }
 
-        PrimaryModalType.CONFIG_IMPORT_EXPORT -> {
-            var showHelp by remember { mutableStateOf(false) }
-            PrimaryOverlayContainer(
-                title = stringResource(R.string.settings_global_title),
-                icon = Icons.Rounded.Settings,
-                onDismiss = onDismiss,
-                modifier = modifier,
-                actions = {
-                    Image(
-                        painter = painterResource(R.drawable.support_me_on_kofi_dark),
-                        contentDescription = stringResource(R.string.settings_support_app),
-                        modifier =
-                            Modifier
-                                .height(PMH_KOFI_BUTTON_HEIGHT)
-                                .clip(RoundedCornerShape(PMH_KOFI_CORNER))
-                                .clickable {
-                                    val url = "https://ko-fi.com/stormpanda"
-                                    try {
-                                        val intent =
-                                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                        val options = ActivityOptions.makeBasic()
-                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                        context.startActivity(intent, options.toBundle())
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
-                                    }
-                                },
-                    )
-                    HelpIconButton(onClick = { showHelp = true })
-                },
-            ) {
-                GlobalSettingsScreen(
-                    onBack = onDismiss,
-                    showHelp = showHelp,
-                    onDismissHelp = { showHelp = false },
-                )
-            }
-        }
-
         PrimaryModalType.CROP_SELECTOR -> {
             val payload = config.payload as? PrimaryModalPayload.CropSelector
             val cutoutId = payload?.cutoutId

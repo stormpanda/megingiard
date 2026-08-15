@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
@@ -101,9 +102,15 @@ internal fun IconPickerDialog(
     ) {
         FullScreenTopBar(
             title = stringResource(R.string.macropad_icon_picker_title),
-            onDismiss = onDismiss,
+            onDismiss = {
+                AppLog.d(TAG, "IconPickerDialog: dismissed")
+                onDismiss()
+            },
         ) {
-            IconButton(onClick = { onSelect(pendingIcon) }) {
+            IconButton(onClick = {
+                AppLog.d(TAG, "IconPickerDialog: selected '$pendingIcon'")
+                onSelect(pendingIcon)
+            }) {
                 Icon(
                     imageVector = Icons.Rounded.Check,
                     contentDescription = stringResource(R.string.cd_icon_picker_confirm),
@@ -196,7 +203,10 @@ internal fun IconPickerDialog(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-                IconButton(onClick = { pendingIcon = null }) {
+                IconButton(onClick = {
+                    AppLog.d(TAG, "IconPickerDialog: selection cleared")
+                    pendingIcon = null
+                }) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
                         contentDescription = stringResource(R.string.cd_icon_picker_delete),

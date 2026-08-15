@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
@@ -117,12 +118,16 @@ internal fun LayoutSettingsEditor(
             topBar = {
                 FullScreenTopBar(
                     title = title,
-                    onDismiss = onDismiss,
+                    onDismiss = {
+                        AppLog.d(TAG, "LayoutSettingsEditor: dismissed for layoutId='$layoutId'")
+                        onDismiss()
+                    },
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         TextButton(
                             onClick = {
                                 if (isConfirmEnabled) {
+                                    AppLog.d(TAG, "LayoutSettingsEditor: confirmed for layoutId='$layoutId', name='$normalizedName'")
                                     isSaving = true
                                     onConfirm(
                                         normalizedName,

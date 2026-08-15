@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "AppSettingsRow"
 
@@ -45,7 +46,15 @@ fun AppSettingsRow(
     val clickModifier =
         if (onClick != null) {
             Modifier.primaryOverlayFocusable(
-                onClick = if (enabled) onClick else null,
+                onClick =
+                    if (enabled) {
+                        {
+                            AppLog.d(TAG, "AppSettingsRow clicked")
+                            onClick()
+                        }
+                    } else {
+                        null
+                    },
                 shape = RoundedCornerShape(SETTINGS_ROW_CORNER),
             )
         } else {

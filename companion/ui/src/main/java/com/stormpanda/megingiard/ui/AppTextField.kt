@@ -4,6 +4,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "AppTextField"
 
@@ -25,7 +26,10 @@ internal fun AppTextField(
     val accentColor = colors.accent
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
+        onValueChange = {
+            AppLog.d(TAG, "AppTextField value changed: len=${it.length}, isError=$isError")
+            onValueChange(it)
+        },
         modifier = modifier,
         label = label,
         placeholder = placeholder,
