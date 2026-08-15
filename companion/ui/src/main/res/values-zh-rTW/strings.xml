@@ -1105,7 +1105,7 @@
     <string name="integration_home_new_profile">新增設定檔</string>
     <string name="integration_home_default_layout">預設</string>
     <string name="integration_home_show_macropad">顯示</string>
-    <string name="integration_home_hero_idle_title">Megingiard Companion Hub</string>
+    <string name="integration_home_hero_idle_title">Megingiard 副螢幕輔助中心</string>
     <string name="integration_home_hero_idle_subtitle">請在主螢幕選擇遊戲，或在此啟動副螢幕工具。</string>
     <string name="integration_home_launch_controls">顯示</string>
     <string name="integration_home_deck_title">副螢幕工具</string>
@@ -1121,7 +1121,7 @@
     <string name="integration_home_tool_settings">全域設定</string>
     <string name="integration_home_settings_desc">應用程式偏好設定</string>
     <string name="integration_home_tool_mirror">螢幕鏡射</string>
-    <string name="quick_menu_show_dashboard">顯示儀表板</string>
+    <string name="quick_menu_show_dashboard">切換至輔助中心</string>
     <string name="quick_menu_show_macropad">切換至遊戲設定檔</string>
     <string name="quick_menu_auto_mode">自動切換</string>
     <string name="toast_auto_switch_off">自動切換：關閉</string>
