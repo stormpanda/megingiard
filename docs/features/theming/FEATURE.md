@@ -348,3 +348,24 @@ Modifier.padding(dimens.paddingLarge)
 | `sectionHeaderColor`   | `accent`      | `accent`      | `CP_SECTION_HEADER` | Section-header labels and pull-tab tint |
 
 Use these tokens instead of hardcoding `Color(0xFFCF6679)` / `Color(0xFFFF9800)` / `Color(0xFF2196F3)` in screen code.
+
+---
+
+## Gamepad Design System Components (`ui/GamepadComponents.kt`)
+
+Megingiard provides a centralized, reusable suite of handheld gamepad-first composables for primary screen menus and dialogs:
+
+| Component | Description | Primary Usage |
+| --------- | ----------- | ------------- |
+| `GamepadTwoPaneScaffold` | Split-screen scaffold with fixed `210.dp` category sidebar, scrollable content deck, sticky sidebar footer, and bottom prompt bar. | `GlobalSettingsScreen`, `MacroPadEditor` |
+| `GamepadSectionHeader` | Uppercase section header with tracked letter-spacing, localized text, and themed accent/section coloring. | `GlobalSettingsComponents`, `MacroPadEditor`, `MacroTimelineEditor` |
+| `GamepadCategoryTile` | Focusable navigation tile for sidebar category rails with subtle background highlight and icon/label layout. | `GamepadTwoPaneScaffold` sidebars |
+| `GamepadFocusCard` | Standard focusable card container with animated scaling, glowing accent border on focus, and click handling. | Base for all gamepad cards |
+| `GamepadToggleCard` | Focusable toggle card with switch control, title, description, and icon. | Settings switches, lock toggles |
+| `GamepadChoiceCard` | Focusable value carousel card with left/right bump navigation and value badge pill. | Enums, presets, log levels |
+| `GamepadActionCard` | Focusable actionable item card with action pill and icon. | Buttons, macros, edit actions |
+| `GamepadSliderCard` | Focusable slider card with LB/RB step increment controls, formatted value pill readout, and accent track. | Deadzone, opacity, volume sliders |
+| `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
+| `GamepadConfirmDialog` | Standard modal confirmation dialog with gamepad controller hints and destructive styling. | `InlineConfirmDeleteOverlay`, step delete |
+| `GamepadEmptyState` | Empty state layout with circular icon backdrop, title, subtitle, and optional call-to-action button. | Empty search results, empty macro/step lists |
+

@@ -48,6 +48,7 @@ import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppDropdown
 import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.AppSettingsRow
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.SettingLabelColumn
 import com.stormpanda.megingiard.ui.appSwitchColors
@@ -87,16 +88,13 @@ internal fun SettingsCategoryHeader(
     accentColor: Color,
     colors: AppColors,
 ) {
-    Text(
-        text = text.uppercase(Locale.ROOT),
+    GamepadSectionHeader(
+        text = text,
         color = accentColor,
-        style = MaterialTheme.typography.labelSmall,
-        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
         modifier =
             Modifier
-                .fillMaxWidth()
                 .background(colors.appBackground)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
     )
 }
 

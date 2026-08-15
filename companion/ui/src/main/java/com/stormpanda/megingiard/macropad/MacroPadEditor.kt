@@ -92,7 +92,10 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -114,8 +117,6 @@ internal val MPE_PADDING = 16.dp
 internal val MPE_ITEM_PADDING = 12.dp
 internal val MPE_GRID_TOGGLE_SIZE = 36.dp
 internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
-
-private val MPE_SIDEBAR_WIDTH = 210.dp
 
 internal enum class EditorSection {
     OVERVIEW,
@@ -834,23 +835,8 @@ private fun EditorTwoPaneBody(
         }
     }
 
-    Row(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
-    ) {
-        // Left Category Rail Sidebar
-        Column(
-            modifier =
-                Modifier
-                    .width(MPE_SIDEBAR_WIDTH)
-                    .fillMaxHeight()
-                    .background(colors.surfaceVariant.copy(alpha = 0.5f))
-                    .verticalScroll(rememberScrollState())
-                    .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+    GamepadTwoPaneScaffold(
+        sidebarContent = {
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_all),
                 icon = Icons.Rounded.Dashboard,
@@ -887,9 +873,8 @@ private fun EditorTwoPaneBody(
                 selected = selectedSection == EditorSection.MACROS,
                 onClick = { selectedSection = EditorSection.MACROS },
             )
-
-            Spacer(modifier = Modifier.weight(1f))
-
+        },
+        sidebarFooter = {
             Row(
                 modifier =
                     Modifier
@@ -900,25 +885,13 @@ private fun EditorTwoPaneBody(
             ) {
                 HelpIconButton(onClick = onHelpClick)
             }
-        }
-
-        // Right Settings Content Deck
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        },
+        content = {
             // PROFILES & LAYOUTS CHOOSER (Available in OVERVIEW)
             if (selectedSection == EditorSection.OVERVIEW) {
-                Text(
+                GamepadSectionHeader(
                     text = "ACTIVE CONFIGURATION",
                     color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
                 )
 
                 val profileIdx = profiles.indexOf(profile).coerceAtLeast(0)
@@ -959,12 +932,9 @@ private fun EditorTwoPaneBody(
                     },
                 )
 
-                Text(
+                GamepadSectionHeader(
                     text = "CANVAS PREVIEW",
                     color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp),
                 )
 
                 GamepadToggleCard(
@@ -1211,11 +1181,9 @@ private fun EditorTwoPaneBody(
 
             // CANVAS DECK
             if (selectedSection == EditorSection.CANVAS) {
-                Text(
+                GamepadSectionHeader(
                     text = "CANVAS CONTROLS",
                     color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
                 )
 
                 GamepadToggleCard(
@@ -1266,12 +1234,9 @@ private fun EditorTwoPaneBody(
 
             // BUTTONS DECK
             if (selectedSection == EditorSection.BUTTONS || selectedSection == EditorSection.OVERVIEW) {
-                Text(
-                    text = stringResource(R.string.macropad_editor_section_buttons).uppercase(),
+                GamepadSectionHeader(
+                    text = stringResource(R.string.macropad_editor_section_buttons),
                     color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSection == EditorSection.OVERVIEW) 8.dp else 0.dp),
                 )
 
                 GamepadActionCard(
@@ -1340,11 +1305,12 @@ private fun EditorTwoPaneBody(
 
                 val macros = profile.macros
                 if (macros.isEmpty()) {
-                    Text(
-                        text = "No macros created for this profile yet.",
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 12.dp),
+                    GamepadEmptyState(
+                        icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                        title = "No macros created yet",
+                        subtitle = "Create and edit input macro sequences",
+                        actionText = "Create Macro",
+                        onAction = onManageMacros,
                     )
                 } else {
                     macros.forEach { macro ->
@@ -1358,8 +1324,8 @@ private fun EditorTwoPaneBody(
                     }
                 }
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable

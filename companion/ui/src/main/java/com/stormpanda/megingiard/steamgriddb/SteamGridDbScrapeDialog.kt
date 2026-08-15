@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
@@ -71,6 +72,7 @@ import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -527,35 +529,19 @@ internal fun SteamGridDbScrapeDialog(
                     }
                 } else if (gamesList.isEmpty() && searchQuery.isNotBlank() && !isSearchingGames) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.steamgriddb_scrape_no_games_found),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+                        GamepadEmptyState(
+                            icon = Icons.Rounded.Search,
+                            title = stringResource(R.string.steamgriddb_scrape_no_games_found),
+                            subtitle = "Try searching for a different game title",
+                        )
                     }
                 } else if (imagesList.isEmpty() && selectedGame != null) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(STATUS_BOX_HEIGHT),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.steamgriddb_scrape_no_images_found),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+                        GamepadEmptyState(
+                            icon = Icons.Rounded.Image,
+                            title = stringResource(R.string.steamgriddb_scrape_no_images_found),
+                            subtitle = "No images found for this category",
+                        )
                     }
                 } else {
                     // One item per image — LazyVerticalGrid handles 2-column layout and

@@ -96,6 +96,8 @@ import com.stormpanda.megingiard.privd.DeadzoneDialog
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
+import com.stormpanda.megingiard.ui.AppColors
+import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -103,6 +105,7 @@ import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteGrid
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -123,7 +126,6 @@ private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
 private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
 
-private val GS_SIDEBAR_WIDTH = 210.dp
 private val GS_KOFI_BUTTON_HEIGHT = 32.dp
 private val GS_KOFI_CORNER = 8.dp
 
@@ -230,23 +232,8 @@ fun GlobalSettingsScreen(
         }
     }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(colors.appBackground),
-    ) {
-        // Left Category Sidebar Rail
-        Column(
-            modifier =
-                Modifier
-                    .width(GS_SIDEBAR_WIDTH)
-                    .fillMaxHeight()
-                    .background(colors.surfaceVariant.copy(alpha = 0.5f))
-                    .verticalScroll(rememberScrollState())
-                    .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+    GamepadTwoPaneScaffold(
+        sidebarContent = {
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_all),
                 icon = Icons.Rounded.Dashboard,
@@ -295,10 +282,8 @@ fun GlobalSettingsScreen(
                 selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS },
             )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Ko-fi & In-App Help footer inside sidebar
+        },
+        sidebarFooter = {
             Row(
                 modifier =
                     Modifier
@@ -333,18 +318,8 @@ fun GlobalSettingsScreen(
                 )
                 HelpIconButton(onClick = { showSettingsHelp = true })
             }
-        }
-
-        // Right Settings Content Deck
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        },
+        content = {
             if (updateAvailable && latestReleaseInfo != null) {
                 UpdateAvailableBanner(
                     tagName = latestReleaseInfo!!.tagName,
@@ -689,8 +664,8 @@ fun GlobalSettingsScreen(
                     onClick = { viewModel.requestSaveLogReport() },
                 )
             }
-        }
-    }
+        },
+    )
 
     if (showPrivdWizard) {
         PrivdSetupWizardDialog(
@@ -982,14 +957,14 @@ fun GlobalSettingsScreen(
 @Composable
 private fun SteamGridDbTokenDialog(
     initialToken: String,
-    colors: com.stormpanda.megingiard.ui.AppColors,
+    colors: AppColors,
     accentColor: Color,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var token by rememberSaveable { mutableStateOf(initialToken) }
 
-    com.stormpanda.megingiard.ui.AppModalDialog(
+    AppModalDialog(
         onDismiss = onDismiss,
     ) {
         Text(

@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
@@ -65,6 +66,8 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppSelectableChip
+import com.stormpanda.megingiard.ui.GamepadConfirmDialog
+import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -467,19 +470,13 @@ internal fun MacroTimelineEditor(
                             .verticalScroll(rememberScrollState()),
                 ) {
                     if (steps.isEmpty()) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(MTE_PADDING.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                stringResource(R.string.macropad_macro_no_steps),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
+                        GamepadEmptyState(
+                            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                            title = stringResource(R.string.macropad_macro_no_steps),
+                            subtitle = "Add a step below or record touch/gamepad inputs",
+                            actionText = stringResource(R.string.macropad_macro_add_step),
+                            onAction = { showAddStep = true },
+                        )
                         AppDivider()
                     }
 
@@ -537,20 +534,13 @@ internal fun MacroTimelineEditor(
             } else {
                 Column(modifier = Modifier.fillMaxSize().background(colors.surface)) {
                     if (steps.isEmpty()) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .padding(MTE_PADDING.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                stringResource(R.string.macropad_macro_no_steps),
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
+                        GamepadEmptyState(
+                            icon = Icons.Rounded.Timeline,
+                            title = stringResource(R.string.macropad_macro_no_steps),
+                            subtitle = "Add a step or record input sequences",
+                            actionText = stringResource(R.string.macropad_macro_add_step),
+                            onAction = { showAddStep = true },
+                        )
                     } else {
                         MacroVerticalTimeline(
                             modifier =
@@ -686,26 +676,20 @@ internal fun MacroTimelineEditor(
     }
 
     if (deleteStepIndex != null) {
-        AppAlertDialog(
-            onDismissRequest = { deleteStepIndex = null },
-            title = { Text(stringResource(R.string.macropad_macro_step_delete_title), color = colors.onSurface) },
-            text = { Text(stringResource(R.string.macropad_macro_step_delete_confirm), color = colors.onSurfaceSecondary) },
-            confirmButton = {
-                TextButton(onClick = {
-                    deleteStepIndex?.let { idx ->
-                        pushUndo(steps)
-                        steps = steps.filterIndexed { i, _ -> i != idx }
-                    }
-                    deleteStepIndex = null
-                }) {
-                    Text(stringResource(R.string.macropad_editor_confirm), color = colors.error)
+        GamepadConfirmDialog(
+            title = stringResource(R.string.macropad_macro_step_delete_title),
+            message = stringResource(R.string.macropad_macro_step_delete_confirm),
+            confirmText = stringResource(R.string.macropad_editor_confirm),
+            cancelText = stringResource(R.string.macropad_editor_cancel),
+            isDestructive = true,
+            onConfirm = {
+                deleteStepIndex?.let { idx ->
+                    pushUndo(steps)
+                    steps = steps.filterIndexed { i, _ -> i != idx }
                 }
+                deleteStepIndex = null
             },
-            dismissButton = {
-                TextButton(onClick = { deleteStepIndex = null }) {
-                    Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-                }
-            },
+            onDismiss = { deleteStepIndex = null },
         )
     }
 

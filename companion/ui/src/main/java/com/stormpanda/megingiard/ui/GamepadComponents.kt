@@ -7,29 +7,38 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,11 +55,13 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import java.util.Locale
 
 private const val TAG = "GamepadComponents"
 
@@ -73,6 +84,7 @@ private val GC_FOOTER_H_PADDING = 16.dp
 private val GC_GLYPH_SIZE = 20.dp
 private val GC_STEPPER_BTN_SIZE = 32.dp
 private val GC_SWATCH_SIZE = 36.dp
+private val GC_SIDEBAR_WIDTH = 210.dp
 private val GC_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GC_SIDEBAR_CORNER = 10.dp
 private val GC_SIDEBAR_ICON_SIZE = 20.dp
@@ -883,6 +895,405 @@ fun GamepadCategoryTile(
                 fontWeight = if (selected || isFocused) FontWeight.Bold else FontWeight.Normal,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * Standardized split-screen two-pane scaffold for primary screen settings and editors.
+ */
+@Composable
+fun GamepadTwoPaneScaffold(
+    sidebarContent: @Composable ColumnScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+    modifier: Modifier = Modifier,
+    footerContent: (@Composable () -> Unit)? = null,
+    sidebarFooter: (@Composable () -> Unit)? = null,
+    sidebarWidth: Dp = GC_SIDEBAR_WIDTH,
+) {
+    val colors = LocalAppColors.current
+    Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
+        Row(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
+            // Left Category Sidebar Rail
+            Column(
+                modifier =
+                    Modifier
+                        .width(sidebarWidth)
+                        .fillMaxHeight()
+                        .background(colors.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(8.dp),
+            ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    sidebarContent()
+                }
+                if (sidebarFooter != null) {
+                    sidebarFooter()
+                }
+            }
+
+            // Right Content Deck
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                content()
+            }
+        }
+        if (footerContent != null) {
+            footerContent()
+        }
+    }
+}
+
+/**
+ * Uppercase section header label with tracked letter spacing and design token colors.
+ */
+@Composable
+fun GamepadSectionHeader(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = LocalAppColors.current.sectionHeaderColor,
+) {
+    Text(
+        text = text.uppercase(Locale.ROOT),
+        color = color,
+        style = MaterialTheme.typography.labelSmall,
+        letterSpacing = MaterialTheme.typography.labelSmall.letterSpacing,
+        fontWeight = FontWeight.Bold,
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+    )
+}
+
+/**
+ * Gamepad-first slider card with continuous value adjustment, LB/RB bumper steps,
+ * and glowing focus outline.
+ */
+@Composable
+fun GamepadSliderCard(
+    title: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    valueLabel: String = "%.0f%%".format(value * 100f),
+    step: Float = 0.05f,
+    enabled: Boolean = true,
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    GamepadFocusCard(
+        onClick = null,
+        modifier = modifier,
+        enabled = enabled,
+        onLeftKey = {
+            val newVal = (value - step).coerceIn(valueRange.start, valueRange.endInclusive)
+            onValueChange(newVal)
+        },
+        onRightKey = {
+            val newVal = (value + step).coerceIn(valueRange.start, valueRange.endInclusive)
+            onValueChange(newVal)
+        },
+    ) { focused ->
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (focused) colors.accent else colors.onSurfaceSecondary,
+                            modifier = Modifier.size(GC_ICON_SIZE),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = title,
+                            color = colors.onSurface,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                color = colors.onSurfaceSecondary,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+                }
+
+                // Value readout pill
+                Box(
+                    modifier =
+                        Modifier
+                            .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                            .border(1.dp, colors.subduedBorder, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                            .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = valueLabel,
+                        color = if (focused) colors.accent else colors.onSurface,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                valueRange = valueRange,
+                enabled = enabled,
+                colors =
+                    SliderDefaults.colors(
+                        thumbColor = if (focused) colors.accent else colors.onSurface,
+                        activeTrackColor = colors.accent,
+                        inactiveTrackColor = colors.subduedBorder,
+                    ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(24.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Gamepad-first search bar with clear button and optional category filter chips.
+ */
+@Composable
+fun GamepadSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "Search...",
+) {
+    GamepadSearchBar<String>(
+        query = query,
+        onQueryChange = onQueryChange,
+        modifier = modifier,
+        placeholder = placeholder,
+        categories = emptyList(),
+        selectedCategory = null,
+        onCategorySelected = null,
+        categoryLabel = { it },
+    )
+}
+
+@Composable
+fun <T> GamepadSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "Search...",
+    categories: List<T> = emptyList(),
+    selectedCategory: T? = null,
+    onCategorySelected: ((T?) -> Unit)? = null,
+    categoryLabel: (T) -> String = { it.toString() },
+) {
+    val colors = LocalAppColors.current
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AppTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = {
+                Text(text = placeholder, color = colors.onSurfaceSecondary)
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary,
+                    modifier = Modifier.size(20.dp),
+                )
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Clear",
+                            tint = colors.onSurfaceSecondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        if (categories.isNotEmpty() && onCategorySelected != null) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AppSelectableChip(
+                    text = "All",
+                    selected = selectedCategory == null,
+                    onClick = { onCategorySelected(null) },
+                )
+                categories.forEach { category ->
+                    AppSelectableChip(
+                        text = categoryLabel(category),
+                        selected = selectedCategory == category,
+                        onClick = { onCategorySelected(category) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Standard gamepad-focused confirmation dialog with destructive styling support.
+ */
+@Composable
+fun GamepadConfirmDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    confirmText: String = "Confirm",
+    cancelText: String = "Cancel",
+    isDestructive: Boolean = false,
+) {
+    val colors = LocalAppColors.current
+    AppAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                color = if (isDestructive) colors.error else colors.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Text(
+                text = message,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            GamepadActionCard(
+                title = confirmText,
+                onClick = onConfirm,
+                actionGlyph = GamePadGlyph.BTN_A,
+                isDestructive = isDestructive,
+            )
+        },
+        dismissButton = {
+            GamepadActionCard(
+                title = cancelText,
+                onClick = onDismiss,
+                actionGlyph = GamePadGlyph.BTN_B,
+            )
+        },
+    )
+}
+
+/**
+ * Standard empty state display for lists and grids.
+ */
+@Composable
+fun GamepadEmptyState(
+    icon: ImageVector,
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    val colors = LocalAppColors.current
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(56.dp)
+                    .background(colors.surfaceVariant, CircleShape)
+                    .border(1.dp, colors.subduedBorder, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.onSurfaceSecondary,
+                modifier = Modifier.size(28.dp),
+            )
+        }
+        Text(
+            text = title,
+            color = colors.onSurface,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
+        }
+        if (actionText != null && onAction != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            GamepadActionCard(
+                title = actionText,
+                onClick = onAction,
+                actionGlyph = GamePadGlyph.BTN_A,
             )
         }
     }

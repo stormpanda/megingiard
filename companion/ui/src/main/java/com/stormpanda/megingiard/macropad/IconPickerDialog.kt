@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -45,6 +46,8 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
+import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadSearchBar
 import com.stormpanda.megingiard.ui.LocalAppColors
 
 private const val TAG = "IconPickerDialog"
@@ -117,15 +120,10 @@ internal fun IconPickerDialog(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            AppTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = {
-                    Text(
-                        stringResource(R.string.macropad_icon_picker_search),
-                        color = colors.onSurfaceSecondary,
-                    )
-                },
+            GamepadSearchBar(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = stringResource(R.string.macropad_icon_picker_search),
                 modifier = Modifier.weight(1f),
             )
             Row(
@@ -133,7 +131,7 @@ internal fun IconPickerDialog(
                 modifier =
                     Modifier
                         .clickable { onFilledChange(!filled) }
-                        .padding(start = 4.dp),
+                        .padding(start = 8.dp),
             ) {
                 Checkbox(
                     checked = filled,
@@ -217,10 +215,10 @@ internal fun IconPickerDialog(
                         .fillMaxWidth()
                         .weight(1f),
             ) {
-                Text(
-                    stringResource(R.string.macropad_icon_picker_no_results),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
+                GamepadEmptyState(
+                    icon = Icons.Rounded.Search,
+                    title = stringResource(R.string.macropad_icon_picker_no_results),
+                    subtitle = "Try searching for a different keyword",
                 )
             }
         } else {

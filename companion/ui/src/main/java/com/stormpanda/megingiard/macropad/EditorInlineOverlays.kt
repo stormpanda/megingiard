@@ -67,6 +67,7 @@ import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -140,22 +141,15 @@ internal fun InlineConfirmDeleteOverlay(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val colors = LocalAppColors.current
-    InlineDialogOverlay(
+    GamepadConfirmDialog(
         title = title,
+        message = body,
+        confirmText = stringResource(R.string.macropad_editor_confirm),
+        cancelText = stringResource(R.string.macropad_editor_cancel),
+        isDestructive = true,
+        onConfirm = onConfirm,
         onDismiss = onDismiss,
-        widthFraction = 0.8f,
-        buttonsRow = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.macropad_editor_confirm), color = colors.error)
-            }
-        },
-    ) {
-        Text(body, color = colors.onSurfaceSecondary)
-    }
+    )
 }
 
 @Composable
