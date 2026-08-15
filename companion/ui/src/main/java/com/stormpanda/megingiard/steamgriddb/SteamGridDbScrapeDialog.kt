@@ -355,8 +355,11 @@ internal fun SteamGridDbScrapeDialog(
                                         .weight(1f)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(if (isSelected) accentColor else colors.surface)
-                                        .border(1.dp, if (isSelected) accentColor else colors.accentBorder, RoundedCornerShape(8.dp))
-                                        .clickable {
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) accentColor else colors.onSurface.copy(alpha = 0.15f),
+                                            RoundedCornerShape(8.dp),
+                                        ).clickable {
                                             selectedType = type
                                             if (selectedGame != null) {
                                                 loadImagesForGame(selectedGame!!.id, type)
@@ -426,7 +429,7 @@ internal fun SteamGridDbScrapeDialog(
                                                         },
                                                     ).border(
                                                         1.dp,
-                                                        if (isSelectedGame) accentColor else colors.accentBorder,
+                                                        if (isSelectedGame) accentColor else colors.onSurface.copy(alpha = 0.15f),
                                                         RoundedCornerShape(8.dp),
                                                     ).clickable {
                                                         selectedGame = game
@@ -573,7 +576,7 @@ internal fun SteamGridDbScrapeDialog(
                                     .background(colors.surface)
                                     .border(
                                         width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) accentColor else colors.accentBorder,
+                                        color = if (isSelected) accentColor else colors.onSurface.copy(alpha = 0.15f),
                                         shape = RoundedCornerShape(8.dp),
                                     ).clickable {
                                         selectedImage = if (isSelected) null else image

@@ -217,7 +217,7 @@ internal fun AccentColorRow(
                     .size(GS_COLOR_PREVIEW_SIZE)
                     .clip(CircleShape)
                     .background(accentColor)
-                    .border(1.dp, colors.accentBorder, CircleShape),
+                    .border(1.dp, colors.onSurface.copy(alpha = 0.2f), CircleShape),
         )
         Spacer(modifier = Modifier.size(GS_COLOR_ICON_SPACER))
         IconButton(
@@ -526,7 +526,7 @@ internal fun UpdateAvailableBanner(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(accentColor.copy(alpha = 0.15f))
-                .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                 .padding(16.dp),
     ) {
         Row(

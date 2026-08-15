@@ -244,7 +244,6 @@ fun GlobalSettingsScreen(
                     .width(GS_SIDEBAR_WIDTH)
                     .fillMaxHeight()
                     .background(colors.surfaceVariant.copy(alpha = 0.5f))
-                    .border(1.dp, colors.controlOverlayBorder.copy(alpha = 0.6f))
                     .verticalScroll(rememberScrollState())
                     .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -482,7 +481,7 @@ fun GlobalSettingsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .background(colors.surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .border(1.dp, colors.controlOverlayBorder.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                .border(1.dp, colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                                 .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -1004,12 +1003,7 @@ private fun CategorySidebarTile(
         label = "catBg",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue =
-            when {
-                isFocused -> colors.accent
-                selected -> colors.accent.copy(alpha = 0.5f)
-                else -> Color.Transparent
-            },
+        targetValue = if (isFocused) colors.accent else Color.Transparent,
         label = "catBorder",
     )
 
@@ -1019,7 +1013,7 @@ private fun CategorySidebarTile(
                 .fillMaxWidth()
                 .height(GS_SIDEBAR_ITEM_HEIGHT)
                 .background(animatedBg, RoundedCornerShape(GS_SIDEBAR_CORNER))
-                .border(if (isFocused || selected) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GS_SIDEBAR_CORNER))
+                .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GS_SIDEBAR_CORNER))
                 .primaryOverlayFocusable(
                     onClick = onClick,
                     shape = RoundedCornerShape(GS_SIDEBAR_CORNER),

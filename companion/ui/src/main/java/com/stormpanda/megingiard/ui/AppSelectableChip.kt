@@ -80,8 +80,7 @@ fun AppSelectableChip(
                     ).copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
                 ).border(
                     1.dp,
-                    (if (selected) colors.accent else colors.controlOverlayBorder)
-                        .copy(alpha = effectiveAlpha),
+                    colors.onSurface.copy(alpha = 0.15f * effectiveAlpha),
                     RoundedCornerShape(CHIP_CORNER),
                 ).primaryOverlayFocusable(
                     onClick = if (enabled) onClick else null,

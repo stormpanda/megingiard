@@ -404,8 +404,8 @@ internal fun ButtonEditDialog(
                                             colors.surface
                                         },
                                     ).border(
-                                        width = if (iconName != null) 2.dp else 1.dp,
-                                        color = if (iconName != null) accentColor else colors.accentBorder,
+                                        width = 1.dp,
+                                        color = colors.onSurface.copy(alpha = 0.15f),
                                         shape = RoundedCornerShape(8.dp),
                                     ).clickable { showIconPicker = true },
                         ) {
@@ -828,7 +828,7 @@ private fun ColorPickerRow(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(previewColor)
-                        .border(1.dp, colors.accentBorder, CircleShape)
+                        .border(1.dp, colors.onSurface.copy(alpha = 0.2f), CircleShape)
                         .clickable(onClick = onWheelClick),
             )
 

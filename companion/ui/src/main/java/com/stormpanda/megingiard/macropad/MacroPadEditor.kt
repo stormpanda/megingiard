@@ -799,12 +799,7 @@ private fun EditorSidebarTile(
         label = "tileBg",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue =
-            when {
-                isFocused -> colors.accent
-                selected -> colors.accent.copy(alpha = 0.5f)
-                else -> Color.Transparent
-            },
+        targetValue = if (isFocused) colors.accent else Color.Transparent,
         label = "tileBorder",
     )
 
@@ -814,7 +809,7 @@ private fun EditorSidebarTile(
                 .fillMaxWidth()
                 .height(MPE_SIDEBAR_ITEM_HEIGHT)
                 .background(animatedBg, RoundedCornerShape(MPE_SIDEBAR_CORNER))
-                .border(if (isFocused || selected) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(MPE_SIDEBAR_CORNER))
+                .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(MPE_SIDEBAR_CORNER))
                 .primaryOverlayFocusable(
                     onClick = onClick,
                     shape = RoundedCornerShape(MPE_SIDEBAR_CORNER),
@@ -922,7 +917,6 @@ private fun EditorTwoPaneBody(
                     .width(MPE_SIDEBAR_WIDTH)
                     .fillMaxHeight()
                     .background(colors.surfaceVariant.copy(alpha = 0.5f))
-                    .border(1.dp, colors.controlOverlayBorder.copy(alpha = 0.6f))
                     .verticalScroll(rememberScrollState())
                     .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),

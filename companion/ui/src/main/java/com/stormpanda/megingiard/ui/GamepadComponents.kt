@@ -106,6 +106,7 @@ fun GamePadGlyphBadge(
     tint: Color = LocalAppColors.current.onSurfaceSecondary,
     backgroundColor: Color = LocalAppColors.current.surfaceVariant,
 ) {
+    val colors = LocalAppColors.current
     val shape: Shape = if (glyph.isPill) RoundedCornerShape(4.dp) else CircleShape
     val horizontalPadding = if (glyph.isPill) 6.dp else 0.dp
 
@@ -115,7 +116,7 @@ fun GamePadGlyphBadge(
                 .height(size)
                 .defaultMinSize(minWidth = size)
                 .background(backgroundColor, shape)
-                .border(1.dp, tint.copy(alpha = 0.5f), shape)
+                .border(1.dp, colors.onSurface.copy(alpha = 0.2f), shape)
                 .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
@@ -182,7 +183,7 @@ fun PrimaryOverlayFooter(
                 .fillMaxWidth()
                 .height(GC_FOOTER_HEIGHT)
                 .background(colors.surfaceVariant.copy(alpha = 0.85f))
-                .border(GC_DEFAULT_BORDER_WIDTH, colors.controlOverlayBorder)
+                .border(GC_DEFAULT_BORDER_WIDTH, colors.onSurface.copy(alpha = 0.12f))
                 .padding(horizontal = GC_FOOTER_H_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -216,7 +217,7 @@ fun GamepadFocusCard(
         label = "cardBorderWidth",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.accent else colors.controlOverlayBorder.copy(alpha = 0.6f),
+        targetValue = if (isFocused) colors.accent else colors.onSurface.copy(alpha = 0.12f),
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderColor",
     )
@@ -395,7 +396,7 @@ fun GamepadToggleCard(
                         .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
                             1.dp,
-                            if (checked) colors.accent else colors.controlOverlayBorder,
+                            colors.onSurface.copy(alpha = 0.15f),
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
                 contentAlignment = Alignment.Center,
@@ -488,7 +489,7 @@ fun GamepadStepperCard(
                         .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
                             1.dp,
-                            if (isFocused) colors.accent else colors.controlOverlayBorder,
+                            colors.onSurface.copy(alpha = 0.15f),
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -604,7 +605,7 @@ fun GamepadChoiceCard(
                         .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
                             1.dp,
-                            if (isFocused) colors.accent else colors.controlOverlayBorder,
+                            colors.onSurface.copy(alpha = 0.15f),
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -735,11 +736,9 @@ fun GamepadActionCard(
                             ).border(
                                 1.dp,
                                 if (isDestructive) {
-                                    colors.error
-                                } else if (isFocused) {
-                                    colors.accent
+                                    colors.error.copy(alpha = 0.6f)
                                 } else {
-                                    colors.controlOverlayBorder
+                                    colors.onSurface.copy(alpha = 0.15f)
                                 },
                                 RoundedCornerShape(GC_STATUS_PILL_CORNER),
                             ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),

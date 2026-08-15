@@ -299,6 +299,7 @@ internal fun MacroPicker(
     onChange: (PadAction) -> Unit,
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
+    val colors = LocalAppColors.current
     val macros = profile?.macros ?: emptyList()
     val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
     val defaultName = stringResource(R.string.macropad_macro_default_name)
@@ -331,7 +332,7 @@ internal fun MacroPicker(
                         Modifier
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                             .clickable { onEditMacro(selectedMacro) }
                             .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -356,7 +357,7 @@ internal fun MacroPicker(
                         Modifier
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                            .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                             .clickable {
                                 val newMacroId = UUID.randomUUID().toString()
                                 val newMacro =

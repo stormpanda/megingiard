@@ -614,7 +614,7 @@ internal fun PresetAccentPaletteDialog(
                                 .size(GSD_SWATCH_SIZE)
                                 .clip(CircleShape)
                                 .background(swatchColor)
-                                .border(1.dp, colors.accentBorder, CircleShape),
+                                .border(1.dp, colors.onSurface.copy(alpha = 0.2f), CircleShape),
                     )
                     Spacer(modifier = Modifier.width(GSD_SWATCH_SPACING))
                     Text(

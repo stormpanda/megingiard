@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -576,7 +577,7 @@ internal fun AsoPreviewBar(
                 .padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         color = colors.surface.copy(alpha = 0.95f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.accentBorder),
+        border = BorderStroke(1.dp, colors.onSurface.copy(alpha = 0.12f)),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
