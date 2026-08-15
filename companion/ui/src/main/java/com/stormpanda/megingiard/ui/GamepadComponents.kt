@@ -370,6 +370,304 @@ fun GamepadFocusCard(
 }
 
 /**
+ * Handles standardized gamepad adjustment key events (D-pad Left/Right adjustment, A/B/Enter dismiss).
+ */
+private fun handleAdjustmentKeyEvent(
+    keyEvent: androidx.compose.ui.input.key.KeyEvent,
+    isAdjusting: Boolean,
+    onAdjustLeft: () -> Unit,
+    onAdjustRight: () -> Unit,
+    onDismissAdjustment: () -> Unit,
+): Boolean {
+    if (!isAdjusting) return false
+    val keyCode = keyEvent.nativeKeyEvent.keyCode
+    return if (keyEvent.type == KeyEventType.KeyDown) {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                onAdjustLeft()
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                onAdjustRight()
+                true
+            }
+
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            -> {
+                onDismissAdjustment()
+                true
+            }
+
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            -> {
+                onDismissAdjustment()
+                false
+            }
+
+            else -> {
+                false
+            }
+        }
+    } else if (keyEvent.type == KeyEventType.KeyUp) {
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_B,
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_BUTTON_A,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            -> true
+
+            else -> false
+        }
+    } else {
+        false
+    }
+}
+
+/**
+ * Shared icon container with focus-tinted background for gamepad settings cards.
+ */
+@Composable
+fun GamepadCardIcon(
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    isFocused: Boolean = false,
+    isDestructive: Boolean = false,
+) {
+    val colors = LocalAppColors.current
+    val bg =
+        when {
+            isDestructive -> colors.error.copy(alpha = 0.2f)
+            isFocused -> colors.accent.copy(alpha = 0.2f)
+            else -> colors.surfaceVariant
+        }
+    val tint =
+        when {
+            isDestructive -> colors.error
+            isFocused -> colors.accent
+            else -> colors.onSurfaceSecondary
+        }
+
+    Box(
+        modifier =
+            modifier
+                .size(GC_ICON_BOX_SIZE)
+                .background(bg, RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(GC_ICON_SIZE),
+        )
+    }
+}
+
+/**
+ * Shared title and adaptive animated description block for gamepad settings cards.
+ */
+@Composable
+fun GamepadCardText(
+    title: String,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    isFocused: Boolean = false,
+    isDestructive: Boolean = false,
+) {
+    val colors = LocalAppColors.current
+    Column(
+        modifier = modifier.animateContentSize(),
+    ) {
+        Text(
+            text = title,
+            color = if (isDestructive) colors.error else colors.onSurface,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (description != null) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * Shared status, badge, or readout pill for gamepad settings cards.
+ */
+@Composable
+fun GamepadPill(
+    text: String,
+    modifier: Modifier = Modifier,
+    isHighlighted: Boolean = false,
+    isAccent: Boolean = false,
+    isDestructive: Boolean = false,
+) {
+    val colors = LocalAppColors.current
+    val pillBg =
+        when {
+            isDestructive -> colors.error.copy(alpha = 0.15f)
+            isAccent -> colors.accent
+            isHighlighted -> colors.accent.copy(alpha = 0.2f)
+            else -> colors.surfaceVariant
+        }
+    val pillTextColor =
+        when {
+            isDestructive -> colors.error
+            isAccent -> colors.onAccent
+            isHighlighted -> colors.accent
+            else -> colors.onSurfaceSecondary
+        }
+    val pillBorderColor =
+        when {
+            isDestructive -> colors.error.copy(alpha = 0.6f)
+            isHighlighted -> colors.accent
+            else -> colors.subduedBorder
+        }
+    val pillBorderWidth = if (isHighlighted) 2.dp else 1.dp
+
+    Box(
+        modifier =
+            modifier
+                .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = pillTextColor,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/**
+ * Shared interactive stepper / choice capsule with left & right navigation buttons.
+ */
+@Composable
+fun GamepadAdjustableCapsule(
+    valueText: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    isAdjusting: Boolean,
+    isFocused: Boolean,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
+    val capsuleBorderWidth = if (isAdjusting) 2.dp else 1.dp
+    val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
+
+    Row(
+        modifier =
+            modifier
+                .background(capsuleBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
+                .border(
+                    capsuleBorderWidth,
+                    capsuleBorderColor,
+                    RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                ).padding(horizontal = 4.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(GC_STEPPER_BTN_SIZE)
+                    .clip(CircleShape)
+                    .clickable(enabled = enabled) { onPrevious() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                contentDescription = null,
+                tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
+            )
+        }
+
+        Text(
+            text = valueText,
+            color = if (isAdjusting) colors.accent else colors.onSurface,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+
+        Box(
+            modifier =
+                Modifier
+                    .size(GC_STEPPER_BTN_SIZE)
+                    .clip(CircleShape)
+                    .clickable(enabled = enabled) { onNext() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
+            )
+        }
+    }
+}
+
+/**
+ * Shared top-anchored 3-slot row layout ([Icon] -> [Title + Description] -> [Trailing Control]) for settings cards.
+ */
+@Composable
+fun GamepadCardRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector? = null,
+    isFocused: Boolean = false,
+    isDestructive: Boolean = false,
+    trailingContent: (@Composable () -> Unit)? = null,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+    ) {
+        if (icon != null) {
+            GamepadCardIcon(
+                icon = icon,
+                isFocused = isFocused,
+                isDestructive = isDestructive,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+
+        GamepadCardText(
+            title = title,
+            description = description,
+            isFocused = isFocused,
+            isDestructive = isDestructive,
+            modifier = Modifier.weight(1f),
+        )
+
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            trailingContent()
+        }
+    }
+}
+
+/**
  * Gamepad-first switch card with illuminated ON/OFF status badge.
  */
 @Composable
@@ -382,8 +680,6 @@ fun GamepadToggleCard(
     icon: ImageVector? = null,
     enabled: Boolean = true,
 ) {
-    val colors = LocalAppColors.current
-
     GamepadFocusCard(
         onClick =
             if (enabled) {
@@ -394,81 +690,18 @@ fun GamepadToggleCard(
         enabled = enabled,
         modifier = modifier,
     ) { isFocused ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            if (icon != null) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_ICON_BOX_SIZE)
-                            .background(
-                                if (isFocused) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant,
-                                RoundedCornerShape(8.dp),
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
-                        modifier = Modifier.size(GC_ICON_SIZE),
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .animateContentSize(),
-            ) {
-                Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+        GamepadCardRow(
+            title = title,
+            description = description,
+            icon = icon,
+            isFocused = isFocused,
+            trailingContent = {
+                GamepadPill(
+                    text = if (checked) "ON ●" else "OFF ○",
+                    isAccent = checked,
                 )
-                if (description != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = description,
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
-                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Illuminated Status Pill
-            val pillBg = if (checked) colors.accent else colors.surfaceVariant
-            val pillTextColor = if (checked) colors.onAccent else colors.onSurfaceSecondary
-            val pillText = if (checked) "ON ●" else "OFF ○"
-
-            Box(
-                modifier =
-                    Modifier
-                        .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                        .border(
-                            1.dp,
-                            colors.subduedBorder,
-                            RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                        ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = pillText,
-                    color = pillTextColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
+            },
+        )
     }
 }
 
@@ -500,7 +733,6 @@ fun GamepadStepperCard(
     onValueClick: (() -> Unit)? = null,
     enabled: Boolean = true,
 ) {
-    val colors = LocalAppColors.current
     var isAdjusting by remember { mutableStateOf(false) }
 
     GamepadFocusCard(
@@ -514,58 +746,13 @@ fun GamepadStepperCard(
         enabled = enabled,
         modifier = modifier,
         onCustomKeyEvent = { keyEvent ->
-            if (!isAdjusting) {
-                false
-            } else {
-                val keyCode = keyEvent.nativeKeyEvent.keyCode
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            onDecrement()
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            onIncrement()
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> {
-                            isAdjusting = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                            isAdjusting = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            isAdjusting = false
-                            false
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                } else if (keyEvent.type == KeyEventType.KeyUp) {
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_BUTTON_B,
-                        KeyEvent.KEYCODE_BACK,
-                        KeyEvent.KEYCODE_BUTTON_A,
-                        KeyEvent.KEYCODE_DPAD_CENTER,
-                        KeyEvent.KEYCODE_ENTER,
-                        KeyEvent.KEYCODE_DPAD_LEFT,
-                        KeyEvent.KEYCODE_DPAD_RIGHT,
-                        -> true
-
-                        else -> false
-                    }
-                } else {
-                    false
-                }
-            }
+            handleAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onAdjustLeft = onDecrement,
+                onAdjustRight = onIncrement,
+                onDismissAdjustment = { isAdjusting = false },
+            )
         },
         onFocusChanged = { focused ->
             if (!focused) {
@@ -573,112 +760,22 @@ fun GamepadStepperCard(
             }
         },
     ) { isFocused ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            if (icon != null) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_ICON_BOX_SIZE)
-                            .background(
-                                if (isFocused) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant,
-                                RoundedCornerShape(8.dp),
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
-                        modifier = Modifier.size(GC_ICON_SIZE),
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .animateContentSize(),
-            ) {
-                Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+        GamepadCardRow(
+            title = title,
+            description = description,
+            icon = icon,
+            isFocused = isFocused,
+            trailingContent = {
+                GamepadAdjustableCapsule(
+                    valueText = valueText,
+                    onPrevious = onDecrement,
+                    onNext = onIncrement,
+                    isAdjusting = isAdjusting,
+                    isFocused = isFocused,
+                    enabled = enabled,
                 )
-                if (description != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = description,
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
-                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Stepper Pill ◀ Value ▶
-            val pillBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
-            val pillBorderWidth = if (isAdjusting) 2.dp else 1.dp
-            val pillBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
-
-            Row(
-                modifier =
-                    Modifier
-                        .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                        .border(
-                            pillBorderWidth,
-                            pillBorderColor,
-                            RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                        ).padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_STEPPER_BTN_SIZE)
-                            .clip(CircleShape)
-                            .clickable(enabled = enabled) { onDecrement() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                        contentDescription = null,
-                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
-                    )
-                }
-
-                Text(
-                    text = valueText,
-                    color = if (isAdjusting) colors.accent else colors.onSurface,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_STEPPER_BTN_SIZE)
-                            .clip(CircleShape)
-                            .clickable(enabled = enabled) { onIncrement() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
-                    )
-                }
-            }
-        }
+            },
+        )
     }
 }
 
@@ -710,7 +807,6 @@ fun GamepadChoiceCard(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
 ) {
-    val colors = LocalAppColors.current
     var isAdjusting by remember { mutableStateOf(false) }
 
     GamepadFocusCard(
@@ -724,58 +820,13 @@ fun GamepadChoiceCard(
         enabled = enabled,
         modifier = modifier,
         onCustomKeyEvent = { keyEvent ->
-            if (!isAdjusting) {
-                false
-            } else {
-                val keyCode = keyEvent.nativeKeyEvent.keyCode
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            onPrevious()
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            onNext()
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> {
-                            isAdjusting = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                            isAdjusting = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            isAdjusting = false
-                            false
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                } else if (keyEvent.type == KeyEventType.KeyUp) {
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_BUTTON_B,
-                        KeyEvent.KEYCODE_BACK,
-                        KeyEvent.KEYCODE_BUTTON_A,
-                        KeyEvent.KEYCODE_DPAD_CENTER,
-                        KeyEvent.KEYCODE_ENTER,
-                        KeyEvent.KEYCODE_DPAD_LEFT,
-                        KeyEvent.KEYCODE_DPAD_RIGHT,
-                        -> true
-
-                        else -> false
-                    }
-                } else {
-                    false
-                }
-            }
+            handleAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onAdjustLeft = onPrevious,
+                onAdjustRight = onNext,
+                onDismissAdjustment = { isAdjusting = false },
+            )
         },
         onFocusChanged = { focused ->
             if (!focused) {
@@ -783,112 +834,22 @@ fun GamepadChoiceCard(
             }
         },
     ) { isFocused ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            if (icon != null) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_ICON_BOX_SIZE)
-                            .background(
-                                if (isFocused) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant,
-                                RoundedCornerShape(8.dp),
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = if (isFocused) colors.accent else colors.onSurfaceSecondary,
-                        modifier = Modifier.size(GC_ICON_SIZE),
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .animateContentSize(),
-            ) {
-                Text(
-                    text = title,
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+        GamepadCardRow(
+            title = title,
+            description = description,
+            icon = icon,
+            isFocused = isFocused,
+            trailingContent = {
+                GamepadAdjustableCapsule(
+                    valueText = selectedText,
+                    onPrevious = onPrevious,
+                    onNext = onNext,
+                    isAdjusting = isAdjusting,
+                    isFocused = isFocused,
+                    enabled = enabled,
                 )
-                if (description != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = description,
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
-                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Choice Capsule ◀ Option ▶
-            val capsuleBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
-            val capsuleBorderWidth = if (isAdjusting) 2.dp else 1.dp
-            val capsuleBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
-
-            Row(
-                modifier =
-                    Modifier
-                        .background(capsuleBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                        .border(
-                            capsuleBorderWidth,
-                            capsuleBorderColor,
-                            RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                        ).padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_STEPPER_BTN_SIZE)
-                            .clip(CircleShape)
-                            .clickable(enabled = enabled) { onPrevious() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                        contentDescription = null,
-                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
-                    )
-                }
-
-                Text(
-                    text = selectedText,
-                    color = if (isAdjusting) colors.accent else colors.onSurface,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_STEPPER_BTN_SIZE)
-                            .clip(CircleShape)
-                            .clickable(enabled = enabled) { onNext() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary,
-                    )
-                }
-            }
-        }
+            },
+        )
     }
 }
 
@@ -914,107 +875,53 @@ fun GamepadActionCard(
         enabled = enabled,
         modifier = modifier,
     ) { isFocused ->
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            if (icon != null) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(GC_ICON_BOX_SIZE)
-                            .background(
-                                if (isDestructive) {
-                                    colors.error.copy(alpha = 0.2f)
-                                } else if (isFocused) {
-                                    colors.accent.copy(alpha = 0.2f)
-                                } else {
-                                    colors.surfaceVariant
-                                },
-                                RoundedCornerShape(8.dp),
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint =
-                            if (isDestructive) {
-                                colors.error
-                            } else if (isFocused) {
-                                colors.accent
-                            } else {
-                                colors.onSurfaceSecondary
-                            },
-                        modifier = Modifier.size(GC_ICON_SIZE),
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            Column(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .animateContentSize(),
-            ) {
-                Text(
-                    text = title,
-                    color = if (isDestructive) colors.error else colors.onSurface,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                if (description != null) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = description,
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
-                        overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            if (actionText != null || actionGlyph != null) {
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Action Badge / Button
-                Row(
-                    modifier =
-                        Modifier
-                            .background(
-                                if (isDestructive) colors.error.copy(alpha = 0.15f) else colors.surfaceVariant,
-                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                            ).border(
-                                1.dp,
-                                if (isDestructive) {
-                                    colors.error.copy(alpha = 0.6f)
-                                } else {
-                                    colors.subduedBorder
-                                },
-                                RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    if (actionGlyph != null) {
-                        GamePadGlyphBadge(
-                            glyph = actionGlyph,
-                            tint = if (isDestructive) colors.error else colors.accent,
-                        )
+        GamepadCardRow(
+            title = title,
+            description = description,
+            icon = icon,
+            isFocused = isFocused,
+            isDestructive = isDestructive,
+            trailingContent =
+                if (actionText != null || actionGlyph != null) {
+                    {
+                        Row(
+                            modifier =
+                                Modifier
+                                    .background(
+                                        if (isDestructive) colors.error.copy(alpha = 0.15f) else colors.surfaceVariant,
+                                        RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                                    ).border(
+                                        1.dp,
+                                        if (isDestructive) {
+                                            colors.error.copy(alpha = 0.6f)
+                                        } else {
+                                            colors.subduedBorder
+                                        },
+                                        RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                                    ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            if (actionGlyph != null) {
+                                GamePadGlyphBadge(
+                                    glyph = actionGlyph,
+                                    tint = if (isDestructive) colors.error else colors.accent,
+                                )
+                            }
+                            if (actionText != null) {
+                                Text(
+                                    text = actionText,
+                                    color = if (isDestructive) colors.error else colors.onSurface,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
                     }
-                    if (actionText != null) {
-                        Text(
-                            text = actionText,
-                            color = if (isDestructive) colors.error else colors.onSurface,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
-        }
+                } else {
+                    null
+                },
+        )
     }
 }
 
@@ -1397,60 +1304,19 @@ fun GamepadSliderCard(
         modifier = modifier,
         enabled = enabled,
         onCustomKeyEvent = { keyEvent ->
-            if (!isAdjusting) {
-                false
-            } else {
-                val keyCode = keyEvent.nativeKeyEvent.keyCode
-                if (keyEvent.type == KeyEventType.KeyDown) {
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_DPAD_LEFT -> {
-                            val newVal = (value - step).coerceIn(valueRange.start, valueRange.endInclusive)
-                            onValueChange(newVal)
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                            val newVal = (value + step).coerceIn(valueRange.start, valueRange.endInclusive)
-                            onValueChange(newVal)
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK -> {
-                            isAdjusting = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                            isAdjusting = false
-                            true
-                        }
-
-                        KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
-                            isAdjusting = false
-                            false
-                        }
-
-                        else -> {
-                            false
-                        }
-                    }
-                } else if (keyEvent.type == KeyEventType.KeyUp) {
-                    when (keyCode) {
-                        KeyEvent.KEYCODE_BUTTON_B,
-                        KeyEvent.KEYCODE_BACK,
-                        KeyEvent.KEYCODE_BUTTON_A,
-                        KeyEvent.KEYCODE_DPAD_CENTER,
-                        KeyEvent.KEYCODE_ENTER,
-                        KeyEvent.KEYCODE_DPAD_LEFT,
-                        KeyEvent.KEYCODE_DPAD_RIGHT,
-                        -> true
-
-                        else -> false
-                    }
-                } else {
-                    false
-                }
-            }
+            handleAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onAdjustLeft = {
+                    val newVal = (value - step).coerceIn(valueRange.start, valueRange.endInclusive)
+                    onValueChange(newVal)
+                },
+                onAdjustRight = {
+                    val newVal = (value + step).coerceIn(valueRange.start, valueRange.endInclusive)
+                    onValueChange(newVal)
+                },
+                onDismissAdjustment = { isAdjusting = false },
+            )
         },
         onFocusChanged = { focused ->
             if (!focused) {
@@ -1459,75 +1325,21 @@ fun GamepadSliderCard(
         },
     ) { focused ->
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    if (icon != null) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = if (focused) colors.accent else colors.onSurfaceSecondary,
-                            modifier = Modifier.size(GC_ICON_SIZE),
-                        )
-                    }
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .animateContentSize(),
-                    ) {
-                        Text(
-                            text = title,
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        if (subtitle != null) {
-                            Text(
-                                text = subtitle,
-                                color = colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = if (focused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
-                                overflow = if (focused) TextOverflow.Clip else TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-
-                // Value readout pill
-                val pillBorderColor = if (isAdjusting) colors.accent else colors.subduedBorder
-                val pillBorderWidth = if (isAdjusting) 2.dp else 1.dp
-                val pillBg = if (isAdjusting) colors.accent.copy(alpha = 0.2f) else colors.surfaceVariant
-
-                Box(
-                    modifier =
-                        Modifier
-                            .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                            .border(pillBorderWidth, pillBorderColor, RoundedCornerShape(GC_STATUS_PILL_CORNER))
-                            .padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
+            GamepadCardRow(
+                title = title,
+                description = subtitle,
+                icon = icon,
+                isFocused = focused,
+                trailingContent = {
+                    GamepadPill(
                         text = valueLabel,
-                        color = if (isAdjusting || focused) colors.accent else colors.onSurface,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
+                        isHighlighted = isAdjusting,
                     )
-                }
-            }
+                },
+            )
 
             Slider(
                 value = value,
