@@ -103,7 +103,7 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
-import com.stormpanda.megingiard.ui.GamepadColorPaletteGrid
+import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -114,7 +114,6 @@ import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
-import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -409,27 +408,12 @@ fun GlobalSettingsScreen(
                 )
 
                 if (themeMode.supportsCustomAccent) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .background(colors.surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .border(1.dp, colors.subduedBorder, RoundedCornerShape(12.dp))
-                                .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.settings_accent_color),
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        GamepadColorPaletteGrid(
-                            paletteColors = ACCENT_PALETTE_PRESETS,
-                            selectedColor = accentColor,
-                            onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
-                        )
-                    }
+                    GamepadColorPaletteCard(
+                        title = stringResource(R.string.settings_accent_color),
+                        paletteColors = ACCENT_PALETTE_PRESETS,
+                        selectedColor = accentColor,
+                        onColorSelected = { viewModel.setAccentColor(it.toArgb()) },
+                    )
 
                     GamepadActionCard(
                         title = stringResource(R.string.settings_accent_wheel_title),

@@ -62,6 +62,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
@@ -84,7 +85,12 @@ private val GC_STATUS_PILL_CORNER = 16.dp
 private val GC_STATUS_PILL_H_PADDING = 10.dp
 private val GC_STATUS_PILL_V_PADDING = 4.dp
 private val GC_STEPPER_BTN_SIZE = 32.dp
-private val GC_SWATCH_SIZE = 36.dp
+private val GC_SWATCH_SIZE = 28.dp
+private val GC_SWATCH_CHECK_ICON_SIZE = 16.dp
+private val GC_SWATCH_BORDER_WIDTH_ADJUSTING = 3.5.dp
+private val GC_SWATCH_BORDER_WIDTH_SELECTED = 3.dp
+private val GC_SWATCH_BORDER_WIDTH_DEFAULT = 1.5.dp
+private val GC_COLOR_CARD_CONTENT_SPACING = 8.dp
 private val GC_SLIDER_HEIGHT = 24.dp
 private val GC_ROW_CONTENT_SPACING = 12.dp
 private val GC_TEXT_SIZE_PILL = 12.sp
@@ -113,6 +119,7 @@ fun GamepadFocusCard(
     onLeftKey: (() -> Unit)? = null,
     onRightKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
+    isAdjusting: Boolean = false,
     content: @Composable (isFocused: Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -122,6 +129,8 @@ fun GamepadFocusCard(
     val cardFocusRequester = remember { FocusRequester() }
     val recordLastFocused = LocalLastFocusedDeckTracker.current
 
+    val isEffectivelyFocused = isFocused || isAdjusting
+
     LaunchedEffect(isFocused) {
         if (isFocused) {
             recordLastFocused?.invoke(cardFocusRequester)
@@ -130,18 +139,18 @@ fun GamepadFocusCard(
     }
 
     val animatedBorderWidth by animateDpAsState(
-        targetValue = if (isFocused) GC_FOCUS_BORDER_WIDTH else GC_DEFAULT_BORDER_WIDTH,
+        targetValue = if (isEffectivelyFocused) GC_FOCUS_BORDER_WIDTH else GC_DEFAULT_BORDER_WIDTH,
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderWidth",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.accent else colors.subduedBorder,
+        targetValue = if (isEffectivelyFocused) colors.accent else colors.subduedBorder,
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderColor",
     )
     val animatedBgColor by animateColorAsState(
         targetValue =
-            if (isFocused) {
+            if (isEffectivelyFocused) {
                 colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
             } else {
                 colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
@@ -150,7 +159,7 @@ fun GamepadFocusCard(
         label = "cardBgColor",
     )
     val animatedElevation by animateDpAsState(
-        targetValue = if (isFocused) GC_FOCUS_ELEVATION else GC_DEFAULT_ELEVATION,
+        targetValue = if (isEffectivelyFocused) GC_FOCUS_ELEVATION else GC_DEFAULT_ELEVATION,
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardElevation",
     )
@@ -160,41 +169,38 @@ fun GamepadFocusCard(
             if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
                 return@onKeyEvent true
             }
-            if (keyEvent.type == KeyEventType.KeyUp) {
-                when (keyEvent.nativeKeyEvent.keyCode) {
-                    KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+            when (keyEvent.nativeKeyEvent.keyCode) {
+                KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                    if (keyEvent.type == KeyEventType.KeyUp) {
                         if (enabled && onClick != null) {
                             onClick()
-                            true
-                        } else {
-                            false
                         }
                     }
+                    // Consume both KeyDown and KeyUp so clickable does not double-fire
+                    true
+                }
 
-                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                        if (enabled && onLeftKey != null) {
-                            onLeftKey()
-                            true
-                        } else {
-                            false
-                        }
-                    }
-
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        if (enabled && onRightKey != null) {
-                            onRightKey()
-                            true
-                        } else {
-                            false
-                        }
-                    }
-
-                    else -> {
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (keyEvent.type == KeyEventType.KeyUp && enabled && onLeftKey != null) {
+                        onLeftKey()
+                        true
+                    } else {
                         false
                     }
                 }
-            } else {
-                false
+
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (keyEvent.type == KeyEventType.KeyUp && enabled && onRightKey != null) {
+                        onRightKey()
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+                else -> {
+                    false
+                }
             }
         }
 
@@ -204,14 +210,7 @@ fun GamepadFocusCard(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = {
-                    try {
-                        cardFocusRequester.requestFocus()
-                    } catch (_: IllegalStateException) {
-                        AppLog.d(TAG, "GamepadFocusCard: cardFocusRequester unattached on click")
-                    }
-                    onClick()
-                },
+                onClick = onClick,
             )
         } else {
             Modifier.focusable(enabled = enabled, interactionSource = interactionSource)
@@ -250,7 +249,7 @@ fun GamepadFocusCard(
                     .padding(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
             contentAlignment = Alignment.CenterStart,
         ) {
-            content(isFocused)
+            content(isEffectivelyFocused)
         }
     }
 }
@@ -452,12 +451,13 @@ private fun CapsuleArrowButton(
     onClick: () -> Unit,
     enabled: Boolean = true,
     contentDescription: String? = null,
+    size: Dp = GC_STEPPER_BTN_SIZE,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier =
             modifier
-                .size(GC_STEPPER_BTN_SIZE)
+                .size(size)
                 .clip(CircleShape)
                 .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -634,6 +634,7 @@ fun GamepadAdjustableCard(
         },
         enabled = enabled,
         modifier = modifier,
+        isAdjusting = isAdjusting,
         onCustomKeyEvent = { keyEvent ->
             handleAdjustmentKeyEvent(
                 keyEvent = keyEvent,
@@ -823,7 +824,121 @@ fun GamepadActionCard(
 }
 
 /**
- * 2D Gamepad Color Palette Grid.
+ * Gamepad-first color palette card for selecting preset colors.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A: enters Tier 2 (Color Selection Mode)
+ *
+ * In Tier 2 (Color Selection Mode):
+ * - D-Pad Left: selects previous preset color
+ * - D-Pad Right: selects next preset color
+ * - Button A: confirms selection and exits adjustment
+ * - Button B / Back: cancels/exits adjustment without dismissing overlay
+ * - D-Pad Up / Down: exits adjustment and moves to adjacent card
+ */
+@Composable
+fun GamepadColorPaletteCard(
+    title: String,
+    paletteColors: List<Color>,
+    selectedColor: Color,
+    onColorSelected: (Color) -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+) {
+    val colors = LocalAppColors.current
+    var isAdjusting by remember { mutableStateOf(false) }
+
+    val onPreviousColor = {
+        if (paletteColors.isNotEmpty()) {
+            val currentIndex = paletteColors.indexOf(selectedColor)
+            val prevIndex =
+                if (currentIndex <= 0) {
+                    paletteColors.size - 1
+                } else {
+                    currentIndex - 1
+                }
+            onColorSelected(paletteColors[prevIndex])
+        }
+    }
+
+    val onNextColor = {
+        if (paletteColors.isNotEmpty()) {
+            val currentIndex = paletteColors.indexOf(selectedColor)
+            val nextIndex =
+                if (currentIndex == -1 || currentIndex >= paletteColors.size - 1) {
+                    0
+                } else {
+                    currentIndex + 1
+                }
+            onColorSelected(paletteColors[nextIndex])
+        }
+    }
+
+    GamepadFocusCard(
+        onClick = {
+            if (enabled) {
+                val nextState = !isAdjusting
+                AppLog.d(TAG, "GamepadColorPaletteCard: '$title' adjustment mode=$nextState")
+                isAdjusting = nextState
+            }
+        },
+        enabled = enabled,
+        modifier = modifier,
+        isAdjusting = isAdjusting,
+        onCustomKeyEvent = { keyEvent ->
+            handleAdjustmentKeyEvent(
+                keyEvent = keyEvent,
+                isAdjusting = isAdjusting,
+                onAdjustLeft = onPreviousColor,
+                onAdjustRight = onNextColor,
+                onDismissAdjustment = { isAdjusting = false },
+            )
+        },
+        onFocusChanged = { focused ->
+            if (!focused) {
+                isAdjusting = false
+            }
+        },
+    ) { isFocused ->
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(GC_COLOR_CARD_CONTENT_SPACING),
+        ) {
+            if (icon != null || description != null) {
+                GamepadCardRow(
+                    title = title,
+                    description = description,
+                    icon = icon,
+                    isFocused = isFocused,
+                )
+            } else {
+                Text(
+                    text = title,
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            GamepadColorPaletteGrid(
+                paletteColors = paletteColors,
+                selectedColor = selectedColor,
+                onColorSelected = onColorSelected,
+                onPrevious = onPreviousColor,
+                onNext = onNextColor,
+                isAdjusting = isAdjusting,
+                isFocused = isFocused,
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+/**
+ * 2D Gamepad Color Palette Grid with navigation chevrons.
  */
 @Composable
 fun GamepadColorPaletteGrid(
@@ -831,17 +946,46 @@ fun GamepadColorPaletteGrid(
     selectedColor: Color,
     onColorSelected: (Color) -> Unit,
     modifier: Modifier = Modifier,
+    onPrevious: (() -> Unit)? = null,
+    onNext: (() -> Unit)? = null,
+    isAdjusting: Boolean = false,
+    isFocused: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
+    val arrowTint = if (isAdjusting || isFocused) colors.accent else colors.onSurfaceSecondary
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (onPrevious != null) {
+            CapsuleArrowButton(
+                icon = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.gamepad_previous),
+                tint = arrowTint,
+                onClick = onPrevious,
+                enabled = enabled,
+                size = GC_SWATCH_SIZE,
+            )
+        }
+
         paletteColors.forEachIndexed { index, color ->
             val isSelected = color == selectedColor
             val colorDesc = stringResource(R.string.gamepad_color_option, index + 1)
+            val swatchBorderWidth =
+                when {
+                    isSelected && isAdjusting -> GC_SWATCH_BORDER_WIDTH_ADJUSTING
+                    isSelected -> GC_SWATCH_BORDER_WIDTH_SELECTED
+                    else -> GC_SWATCH_BORDER_WIDTH_DEFAULT
+                }
+            val swatchBorderColor =
+                when {
+                    isSelected -> colors.onSurface
+                    else -> Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA)
+                }
+
             Box(
                 modifier =
                     Modifier
@@ -849,15 +993,15 @@ fun GamepadColorPaletteGrid(
                         .clip(CircleShape)
                         .background(color)
                         .border(
-                            if (isSelected) 3.dp else 1.5.dp,
-                            if (isSelected) colors.onSurface else Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA),
+                            swatchBorderWidth,
+                            swatchBorderColor,
                             CircleShape,
                         ).semantics {
                             contentDescription = colorDesc
                             selected = isSelected
-                        }.primaryOverlayFocusable(
+                        }.clickable(
+                            enabled = enabled,
                             onClick = { onColorSelected(color) },
-                            shape = CircleShape,
                         ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -866,10 +1010,21 @@ fun GamepadColorPaletteGrid(
                         imageVector = Icons.Rounded.Check,
                         contentDescription = stringResource(R.string.gamepad_color_selected),
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(GC_SWATCH_CHECK_ICON_SIZE),
                     )
                 }
             }
+        }
+
+        if (onNext != null) {
+            CapsuleArrowButton(
+                icon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = stringResource(R.string.gamepad_next),
+                tint = arrowTint,
+                onClick = onNext,
+                enabled = enabled,
+                size = GC_SWATCH_SIZE,
+            )
         }
     }
 }
@@ -935,6 +1090,7 @@ fun GamepadSliderCard(
         },
         modifier = modifier,
         enabled = enabled,
+        isAdjusting = isAdjusting,
         onCustomKeyEvent = { keyEvent ->
             handleAdjustmentKeyEvent(
                 keyEvent = keyEvent,

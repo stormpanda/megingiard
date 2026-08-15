@@ -194,7 +194,8 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
   - `GamepadStepperCard`: Stepper card with `◀ Value ▶` adjustment controls navigable with D-pad Left/Right.
   - `GamepadChoiceCard`: Option carousel with `◀ Choice ▶` cycling through enum / list options without requiring submenu navigation.
   - `GamepadActionCard`: Compact action trigger card with focus activation.
-  - `GamepadColorPaletteGrid`: 2D focusable color palette grid for accent color selection.
+  - `GamepadColorPaletteCard`: Two-tier focusable color palette card for accent color selection (`[Left/Right]` selects preset colors, `[A]` enters adjustment mode).
+  - `GamepadColorPaletteGrid`: Color swatch grid with checkmark selection indicators and touch click support.
 - **Multi-Modal Input Synchronization & Focus Recovery:**
   - **Pointer-to-Focus Sync:** Tapping with touchscreen or clicking with mouse on category tiles (`GamepadCategoryTile`) or content cards (`GamepadFocusCard`) automatically requests 2D focus for that element, synchronizing cursor state across input methods.
   - **Focus Recovery Dispatcher:** If pointer interaction clears focus or switches Compose to `InputMode.Touch`, subsequent gamepad D-Pad, Analog Stick, or Button A inputs that are unhandled are captured by `PrimaryOverlayManager` / `PrimaryOverlayActivity` and forwarded to `PrimaryOverlayInputBridge.sendFocusRecovery()`.
@@ -215,7 +216,7 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
 | [PrimaryOverlayContainer.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayContainer.kt) | Top-screen elevated modal dialog container with bezel border, bumper badges, footer action prompt bar, and auto-focus initialization |
 | [PrimaryOverlayManager.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayManager.kt) | WindowManager overlay coordinator on Display 0; routes gamepad key and motion events |
 | [PrimaryOverlayInputBridge.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/PrimaryOverlayInputBridge.kt) | Gamepad bumper event dispatcher, joystick-to-Dpad motion translator, and `primaryOverlayFocusable` modifier |
-| [GamepadComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
+| [GamepadComponents.kt](../../../companion/ui/src/main/java/com/stormpanda/megingiard/ui/GamepadComponents.kt) | Gamepad-First UI component library: `GamepadFocusCard`, `GamepadToggleCard`, `GamepadStepperCard`, `GamepadChoiceCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadColorPaletteGrid`, and `PrimaryOverlayFooter` |
 | [AppStateManager.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/AppStateManager.kt) | `isQuickMenuOpen`, `isAnyModalActive`, `handleEdgeSwipe()`, modal open/close helpers; holds active swipe state |
 | [SwipeGestureProcessor.kt](../../../companion/domain/src/main/java/com/stormpanda/megingiard/SwipeGestureProcessor.kt) | Edge-swipe detection (`pointerInput`); evaluates threshold, triggers haptics, and coordinates release actions |
 | [SwipeGestureProgress.kt](../../../shared/core/src/main/kotlin/com/stormpanda/megingiard/SwipeGestureProgress.kt) | Data model defining the current active swipe type, delta, threshold, and past-threshold flag |

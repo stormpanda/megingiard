@@ -367,7 +367,8 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | `GamepadChoiceCard` | Two-tier focusable value carousel card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (capsule glows, `[Left/Right]` changes value, `[B]` exits without closing dialog). | Enums, presets, log levels |
 | `GamepadActionCard` | Focusable actionable item card with action pill and icon. Pressing `[A]` executes action; `[Left]` returns to sidebar rail. | Buttons, macros, edit actions |
 | `GamepadSliderCard` | Two-tier focusable slider card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 value adjustment (`[Left/Right]` adjusts value, `[B]` exits). | Deadzone, opacity, volume sliders |
-| `GamepadColorPaletteGrid` | 2D focusable color palette grid with checkmark indicators and accessibility semantics. | Color picker options |
+| `GamepadColorPaletteCard` | Two-tier focusable color palette card. Tier 1: `[Up/Down]` row traversal, `[Left]` back to sidebar. Pressing `[A]` enters Tier 2 color selection (`[Left/Right]` cycles preset colors, `[B]` exits). | Accent color preset picker |
+| `GamepadColorPaletteGrid` | Color swatch grid with checkmark selection indicators and touch click support. | Color picker options |
 | `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
 | `GamepadConfirmDialog` | Standard modal confirmation dialog with gamepad controller hints and destructive styling. | `InlineConfirmDeleteOverlay`, step delete |
 | `GamepadEmptyState` | Empty state layout with circular icon backdrop, title, description, and optional call-to-action button. | Empty search results, empty macro/step lists |
@@ -377,5 +378,5 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 All two-pane primary screen overlays adhere to a strict two-tier gamepad focus architecture:
 1. **Left Category Rail:** Navigating `[D-Pad Up / Down]` automatically selects and switches categories on focus (`onFocusChanged`). Pressing `[D-Pad Right]` transitions focus into the right content deck.
 2. **Tier 1 — Row Selection Mode:** The entire card is outlined with an accent border. `[D-Pad Up / Down]` navigates strictly to the adjacent card above or below without diagonal jumping. Pressing `[D-Pad Left]` navigates back to the left category sidebar.
-3. **Tier 2 — Value Adjustment Mode (Choice / Stepper / Slider):** Pressing `[Button A]` activates in-place value adjustment (the value capsule illuminates). `[D-Pad Left / Right]` modifies the value. Pressing `[Button B]` cancels/exits value adjustment without closing the overlay dialog. Pressing `[D-Pad Up / Down]` commits the value, exits adjustment mode, and navigates to the adjacent row.
+3. **Tier 2 — Value Adjustment Mode (Choice / Stepper / Slider / Color Palette):** Pressing `[Button A]` activates in-place value adjustment (the value capsule or active element illuminates). `[D-Pad Left / Right]` modifies the value or selects adjacent colors. Pressing `[Button B]` cancels/exits value adjustment without closing the overlay dialog. Pressing `[D-Pad Up / Down]` commits the value, exits adjustment mode, and navigates to the adjacent row.
 
