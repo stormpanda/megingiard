@@ -104,7 +104,7 @@ private val GC_SIDEBAR_CORNER = 10.dp
 private val GC_SIDEBAR_ICON_SIZE = 20.dp
 private const val GC_ANIM_DURATION_MS = 150
 private const val GC_INITIAL_FOCUS_DELAY_MS = 50L
-private const val GC_UNFOCUSED_MAX_LINES = 1
+private const val GC_UNFOCUSED_MAX_LINES = 2
 
 /**
  * Standard gamepad button glyph descriptors.
@@ -396,7 +396,7 @@ fun GamepadToggleCard(
     ) { isFocused ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
             if (icon != null) {
                 Box(
@@ -575,7 +575,7 @@ fun GamepadStepperCard(
     ) { isFocused ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
             if (icon != null) {
                 Box(
@@ -785,7 +785,7 @@ fun GamepadChoiceCard(
     ) { isFocused ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
             if (icon != null) {
                 Box(
@@ -916,7 +916,7 @@ fun GamepadActionCard(
     ) { isFocused ->
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
             if (icon != null) {
                 Box(
@@ -1467,11 +1467,11 @@ fun GamepadSliderCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.weight(1f),
                 ) {
@@ -1483,7 +1483,12 @@ fun GamepadSliderCard(
                             modifier = Modifier.size(GC_ICON_SIZE),
                         )
                     }
-                    Column(modifier = Modifier.animateContentSize()) {
+                    Column(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .animateContentSize(),
+                    ) {
                         Text(
                             text = title,
                             color = colors.onSurface,
