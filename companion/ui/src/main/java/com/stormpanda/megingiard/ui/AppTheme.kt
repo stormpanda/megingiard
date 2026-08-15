@@ -99,7 +99,11 @@ data class AppColors(
     val sectionHeaderColor: Color,
     /** Thin divider between transparent settings rows drawn on the default screen/dialog background. */
     val settingsSeparator: Color,
-)
+) {
+    /** Subtle, non-accented border used for unfocused cards, pills, text fields, and chips. */
+    val subduedBorder: Color
+        get() = onSurface.copy(alpha = 0.15f)
+}
 
 // ─── Palettes ─────────────────────────────────────────────────────────────────
 

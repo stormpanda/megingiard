@@ -298,7 +298,7 @@ internal fun MacroTimelineEditor(
                     colors =
                         OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = accentColor,
-                            unfocusedBorderColor = colors.onSurface.copy(alpha = 0.15f),
+                            unfocusedBorderColor = colors.subduedBorder,
                             focusedTextColor = colors.onSurface,
                             unfocusedTextColor = colors.onSurface,
                             cursorColor = accentColor,

@@ -88,6 +88,7 @@ Thirty-five semantic `AppColors` tokens cover all theming needs:
 | `macroPadAccentBorder`   | MacroPad placement border/outline tint                                                                                             |
 | `sectionHeaderColor`     | Uppercase section-header label tint                                                                                                |
 | `settingsSeparator`      | Thin divider between transparent settings rows (distinct from `divider`); tuned per theme to the settings screen/dialog background |
+| `subduedBorder`          | Subtle, non-accented border (`onSurface.copy(alpha = 0.15f)`) used for unfocused cards, pills, text fields, and chips              |
 
 ### Palettes
 

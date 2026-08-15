@@ -357,7 +357,7 @@ internal fun SteamGridDbScrapeDialog(
                                         .background(if (isSelected) accentColor else colors.surface)
                                         .border(
                                             1.dp,
-                                            if (isSelected) accentColor else colors.onSurface.copy(alpha = 0.15f),
+                                            if (isSelected) accentColor else colors.subduedBorder,
                                             RoundedCornerShape(8.dp),
                                         ).clickable {
                                             selectedType = type
@@ -429,7 +429,7 @@ internal fun SteamGridDbScrapeDialog(
                                                         },
                                                     ).border(
                                                         1.dp,
-                                                        if (isSelectedGame) accentColor else colors.onSurface.copy(alpha = 0.15f),
+                                                        if (isSelectedGame) accentColor else colors.subduedBorder,
                                                         RoundedCornerShape(8.dp),
                                                     ).clickable {
                                                         selectedGame = game
@@ -576,7 +576,7 @@ internal fun SteamGridDbScrapeDialog(
                                     .background(colors.surface)
                                     .border(
                                         width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) accentColor else colors.onSurface.copy(alpha = 0.15f),
+                                        color = if (isSelected) accentColor else colors.subduedBorder,
                                         shape = RoundedCornerShape(8.dp),
                                     ).clickable {
                                         selectedImage = if (isSelected) null else image

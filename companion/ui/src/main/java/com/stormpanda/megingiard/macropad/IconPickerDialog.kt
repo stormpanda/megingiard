@@ -247,7 +247,7 @@ internal fun IconPickerDialog(
                                     },
                                 ).border(
                                     width = if (isSelected) 2.dp else 1.dp,
-                                    color = if (isSelected) accentColor else colors.onSurface.copy(alpha = 0.15f),
+                                    color = if (isSelected) accentColor else colors.subduedBorder,
                                     shape = RoundedCornerShape(IP_CELL_CORNER),
                                 ).clickable { pendingIcon = name },
                     ) {

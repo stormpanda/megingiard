@@ -99,6 +99,7 @@ import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteGrid
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -123,10 +124,8 @@ private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingi
 private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
 
 private val GS_SIDEBAR_WIDTH = 210.dp
-private val GS_SIDEBAR_ITEM_HEIGHT = 44.dp
-private val GS_SIDEBAR_ICON_SIZE = 18.dp
-private val GS_SIDEBAR_CORNER = 8.dp
 private val GS_KOFI_BUTTON_HEIGHT = 32.dp
+private val GS_KOFI_CORNER = 8.dp
 
 private val ACCENT_PALETTE_PRESETS =
     listOf(
@@ -248,49 +247,49 @@ fun GlobalSettingsScreen(
                     .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_all),
                 icon = Icons.Rounded.Dashboard,
                 selected = selectedSectionFilter == null,
                 onClick = { selectedSectionFilter = null },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_general),
                 icon = Icons.Rounded.Tune,
                 selected = selectedSectionFilter == SettingsSectionFilter.GENERAL,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.GENERAL },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_input),
                 icon = Icons.Rounded.Gamepad,
                 selected = selectedSectionFilter == SettingsSectionFilter.INPUT,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.INPUT },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_appearance),
                 icon = Icons.Rounded.Palette,
                 selected = selectedSectionFilter == SettingsSectionFilter.APPEARANCE,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.APPEARANCE },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_data),
                 icon = Icons.Rounded.Storage,
                 selected = selectedSectionFilter == SettingsSectionFilter.DATA,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.DATA },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_config),
                 icon = Icons.Rounded.Build,
                 selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.CONFIGURATION },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_updates),
                 icon = Icons.Rounded.SystemUpdate,
                 selected = selectedSectionFilter == SettingsSectionFilter.UPDATES,
                 onClick = { selectedSectionFilter = SettingsSectionFilter.UPDATES },
             )
-            CategorySidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_diagnostics),
                 icon = Icons.Rounded.HealthAndSafety,
                 selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS,
@@ -329,7 +328,7 @@ fun GlobalSettingsScreen(
                                         AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
                                     }
                                 },
-                                shape = RoundedCornerShape(GS_SIDEBAR_CORNER),
+                                shape = RoundedCornerShape(GS_KOFI_CORNER),
                             ),
                 )
                 HelpIconButton(onClick = { showSettingsHelp = true })
@@ -481,7 +480,7 @@ fun GlobalSettingsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .background(colors.surface.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .border(1.dp, colors.onSurface.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                .border(1.dp, colors.subduedBorder, RoundedCornerShape(12.dp))
                                 .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -978,74 +977,6 @@ fun GlobalSettingsScreen(
         visible = showSettingsHelp,
         onDismiss = { showSettingsHelp = false },
     )
-}
-
-@Composable
-private fun CategorySidebarTile(
-    title: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-
-    val animatedBg by animateColorAsState(
-        targetValue =
-            when {
-                selected && isFocused -> colors.accent.copy(alpha = 0.35f)
-                selected -> colors.accent.copy(alpha = 0.2f)
-                isFocused -> colors.surface.copy(alpha = 0.95f)
-                else -> Color.Transparent
-            },
-        label = "catBg",
-    )
-    val animatedBorderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.accent else Color.Transparent,
-        label = "catBorder",
-    )
-
-    Surface(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(GS_SIDEBAR_ITEM_HEIGHT)
-                .background(animatedBg, RoundedCornerShape(GS_SIDEBAR_CORNER))
-                .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GS_SIDEBAR_CORNER))
-                .primaryOverlayFocusable(
-                    onClick = onClick,
-                    shape = RoundedCornerShape(GS_SIDEBAR_CORNER),
-                    interactionSource = interactionSource,
-                ),
-        shape = RoundedCornerShape(GS_SIDEBAR_CORNER),
-        color = Color.Transparent,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected || isFocused) colors.accent else colors.onSurfaceSecondary,
-                modifier = Modifier.size(GS_SIDEBAR_ICON_SIZE),
-            )
-            Text(
-                text = title,
-                color = if (selected || isFocused) colors.onSurface else colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected || isFocused) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
 }
 
 @Composable

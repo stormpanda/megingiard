@@ -527,7 +527,7 @@ private fun NewMacroChip(
             modifier =
                 Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, colors.onSurface.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                    .border(1.dp, colors.subduedBorder, RoundedCornerShape(8.dp))
                     .clickable(onClick = onClick)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

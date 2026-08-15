@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -72,6 +73,9 @@ private val GC_FOOTER_H_PADDING = 16.dp
 private val GC_GLYPH_SIZE = 20.dp
 private val GC_STEPPER_BTN_SIZE = 32.dp
 private val GC_SWATCH_SIZE = 36.dp
+private val GC_SIDEBAR_ITEM_HEIGHT = 40.dp
+private val GC_SIDEBAR_CORNER = 10.dp
+private val GC_SIDEBAR_ICON_SIZE = 20.dp
 private val GC_ANIM_DURATION_MS = 150
 
 /**
@@ -116,7 +120,7 @@ fun GamePadGlyphBadge(
                 .height(size)
                 .defaultMinSize(minWidth = size)
                 .background(backgroundColor, shape)
-                .border(1.dp, colors.onSurface.copy(alpha = 0.2f), shape)
+                .border(1.dp, colors.subduedBorder, shape)
                 .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
@@ -183,7 +187,7 @@ fun PrimaryOverlayFooter(
                 .fillMaxWidth()
                 .height(GC_FOOTER_HEIGHT)
                 .background(colors.surfaceVariant.copy(alpha = 0.85f))
-                .border(GC_DEFAULT_BORDER_WIDTH, colors.onSurface.copy(alpha = 0.12f))
+                .border(GC_DEFAULT_BORDER_WIDTH, colors.subduedBorder)
                 .padding(horizontal = GC_FOOTER_H_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -217,7 +221,7 @@ fun GamepadFocusCard(
         label = "cardBorderWidth",
     )
     val animatedBorderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.accent else colors.onSurface.copy(alpha = 0.12f),
+        targetValue = if (isFocused) colors.accent else colors.subduedBorder,
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderColor",
     )
@@ -396,7 +400,7 @@ fun GamepadToggleCard(
                         .background(pillBg, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
                             1.dp,
-                            colors.onSurface.copy(alpha = 0.15f),
+                            colors.subduedBorder,
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
                 contentAlignment = Alignment.Center,
@@ -489,7 +493,7 @@ fun GamepadStepperCard(
                         .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
                             1.dp,
-                            colors.onSurface.copy(alpha = 0.15f),
+                            colors.subduedBorder,
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -605,7 +609,7 @@ fun GamepadChoiceCard(
                         .background(colors.surfaceVariant, RoundedCornerShape(GC_STATUS_PILL_CORNER))
                         .border(
                             1.dp,
-                            colors.onSurface.copy(alpha = 0.15f),
+                            colors.subduedBorder,
                             RoundedCornerShape(GC_STATUS_PILL_CORNER),
                         ).padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -738,7 +742,7 @@ fun GamepadActionCard(
                                 if (isDestructive) {
                                     colors.error.copy(alpha = 0.6f)
                                 } else {
-                                    colors.onSurface.copy(alpha = 0.15f)
+                                    colors.subduedBorder
                                 },
                                 RoundedCornerShape(GC_STATUS_PILL_CORNER),
                             ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
@@ -809,6 +813,77 @@ fun GamepadColorPaletteGrid(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Unified gamepad-first category sidebar item tile used across split-screen dialogs and editors.
+ */
+@Composable
+fun GamepadCategoryTile(
+    title: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val animatedBg by animateColorAsState(
+        targetValue =
+            when {
+                selected && isFocused -> colors.accent.copy(alpha = 0.35f)
+                selected -> colors.accent.copy(alpha = 0.2f)
+                isFocused -> colors.surface.copy(alpha = 0.95f)
+                else -> Color.Transparent
+            },
+        label = "catBg",
+    )
+    val animatedBorderColor by animateColorAsState(
+        targetValue = if (isFocused) colors.accent else Color.Transparent,
+        label = "catBorder",
+    )
+
+    Surface(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(GC_SIDEBAR_ITEM_HEIGHT)
+                .background(animatedBg, RoundedCornerShape(GC_SIDEBAR_CORNER))
+                .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GC_SIDEBAR_CORNER))
+                .primaryOverlayFocusable(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
+                    interactionSource = interactionSource,
+                ),
+        shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
+        color = Color.Transparent,
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (selected || isFocused) colors.accent else colors.onSurfaceSecondary,
+                modifier = Modifier.size(GC_SIDEBAR_ICON_SIZE),
+            )
+            Text(
+                text = title,
+                color = if (selected || isFocused) colors.onSurface else colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected || isFocused) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

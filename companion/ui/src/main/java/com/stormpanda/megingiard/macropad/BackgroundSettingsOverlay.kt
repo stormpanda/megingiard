@@ -577,7 +577,7 @@ internal fun AsoPreviewBar(
                 .padding(16.dp),
         shape = RoundedCornerShape(12.dp),
         color = colors.surface.copy(alpha = 0.95f),
-        border = BorderStroke(1.dp, colors.onSurface.copy(alpha = 0.12f)),
+        border = BorderStroke(1.dp, colors.subduedBorder),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

@@ -405,7 +405,7 @@ internal fun ButtonEditDialog(
                                         },
                                     ).border(
                                         width = 1.dp,
-                                        color = colors.onSurface.copy(alpha = 0.15f),
+                                        color = colors.subduedBorder,
                                         shape = RoundedCornerShape(8.dp),
                                     ).clickable { showIconPicker = true },
                         ) {
@@ -828,7 +828,7 @@ private fun ColorPickerRow(
                         .size(36.dp)
                         .clip(CircleShape)
                         .background(previewColor)
-                        .border(1.dp, colors.onSurface.copy(alpha = 0.2f), CircleShape)
+                        .border(1.dp, colors.subduedBorder, CircleShape)
                         .clickable(onClick = onWheelClick),
             )
 

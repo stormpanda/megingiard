@@ -90,6 +90,7 @@ import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -115,9 +116,6 @@ internal val MPE_GRID_TOGGLE_SIZE = 36.dp
 internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 
 private val MPE_SIDEBAR_WIDTH = 210.dp
-private val MPE_SIDEBAR_ITEM_HEIGHT = 44.dp
-private val MPE_SIDEBAR_ICON_SIZE = 18.dp
-private val MPE_SIDEBAR_CORNER = 8.dp
 
 internal enum class EditorSection {
     OVERVIEW,
@@ -777,74 +775,6 @@ private fun EditorTopBar(
 }
 
 @Composable
-private fun EditorSidebarTile(
-    title: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-
-    val animatedBg by animateColorAsState(
-        targetValue =
-            when {
-                selected && isFocused -> colors.accent.copy(alpha = 0.35f)
-                selected -> colors.accent.copy(alpha = 0.2f)
-                isFocused -> colors.surface.copy(alpha = 0.95f)
-                else -> Color.Transparent
-            },
-        label = "tileBg",
-    )
-    val animatedBorderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.accent else Color.Transparent,
-        label = "tileBorder",
-    )
-
-    Surface(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(MPE_SIDEBAR_ITEM_HEIGHT)
-                .background(animatedBg, RoundedCornerShape(MPE_SIDEBAR_CORNER))
-                .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(MPE_SIDEBAR_CORNER))
-                .primaryOverlayFocusable(
-                    onClick = onClick,
-                    shape = RoundedCornerShape(MPE_SIDEBAR_CORNER),
-                    interactionSource = interactionSource,
-                ),
-        shape = RoundedCornerShape(MPE_SIDEBAR_CORNER),
-        color = Color.Transparent,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected || isFocused) colors.accent else colors.onSurfaceSecondary,
-                modifier = Modifier.size(MPE_SIDEBAR_ICON_SIZE),
-            )
-            Text(
-                text = title,
-                color = if (selected || isFocused) colors.onSurface else colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected || isFocused) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
 private fun EditorTwoPaneBody(
     profiles: List<PadProfile>,
     profile: PadProfile,
@@ -921,37 +851,37 @@ private fun EditorTwoPaneBody(
                     .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            EditorSidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_all),
                 icon = Icons.Rounded.Dashboard,
                 selected = selectedSection == EditorSection.OVERVIEW,
                 onClick = { selectedSection = EditorSection.OVERVIEW },
             )
-            EditorSidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.quick_menu_profile_label),
                 icon = Icons.Rounded.Folder,
                 selected = selectedSection == EditorSection.PROFILES,
                 onClick = { selectedSection = EditorSection.PROFILES },
             )
-            EditorSidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.macropad_editor_section_layout),
                 icon = Icons.AutoMirrored.Rounded.ViewQuilt,
                 selected = selectedSection == EditorSection.LAYOUTS,
                 onClick = { selectedSection = EditorSection.LAYOUTS },
             )
-            EditorSidebarTile(
+            GamepadCategoryTile(
                 title = "Canvas",
                 icon = Icons.Rounded.Preview,
                 selected = selectedSection == EditorSection.CANVAS,
                 onClick = { selectedSection = EditorSection.CANVAS },
             )
-            EditorSidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.macropad_editor_section_buttons),
                 icon = Icons.Rounded.SmartButton,
                 selected = selectedSection == EditorSection.BUTTONS,
                 onClick = { selectedSection = EditorSection.BUTTONS },
             )
-            EditorSidebarTile(
+            GamepadCategoryTile(
                 title = stringResource(R.string.macropad_editor_manage_macros),
                 icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
                 selected = selectedSection == EditorSection.MACROS,
