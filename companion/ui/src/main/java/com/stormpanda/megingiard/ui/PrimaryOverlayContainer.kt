@@ -33,8 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -77,6 +79,7 @@ private const val POC_SUBTITLE_DOT = "•"
  * dual-corner bezel brush border ([rememberBezelBrush]), structured header with category
  * title, gamepad B-button dismissal, and focus initialization.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun PrimaryOverlayContainer(
     title: String,
@@ -148,7 +151,11 @@ fun PrimaryOverlayContainer(
                             .fillMaxWidth()
                             .height(POC_HEADER_HEIGHT)
                             .background(colors.surfaceVariant.copy(alpha = POC_HEADER_BG_ALPHA))
-                            .padding(horizontal = POC_HEADER_PADDING_H),
+                            .padding(horizontal = POC_HEADER_PADDING_H)
+                            .focusProperties {
+                                canFocus = false
+                                enter = { FocusRequester.Cancel }
+                            },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (icon != null) {
@@ -191,6 +198,11 @@ fun PrimaryOverlayContainer(
                     // Custom Actions
                     if (actions != null) {
                         Row(
+                            modifier =
+                                Modifier.focusProperties {
+                                    canFocus = false
+                                    enter = { FocusRequester.Cancel }
+                                },
                             horizontalArrangement = Arrangement.spacedBy(POC_SPACER_SMALL),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

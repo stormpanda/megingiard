@@ -51,12 +51,24 @@ object PrimaryOverlayInputBridge {
     private val _bumperEvents = MutableSharedFlow<BumperDirection>(extraBufferCapacity = 16)
     val bumperEvents: SharedFlow<BumperDirection> = _bumperEvents.asSharedFlow()
 
+    private val _focusRecoveryEvents = MutableSharedFlow<Int>(extraBufferCapacity = 16)
+    val focusRecoveryEvents: SharedFlow<Int> = _focusRecoveryEvents.asSharedFlow()
+
     private var lastJoystickMotionMs = 0L
     private var lastJoystickKeyCode = 0
 
     fun sendBumper(direction: BumperDirection) {
         AppLog.d(TAG, "sendBumper: direction=$direction")
         _bumperEvents.tryEmit(direction)
+    }
+
+    /**
+     * Dispatches a focus recovery request when unhandled directional keys or action buttons occur
+     * (e.g. after touch/mouse pointer interaction cleared Compose focus).
+     */
+    fun sendFocusRecovery(keyCode: Int) {
+        AppLog.d(TAG, "sendFocusRecovery: keyCode=$keyCode")
+        _focusRecoveryEvents.tryEmit(keyCode)
     }
 
     /**

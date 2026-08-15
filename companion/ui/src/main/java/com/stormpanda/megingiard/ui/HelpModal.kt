@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -98,9 +99,15 @@ private val HM_INTRO_TOP_SPACER = 12.dp
  * Renders [Icons.AutoMirrored.Rounded.HelpOutline] with the standard [LocalAppColors] secondary tint.
  */
 @Composable
-internal fun HelpIconButton(onClick: () -> Unit) {
+internal fun HelpIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalAppColors.current
-    IconButton(onClick = onClick) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.focusProperties { canFocus = false },
+    ) {
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.HelpOutline,
             contentDescription = stringResource(R.string.help_open_cd),

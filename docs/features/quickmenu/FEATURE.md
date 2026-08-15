@@ -195,9 +195,13 @@ Dialogs and configuration overlays presented on the primary display (Display 0) 
   - `GamepadChoiceCard`: Option carousel with `◀ Choice ▶` cycling through enum / list options without requiring submenu navigation.
   - `GamepadActionCard`: Compact action trigger card with focus activation.
   - `GamepadColorPaletteGrid`: 2D focusable color palette grid for accent color selection.
-- **Two-Pane Console Sidebar Layout (`GlobalSettingsScreen`):**
-  - Left pane features a 210 dp category rail with category tiles (All, General, Input, Appearance, Data, Config, Updates, Diagnostics).
-  - Right pane presents the active category's settings deck using gamepad cards without space-consuming footer bars.
+- **Multi-Modal Input Synchronization & Focus Recovery:**
+  - **Pointer-to-Focus Sync:** Tapping with touchscreen or clicking with mouse on category tiles (`GamepadCategoryTile`) or content cards (`GamepadFocusCard`) automatically requests 2D focus for that element, synchronizing cursor state across input methods.
+  - **Focus Recovery Dispatcher:** If pointer interaction clears focus or switches Compose to `InputMode.Touch`, subsequent gamepad D-Pad, Analog Stick, or Button A inputs that are unhandled are captured by `PrimaryOverlayManager` / `PrimaryOverlayActivity` and forwarded to `PrimaryOverlayInputBridge.sendFocusRecovery()`.
+  - **Universal Fallback:** `GamepadTwoPaneScaffold` listens to focus recovery events and requests `InputMode.Keyboard`, instantly restoring focus to the active category or last-focused deck card without dropped inputs.
+- **Two-Pane Console Sidebar Layout (`GlobalSettingsScreen`, `MacroPadEditor`):**
+  - Left pane features a 210 dp category rail with category tiles (General, Input, Appearance, Data, Config, Updates, Diagnostics in Settings; Profiles, Layouts, Canvas, Buttons, Macros in MacroPad Editor).
+  - Right pane presents the active category's settings deck using gamepad cards with independent scroll and focus restoration.
 
 ### Source Files
 

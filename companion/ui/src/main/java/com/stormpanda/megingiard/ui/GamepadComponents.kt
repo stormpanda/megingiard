@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -60,9 +61,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -325,7 +328,14 @@ fun GamepadFocusCard(
                 enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onClick,
+                onClick = {
+                    try {
+                        cardFocusRequester.requestFocus()
+                    } catch (_: Exception) {
+                        // Focus sync fallback
+                    }
+                    onClick()
+                },
             )
         } else {
             Modifier.focusable(enabled = enabled, interactionSource = interactionSource)
@@ -1088,6 +1098,15 @@ fun GamepadCategoryTile(
             Modifier
         }
 
+    val wrappedOnClick: () -> Unit = {
+        try {
+            activeCategoryRequester?.requestFocus()
+        } catch (_: Exception) {
+            // Focus sync fallback
+        }
+        onClick()
+    }
+
     Surface(
         modifier =
             modifier
@@ -1104,7 +1123,7 @@ fun GamepadCategoryTile(
                     }
                 }.then(requesterModifier)
                 .primaryOverlayFocusable(
-                    onClick = onClick,
+                    onClick = wrappedOnClick,
                     shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
                     interactionSource = interactionSource,
                 ),
@@ -1140,6 +1159,7 @@ fun GamepadCategoryTile(
 /**
  * Standardized split-screen two-pane scaffold for primary screen settings and editors.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GamepadTwoPaneScaffold(
     sidebarContent: @Composable ColumnScope.() -> Unit,
@@ -1150,6 +1170,7 @@ fun GamepadTwoPaneScaffold(
     sidebarWidth: Dp = GC_SIDEBAR_WIDTH,
 ) {
     val colors = LocalAppColors.current
+    val inputModeManager = LocalInputModeManager.current
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
     var lastFocusedContentRequester by remember { mutableStateOf<FocusRequester?>(null) }
@@ -1163,9 +1184,45 @@ fun GamepadTwoPaneScaffold(
         LaunchedEffect(Unit) {
             delay(GC_INITIAL_FOCUS_DELAY_MS)
             try {
+                inputModeManager.requestInputMode(InputMode.Keyboard)
                 activeCategoryRequester.requestFocus()
             } catch (_: Exception) {
                 // Initial focus fallback
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
+                inputModeManager.requestInputMode(InputMode.Keyboard)
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        var handled = false
+                        val target = lastFocusedContentRequester
+                        if (target != null) {
+                            try {
+                                target.requestFocus()
+                                handled = true
+                            } catch (_: Exception) {
+                                lastFocusedContentRequester = null
+                            }
+                        }
+                        if (!handled) {
+                            try {
+                                firstContentRequester.requestFocus()
+                            } catch (_: Exception) {
+                                activeCategoryRequester.requestFocus()
+                            }
+                        }
+                    }
+
+                    else -> {
+                        try {
+                            activeCategoryRequester.requestFocus()
+                        } catch (_: Exception) {
+                            // Focus recovery fallback
+                        }
+                    }
+                }
             }
         }
 

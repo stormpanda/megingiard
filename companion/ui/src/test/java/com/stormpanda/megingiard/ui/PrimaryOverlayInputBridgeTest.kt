@@ -93,6 +93,19 @@ class PrimaryOverlayInputBridgeTest {
         }
 
     @Test
+    fun testFocusRecoveryEventEmission() =
+        runTest {
+            var receivedKey: Int? = null
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+                PrimaryOverlayInputBridge.focusRecoveryEvents.collect {
+                    receivedKey = it
+                }
+            }
+            PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_DPAD_DOWN)
+            assertEquals(KeyEvent.KEYCODE_DPAD_DOWN, receivedKey)
+        }
+
+    @Test
     fun testProcessGenericMotionEvent_nonJoystickSource_returnsFalse() {
         val motionEvent = createJoystickMotionEvent(axisX = 0.8f, source = InputDevice.SOURCE_TOUCHSCREEN)
 
