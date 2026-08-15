@@ -193,7 +193,7 @@
     <string name="macropad_icon_picker_title">選擇圖示</string>
     <string name="macropad_icon_picker_search">搜尋圖示…</string>
     <string name="macropad_icon_picker_no_results">找不到圖示</string>
-    <string name="macropad_icon_picker_filled">填滿</string>
+    <string name="macropad_icon_picker_filled">實心</string>
     <string name="macropad_icon_picker_currently_selected">當前選擇</string>
     <string name="settings_section_config">備份與設定檔</string>
     <string name="settings_section_updates">應用程式更新</string>
