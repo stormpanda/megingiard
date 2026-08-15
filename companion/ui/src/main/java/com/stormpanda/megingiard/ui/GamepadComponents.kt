@@ -9,59 +9,42 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -70,24 +53,19 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import kotlinx.coroutines.delay
 import java.util.Locale
 
 private const val TAG = "GamepadComponents"
@@ -105,160 +83,22 @@ private val GC_ICON_SIZE = 22.dp
 private val GC_STATUS_PILL_CORNER = 16.dp
 private val GC_STATUS_PILL_H_PADDING = 10.dp
 private val GC_STATUS_PILL_V_PADDING = 4.dp
-private val GC_FOOTER_HEIGHT = 44.dp
-private val GC_FOOTER_H_PADDING = 16.dp
-private val GC_GLYPH_SIZE = 20.dp
 private val GC_STEPPER_BTN_SIZE = 32.dp
 private val GC_SWATCH_SIZE = 36.dp
-private val GC_SIDEBAR_WIDTH = 210.dp
-private val GC_SIDEBAR_ITEM_HEIGHT = 40.dp
-private val GC_SIDEBAR_CORNER = 10.dp
-private val GC_SIDEBAR_ICON_SIZE = 20.dp
-private val GC_EMPTY_STATE_ICON_BOX_SIZE = 56.dp
-private val GC_EMPTY_STATE_ICON_SIZE = 28.dp
-private val GC_EMPTY_STATE_PADDING = 24.dp
 private val GC_SLIDER_HEIGHT = 24.dp
 private val GC_ROW_CONTENT_SPACING = 12.dp
-private val GC_SEARCH_ICON_SIZE = 20.dp
-private val GC_SEARCH_CLEAR_SIZE = 18.dp
-private val GC_TEXT_SIZE_GLYPH = 11.sp
 private val GC_TEXT_SIZE_PILL = 12.sp
 private val GC_TEXT_SIZE_CAPSULE = 13.sp
 
 private const val GC_CARD_FOCUSED_BG_ALPHA = 0.95f
 private const val GC_CARD_UNFOCUSED_BG_ALPHA = 0.55f
-private const val GC_FOOTER_BG_ALPHA = 0.85f
-private const val GC_SIDEBAR_BG_ALPHA = 0.5f
-private const val GC_SIDEBAR_SELECTED_FOCUSED_ALPHA = 0.35f
-private const val GC_SIDEBAR_SELECTED_ALPHA = 0.2f
 private const val GC_ACCENT_TINT_ALPHA = 0.2f
 private const val GC_DESTRUCTIVE_BG_ALPHA = 0.15f
 private const val GC_DESTRUCTIVE_BORDER_ALPHA = 0.6f
 private const val GC_SWATCH_BORDER_ALPHA = 0.3f
 private const val GC_ANIM_DURATION_MS = 150
-private const val GC_INITIAL_FOCUS_DELAY_MS = 50L
 private const val GC_UNFOCUSED_MAX_LINES = 2
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
-
-/**
- * Standard gamepad button glyph descriptors.
- */
-enum class GamePadGlyph(
-    val label: String,
-    val isPill: Boolean = false,
-) {
-    BTN_A("A"),
-    BTN_B("B"),
-    BTN_X("X"),
-    BTN_Y("Y"),
-    BTN_L1("L1", isPill = true),
-    BTN_R1("R1", isPill = true),
-    BTN_L2("L2", isPill = true),
-    BTN_R2("R2", isPill = true),
-    DPAD("D-Pad", isPill = true),
-    STICK("Stick", isPill = true),
-    NAV("Stick / D-Pad", isPill = true),
-    BUMPERS("L1 / R1", isPill = true),
-}
-
-/**
- * Renders a circular or pill console controller glyph badge.
- */
-@Composable
-fun GamePadGlyphBadge(
-    glyph: GamePadGlyph,
-    modifier: Modifier = Modifier,
-    size: Dp = GC_GLYPH_SIZE,
-    tint: Color = LocalAppColors.current.onSurfaceSecondary,
-    backgroundColor: Color = LocalAppColors.current.surfaceVariant,
-) {
-    val colors = LocalAppColors.current
-    val shape: Shape = if (glyph.isPill) RoundedCornerShape(4.dp) else CircleShape
-    val horizontalPadding = if (glyph.isPill) 6.dp else 0.dp
-
-    Box(
-        modifier =
-            modifier
-                .height(size)
-                .defaultMinSize(minWidth = size)
-                .background(backgroundColor, shape)
-                .border(1.dp, colors.subduedBorder, shape)
-                .padding(horizontal = horizontalPadding),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = glyph.label,
-            color = tint,
-            fontSize = GC_TEXT_SIZE_GLYPH,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-        )
-    }
-}
-
-/**
- * Controller action prompt item displaying `[Glyph] Action Label`.
- */
-@Composable
-fun GamePadActionPrompt(
-    glyph: GamePadGlyph,
-    text: String,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-) {
-    val colors = LocalAppColors.current
-    val clickModifier =
-        if (onClick != null) {
-            Modifier.clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            )
-        } else {
-            Modifier
-        }
-
-    Row(
-        modifier = modifier.then(clickModifier),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        GamePadGlyphBadge(glyph = glyph)
-        Text(
-            text = text,
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-/**
- * Unified bottom footer bar displaying contextual gamepad button action prompts.
- */
-@Composable
-fun PrimaryOverlayFooter(
-    actions: List<Pair<GamePadGlyph, String>>,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(GC_FOOTER_HEIGHT)
-                .background(colors.surfaceVariant.copy(alpha = GC_FOOTER_BG_ALPHA))
-                .border(GC_DEFAULT_BORDER_WIDTH, colors.subduedBorder)
-                .padding(horizontal = GC_FOOTER_H_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        actions.forEach { (glyph, label) ->
-            GamePadActionPrompt(glyph = glyph, text = label)
-        }
-    }
-}
 
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.
@@ -1034,290 +874,6 @@ fun GamepadColorPaletteGrid(
     }
 }
 
-val LocalActiveCategoryRequester = compositionLocalOf<FocusRequester?> { null }
-val LocalFirstContentRequester = compositionLocalOf<FocusRequester?> { null }
-val LocalLastFocusedDeckTracker = compositionLocalOf<((FocusRequester) -> Unit)?> { null }
-val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
-
-/**
- * Modifier extension to mark a composable card as the primary focus target when entering the right deck from the sidebar.
- */
-@Composable
-fun Modifier.firstDeckItem(isFirst: Boolean = true): Modifier {
-    val requester = LocalFirstContentRequester.current
-    return if (requester != null && isFirst) this.focusRequester(requester) else this
-}
-
-/**
- * Unified gamepad-first category sidebar item tile used across split-screen dialogs and editors.
- */
-@Composable
-fun GamepadCategoryTile(
-    title: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    onSelect: (() -> Unit)? = null,
-) {
-    val colors = LocalAppColors.current
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
-    val activeCategoryRequester = LocalActiveCategoryRequester.current
-    val resetLastFocused = LocalResetLastFocusedTracker.current
-
-    val animatedBg by animateColorAsState(
-        targetValue =
-            when {
-                selected && isFocused -> colors.accent.copy(alpha = GC_SIDEBAR_SELECTED_FOCUSED_ALPHA)
-                selected -> colors.accent.copy(alpha = GC_SIDEBAR_SELECTED_ALPHA)
-                isFocused -> colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
-                else -> Color.Transparent
-            },
-        label = "catBg",
-    )
-    val animatedBorderColor by animateColorAsState(
-        targetValue = if (isFocused) colors.accent else Color.Transparent,
-        label = "catBorder",
-    )
-
-    val requesterModifier =
-        if (activeCategoryRequester != null && selected) {
-            Modifier.focusRequester(activeCategoryRequester)
-        } else {
-            Modifier
-        }
-
-    val wrappedOnClick: () -> Unit = {
-        try {
-            activeCategoryRequester?.requestFocus()
-        } catch (_: IllegalStateException) {
-            AppLog.d(TAG, "GamepadCategoryTile: activeCategoryRequester unattached on click")
-        }
-        onClick()
-    }
-
-    val shape = RoundedCornerShape(GC_SIDEBAR_CORNER)
-
-    Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(GC_SIDEBAR_ITEM_HEIGHT)
-                .drawBehind {
-                    val cornerRadius = CornerRadius(GC_SIDEBAR_CORNER.toPx())
-                    drawRoundRect(
-                        color = animatedBg,
-                        cornerRadius = cornerRadius,
-                    )
-                    if (isFocused) {
-                        val stroke = 1.5.dp.toPx()
-                        val half = stroke / 2f
-                        drawRoundRect(
-                            color = animatedBorderColor,
-                            topLeft = Offset(half, half),
-                            size = Size(size.width - stroke, size.height - stroke),
-                            cornerRadius = cornerRadius,
-                            style = Stroke(width = stroke),
-                        )
-                    }
-                }.onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        if (!selected) {
-                            resetLastFocused?.invoke()
-                        }
-                        onSelect?.invoke() ?: onClick()
-                    }
-                }.then(requesterModifier)
-                .primaryOverlayFocusable(
-                    onClick = wrappedOnClick,
-                    shape = shape,
-                    borderWidth = 0.dp,
-                    interactionSource = interactionSource,
-                ),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected || isFocused) colors.accent else colors.onSurfaceSecondary,
-                modifier = Modifier.size(GC_SIDEBAR_ICON_SIZE),
-            )
-            Text(
-                text = title,
-                color = if (selected || isFocused) colors.onSurface else colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected || isFocused) FontWeight.Bold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-/**
- * Standardized split-screen two-pane scaffold for primary screen settings and editors.
- */
-@OptIn(ExperimentalComposeUiApi::class)
-@Composable
-fun GamepadTwoPaneScaffold(
-    sidebarContent: @Composable ColumnScope.() -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-    modifier: Modifier = Modifier,
-    footerContent: (@Composable () -> Unit)? = null,
-    sidebarFooter: (@Composable () -> Unit)? = null,
-    sidebarWidth: Dp = GC_SIDEBAR_WIDTH,
-) {
-    val colors = LocalAppColors.current
-    val inputModeManager = LocalInputModeManager.current
-    val activeCategoryRequester = remember { FocusRequester() }
-    val firstContentRequester = remember { FocusRequester() }
-    var lastFocusedContentRequester by remember { mutableStateOf<FocusRequester?>(null) }
-
-    val transferFocusToDeck: () -> Unit = {
-        var handled = false
-        val target = lastFocusedContentRequester
-        if (target != null) {
-            try {
-                target.requestFocus()
-                AppLog.d(TAG, "transferFocusToDeck: restored focus to last focused content deck item")
-                handled = true
-            } catch (_: IllegalStateException) {
-                lastFocusedContentRequester = null
-            }
-        }
-        if (!handled) {
-            try {
-                firstContentRequester.requestFocus()
-                AppLog.d(TAG, "transferFocusToDeck: focused first content deck item")
-            } catch (_: IllegalStateException) {
-                try {
-                    activeCategoryRequester.requestFocus()
-                } catch (_: IllegalStateException) {
-                    // Focus fallback
-                }
-            }
-        }
-    }
-
-    CompositionLocalProvider(
-        LocalActiveCategoryRequester provides activeCategoryRequester,
-        LocalFirstContentRequester provides firstContentRequester,
-        LocalLastFocusedDeckTracker provides { req -> lastFocusedContentRequester = req },
-        LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
-    ) {
-        LaunchedEffect(Unit) {
-            delay(GC_INITIAL_FOCUS_DELAY_MS)
-            try {
-                inputModeManager.requestInputMode(InputMode.Keyboard)
-                activeCategoryRequester.requestFocus()
-                AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
-            } catch (_: IllegalStateException) {
-                AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on initial focus")
-            }
-        }
-
-        LaunchedEffect(Unit) {
-            PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
-                AppLog.d(TAG, "GamepadTwoPaneScaffold: focusRecoveryEvent keyCode=$keyCode")
-                inputModeManager.requestInputMode(InputMode.Keyboard)
-                when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        transferFocusToDeck()
-                    }
-
-                    else -> {
-                        try {
-                            activeCategoryRequester.requestFocus()
-                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
-                        } catch (_: IllegalStateException) {
-                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
-                        }
-                    }
-                }
-            }
-        }
-
-        Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
-            Row(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) {
-                // Left Category Sidebar Rail
-                Column(
-                    modifier =
-                        Modifier
-                            .width(sidebarWidth)
-                            .fillMaxHeight()
-                            .background(colors.surfaceVariant.copy(alpha = GC_SIDEBAR_BG_ALPHA))
-                            .padding(8.dp)
-                            .onKeyEvent { keyEvent ->
-                                if (keyEvent.type == KeyEventType.KeyDown &&
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                                ) {
-                                    transferFocusToDeck()
-                                    true
-                                } else {
-                                    false
-                                }
-                            },
-                ) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        sidebarContent()
-                    }
-                    if (sidebarFooter != null) {
-                        sidebarFooter()
-                    }
-                }
-
-                // Right Content Deck
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                            .onKeyEvent { keyEvent ->
-                                if (keyEvent.type == KeyEventType.KeyDown &&
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                                ) {
-                                    try {
-                                        activeCategoryRequester.requestFocus()
-                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: navigated back to sidebar category")
-                                    } catch (_: IllegalStateException) {
-                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on D-pad left")
-                                    }
-                                    true
-                                } else {
-                                    false
-                                }
-                            }.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    content()
-                }
-            }
-            if (footerContent != null) {
-                footerContent()
-            }
-        }
-    }
-}
-
 /**
  * Uppercase section header label with tracked letter spacing and design token colors.
  */
@@ -1432,209 +988,6 @@ fun GamepadSliderCard(
                     Modifier
                         .fillMaxWidth()
                         .height(GC_SLIDER_HEIGHT),
-            )
-        }
-    }
-}
-
-/**
- * Gamepad-first search bar with clear button and optional category filter chips.
- */
-@Composable
-fun GamepadSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = stringResource(R.string.gamepad_search_placeholder),
-) {
-    GamepadSearchBar<String>(
-        query = query,
-        onQueryChange = onQueryChange,
-        modifier = modifier,
-        placeholder = placeholder,
-        categories = emptyList(),
-        selectedCategory = null,
-        onCategorySelected = null,
-        categoryLabel = { it },
-    )
-}
-
-@Composable
-fun <T> GamepadSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = stringResource(R.string.gamepad_search_placeholder),
-    categories: List<T> = emptyList(),
-    selectedCategory: T? = null,
-    onCategorySelected: ((T?) -> Unit)? = null,
-    categoryLabel: (T) -> String = { it.toString() },
-) {
-    val colors = LocalAppColors.current
-
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        AppTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = {
-                Text(text = placeholder, color = colors.onSurfaceSecondary)
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary,
-                    modifier = Modifier.size(GC_SEARCH_ICON_SIZE),
-                )
-            },
-            trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.gamepad_search_clear),
-                            tint = colors.onSurfaceSecondary,
-                            modifier = Modifier.size(GC_SEARCH_CLEAR_SIZE),
-                        )
-                    }
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        if (categories.isNotEmpty() && onCategorySelected != null) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AppSelectableChip(
-                    text = stringResource(R.string.gamepad_category_all),
-                    selected = selectedCategory == null,
-                    onClick = { onCategorySelected(null) },
-                )
-                categories.forEach { category ->
-                    AppSelectableChip(
-                        text = categoryLabel(category),
-                        selected = selectedCategory == category,
-                        onClick = { onCategorySelected(category) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Standard gamepad-focused confirmation dialog with destructive styling support.
- */
-@Composable
-fun GamepadConfirmDialog(
-    title: String,
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-    confirmText: String = stringResource(R.string.gamepad_confirm_dialog_confirm),
-    cancelText: String = stringResource(R.string.gamepad_confirm_dialog_cancel),
-    isDestructive: Boolean = false,
-) {
-    val colors = LocalAppColors.current
-    AppAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = title,
-                color = if (isDestructive) colors.error else colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            GamepadActionCard(
-                title = confirmText,
-                onClick = onConfirm,
-                actionGlyph = GamePadGlyph.BTN_A,
-                isDestructive = isDestructive,
-            )
-        },
-        dismissButton = {
-            GamepadActionCard(
-                title = cancelText,
-                onClick = onDismiss,
-                actionGlyph = GamePadGlyph.BTN_B,
-            )
-        },
-    )
-}
-
-/**
- * Standard empty state display for lists and grids.
- */
-@Composable
-fun GamepadEmptyState(
-    icon: ImageVector,
-    title: String,
-    modifier: Modifier = Modifier,
-    description: String? = null,
-    actionText: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
-    val colors = LocalAppColors.current
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(GC_EMPTY_STATE_PADDING),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(GC_EMPTY_STATE_ICON_BOX_SIZE)
-                    .background(colors.surfaceVariant, CircleShape)
-                    .border(1.dp, colors.subduedBorder, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(GC_EMPTY_STATE_ICON_SIZE),
-            )
-        }
-        Text(
-            text = title,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (description != null) {
-            Text(
-                text = description,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
-        }
-        if (actionText != null && onAction != null) {
-            Spacer(modifier = Modifier.height(4.dp))
-            GamepadActionCard(
-                title = actionText,
-                onClick = onAction,
-                actionGlyph = GamePadGlyph.BTN_A,
             )
         }
     }
