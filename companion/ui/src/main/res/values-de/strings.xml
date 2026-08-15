@@ -1312,5 +1312,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_category_all">Alle</string>
     <string name="gamepad_confirm_dialog_confirm">Bestätigen</string>
     <string name="gamepad_confirm_dialog_cancel">Abbrechen</string>
+    <string name="gamepad_previous">Zurück</string>
+    <string name="gamepad_next">Weiter</string>
+    <string name="gamepad_toggle_on">EIN ●</string>
+    <string name="gamepad_toggle_off">AUS ○</string>
+    <string name="gamepad_color_option">Farboption %1$d</string>
+    <string name="gamepad_color_selected">Ausgewählt</string>
 </resources>
 

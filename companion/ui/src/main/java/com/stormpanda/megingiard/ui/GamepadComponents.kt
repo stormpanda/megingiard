@@ -55,12 +55,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
@@ -68,6 +76,9 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -356,8 +367,8 @@ fun GamepadFocusCard(
                 onClick = {
                     try {
                         cardFocusRequester.requestFocus()
-                    } catch (_: Exception) {
-                        // Focus sync fallback
+                    } catch (_: IllegalStateException) {
+                        AppLog.d(TAG, "GamepadFocusCard: cardFocusRequester unattached on click")
                     }
                     onClick()
                 },
@@ -366,19 +377,31 @@ fun GamepadFocusCard(
             Modifier.focusable(enabled = enabled, interactionSource = interactionSource)
         }
 
-    Surface(
+    Box(
         modifier =
             modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = GC_CARD_MIN_HEIGHT)
-                .shadow(animatedElevation, shape)
-                .background(animatedBgColor, shape)
-                .border(animatedBorderWidth, animatedBorderColor, shape)
-                .focusRequester(cardFocusRequester)
+                .graphicsLayer {
+                    this.shadowElevation = animatedElevation.toPx()
+                    this.shape = shape
+                    this.clip = false
+                }.drawBehind {
+                    val outline = shape.createOutline(size, layoutDirection, this)
+                    drawOutline(
+                        outline = outline,
+                        brush = SolidColor(animatedBgColor),
+                        style = Fill,
+                    )
+                    drawOutline(
+                        outline = outline,
+                        brush = SolidColor(animatedBorderColor),
+                        style = Stroke(width = animatedBorderWidth.toPx()),
+                    )
+                }.focusRequester(cardFocusRequester)
                 .then(keyModifier)
                 .then(focusableOrClickModifier),
-        shape = shape,
-        color = Color.Transparent,
+        contentAlignment = Alignment.CenterStart,
     ) {
         Box(
             modifier =
@@ -588,6 +611,7 @@ private fun CapsuleArrowButton(
     tint: Color,
     onClick: () -> Unit,
     enabled: Boolean = true,
+    contentDescription: String? = null,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -600,7 +624,7 @@ private fun CapsuleArrowButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = contentDescription,
             tint = tint,
         )
     }
@@ -638,6 +662,7 @@ fun GamepadAdjustableCapsule(
     ) {
         CapsuleArrowButton(
             icon = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
+            contentDescription = stringResource(R.string.gamepad_previous),
             tint = arrowTint,
             onClick = onPrevious,
             enabled = enabled,
@@ -653,6 +678,7 @@ fun GamepadAdjustableCapsule(
 
         CapsuleArrowButton(
             icon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = stringResource(R.string.gamepad_next),
             tint = arrowTint,
             onClick = onNext,
             enabled = enabled,
@@ -731,7 +757,7 @@ fun GamepadToggleCard(
             isFocused = isFocused,
             trailingContent = {
                 GamepadPill(
-                    text = if (checked) "ON ●" else "OFF ○",
+                    text = if (checked) stringResource(R.string.gamepad_toggle_on) else stringResource(R.string.gamepad_toggle_off),
                     isAccent = checked,
                 )
             },
@@ -973,8 +999,9 @@ fun GamepadColorPaletteGrid(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        paletteColors.forEach { color ->
+        paletteColors.forEachIndexed { index, color ->
             val isSelected = color == selectedColor
+            val colorDesc = stringResource(R.string.gamepad_color_option, index + 1)
             Box(
                 modifier =
                     Modifier
@@ -985,7 +1012,10 @@ fun GamepadColorPaletteGrid(
                             if (isSelected) 3.dp else 1.5.dp,
                             if (isSelected) colors.onSurface else Color.White.copy(alpha = GC_SWATCH_BORDER_ALPHA),
                             CircleShape,
-                        ).primaryOverlayFocusable(
+                        ).semantics {
+                            contentDescription = colorDesc
+                            selected = isSelected
+                        }.primaryOverlayFocusable(
                             onClick = { onColorSelected(color) },
                             shape = CircleShape,
                         ),
@@ -994,7 +1024,7 @@ fun GamepadColorPaletteGrid(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Rounded.Check,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.gamepad_color_selected),
                         tint = Color.White,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1061,20 +1091,37 @@ fun GamepadCategoryTile(
     val wrappedOnClick: () -> Unit = {
         try {
             activeCategoryRequester?.requestFocus()
-        } catch (_: Exception) {
-            // Focus sync fallback
+        } catch (_: IllegalStateException) {
+            AppLog.d(TAG, "GamepadCategoryTile: activeCategoryRequester unattached on click")
         }
         onClick()
     }
 
-    Surface(
+    val shape = RoundedCornerShape(GC_SIDEBAR_CORNER)
+
+    Box(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(GC_SIDEBAR_ITEM_HEIGHT)
-                .background(animatedBg, RoundedCornerShape(GC_SIDEBAR_CORNER))
-                .border(if (isFocused) 1.5.dp else 0.dp, animatedBorderColor, RoundedCornerShape(GC_SIDEBAR_CORNER))
-                .onFocusChanged { focusState ->
+                .drawBehind {
+                    val cornerRadius = CornerRadius(GC_SIDEBAR_CORNER.toPx())
+                    drawRoundRect(
+                        color = animatedBg,
+                        cornerRadius = cornerRadius,
+                    )
+                    if (isFocused) {
+                        val stroke = 1.5.dp.toPx()
+                        val half = stroke / 2f
+                        drawRoundRect(
+                            color = animatedBorderColor,
+                            topLeft = Offset(half, half),
+                            size = Size(size.width - stroke, size.height - stroke),
+                            cornerRadius = cornerRadius,
+                            style = Stroke(width = stroke),
+                        )
+                    }
+                }.onFocusChanged { focusState ->
                     if (focusState.isFocused) {
                         if (!selected) {
                             resetLastFocused?.invoke()
@@ -1084,12 +1131,11 @@ fun GamepadCategoryTile(
                 }.then(requesterModifier)
                 .primaryOverlayFocusable(
                     onClick = wrappedOnClick,
-                    shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
+                    shape = shape,
                     borderWidth = 0.dp,
                     interactionSource = interactionSource,
                 ),
-        shape = RoundedCornerShape(GC_SIDEBAR_CORNER),
-        color = Color.Transparent,
+        contentAlignment = Alignment.CenterStart,
     ) {
         Row(
             modifier =
@@ -1174,8 +1220,8 @@ fun GamepadTwoPaneScaffold(
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 activeCategoryRequester.requestFocus()
                 AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
-            } catch (_: Exception) {
-                // Initial focus fallback
+            } catch (_: IllegalStateException) {
+                AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on initial focus")
             }
         }
 
@@ -1191,8 +1237,9 @@ fun GamepadTwoPaneScaffold(
                     else -> {
                         try {
                             activeCategoryRequester.requestFocus()
-                        } catch (_: Exception) {
-                            // Focus recovery fallback
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
+                        } catch (_: IllegalStateException) {
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
                         }
                     }
                 }
@@ -1250,8 +1297,9 @@ fun GamepadTwoPaneScaffold(
                                 ) {
                                     try {
                                         activeCategoryRequester.requestFocus()
-                                    } catch (_: Exception) {
-                                        // Focus fallback
+                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: navigated back to sidebar category")
+                                    } catch (_: IllegalStateException) {
+                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on D-pad left")
                                     }
                                     true
                                 } else {
