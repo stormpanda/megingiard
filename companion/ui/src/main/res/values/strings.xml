@@ -549,6 +549,7 @@ Open Settings to create a layout.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_canvas">Canvas</string>
     <string name="macropad_editor_section_buttons">Buttons</string>
     <string name="macropad_editor_section_button_settings">Button Settings</string>
     <string name="macropad_editor_section_layout_settings">Layout Settings</string>

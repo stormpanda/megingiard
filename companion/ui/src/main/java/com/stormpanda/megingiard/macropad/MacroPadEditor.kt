@@ -120,7 +120,6 @@ internal val MPE_GRID_TOGGLE_SIZE = 36.dp
 internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 
 internal enum class EditorSection {
-    OVERVIEW,
     PROFILES,
     LAYOUTS,
     CANVAS,
@@ -812,7 +811,7 @@ private fun EditorTwoPaneBody(
     val colors = LocalAppColors.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var selectedSection by remember { mutableStateOf(EditorSection.OVERVIEW) }
+    var selectedSection by remember { mutableStateOf(EditorSection.PROFILES) }
     var gridMode by remember { mutableStateOf(GridMode.OFF) }
 
     val lazyListState = rememberLazyListState()
@@ -843,12 +842,6 @@ private fun EditorTwoPaneBody(
     GamepadTwoPaneScaffold(
         sidebarContent = {
             GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_all),
-                icon = Icons.Rounded.Dashboard,
-                selected = selectedSection == EditorSection.OVERVIEW,
-                onClick = { selectedSection = EditorSection.OVERVIEW },
-            )
-            GamepadCategoryTile(
                 title = stringResource(R.string.quick_menu_profile_label),
                 icon = Icons.Rounded.Folder,
                 selected = selectedSection == EditorSection.PROFILES,
@@ -859,6 +852,12 @@ private fun EditorTwoPaneBody(
                 icon = Icons.AutoMirrored.Rounded.ViewQuilt,
                 selected = selectedSection == EditorSection.LAYOUTS,
                 onClick = { selectedSection = EditorSection.LAYOUTS },
+            )
+            GamepadCategoryTile(
+                title = stringResource(R.string.macropad_editor_section_canvas),
+                icon = Icons.Rounded.Preview,
+                selected = selectedSection == EditorSection.CANVAS,
+                onClick = { selectedSection = EditorSection.CANVAS },
             )
             GamepadCategoryTile(
                 title = stringResource(R.string.macropad_editor_section_buttons),
@@ -874,111 +873,6 @@ private fun EditorTwoPaneBody(
             )
         },
         content = {
-            // PROFILES & LAYOUTS CHOOSER (Available in OVERVIEW)
-            if (selectedSection == EditorSection.OVERVIEW) {
-                GamepadSectionHeader(
-                    text = "ACTIVE CONFIGURATION",
-                    color = accentColor,
-                )
-
-                val profileIdx = profiles.indexOf(profile).coerceAtLeast(0)
-                GamepadChoiceCard(
-                    title = stringResource(R.string.quick_menu_profile_label),
-                    description = "Active MacroPad profile",
-                    selectedText = profile.name,
-                    icon = Icons.Rounded.Folder,
-                    onPrevious = {
-                        val next = profiles[(profileIdx - 1 + profiles.size) % profiles.size]
-                        onSelectProfile(next.id)
-                    },
-                    onNext = {
-                        val next = profiles[(profileIdx + 1) % profiles.size]
-                        onSelectProfile(next.id)
-                    },
-                    modifier = Modifier.firstDeckItem(isFirst = selectedSection == EditorSection.OVERVIEW),
-                )
-
-                val layouts = profile.layouts
-                val layoutIdx = layouts.indexOf(layout).coerceAtLeast(0)
-                GamepadChoiceCard(
-                    title = stringResource(R.string.macropad_editor_section_layout),
-                    description = "Active button layout",
-                    selectedText = layout?.name ?: "None",
-                    icon = Icons.AutoMirrored.Rounded.ViewQuilt,
-                    enabled = layouts.isNotEmpty(),
-                    onPrevious = {
-                        if (layouts.isNotEmpty()) {
-                            val next = layouts[(layoutIdx - 1 + layouts.size) % layouts.size]
-                            onSelectLayout(next.id)
-                        }
-                    },
-                    onNext = {
-                        if (layouts.isNotEmpty()) {
-                            val next = layouts[(layoutIdx + 1) % layouts.size]
-                            onSelectLayout(next.id)
-                        }
-                    },
-                )
-
-                GamepadSectionHeader(
-                    text = "CANVAS PREVIEW",
-                    color = accentColor,
-                )
-
-                GamepadToggleCard(
-                    title = "Lock Canvas Drag",
-                    description = if (isCanvasLocked) "Canvas is locked (buttons cannot be moved)" else "Drag buttons freely on the canvas below",
-                    checked = isCanvasLocked,
-                    icon = if (isCanvasLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-                    onCheckedChange = { onToggleCanvasLock() },
-                )
-
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    PadCanvas(
-                        profile = profile,
-                        layout = layout,
-                        accentColor = accentColor,
-                        gridMode = gridMode,
-                        isLocked = isCanvasLocked,
-                    )
-                }
-
-                Text(
-                    text = "QUICK ACTIONS",
-                    color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.macropad_editor_add_button),
-                    description = "Create and position a new interactive button",
-                    actionText = "Add",
-                    icon = Icons.Rounded.Add,
-                    onClick = onAddButton,
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.layout_settings_bg_section_title),
-                    description = "Background image, transparency mask, scaling, and dimming",
-                    actionText = "Background",
-                    icon = Icons.Rounded.Wallpaper,
-                    onClick = onManageBackground,
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.settings_touchpad_title),
-                    description = "Background virtual touchpad & touch projection settings",
-                    actionText = "Touchpad",
-                    icon = Icons.Rounded.Mouse,
-                    onClick = onManageTouchpadSettings,
-                )
-            }
-
             // PROFILES DECK
             if (selectedSection == EditorSection.PROFILES) {
                 Text(
@@ -1224,7 +1118,7 @@ private fun EditorTwoPaneBody(
             }
 
             // BUTTONS DECK
-            if (selectedSection == EditorSection.BUTTONS || selectedSection == EditorSection.OVERVIEW) {
+            if (selectedSection == EditorSection.BUTTONS) {
                 GamepadSectionHeader(
                     text = stringResource(R.string.macropad_editor_section_buttons),
                     color = accentColor,

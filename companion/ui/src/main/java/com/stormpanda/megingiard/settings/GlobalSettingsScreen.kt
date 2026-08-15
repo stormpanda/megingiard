@@ -208,21 +208,9 @@ fun GlobalSettingsScreen(
         }
     }
 
-    var selectedSectionFilter by remember { mutableStateOf<SettingsSectionFilter?>(null) }
+    var selectedSectionFilter by remember { mutableStateOf(SettingsSectionFilter.GENERAL) }
 
-    val filterList =
-        remember {
-            listOf(
-                null,
-                SettingsSectionFilter.GENERAL,
-                SettingsSectionFilter.INPUT,
-                SettingsSectionFilter.APPEARANCE,
-                SettingsSectionFilter.DATA,
-                SettingsSectionFilter.CONFIGURATION,
-                SettingsSectionFilter.UPDATES,
-                SettingsSectionFilter.DIAGNOSTICS,
-            )
-        }
+    val filterList = remember { SettingsSectionFilter.entries }
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
@@ -238,12 +226,6 @@ fun GlobalSettingsScreen(
 
     GamepadTwoPaneScaffold(
         sidebarContent = {
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_all),
-                icon = Icons.Rounded.Dashboard,
-                selected = selectedSectionFilter == null,
-                onClick = { selectedSectionFilter = null },
-            )
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_general),
                 icon = Icons.Rounded.Tune,
@@ -288,19 +270,19 @@ fun GlobalSettingsScreen(
             )
         },
         content = {
-            if (updateAvailable && latestReleaseInfo != null) {
-                GamepadActionCard(
-                    title = stringResource(R.string.settings_update_available_banner, latestReleaseInfo?.tagName ?: ""),
-                    description = stringResource(R.string.settings_update_available_banner_desc),
-                    actionText = stringResource(R.string.settings_update_now_btn),
-                    icon = Icons.Rounded.SystemUpdate,
-                    onClick = { showUpdatePromptDialog = true },
-                    modifier = Modifier.firstDeckItem(),
-                )
-            }
-
             // GENERAL
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.GENERAL) {
+            if (selectedSectionFilter == SettingsSectionFilter.GENERAL) {
+                if (updateAvailable && latestReleaseInfo != null) {
+                    GamepadActionCard(
+                        title = stringResource(R.string.settings_update_available_banner, latestReleaseInfo?.tagName ?: ""),
+                        description = stringResource(R.string.settings_update_available_banner_desc),
+                        actionText = stringResource(R.string.settings_update_now_btn),
+                        icon = Icons.Rounded.SystemUpdate,
+                        onClick = { showUpdatePromptDialog = true },
+                        modifier = Modifier.firstDeckItem(),
+                    )
+                }
+
                 Text(
                     text = stringResource(R.string.settings_section_general).uppercase(),
                     color = effectiveAccent,
@@ -371,13 +353,12 @@ fun GlobalSettingsScreen(
             }
 
             // INPUT
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.INPUT) {
+            if (selectedSectionFilter == SettingsSectionFilter.INPUT) {
                 Text(
                     text = stringResource(R.string.settings_section_input).uppercase(),
                     color = effectiveAccent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSectionFilter == null) 8.dp else 0.dp),
                 )
 
                 GamepadToggleCard(
@@ -399,13 +380,12 @@ fun GlobalSettingsScreen(
             }
 
             // APPEARANCE
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
+            if (selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
                 Text(
                     text = stringResource(R.string.settings_section_appearance).uppercase(),
                     color = effectiveAccent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSectionFilter == null) 8.dp else 0.dp),
                 )
 
                 val allThemes = remember { ThemeMode.entries }
@@ -472,13 +452,12 @@ fun GlobalSettingsScreen(
             }
 
             // DATA
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DATA) {
+            if (selectedSectionFilter == SettingsSectionFilter.DATA) {
                 Text(
                     text = stringResource(R.string.settings_section_data).uppercase(),
                     color = effectiveAccent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSectionFilter == null) 8.dp else 0.dp),
                 )
 
                 GamepadActionCard(
@@ -509,13 +488,12 @@ fun GlobalSettingsScreen(
             }
 
             // CONFIGURATION
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
+            if (selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
                 Text(
                     text = stringResource(R.string.settings_section_config).uppercase(),
                     color = effectiveAccent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSectionFilter == null) 8.dp else 0.dp),
                 )
 
                 GamepadActionCard(
@@ -578,13 +556,12 @@ fun GlobalSettingsScreen(
             }
 
             // UPDATES
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.UPDATES) {
+            if (selectedSectionFilter == SettingsSectionFilter.UPDATES) {
                 Text(
                     text = stringResource(R.string.settings_section_updates).uppercase(),
                     color = effectiveAccent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSectionFilter == null) 8.dp else 0.dp),
                 )
 
                 GamepadToggleCard(
@@ -611,13 +588,12 @@ fun GlobalSettingsScreen(
             }
 
             // DIAGNOSTICS
-            if (selectedSectionFilter == null || selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
+            if (selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
                 Text(
                     text = stringResource(R.string.settings_section_diagnostics).uppercase(),
                     color = effectiveAccent,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = if (selectedSectionFilter == null) 8.dp else 0.dp),
                 )
 
                 val allLogLevels = remember { AppLog.Level.entries }

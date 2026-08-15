@@ -466,6 +466,7 @@
     <string name="macropad_editor_lock">鎖定按鈕</string>
     <string name="macropad_editor_change_background">更改背景</string>
     <string name="macropad_editor_section_layout">配置</string>
+    <string name="macropad_editor_section_canvas">畫布</string>
     <string name="macropad_editor_section_buttons">按鈕</string>
     <string name="macropad_editor_section_button_settings">按鈕設定</string>
     <string name="macropad_editor_section_layout_settings">配置設定</string>

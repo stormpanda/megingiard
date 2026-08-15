@@ -460,6 +460,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- MacroPad editor section headers -->
     <string name="macropad_editor_section_layout">Layout</string>
+    <string name="macropad_editor_section_canvas">Arbeitsfläche</string>
     <string name="macropad_editor_section_buttons">Tasten</string>
     <string name="macropad_editor_section_button_settings">Tasteneinstellungen</string>
     <string name="macropad_editor_section_layout_settings">Layout-Einstellungen</string>
