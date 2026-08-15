@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.delay
 import java.util.Locale
 
 private const val TAG = "GamepadComponents"
@@ -97,7 +98,8 @@ private val GC_SIDEBAR_WIDTH = 210.dp
 private val GC_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GC_SIDEBAR_CORNER = 10.dp
 private val GC_SIDEBAR_ICON_SIZE = 20.dp
-private val GC_ANIM_DURATION_MS = 150
+private const val GC_ANIM_DURATION_MS = 150
+private const val GC_INITIAL_FOCUS_DELAY_MS = 50L
 
 /**
  * Standard gamepad button glyph descriptors.
@@ -317,18 +319,16 @@ fun GamepadFocusCard(
             }
         }
 
-    val clickModifier =
+    val focusableOrClickModifier =
         if (onClick != null) {
-            Modifier
-                .focusable(enabled = enabled, interactionSource = interactionSource)
-                .clickable(
-                    enabled = enabled,
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                )
+            Modifier.clickable(
+                enabled = enabled,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
         } else {
-            Modifier.primaryOverlayFocusable(interactionSource = interactionSource, shape = shape, enabled = enabled)
+            Modifier.focusable(enabled = enabled, interactionSource = interactionSource)
         }
 
     Surface(
@@ -341,7 +341,7 @@ fun GamepadFocusCard(
                 .border(animatedBorderWidth, animatedBorderColor, shape)
                 .focusRequester(cardFocusRequester)
                 .then(keyModifier)
-                .then(clickModifier),
+                .then(focusableOrClickModifier),
         shape = shape,
         color = Color.Transparent,
     ) {
@@ -1160,6 +1160,15 @@ fun GamepadTwoPaneScaffold(
         LocalLastFocusedDeckTracker provides { req -> lastFocusedContentRequester = req },
         LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
     ) {
+        LaunchedEffect(Unit) {
+            delay(GC_INITIAL_FOCUS_DELAY_MS)
+            try {
+                activeCategoryRequester.requestFocus()
+            } catch (_: Exception) {
+                // Initial focus fallback
+            }
+        }
+
         Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
             Row(
                 modifier = Modifier.weight(1f).fillMaxWidth(),

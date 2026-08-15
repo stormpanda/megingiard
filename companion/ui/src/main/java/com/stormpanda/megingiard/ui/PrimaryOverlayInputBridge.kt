@@ -166,7 +166,7 @@ fun Modifier.primaryOverlayFocusable(
                 Modifier
             }
 
-        val clickModifier =
+        val focusableOrClickModifier =
             if (onClick != null) {
                 Modifier.clickable(
                     enabled = enabled,
@@ -175,18 +175,14 @@ fun Modifier.primaryOverlayFocusable(
                     onClick = onClick,
                 )
             } else {
-                Modifier
+                Modifier.focusable(
+                    enabled = enabled,
+                    interactionSource = effectiveInteractionSource,
+                )
             }
 
-        val focusableModifier =
-            Modifier.focusable(
-                enabled = enabled,
-                interactionSource = effectiveInteractionSource,
-            )
-
         this
-            .then(focusableModifier)
-            .then(clickModifier)
+            .then(focusableOrClickModifier)
             .then(focusBorderModifier)
             .then(keyHandlerModifier)
     }

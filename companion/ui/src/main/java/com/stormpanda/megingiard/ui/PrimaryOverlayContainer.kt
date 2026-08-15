@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,13 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -89,7 +90,6 @@ fun PrimaryOverlayContainer(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val focusManager = LocalFocusManager.current
 
     if (onBumperPrev != null || onBumperNext != null) {
         LaunchedEffect(Unit) {
@@ -99,15 +99,6 @@ fun PrimaryOverlayContainer(
                     BumperDirection.NEXT -> onBumperNext?.invoke()
                 }
             }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        delay(100L)
-        try {
-            focusManager.moveFocus(FocusDirection.Next)
-        } catch (_: Exception) {
-            // Focus hierarchy initialized
         }
     }
 
@@ -143,11 +134,9 @@ fun PrimaryOverlayContainer(
                     .fillMaxHeight(POC_HEIGHT_FRACTION)
                     .shadow(POC_CARD_ELEVATION, RoundedCornerShape(POC_CARD_CORNER))
                     .border(POC_BORDER_WIDTH, brush = rememberBezelBrush(), shape = RoundedCornerShape(POC_CARD_CORNER))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}, // Prevent scrim dismissal when clicking inside the card
-                    ),
+                    .pointerInput(Unit) {
+                        detectTapGestures { } // Prevent scrim dismissal when clicking inside the card without stealing focus
+                    },
             shape = RoundedCornerShape(POC_CARD_CORNER),
             color = colors.surface.copy(alpha = POC_CARD_SURFACE_ALPHA),
         ) {
@@ -217,7 +206,8 @@ fun PrimaryOverlayContainer(
                             Modifier
                                 .size(POC_CLOSE_BTN_SIZE)
                                 .background(colors.surface, CircleShape)
-                                .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape),
+                                .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape)
+                                .focusProperties { canFocus = false },
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
