@@ -128,6 +128,14 @@ object MacroPadState {
                     ?: profile.layouts.firstOrNull()
             }.stateIn(scope, SharingStarted.Eagerly, null)
 
+    private val _selectedButtonId = MutableStateFlow<String?>(null)
+    val selectedButtonId: StateFlow<String?> = _selectedButtonId.asStateFlow()
+
+    fun setSelectedButtonId(id: String?) {
+        AppLog.d(TAG, "setSelectedButtonId($id)")
+        _selectedButtonId.value = id
+    }
+
     /**
      * Resolves the best matching profile for a given package name, optional ROM path, and system ID.
      * Prefers specific ROM-file profile matches over generic package profiles.
@@ -446,6 +454,12 @@ object MacroPadState {
                 layouts = profile.layouts.map { if (it.id == withConfigured.id) withConfigured else it },
             ),
         )
+    }
+
+    fun updateButton(button: PadButton) {
+        val layout = activeLayout.value ?: return
+        val updatedButtons = layout.buttons.map { if (it.id == button.id) button else it }
+        updateLayout(layout.copy(buttons = updatedButtons))
     }
 
     fun deleteLayout(layoutId: String) {

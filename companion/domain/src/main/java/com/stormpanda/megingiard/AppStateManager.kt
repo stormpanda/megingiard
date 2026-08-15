@@ -11,6 +11,8 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -458,6 +460,23 @@ object AppStateManager {
     private val _selectedCutoutId = MutableStateFlow<String?>(null)
     val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
 
+    private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
+    val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
+
+    fun openPrimaryModal(config: PrimaryModalConfig) {
+        AppLog.i(TAG, "openPrimaryModal: type=${config.type}")
+        _activePrimaryModal.value = config
+    }
+
+    fun openPrimaryModal(type: PrimaryModalType) {
+        openPrimaryModal(PrimaryModalConfig(type))
+    }
+
+    fun closePrimaryModal() {
+        AppLog.i(TAG, "closePrimaryModal")
+        _activePrimaryModal.value = null
+    }
+
     fun setActiveCropCutoutId(id: String?) {
         AppLog.d(TAG, "setActiveCropCutoutId($id)")
         _activeCropCutoutId.value = id
@@ -471,16 +490,31 @@ object AppStateManager {
     fun setGlobalSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setGlobalSettingsOpen($open)")
         _uiMode.value = if (open) UiMode.GLOBAL_SETTINGS else UiMode.MACROPAD_USE
+        if (open) {
+            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.GLOBAL_SETTINGS)
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.GLOBAL_SETTINGS) {
+            _activePrimaryModal.value = null
+        }
     }
 
     fun setKeyboardSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setKeyboardSettingsOpen($open)")
         _uiMode.value = if (open) UiMode.KEYBOARD_SETTINGS else UiMode.MACROPAD_USE
+        if (open) {
+            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.KEYBOARD_SETTINGS)
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.KEYBOARD_SETTINGS) {
+            _activePrimaryModal.value = null
+        }
     }
 
     fun setTouchpadSettingsOpen(open: Boolean) {
         AppLog.d(TAG, "setTouchpadSettingsOpen($open)")
         _uiMode.value = if (open) UiMode.TOUCHPAD_SETTINGS else UiMode.MACROPAD_USE
+        if (open) {
+            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.TOUCHPAD_SETTINGS)
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.TOUCHPAD_SETTINGS) {
+            _activePrimaryModal.value = null
+        }
     }
 
     private var wasViewportEditActiveBeforeSettings = false
@@ -499,8 +533,8 @@ object AppStateManager {
      * Used by [handleEdgeSwipe] to determine if an edge swipe should close the active modal.
      */
     val isAnyModalActive: StateFlow<Boolean> =
-        combine(uiMode, MacroPadState.isPeekActive) { mode, peek ->
-            peek || mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
+        combine(uiMode, MacroPadState.isPeekActive, activePrimaryModal) { mode, peek, primaryModal ->
+            peek || primaryModal != null || mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
                 mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
                 mode == UiMode.FULLSCREEN_KEYBOARD || mode == UiMode.FULLSCREEN_MOUSE ||
                 mode == UiMode.VIEWPORT_EDIT
@@ -511,12 +545,11 @@ object AppStateManager {
      * Used by swipe gesture processors to disable edge gesture handling when menus are open.
      */
     val isAnyMenuOpen: StateFlow<Boolean> =
-        uiMode
-            .map { mode ->
-                mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
-                    mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
-                    mode == UiMode.LAYOUT_EDITOR || mode == UiMode.QUICK_MENU
-            }.stateIn(scope, SharingStarted.Eagerly, false)
+        combine(uiMode, activePrimaryModal) { mode, primaryModal ->
+            primaryModal != null || mode == UiMode.GLOBAL_SETTINGS || mode == UiMode.KEYBOARD_SETTINGS ||
+                mode == UiMode.TOUCHPAD_SETTINGS || mode == UiMode.BACKGROUND_SETTINGS ||
+                mode == UiMode.LAYOUT_EDITOR || mode == UiMode.QUICK_MENU
+        }.stateIn(scope, SharingStarted.Eagerly, false)
 
     fun setFullscreenKeyboardActive(
         active: Boolean,
@@ -564,25 +597,35 @@ object AppStateManager {
             wasViewportEditActiveBeforeSettings = (_uiMode.value == UiMode.VIEWPORT_EDIT)
             setPrivdPromptDismissed(true)
             _uiMode.value = UiMode.BACKGROUND_SETTINGS
+            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.BACKGROUND_SETTINGS)
         } else {
             _uiMode.value = if (wasViewportEditActiveBeforeSettings) UiMode.VIEWPORT_EDIT else UiMode.MACROPAD_USE
+            if (_activePrimaryModal.value?.type == PrimaryModalType.BACKGROUND_SETTINGS) {
+                _activePrimaryModal.value = null
+            }
         }
     }
 
     fun setEditorActive(active: Boolean) {
         AppLog.i(TAG, "setEditorActive($active)")
         _uiMode.value = if (active) UiMode.LAYOUT_EDITOR else UiMode.MACROPAD_USE
+        if (active) {
+            _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.MACROPAD_INSPECTOR)
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.MACROPAD_INSPECTOR) {
+            _activePrimaryModal.value = null
+        }
     }
 
     /** Closes whichever fullscreen modal overlay is currently active. */
     fun closeActiveModal() {
         AppLog.i(
             TAG,
-            "closeActiveModal: mode=${_uiMode.value} peek=${MacroPadState.isPeekActive.value}",
+            "closeActiveModal: mode=${_uiMode.value} peek=${MacroPadState.isPeekActive.value} primaryModal=${_activePrimaryModal.value?.type}",
         )
         _uiMode.value = UiMode.MACROPAD_USE
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
+        _activePrimaryModal.value = null
         wasViewportEditActiveBeforeSettings = false
         MacroPadState.resetPeek()
     }

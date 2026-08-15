@@ -11,6 +11,7 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -715,5 +716,30 @@ class AppStateManagerTest {
 
             AppStateManager.setPromptInFlight(false)
             assertFalse(AppStateManager.promptInFlight.value)
+        }
+
+    @Test
+    fun `openPrimaryModal and closePrimaryModal update activePrimaryModal state flow`() =
+        runTest {
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+
+            AppStateManager.openPrimaryModal(PrimaryModalType.GLOBAL_SETTINGS)
+            assertEquals(PrimaryModalType.GLOBAL_SETTINGS, AppStateManager.activePrimaryModal.value?.type)
+            assertTrue(AppStateManager.isAnyModalActive.value)
+            assertTrue(AppStateManager.isAnyMenuOpen.value)
+
+            AppStateManager.closePrimaryModal()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+        }
+
+    @Test
+    fun `closeActiveModal resets activePrimaryModal and selectedButtonId`() =
+        runTest {
+            AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_INSPECTOR)
+            assertEquals(PrimaryModalType.MACROPAD_INSPECTOR, AppStateManager.activePrimaryModal.value?.type)
+
+            AppStateManager.closeActiveModal()
+            assertEquals(null, AppStateManager.activePrimaryModal.value)
+            assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
         }
 }

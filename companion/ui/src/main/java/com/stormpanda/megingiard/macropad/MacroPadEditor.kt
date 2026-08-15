@@ -60,6 +60,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
@@ -70,6 +71,8 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -267,13 +270,27 @@ fun MacroPadEditor(onDone: () -> Unit) {
                         AppStateManager.setCompanionViewMode(CompanionViewMode.MACROPAD)
                     },
                     onNewLayout = { showNewLayoutDialog = true },
-                    onEditLayout = { showEditLayoutDialog = true },
+                    onEditLayout = {
+                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                        if (isDual) {
+                            MacroPadState.setSelectedButtonId(null)
+                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.LAYOUT_SETTINGS))
+                        } else {
+                            showEditLayoutDialog = true
+                        }
+                    },
                     onDeleteLayoutRequested = { lay -> layoutPendingDelete = lay },
                     onManageMacros = { showMacroListEditor = true },
                     onAddButton = { showAddButton = true },
                     onEditButton = { btn ->
-                        editingButton = btn
-                        editingButtonActive = true
+                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                        if (isDual) {
+                            MacroPadState.setSelectedButtonId(btn.id)
+                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.MACROPAD_INSPECTOR))
+                        } else {
+                            editingButton = btn
+                            editingButtonActive = true
+                        }
                     },
                     onCopyToProfile = { showCopyLayoutProfileDialog = true },
                     onCopyToLayout = { btn ->
@@ -285,8 +302,22 @@ fun MacroPadEditor(onDone: () -> Unit) {
                     onReorderLayouts = { showReorderLayoutsOverlay = true },
                     isCanvasLocked = isCanvasLocked,
                     onToggleCanvasLock = { isCanvasLocked = !isCanvasLocked },
-                    onManageBackground = { showBackgroundSettingsDialog = true },
-                    onManageTouchpadSettings = { showTouchpadSettingsDialog = true },
+                    onManageBackground = {
+                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                        if (isDual) {
+                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.BACKGROUND_SETTINGS))
+                        } else {
+                            showBackgroundSettingsDialog = true
+                        }
+                    },
+                    onManageTouchpadSettings = {
+                        val isDual = DisplayDetector.findSecondaryDisplay(context) != null
+                        if (isDual) {
+                            AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.TOUCHPAD_SETTINGS))
+                        } else {
+                            showTouchpadSettingsDialog = true
+                        }
+                    },
                     modifier = Modifier.padding(innerPadding),
                 )
             }

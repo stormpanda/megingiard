@@ -93,6 +93,9 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppDimens
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalAppDimens
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalType
+import com.stormpanda.megingiard.ui.PrimaryOverlayActivity
 import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.colorSchemeFor
 import com.stormpanda.megingiard.ui.megingiardTypography
@@ -343,6 +346,27 @@ class MainActivity : ComponentActivity() {
                         startActivity(intent, options.toBundle())
                     } else if (id == null) {
                         lastLaunchedId = null
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            var lastLaunchedType: PrimaryModalType? = null
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                AppStateManager.activePrimaryModal.collect { config ->
+                    val isDual = DisplayDetector.findSecondaryDisplay(this@MainActivity) != null
+                    if (isDual && config != null && config.type != lastLaunchedType) {
+                        lastLaunchedType = config.type
+                        AppLog.i(TAG, "activePrimaryModal=${config.type} -> launching PrimaryOverlayActivity on primary display")
+                        val options = ActivityOptions.makeBasic()
+                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+                        val intent =
+                            Intent(this@MainActivity, PrimaryOverlayActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                            }
+                        startActivity(intent, options.toBundle())
+                    } else if (config == null) {
+                        lastLaunchedType = null
                     }
                 }
             }

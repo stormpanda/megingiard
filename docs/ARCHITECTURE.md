@@ -62,18 +62,22 @@ Megingiard is structured as a **Feature-First Modular Architecture** split acros
 Megingiard runs on the AYN Thor, an Android gaming handheld with two physical displays. The app lives on the **secondary (bottom) display** and provides tools that assist the user while the primary (top) display runs games or other applications.
 
 ```
-Primary Display (DEFAULT_DISPLAY) — top screen, game display
-  └─ [running games / other apps — captured by MediaProjection]
+Primary Display (DEFAULT_DISPLAY) — top screen, game display & deep configuration overlays
+  ├─ [running games / other apps — captured by MediaProjection]
+  ├─ CropSelectorActivity (translucent crop selection overlay)
+  └─ PrimaryOverlayActivity (translucent 16:9 widescreen settings, inspectors, wizards, & tutorials)
 
-Secondary Display (non-default displayId) — bottom screen, Megingiard UI
+Secondary Display (non-default displayId) — bottom screen, interactive deck & tools
   ├─ MainActivity → MainAppScreen (Jetpack Compose)
-  │    └─ MacroPad-centric main content
+  │    └─ MacroPad canvas, Quick Menu, Keyboard, Touchpad, Dashboard
   └─ MirrorPresentation (android.app.Presentation — ambient mirroring modes)
        ├─ TextureView / SurfaceView: hardware VirtualDisplay output (mirrors primary display)
        └─ ComposeView → BackgroundMacroPadOverlay / MirrorScreen
 ```
 
 `MainActivity` and `MainAppScreen` run on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). `MirrorPresentation` is layered on top of `MainAppScreen` on the same secondary display when ambient mirroring is active and hidden (`hide()`) when it is not needed.
+
+Configuration menus (Global Settings, MacroPad button/layout inspector, Background Settings, Touchpad/Keyboard settings, Setup Wizards, and Tutorials) open as translucent widescreen overlays on the **primary (top) display** via `PrimaryOverlayActivity` (`ActivityOptions.setLaunchDisplayId(Display.DEFAULT_DISPLAY)`). This allows the secondary display to remain an unobstructed, live interactive action deck.
 
 The MacroPad macro editor also uses **inline full-screen overlays in the same secondary-display window** for transient recording workflows. Touch-tap recording opens a dedicated `RecordingMirrorPresentation`, while gamepad macro recording renders an in-app `GamepadRecordingOverlay` directly above `MacroTimelineEditor`. The gamepad overlay intentionally captures input from on-screen touch surfaces instead of listening to the physical controller device, so recording works without root-only device snooping while still forwarding events live through the existing virtual gamepad injector.
 

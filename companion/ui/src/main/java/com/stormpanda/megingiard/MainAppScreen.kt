@@ -159,6 +159,7 @@ fun MainAppScreen() {
     ) = rememberQuickMenuGestureMetrics()
 
     val context = LocalContext.current
+    val isDualScreen = remember(context) { DisplayDetector.findSecondaryDisplay(context) != null }
     var showExitDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val pendingImportUri by ConfigManager.pendingUri.collectAsState()
@@ -442,7 +443,7 @@ fun MainAppScreen() {
             }
 
             AnimatedVisibility(
-                visible = isGlobalSettingsOpen,
+                visible = isGlobalSettingsOpen && !isDualScreen,
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
@@ -453,7 +454,7 @@ fun MainAppScreen() {
             }
 
             AnimatedVisibility(
-                visible = isKeyboardSettingsOpen,
+                visible = isKeyboardSettingsOpen && !isDualScreen,
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
@@ -463,7 +464,7 @@ fun MainAppScreen() {
                 )
             }
             AnimatedVisibility(
-                visible = isTouchpadSettingsOpen,
+                visible = isTouchpadSettingsOpen && !isDualScreen,
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut(),
                 modifier = Modifier.fillMaxSize(),
