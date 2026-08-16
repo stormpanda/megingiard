@@ -41,8 +41,6 @@
     <string name="settings_accessibility_status">無障礙服務</string>
     <string name="settings_accessibility_setup">前往設定</string>
     <string name="settings_accent_color_picker_title">選擇主題重點色</string>
-    <string name="settings_accent_suggestions_title">推薦主題重點色</string>
-    <string name="settings_accent_suggestions_close">關閉</string>
     <string name="settings_color_brightness">亮度</string>
     <string name="settings_color_cancel">取消</string>
     <string name="settings_color_apply">應用</string>

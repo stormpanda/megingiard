@@ -178,7 +178,6 @@ fun GlobalSettingsScreen(
     var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
     var showSteamGridDbDialog by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
-    var showPresetPaletteDialog by rememberSaveable { mutableStateOf(false) }
     val exportResult by ConfigManager.exportResult.collectAsState()
     val logReportSaveResult by LogReportManager.saveResult.collectAsState()
 
@@ -670,17 +669,6 @@ fun GlobalSettingsScreen(
                 showColorPicker = false
             },
             onDismiss = { showColorPicker = false },
-        )
-    }
-    if (showPresetPaletteDialog) {
-        PresetAccentPaletteDialog(
-            currentAccent = accentColor,
-            colors = colors,
-            onColorSelected = { color ->
-                viewModel.setAccentColor(color.toArgb())
-                showPresetPaletteDialog = false
-            },
-            onDismiss = { showPresetPaletteDialog = false },
         )
     }
     if (showRestoreBackupDialog) {

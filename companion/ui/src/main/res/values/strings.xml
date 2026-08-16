@@ -44,8 +44,6 @@
     <string name="settings_accessibility_status">Accessibility Service</string>
     <string name="settings_accessibility_setup">Set up</string>
     <string name="settings_accent_color_picker_title">Pick accent color</string>
-    <string name="settings_accent_suggestions_title">Accent Color Suggestions</string>
-    <string name="settings_accent_suggestions_close">Close</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
     <string name="settings_color_apply">Apply</string>

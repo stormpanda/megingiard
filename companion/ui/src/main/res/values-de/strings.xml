@@ -47,8 +47,6 @@
     <string name="settings_accessibility_status">Bedienungshilfen-Dienst</string>
     <string name="settings_accessibility_setup">Einrichten</string>
     <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
-    <string name="settings_accent_suggestions_title">Akzentfarben-Vorschläge</string>
-    <string name="settings_accent_suggestions_close">Schließen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
     <string name="settings_color_apply">Anwenden</string>

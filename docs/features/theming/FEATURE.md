@@ -169,9 +169,8 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 ### Settings UI — `GlobalSettingsScreen.kt`
 
 - Theme selection uses a picker/dropdown row, not a binary switch.
-- The Accent Color row is only shown when `themeMode.supportsCustomAccent` is `true`.
-- To the right of the accent color chooser row, a palette icon button (`Icons.Rounded.Palette`) opens a color suggestions dialog (`PresetAccentPaletteDialog`).
-- `PresetAccentPaletteDialog` lists all fixed accent colors from thematic styles (`!supportsCustomAccent`) as swatches labeled with their theme names.
+- The Accent Color section is only shown when `themeMode.supportsCustomAccent` is `true`.
+- Accent color selection provides an inline palette grid (`GamepadColorPaletteGrid`) containing preset swatches (`ACCENT_PALETTE_PRESETS`) and an action card opening a full color wheel picker (`ColorWheelPicker`).
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
 ### Shared Dropdowns — `ui/AppDropdown.kt`
