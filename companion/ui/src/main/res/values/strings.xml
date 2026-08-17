@@ -168,11 +168,15 @@ Open Settings to create a layout.</string>
     <string name="settings_config_import_profile">Import shared profile</string>
     <string name="settings_add_to_obtainium">Add to Obtainium</string>
 
-    <!-- Export metadata dialog -->
+    <!-- Export metadata configuration -->
     <string name="config_export_dialog_title">Export info (optional)</string>
     <string name="config_export_author">Author</string>
+    <string name="config_export_author_desc">Creator or author name attached to metadata</string>
     <string name="config_export_description">Description</string>
+    <string name="config_export_description_desc">Summary or notes about this export</string>
     <string name="config_export_tags">Tags (comma-separated)</string>
+    <string name="config_export_tags_desc">Comma-separated tags for categorizing</string>
+    <string name="config_export_include_backgrounds_desc">Bundle custom background wallpaper images in the .mgrd file</string>
     <string name="config_export_confirm">Export</string>
     <string name="config_export_cancel">Cancel</string>
 

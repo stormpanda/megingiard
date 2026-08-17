@@ -35,9 +35,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.automirrored.rounded.Label
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -46,6 +49,7 @@ import androidx.compose.material.icons.rounded.Games
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
@@ -53,11 +57,13 @@ import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -94,11 +100,13 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.config.ConfigManager
+import com.stormpanda.megingiard.config.ExportMetadata
 import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.config.buildExportFilename
 import com.stormpanda.megingiard.config.buildProfileExportFilename
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
@@ -136,6 +144,8 @@ internal enum class SettingsSubPage(
 ) {
     DEADZONES(SettingsCategory.INPUT),
     STEAMGRIDDB_TOKEN(SettingsCategory.GENERAL),
+    CREATE_BACKUP(SettingsCategory.CONFIGURATION),
+    SHARE_PROFILE(SettingsCategory.CONFIGURATION),
 }
 
 private const val GS_SUBPAGE_FOCUS_DELAY_MS = 50L
@@ -200,12 +210,10 @@ fun GlobalSettingsScreen(
     val logReportSaveResult by LogReportManager.saveResult.collectAsState()
 
     val context = LocalContext.current
-    var showExportMetadataDialog by rememberSaveable { mutableStateOf(false) }
     var activeSubPage by rememberSaveable { mutableStateOf<SettingsSubPage?>(null) }
     var showImportPreviewDialog by remember { mutableStateOf<MegingiardExport?>(null) }
     var importError by rememberSaveable { mutableStateOf<String?>(null) }
     var importSuccess by rememberSaveable { mutableStateOf(false) }
-    var showProfileExportDialog by rememberSaveable { mutableStateOf(false) }
     var profileImportSuccess by rememberSaveable { mutableStateOf(false) }
     val pendingInAppImportMode by ConfigManager.pendingInAppImportMode.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -559,9 +567,9 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_export),
                                     description = stringResource(R.string.help_settings_export_desc),
-                                    actionText = stringResource(R.string.gamepad_action_export),
+                                    actionText = stringResource(R.string.gamepad_action_setup),
                                     icon = Icons.Rounded.FileDownload,
-                                    onClick = { showExportMetadataDialog = true },
+                                    onClick = { activeSubPage = SettingsSubPage.CREATE_BACKUP },
                                     modifier =
                                         Modifier.firstDeckItem(
                                             isFirst = selectedCategory == SettingsCategory.CONFIGURATION,
@@ -579,9 +587,9 @@ fun GlobalSettingsScreen(
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_export_profile),
                                     description = stringResource(R.string.help_settings_export_profile_desc),
-                                    actionText = stringResource(R.string.gamepad_action_export),
+                                    actionText = stringResource(R.string.gamepad_action_setup),
                                     icon = Icons.Rounded.Share,
-                                    onClick = { showProfileExportDialog = true },
+                                    onClick = { activeSubPage = SettingsSubPage.SHARE_PROFILE },
                                 )
 
                                 GamepadActionCard(
@@ -770,6 +778,35 @@ fun GlobalSettingsScreen(
                                 onTestConnection = { viewModel.testSteamGridDbConnection(steamGridDbApiToken) },
                             )
                         }
+
+                        SettingsSubPage.CREATE_BACKUP -> {
+                            CreateBackupSubPage(
+                                effectiveAccent = effectiveAccent,
+                                onExport = { metadata, includeBackgrounds ->
+                                    activeSubPage = null
+                                    ConfigManager.requestExport(
+                                        metadata = metadata,
+                                        filename = buildExportFilename(metadata),
+                                        includeBackgrounds = includeBackgrounds,
+                                    )
+                                },
+                            )
+                        }
+
+                        SettingsSubPage.SHARE_PROFILE -> {
+                            ShareProfileSubPage(
+                                effectiveAccent = effectiveAccent,
+                                onExportProfile = { metadata, profile, includeBackgrounds ->
+                                    activeSubPage = null
+                                    ConfigManager.requestProfileExport(
+                                        metadata = metadata,
+                                        profile = profile,
+                                        filename = buildProfileExportFilename(metadata, profile.name),
+                                        includeBackgrounds = includeBackgrounds,
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -823,22 +860,6 @@ fun GlobalSettingsScreen(
             onDismiss = { showRestoreDefaultsConfirm = false },
         )
     }
-    if (showExportMetadataDialog) {
-        ExportMetadataDialog(
-            defaultMetadata = ConfigManager.defaultMetadata(context),
-            colors = colors,
-            accentColor = effectiveAccent,
-            onConfirm = { metadata, includeBackgrounds ->
-                showExportMetadataDialog = false
-                ConfigManager.requestExport(
-                    metadata = metadata,
-                    filename = buildExportFilename(metadata),
-                    includeBackgrounds = includeBackgrounds,
-                )
-            },
-            onDismiss = { showExportMetadataDialog = false },
-        )
-    }
     if (showUpdatePromptDialog) {
         UpdatePromptDialog(
             tagName = latestReleaseInfo?.tagName ?: "",
@@ -846,7 +867,8 @@ fun GlobalSettingsScreen(
             accentColor = effectiveAccent,
             onBackupAndOpen = {
                 showUpdatePromptDialog = false
-                showExportMetadataDialog = true
+                selectedCategory = SettingsCategory.CONFIGURATION
+                activeSubPage = SettingsSubPage.CREATE_BACKUP
                 val url =
                     latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
                         ?: "https://github.com/stormpanda/megingiard/releases"
@@ -882,22 +904,6 @@ fun GlobalSettingsScreen(
                 }
             },
             onDismiss = { showUpdatePromptDialog = false },
-        )
-    }
-    if (showProfileExportDialog) {
-        ProfileExportDialog(
-            colors = colors,
-            accentColor = effectiveAccent,
-            onConfirm = { metadata, profile, includeBackgrounds ->
-                showProfileExportDialog = false
-                ConfigManager.requestProfileExport(
-                    metadata = metadata,
-                    profile = profile,
-                    filename = buildProfileExportFilename(metadata, profile.name),
-                    includeBackgrounds = includeBackgrounds,
-                )
-            },
-            onDismiss = { showProfileExportDialog = false },
         )
     }
     showImportPreviewDialog?.let { export ->
@@ -1125,5 +1131,178 @@ private fun DeadzonesSubPage(
         icon = Icons.Rounded.Games,
         valueLabel = "${(deadzoneRight * 100f).roundToInt()}%",
         onValueChange = onRightChange,
+    )
+}
+
+@Composable
+private fun CreateBackupSubPage(
+    effectiveAccent: Color,
+    onExport: (ExportMetadata, Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    var author by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var tags by rememberSaveable { mutableStateOf("") }
+    var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
+
+    GamepadSectionHeader(
+        text = "${stringResource(
+            R.string.settings_section_config,
+        ).uppercase()}  ›  ${stringResource(R.string.settings_config_export).uppercase()}",
+        color = effectiveAccent,
+    )
+
+    GamepadTextFieldCard(
+        title = stringResource(R.string.config_export_author),
+        description = stringResource(R.string.config_export_author_desc),
+        placeholder = stringResource(R.string.config_export_author),
+        value = author,
+        onValueChange = { author = it },
+        icon = Icons.Rounded.Person,
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    GamepadTextFieldCard(
+        title = stringResource(R.string.config_export_description),
+        description = stringResource(R.string.config_export_description_desc),
+        placeholder = stringResource(R.string.config_export_description),
+        value = description,
+        onValueChange = { description = it },
+        icon = Icons.AutoMirrored.Rounded.Notes,
+    )
+
+    GamepadTextFieldCard(
+        title = stringResource(R.string.config_export_tags),
+        description = stringResource(R.string.config_export_tags_desc),
+        placeholder = stringResource(R.string.config_export_tags),
+        value = tags,
+        onValueChange = { tags = it },
+        icon = Icons.AutoMirrored.Rounded.Label,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.config_export_include_backgrounds),
+        description = stringResource(R.string.config_export_include_backgrounds_desc),
+        checked = includeBackgrounds,
+        onCheckedChange = { includeBackgrounds = it },
+        icon = Icons.Rounded.Wallpaper,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_export),
+        description = stringResource(R.string.help_settings_export_desc),
+        actionText = stringResource(R.string.gamepad_action_export),
+        icon = Icons.Rounded.FileDownload,
+        onClick = {
+            val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val metadata =
+                ConfigManager.defaultMetadata(context).copy(
+                    author = author.trim().ifEmpty { null },
+                    description = description.trim().ifEmpty { null },
+                    tags = parsedTags,
+                )
+            onExport(metadata, includeBackgrounds)
+        },
+    )
+}
+
+@Composable
+private fun ShareProfileSubPage(
+    effectiveAccent: Color,
+    onExportProfile: (ExportMetadata, PadProfile, Boolean) -> Unit,
+) {
+    val context = LocalContext.current
+    val profiles by MacroPadState.profiles.collectAsState()
+    val activeProfile by MacroPadState.activeProfile.collectAsState()
+    var selectedProfileIdx by rememberSaveable(profiles) {
+        val initialIdx = profiles.indexOfFirst { it.id == activeProfile?.id }.coerceAtLeast(0)
+        mutableStateOf(initialIdx)
+    }
+    val currentProfile = profiles.getOrNull(selectedProfileIdx) ?: activeProfile ?: profiles.firstOrNull()
+
+    var author by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var tags by rememberSaveable { mutableStateOf("") }
+    var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
+
+    GamepadSectionHeader(
+        text = "${stringResource(
+            R.string.settings_section_config,
+        ).uppercase()}  ›  ${stringResource(R.string.settings_config_export_profile).uppercase()}",
+        color = effectiveAccent,
+    )
+
+    if (profiles.size > 1) {
+        GamepadChoiceCard(
+            title = stringResource(R.string.config_profile_export_select),
+            selectedText = currentProfile?.name ?: "",
+            onPrevious = {
+                if (profiles.isNotEmpty()) {
+                    selectedProfileIdx = (selectedProfileIdx - 1 + profiles.size) % profiles.size
+                }
+            },
+            onNext = {
+                if (profiles.isNotEmpty()) {
+                    selectedProfileIdx = (selectedProfileIdx + 1) % profiles.size
+                }
+            },
+            icon = Icons.Rounded.SportsEsports,
+            modifier = Modifier.firstDeckItem(),
+        )
+    }
+
+    GamepadTextFieldCard(
+        title = stringResource(R.string.config_export_author),
+        description = stringResource(R.string.config_export_author_desc),
+        placeholder = stringResource(R.string.config_export_author),
+        value = author,
+        onValueChange = { author = it },
+        icon = Icons.Rounded.Person,
+        modifier = if (profiles.size <= 1) Modifier.firstDeckItem() else Modifier,
+    )
+
+    GamepadTextFieldCard(
+        title = stringResource(R.string.config_export_description),
+        description = stringResource(R.string.config_export_description_desc),
+        placeholder = stringResource(R.string.config_export_description),
+        value = description,
+        onValueChange = { description = it },
+        icon = Icons.AutoMirrored.Rounded.Notes,
+    )
+
+    GamepadTextFieldCard(
+        title = stringResource(R.string.config_export_tags),
+        description = stringResource(R.string.config_export_tags_desc),
+        placeholder = stringResource(R.string.config_export_tags),
+        value = tags,
+        onValueChange = { tags = it },
+        icon = Icons.AutoMirrored.Rounded.Label,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.config_export_include_backgrounds),
+        description = stringResource(R.string.config_export_include_backgrounds_desc),
+        checked = includeBackgrounds,
+        onCheckedChange = { includeBackgrounds = it },
+        icon = Icons.Rounded.Wallpaper,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_config_export_profile),
+        description = stringResource(R.string.help_settings_export_profile_desc),
+        actionText = stringResource(R.string.gamepad_action_export),
+        icon = Icons.Rounded.Share,
+        enabled = currentProfile != null,
+        onClick = {
+            val targetProfile = currentProfile ?: return@GamepadActionCard
+            val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val metadata =
+                ConfigManager.defaultMetadata(context).copy(
+                    author = author.trim().ifEmpty { null },
+                    description = description.trim().ifEmpty { null },
+                    tags = parsedTags,
+                )
+            onExportProfile(metadata, targetProfile, includeBackgrounds)
+        },
     )
 }

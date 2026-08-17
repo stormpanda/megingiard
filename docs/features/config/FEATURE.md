@@ -226,9 +226,9 @@ Adding a new setting requires assigning the key to a section in `SECTION_MAP` or
 | `settings/SettingsManager.kt`          | `exportGroupedSettings()` + `importGroupedSettings()` — bulk DataStore I/O                                                                                                                                          |
 | `settings/SettingsKeys.kt`             | Preference keys, section key groups (`GLOBAL_KEYS`, etc.), `SECTION_MAP`, and `EXCLUDED_KEYS`                                                                                                                     |
 | `settings/SettingsKeysTest.kt`         | Reflection-based unit test guard asserting 100% coverage of declared preference keys across `SECTION_MAP` and `EXCLUDED_KEYS`                                                                                    |
-| `settings/GlobalSettingsScreen.kt`     | State hoists, navigation scaffold, and sections orchestrator                                                                                                                                                        |
-| `settings/GlobalSettingsComponents.kt` | SettingsCategory enum and enum display name mapping helpers                                                                                                                        |
-| `settings/GlobalSettingsDialogs.kt`    | Extracted five in-tree settings overlay dialogs and filename builders                                                                                                                                               |
+| `settings/GlobalSettingsScreen.kt`     | State hoists, navigation scaffold, sections orchestrator, and export sub-pages (`CreateBackupSubPage`, `ShareProfileSubPage`)                                                     |
+| `settings/GlobalSettingsComponents.kt` | SettingsCategory enum, SettingsSubPage enum, and enum display name mapping helpers                                                                                                  |
+| `settings/GlobalSettingsDialogs.kt`    | In-tree settings overlay dialogs (import preview, internal backups selection, and result messages)                                                                                  |
 | `MainAppScreen.kt`                     | `LaunchedEffect(pendingImportUri)` + `IncomingImportDialog` for external file intents                                                                                                                               |
 | `MainActivity.kt`                      | `handleIncomingIntent()` / `onNewIntent()` — routes `ACTION_VIEW` uri to `ConfigManager`; holds `createDocumentLauncher` / `openDocumentLauncher`; discriminates `ExportKind` to call correct build function        |
 | `AndroidManifest.xml`                  | `ACTION_VIEW` intent-filter for `application/vnd.megingiard.config+json`                                                                                                                                            |
@@ -267,9 +267,9 @@ corresponding `*_KEYS` set in `SettingsManager` (e.g. `GLOBAL_KEYS`, `MIRROR_KEY
 - Checksum mismatch rejects the import with a localized error message.
 - The 10 MB file size cap in `ConfigManager.readFromUri()` prevents OOM when opening arbitrary files.
 
-### Dialog Rendering
+### In-Tree Overlays & Sub-Pages
 
-All dialogs in `GlobalSettingsScreen` (export metadata, import preview, success / error messages)
+Configuration exports (`CreateBackupSubPage` and `ShareProfileSubPage`) are rendered as dedicated **sub-pages** within the two-pane scaffold, supporting gamepad-first input cards. Dialogs in `GlobalSettingsScreen` (import preview, restore selection, success / error messages)
 are rendered as **in-tree overlays** — a full-screen `Box` with a semi-transparent scrim and a
 centered card, not as Compose `AlertDialog`. This is required because `GlobalSettingsScreen` may
 be rendered inside `MirrorPresentation` (`android.app.Presentation`), which has no valid Activity

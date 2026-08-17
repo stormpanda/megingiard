@@ -507,11 +507,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_config_import_profile">Geteiltes Profil importieren</string>
     <string name="settings_add_to_obtainium">Zu Obtainium hinzufügen</string>
 
-    <!-- Export metadata dialog -->
+    <!-- Export metadata configuration -->
     <string name="config_export_dialog_title">Export-Info (optional)</string>
     <string name="config_export_author">Autor</string>
+    <string name="config_export_author_desc">Ersteller- oder Autorenname in den Metadaten</string>
     <string name="config_export_description">Beschreibung</string>
+    <string name="config_export_description_desc">Zusammenfassung oder Notizen zu diesem Export</string>
     <string name="config_export_tags">Tags (kommagetrennt)</string>
+    <string name="config_export_tags_desc">Kommagetrennte Schlagwörter zur Kategorisierung</string>
+    <string name="config_export_include_backgrounds_desc">Benutzerdefinierte Hintergrundbilder in der .mgrd-Datei bündeln</string>
     <string name="config_export_confirm">Exportieren</string>
     <string name="config_export_cancel">Abbrechen</string>
 

@@ -29,7 +29,7 @@ The Automatic Update Check feature periodically and silently queries the GitHub 
 
 - Clicking the update link or banner MUST present an update prompt dialog.
 - The dialog MUST allow the user to choose between:
-  1. **Backup Config & Open Link**: Opens the full configuration export dialog (`ExportMetadataDialog`) and opens the release URL on the top display (`Display.DEFAULT_DISPLAY`).
+  1. **Backup Config & Open Link**: Navigates to the full configuration export sub-page (`SettingsSubPage.CREATE_BACKUP`) and opens the release URL on the top display (`Display.DEFAULT_DISPLAY`).
   2. **Open Link Directly**: Opens the release URL on the top display (`Display.DEFAULT_DISPLAY`) without launching the backup export dialog.
   3. **Cancel**: Dismisses the update prompt.
 
