@@ -253,6 +253,7 @@ fun GamepadTwoPaneScaffold(
     modifier: Modifier = Modifier,
     isCustomBackActive: Boolean = false,
     onCustomBack: (() -> Unit)? = null,
+    navigationKey: Any? = null,
     footerContent: (@Composable () -> Unit)? = null,
     sidebarFooter: (@Composable () -> Unit)? = null,
     sidebarWidth: Dp = GS_SIDEBAR_WIDTH,
@@ -330,6 +331,24 @@ fun GamepadTwoPaneScaffold(
         LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
         LocalBringIntoViewSpec provides bringIntoViewSpec,
     ) {
+        val effectiveNavKey = navigationKey ?: isCustomBackActive
+        var previousNavKey by remember { mutableStateOf(effectiveNavKey) }
+
+        LaunchedEffect(effectiveNavKey) {
+            if (effectiveNavKey != previousNavKey) {
+                previousNavKey = effectiveNavKey
+                lastFocusedContentRequester = null
+                delay(GS_INITIAL_FOCUS_DELAY_MS)
+                try {
+                    inputModeManager.requestInputMode(InputMode.Keyboard)
+                    firstContentRequester.requestFocus()
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: auto focus restored on navigationKey change ($effectiveNavKey)")
+                } catch (_: IllegalStateException) {
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: firstContentRequester unattached on auto focus restore")
+                }
+            }
+        }
+
         LaunchedEffect(Unit) {
             delay(GS_INITIAL_FOCUS_DELAY_MS)
             try {

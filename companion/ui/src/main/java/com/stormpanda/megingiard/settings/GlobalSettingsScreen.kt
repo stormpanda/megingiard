@@ -78,9 +78,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -149,7 +147,6 @@ internal enum class SettingsSubPage(
     RESTORE_REVIEW(SettingsCategory.CONFIGURATION),
 }
 
-private const val GS_SUBPAGE_FOCUS_DELAY_MS = 50L
 private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
 private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 
@@ -273,6 +270,7 @@ fun GlobalSettingsScreen(
         onCustomBack = {
             subPageStack = subPageStack.dropLast(1)
         },
+        navigationKey = subPageStack,
         sidebarContent = {
             SettingsCategory.entries.forEach { category ->
                 GamepadCategoryTile(
@@ -287,32 +285,6 @@ fun GlobalSettingsScreen(
             }
         },
         content = {
-            val firstContentRequester = LocalFirstContentRequester.current
-            val inputModeManager = LocalInputModeManager.current
-            var wasInSubPage by remember { mutableStateOf(false) }
-
-            LaunchedEffect(subPageStack) {
-                if (subPageStack.isNotEmpty()) {
-                    wasInSubPage = true
-                    delay(GS_SUBPAGE_FOCUS_DELAY_MS)
-                    try {
-                        inputModeManager?.requestInputMode(InputMode.Keyboard)
-                        firstContentRequester?.requestFocus()
-                    } catch (_: IllegalStateException) {
-                        // Requester unattached
-                    }
-                } else if (wasInSubPage) {
-                    wasInSubPage = false
-                    delay(GS_SUBPAGE_FOCUS_DELAY_MS)
-                    try {
-                        inputModeManager?.requestInputMode(InputMode.Keyboard)
-                        firstContentRequester?.requestFocus()
-                    } catch (_: IllegalStateException) {
-                        // Requester unattached
-                    }
-                }
-            }
-
             AnimatedContent(
                 targetState = subPageStack,
                 transitionSpec = {
