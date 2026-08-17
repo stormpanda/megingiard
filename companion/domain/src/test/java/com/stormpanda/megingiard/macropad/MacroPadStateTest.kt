@@ -740,4 +740,41 @@ class MacroPadStateTest {
         assertEquals(0.2f, MacroPadState.activeLayout.value?.bgImageOffsetX)
         assertEquals(-0.1f, MacroPadState.activeLayout.value?.bgImageOffsetY)
     }
+
+    @Test
+    fun `reorderProfiles updates profile order in state`() {
+        val p1 = PadProfile(id = "p1", name = "Profile 1", layouts = listOf(PadLayout(id = "l1", name = "L1")), activeLayoutId = "l1")
+        val p2 = PadProfile(id = "p2", name = "Profile 2", layouts = listOf(PadLayout(id = "l2", name = "L2")), activeLayoutId = "l2")
+        val p3 = PadProfile(id = "p3", name = "Profile 3", layouts = listOf(PadLayout(id = "l3", name = "L3")), activeLayoutId = "l3")
+
+        MacroPadState.loadFrom(listOf(p1, p2, p3), "p1")
+        assertEquals(listOf("p1", "p2", "p3"), MacroPadState.profiles.value.map { it.id })
+
+        MacroPadState.reorderProfiles(listOf(p3, p1, p2))
+        assertEquals(listOf("p3", "p1", "p2"), MacroPadState.profiles.value.map { it.id })
+    }
+
+    @Test
+    fun `reorderLayouts updates layout order in active profile`() {
+        val l1 = PadLayout(id = "l1", name = "Layout 1")
+        val l2 = PadLayout(id = "l2", name = "Layout 2")
+        val l3 = PadLayout(id = "l3", name = "Layout 3")
+        val p1 = PadProfile(id = "p1", name = "Profile 1", layouts = listOf(l1, l2, l3), activeLayoutId = "l1")
+
+        MacroPadState.loadFrom(listOf(p1), "p1")
+        assertEquals(
+            listOf("l1", "l2", "l3"),
+            MacroPadState.activeProfile.value
+                ?.layouts
+                ?.map { it.id },
+        )
+
+        MacroPadState.reorderLayouts(listOf(l2, l3, l1))
+        assertEquals(
+            listOf("l2", "l3", "l1"),
+            MacroPadState.activeProfile.value
+                ?.layouts
+                ?.map { it.id },
+        )
+    }
 }

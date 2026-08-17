@@ -32,6 +32,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -396,6 +397,40 @@ fun GamepadCardIcon(
             contentDescription = null,
             tint = tint,
             modifier = Modifier.size(GC_ICON_SIZE),
+        )
+    }
+}
+
+/**
+ * Shared position number badge with rounded square background matching [GamepadCardIcon] geometry.
+ */
+@Composable
+fun GamepadPositionBadge(
+    index: Int,
+    modifier: Modifier = Modifier,
+    isFocused: Boolean = false,
+) {
+    val colors = LocalAppColors.current
+    val bg =
+        if (isFocused) {
+            colors.accent.copy(alpha = GC_ACCENT_TINT_ALPHA)
+        } else {
+            colors.surfaceVariant
+        }
+    val textColor = if (isFocused) colors.accent else colors.onSurfaceSecondary
+
+    Box(
+        modifier =
+            modifier
+                .size(GC_ICON_BOX_SIZE)
+                .background(bg, RoundedCornerShape(GC_CORNER_8)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "#${index + 1}",
+            color = textColor,
+            fontSize = GC_TEXT_SIZE_PILL,
+            fontWeight = FontWeight.Bold,
         )
     }
 }
@@ -1217,6 +1252,165 @@ fun GamepadTwoStepConfirmCard(
                             },
                         fontSize = GC_TEXT_SIZE_PILL,
                         fontWeight = FontWeight.Bold,
+                    )
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Gamepad-first reorderable card supporting 2-tier D-pad navigation, touch drag-and-drop,
+ * and single-tap Up/Down arrow buttons.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Up / Down: moves focus between adjacent cards in the list.
+ * - D-Pad Left: passes through to navigate back to the sidebar.
+ * - Button A / Click: enters Tier 2 (Moving Mode) on this card.
+ *
+ * In Tier 2 (Moving Mode):
+ * - Card illuminates with glowing accent border and active "Moving" status badge.
+ * - D-Pad Up: moves this item UP by 1 position (if not already at top).
+ * - D-Pad Down: moves this item DOWN by 1 position (if not already at bottom).
+ * - Button A / Enter: confirms position and exits Moving Mode.
+ * - Button B / Back: cancels/exits Moving Mode.
+ */
+@Composable
+fun GamepadReorderCard(
+    title: String,
+    index: Int,
+    totalCount: Int,
+    isMoving: Boolean,
+    onToggleMoving: () -> Unit,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
+    isDragging: Boolean = false,
+    dragHandleModifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    itemKey: Any? = title,
+    enabled: Boolean = true,
+) {
+    val colors = LocalAppColors.current
+
+    BackHandler(enabled = isMoving) {
+        AppLog.d(TAG, "GamepadReorderCard: '$title' back pressed while moving, exiting moving mode")
+        onToggleMoving()
+    }
+
+    GamepadFocusCard(
+        onClick = {
+            if (enabled) {
+                onToggleMoving()
+            }
+        },
+        cardFocusRequester = cardFocusRequester,
+        itemKey = itemKey,
+        enabled = enabled,
+        modifier = modifier,
+        isAdjusting = isMoving,
+        onCustomKeyEvent = { keyEvent ->
+            if (!isMoving) return@GamepadFocusCard false
+            val keyCode = keyEvent.nativeKeyEvent.keyCode
+            if (keyEvent.type == KeyEventType.KeyDown) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP -> {
+                        if (index > 0) {
+                            AppLog.d(TAG, "GamepadReorderCard: '$title' move up via D-pad")
+                            onMoveUp()
+                        }
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                        if (index < totalCount - 1) {
+                            AppLog.d(TAG, "GamepadReorderCard: '$title' move down via D-pad")
+                            onMoveDown()
+                        }
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    -> {
+                        AppLog.d(TAG, "GamepadReorderCard: '$title' exiting moving mode on keyCode=$keyCode")
+                        onToggleMoving()
+                        true
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            } else if (keyEvent.type == KeyEventType.KeyUp) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    -> true
+
+                    else -> false
+                }
+            } else {
+                false
+            }
+        },
+        onFocusChanged = { isFocused ->
+            if (!isFocused && isMoving) {
+                onToggleMoving()
+            }
+        },
+    ) { isFocused ->
+        GamepadCardRow(
+            title = title,
+            description = description,
+            icon = icon,
+            leadingContent =
+                leadingContent ?: {
+                    GamepadPositionBadge(
+                        index = index,
+                        isFocused = isFocused || isMoving || isDragging,
+                    )
+                },
+            isFocused = isFocused || isMoving || isDragging,
+            trailingContent = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_8),
+                ) {
+                    // Drag Handle on the left of badge
+                    Icon(
+                        imageVector = Icons.Rounded.DragHandle,
+                        contentDescription = stringResource(R.string.cd_drag_reorder),
+                        tint = if (isFocused || isMoving || isDragging) colors.accent else colors.onSurfaceSecondary,
+                        modifier =
+                            Modifier
+                                .padding(horizontal = GC_SPACING_4)
+                                .then(dragHandleModifier),
+                    )
+
+                    // Moving / Move badge on the very right
+                    GamepadPill(
+                        text =
+                            if (isMoving) {
+                                stringResource(R.string.gamepad_action_moving)
+                            } else {
+                                stringResource(R.string.gamepad_action_move)
+                            },
+                        isAccent = isMoving,
+                        isHighlighted = isFocused && !isMoving,
                     )
                 }
             },

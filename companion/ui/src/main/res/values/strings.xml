@@ -1078,7 +1078,12 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_new">New</string>
     <string name="gamepad_action_duplicate">Duplicate</string>
     <string name="gamepad_action_reorder">Reorder</string>
+    <string name="gamepad_action_move">Move</string>
+    <string name="gamepad_action_moving">Moving</string>
     <string name="gamepad_action_delete">Delete</string>
+    <string name="cd_move_up">Move up</string>
+    <string name="cd_move_down">Move down</string>
+    <string name="macropad_reorder_empty">No items to reorder</string>
     <string name="gamepad_action_appearance">Appearance</string>
     <string name="gamepad_action_background">Background</string>
     <string name="gamepad_action_touchpad">Touchpad</string>

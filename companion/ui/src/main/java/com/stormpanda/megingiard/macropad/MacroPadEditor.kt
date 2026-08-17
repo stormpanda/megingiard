@@ -538,10 +538,9 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ReorderProfiles -> {
-                                        Box(modifier = Modifier.fillMaxSize()) {
-                                            ReorderProfilesOverlay(
+                                        SubPageFillColumn {
+                                            ReorderProfilesSubPage(
                                                 profiles = profiles,
-                                                onDone = { subPageStack = subPageStack.dropLast(1) },
                                             )
                                         }
                                     }
@@ -696,10 +695,9 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ReorderLayouts -> {
-                                        Box(modifier = Modifier.fillMaxSize()) {
-                                            ReorderLayoutsOverlay(
+                                        SubPageFillColumn {
+                                            ReorderLayoutsSubPage(
                                                 layouts = profile.layouts,
-                                                onDone = { subPageStack = subPageStack.dropLast(1) },
                                             )
                                         }
                                     }

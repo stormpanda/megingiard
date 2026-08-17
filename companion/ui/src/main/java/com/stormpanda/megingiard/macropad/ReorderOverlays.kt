@@ -1,38 +1,44 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.AppReorderOverlay
-
-private const val TAG = "ReorderOverlays"
+import com.stormpanda.megingiard.ui.GamepadReorderDeck
 
 @Composable
-internal fun ReorderProfilesOverlay(
+internal fun ReorderProfilesSubPage(
     profiles: List<PadProfile>,
-    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    AppReorderOverlay(
-        title = stringResource(R.string.macropad_reorder_profiles),
+    GamepadReorderDeck(
+        headerTitle = stringResource(R.string.macropad_reorder_profiles),
         items = profiles,
         itemKey = { it.id },
-        itemText = { it.name },
+        itemTitle = { it.name },
+        itemDescription = { profile ->
+            profile.association?.packageName?.takeIf { it.isNotBlank() }
+                ?: if (profile.layouts.size == 1) "1 layout" else "${profile.layouts.size} layouts"
+        },
         onReorder = { MacroPadState.reorderProfiles(it) },
-        onDone = onDone,
+        modifier = modifier,
     )
 }
 
 @Composable
-internal fun ReorderLayoutsOverlay(
+internal fun ReorderLayoutsSubPage(
     layouts: List<PadLayout>,
-    onDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    AppReorderOverlay(
-        title = stringResource(R.string.macropad_reorder_layouts),
+    GamepadReorderDeck(
+        headerTitle = stringResource(R.string.macropad_reorder_layouts),
         items = layouts,
         itemKey = { it.id },
-        itemText = { it.name },
+        itemTitle = { it.name },
+        itemDescription = { layout ->
+            if (layout.buttons.size == 1) "1 button" else "${layout.buttons.size} buttons"
+        },
         onReorder = { MacroPadState.reorderLayouts(it) },
-        onDone = onDone,
+        modifier = modifier,
     )
 }
