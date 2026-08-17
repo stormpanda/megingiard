@@ -65,6 +65,15 @@ private val GS_SIDEBAR_WIDTH = 210.dp
 private val GS_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GS_SIDEBAR_CORNER = 10.dp
 private val GS_SIDEBAR_ICON_SIZE = 20.dp
+private val GS_FOCUS_STROKE_WIDTH = 1.5.dp
+private val GS_ZERO_BORDER_WIDTH = 0.dp
+private val GS_SIDEBAR_ITEM_PADDING_H = 12.dp
+private val GS_SIDEBAR_ITEM_SPACING = 10.dp
+private val GS_SIDEBAR_PADDING = 8.dp
+private val GS_SIDEBAR_SPACING = 4.dp
+private val GS_DECK_PADDING_H = 16.dp
+private val GS_DECK_PADDING_V = 12.dp
+private val GS_DECK_SPACING = 10.dp
 private const val GS_SIDEBAR_SELECTED_FOCUSED_ALPHA = 0.35f
 private const val GS_SIDEBAR_SELECTED_ALPHA = 0.2f
 private const val GS_CARD_FOCUSED_BG_ALPHA = 0.95f
@@ -147,7 +156,7 @@ fun GamepadCategoryTile(
                         cornerRadius = cornerRadius,
                     )
                     if (isFocused) {
-                        val stroke = 1.5.dp.toPx()
+                        val stroke = GS_FOCUS_STROKE_WIDTH.toPx()
                         val half = stroke / 2f
                         drawRoundRect(
                             color = animatedBorderColor,
@@ -168,7 +177,7 @@ fun GamepadCategoryTile(
                 .primaryOverlayFocusable(
                     onClick = wrappedOnClick,
                     shape = shape,
-                    borderWidth = 0.dp,
+                    borderWidth = GS_ZERO_BORDER_WIDTH,
                     interactionSource = interactionSource,
                 ),
         contentAlignment = Alignment.CenterStart,
@@ -177,9 +186,9 @@ fun GamepadCategoryTile(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = GS_SIDEBAR_ITEM_PADDING_H),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(GS_SIDEBAR_ITEM_SPACING),
         ) {
             Icon(
                 imageVector = icon,
@@ -344,7 +353,7 @@ fun GamepadTwoPaneScaffold(
                             .width(sidebarWidth)
                             .fillMaxHeight()
                             .background(colors.surfaceVariant.copy(alpha = GS_SIDEBAR_BG_ALPHA))
-                            .padding(8.dp)
+                            .padding(GS_SIDEBAR_PADDING)
                             .onKeyEvent { keyEvent ->
                                 if (keyEvent.type == KeyEventType.KeyDown &&
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
@@ -362,7 +371,7 @@ fun GamepadTwoPaneScaffold(
                                 .weight(1f)
                                 .fillMaxWidth()
                                 .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(GS_SIDEBAR_SPACING),
                     ) {
                         sidebarContent()
                     }
@@ -377,7 +386,7 @@ fun GamepadTwoPaneScaffold(
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .padding(horizontal = GS_DECK_PADDING_H, vertical = GS_DECK_PADDING_V)
                             .onFocusChanged { focusState ->
                                 isDeckFocused = focusState.hasFocus
                             }.onKeyEvent { keyEvent ->
@@ -395,7 +404,7 @@ fun GamepadTwoPaneScaffold(
                                     false
                                 }
                             }.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(GS_DECK_SPACING),
                 ) {
                     content()
                 }
