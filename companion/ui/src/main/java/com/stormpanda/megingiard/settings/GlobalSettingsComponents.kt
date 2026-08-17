@@ -1,15 +1,28 @@
 package com.stormpanda.megingiard.settings
 
+import androidx.annotation.StringRes
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Gamepad
+import androidx.compose.material.icons.rounded.HealthAndSafety
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.stormpanda.megingiard.R
 
-internal enum class SettingsSectionFilter {
-    GENERAL,
-    INPUT,
-    APPEARANCE,
-    DATA,
-    CONFIGURATION,
-    UPDATES,
-    DIAGNOSTICS,
+internal enum class SettingsCategory(
+    @StringRes val titleResId: Int,
+    val icon: ImageVector,
+) {
+    GENERAL(R.string.settings_jump_general, Icons.Rounded.Tune),
+    INPUT(R.string.settings_jump_input, Icons.Rounded.Gamepad),
+    APPEARANCE(R.string.settings_jump_appearance, Icons.Rounded.Palette),
+    DATA(R.string.settings_jump_data, Icons.Rounded.Storage),
+    CONFIGURATION(R.string.settings_jump_config, Icons.Rounded.Build),
+    UPDATES(R.string.settings_jump_updates, Icons.Rounded.SystemUpdate),
+    DIAGNOSTICS(R.string.settings_jump_diagnostics, Icons.Rounded.HealthAndSafety),
 }
 
 internal fun ThemeMode.displayNameResId(): Int =

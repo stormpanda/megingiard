@@ -37,16 +37,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.BugReport
-import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Colorize
-import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FormatColorFill
-import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Games
-import androidx.compose.material.icons.rounded.HealthAndSafety
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
@@ -56,10 +52,8 @@ import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -140,10 +134,10 @@ private const val TAG = "GlobalSettingsScreen"
  * Sub-pages that can be drilled into within [GlobalSettingsScreen].
  */
 internal enum class SettingsSubPage(
-    val parentSection: SettingsSectionFilter,
+    val parentCategory: SettingsCategory,
 ) {
-    DEADZONES(SettingsSectionFilter.INPUT),
-    STEAMGRIDDB_TOKEN(SettingsSectionFilter.GENERAL),
+    DEADZONES(SettingsCategory.INPUT),
+    STEAMGRIDDB_TOKEN(SettingsCategory.GENERAL),
 }
 
 private const val GS_SUBPAGE_FOCUS_DELAY_MS = 50L
@@ -236,19 +230,19 @@ fun GlobalSettingsScreen(
         activeSubPage = null
     }
 
-    var selectedSectionFilter by remember { mutableStateOf(SettingsSectionFilter.GENERAL) }
+    var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
 
-    val filterList = remember { SettingsSectionFilter.entries }
+    val categoryList = remember { SettingsCategory.entries }
 
     LaunchedEffect(Unit) {
         PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
-            val currentIndex = filterList.indexOf(selectedSectionFilter).coerceAtLeast(0)
+            val currentIndex = categoryList.indexOf(selectedCategory).coerceAtLeast(0)
             val nextIndex =
                 when (direction) {
-                    BumperDirection.PREV -> (currentIndex - 1 + filterList.size) % filterList.size
-                    BumperDirection.NEXT -> (currentIndex + 1) % filterList.size
+                    BumperDirection.PREV -> (currentIndex - 1 + categoryList.size) % categoryList.size
+                    BumperDirection.NEXT -> (currentIndex + 1) % categoryList.size
                 }
-            selectedSectionFilter = filterList[nextIndex]
+            selectedCategory = categoryList[nextIndex]
             activeSubPage = null
         }
     }
@@ -274,69 +268,17 @@ fun GlobalSettingsScreen(
                 }
             },
         sidebarContent = {
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_general),
-                icon = Icons.Rounded.Tune,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.GENERAL,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.GENERAL
-                    activeSubPage = null
-                },
-            )
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_input),
-                icon = Icons.Rounded.Gamepad,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.INPUT,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.INPUT
-                    activeSubPage = null
-                },
-            )
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_appearance),
-                icon = Icons.Rounded.Palette,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.APPEARANCE,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.APPEARANCE
-                    activeSubPage = null
-                },
-            )
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_data),
-                icon = Icons.Rounded.Storage,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.DATA,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.DATA
-                    activeSubPage = null
-                },
-            )
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_config),
-                icon = Icons.Rounded.Build,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.CONFIGURATION,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.CONFIGURATION
-                    activeSubPage = null
-                },
-            )
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_updates),
-                icon = Icons.Rounded.SystemUpdate,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.UPDATES,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.UPDATES
-                    activeSubPage = null
-                },
-            )
-            GamepadCategoryTile(
-                title = stringResource(R.string.settings_jump_diagnostics),
-                icon = Icons.Rounded.HealthAndSafety,
-                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.DIAGNOSTICS,
-                onClick = {
-                    selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS
-                    activeSubPage = null
-                },
-            )
+            SettingsCategory.entries.forEach { category ->
+                GamepadCategoryTile(
+                    title = stringResource(category.titleResId),
+                    icon = category.icon,
+                    selected = (activeSubPage?.parentCategory ?: selectedCategory) == category,
+                    onClick = {
+                        selectedCategory = category
+                        activeSubPage = null
+                    },
+                )
+            }
         },
         content = {
             val firstContentRequester = LocalFirstContentRequester.current
@@ -374,7 +316,7 @@ fun GlobalSettingsScreen(
                     when (subPage) {
                         null -> {
                             // GENERAL
-                            if (selectedSectionFilter == SettingsSectionFilter.GENERAL) {
+                            if (selectedCategory == SettingsCategory.GENERAL) {
                                 if (updateAvailable && latestReleaseInfo != null) {
                                     GamepadActionCard(
                                         title = stringResource(R.string.settings_update_available_banner, latestReleaseInfo?.tagName ?: ""),
@@ -464,7 +406,7 @@ fun GlobalSettingsScreen(
                             }
 
                             // INPUT
-                            if (selectedSectionFilter == SettingsSectionFilter.INPUT) {
+                            if (selectedCategory == SettingsCategory.INPUT) {
                                 Text(
                                     text = stringResource(R.string.settings_section_input).uppercase(),
                                     color = effectiveAccent,
@@ -478,7 +420,7 @@ fun GlobalSettingsScreen(
                                     checked = gamepadSwapFaceButtons,
                                     icon = Icons.Rounded.SwapHoriz,
                                     onCheckedChange = { viewModel.setGamepadSwapFaceButtons(it) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.INPUT),
+                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.INPUT),
                                 )
 
                                 GamepadActionCard(
@@ -496,7 +438,7 @@ fun GlobalSettingsScreen(
                             }
 
                             // APPEARANCE
-                            if (selectedSectionFilter == SettingsSectionFilter.APPEARANCE) {
+                            if (selectedCategory == SettingsCategory.APPEARANCE) {
                                 Text(
                                     text = stringResource(R.string.settings_section_appearance).uppercase(),
                                     color = effectiveAccent,
@@ -519,7 +461,7 @@ fun GlobalSettingsScreen(
                                         )
                                     },
                                     onNext = { viewModel.setThemeMode(allThemes[(currentThemeIdx + 1) % allThemes.size]) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.APPEARANCE),
+                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.APPEARANCE),
                                 )
 
                                 if (themeMode.supportsCustomAccent) {
@@ -572,7 +514,7 @@ fun GlobalSettingsScreen(
                             }
 
                             // DATA
-                            if (selectedSectionFilter == SettingsSectionFilter.DATA) {
+                            if (selectedCategory == SettingsCategory.DATA) {
                                 Text(
                                     text = stringResource(R.string.settings_section_data).uppercase(),
                                     color = effectiveAccent,
@@ -587,7 +529,7 @@ fun GlobalSettingsScreen(
                                     isDestructive = true,
                                     icon = Icons.Rounded.Restore,
                                     onClick = { showRestoreDefaultsConfirm = true },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.DATA),
+                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.DATA),
                                 )
 
                                 GamepadActionCard(
@@ -608,7 +550,7 @@ fun GlobalSettingsScreen(
                             }
 
                             // CONFIGURATION
-                            if (selectedSectionFilter == SettingsSectionFilter.CONFIGURATION) {
+                            if (selectedCategory == SettingsCategory.CONFIGURATION) {
                                 Text(
                                     text = stringResource(R.string.settings_section_config).uppercase(),
                                     color = effectiveAccent,
@@ -624,7 +566,7 @@ fun GlobalSettingsScreen(
                                     onClick = { showExportMetadataDialog = true },
                                     modifier =
                                         Modifier.firstDeckItem(
-                                            isFirst = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION,
+                                            isFirst = selectedCategory == SettingsCategory.CONFIGURATION,
                                         ),
                                 )
 
@@ -679,7 +621,7 @@ fun GlobalSettingsScreen(
                             }
 
                             // UPDATES
-                            if (selectedSectionFilter == SettingsSectionFilter.UPDATES) {
+                            if (selectedCategory == SettingsCategory.UPDATES) {
                                 Text(
                                     text = stringResource(R.string.settings_section_updates).uppercase(),
                                     color = effectiveAccent,
@@ -693,7 +635,7 @@ fun GlobalSettingsScreen(
                                     checked = autoUpdateCheckEnabled,
                                     icon = Icons.Rounded.Update,
                                     onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.UPDATES),
+                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.UPDATES),
                                 )
 
                                 GamepadActionCard(
@@ -718,7 +660,7 @@ fun GlobalSettingsScreen(
                             }
 
                             // DIAGNOSTICS
-                            if (selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS) {
+                            if (selectedCategory == SettingsCategory.DIAGNOSTICS) {
                                 Text(
                                     text = stringResource(R.string.settings_section_diagnostics).uppercase(),
                                     color = effectiveAccent,
@@ -743,7 +685,7 @@ fun GlobalSettingsScreen(
                                         )
                                     },
                                     onNext = { viewModel.setLogLevel(allLogLevels[(currentLogLevelIdx + 1) % allLogLevels.size]) },
-                                    modifier = Modifier.firstDeckItem(isFirst = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS),
+                                    modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.DIAGNOSTICS),
                                 )
 
                                 GamepadActionCard(
