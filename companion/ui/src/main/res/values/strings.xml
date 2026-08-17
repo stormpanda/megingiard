@@ -153,7 +153,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_icon_picker_currently_selected">Currently selected</string>
 
     <!-- Configuration export/import -->
-    <string name="settings_section_config">Configuration</string>
+    <string name="settings_section_config">Share &amp; Backup</string>
     <string name="settings_section_updates">Updates</string>
     <string name="settings_section_data">Data</string>
     <string name="settings_restore_defaults">Restore default profiles</string>
@@ -353,7 +353,7 @@ Open Settings to create a layout.</string>
     <string name="settings_jump_general">General</string>
     <string name="settings_jump_appearance">Appearance</string>
     <string name="settings_jump_data">Data</string>
-    <string name="settings_jump_config">Configuration</string>
+    <string name="settings_jump_config">Share &amp; Backup</string>
     <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Input</string>
     <string name="settings_jump_diagnostics">Diagnostics</string>

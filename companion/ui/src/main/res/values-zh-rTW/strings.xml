@@ -131,7 +131,7 @@
     <string name="macropad_icon_picker_no_results">找不到圖示</string>
     <string name="macropad_icon_picker_filled">填滿</string>
     <string name="macropad_icon_picker_currently_selected">當前選擇</string>
-    <string name="settings_section_config">備份與設定檔</string>
+    <string name="settings_section_config">分享與備份</string>
     <string name="settings_section_updates">應用程式更新</string>
     <string name="settings_section_data">還原與重置</string>
     <string name="settings_restore_defaults">還原預設設定檔</string>
@@ -296,7 +296,7 @@
     <string name="settings_jump_general">一般</string>
     <string name="settings_jump_appearance">外觀</string>
     <string name="settings_jump_data">還原與重置</string>
-    <string name="settings_jump_config">備份與設定檔</string>
+    <string name="settings_jump_config">分享與備份</string>
     <string name="settings_jump_updates">應用程式更新</string>
     <string name="settings_jump_input">輸入</string>
     <string name="settings_jump_diagnostics">診斷</string>

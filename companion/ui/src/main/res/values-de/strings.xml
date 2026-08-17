@@ -471,7 +471,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_jump_general">Allgemein</string>
     <string name="settings_jump_appearance">Darstellung</string>
     <string name="settings_jump_data">Daten</string>
-    <string name="settings_jump_config">Konfiguration</string>
+    <string name="settings_jump_config">Teilen &amp; Backup</string>
     <string name="settings_jump_updates">Updates</string>
     <string name="settings_jump_input">Eingabe</string>
     <string name="settings_jump_diagnostics">Diagnose</string>
@@ -500,7 +500,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_cancel">Abbrechen</string>
 
     <!-- Configuration export/import -->
-    <string name="settings_section_config">Konfiguration</string>
+    <string name="settings_section_config">Teilen &amp; Backup</string>
     <string name="settings_config_export">Backup erstellen</string>
     <string name="settings_config_import">Backup wiederherstellen</string>
     <string name="settings_config_export_profile">Profil teilen</string>
