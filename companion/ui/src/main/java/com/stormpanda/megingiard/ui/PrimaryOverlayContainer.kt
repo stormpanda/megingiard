@@ -1,5 +1,10 @@
 package com.stormpanda.megingiard.ui
 
+import android.app.ActivityOptions
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.view.Display
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -53,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -288,5 +294,26 @@ fun PrimaryOverlayContainer(
                 }
             }
         }
+    }
+}
+
+/**
+ * Launches an external URL via browser intent targeted to the primary (default) display.
+ */
+fun launchUrlOnPrimaryDisplay(
+    context: Context,
+    url: String,
+) {
+    try {
+        val intent =
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        val options = ActivityOptions.makeBasic()
+        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        context.startActivity(intent, options.toBundle())
+        AppLog.d("PrimaryOverlay", "Launched URL on primary display: $url")
+    } catch (e: Exception) {
+        AppLog.e("PrimaryOverlay", "Failed to launch URL ($url) on primary display: ${e.message}")
     }
 }

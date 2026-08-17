@@ -1420,6 +1420,7 @@ fun GamepadSliderCard(
                     Slider(
                         value = value,
                         onValueChange = onValueChange,
+                        onValueChangeFinished = { isAdjusting = false },
                         valueRange = valueRange,
                         enabled = enabled,
                         colors =
@@ -1435,6 +1436,7 @@ fun GamepadSliderCard(
                 Slider(
                     value = value,
                     onValueChange = onValueChange,
+                    onValueChangeFinished = { isAdjusting = false },
                     valueRange = valueRange,
                     enabled = enabled,
                     colors =

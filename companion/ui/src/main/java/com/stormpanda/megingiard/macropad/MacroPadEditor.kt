@@ -108,7 +108,6 @@ import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import java.io.File
 import java.util.UUID
 
 private const val TAG = "MacroPadEditor"
@@ -476,15 +475,8 @@ fun MacroPadEditor(
                 title = stringResource(R.string.macropad_editor_delete_layout),
                 body = pendingLayout.name,
                 onConfirm = {
-                    pendingLayout.backgroundImagePath?.let { path ->
-                        val file = File(context.filesDir, path)
-                        if (file.exists()) {
-                            try {
-                                file.delete()
-                            } catch (e: Exception) {
-                                AppLog.e(TAG, "Failed to delete background file $path", e)
-                            }
-                        }
+                    scope.launch {
+                        MacroPadMediaRepository.deleteBackgroundImage(context, pendingLayout.id)
                     }
                     MacroPadState.deleteLayout(pendingLayout.id)
                     layoutPendingDelete = null
@@ -545,16 +537,10 @@ fun MacroPadEditor(
                 title = stringResource(R.string.macropad_editor_delete_profile),
                 body = stringResource(R.string.macropad_editor_confirm_delete),
                 onConfirm = {
-                    activeProfile.layouts.forEach { layout ->
-                        layout.backgroundImagePath?.let { path ->
-                            val file = File(context.filesDir, path)
-                            if (file.exists()) {
-                                try {
-                                    file.delete()
-                                } catch (e: Exception) {
-                                    AppLog.e(TAG, "Failed to delete background file $path", e)
-                                }
-                            }
+                    val layoutsToDelete = activeProfile.layouts
+                    scope.launch {
+                        layoutsToDelete.forEach { layout ->
+                            MacroPadMediaRepository.deleteBackgroundImage(context, layout.id)
                         }
                     }
                     MacroPadState.deleteProfile(activeProfile.id)

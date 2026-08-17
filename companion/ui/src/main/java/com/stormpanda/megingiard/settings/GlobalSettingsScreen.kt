@@ -1,9 +1,5 @@
 package com.stormpanda.megingiard.settings
 
-import android.app.ActivityOptions
-import android.content.Intent
-import android.net.Uri
-import android.view.Display
 import android.view.KeyEvent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -133,6 +129,7 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
 import com.stormpanda.megingiard.viewmodel.SteamGridDbTestStatus
 import kotlinx.coroutines.delay
@@ -161,9 +158,6 @@ private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
 
 private const val GS_OBTAINIUM_REPO_URL = "https://github.com/stormpanda/megingiard"
 private const val GS_OBTAINIUM_FALLBACK_URL = "https://github.com/ImranR98/Obtainium"
-
-private val GS_KOFI_BUTTON_HEIGHT = 32.dp
-private val GS_KOFI_CORNER = 8.dp
 
 private val ACCENT_PALETTE_PRESETS =
     listOf(
@@ -593,27 +587,10 @@ fun GlobalSettingsScreen(
                                     onClick = {
                                         val deepLink = "obtainium://add/${GS_OBTAINIUM_REPO_URL}"
                                         try {
-                                            val intent =
-                                                Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
-                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                }
-                                            val options = ActivityOptions.makeBasic()
-                                            options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                            context.startActivity(intent, options.toBundle())
-                                            AppLog.d(TAG, "Launched Obtainium deep link: $deepLink")
+                                            launchUrlOnPrimaryDisplay(context, deepLink)
                                         } catch (e: Exception) {
                                             AppLog.w(TAG, "Obtainium deep link failed: ${e.message}, falling back to browser")
-                                            try {
-                                                val browserIntent =
-                                                    Intent(Intent.ACTION_VIEW, Uri.parse(GS_OBTAINIUM_FALLBACK_URL)).apply {
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                    }
-                                                val options = ActivityOptions.makeBasic()
-                                                options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                                context.startActivity(browserIntent, options.toBundle())
-                                            } catch (ex: Exception) {
-                                                AppLog.e(TAG, "Failed to open browser fallback: ${ex.message}")
-                                            }
+                                            launchUrlOnPrimaryDisplay(context, GS_OBTAINIUM_FALLBACK_URL)
                                         }
                                         AppStateManager.closeActiveModal()
                                         onBack()
@@ -855,6 +832,9 @@ fun GlobalSettingsScreen(
         )
     }
     if (showUpdatePromptDialog) {
+        val releaseUrl =
+            latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
+                ?: "https://github.com/stormpanda/megingiard/releases"
         UpdatePromptDialog(
             tagName = latestReleaseInfo?.tagName ?: "",
             colors = colors,
@@ -863,39 +843,11 @@ fun GlobalSettingsScreen(
                 showUpdatePromptDialog = false
                 selectedCategory = SettingsCategory.CONFIGURATION
                 activeSubPage = SettingsSubPage.CREATE_BACKUP
-                val url =
-                    latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                        ?: "https://github.com/stormpanda/megingiard/releases"
-                try {
-                    val intent =
-                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    val options = ActivityOptions.makeBasic()
-                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                    context.startActivity(intent, options.toBundle())
-                    AppLog.d(TAG, "Launched release URL on top display: $url")
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
-                }
+                launchUrlOnPrimaryDisplay(context, releaseUrl)
             },
             onOpenDirectly = {
                 showUpdatePromptDialog = false
-                val url =
-                    latestReleaseInfo?.htmlUrl?.ifBlank { "https://github.com/stormpanda/megingiard/releases" }
-                        ?: "https://github.com/stormpanda/megingiard/releases"
-                try {
-                    val intent =
-                        Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    val options = ActivityOptions.makeBasic()
-                    options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                    context.startActivity(intent, options.toBundle())
-                    AppLog.d(TAG, "Launched release URL on top display: $url")
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to launch release URL: ${e.message}")
-                }
+                launchUrlOnPrimaryDisplay(context, releaseUrl)
             },
             onDismiss = { showUpdatePromptDialog = false },
         )
@@ -1016,6 +968,18 @@ fun GlobalSettingsScreen(
 }
 
 @Composable
+private fun GamepadSubPageHeader(
+    parentTitle: String,
+    subPageTitle: String,
+    accentColor: Color,
+) {
+    GamepadSectionHeader(
+        text = "${parentTitle.uppercase()}  ›  ${subPageTitle.uppercase()}",
+        color = accentColor,
+    )
+}
+
+@Composable
 private fun SteamGridDbTokenSubPage(
     token: String,
     onTokenChange: (String) -> Unit,
@@ -1023,11 +987,10 @@ private fun SteamGridDbTokenSubPage(
     testStatus: SteamGridDbTestStatus,
     onTestConnection: () -> Unit,
 ) {
-    GamepadSectionHeader(
-        text = "${stringResource(
-            R.string.settings_section_general,
-        ).uppercase()}  ›  ${stringResource(R.string.settings_steamgriddb_token).uppercase()}",
-        color = effectiveAccent,
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.settings_section_general),
+        subPageTitle = stringResource(R.string.settings_steamgriddb_token),
+        accentColor = effectiveAccent,
     )
 
     GamepadTextFieldCard(
@@ -1097,11 +1060,10 @@ private fun DeadzonesSubPage(
     onRightChange: (Float) -> Unit,
     effectiveAccent: Color,
 ) {
-    GamepadSectionHeader(
-        text = "${stringResource(
-            R.string.settings_section_input,
-        ).uppercase()}  ›  ${stringResource(R.string.privd_deadzone_title).uppercase()}",
-        color = effectiveAccent,
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.settings_section_input),
+        subPageTitle = stringResource(R.string.privd_deadzone_title),
+        accentColor = effectiveAccent,
     )
 
     GamepadSliderCard(
@@ -1138,11 +1100,10 @@ private fun CreateBackupSubPage(
     var description by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
 
-    GamepadSectionHeader(
-        text = "${stringResource(
-            R.string.settings_section_config,
-        ).uppercase()}  ›  ${stringResource(R.string.settings_config_export).uppercase()}",
-        color = effectiveAccent,
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.settings_section_config),
+        subPageTitle = stringResource(R.string.settings_config_export),
+        accentColor = effectiveAccent,
     )
 
     GamepadTextFieldCard(
@@ -1207,11 +1168,10 @@ private fun ShareProfileSubPage(
     var description by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
 
-    GamepadSectionHeader(
-        text = "${stringResource(
-            R.string.settings_section_config,
-        ).uppercase()}  ›  ${stringResource(R.string.settings_config_export_profile).uppercase()}",
-        color = effectiveAccent,
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.settings_section_config),
+        subPageTitle = stringResource(R.string.settings_config_export_profile),
+        accentColor = effectiveAccent,
     )
 
     if (profiles.size > 1) {
@@ -1337,11 +1297,10 @@ private fun CustomAccentSubPage(
             )
         }
 
-    GamepadSectionHeader(
-        text = "${stringResource(
-            R.string.settings_section_appearance,
-        ).uppercase()}  ›  ${stringResource(R.string.settings_accent_custom_title).uppercase()}",
-        color = effectiveAccent,
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.settings_section_appearance),
+        subPageTitle = stringResource(R.string.settings_accent_custom_title),
+        accentColor = effectiveAccent,
     )
 
     GamepadSliderCard(

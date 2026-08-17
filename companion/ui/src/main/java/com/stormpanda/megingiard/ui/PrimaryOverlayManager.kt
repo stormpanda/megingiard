@@ -230,12 +230,17 @@ object PrimaryOverlayManager {
                             }
 
                             event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_BUTTON_A -> {
-                                AppLog.d(TAG, "Button A pressed -> Forwarding as DPAD_CENTER")
+                                AppLog.d(TAG, "Button A down -> Forwarding as DPAD_CENTER down")
                                 val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+                                dispatchKeyEvent(dpadCenterDown)
+                                true
+                            }
+
+                            event.action == KeyEvent.ACTION_UP && keyCode == KeyEvent.KEYCODE_BUTTON_A -> {
+                                AppLog.d(TAG, "Button A up -> Forwarding as DPAD_CENTER up")
                                 val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
-                                val downHandled = dispatchKeyEvent(dpadCenterDown)
-                                val upHandled = dispatchKeyEvent(dpadCenterUp)
-                                if (!downHandled && !upHandled) {
+                                val handled = dispatchKeyEvent(dpadCenterUp)
+                                if (!handled) {
                                     PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_BUTTON_A)
                                 }
                                 true

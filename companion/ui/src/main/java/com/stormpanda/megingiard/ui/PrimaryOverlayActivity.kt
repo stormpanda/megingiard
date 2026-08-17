@@ -145,18 +145,31 @@ class PrimaryOverlayActivity : ComponentActivity() {
             }
 
             KeyEvent.KEYCODE_BUTTON_A -> {
-                AppLog.d(TAG, "onKeyDown: Button A pressed -> Forwarding as DPAD_CENTER")
+                AppLog.d(TAG, "onKeyDown: Button A pressed -> Forwarding as DPAD_CENTER down")
                 val dpadCenterDown = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER)
+                dispatchKeyEvent(dpadCenterDown)
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(
+        keyCode: Int,
+        event: KeyEvent?,
+    ): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_BUTTON_A -> {
+                AppLog.d(TAG, "onKeyUp: Button A released -> Forwarding as DPAD_CENTER up")
                 val dpadCenterUp = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_CENTER)
-                val downHandled = dispatchKeyEvent(dpadCenterDown)
-                val upHandled = dispatchKeyEvent(dpadCenterUp)
-                if (!downHandled && !upHandled) {
+                val handled = dispatchKeyEvent(dpadCenterUp)
+                if (!handled) {
                     PrimaryOverlayInputBridge.sendFocusRecovery(KeyEvent.KEYCODE_BUTTON_A)
                 }
                 return true
             }
         }
-        return super.onKeyDown(keyCode, event)
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onDestroy() {

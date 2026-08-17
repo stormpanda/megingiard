@@ -1,9 +1,5 @@
 package com.stormpanda.megingiard.ui
 
-import android.app.ActivityOptions
-import android.content.Intent
-import android.net.Uri
-import android.view.Display
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
@@ -75,19 +71,8 @@ fun PrimaryModalHost(
                                 .height(PMH_KOFI_BUTTON_HEIGHT)
                                 .clip(RoundedCornerShape(PMH_KOFI_CORNER))
                                 .clickable {
-                                    val url = "https://ko-fi.com/stormpanda"
-                                    try {
-                                        val intent =
-                                            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                        val options = ActivityOptions.makeBasic()
-                                        options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
-                                        context.startActivity(intent, options.toBundle())
-                                        onDismiss()
-                                    } catch (e: Exception) {
-                                        AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
-                                    }
+                                    launchUrlOnPrimaryDisplay(context, "https://ko-fi.com/stormpanda")
+                                    onDismiss()
                                 }.focusProperties { canFocus = false },
                     )
                 },
