@@ -1,5 +1,7 @@
 package com.stormpanda.megingiard.ui
 
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -21,6 +23,9 @@ internal fun AppTextField(
     isError: Boolean = false,
     singleLine: Boolean = true,
     enabled: Boolean = true,
+    readOnly: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val colors = LocalAppColors.current
     val accentColor = colors.accent
@@ -39,6 +44,9 @@ internal fun AppTextField(
         isError = isError,
         singleLine = singleLine,
         enabled = enabled,
+        readOnly = readOnly,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
         colors =
             OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = accentColor,

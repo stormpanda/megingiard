@@ -109,7 +109,6 @@ import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
@@ -118,6 +117,7 @@ import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -141,6 +141,7 @@ private const val TAG = "GlobalSettingsScreen"
  */
 enum class SettingsSubPage {
     DEADZONES,
+    STEAMGRIDDB_TOKEN,
 }
 
 private const val GS_SUBPAGE_FOCUS_DELAY_MS = 50L
@@ -199,7 +200,6 @@ fun GlobalSettingsScreen(
 
     var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
     var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
-    var showSteamGridDbDialog by rememberSaveable { mutableStateOf(false) }
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     val exportResult by ConfigManager.exportResult.collectAsState()
     val logReportSaveResult by LogReportManager.saveResult.collectAsState()
@@ -457,7 +457,7 @@ fun GlobalSettingsScreen(
                                         },
                                     actionText = stringResource(R.string.gamepad_action_edit),
                                     icon = Icons.Rounded.Key,
-                                    onClick = { showSteamGridDbDialog = true },
+                                    onClick = { activeSubPage = SettingsSubPage.STEAMGRIDDB_TOKEN },
                                 )
                             }
 
@@ -763,24 +763,20 @@ fun GlobalSettingsScreen(
                                 effectiveAccent = effectiveAccent,
                             )
                         }
+
+                        SettingsSubPage.STEAMGRIDDB_TOKEN -> {
+                            SteamGridDbTokenSubPage(
+                                token = steamGridDbApiToken,
+                                onTokenChange = { viewModel.setSteamGridDbApiToken(it) },
+                                effectiveAccent = effectiveAccent,
+                            )
+                        }
                     }
                 }
             }
         },
     )
 
-    if (showSteamGridDbDialog) {
-        SteamGridDbTokenDialog(
-            initialToken = steamGridDbApiToken,
-            colors = colors,
-            accentColor = effectiveAccent,
-            onConfirm = {
-                viewModel.setSteamGridDbApiToken(it)
-                showSteamGridDbDialog = false
-            },
-            onDismiss = { showSteamGridDbDialog = false },
-        )
-    }
     if (showColorPicker) {
         ColorWheelPicker(
             initialColor = accentColor,
@@ -1029,58 +1025,27 @@ fun GlobalSettingsScreen(
 }
 
 @Composable
-private fun SteamGridDbTokenDialog(
-    initialToken: String,
-    colors: AppColors,
-    accentColor: Color,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
+private fun SteamGridDbTokenSubPage(
+    token: String,
+    onTokenChange: (String) -> Unit,
+    effectiveAccent: Color,
 ) {
-    var token by rememberSaveable { mutableStateOf(initialToken) }
+    GamepadSectionHeader(
+        text = "${stringResource(
+            R.string.settings_section_general,
+        ).uppercase()}  ›  ${stringResource(R.string.settings_steamgriddb_token).uppercase()}",
+        color = effectiveAccent,
+    )
 
-    AppModalDialog(
-        onDismiss = onDismiss,
-    ) {
-        Text(
-            text = stringResource(R.string.settings_steamgriddb_token),
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.settings_steamgriddb_token_desc),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        AppTextField(
-            value = token,
-            onValueChange = { token = it },
-            placeholder = { Text(stringResource(R.string.settings_steamgriddb_token_placeholder)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GamepadActionCard(
-                title = "",
-                actionText = stringResource(R.string.settings_cancel),
-                onClick = onDismiss,
-                modifier = Modifier.width(100.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            GamepadActionCard(
-                title = "",
-                actionText = stringResource(R.string.config_ok),
-                onClick = { onConfirm(token.trim()) },
-                modifier = Modifier.width(100.dp),
-            )
-        }
-    }
+    GamepadTextFieldCard(
+        title = stringResource(R.string.settings_steamgriddb_token),
+        description = stringResource(R.string.settings_steamgriddb_token_desc),
+        placeholder = stringResource(R.string.settings_steamgriddb_token_placeholder),
+        value = token,
+        onValueChange = onTokenChange,
+        icon = Icons.Rounded.Key,
+        modifier = Modifier.firstDeckItem(),
+    )
 }
 
 @Composable

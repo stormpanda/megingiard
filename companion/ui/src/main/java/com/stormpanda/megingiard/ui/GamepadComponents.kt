@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -46,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -58,11 +62,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -118,6 +124,7 @@ private const val GC_DEFAULT_SLIDER_STEP = 0.05f
 fun GamepadFocusCard(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    cardFocusRequester: FocusRequester = remember { FocusRequester() },
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
     onCustomKeyEvent: ((androidx.compose.ui.input.key.KeyEvent) -> Boolean)? = null,
@@ -131,7 +138,6 @@ fun GamepadFocusCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 
-    val cardFocusRequester = remember { FocusRequester() }
     val recordLastFocused = LocalLastFocusedDeckTracker.current
 
     val isEffectivelyFocused = isFocused || isAdjusting
@@ -754,6 +760,180 @@ fun GamepadChoiceCard(
         onClick = onClick,
         enabled = enabled,
     )
+}
+
+/**
+ * Gamepad-first text input card supporting 2-tier D-pad navigation.
+ *
+ * In Tier 1 (Row Navigation):
+ * - D-Pad Left: passes through to navigate back to the sidebar
+ * - D-Pad Up / Down: moves strictly to adjacent card
+ * - Button A / Click: enters Tier 2 (Text Editing Mode), requests text field focus
+ *
+ * In Tier 2 (Text Editing Mode):
+ * - Text field is focused and receives software/hardware keyboard input
+ * - Enter / Dpad Center: confirms value, exits editing mode
+ * - Button B / Back / Escape: cancels/exits editing mode without dismissing overlay
+ */
+@Composable
+fun GamepadTextFieldCard(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    placeholder: String? = null,
+    icon: ImageVector? = null,
+    singleLine: Boolean = true,
+    enabled: Boolean = true,
+) {
+    val colors = LocalAppColors.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var isEditing by remember { mutableStateOf(false) }
+    var draftText by remember(value) { mutableStateOf(value) }
+    val cardFocusRequester = remember { FocusRequester() }
+    val textFieldFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(isEditing) {
+        if (isEditing) {
+            try {
+                textFieldFocusRequester.requestFocus()
+                keyboardController?.show()
+            } catch (_: IllegalStateException) {
+                // Focus requester unattached
+            }
+        } else {
+            keyboardController?.hide()
+            try {
+                cardFocusRequester.requestFocus()
+            } catch (_: IllegalStateException) {
+                // Focus requester unattached
+            }
+        }
+    }
+
+    BackHandler(enabled = isEditing) {
+        onValueChange(draftText.trim())
+        isEditing = false
+    }
+
+    GamepadFocusCard(
+        onClick = {
+            if (enabled && !isEditing) {
+                isEditing = true
+            }
+        },
+        cardFocusRequester = cardFocusRequester,
+        enabled = enabled,
+        modifier = modifier,
+        isAdjusting = isEditing,
+        onCustomKeyEvent = { keyEvent ->
+            if (!isEditing) return@GamepadFocusCard false
+            val keyCode = keyEvent.nativeKeyEvent.keyCode
+            if (keyEvent.type == KeyEventType.KeyDown) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    -> {
+                        onValueChange(draftText.trim())
+                        isEditing = false
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    -> {
+                        if (singleLine) {
+                            onValueChange(draftText.trim())
+                            isEditing = false
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    else -> {
+                        false
+                    }
+                }
+            } else if (keyEvent.type == KeyEventType.KeyUp) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_BUTTON_B,
+                    KeyEvent.KEYCODE_BACK,
+                    KeyEvent.KEYCODE_ESCAPE,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    -> singleLine
+
+                    else -> false
+                }
+            } else {
+                false
+            }
+        },
+    ) { isFocused ->
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (icon != null) {
+                    GamepadCardIcon(
+                        icon = icon,
+                        isFocused = isFocused,
+                    )
+                    Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
+                }
+
+                GamepadCardText(
+                    title = title,
+                    description = description,
+                    isFocused = isFocused,
+                    modifier = Modifier.weight(1f),
+                )
+
+                Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
+
+                GamepadPill(
+                    text = if (isEditing) stringResource(R.string.gamepad_action_save) else stringResource(R.string.gamepad_action_edit),
+                    isAccent = isEditing,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AppTextField(
+                value = if (isEditing) draftText else value,
+                onValueChange = {
+                    if (isEditing) {
+                        draftText = it
+                        onValueChange(it)
+                    }
+                },
+                placeholder = placeholder?.let { { Text(it) } },
+                singleLine = singleLine,
+                enabled = enabled,
+                readOnly = !isEditing,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions =
+                    KeyboardActions(onDone = {
+                        onValueChange(draftText.trim())
+                        isEditing = false
+                    }),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusProperties {
+                            canFocus = isEditing
+                        }.focusRequester(textFieldFocusRequester),
+            )
+        }
+    }
 }
 
 /**
