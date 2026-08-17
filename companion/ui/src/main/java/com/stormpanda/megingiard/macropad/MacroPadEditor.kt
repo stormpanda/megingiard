@@ -55,11 +55,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -87,15 +90,19 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.LocalFirstContentRequester
+import com.stormpanda.megingiard.ui.LocalResetLastFocusedTracker
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.UUID
 
 private const val TAG = "MacroPadEditor"
+private const val MPE_SUBPAGE_FOCUS_DELAY_MS = 60L
 
 internal val MPE_TOP_BAR_HEIGHT = 56.dp
 internal val MPE_PADDING = 16.dp
@@ -103,6 +110,7 @@ internal val MPE_ITEM_PADDING = 12.dp
 internal val MPE_GRID_TOGGLE_SIZE = 36.dp
 internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MacroPadEditor(
     onDone: () -> Unit,
@@ -244,6 +252,36 @@ fun MacroPadEditor(
                         )
                     },
                     content = {
+                        val firstContentRequester = LocalFirstContentRequester.current
+                        val resetLastFocused = LocalResetLastFocusedTracker.current
+                        val inputModeManager = LocalInputModeManager.current
+                        var wasInSubPage by remember { mutableStateOf(false) }
+
+                        LaunchedEffect(subPageStack) {
+                            resetLastFocused?.invoke()
+                            if (subPageStack.isNotEmpty()) {
+                                wasInSubPage = true
+                                delay(MPE_SUBPAGE_FOCUS_DELAY_MS)
+                                try {
+                                    inputModeManager?.requestInputMode(InputMode.Keyboard)
+                                    firstContentRequester?.requestFocus()
+                                    AppLog.d(TAG, "MacroPadEditor: focused first item on entering subpage (${subPageStack.lastOrNull()})")
+                                } catch (_: IllegalStateException) {
+                                    AppLog.d(TAG, "MacroPadEditor: firstContentRequester unattached on entering subpage")
+                                }
+                            } else if (wasInSubPage) {
+                                wasInSubPage = false
+                                delay(MPE_SUBPAGE_FOCUS_DELAY_MS)
+                                try {
+                                    inputModeManager?.requestInputMode(InputMode.Keyboard)
+                                    firstContentRequester?.requestFocus()
+                                    AppLog.d(TAG, "MacroPadEditor: focused first item on returning from subpage to deck")
+                                } catch (_: IllegalStateException) {
+                                    AppLog.d(TAG, "MacroPadEditor: firstContentRequester unattached on returning to deck")
+                                }
+                            }
+                        }
+
                         AnimatedContent(
                             targetState = subPageStack,
                             transitionSpec = {
