@@ -32,6 +32,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -88,7 +89,8 @@ private const val GS_INITIAL_FOCUS_DELAY_MS = 50L
 val LocalActiveCategoryRequester = compositionLocalOf<FocusRequester?> { null }
 val LocalFirstContentRequester = compositionLocalOf<FocusRequester?> { null }
 val LocalTransferFocusToDeck = compositionLocalOf<(() -> Unit)?> { null }
-val LocalLastFocusedDeckTracker = compositionLocalOf<((FocusRequester) -> Unit)?> { null }
+val LocalLastFocusedDeckTracker = compositionLocalOf<((key: Any, requester: FocusRequester) -> Unit)?> { null }
+val LocalDeckCardRegistry = compositionLocalOf<((key: Any, requester: FocusRequester?) -> Unit)?> { null }
 val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
 
 /**
@@ -264,19 +266,22 @@ fun GamepadTwoPaneScaffold(
     val inputModeManager = LocalInputModeManager.current
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
-    var lastFocusedContentRequester by remember { mutableStateOf<FocusRequester?>(null) }
+    val activeDeckCardRequesters = remember { mutableMapOf<Any, FocusRequester>() }
+    val savedFocusKeyByDepth = remember { mutableMapOf<Int, Any>() }
+    var currentDepth by remember { mutableIntStateOf(0) }
     var isDeckFocused by remember { mutableStateOf(false) }
 
     val transferFocusToDeck: () -> Unit = {
         var handled = false
-        val target = lastFocusedContentRequester
-        if (target != null) {
+        val targetKey = savedFocusKeyByDepth[currentDepth]
+        val targetRequester = if (targetKey != null) activeDeckCardRequesters[targetKey] else null
+        if (targetRequester != null) {
             try {
-                target.requestFocus()
-                AppLog.d(TAG, "transferFocusToDeck: restored focus to last focused content deck item")
+                targetRequester.requestFocus()
+                AppLog.d(TAG, "transferFocusToDeck: restored focus to card '$targetKey' at depth $currentDepth")
                 handled = true
             } catch (_: IllegalStateException) {
-                lastFocusedContentRequester = null
+                savedFocusKeyByDepth.remove(currentDepth)
             }
         }
         if (!handled) {
@@ -327,8 +332,18 @@ fun GamepadTwoPaneScaffold(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
         LocalTransferFocusToDeck provides transferFocusToDeck,
-        LocalLastFocusedDeckTracker provides { req -> lastFocusedContentRequester = req },
-        LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
+        LocalLastFocusedDeckTracker provides { key, req ->
+            savedFocusKeyByDepth[currentDepth] = key
+            activeDeckCardRequesters[key] = req
+        },
+        LocalDeckCardRegistry provides { key, req ->
+            if (req != null) {
+                activeDeckCardRequesters[key] = req
+            } else {
+                activeDeckCardRequesters.remove(key)
+            }
+        },
+        LocalResetLastFocusedTracker provides { savedFocusKeyByDepth.remove(currentDepth) },
         LocalBringIntoViewSpec provides bringIntoViewSpec,
     ) {
         val effectiveNavKey = navigationKey ?: isCustomBackActive
@@ -337,14 +352,47 @@ fun GamepadTwoPaneScaffold(
         LaunchedEffect(effectiveNavKey) {
             if (effectiveNavKey != previousNavKey) {
                 previousNavKey = effectiveNavKey
-                lastFocusedContentRequester = null
+                val newDepth =
+                    when (effectiveNavKey) {
+                        is Collection<*> -> effectiveNavKey.size
+                        is Boolean -> if (effectiveNavKey) 1 else 0
+                        else -> if (isCustomBackActive) 1 else 0
+                    }
+                val isBackTransition = newDepth < currentDepth
+                currentDepth = newDepth
+
+                // Clean up deeper depth key references when backing out
+                savedFocusKeyByDepth.keys.filter { it > newDepth }.forEach { savedFocusKeyByDepth.remove(it) }
+
                 delay(GS_INITIAL_FOCUS_DELAY_MS)
                 try {
                     inputModeManager.requestInputMode(InputMode.Keyboard)
-                    firstContentRequester.requestFocus()
-                    AppLog.d(TAG, "GamepadTwoPaneScaffold: auto focus restored on navigationKey change ($effectiveNavKey)")
+                    if (isBackTransition) {
+                        val parentKey = savedFocusKeyByDepth[newDepth]
+                        val parentRequester = if (parentKey != null) activeDeckCardRequesters[parentKey] else null
+                        var restored = false
+                        if (parentRequester != null) {
+                            try {
+                                parentRequester.requestFocus()
+                                AppLog.d(
+                                    TAG,
+                                    "GamepadTwoPaneScaffold: restored focus to parent trigger card '$parentKey' at depth $newDepth",
+                                )
+                                restored = true
+                            } catch (_: IllegalStateException) {
+                                savedFocusKeyByDepth.remove(newDepth)
+                            }
+                        }
+                        if (!restored) {
+                            firstContentRequester.requestFocus()
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: fallback focus on first item at depth $newDepth")
+                        }
+                    } else {
+                        firstContentRequester.requestFocus()
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focused first item entering sub-menu at depth $newDepth")
+                    }
                 } catch (_: IllegalStateException) {
-                    AppLog.d(TAG, "GamepadTwoPaneScaffold: firstContentRequester unattached on auto focus restore")
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on auto focus restore")
                 }
             }
         }

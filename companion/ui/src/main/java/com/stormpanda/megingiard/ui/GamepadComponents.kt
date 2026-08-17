@@ -142,6 +142,7 @@ fun GamepadFocusCard(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
+    itemKey: Any? = null,
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
@@ -156,12 +157,21 @@ fun GamepadFocusCard(
     val isFocused by interactionSource.collectIsFocusedAsState()
 
     val recordLastFocused = LocalLastFocusedDeckTracker.current
+    val cardRegistry = LocalDeckCardRegistry.current
+    val effectiveKey = itemKey ?: cardFocusRequester
+
+    DisposableEffect(effectiveKey, cardFocusRequester) {
+        cardRegistry?.invoke(effectiveKey, cardFocusRequester)
+        onDispose {
+            cardRegistry?.invoke(effectiveKey, null)
+        }
+    }
 
     val isEffectivelyFocused = isFocused || isAdjusting
 
     LaunchedEffect(isFocused) {
         if (isFocused) {
-            recordLastFocused?.invoke(cardFocusRequester)
+            recordLastFocused?.invoke(effectiveKey, cardFocusRequester)
         }
         onFocusChanged?.invoke(isFocused)
     }
@@ -623,6 +633,7 @@ fun GamepadToggleCard(
     description: String? = null,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    itemKey: Any? = title,
 ) {
     GamepadFocusCard(
         onClick =
@@ -633,6 +644,7 @@ fun GamepadToggleCard(
             },
         enabled = enabled,
         modifier = modifier,
+        itemKey = itemKey,
     ) { isFocused ->
         GamepadCardRow(
             title = title,
@@ -663,6 +675,7 @@ fun GamepadAdjustableCard(
     icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    itemKey: Any? = title,
 ) {
     var isAdjusting by remember { mutableStateOf(false) }
 
@@ -678,6 +691,7 @@ fun GamepadAdjustableCard(
         },
         enabled = enabled,
         modifier = modifier,
+        itemKey = itemKey,
         isAdjusting = isAdjusting,
         onCustomKeyEvent = { keyEvent ->
             handleAdjustmentKeyEvent(
@@ -740,6 +754,7 @@ fun GamepadStepperCard(
     icon: ImageVector? = null,
     onValueClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    itemKey: Any? = title,
 ) {
     GamepadAdjustableCard(
         title = title,
@@ -751,6 +766,7 @@ fun GamepadStepperCard(
         icon = icon,
         onClick = onValueClick,
         enabled = enabled,
+        itemKey = itemKey,
     )
 }
 
@@ -781,6 +797,7 @@ fun GamepadChoiceCard(
     icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    itemKey: Any? = title,
 ) {
     GamepadAdjustableCard(
         title = title,
@@ -792,6 +809,7 @@ fun GamepadChoiceCard(
         icon = icon,
         onClick = onClick,
         enabled = enabled,
+        itemKey = itemKey,
     )
 }
 
@@ -821,6 +839,7 @@ fun GamepadTextFieldCard(
     singleLine: Boolean = true,
     enabled: Boolean = true,
     onLeftKey: (() -> Unit)? = null,
+    itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -881,6 +900,7 @@ fun GamepadTextFieldCard(
             }
         },
         cardFocusRequester = cardFocusRequester,
+        itemKey = itemKey,
         enabled = enabled,
         modifier = modifier,
         isAdjusting = isEditing,
@@ -1012,6 +1032,7 @@ fun GamepadActionCard(
     actionLeadingContent: (@Composable () -> Unit)? = null,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
+    itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
 
@@ -1019,6 +1040,7 @@ fun GamepadActionCard(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
+        itemKey = itemKey,
     ) { isFocused ->
         GamepadCardRow(
             title = title,
@@ -1109,26 +1131,29 @@ fun GamepadTwoStepConfirmCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     confirmDescription: String? = description,
-    actionText: String = stringResource(R.string.gamepad_action_delete),
+    actionText: String? = null,
     confirmActionText: String = stringResource(R.string.gamepad_action_confirm),
-    icon: ImageVector? = Icons.Rounded.Delete,
+    icon: ImageVector? = null,
     enabled: Boolean = true,
-    isDestructive: Boolean = true,
+    isDestructive: Boolean = false,
+    itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
     var isConfirming by remember { mutableStateOf(false) }
 
     GamepadFocusCard(
         onClick = {
-            if (!isConfirming) {
-                isConfirming = true
-            } else {
-                isConfirming = false
-                onConfirm()
+            if (enabled) {
+                if (!isConfirming) {
+                    isConfirming = true
+                } else {
+                    onConfirm()
+                }
             }
         },
         enabled = enabled,
         modifier = modifier,
+        itemKey = itemKey,
         onFocusChanged = { isFocused ->
             if (!isFocused && isConfirming) {
                 isConfirming = false
@@ -1181,7 +1206,7 @@ fun GamepadTwoStepConfirmCard(
                     horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
                 ) {
                     Text(
-                        text = if (isConfirming) confirmActionText else actionText,
+                        text = if (isConfirming) confirmActionText else (actionText ?: stringResource(R.string.gamepad_action_delete)),
                         color =
                             when {
                                 isConfirming -> colors.surface
@@ -1282,6 +1307,7 @@ fun GamepadColorPaletteCard(
     description: String? = null,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
     var isAdjusting by remember { mutableStateOf(false) }
@@ -1322,6 +1348,7 @@ fun GamepadColorPaletteCard(
         },
         enabled = enabled,
         modifier = modifier,
+        itemKey = itemKey,
         isAdjusting = isAdjusting,
         onCustomKeyEvent = { keyEvent ->
             handleAdjustmentKeyEvent(
