@@ -335,7 +335,7 @@ object ConfigManager {
                 if (file.exists() && file.isFile) {
                     val bytes = file.readBytes()
                     val hash =
-                        com.stormpanda.megingiard.security.HmacUtil
+                        HmacUtil
                             .sha256Hex(bytes)
                             .lowercase()
                     result["bg_${layout.id}"] = hash

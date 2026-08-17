@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.AppDropdown
@@ -61,6 +62,7 @@ internal fun KeyboardKeyPicker(
         newMod1: Int?,
         newMod2: Int?,
     ) {
+        AppLog.d(TAG, "KeyboardKeyPicker: emitChange keycode=$keycode label='$label'")
         onChange(PadAction.KeyboardKey(keycode, label, listOfNotNull(newMod1, newMod2)))
     }
 

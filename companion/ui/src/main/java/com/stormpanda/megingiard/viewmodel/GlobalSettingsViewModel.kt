@@ -1,9 +1,6 @@
 package com.stormpanda.megingiard.viewmodel
 
-import android.content.ComponentName
 import android.content.Context
-import android.provider.Settings
-import android.text.TextUtils
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.stormpanda.megingiard.AppLog

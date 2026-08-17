@@ -33,6 +33,11 @@ private val GG_FOOTER_HEIGHT = 44.dp
 private val GG_FOOTER_H_PADDING = 16.dp
 private val GG_GLYPH_SIZE = 20.dp
 private val GG_DEFAULT_BORDER_WIDTH = 1.dp
+private val GG_PILL_CORNER = 4.dp
+private val GG_PILL_H_PADDING = 6.dp
+private val GG_SPACING_ZERO = 0.dp
+private val GG_ACTION_PROMPT_SPACING = 6.dp
+private val GG_ACTIONS_SPACING = 16.dp
 private val GG_TEXT_SIZE_GLYPH = 11.sp
 private const val GG_FOOTER_BG_ALPHA = 0.85f
 
@@ -69,8 +74,8 @@ fun GamePadGlyphBadge(
     backgroundColor: Color = LocalAppColors.current.surfaceVariant,
 ) {
     val colors = LocalAppColors.current
-    val shape: Shape = if (glyph.isPill) RoundedCornerShape(4.dp) else CircleShape
-    val horizontalPadding = if (glyph.isPill) 6.dp else 0.dp
+    val shape: Shape = if (glyph.isPill) RoundedCornerShape(GG_PILL_CORNER) else CircleShape
+    val horizontalPadding = if (glyph.isPill) GG_PILL_H_PADDING else GG_SPACING_ZERO
 
     Box(
         modifier =
@@ -78,7 +83,7 @@ fun GamePadGlyphBadge(
                 .height(size)
                 .defaultMinSize(minWidth = size)
                 .background(backgroundColor, shape)
-                .border(1.dp, colors.subduedBorder, shape)
+                .border(GG_DEFAULT_BORDER_WIDTH, colors.subduedBorder, shape)
                 .padding(horizontal = horizontalPadding),
         contentAlignment = Alignment.Center,
     ) {
@@ -120,7 +125,7 @@ fun GamePadActionPrompt(
     Row(
         modifier = modifier.then(clickModifier),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(GG_ACTION_PROMPT_SPACING),
     ) {
         GamePadGlyphBadge(glyph = glyph)
         Text(
@@ -151,7 +156,7 @@ fun PrimaryOverlayFooter(
                 .border(GG_DEFAULT_BORDER_WIDTH, colors.subduedBorder)
                 .padding(horizontal = GG_FOOTER_H_PADDING),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(GG_ACTIONS_SPACING),
     ) {
         actions.forEach { (glyph, label) ->
             GamePadActionPrompt(glyph = glyph, text = label)

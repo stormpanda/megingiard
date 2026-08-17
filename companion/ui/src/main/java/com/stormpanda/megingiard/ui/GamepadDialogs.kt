@@ -39,6 +39,9 @@ private val GD_SEARCH_CLEAR_SIZE = 18.dp
 private val GD_EMPTY_STATE_ICON_BOX_SIZE = 56.dp
 private val GD_EMPTY_STATE_ICON_SIZE = 28.dp
 private val GD_EMPTY_STATE_PADDING = 24.dp
+private val GD_SPACING_4 = 4.dp
+private val GD_SPACING_8 = 8.dp
+private val GD_BORDER_WIDTH = 1.dp
 
 /**
  * Gamepad-first search bar with clear button and optional category filter chips.
@@ -77,7 +80,7 @@ fun <T> GamepadSearchBar(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(GD_SPACING_8),
     ) {
         AppTextField(
             value = query,
@@ -117,7 +120,7 @@ fun <T> GamepadSearchBar(
                     Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(GD_SPACING_8),
             ) {
                 AppSelectableChip(
                     text = stringResource(R.string.gamepad_category_all),
@@ -217,14 +220,14 @@ fun GamepadEmptyState(
                 .fillMaxWidth()
                 .padding(GD_EMPTY_STATE_PADDING),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(GD_SPACING_8),
     ) {
         Box(
             modifier =
                 Modifier
                     .size(GD_EMPTY_STATE_ICON_BOX_SIZE)
                     .background(colors.surfaceVariant, CircleShape)
-                    .border(1.dp, colors.subduedBorder, CircleShape),
+                    .border(GD_BORDER_WIDTH, colors.subduedBorder, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -249,7 +252,7 @@ fun GamepadEmptyState(
             )
         }
         if (actionText != null && onAction != null) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(GD_SPACING_4))
             GamepadActionCard(
                 title = actionText,
                 onClick = {

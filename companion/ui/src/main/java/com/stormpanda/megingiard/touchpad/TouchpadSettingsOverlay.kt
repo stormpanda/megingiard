@@ -43,6 +43,10 @@ import java.util.Locale
 
 private const val TAG = "TouchpadSettingsOverlay"
 
+private val TS_PADDING_SCREEN = 16.dp
+private val TS_SPACING_CARDS = 10.dp
+private val TS_SECTION_TOP_PADDING = 10.dp
+
 @Composable
 fun TouchpadSettingsOverlay(
     onBack: () -> Unit,
@@ -79,8 +83,8 @@ fun TouchpadSettingsOverlay(
                 .fillMaxSize()
                 .background(colors.appBackground)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(TS_PADDING_SCREEN),
+        verticalArrangement = Arrangement.spacedBy(TS_SPACING_CARDS),
     ) {
         Text(
             text = stringResource(R.string.settings_section_relative_mouse).uppercase(),
@@ -178,7 +182,7 @@ fun TouchpadSettingsOverlay(
             color = colors.accent,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 10.dp),
+            modifier = Modifier.padding(top = TS_SECTION_TOP_PADDING),
         )
 
         GamepadToggleCard(

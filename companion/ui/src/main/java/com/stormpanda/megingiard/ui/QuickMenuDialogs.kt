@@ -18,6 +18,10 @@ import com.stormpanda.megingiard.R
 
 private const val TAG = "QuickMenuDialogs"
 
+private val QMD_SPACING_12 = 12.dp
+private val QMD_SPACING_16 = 16.dp
+private val QMD_SPACING_8 = 8.dp
+
 @Composable
 internal fun ShutOffConfirmDialog(
     colors: AppColors,
@@ -39,13 +43,13 @@ internal fun ShutOffConfirmDialog(
             color = colors.onSurface,
             style = MaterialTheme.typography.titleLarge,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(QMD_SPACING_12))
         Text(
             text = stringResource(R.string.shut_off_dialog_body),
             color = colors.onSurfaceSecondary,
             style = MaterialTheme.typography.bodyMedium,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(QMD_SPACING_16))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
@@ -56,7 +60,7 @@ internal fun ShutOffConfirmDialog(
             }) {
                 Text(stringResource(R.string.settings_color_cancel), color = colors.onSurfaceSecondary)
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(QMD_SPACING_8))
             TextButton(onClick = {
                 AppLog.d(TAG, "ShutOffConfirmDialog confirmed")
                 onConfirm()

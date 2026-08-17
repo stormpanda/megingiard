@@ -31,7 +31,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -41,7 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -80,6 +78,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import java.util.Locale
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
 private const val TAG = "GamepadComponents"
 
@@ -107,10 +106,17 @@ private val GC_PALETTE_CONTAINER_BORDER_ADJUSTING = 2.dp
 private val GC_PALETTE_CONTAINER_BORDER_DEFAULT = 1.dp
 private val GC_COLOR_CARD_CONTENT_SPACING = 8.dp
 private val GC_SLIDER_HEIGHT = 24.dp
+private val GC_SLIDER_TRACK_HEIGHT = 8.dp
 private val GC_ROW_CONTENT_SPACING = 12.dp
 private val GC_TEXT_SIZE_PILL = 12.sp
 private val GC_TEXT_SIZE_CAPSULE = 13.sp
 private val GC_CAPSULE_TEXT_WIDTH = 140.dp
+private val GC_SPACING_2 = 2.dp
+private val GC_SPACING_4 = 4.dp
+private val GC_SPACING_6 = 6.dp
+private val GC_SPACING_8 = 8.dp
+private val GC_CORNER_4 = 4.dp
+private val GC_CORNER_8 = 8.dp
 
 private const val GC_CARD_FOCUSED_BG_ALPHA = 0.95f
 private const val GC_CARD_UNFOCUSED_BG_ALPHA = 0.55f
@@ -118,6 +124,7 @@ private const val GC_ACCENT_TINT_ALPHA = 0.2f
 private const val GC_DESTRUCTIVE_BG_ALPHA = 0.15f
 private const val GC_DESTRUCTIVE_BORDER_ALPHA = 0.6f
 private const val GC_SWATCH_BORDER_ALPHA = 0.3f
+private const val GC_SLIDER_TRACK_BORDER_ALPHA = 0.25f
 private const val GC_ANIM_DURATION_MS = 150
 private const val GC_UNFOCUSED_MAX_LINES = 2
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
@@ -132,7 +139,7 @@ fun GamepadFocusCard(
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
-    onCustomKeyEvent: ((androidx.compose.ui.input.key.KeyEvent) -> Boolean)? = null,
+    onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     onLeftKey: (() -> Unit)? = null,
     onRightKey: (() -> Unit)? = null,
     onFocusChanged: ((Boolean) -> Unit)? = null,
@@ -274,7 +281,7 @@ fun GamepadFocusCard(
  * Handles standardized gamepad adjustment key events (D-pad Left/Right adjustment, A/B/Enter dismiss).
  */
 internal fun handleAdjustmentKeyEvent(
-    keyEvent: androidx.compose.ui.input.key.KeyEvent,
+    keyEvent: ComposeKeyEvent,
     isAdjusting: Boolean,
     onAdjustLeft: () -> Unit,
     onAdjustRight: () -> Unit,
@@ -363,7 +370,7 @@ fun GamepadCardIcon(
         modifier =
             modifier
                 .size(GC_ICON_BOX_SIZE)
-                .background(bg, RoundedCornerShape(8.dp)),
+                .background(bg, RoundedCornerShape(GC_CORNER_8)),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -397,7 +404,7 @@ fun GamepadCardText(
             fontWeight = FontWeight.SemiBold,
         )
         if (description != null) {
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(GC_SPACING_2))
             Text(
                 text = description,
                 color = colors.onSurfaceSecondary,
@@ -513,7 +520,7 @@ fun GamepadAdjustableCapsule(
                     capsuleBorderWidth,
                     capsuleBorderColor,
                     RoundedCornerShape(GC_STATUS_PILL_CORNER),
-                ).padding(horizontal = 4.dp, vertical = 2.dp),
+                ).padding(horizontal = GC_SPACING_4, vertical = GC_SPACING_2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CapsuleArrowButton(
@@ -535,7 +542,7 @@ fun GamepadAdjustableCapsule(
                 Modifier
                     .width(GC_CAPSULE_TEXT_WIDTH)
                     .appMarquee()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = GC_SPACING_8),
         )
 
         CapsuleArrowButton(
@@ -930,7 +937,7 @@ fun GamepadTextFieldCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(GC_SPACING_8))
 
             AppTextField(
                 value = if (isEditing) draftText else value,
@@ -995,7 +1002,7 @@ fun GamepadActionCard(
                     {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(GC_SPACING_8),
                         ) {
                             if (actionLeadingContent != null) {
                                 actionLeadingContent()
@@ -1014,7 +1021,7 @@ fun GamepadActionCard(
                                                 },
                                                 RoundedCornerShape(GC_STATUS_PILL_CORNER),
                                             ).border(
-                                                1.dp,
+                                                GC_DEFAULT_BORDER_WIDTH,
                                                 if (isDestructive) {
                                                     colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
                                                 } else {
@@ -1023,7 +1030,7 @@ fun GamepadActionCard(
                                                 RoundedCornerShape(GC_STATUS_PILL_CORNER),
                                             ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
                                 ) {
                                     if (actionGlyph != null) {
                                         GamePadGlyphBadge(
@@ -1315,7 +1322,7 @@ fun GamepadSectionHeader(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = GC_SPACING_8, vertical = GC_SPACING_6),
     )
 }
 
@@ -1384,7 +1391,7 @@ fun GamepadSliderCard(
     ) { focused ->
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(GC_SPACING_8),
         ) {
             GamepadCardRow(
                 title = title,
@@ -1411,10 +1418,14 @@ fun GamepadSliderCard(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp))
+                                .height(GC_SLIDER_TRACK_HEIGHT)
+                                .clip(RoundedCornerShape(GC_CORNER_4))
                                 .background(trackBrush)
-                                .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(4.dp)),
+                                .border(
+                                    GC_DEFAULT_BORDER_WIDTH,
+                                    Color.White.copy(alpha = GC_SLIDER_TRACK_BORDER_ALPHA),
+                                    RoundedCornerShape(GC_CORNER_4),
+                                ),
                     )
 
                     Slider(

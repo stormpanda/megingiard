@@ -63,7 +63,10 @@ import com.stormpanda.megingiard.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private const val TAG = "PrimaryOverlayContainer"
+
 private val POC_CARD_CORNER = 16.dp
+private val POC_BOTTOM_CORNER_ZERO = 0.dp
 private val POC_CARD_ELEVATION = 16.dp
 private val POC_BORDER_WIDTH = 1.dp
 private const val POC_SCRIM_ALPHA = 0.78f
@@ -104,6 +107,7 @@ fun PrimaryOverlayContainer(
     actions: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    AppLog.d(TAG, "PrimaryOverlayContainer: rendering '$title'")
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     var isVisible by remember { mutableStateOf(false) }
@@ -114,6 +118,7 @@ fun PrimaryOverlayContainer(
 
     val handleDismiss: () -> Unit = {
         if (isVisible) {
+            AppLog.d(TAG, "PrimaryOverlayContainer: dismissing '$title'")
             isVisible = false
             coroutineScope.launch {
                 delay(MODAL_OVERLAY_ANIMATION_DURATION_MS.toLong())
@@ -172,8 +177,8 @@ fun PrimaryOverlayContainer(
                 RoundedCornerShape(
                     topStart = POC_CARD_CORNER,
                     topEnd = POC_CARD_CORNER,
-                    bottomStart = 0.dp,
-                    bottomEnd = 0.dp,
+                    bottomStart = POC_BOTTOM_CORNER_ZERO,
+                    bottomEnd = POC_BOTTOM_CORNER_ZERO,
                 )
 
             Surface(
@@ -312,8 +317,8 @@ fun launchUrlOnPrimaryDisplay(
         val options = ActivityOptions.makeBasic()
         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
         context.startActivity(intent, options.toBundle())
-        AppLog.d("PrimaryOverlay", "Launched URL on primary display: $url")
+        AppLog.d(TAG, "Launched URL on primary display: $url")
     } catch (e: Exception) {
-        AppLog.e("PrimaryOverlay", "Failed to launch URL ($url) on primary display: ${e.message}")
+        AppLog.e(TAG, "Failed to launch URL ($url) on primary display: ${e.message}")
     }
 }

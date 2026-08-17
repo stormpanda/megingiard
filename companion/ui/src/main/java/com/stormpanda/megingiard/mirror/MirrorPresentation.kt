@@ -111,6 +111,7 @@ import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
@@ -1226,7 +1227,7 @@ class MultiCutoutContainer(
                 val iw = bg.width.toFloat()
                 val ih = bg.height.toFloat()
                 val scaleBase =
-                    com.stormpanda.megingiard.math.ViewportMath
+                    ViewportMath
                         .calculateAspectFillScale(cw, ch, iw, ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase
@@ -1440,7 +1441,7 @@ class MultiCutoutContainer(
                 val iw = mask.width.toFloat()
                 val ih = mask.height.toFloat()
                 val scaleBase =
-                    com.stormpanda.megingiard.math.ViewportMath
+                    ViewportMath
                         .calculateAspectFillScale(cw, ch, iw, ih)
                 val ws = iw * scaleBase
                 val hs = ih * scaleBase

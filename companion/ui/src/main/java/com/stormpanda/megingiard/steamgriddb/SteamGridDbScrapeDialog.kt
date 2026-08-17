@@ -33,7 +33,6 @@ import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -99,6 +98,15 @@ private const val BACK_TO_TOP_THRESHOLD = 3
 private val STATUS_BOX_HEIGHT = 300.dp
 private val SELECTION_ALPHA = 0.15f
 private val DISABLE_ALPHA = 0.5f
+
+private val SG_THUMB_CORNER = 8.dp
+private val SG_THUMB_BORDER_SELECTED = 3.dp
+private val SG_THUMB_BORDER_DEFAULT = 1.dp
+private val SG_GRID_BOTTOM_SPACER = 72.dp
+private val SG_FAB_PADDING = 24.dp
+private val SG_FAB_SIZE = 56.dp
+private val SG_PROGRESS_SIZE = 24.dp
+private val SG_PROGRESS_STROKE = 2.dp
 
 @Composable
 internal fun SteamGridDbScrapeDialog(
@@ -558,12 +566,12 @@ internal fun SteamGridDbScrapeDialog(
                                             TYPE_HEROES -> GRID_ASPECT_RATIO_HERO
                                             else -> GRID_ASPECT_RATIO_DEFAULT
                                         },
-                                    ).clip(RoundedCornerShape(8.dp))
+                                    ).clip(RoundedCornerShape(SG_THUMB_CORNER))
                                     .background(colors.surface)
                                     .border(
-                                        width = if (isSelected) 3.dp else 1.dp,
+                                        width = if (isSelected) SG_THUMB_BORDER_SELECTED else SG_THUMB_BORDER_DEFAULT,
                                         color = if (isSelected) accentColor else colors.subduedBorder,
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(SG_THUMB_CORNER),
                                     ).clickable {
                                         selectedImage = if (isSelected) null else image
                                     },
@@ -579,7 +587,7 @@ internal fun SteamGridDbScrapeDialog(
 
                 // Bottom padding so FAB doesn't obscure the last row
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Spacer(Modifier.height(72.dp))
+                    Spacer(Modifier.height(SG_GRID_BOTTOM_SPACER))
                 }
             }
 
@@ -589,7 +597,7 @@ internal fun SteamGridDbScrapeDialog(
                     modifier =
                         Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(24.dp),
+                            .padding(SG_FAB_PADDING),
                 ) {
                     FloatingActionButton(
                         onClick = {
@@ -600,7 +608,7 @@ internal fun SteamGridDbScrapeDialog(
                         containerColor = accentColor,
                         contentColor = colors.onAccent,
                         shape = CircleShape,
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(SG_FAB_SIZE),
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.ArrowUpward,
@@ -716,9 +724,9 @@ private fun SteamGridDbImageThumbnail(
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(SG_PROGRESS_SIZE),
                 color = colors.accent,
-                strokeWidth = 2.dp,
+                strokeWidth = SG_PROGRESS_STROKE,
             )
         } else if (isError || bitmap == null) {
             Icon(

@@ -7,6 +7,7 @@ import com.stormpanda.megingiard.keyboard.KbLayout
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
 import com.stormpanda.megingiard.macropad.PadProfile
+import com.stormpanda.megingiard.macropad.ProfileAssociation
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
@@ -440,8 +441,7 @@ class AppStateManagerTest {
                 name = "Game",
                 layouts = emptyList(),
                 association =
-                    com.stormpanda.megingiard.macropad
-                        .ProfileAssociation(packageName = "com.test.game"),
+                    ProfileAssociation(packageName = "com.test.game"),
             )
 
         assertFalse(CompanionViewMode.MACROPAD.shouldShowIntegrationHome("com.test.game", null, associatedProfile))
@@ -465,7 +465,7 @@ class AppStateManagerTest {
                 name = "Ball x Pit",
                 layouts = emptyList(),
                 association =
-                    com.stormpanda.megingiard.macropad.ProfileAssociation(
+                    ProfileAssociation(
                         packageName = "app.gamenative",
                         romFileName = "BALL x PIT.steam",
                         systemId = "pc",
@@ -490,12 +490,11 @@ class AppStateManagerTest {
                     id = "p-1",
                     name = "AetherSX2 Profile",
                     association =
-                        com.stormpanda.megingiard.macropad
-                            .ProfileAssociation(packageName = "com.emulator.aethersx2"),
+                        ProfileAssociation(packageName = "com.emulator.aethersx2"),
                 )
-            com.stormpanda.megingiard.macropad.MacroPadState
+            MacroPadState
                 .addProfile(gameProfile)
-            com.stormpanda.megingiard.macropad.MacroPadState
+            MacroPadState
                 .setActiveProfileId(gameProfile.id)
             AppStateManager.setCompanionViewMode(CompanionViewMode.AUTO)
             AppStateManager.setStandaloneForegroundState("com.emulator.aethersx2", null)

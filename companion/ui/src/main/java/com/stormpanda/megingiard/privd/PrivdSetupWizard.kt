@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -613,7 +614,7 @@ private fun Step2ConnectPort(
     connectPort: String,
     busy: Boolean,
     fieldColors: TextFieldColors,
-    focusManager: androidx.compose.ui.focus.FocusManager,
+    focusManager: FocusManager,
     onConnectPortChange: (String) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -677,7 +678,7 @@ private fun Step3Pairing(
     lastError: PrivdError?,
     stage: BootstrapStage,
     fieldColors: TextFieldColors,
-    focusManager: androidx.compose.ui.focus.FocusManager,
+    focusManager: FocusManager,
     onPairPortChange: (String) -> Unit,
     onCodeChange: (String) -> Unit,
 ) {
