@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -109,6 +110,7 @@ import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
@@ -124,6 +126,7 @@ import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.viewmodel.GlobalSettingsViewModel
+import com.stormpanda.megingiard.viewmodel.SteamGridDbTestStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -184,6 +187,7 @@ fun GlobalSettingsScreen(
     val deadzoneLeft by viewModel.privdDeadzoneLeft.collectAsState()
     val deadzoneRight by viewModel.privdDeadzoneRight.collectAsState()
     val steamGridDbApiToken by viewModel.steamGridDbApiToken.collectAsState()
+    val steamGridDbTestStatus by viewModel.steamGridDbTestStatus.collectAsState()
     val internalBackups by viewModel.internalBackups.collectAsState()
 
     val autoUpdateCheckEnabled by viewModel.autoUpdateCheckEnabled.collectAsState()
@@ -713,6 +717,8 @@ fun GlobalSettingsScreen(
                                 token = steamGridDbApiToken,
                                 onTokenChange = { viewModel.setSteamGridDbApiToken(it) },
                                 effectiveAccent = effectiveAccent,
+                                testStatus = steamGridDbTestStatus,
+                                onTestConnection = { viewModel.testSteamGridDbConnection(steamGridDbApiToken) },
                             )
                         }
                     }
@@ -973,6 +979,8 @@ private fun SteamGridDbTokenSubPage(
     token: String,
     onTokenChange: (String) -> Unit,
     effectiveAccent: Color,
+    testStatus: SteamGridDbTestStatus,
+    onTestConnection: () -> Unit,
 ) {
     GamepadSectionHeader(
         text = "${stringResource(
@@ -989,6 +997,54 @@ private fun SteamGridDbTokenSubPage(
         onValueChange = onTokenChange,
         icon = Icons.Rounded.Key,
         modifier = Modifier.firstDeckItem(),
+    )
+
+    val statusBadge: @Composable () -> Unit =
+        when (testStatus) {
+            SteamGridDbTestStatus.IDLE -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_test_btn)) }
+            }
+
+            SteamGridDbTestStatus.TESTING -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_testing), isHighlighted = true) }
+            }
+
+            SteamGridDbTestStatus.CONNECTED -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_connected), isAccent = true) }
+            }
+
+            SteamGridDbTestStatus.INVALID_TOKEN -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_invalid), isDestructive = true) }
+            }
+
+            SteamGridDbTestStatus.OFFLINE -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_offline), isDestructive = true) }
+            }
+
+            SteamGridDbTestStatus.RATE_LIMITED -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_rate_limited), isDestructive = true) }
+            }
+
+            SteamGridDbTestStatus.UNREACHABLE -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_unreachable), isDestructive = true) }
+            }
+
+            SteamGridDbTestStatus.ERROR -> {
+                { GamepadPill(text = stringResource(R.string.settings_steamgriddb_status_error), isDestructive = true) }
+            }
+        }
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_steamgriddb_test_title),
+        description = stringResource(R.string.settings_steamgriddb_test_desc),
+        icon = Icons.Rounded.Sensors,
+        actionLeadingContent = statusBadge,
+        enabled = true,
+        onClick = {
+            if (token.isNotBlank() && testStatus != SteamGridDbTestStatus.TESTING) {
+                onTestConnection()
+            }
+        },
     )
 }
 
@@ -1020,6 +1076,10 @@ private fun GlobalSettingsHelpModal(
         HelpEntry(
             label = stringResource(R.string.settings_exclude_from_recents),
             description = stringResource(R.string.help_settings_recents_desc),
+        )
+        HelpEntry(
+            label = stringResource(R.string.settings_steamgriddb_token),
+            description = stringResource(R.string.settings_steamgriddb_token_desc),
         )
 
         HelpSection(stringResource(R.string.settings_section_input))

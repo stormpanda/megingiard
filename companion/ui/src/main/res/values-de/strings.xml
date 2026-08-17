@@ -909,6 +909,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_steamgriddb_token">SteamGridDB API-Token</string>
     <string name="settings_steamgriddb_token_desc">Erforderlich, um Hintergrundbilder von steamgriddb.com zu laden (Scrapen). Erstelle ein API-Token in deinen Profileinstellungen auf deren Website.</string>
     <string name="settings_steamgriddb_token_placeholder">Gib deinen API-Schlüssel hier ein</string>
+    <string name="settings_steamgriddb_test_title">Verbindung testen</string>
+    <string name="settings_steamgriddb_test_desc">Überprüft, ob dein API-Token eine Verbindung zu SteamGridDB herstellen kann.</string>
+    <string name="settings_steamgriddb_test_btn">Testen</string>
+    <string name="settings_steamgriddb_status_testing">Wird getestet...</string>
+    <string name="settings_steamgriddb_status_connected">Verbunden</string>
+    <string name="settings_steamgriddb_status_invalid">Ungültiges Token (401)</string>
+    <string name="settings_steamgriddb_status_offline">Offline</string>
+    <string name="settings_steamgriddb_status_rate_limited">Ratenlimit erreicht (429)</string>
+    <string name="settings_steamgriddb_status_unreachable">Nicht erreichbar</string>
+    <string name="settings_steamgriddb_status_error">Verbindung fehlgeschlagen</string>
     <string name="layout_settings_bg_image_scrape">Von SteamGridDB abrufen</string>
     <string name="layout_settings_bg_image_browse_local">Lokale Bilder durchsuchen</string>
     <string name="steamgriddb_token_missing_title">API-Token erforderlich</string>

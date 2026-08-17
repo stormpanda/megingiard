@@ -109,6 +109,24 @@ object SteamGridDbClient {
         return if (cleaned.isNotBlank()) cleaned else rawQuery.trim()
     }
 
+    suspend fun validateToken(apiKey: String): Result<Boolean> {
+        if (apiKey.isBlank()) {
+            return Result.failure(IllegalArgumentException("API Key is blank"))
+        }
+        val urlString = "$BASE_URL/search/autocomplete/test"
+        return fetchString(urlString, apiKey)
+            .mapCatching { jsonStr ->
+                val parsed = json.decodeFromString<SteamGridDbResponse<List<SteamGridDbGame>>>(jsonStr)
+                if (parsed.success) {
+                    true
+                } else {
+                    throw Exception("API returned success=false")
+                }
+            }.recoverCatching { err ->
+                throw if (err is SteamGridDbException) err else mapNetworkError(err as Exception)
+            }
+    }
+
     suspend fun searchGames(
         query: String,
         apiKey: String,

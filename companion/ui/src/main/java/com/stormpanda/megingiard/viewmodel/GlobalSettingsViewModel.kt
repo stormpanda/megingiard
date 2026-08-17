@@ -10,6 +10,8 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.BuildConfig
 import com.stormpanda.megingiard.config.InternalBackup
 import com.stormpanda.megingiard.log.LogReportManager
+import com.stormpanda.megingiard.media.SteamGridDbClient
+import com.stormpanda.megingiard.media.SteamGridDbException
 import com.stormpanda.megingiard.privd.BootstrapStage
 import com.stormpanda.megingiard.privd.PrivdBootstrapper
 import com.stormpanda.megingiard.privd.PrivdError
@@ -30,6 +32,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "GlobalSettingsVM"
+
+enum class SteamGridDbTestStatus {
+    IDLE,
+    TESTING,
+    CONNECTED,
+    INVALID_TOKEN,
+    OFFLINE,
+    RATE_LIMITED,
+    UNREACHABLE,
+    ERROR,
+}
 
 /**
  * ViewModel for [GlobalSettingsScreen] — exposes the app-global settings state
@@ -90,9 +103,43 @@ class GlobalSettingsViewModel : ViewModel() {
 
     fun setAppLanguage(value: AppLanguage) = SettingsManager.setAppLanguage(value)
 
+    private val _steamGridDbTestStatus = MutableStateFlow(SteamGridDbTestStatus.IDLE)
+    val steamGridDbTestStatus: StateFlow<SteamGridDbTestStatus> = _steamGridDbTestStatus.asStateFlow()
+
     fun setLogLevel(value: AppLog.Level) = SettingsManager.setLogLevel(value)
 
-    fun setSteamGridDbApiToken(value: String) = SettingsManager.setSteamGridDbApiToken(value)
+    fun setSteamGridDbApiToken(value: String) {
+        SettingsManager.setSteamGridDbApiToken(value)
+        _steamGridDbTestStatus.value = SteamGridDbTestStatus.IDLE
+    }
+
+    fun testSteamGridDbConnection(token: String) {
+        if (token.isBlank()) {
+            _steamGridDbTestStatus.value = SteamGridDbTestStatus.INVALID_TOKEN
+            return
+        }
+        viewModelScope.launch {
+            _steamGridDbTestStatus.value = SteamGridDbTestStatus.TESTING
+            val result = SteamGridDbClient.validateToken(token.trim())
+            result
+                .onSuccess {
+                    _steamGridDbTestStatus.value = SteamGridDbTestStatus.CONNECTED
+                }.onFailure { err ->
+                    _steamGridDbTestStatus.value =
+                        when (err) {
+                            is SteamGridDbException.Offline -> SteamGridDbTestStatus.OFFLINE
+                            is SteamGridDbException.RateLimited -> SteamGridDbTestStatus.RATE_LIMITED
+                            is SteamGridDbException.ServiceUnavailable -> SteamGridDbTestStatus.UNREACHABLE
+                            is SteamGridDbException.ApiError -> SteamGridDbTestStatus.INVALID_TOKEN
+                            else -> SteamGridDbTestStatus.ERROR
+                        }
+                }
+        }
+    }
+
+    fun resetSteamGridDbTestStatus() {
+        _steamGridDbTestStatus.value = SteamGridDbTestStatus.IDLE
+    }
 
     fun requestSaveLogReport() = LogReportManager.requestSaveReport()
 

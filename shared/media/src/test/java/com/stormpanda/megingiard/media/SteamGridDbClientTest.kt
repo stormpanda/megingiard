@@ -140,4 +140,13 @@ class SteamGridDbClientTest {
         assertEquals("SimpleApp", SteamGridDbClient.cleanSearchQuery("SimpleApp"))
         assertEquals("Mobile", SteamGridDbClient.cleanSearchQuery("Mobile"))
     }
+
+    @Test
+    fun testValidateTokenBlankKeyFails() {
+        kotlinx.coroutines.runBlocking {
+            val result = SteamGridDbClient.validateToken("")
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        }
+    }
 }
