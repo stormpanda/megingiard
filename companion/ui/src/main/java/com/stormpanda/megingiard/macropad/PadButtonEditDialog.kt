@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Image
@@ -52,7 +53,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
@@ -60,6 +60,7 @@ import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
@@ -341,11 +342,13 @@ internal fun EditButtonSubPageContent(
 
     // Label & Icon input
     if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher) {
-        AppTextField(
+        GamepadTextFieldCard(
+            title = stringResource(R.string.macropad_editor_button_label),
+            description = stringResource(R.string.macropad_editor_button_label_desc),
+            placeholder = stringResource(R.string.macropad_editor_button_label_placeholder),
             value = label,
             onValueChange = { label = it },
-            label = { Text(stringResource(R.string.macropad_editor_button_label), color = colors.onSurfaceSecondary) },
-            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Rounded.Edit,
         )
 
         GamepadActionCard(

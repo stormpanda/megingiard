@@ -183,206 +183,197 @@ internal fun MacroStepEditSubPageContent(
         accentColor = accentColor,
     )
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macro_step_action_type_title),
-            color = accentColor,
-        )
+    GamepadSectionHeader(
+        text = stringResource(R.string.macro_step_action_type_title),
+        color = accentColor,
+    )
 
-        val availableTypes =
-            StepType.entries.filter { type ->
-                val initialIsRecorded =
-                    initialType == StepType.TOUCH || initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
-                val typeIsRecorded = type == StepType.TOUCH || type == StepType.TOUCH_PATH || type == StepType.JOYSTICK_PATH
-                if (initialIsRecorded) type == initialType else !typeIsRecorded
+    val availableTypes =
+        StepType.entries.filter { type ->
+            val initialIsRecorded =
+                initialType == StepType.TOUCH || initialType == StepType.TOUCH_PATH || initialType == StepType.JOYSTICK_PATH
+            val typeIsRecorded = type == StepType.TOUCH || type == StepType.TOUCH_PATH || type == StepType.JOYSTICK_PATH
+            if (initialIsRecorded) type == initialType else !typeIsRecorded
+        }
+    val currentTypeIdx = availableTypes.indexOf(stepType).coerceAtLeast(0)
+    val typeLabels =
+        availableTypes.map { type ->
+            when (type) {
+                StepType.GAMEPAD -> stringResource(R.string.macropad_macro_step_type_gamepad)
+                StepType.JOYSTICK -> stringResource(R.string.macropad_macro_step_type_joystick)
+                StepType.JOYSTICK_PATH -> stringResource(R.string.macropad_macro_step_type_joystick_path)
+                StepType.DPAD -> stringResource(R.string.macropad_macro_step_type_dpad)
+                StepType.TOUCH -> stringResource(R.string.macropad_macro_step_type_touch)
+                StepType.TOUCH_PATH -> stringResource(R.string.macropad_macro_step_type_touch_path)
             }
-        val currentTypeIdx = availableTypes.indexOf(stepType).coerceAtLeast(0)
-        val typeLabels =
-            availableTypes.map { type ->
-                when (type) {
-                    StepType.GAMEPAD -> stringResource(R.string.macropad_macro_step_type_gamepad)
-                    StepType.JOYSTICK -> stringResource(R.string.macropad_macro_step_type_joystick)
-                    StepType.JOYSTICK_PATH -> stringResource(R.string.macropad_macro_step_type_joystick_path)
-                    StepType.DPAD -> stringResource(R.string.macropad_macro_step_type_dpad)
-                    StepType.TOUCH -> stringResource(R.string.macropad_macro_step_type_touch)
-                    StepType.TOUCH_PATH -> stringResource(R.string.macropad_macro_step_type_touch_path)
-                }
-            }
+        }
 
-        GamepadChoiceCard(
-            title = stringResource(R.string.macro_step_action_type_title),
-            description = stringResource(R.string.macro_step_action_type_desc),
-            selectedText = typeLabels[currentTypeIdx],
-            icon = Icons.Rounded.SportsEsports,
-            enabled = availableTypes.size > 1,
-            onPrevious = {
-                val nextIdx = (currentTypeIdx - 1 + availableTypes.size) % availableTypes.size
-                stepType = availableTypes[nextIdx]
-            },
-            onNext = {
-                val nextIdx = (currentTypeIdx + 1) % availableTypes.size
-                stepType = availableTypes[nextIdx]
-            },
-        )
+    GamepadChoiceCard(
+        title = stringResource(R.string.macro_step_action_type_title),
+        description = stringResource(R.string.macro_step_action_type_desc),
+        selectedText = typeLabels[currentTypeIdx],
+        icon = Icons.Rounded.SportsEsports,
+        enabled = availableTypes.size > 1,
+        onPrevious = {
+            val nextIdx = (currentTypeIdx - 1 + availableTypes.size) % availableTypes.size
+            stepType = availableTypes[nextIdx]
+        },
+        onNext = {
+            val nextIdx = (currentTypeIdx + 1) % availableTypes.size
+            stepType = availableTypes[nextIdx]
+        },
+    )
 
-        when (stepType) {
-            StepType.GAMEPAD -> {
-                val presets = GamepadKeycodes.PRESETS
-                val presetIdx = presets.indexOf(selectedPreset).coerceAtLeast(0)
-                GamepadChoiceCard(
-                    title = stringResource(R.string.macro_step_gamepad_button_title),
-                    description = stringResource(R.string.macro_step_gamepad_button_desc),
-                    selectedText = selectedPreset.localizedDisplayLabel(swapFaceButtons),
-                    icon = Icons.Rounded.SportsEsports,
-                    onPrevious = {
-                        val nextIdx = (presetIdx - 1 + presets.size) % presets.size
-                        selectedPreset = presets[nextIdx]
-                    },
-                    onNext = {
-                        val nextIdx = (presetIdx + 1) % presets.size
-                        selectedPreset = presets[nextIdx]
-                    },
-                )
-            }
+    when (stepType) {
+        StepType.GAMEPAD -> {
+            val presets = GamepadKeycodes.PRESETS
+            val presetIdx = presets.indexOf(selectedPreset).coerceAtLeast(0)
+            GamepadChoiceCard(
+                title = stringResource(R.string.macro_step_gamepad_button_title),
+                description = stringResource(R.string.macro_step_gamepad_button_desc),
+                selectedText = selectedPreset.localizedDisplayLabel(swapFaceButtons),
+                icon = Icons.Rounded.SportsEsports,
+                onPrevious = {
+                    val nextIdx = (presetIdx - 1 + presets.size) % presets.size
+                    selectedPreset = presets[nextIdx]
+                },
+                onNext = {
+                    val nextIdx = (presetIdx + 1) % presets.size
+                    selectedPreset = presets[nextIdx]
+                },
+            )
+        }
 
-            StepType.JOYSTICK -> {
-                val sticks = listOf(JoystickStick.LEFT, JoystickStick.RIGHT)
-                val stickLabels =
-                    listOf(
-                        stringResource(R.string.macropad_macro_step_stick_left),
-                        stringResource(R.string.macropad_macro_step_stick_right),
-                    )
-                val stickIdx = sticks.indexOf(joyStick).coerceAtLeast(0)
-                GamepadChoiceCard(
-                    title = stringResource(R.string.macro_step_target_stick_title),
-                    description = stringResource(R.string.macro_step_target_stick_desc),
-                    selectedText = stickLabels[stickIdx],
-                    icon = Icons.Rounded.SportsEsports,
-                    onPrevious = {
-                        val nextIdx = (stickIdx - 1 + sticks.size) % sticks.size
-                        joyStick = sticks[nextIdx]
-                    },
-                    onNext = {
-                        val nextIdx = (stickIdx + 1) % sticks.size
-                        joyStick = sticks[nextIdx]
-                    },
+        StepType.JOYSTICK -> {
+            val sticks = listOf(JoystickStick.LEFT, JoystickStick.RIGHT)
+            val stickLabels =
+                listOf(
+                    stringResource(R.string.macropad_macro_step_stick_left),
+                    stringResource(R.string.macropad_macro_step_stick_right),
                 )
+            val stickIdx = sticks.indexOf(joyStick).coerceAtLeast(0)
+            GamepadChoiceCard(
+                title = stringResource(R.string.macro_step_target_stick_title),
+                description = stringResource(R.string.macro_step_target_stick_desc),
+                selectedText = stickLabels[stickIdx],
+                icon = Icons.Rounded.SportsEsports,
+                onPrevious = {
+                    val nextIdx = (stickIdx - 1 + sticks.size) % sticks.size
+                    joyStick = sticks[nextIdx]
+                },
+                onNext = {
+                    val nextIdx = (stickIdx + 1) % sticks.size
+                    joyStick = sticks[nextIdx]
+                },
+            )
 
-                GamepadSectionHeader(
-                    text = stringResource(R.string.macropad_macro_step_direction),
-                    color = accentColor,
-                )
-                DirectionGrid(
-                    selectedX = joyDirX,
-                    selectedY = joyDirY,
-                    accentColor = accentColor,
-                    onSelect = { x, y ->
-                        joyDirX = x
-                        joyDirY = y
-                    },
-                )
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_macro_step_direction),
+                color = accentColor,
+            )
+            DirectionGrid(
+                selectedX = joyDirX,
+                selectedY = joyDirY,
+                accentColor = accentColor,
+                onSelect = { x, y ->
+                    joyDirX = x
+                    joyDirY = y
+                },
+            )
 
-                GamepadStepperCard(
-                    title = stringResource(R.string.macropad_macro_step_magnitude, joyMagnitude),
-                    description = stringResource(R.string.macro_step_stick_deflection_desc),
-                    valueText = "${(joyMagnitude * 100).roundToInt()}%",
-                    icon = Icons.Rounded.SportsEsports,
-                    onDecrement = {
-                        joyMagnitude = (joyMagnitude - 0.1f).coerceIn(0.1f, 1.0f)
-                    },
-                    onIncrement = {
-                        joyMagnitude = (joyMagnitude + 0.1f).coerceIn(0.1f, 1.0f)
-                    },
-                )
-            }
+            GamepadStepperCard(
+                title = stringResource(R.string.macropad_macro_step_magnitude, joyMagnitude),
+                description = stringResource(R.string.macro_step_stick_deflection_desc),
+                valueText = "${(joyMagnitude * 100).roundToInt()}%",
+                icon = Icons.Rounded.SportsEsports,
+                onDecrement = {
+                    joyMagnitude = (joyMagnitude - 0.1f).coerceIn(0.1f, 1.0f)
+                },
+                onIncrement = {
+                    joyMagnitude = (joyMagnitude + 0.1f).coerceIn(0.1f, 1.0f)
+                },
+            )
+        }
 
-            StepType.DPAD -> {
-                GamepadSectionHeader(
-                    text = stringResource(R.string.macropad_macro_step_direction),
-                    color = accentColor,
-                )
-                DirectionGrid(
-                    selectedX = dpadDirX,
-                    selectedY = dpadDirY,
-                    accentColor = accentColor,
-                    onSelect = { x, y ->
-                        dpadDirX = x
-                        dpadDirY = y
-                    },
-                )
-            }
+        StepType.DPAD -> {
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_macro_step_direction),
+                color = accentColor,
+            )
+            DirectionGrid(
+                selectedX = dpadDirX,
+                selectedY = dpadDirY,
+                accentColor = accentColor,
+                onSelect = { x, y ->
+                    dpadDirX = x
+                    dpadDirY = y
+                },
+            )
+        }
 
-            StepType.TOUCH -> {
-                val touchStep = step as? MacroStep.TouchTap
-                GamepadSectionHeader(
-                    text = stringResource(R.string.macropad_macro_step_touch_position),
-                    color = accentColor,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(
-                        "X: ${"%.3f".format(touchStep?.normX ?: 0f)}",
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        "Y: ${"%.3f".format(touchStep?.normY ?: 0f)}",
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-
-            StepType.JOYSTICK_PATH -> {
-                val pathStep = step as? MacroStep.JoystickPath
-                GamepadSectionHeader(
-                    text = stringResource(R.string.macropad_macro_step_path_readonly),
-                    color = accentColor,
-                )
-                val stickLabel =
-                    stringResource(
-                        if (pathStep?.stick == JoystickStick.RIGHT) {
-                            R.string.macropad_macro_step_stick_right
-                        } else {
-                            R.string.macropad_macro_step_stick_left
-                        },
-                    )
+        StepType.TOUCH -> {
+            val touchStep = step as? MacroStep.TouchTap
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_macro_step_touch_position),
+                color = accentColor,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
                 Text(
-                    stringResource(R.string.macropad_macro_step_path_summary_stick, stickLabel),
+                    "X: ${"%.3f".format(touchStep?.normX ?: 0f)}",
                     color = colors.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
-                    stringResource(
-                        R.string.macropad_macro_step_path_summary_samples,
-                        pathStep?.samples?.size ?: 0,
-                    ),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodySmall,
+                    "Y: ${"%.3f".format(touchStep?.normY ?: 0f)}",
+                    color = colors.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
+        }
 
-            StepType.TOUCH_PATH -> {
-                val touchPathStep = step as? MacroStep.TouchPath
-                GamepadSectionHeader(
-                    text = stringResource(R.string.macropad_macro_step_touch_path_readonly),
-                    color = accentColor,
+        StepType.JOYSTICK_PATH -> {
+            val pathStep = step as? MacroStep.JoystickPath
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_macro_step_path_readonly),
+                color = accentColor,
+            )
+            val stickLabel =
+                stringResource(
+                    if (pathStep?.stick == JoystickStick.RIGHT) {
+                        R.string.macropad_macro_step_stick_right
+                    } else {
+                        R.string.macropad_macro_step_stick_left
+                    },
                 )
-                if (touchPathStep != null) {
-                    Text(
-                        stringResource(R.string.macropad_macro_step_touch_path_details, touchPathStep.samples.size),
-                        color = colors.onSurfaceSecondary,
-                    )
-                }
+            Text(
+                stringResource(R.string.macropad_macro_step_path_summary_stick, stickLabel),
+                color = colors.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                stringResource(
+                    R.string.macropad_macro_step_path_summary_samples,
+                    pathStep?.samples?.size ?: 0,
+                ),
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        StepType.TOUCH_PATH -> {
+            val touchPathStep = step as? MacroStep.TouchPath
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_macro_step_touch_path_readonly),
+                color = accentColor,
+            )
+            if (touchPathStep != null) {
+                Text(
+                    stringResource(R.string.macropad_macro_step_touch_path_details, touchPathStep.samples.size),
+                    color = colors.onSurfaceSecondary,
+                )
             }
         }
     }

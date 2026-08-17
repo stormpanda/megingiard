@@ -17,10 +17,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,12 +48,12 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -59,6 +62,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "LayoutSettingsEditor"
 private val LSE_PREVIEW_BUTTON_SIZE = 56.dp
@@ -153,19 +157,19 @@ internal fun LayoutAppearanceSubPageContent(
         color = accentColor,
     )
 
-    AppTextField(
+    GamepadTextFieldCard(
+        title = stringResource(R.string.quick_menu_layout_name_hint),
+        description =
+            when {
+                normalizedName.isEmpty() -> stringResource(R.string.settings_name_error_empty)
+                isDuplicate -> stringResource(R.string.settings_name_error_duplicate)
+                else -> stringResource(R.string.macropad_editor_layout_name_desc)
+            },
+        placeholder = stringResource(R.string.quick_menu_layout_name_placeholder),
         value = nameText,
         onValueChange = { nameText = it },
-        label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        icon = Icons.Rounded.Edit,
         isError = hasError,
-        supportingText = {
-            when {
-                normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-            }
-        },
     )
 
     GamepadSectionHeader(
@@ -268,9 +272,10 @@ internal fun LayoutAppearanceSubPageContent(
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_done),
+        title = stringResource(R.string.macropad_editor_save_layout_title),
         description = stringResource(R.string.macropad_editor_appearance_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
+        actionText = stringResource(R.string.gamepad_action_save),
+        icon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
         onClick = {
             if (isConfirmEnabled) {
@@ -286,7 +291,20 @@ internal fun NewLayoutSubPageContent(
     accentColor: Color,
     onCreate: (name: String, invisibleButtons: Boolean) -> Unit,
 ) {
-    var nameText by remember { mutableStateOf("") }
+    val defaultLayoutName = stringResource(R.string.macropad_editor_section_layout)
+    val initialLayoutName =
+        remember(existingNames) {
+            if (existingNames.none { it.equals(defaultLayoutName, ignoreCase = true) }) {
+                defaultLayoutName
+            } else {
+                var index = 2
+                while (existingNames.any { it.equals("$defaultLayoutName ($index)", ignoreCase = true) }) {
+                    index++
+                }
+                "$defaultLayoutName ($index)"
+            }
+        }
+    var nameText by remember { mutableStateOf(initialLayoutName) }
     var invisibleButtons by remember { mutableStateOf(false) }
 
     val normalizedName = nameText.trim()
@@ -301,19 +319,20 @@ internal fun NewLayoutSubPageContent(
         accentColor = accentColor,
     )
 
-    AppTextField(
+    GamepadTextFieldCard(
+        title = stringResource(R.string.quick_menu_layout_name_hint),
+        description =
+            when {
+                normalizedName.isEmpty() -> stringResource(R.string.settings_name_error_empty)
+                isDuplicate -> stringResource(R.string.settings_name_error_duplicate)
+                else -> stringResource(R.string.macropad_editor_layout_name_desc)
+            },
+        placeholder = stringResource(R.string.quick_menu_layout_name_placeholder),
         value = nameText,
         onValueChange = { nameText = it },
-        label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        icon = Icons.Rounded.Edit,
         isError = hasError,
-        supportingText = {
-            when {
-                normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-            }
-        },
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadToggleCard(
@@ -325,9 +344,10 @@ internal fun NewLayoutSubPageContent(
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.settings_macropad_new_layout),
-        description = stringResource(R.string.macropad_editor_new_layout_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
+        title = stringResource(R.string.macropad_editor_create_layout_title),
+        description = stringResource(R.string.macropad_editor_create_layout_desc),
+        actionText = stringResource(R.string.gamepad_action_create),
+        icon = Icons.Rounded.Add,
         enabled = isConfirmEnabled,
         onClick = {
             if (isConfirmEnabled) {

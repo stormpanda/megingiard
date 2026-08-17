@@ -1200,7 +1200,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Dialogs & Overlays -->
     <string name="macropad_cutout_rename_title">Ausschnitt umbenennen</string>
     <string name="macropad_cutout_rename_desc">Anzeigenamen dieses Spiegelungsbereichs ändern</string>
-    <string name="macropad_profile_app_association_title">Automatische App-Verknüpfung</string>
+    <string name="macropad_profile_app_association_title">App zuweisen</string>
     <string name="macropad_profile_app_association_desc">Profil automatisch aktivieren, wenn Ziel-App oder Spiel gestartet wird</string>
     <string name="macropad_icon_picker_empty_desc">Versuche es mit einem anderen Suchbegriff</string>
     <string name="steamgriddb_empty_games_desc">Versuche nach einem anderen Spieletitel zu suchen</string>
@@ -1232,5 +1232,25 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="quick_menu_layouts_count">%1$d Layouts</string>
     <string name="quick_menu_buttons_count">%1$d Buttons</string>
     <string name="macropad_macro_section_timing">Timing &amp; Verzögerung</string>
+
+    <string name="macropad_editor_create_profile_title">Profil erstellen</string>
+    <string name="macropad_editor_create_profile_desc">Dieses neue MacroPad-Profil speichern und aktivieren</string>
+    <string name="macropad_editor_save_profile_title">Profil speichern</string>
+    <string name="macropad_editor_create_layout_title">Layout erstellen</string>
+    <string name="macropad_editor_create_layout_desc">Dieses neue Tastenlayout zum aktiven Profil hinzufügen</string>
+    <string name="macropad_editor_save_layout_title">Layout speichern</string>
+    <string name="macropad_editor_profile_name_desc">Name dieses Profils in der Auswahlliste</string>
+    <string name="macropad_editor_edit_profile_name_desc">Dieses Profil umbenennen</string>
+    <string name="macropad_editor_layout_name_desc">Name dieses Tastenlayouts</string>
+    <string name="macropad_editor_button_label_desc">Auf der Taste angezeigter Text</string>
+    <string name="macropad_editor_button_label_placeholder">z.B. A, Speichern, Turbo</string>
+    <string name="profile_settings_name_placeholder">z. B. Name des Spiels / der App</string>
+    <string name="quick_menu_layout_name_placeholder">z.B. Standard, Kampf, Menü</string>
+    <string name="profile_settings_search_apps_desc">Installierte Apps nach Name oder Paket filtern</string>
+    <string name="profile_settings_search_apps_placeholder">Apps suchen…</string>
+    <string name="macropad_icon_picker_search_placeholder">Symbole suchen…</string>
+    <string name="macropad_icon_picker_filled_desc">Zwischen ausgefüllten und Umriss-Symbolen umschalten</string>
+    <string name="gamepad_action_create">Erstellen</string>
 </resources>
+
 

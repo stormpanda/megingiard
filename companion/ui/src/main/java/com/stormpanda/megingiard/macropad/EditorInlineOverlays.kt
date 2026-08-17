@@ -1,38 +1,22 @@
 package com.stormpanda.megingiard.macropad
 
-import android.app.ActivityOptions
-import android.content.Intent
-import android.provider.Settings
-import android.view.Display
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,154 +28,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.ui.AppIcon
-import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadEmptyState
-import com.stormpanda.megingiard.ui.GamepadSearchBar
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
-import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.primaryOverlayFocusable
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
+import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private const val TAG = "EditorInlineOverlays"
 private val EIO_APP_ICON_SIZE = 36.dp
-private val EIO_CORNER_RADIUS = 12.dp
-
-@Composable
-internal fun InlineDialogOverlay(
-    title: String,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-    widthFraction: Float = 0.85f,
-    titleAccessory: @Composable (() -> Unit)? = null,
-    buttonsArrangement: Arrangement.Horizontal = Arrangement.End,
-    buttonsRow: @Composable (RowScope.() -> Unit)? = {
-        TextButton(onClick = onDismiss) {
-            Text(
-                text = stringResource(R.string.macropad_editor_cancel),
-                color = LocalAppColors.current.onSurfaceSecondary,
-            )
-        }
-    },
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val colors = LocalAppColors.current
-    AppModalDialog(
-        onDismiss = onDismiss,
-        modifier = modifier,
-        widthFraction = widthFraction,
-        cornerRadius = EIO_CORNER_RADIUS,
-        contentPadding = MPE_PADDING,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = title,
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (titleAccessory != null) {
-                titleAccessory()
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        content()
-        if (buttonsRow != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = buttonsArrangement,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                buttonsRow()
-            }
-        }
-    }
-}
-
-@Composable
-internal fun InlineConfirmDeleteOverlay(
-    title: String,
-    body: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    GamepadConfirmDialog(
-        title = title,
-        message = body,
-        confirmText = stringResource(R.string.macropad_editor_confirm),
-        cancelText = stringResource(R.string.macropad_editor_cancel),
-        isDestructive = true,
-        onConfirm = onConfirm,
-        onDismiss = onDismiss,
-    )
-}
-
-@Composable
-internal fun InlineNameInputOverlay(
-    title: String,
-    initialValue: String,
-    accentColor: Color,
-    existingNames: List<String>,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var text by remember { mutableStateOf(initialValue) }
-    val normalizedName = text.trim()
-    val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
-    val hasError = normalizedName.isEmpty() || isDuplicate
-    val colors = LocalAppColors.current
-
-    InlineDialogOverlay(
-        title = title,
-        onDismiss = onDismiss,
-        widthFraction = 0.8f,
-        buttonsRow = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-            TextButton(
-                onClick = { if (!hasError) onConfirm(normalizedName) },
-                enabled = !hasError,
-            ) {
-                Text(
-                    stringResource(R.string.macropad_editor_done),
-                    color = if (!hasError) accentColor else colors.onSurfaceSecondary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
-    ) {
-        AppTextField(
-            value = text,
-            onValueChange = { text = it },
-            label = { Text(title, color = colors.onSurfaceSecondary) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            isError = hasError,
-            supportingText = {
-                when {
-                    normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                    isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                }
-            },
-        )
-    }
-}
+private val EIO_APP_ICON_CORNER = 8.dp
 
 @Composable
 internal fun NewProfileSubPageContent(
@@ -202,12 +53,24 @@ internal fun NewProfileSubPageContent(
     onClearApp: () -> Unit,
     onCreate: (name: String, packageName: String?) -> Unit,
 ) {
-    var nameText by remember { mutableStateOf("") }
+    val defaultName = stringResource(R.string.integration_home_new_profile)
+    val initialName =
+        remember(existingNames) {
+            if (existingNames.none { it.equals(defaultName, ignoreCase = true) }) {
+                defaultName
+            } else {
+                var index = 2
+                while (existingNames.any { it.equals("$defaultName ($index)", ignoreCase = true) }) {
+                    index++
+                }
+                "$defaultName ($index)"
+            }
+        }
+    var nameText by remember { mutableStateOf(initialName) }
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
-    val colors = LocalAppColors.current
     val context = LocalContext.current
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
 
@@ -221,6 +84,7 @@ internal fun NewProfileSubPageContent(
                         val info = pm.getApplicationInfo(pkg, 0)
                         pm.getApplicationLabel(info).toString()
                     } catch (e: Exception) {
+                        AppLog.w(TAG, "Failed to resolve app label for $pkg: ${e.message}")
                         pkg
                     }
                 }
@@ -233,19 +97,20 @@ internal fun NewProfileSubPageContent(
         accentColor = accentColor,
     )
 
-    AppTextField(
+    GamepadTextFieldCard(
+        title = stringResource(R.string.profile_settings_name),
+        description =
+            when {
+                normalizedName.isEmpty() -> stringResource(R.string.settings_name_error_empty)
+                isDuplicate -> stringResource(R.string.settings_name_error_duplicate)
+                else -> stringResource(R.string.macropad_editor_profile_name_desc)
+            },
+        placeholder = stringResource(R.string.profile_settings_name_placeholder),
         value = nameText,
         onValueChange = { nameText = it },
-        label = { Text(stringResource(R.string.profile_settings_name), color = colors.onSurfaceSecondary) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        icon = Icons.Rounded.Edit,
         isError = hasError,
-        supportingText = {
-            when {
-                normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-            }
-        },
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadSectionHeader(
@@ -272,9 +137,10 @@ internal fun NewProfileSubPageContent(
     }
 
     GamepadActionCard(
-        title = stringResource(R.string.settings_macropad_new_profile),
-        description = stringResource(R.string.macropad_editor_new_profile_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
+        title = stringResource(R.string.macropad_editor_create_profile_title),
+        description = stringResource(R.string.macropad_editor_create_profile_desc),
+        actionText = stringResource(R.string.gamepad_action_create),
+        icon = Icons.Rounded.Add,
         enabled = isConfirmEnabled,
         onClick = {
             if (isConfirmEnabled) {
@@ -299,7 +165,6 @@ internal fun EditProfileSubPageContent(
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
-    val colors = LocalAppColors.current
     val context = LocalContext.current
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
 
@@ -313,6 +178,7 @@ internal fun EditProfileSubPageContent(
                         val info = pm.getApplicationInfo(pkg, 0)
                         pm.getApplicationLabel(info).toString()
                     } catch (e: Exception) {
+                        AppLog.w(TAG, "Failed to resolve app label for $pkg: ${e.message}")
                         pkg
                     }
                 }
@@ -325,19 +191,20 @@ internal fun EditProfileSubPageContent(
         accentColor = accentColor,
     )
 
-    AppTextField(
+    GamepadTextFieldCard(
+        title = stringResource(R.string.profile_settings_name),
+        description =
+            when {
+                normalizedName.isEmpty() -> stringResource(R.string.settings_name_error_empty)
+                isDuplicate -> stringResource(R.string.settings_name_error_duplicate)
+                else -> stringResource(R.string.macropad_editor_edit_profile_name_desc)
+            },
+        placeholder = stringResource(R.string.profile_settings_name_placeholder),
         value = nameText,
         onValueChange = { nameText = it },
-        label = { Text(stringResource(R.string.profile_settings_name), color = colors.onSurfaceSecondary) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        icon = Icons.Rounded.Edit,
         isError = hasError,
-        supportingText = {
-            when {
-                normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-            }
-        },
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadSectionHeader(
@@ -364,9 +231,10 @@ internal fun EditProfileSubPageContent(
     }
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_done),
+        title = stringResource(R.string.macropad_editor_save_profile_title),
         description = stringResource(R.string.macropad_editor_edit_profile_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
+        actionText = stringResource(R.string.gamepad_action_save),
+        icon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
         onClick = {
             if (isConfirmEnabled) {
@@ -382,7 +250,6 @@ internal fun AppPickerSubPageContent(
     accentColor: Color,
     onSelectApp: (packageName: String) -> Unit,
 ) {
-    val colors = LocalAppColors.current
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var appsList by remember { mutableStateOf<List<InstalledAppItem>>(emptyList()) }
@@ -404,11 +271,14 @@ internal fun AppPickerSubPageContent(
         accentColor = accentColor,
     )
 
-    GamepadSearchBar(
-        query = searchQuery,
-        onQueryChange = { searchQuery = it },
-        placeholder = stringResource(R.string.profile_settings_search_apps),
-        modifier = Modifier.fillMaxWidth(),
+    GamepadTextFieldCard(
+        title = stringResource(R.string.profile_settings_search_apps),
+        description = stringResource(R.string.profile_settings_search_apps_desc),
+        placeholder = stringResource(R.string.profile_settings_search_apps_placeholder),
+        value = searchQuery,
+        onValueChange = { searchQuery = it },
+        icon = Icons.Rounded.Search,
+        modifier = Modifier.firstDeckItem(),
     )
 
     if (isLoadingApps) {
@@ -432,66 +302,29 @@ internal fun AppPickerSubPageContent(
             )
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxWidth().height(320.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth().height(360.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(filtered, key = { it.packageName }) { appItem ->
                     val isAssigned = assignedPackages.contains(appItem.packageName.trim().lowercase())
 
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .primaryOverlayFocusable(
-                                    shape = RoundedCornerShape(8.dp),
-                                    onClick = {
-                                        if (!isAssigned) {
-                                            onSelectApp(appItem.packageName)
-                                        }
-                                    },
-                                    enabled = !isAssigned,
-                                ).padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AppIcon(
-                            packageName = appItem.packageName,
-                            modifier =
-                                Modifier
-                                    .padding(end = 12.dp)
-                                    .size(EIO_APP_ICON_SIZE)
-                                    .alpha(if (isAssigned) 0.38f else 1f),
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = appItem.appName,
-                                    color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.5f) else colors.onSurface,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                if (isAssigned) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = stringResource(R.string.profile_settings_app_assigned),
-                                        color = colors.onSurfaceSecondary.copy(alpha = 0.5f),
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                            }
-                            Text(
-                                text = appItem.packageName,
-                                color = if (isAssigned) colors.onSurfaceSecondary.copy(alpha = 0.38f) else colors.onSurfaceSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                    GamepadActionCard(
+                        title = appItem.appName,
+                        description = appItem.packageName,
+                        actionText = if (isAssigned) stringResource(R.string.profile_settings_app_assigned) else null,
+                        leadingContent = {
+                            AppIcon(
+                                packageName = appItem.packageName,
+                                modifier =
+                                    Modifier
+                                        .size(EIO_APP_ICON_SIZE)
+                                        .clip(RoundedCornerShape(EIO_APP_ICON_CORNER))
+                                        .alpha(if (isAssigned) 0.38f else 1f),
                             )
-                        }
-                    }
+                        },
+                        enabled = !isAssigned,
+                        onClick = { onSelectApp(appItem.packageName) },
+                    )
                 }
             }
         }

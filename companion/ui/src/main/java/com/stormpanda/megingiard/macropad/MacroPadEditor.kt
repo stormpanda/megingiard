@@ -244,21 +244,21 @@ fun MacroPadEditor(
                     },
                     content = {
                         AnimatedContent(
-                            targetState = subPageStack.lastOrNull(),
+                            targetState = subPageStack,
                             transitionSpec = {
-                                if (initialState == null && targetState != null) {
-                                    slideInHorizontally { width -> width } + fadeIn() togetherWith
-                                        slideOutHorizontally { width -> -width } + fadeOut()
-                                } else if (initialState != null && targetState == null) {
+                                val isBackTransition = targetState.size < initialState.size
+                                if (isBackTransition) {
                                     slideInHorizontally { width -> -width } + fadeIn() togetherWith
                                         slideOutHorizontally { width -> width } + fadeOut()
                                 } else {
-                                    fadeIn() togetherWith fadeOut()
+                                    slideInHorizontally { width -> width } + fadeIn() togetherWith
+                                        slideOutHorizontally { width -> -width } + fadeOut()
                                 }
                             },
                             label = "MacroPadSubPageAnimation",
                             modifier = Modifier.fillMaxSize(),
-                        ) { currentSubPage ->
+                        ) { stack ->
+                            val currentSubPage = stack.lastOrNull()
                             if (currentSubPage == null) {
                                 SubPageScrollColumn {
                                     // ── Main Section Decks ─────────────────────────────
@@ -956,7 +956,7 @@ private fun ProfilesDeck(
     GamepadActionCard(
         title = stringResource(R.string.settings_macropad_new_profile),
         description = stringResource(R.string.macropad_editor_new_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_new),
+        actionText = stringResource(R.string.gamepad_action_create),
         icon = Icons.Rounded.Add,
         onClick = onNewProfile,
     )
@@ -1041,7 +1041,7 @@ private fun LayoutsDeck(
     GamepadActionCard(
         title = stringResource(R.string.settings_macropad_new_layout),
         description = stringResource(R.string.macropad_editor_new_layout_desc),
-        actionText = stringResource(R.string.gamepad_action_new),
+        actionText = stringResource(R.string.gamepad_action_create),
         icon = Icons.Rounded.Add,
         onClick = onNewLayout,
     )

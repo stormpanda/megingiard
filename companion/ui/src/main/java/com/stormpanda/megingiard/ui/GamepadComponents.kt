@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
@@ -67,8 +68,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -128,6 +131,7 @@ private const val GC_SLIDER_TRACK_BORDER_ALPHA = 0.25f
 private const val GC_ANIM_DURATION_MS = 150
 private const val GC_UNFOCUSED_MAX_LINES = 2
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
+private const val GC_DISABLED_CARD_ALPHA = 0.38f
 
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.
@@ -229,14 +233,16 @@ fun GamepadFocusCard(
 
     val focusableOrClickModifier =
         if (onClick != null) {
-            Modifier.clickable(
-                enabled = enabled,
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            )
+            Modifier
+                .focusable(interactionSource = interactionSource)
+                .clickable(
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                )
         } else {
-            Modifier.focusable(enabled = enabled, interactionSource = interactionSource)
+            Modifier.focusable(interactionSource = interactionSource)
         }
 
     Box(
@@ -269,6 +275,7 @@ fun GamepadFocusCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .alpha(if (enabled) 1f else GC_DISABLED_CARD_ALPHA)
                     .padding(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
             contentAlignment = Alignment.CenterStart,
         ) {
@@ -392,6 +399,7 @@ fun GamepadCardText(
     description: String? = null,
     isFocused: Boolean = false,
     isDestructive: Boolean = false,
+    isError: Boolean = false,
 ) {
     val colors = LocalAppColors.current
     Column(
@@ -407,7 +415,7 @@ fun GamepadCardText(
             Spacer(modifier = Modifier.height(GC_SPACING_2))
             Text(
                 text = description,
-                color = colors.onSurfaceSecondary,
+                color = if (isError) colors.error else colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
                 overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
@@ -564,15 +572,20 @@ fun GamepadCardRow(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     isFocused: Boolean = false,
     isDestructive: Boolean = false,
+    isError: Boolean = false,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
     ) {
-        if (icon != null) {
+        if (leadingContent != null) {
+            leadingContent()
+            Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
+        } else if (icon != null) {
             GamepadCardIcon(
                 icon = icon,
                 isFocused = isFocused,
@@ -586,6 +599,7 @@ fun GamepadCardRow(
             description = description,
             isFocused = isFocused,
             isDestructive = isDestructive,
+            isError = isError,
             modifier = Modifier.weight(1f),
         )
 
@@ -802,6 +816,7 @@ fun GamepadTextFieldCard(
     description: String? = null,
     placeholder: String? = null,
     icon: ImageVector? = null,
+    isError: Boolean = false,
     singleLine: Boolean = true,
     enabled: Boolean = true,
     onLeftKey: (() -> Unit)? = null,
@@ -809,9 +824,17 @@ fun GamepadTextFieldCard(
     val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var isEditing by remember { mutableStateOf(false) }
-    var draftText by remember(value) { mutableStateOf(value) }
+    var draftValue by remember {
+        mutableStateOf(TextFieldValue(text = value))
+    }
     val cardFocusRequester = remember { FocusRequester() }
     val textFieldFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(value) {
+        if (!isEditing && draftValue.text != value) {
+            draftValue = TextFieldValue(text = value, selection = TextRange(value.length))
+        }
+    }
 
     DisposableEffect(isEditing) {
         if (isEditing) {
@@ -826,6 +849,7 @@ fun GamepadTextFieldCard(
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
+            draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
             keyboardController?.hide()
             try {
                 textFieldFocusRequester.requestFocus()
@@ -844,13 +868,14 @@ fun GamepadTextFieldCard(
     }
 
     BackHandler(enabled = isEditing) {
-        onValueChange(draftText.trim())
+        onValueChange(draftValue.text.trim())
         isEditing = false
     }
 
     GamepadFocusCard(
         onClick = {
             if (enabled && !isEditing) {
+                draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
                 isEditing = true
             }
         },
@@ -868,7 +893,7 @@ fun GamepadTextFieldCard(
                     KeyEvent.KEYCODE_BACK,
                     KeyEvent.KEYCODE_ESCAPE,
                     -> {
-                        onValueChange(draftText.trim())
+                        onValueChange(draftValue.text.trim())
                         isEditing = false
                         true
                     }
@@ -878,7 +903,7 @@ fun GamepadTextFieldCard(
                     KeyEvent.KEYCODE_DPAD_CENTER,
                     -> {
                         if (singleLine) {
-                            onValueChange(draftText.trim())
+                            onValueChange(draftValue.text.trim())
                             isEditing = false
                             true
                         } else {
@@ -926,6 +951,7 @@ fun GamepadTextFieldCard(
                     title = title,
                     description = description,
                     isFocused = isFocused,
+                    isError = isError,
                     modifier = Modifier.weight(1f),
                 )
 
@@ -940,21 +966,22 @@ fun GamepadTextFieldCard(
             Spacer(modifier = Modifier.height(GC_SPACING_8))
 
             AppTextField(
-                value = if (isEditing) draftText else value,
+                value = if (isEditing) draftValue else TextFieldValue(value),
                 onValueChange = {
                     if (isEditing) {
-                        draftText = it
-                        onValueChange(it)
+                        draftValue = it
+                        onValueChange(it.text)
                     }
                 },
                 placeholder = placeholder?.let { { Text(it) } },
+                isError = isError,
                 singleLine = singleLine,
                 enabled = enabled,
                 readOnly = !isEditing,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions =
                     KeyboardActions(onDone = {
-                        onValueChange(draftText.trim())
+                        onValueChange(draftValue.text.trim())
                         isEditing = false
                     }),
                 modifier =
@@ -978,6 +1005,7 @@ fun GamepadActionCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     actionText: String? = null,
     actionGlyph: GamePadGlyph? = null,
     actionLeadingContent: (@Composable () -> Unit)? = null,
@@ -987,7 +1015,7 @@ fun GamepadActionCard(
     val colors = LocalAppColors.current
 
     GamepadFocusCard(
-        onClick = if (enabled) onClick else null,
+        onClick = onClick,
         enabled = enabled,
         modifier = modifier,
     ) { isFocused ->
@@ -995,6 +1023,7 @@ fun GamepadActionCard(
             title = title,
             description = description,
             icon = icon,
+            leadingContent = leadingContent,
             isFocused = isFocused,
             isDestructive = isDestructive,
             trailingContent =

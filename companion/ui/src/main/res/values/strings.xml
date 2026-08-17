@@ -138,7 +138,7 @@ Open Settings to create a layout.</string>
     <!-- Profile settings -->
     <string name="profile_settings_title">Profile Settings</string>
     <string name="profile_settings_name">Profile Name</string>
-    <string name="profile_settings_app_mapping">Assign app</string>
+    <string name="profile_settings_app_mapping">Assign App</string>
     <string name="profile_settings_search_apps">Search apps…</string>
     <string name="profile_settings_no_apps">No applications found</string>
     <string name="profile_settings_app_assigned">(assigned)</string>
@@ -1192,7 +1192,7 @@ Open Settings to create a layout.</string>
     <!-- Dialogs & Overlays -->
     <string name="macropad_cutout_rename_title">Rename Cutout</string>
     <string name="macropad_cutout_rename_desc">Change the display name of this mirror viewport</string>
-    <string name="macropad_profile_app_association_title">Automatic App Association</string>
+    <string name="macropad_profile_app_association_title">Assign App</string>
     <string name="macropad_profile_app_association_desc">Auto-activate profile when target app or game opens</string>
     <string name="macropad_icon_picker_empty_desc">Try searching for a different keyword</string>
     <string name="steamgriddb_empty_games_desc">Try searching for a different game title</string>
@@ -1224,5 +1224,25 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_layouts_count">%1$d Layouts</string>
     <string name="quick_menu_buttons_count">%1$d Buttons</string>
     <string name="macropad_macro_section_timing">Timing &amp; Offset</string>
+
+    <string name="macropad_editor_create_profile_title">Create Profile</string>
+    <string name="macropad_editor_create_profile_desc">Save and activate this new MacroPad profile</string>
+    <string name="macropad_editor_save_profile_title">Save Profile</string>
+    <string name="macropad_editor_create_layout_title">Create Layout</string>
+    <string name="macropad_editor_create_layout_desc">Add this new button layout to the active profile</string>
+    <string name="macropad_editor_save_layout_title">Save Layout</string>
+    <string name="macropad_editor_profile_name_desc">Name of this profile in the switcher</string>
+    <string name="macropad_editor_edit_profile_name_desc">Rename this profile</string>
+    <string name="macropad_editor_layout_name_desc">Name of this button layout</string>
+    <string name="macropad_editor_button_label_desc">Text displayed inside the button cap</string>
+    <string name="macropad_editor_button_label_placeholder">e.g. A, Save, Turbo</string>
+    <string name="profile_settings_name_placeholder">e.g. Name of Game / App</string>
+    <string name="quick_menu_layout_name_placeholder">e.g. Default, Combat, Menu</string>
+    <string name="profile_settings_search_apps_desc">Filter installed apps by name or package</string>
+    <string name="profile_settings_search_apps_placeholder">Search apps…</string>
+    <string name="macropad_icon_picker_search_placeholder">Search icons…</string>
+    <string name="macropad_icon_picker_filled_desc">Toggle between solid and outline icon variants</string>
+    <string name="gamepad_action_create">Create</string>
 </resources>
+
 
