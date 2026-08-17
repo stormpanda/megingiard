@@ -774,22 +774,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="help_mirror_editor_done_desc">Speichert alle in dieser Sitzung vorgenommenen Änderungen und schließt den Editor. Das aktualisierte Ausschnitt-Layout wird sofort aktiv.</string>
     <string name="help_mirror_editor_cancel_desc">Verwirft alle seit dem Öffnen des Editors vorgenommenen Änderungen und stellt das Layout in den vorherigen Zustand zurück. Es werden keine Änderungen gespeichert.</string>
 
-    <!-- Global Settings help -->
-    <string name="help_settings_title">Einstellungen — Hilfe</string>
-    <string name="help_settings_intro">Die globalen Einstellungen gelten für die gesamte App und bleiben zwischen Sitzungen erhalten. Nutze die Abschnitts-Sprungleiste oben, um schnell zu einer bestimmten Gruppe zu scrollen.</string>
+    <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Empfohlen, wenn deine Hände das Gerät so halten, dass deine Daumen natürlich in der Nähe der Unterkante ruhen. Das Schnellmenü lässt sich so leichter wischen.</string>
-    <string name="help_settings_overlay_fade_out_desc">Blendet die seitliche Schnellmenüleiste nach einigen Sekunden visuell aus. Die Wischgesten funktionieren weiterhin normal, selbst wenn die Leiste vollständig unsichtbar ist, sodass du das Schnellmenü jederzeit öffnen kannst.</string>
-
-    <string name="help_settings_recents_desc">Hält deine Übersicht der zuletzt geöffneten Apps aufgeräumt. Empfohlen, wenn du Megingiard komplett über die Schnellmenü-Steuerung steuerst.</string>
     <string name="help_settings_language_desc">Ändert die Sprache aller App-Menüs, Overlays und Hilfeseiten. Derzeit stehen Englisch, Deutsch und Trad. Chinesisch zur Auswahl.</string>
-    <string name="help_settings_gamepad_swap_desc">Aktiviere dies, wenn du das Nintendo-Layout (A rechts, B unten) dem standardmäßigen Xbox-Layout für Gamepad-Makros vorziehst.</string>
-    <string name="help_settings_accent_desc">Passt die Farbe aktiver Tasten und Tabs an. Eigene Akzentfarben gelten für die Designs Dunkel und Dunkel OLED; tippe auf die Farbvorschau für das Farbrad oder auf das Paletten-Symbol für vordefinierte Akzentfarben aus den Themen-Designs.</string>
     <string name="help_settings_theme_desc">Wähle aus 8 verschiedenen Designs darunter Dunkel, Dunkel OLED, Megingiard, Mjölnir-Stahl, Valhalla-Sonnenuntergang, Nordlicht Aurora, Retro-Phosphor und Königliches Asgard.</string>
-    <string name="help_settings_restore_desc">Setzt alle Einstellungen auf Werkseinstellungen zurück, falls etwas falsch konfiguriert ist. Dies löscht alle deine benutzerdefinierten Profile, Layouts und Makros.</string>
     <string name="help_settings_export_desc">Erstellt ein vollständiges Backup deiner Profile und Einstellungen. Empfohlen vor App-Updates oder dem Zurücksetzen von Einstellungen.</string>
-    <string name="help_settings_import_desc">Stellt Profile und Einstellungen aus einer .mgrd-Datei oder einem automatischen täglichen Backup wieder her. Überschreibt aktuelle Profile.</string>
     <string name="help_settings_export_profile_desc">Speichert ein einzelnes Profil in eine Datei, um Tasten-Layout und Makros mit anderen Spielern zu teilen, ohne deine gesamte Konfiguration freizugeben.</string>
-    <string name="help_settings_import_profile_desc">Fügt ein geteiltes Profil eines anderen Spielers deiner Sammlung hinzu. Vorhandene eigene Profile werden dabei nicht verändert oder überschrieben.</string>
     <string name="help_settings_add_to_obtainium_desc">Öffnet Obtainium (falls installiert) mit dem vorausgefüllten Megingiard-Repository-Link. Falls Obtainium nicht installiert ist, wird die GitHub-Seite von Obtainium im Browser geöffnet.</string>
     <string name="help_settings_privd_desc">Richtet eine Hintergrundverbindung per Wireless Debugging ein, um auf System-Eingabegeräte zuzugreifen, die für normale Apps gesperrt sind. Dies ermöglicht:\n\n• Gamepad-Zusammenführung: Kombiniert virtuelle und physische Controller, sodass Spiele nur einen Controller sehen (erhöht die Kompatibilität).\n• Physische Gamepad-Aufnahme: Nimmt Makros direkt von deinem physischen Controller auf.\n• Privilegiertes Screen Mirroring: Startet die Bildschirmübertragung ohne die ständige Android-Sicherheitsabfrage.\n• Screenshots: Erstellt Screenshots des Hauptbildschirms direkt aus dem Schnellmenü-Overlay, ohne dass die Bildschirmübertragung aktiv sein muss.</string>
     <string name="help_settings_deadzone_desc">Verhindert, dass Rauschen oder Drift der Analogsticks aufgenommen werden. Gleiche diese Werte für beste Genauigkeit mit den Totzonen-Einstellungen deines Thor ab.</string>
@@ -848,7 +838,6 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_reset_tutorials">Tutorials zurücksetzen</string>
     <string name="settings_reset_tutorials_desc">Setzt alle Tutorial-Popups zurück, um sie beim nächsten Zugriff erneut anzuzeigen</string>
     <string name="settings_reset_tutorials_toast">Tutorials werden nun wieder angezeigt</string>
-    <string name="help_settings_reset_tutorials_desc">Erzwingt, dass alle Tutorial-Bildschirme und Willkommens-Popups beim nächsten Zugriff wieder angezeigt werden, selbst wenn sie zuvor ausgeblendet wurden.</string>
 
     <!-- Macro Editor Tutorial -->
     <string name="macro_tutorial_title">Makros erstellen</string>
@@ -1067,9 +1056,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="update_dialog_btn_open_directly">Link direkt öffnen</string>
     <string name="update_dialog_btn_cancel">Abbrechen</string>
 
-    <!-- Settings Help Modal Entry -->
+    <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">Wenn aktiviert, prüft Megingiard alle 24 Stunden lautlos im Hintergrund auf neue Releases. Wenn ein Update gefunden wird, kannst du deine Einstellungen sichern und die Release-Seite im Standardbrowser auf dem oberen Bildschirm öffnen.</string>
-    <string name="help_settings_check_updates_desc">Führt sofort eine manuelle Suche nach neuen Releases auf GitHub durch.</string>
 
     <!-- Gamepad Action Buttons -->
     <string name="gamepad_action_setup">Einrichten</string>

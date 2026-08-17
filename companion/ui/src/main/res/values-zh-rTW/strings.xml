@@ -644,20 +644,13 @@
     <string name="help_mirror_editor_section_finish">完成</string>
     <string name="help_mirror_editor_done_desc">儲存本次的所有變更並關閉編輯器。更新後的區塊配置會立即生效。</string>
     <string name="help_mirror_editor_cancel_desc">捨棄開啟編輯器後的所有變更，並將配置還原為先前的狀態。不會儲存任何修改。</string>
-    <string name="help_settings_title">設定 — 說明</string>
-    <string name="help_settings_intro">全域設定套用於整個應用程式並在會話間持久儲存. 使用頂端的區塊跳轉列可快速捲動到特定群組。</string>
+
+    <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">如果您的手握姿勢自然落在裝置底部附近，建議開啟此項，使快速選單更容易滑開而無需移動大拇指。</string>
-    <string name="help_settings_overlay_fade_out_desc">在幾秒後視覺上隱藏側邊快速選單列。即使控制列完全不可見，滑動手勢仍可正常感應，讓您隨時開啟快速選單。</string>
-    <string name="help_settings_recents_desc">保持 Android 最近任務選單整潔。如果您在遊戲時完全透過側邊快速選單列控制 Megingiard，建議開啟此項。</string>
     <string name="help_settings_language_desc">更改所有應用程式選單、覆蓋層與說明教學的語言。目前提供英文、德文與繁體中文。</string>
-    <string name="help_settings_gamepad_swap_desc">如果您偏好任天堂配置 (A 在右側，B 在底部) 而非預設的 Xbox 配置 (A 在底部，B 在右側)，請啟用此項。注入的鍵碼將保持不變。</string>
-    <string name="help_settings_accent_desc">自定義活動按鈕與分頁的主題重點色。自定義主題重點色套用於深色與深色 OLED 主題；點擊顏色預覽以開啟自定義選色輪，或點擊調色盤圖示以選擇預設的主題重點顏色。</string>
     <string name="help_settings_theme_desc">從 8 種獨特視覺主題中選擇，包括深色、深色 OLED、Megingiard、Mjölnir 鋼鐵、英靈殿日落、北極光、復古磷光體與皇家阿斯嘉特。</string>
-    <string name="help_settings_restore_desc">如果配置錯誤，可使用此項將所有設定還原為出廠預設值。這將刪除您所有自定義的設定檔、配置與巨集。</string>
     <string name="help_settings_export_desc">建立自定義設定檔與配置的完整備份。建議在執行應用程式更新或重置設定前進行備份。</string>
-    <string name="help_settings_import_desc">從先前儲存的 .mgrd 檔案或每日自動備份中還原設定檔與配置。確認後將覆蓋當前配置。</string>
     <string name="help_settings_export_profile_desc">將單個設定檔儲存到檔案中，以便與其他玩家分享配置與巨集，而無需洩露您的完整 App 配置。</string>
-    <string name="help_settings_import_profile_desc">從其他用戶新增分享的設定檔到您的收藏中。此操作是安全的，不會修改或覆蓋您現有的設定檔。</string>
     <string name="help_settings_add_to_obtainium_desc">開啟 Obtainium (如果已安裝) 並預填 Megingiard 儲存庫連結。如果未安裝 Obtainium，則會在瀏覽器中開啟 Obtainium 的 GitHub 版本發佈頁面。</string>
     <string name="help_settings_privd_desc">透過無線偵錯建立背景助手連接，以寫入一般應用程式無法訪問的系統輸入裝置。這將啟用：\n\n• 手把合併：結合虛擬與實體手把，使遊戲僅看到一個控制器 (提高相容性)。\n• 實體手把錄製：錄製來自實體控制器的巨集輸入。\n• 特權螢幕投影：無需在每次運行時提示螢幕擷取權限即可開始投影。\n• 螢幕截圖：在未開啟螢幕投影的情況下，直接從快速選單覆蓋層儲存主螢幕截圖。</string>
     <string name="help_settings_deadzone_desc">確保類比搖桿錄製不會捕捉到漂移或雜訊。將這些百分比與 Thor 系統設定中的死區設定匹配以獲得最佳準確性。</string>
@@ -709,7 +702,6 @@
     <string name="settings_reset_tutorials">重置教學</string>
     <string name="settings_reset_tutorials_desc">重置所有教學彈窗，以便下次造訪時再次顯示</string>
     <string name="settings_reset_tutorials_toast">教學現在將再次顯示</string>
-    <string name="help_settings_reset_tutorials_desc">強制在造訪時再次顯示所有教學螢幕與歡迎彈窗，即使您先前已關閉它們。</string>
     <string name="macro_tutorial_title">建立巨集</string>
     <string name="macro_tutorial_intro">巨集讓您能自動化手把輸入或螢幕點擊序列。</string>
     <string name="macro_tutorial_privileged_title">使用實體按鈕錄製</string>
@@ -895,6 +887,6 @@
     <string name="update_dialog_btn_backup_and_open">備份並開啟連結</string>
     <string name="update_dialog_btn_open_directly">直接開啟連結</string>
     <string name="update_dialog_btn_cancel">取消</string>
+    <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">啟用時，Megingiard 會每 24 小時靜默檢查一次新版本。若發現更新，您可以備份設定並在上方螢幕的預設瀏覽器中開啟發布頁面。</string>
-    <string name="help_settings_check_updates_desc">立即手動觸發對 GitHub Releases 儲存庫的更新檢查。</string>
 </resources>

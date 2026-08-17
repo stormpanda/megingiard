@@ -766,22 +766,12 @@ Open Settings to create a layout.</string>
     <string name="help_mirror_editor_done_desc">Saves all changes made in this session and closes the editor. The updated cutout layout becomes immediately active.</string>
     <string name="help_mirror_editor_cancel_desc">Discards all changes made since the editor was opened and reverts the layout to its previous state. No modifications are saved.</string>
 
-    <!-- Global Settings help -->
-    <string name="help_settings_title">Settings — Help</string>
-    <string name="help_settings_intro">Global Settings apply to the whole app and persist across sessions. Use the section jump row at the top to scroll quickly to a specific group.</string>
+    <!-- Global Settings card descriptions -->
     <string name="help_settings_overlay_position_desc">Recommended if your hand grip naturally rests near the bottom of the device, making the Quick Menu easier to swipe open without shifting your thumbs.</string>
-    <string name="help_settings_overlay_fade_out_desc">Fades out the edge quick menu bar visually after a few seconds. The swipe gestures will still register normally even when the bar is fully invisible, allowing you to open the Quick Menu anytime.</string>
-
-    <string name="help_settings_recents_desc">Keeps your Android Recents menu clean. Recommended if you launch Megingiard once and control it entirely via the edge quick menu bar overlay while gaming.</string>
     <string name="help_settings_language_desc">Changes the language of all app menus, overlays, and help tutorials. Choose English, German, or Traditional Chinese depending on your preference.</string>
-    <string name="help_settings_gamepad_swap_desc">Enable this if you prefer the Nintendo layout (A on right, B on bottom) over the default Xbox layout (A on bottom, B on right) for gamepad macro actions.</string>
-    <string name="help_settings_accent_desc">Customizes the highlight color for active buttons and tabs. Custom accents apply to Dark and Dark OLED themes; tap the color preview to open the custom color picker wheel or tap the palette icon to choose from preset theme accents.</string>
     <string name="help_settings_theme_desc">Choose from 8 distinct visual themes including Dark, Dark OLED, Megingiard, Mjölnir Steel, Valhalla Sunset, Aurora Borealis, Retro Phosphor, and Royal Asgard.</string>
-    <string name="help_settings_restore_desc">Use this to revert all settings to factory defaults if something gets misconfigured. This will delete all your custom profiles, layouts, and macros.</string>
     <string name="help_settings_export_desc">Creates a complete backup of your custom profiles and configurations. Recommended before performing app updates or resetting settings.</string>
-    <string name="help_settings_import_desc">Restores your profiles and configurations from a previously saved .mgrd file or daily automatic backup. Overwrites current configurations upon confirmation.</string>
     <string name="help_settings_export_profile_desc">Saves a single profile to a file to share layout and macros with other players without exposing your entire app configuration.</string>
-    <string name="help_settings_import_profile_desc">Adds a shared profile from another user to your collection. This operation is safe and will not modify or overwrite your existing profiles.</string>
     <string name="help_settings_add_to_obtainium_desc">Opens Obtainium (if installed) with the pre-filled Megingiard repository link. If Obtainium is not installed, it opens the Obtainium GitHub releases page in the browser.</string>
     <string name="help_settings_privd_desc">Establishes a background helper connection via Wireless Debugging to write to system input devices not accessible by regular apps. This enables:\n\n• Gamepad Merge: Combines virtual and physical gamepads so games see only one controller (improving compatibility).\n• Physical Gamepad Recording: Record macro inputs from your physical controller.\n• Privileged Screen Mirroring: Starts mirroring without prompting for screen capture permissions on every run.\n• Screenshots: Save screenshots of the primary screen directly from the Quick Menu overlay without screen mirroring being active.</string>
     <string name="help_settings_deadzone_desc">Ensures analog stick recordings don\'t capture drift or noise. Match these percentages with the dead zone settings in the Thor system settings for best accuracy.</string>
@@ -840,7 +830,6 @@ Open Settings to create a layout.</string>
     <string name="settings_reset_tutorials">Reset tutorials</string>
     <string name="settings_reset_tutorials_desc">Reset all tutorial popups to show them again on next access</string>
     <string name="settings_reset_tutorials_toast">Tutorials will now be shown again</string>
-    <string name="help_settings_reset_tutorials_desc">Forces all tutorial screens and welcome popups to be shown again upon access, even if you previously dismissed them.</string>
 
     <!-- Macro Editor Tutorial -->
     <string name="macro_tutorial_title">Creating Macros</string>
@@ -1059,9 +1048,8 @@ Open Settings to create a layout.</string>
     <string name="update_dialog_btn_open_directly">Open Link Directly</string>
     <string name="update_dialog_btn_cancel">Cancel</string>
 
-    <!-- Settings Help Modal Entry -->
+    <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">When enabled, Megingiard silently checks for new releases every 24 hours. If an update is found, you can backup your settings and open the release page in your default browser on the top display.</string>
-    <string name="help_settings_check_updates_desc">Triggers a manual check for updates against the GitHub Releases repository immediately.</string>
 
     <!-- Gamepad Action Buttons -->
     <string name="gamepad_action_setup">Setup</string>
