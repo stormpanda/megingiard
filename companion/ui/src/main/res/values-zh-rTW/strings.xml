@@ -169,6 +169,7 @@
     <string name="config_import_warning_profile">設定檔將新增至現有內容中。此檔案中的應用程式設定將被忽略。</string>
     <string name="config_profile_export_dialog_title">分享設定檔</string>
     <string name="config_profile_export_select">要分享的設定檔</string>
+    <string name="config_profile_export_select_desc">選擇您要分享的設定檔</string>
     <string name="config_profile_import_success">設定檔匯入成功。</string>
     <string name="config_import_confirm">匯入</string>
     <string name="config_import_cancel">取消</string>

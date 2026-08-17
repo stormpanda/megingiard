@@ -1197,7 +1197,8 @@ private fun ShareProfileSubPage(
     onExportProfile: (ExportMetadata, PadProfile, Boolean) -> Unit,
 ) {
     val context = LocalContext.current
-    val profiles by MacroPadState.profiles.collectAsState()
+    val rawProfiles by MacroPadState.profiles.collectAsState()
+    val profiles = remember(rawProfiles) { rawProfiles.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }) }
     val activeProfile by MacroPadState.activeProfile.collectAsState()
     var selectedProfileIdx by rememberSaveable(profiles) {
         val initialIdx = profiles.indexOfFirst { it.id == activeProfile?.id }.coerceAtLeast(0)
@@ -1219,6 +1220,7 @@ private fun ShareProfileSubPage(
     if (profiles.size > 1) {
         GamepadChoiceCard(
             title = stringResource(R.string.config_profile_export_select),
+            description = stringResource(R.string.config_profile_export_select_desc),
             selectedText = currentProfile?.name ?: "",
             onPrevious = {
                 if (profiles.isNotEmpty()) {

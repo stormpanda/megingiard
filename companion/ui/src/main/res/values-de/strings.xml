@@ -534,6 +534,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="config_import_warning_profile">Profile werden neben den bestehenden hinzugefügt. App-Einstellungen in dieser Datei werden ignoriert.</string>
     <string name="config_profile_export_dialog_title">Profil teilen</string>
     <string name="config_profile_export_select">Zu teilendes Profil</string>
+    <string name="config_profile_export_select_desc">Wähle das Profil aus, das du teilen möchtest</string>
     <string name="config_profile_import_success">Profil erfolgreich importiert.</string>
     <string name="config_import_confirm">Importieren</string>
     <string name="config_import_cancel">Abbrechen</string>

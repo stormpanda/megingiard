@@ -70,6 +70,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -108,6 +109,7 @@ private val GC_SLIDER_HEIGHT = 24.dp
 private val GC_ROW_CONTENT_SPACING = 12.dp
 private val GC_TEXT_SIZE_PILL = 12.sp
 private val GC_TEXT_SIZE_CAPSULE = 13.sp
+private val GC_CAPSULE_TEXT_WIDTH = 140.dp
 
 private const val GC_CARD_FOCUSED_BG_ALPHA = 0.95f
 private const val GC_CARD_UNFOCUSED_BG_ALPHA = 0.55f
@@ -526,7 +528,13 @@ fun GamepadAdjustableCapsule(
             color = if (isAdjusting) colors.accent else colors.onSurface,
             fontSize = GC_TEXT_SIZE_CAPSULE,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 8.dp),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            modifier =
+                Modifier
+                    .width(GC_CAPSULE_TEXT_WIDTH)
+                    .appMarquee()
+                    .padding(horizontal = 8.dp),
         )
 
         CapsuleArrowButton(

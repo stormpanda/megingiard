@@ -195,6 +195,7 @@ Open Settings to create a layout.</string>
     <string name="config_import_warning_profile">Profiles will be added alongside existing ones. App settings in this file will be ignored.</string>
     <string name="config_profile_export_dialog_title">Share profile</string>
     <string name="config_profile_export_select">Profile to share</string>
+    <string name="config_profile_export_select_desc">Pick the profile you want to share</string>
     <string name="config_profile_import_success">Profile imported successfully.</string>
     <string name="config_import_confirm">Import</string>
     <string name="config_import_cancel">Cancel</string>
