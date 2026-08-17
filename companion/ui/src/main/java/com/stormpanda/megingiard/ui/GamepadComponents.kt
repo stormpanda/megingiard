@@ -788,6 +788,7 @@ fun GamepadTextFieldCard(
     icon: ImageVector? = null,
     singleLine: Boolean = true,
     enabled: Boolean = true,
+    onLeftKey: (() -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -841,6 +842,7 @@ fun GamepadTextFieldCard(
         enabled = enabled,
         modifier = modifier,
         isAdjusting = isEditing,
+        onLeftKey = onLeftKey,
         onCustomKeyEvent = { keyEvent ->
             if (!isEditing) return@GamepadFocusCard false
             val keyCode = keyEvent.nativeKeyEvent.keyCode

@@ -139,9 +139,11 @@ private const val TAG = "GlobalSettingsScreen"
 /**
  * Sub-pages that can be drilled into within [GlobalSettingsScreen].
  */
-enum class SettingsSubPage {
-    DEADZONES,
-    STEAMGRIDDB_TOKEN,
+internal enum class SettingsSubPage(
+    val parentSection: SettingsSectionFilter,
+) {
+    DEADZONES(SettingsSectionFilter.INPUT),
+    STEAMGRIDDB_TOKEN(SettingsSectionFilter.GENERAL),
 }
 
 private const val GS_SUBPAGE_FOCUS_DELAY_MS = 50L
@@ -275,7 +277,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_general),
                 icon = Icons.Rounded.Tune,
-                selected = selectedSectionFilter == SettingsSectionFilter.GENERAL && activeSubPage == null,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.GENERAL,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.GENERAL
                     activeSubPage = null
@@ -284,7 +286,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_input),
                 icon = Icons.Rounded.Gamepad,
-                selected = selectedSectionFilter == SettingsSectionFilter.INPUT || activeSubPage == SettingsSubPage.DEADZONES,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.INPUT,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.INPUT
                     activeSubPage = null
@@ -293,7 +295,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_appearance),
                 icon = Icons.Rounded.Palette,
-                selected = selectedSectionFilter == SettingsSectionFilter.APPEARANCE && activeSubPage == null,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.APPEARANCE,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.APPEARANCE
                     activeSubPage = null
@@ -302,7 +304,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_data),
                 icon = Icons.Rounded.Storage,
-                selected = selectedSectionFilter == SettingsSectionFilter.DATA && activeSubPage == null,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.DATA,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.DATA
                     activeSubPage = null
@@ -311,7 +313,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_config),
                 icon = Icons.Rounded.Build,
-                selected = selectedSectionFilter == SettingsSectionFilter.CONFIGURATION && activeSubPage == null,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.CONFIGURATION,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.CONFIGURATION
                     activeSubPage = null
@@ -320,7 +322,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_updates),
                 icon = Icons.Rounded.SystemUpdate,
-                selected = selectedSectionFilter == SettingsSectionFilter.UPDATES && activeSubPage == null,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.UPDATES,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.UPDATES
                     activeSubPage = null
@@ -329,7 +331,7 @@ fun GlobalSettingsScreen(
             GamepadCategoryTile(
                 title = stringResource(R.string.settings_jump_diagnostics),
                 icon = Icons.Rounded.HealthAndSafety,
-                selected = selectedSectionFilter == SettingsSectionFilter.DIAGNOSTICS && activeSubPage == null,
+                selected = (activeSubPage?.parentSection ?: selectedSectionFilter) == SettingsSectionFilter.DIAGNOSTICS,
                 onClick = {
                     selectedSectionFilter = SettingsSectionFilter.DIAGNOSTICS
                     activeSubPage = null
