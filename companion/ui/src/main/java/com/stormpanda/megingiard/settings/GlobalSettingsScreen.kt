@@ -615,6 +615,8 @@ fun GlobalSettingsScreen(
                                                 AppLog.e(TAG, "Failed to open browser fallback: ${ex.message}")
                                             }
                                         }
+                                        AppStateManager.closeActiveModal()
+                                        onBack()
                                     },
                                 )
                             }
