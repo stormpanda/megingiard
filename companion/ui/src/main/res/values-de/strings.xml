@@ -1251,6 +1251,15 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_icon_picker_search_placeholder">Symbole suchen…</string>
     <string name="macropad_icon_picker_filled_desc">Zwischen ausgefüllten und Umriss-Symbolen umschalten</string>
     <string name="gamepad_action_create">Erstellen</string>
+    <string name="gamepad_action_confirm">Bestätigen</string>
+    <string name="macropad_profile_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_layout_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_button_delete_confirm_title">Diesen Button wirklich löschen?</string>
+    <string name="macropad_macro_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_profile_deleted_toast">Profil \"%1$s\" gelöscht</string>
+    <string name="macropad_layout_deleted_toast">Layout \"%1$s\" gelöscht</string>
+    <string name="macropad_button_deleted_toast">Button gelöscht</string>
+    <string name="macropad_macro_deleted_toast">Makro \"%1$s\" gelöscht</string>
 </resources>
 
 

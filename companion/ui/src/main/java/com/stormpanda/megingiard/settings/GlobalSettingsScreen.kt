@@ -1,7 +1,6 @@
 package com.stormpanda.megingiard.settings
 
 import android.view.KeyEvent
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -103,6 +102,7 @@ import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.settings.ThemeMode
 import com.stormpanda.megingiard.settings.displayNameResId
 import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
@@ -555,12 +555,9 @@ fun GlobalSettingsScreen(
                                     icon = Icons.AutoMirrored.Rounded.HelpOutline,
                                     onClick = {
                                         viewModel.resetAllTutorials()
-                                        Toast
-                                            .makeText(
-                                                context,
-                                                context.getString(R.string.settings_reset_tutorials_toast),
-                                                Toast.LENGTH_SHORT,
-                                            ).show()
+                                        DialogToastManager.show(
+                                            context.getString(R.string.settings_reset_tutorials_toast),
+                                        )
                                     },
                                 )
                             }

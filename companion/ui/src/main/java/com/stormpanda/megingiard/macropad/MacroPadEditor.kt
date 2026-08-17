@@ -53,6 +53,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -66,15 +68,16 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
-import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -126,12 +129,6 @@ fun MacroPadEditor(
     var isCanvasLocked by remember { mutableStateOf(true) }
     var internalShowEditorHelp by remember { mutableStateOf(false) }
     val effectiveShowHelp = showHelp || internalShowEditorHelp
-
-    // Dialog state for destructive actions
-    var deleteProfileTarget by remember { mutableStateOf<PadProfile?>(null) }
-    var deleteLayoutTarget by remember { mutableStateOf<PadLayout?>(null) }
-    var deleteButtonTarget by remember { mutableStateOf<PadButton?>(null) }
-    var deleteMacroTarget by remember { mutableStateOf<Macro?>(null) }
 
     // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
     var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
@@ -304,7 +301,17 @@ fun MacroPadEditor(
                                                     subPageStack = subPageStack + MacroPadSubPage.ReorderProfiles
                                                 },
                                                 onDeleteProfile = {
-                                                    deleteProfileTarget = profile
+                                                    val deletedName = profile.name
+                                                    val layoutsToDelete = profile.layouts
+                                                    scope.launch {
+                                                        layoutsToDelete.forEach { lay ->
+                                                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
+                                                        }
+                                                    }
+                                                    MacroPadState.deleteProfile(profile.id)
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_profile_deleted_toast, deletedName),
+                                                    )
                                                 },
                                             )
                                         }
@@ -360,7 +367,14 @@ fun MacroPadEditor(
                                                 },
                                                 onDeleteLayout = {
                                                     if (activeLayout != null) {
-                                                        deleteLayoutTarget = activeLayout
+                                                        val deletedName = activeLayout.name
+                                                        scope.launch {
+                                                            MacroPadMediaRepository.deleteBackgroundImage(context, activeLayout.id)
+                                                        }
+                                                        MacroPadState.deleteLayout(activeLayout.id)
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_layout_deleted_toast, deletedName),
+                                                        )
                                                     }
                                                 },
                                             )
@@ -400,7 +414,14 @@ fun MacroPadEditor(
                                                     subPageStack = subPageStack + MacroPadSubPage.CopyButton(btn)
                                                 },
                                                 onDeleteButton = { btn ->
-                                                    deleteButtonTarget = btn
+                                                    activeLayout?.let { lay ->
+                                                        MacroPadState.updateLayout(
+                                                            lay.copy(buttons = lay.buttons.filter { it.id != btn.id }),
+                                                        )
+                                                    }
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_button_deleted_toast),
+                                                    )
                                                 },
                                             )
                                         }
@@ -423,7 +444,11 @@ fun MacroPadEditor(
                                                     subPageStack = subPageStack + MacroPadSubPage.MacroTimeline(macro.id)
                                                 },
                                                 onDeleteMacro = { macro ->
-                                                    deleteMacroTarget = macro
+                                                    val deletedName = macro.name
+                                                    MacroPadState.deleteMacro(macro.id)
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_macro_deleted_toast, deletedName),
+                                                    )
                                                 },
                                             )
                                         }
@@ -826,87 +851,6 @@ fun MacroPadEditor(
             }
         }
 
-        // ── Confirm Delete Dialogs ─────────────────────────────────────────
-        if (deleteProfileTarget != null) {
-            val prof = deleteProfileTarget!!
-            GamepadConfirmDialog(
-                title = stringResource(R.string.macropad_editor_delete_profile),
-                message = stringResource(R.string.macropad_editor_confirm_delete),
-                confirmText = stringResource(R.string.macropad_editor_confirm),
-                cancelText = stringResource(R.string.macropad_editor_cancel),
-                isDestructive = true,
-                onConfirm = {
-                    val layoutsToDelete = prof.layouts
-                    scope.launch {
-                        layoutsToDelete.forEach { lay ->
-                            MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                        }
-                    }
-                    MacroPadState.deleteProfile(prof.id)
-                    deleteProfileTarget = null
-                },
-                onDismiss = { deleteProfileTarget = null },
-            )
-        }
-
-        if (deleteLayoutTarget != null) {
-            val lay = deleteLayoutTarget!!
-            GamepadConfirmDialog(
-                title = stringResource(R.string.macropad_editor_delete_layout),
-                message = stringResource(R.string.macropad_editor_delete_layout_desc, lay.name),
-                confirmText = stringResource(R.string.macropad_editor_confirm),
-                cancelText = stringResource(R.string.macropad_editor_cancel),
-                isDestructive = true,
-                onConfirm = {
-                    scope.launch {
-                        MacroPadMediaRepository.deleteBackgroundImage(context, lay.id)
-                    }
-                    MacroPadState.deleteLayout(lay.id)
-                    deleteLayoutTarget = null
-                },
-                onDismiss = { deleteLayoutTarget = null },
-            )
-        }
-
-        if (deleteButtonTarget != null) {
-            val btn = deleteButtonTarget!!
-            GamepadConfirmDialog(
-                title = stringResource(R.string.macropad_editor_delete_button),
-                message =
-                    if (btn.action is PadAction.TrackpointMove) {
-                        stringResource(R.string.macropad_action_trackpoint)
-                    } else {
-                        btn.label
-                    },
-                confirmText = stringResource(R.string.macropad_editor_confirm),
-                cancelText = stringResource(R.string.macropad_editor_cancel),
-                isDestructive = true,
-                onConfirm = {
-                    activeLayout?.let { lay ->
-                        MacroPadState.updateLayout(lay.copy(buttons = lay.buttons.filter { it.id != btn.id }))
-                    }
-                    deleteButtonTarget = null
-                },
-                onDismiss = { deleteButtonTarget = null },
-            )
-        }
-
-        if (deleteMacroTarget != null) {
-            val mac = deleteMacroTarget!!
-            GamepadConfirmDialog(
-                title = stringResource(R.string.macropad_macro_delete_title),
-                message = stringResource(R.string.macropad_macro_delete_confirm, mac.name),
-                confirmText = stringResource(R.string.macropad_editor_confirm),
-                cancelText = stringResource(R.string.macropad_editor_cancel),
-                isDestructive = true,
-                onConfirm = {
-                    MacroPadState.deleteMacro(mac.id)
-                    deleteMacroTarget = null
-                },
-                onDismiss = { deleteMacroTarget = null },
-            )
-        }
-
         MacroPadEditorHelpModal(
             visible = effectiveShowHelp,
             onDismiss = {
@@ -931,6 +875,9 @@ private fun ProfilesDeck(
     onReorderProfiles: () -> Unit,
     onDeleteProfile: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val firstItemFocusRequester = remember { FocusRequester() }
+
     GamepadSectionHeader(
         text = stringResource(R.string.quick_menu_profile_label),
         color = accentColor,
@@ -950,7 +897,7 @@ private fun ProfilesDeck(
             val next = profiles[(profileIdx + 1) % profiles.size]
             onSelectProfile(next.id)
         },
-        modifier = Modifier.firstDeckItem(),
+        modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
     GamepadActionCard(
@@ -985,13 +932,23 @@ private fun ProfilesDeck(
         onClick = onReorderProfiles,
     )
 
-    GamepadActionCard(
+    GamepadTwoStepConfirmCard(
         title = stringResource(R.string.macropad_editor_delete_profile),
+        confirmTitle = stringResource(R.string.macropad_profile_delete_confirm_title, activeProfile.name),
         description = stringResource(R.string.macropad_editor_delete_profile_desc, activeProfile.name),
         actionText = stringResource(R.string.gamepad_action_delete),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
         isDestructive = true,
         icon = Icons.Rounded.Delete,
-        onClick = onDeleteProfile,
+        onConfirm = {
+            onDeleteProfile()
+            scope.launch {
+                try {
+                    firstItemFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
+            }
+        },
     )
 }
 
@@ -1010,6 +967,9 @@ private fun LayoutsDeck(
     onReorderLayouts: () -> Unit,
     onDeleteLayout: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val firstItemFocusRequester = remember { FocusRequester() }
+
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_editor_section_layout),
         color = accentColor,
@@ -1035,7 +995,7 @@ private fun LayoutsDeck(
                 onSelectLayout(next.id)
             }
         },
-        modifier = Modifier.firstDeckItem(),
+        modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
     )
 
     GamepadActionCard(
@@ -1094,14 +1054,26 @@ private fun LayoutsDeck(
         onClick = onReorderLayouts,
     )
 
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_delete_layout),
-        description = stringResource(R.string.macropad_editor_delete_layout_desc, activeLayout?.name ?: ""),
-        actionText = stringResource(R.string.gamepad_action_delete),
-        isDestructive = true,
-        icon = Icons.Rounded.Delete,
-        onClick = onDeleteLayout,
-    )
+    if (activeLayout != null) {
+        GamepadTwoStepConfirmCard(
+            title = stringResource(R.string.macropad_editor_delete_layout),
+            confirmTitle = stringResource(R.string.macropad_layout_delete_confirm_title, activeLayout.name),
+            description = stringResource(R.string.macropad_editor_delete_layout_desc, activeLayout.name),
+            actionText = stringResource(R.string.gamepad_action_delete),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
+            isDestructive = true,
+            icon = Icons.Rounded.Delete,
+            onConfirm = {
+                onDeleteLayout()
+                scope.launch {
+                    try {
+                        firstItemFocusRequester.requestFocus()
+                    } catch (_: IllegalStateException) {
+                    }
+                }
+            },
+        )
+    }
 }
 
 @Composable

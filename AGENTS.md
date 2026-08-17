@@ -446,6 +446,15 @@ The coroutine is automatically cancelled when the key (`isActive`) changes to `f
 
 Never call `.collectAsState()` outside a Composable; never call raw `.collect {}` inside a Composable when the result drives UI.
 
+### 9.6 Gamepad & Settings UI Conventions
+
+- **No Controller Button Prompts in Settings / Editor Menus:** Controller button prompt glyphs (e.g. `GamePadGlyph` badges for A/B/X/Y or footer prompt bars) must **NEVER** be displayed inside Megingiard Companion settings screens or MacroPad editor menus. Button prompt glyphs are exclusively reserved for Game Focus launcher UI.
+- **In-Place Two-Step Confirmation for Destructive Actions:** Never launch modal window dialogs (`Dialog`, `AlertDialog`) from within overlay window contexts or editor menus (prevents window type mismatch crashes on overlay contexts). Instead, destructive actions (e.g. deleting profiles, layouts, buttons, macros) must use in-place two-step confirmation (`GamepadTwoStepConfirmCard`):
+  1. Activating the item (Button A / touch click) changes its headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*) and changes the badge to *"Confirm"*.
+  2. Activating again executes the action and resets state.
+  3. Pressing Button B or navigating away (losing focus) cancels the confirmation state.
+  4. Upon deletion, focus switches back to the primary selection item in the deck (e.g. profile choice card) and a toast notification confirms the deletion.
+
 ---
 
 ## 10 Coroutines & Lifecycle

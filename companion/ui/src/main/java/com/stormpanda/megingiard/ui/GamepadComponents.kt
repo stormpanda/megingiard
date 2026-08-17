@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -1082,6 +1083,118 @@ fun GamepadActionCard(
                 } else {
                     null
                 },
+        )
+    }
+}
+
+/**
+ * Gamepad-first destructive two-step confirmation card.
+ *
+ * Step 1: Displays initial title/description with action badge (e.g. "Delete").
+ * When activated (Button A / click), enters confirming state:
+ * - Title changes to [confirmTitle] (e.g. "Really delete 'Profile'?")
+ * - Action badge changes to [confirmActionText] (e.g. "Confirm") in high-contrast destructive styling
+ *
+ * Step 2: Activating again invokes [onConfirm].
+ *
+ * Cancellation:
+ * - Pressing Button B / Back cancels confirmation and consumes the key.
+ * - Navigating away / losing focus automatically resets the card to Step 1.
+ */
+@Composable
+fun GamepadTwoStepConfirmCard(
+    title: String,
+    confirmTitle: String,
+    onConfirm: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    confirmDescription: String? = description,
+    actionText: String = stringResource(R.string.gamepad_action_delete),
+    confirmActionText: String = stringResource(R.string.gamepad_action_confirm),
+    icon: ImageVector? = Icons.Rounded.Delete,
+    enabled: Boolean = true,
+    isDestructive: Boolean = true,
+) {
+    val colors = LocalAppColors.current
+    var isConfirming by remember { mutableStateOf(false) }
+
+    GamepadFocusCard(
+        onClick = {
+            if (!isConfirming) {
+                isConfirming = true
+            } else {
+                isConfirming = false
+                onConfirm()
+            }
+        },
+        enabled = enabled,
+        modifier = modifier,
+        onFocusChanged = { isFocused ->
+            if (!isFocused && isConfirming) {
+                isConfirming = false
+            }
+        },
+        onCustomKeyEvent = { keyEvent ->
+            if (isConfirming && keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+                if (keyEvent.type == KeyEventType.KeyUp) {
+                    isConfirming = false
+                }
+                true
+            } else {
+                false
+            }
+        },
+    ) { isFocused ->
+        GamepadCardRow(
+            title = if (isConfirming) confirmTitle else title,
+            description = if (isConfirming) confirmDescription else description,
+            icon = icon,
+            isFocused = isFocused,
+            isDestructive = isDestructive,
+            trailingContent = {
+                Row(
+                    modifier =
+                        Modifier
+                            .background(
+                                color =
+                                    when {
+                                        isConfirming -> colors.error
+                                        isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BG_ALPHA)
+                                        !enabled -> colors.surfaceVariant.copy(alpha = GC_DISABLED_CARD_ALPHA)
+                                        isFocused -> colors.accent
+                                        else -> colors.surfaceVariant
+                                    },
+                                shape = RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                            ).border(
+                                width = GC_DEFAULT_BORDER_WIDTH,
+                                color =
+                                    when {
+                                        isConfirming -> colors.error
+                                        isDestructive -> colors.error.copy(alpha = GC_DESTRUCTIVE_BORDER_ALPHA)
+                                        !enabled -> colors.subduedBorder.copy(alpha = GC_DISABLED_CARD_ALPHA)
+                                        isFocused -> colors.accent
+                                        else -> colors.subduedBorder
+                                    },
+                                shape = RoundedCornerShape(GC_STATUS_PILL_CORNER),
+                            ).padding(horizontal = GC_STATUS_PILL_H_PADDING, vertical = GC_STATUS_PILL_V_PADDING),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(GC_SPACING_6),
+                ) {
+                    Text(
+                        text = if (isConfirming) confirmActionText else actionText,
+                        color =
+                            when {
+                                isConfirming -> colors.surface
+                                isDestructive -> colors.error
+                                !enabled -> colors.onSurfaceSecondary
+                                isFocused -> colors.onAccent
+                                else -> colors.onSurfaceSecondary
+                            },
+                        fontSize = GC_TEXT_SIZE_PILL,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            },
         )
     }
 }

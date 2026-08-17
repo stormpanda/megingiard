@@ -35,7 +35,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -111,6 +113,13 @@ fun PrimaryOverlayContainer(
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     var isVisible by remember { mutableStateOf(false) }
+    val activeToast by DialogToastManager.currentToast.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            DialogToastManager.clear()
+        }
+    }
 
     LaunchedEffect(Unit) {
         isVisible = true
@@ -252,6 +261,12 @@ fun PrimaryOverlayContainer(
                                 }
                             }
                         }
+
+                        // In-Header Toast Notification
+                        DialogToastPill(
+                            toast = activeToast,
+                            modifier = Modifier.padding(horizontal = POC_SPACER_SMALL),
+                        )
 
                         // Custom Actions
                         if (actions != null) {
