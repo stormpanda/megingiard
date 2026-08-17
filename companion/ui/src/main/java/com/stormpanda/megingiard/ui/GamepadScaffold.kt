@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.ui
 
 import android.view.KeyEvent
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,6 +31,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -55,6 +57,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val TAG = "GamepadScaffold"
 
@@ -70,6 +73,7 @@ private const val GS_INITIAL_FOCUS_DELAY_MS = 50L
 
 val LocalActiveCategoryRequester = compositionLocalOf<FocusRequester?> { null }
 val LocalFirstContentRequester = compositionLocalOf<FocusRequester?> { null }
+val LocalTransferFocusToDeck = compositionLocalOf<(() -> Unit)?> { null }
 val LocalLastFocusedDeckTracker = compositionLocalOf<((FocusRequester) -> Unit)?> { null }
 val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
 
@@ -122,13 +126,11 @@ fun GamepadCategoryTile(
             Modifier
         }
 
+    val transferFocusToDeck = LocalTransferFocusToDeck.current
+
     val wrappedOnClick: () -> Unit = {
-        try {
-            activeCategoryRequester?.requestFocus()
-        } catch (_: IllegalStateException) {
-            AppLog.d(TAG, "GamepadCategoryTile: activeCategoryRequester unattached on click")
-        }
         onClick()
+        transferFocusToDeck?.invoke()
     }
 
     val shape = RoundedCornerShape(GS_SIDEBAR_CORNER)
@@ -206,15 +208,19 @@ fun GamepadTwoPaneScaffold(
     sidebarContent: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
     modifier: Modifier = Modifier,
+    isCustomBackActive: Boolean = false,
+    onCustomBack: (() -> Unit)? = null,
     footerContent: (@Composable () -> Unit)? = null,
     sidebarFooter: (@Composable () -> Unit)? = null,
     sidebarWidth: Dp = GS_SIDEBAR_WIDTH,
 ) {
     val colors = LocalAppColors.current
+    val coroutineScope = rememberCoroutineScope()
     val inputModeManager = LocalInputModeManager.current
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
     var lastFocusedContentRequester by remember { mutableStateOf<FocusRequester?>(null) }
+    var isDeckFocused by remember { mutableStateOf(false) }
 
     val transferFocusToDeck: () -> Unit = {
         var handled = false
@@ -233,18 +239,47 @@ fun GamepadTwoPaneScaffold(
                 firstContentRequester.requestFocus()
                 AppLog.d(TAG, "transferFocusToDeck: focused first content deck item")
             } catch (_: IllegalStateException) {
-                try {
-                    activeCategoryRequester.requestFocus()
-                } catch (_: IllegalStateException) {
-                    // Focus fallback
+                coroutineScope.launch {
+                    delay(GS_INITIAL_FOCUS_DELAY_MS)
+                    try {
+                        firstContentRequester.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        try {
+                            activeCategoryRequester.requestFocus()
+                        } catch (_: IllegalStateException) {
+                            // Focus fallback
+                        }
+                    }
                 }
             }
         }
     }
 
+    val handleBackNavigation: () -> Boolean = {
+        if (isCustomBackActive && onCustomBack != null) {
+            onCustomBack()
+            true
+        } else if (isDeckFocused) {
+            try {
+                activeCategoryRequester.requestFocus()
+                AppLog.d(TAG, "GamepadTwoPaneScaffold: back navigated from deck to sidebar category")
+                true
+            } catch (_: IllegalStateException) {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    BackHandler(enabled = isCustomBackActive || isDeckFocused) {
+        handleBackNavigation()
+    }
+
     CompositionLocalProvider(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
+        LocalTransferFocusToDeck provides transferFocusToDeck,
         LocalLastFocusedDeckTracker provides { req -> lastFocusedContentRequester = req },
         LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
     ) {
@@ -280,7 +315,25 @@ fun GamepadTwoPaneScaffold(
             }
         }
 
-        Column(modifier = modifier.fillMaxSize().background(colors.appBackground)) {
+        Column(
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .background(colors.appBackground)
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown &&
+                            (
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
+                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
+                            )
+                        ) {
+                            handleBackNavigation()
+                        } else {
+                            false
+                        }
+                    },
+        ) {
             Row(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
             ) {
@@ -325,7 +378,9 @@ fun GamepadTwoPaneScaffold(
                             .weight(1f)
                             .fillMaxHeight()
                             .padding(horizontal = 16.dp, vertical = 12.dp)
-                            .onKeyEvent { keyEvent ->
+                            .onFocusChanged { focusState ->
+                                isDeckFocused = focusState.hasFocus
+                            }.onKeyEvent { keyEvent ->
                                 if (keyEvent.type == KeyEventType.KeyDown &&
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                                 ) {

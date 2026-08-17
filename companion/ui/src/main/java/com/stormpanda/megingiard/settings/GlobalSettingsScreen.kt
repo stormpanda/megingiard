@@ -6,7 +6,6 @@ import android.net.Uri
 import android.view.Display
 import android.view.KeyEvent
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.slideInHorizontally
@@ -229,10 +228,6 @@ fun GlobalSettingsScreen(
         }
     }
 
-    BackHandler(enabled = activeSubPage != null) {
-        activeSubPage = null
-    }
-
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
 
     val categoryList = remember { SettingsCategory.entries }
@@ -251,25 +246,8 @@ fun GlobalSettingsScreen(
     }
 
     GamepadTwoPaneScaffold(
-        modifier =
-            Modifier.onKeyEvent { keyEvent ->
-                if (keyEvent.type == KeyEventType.KeyDown &&
-                    (
-                        keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
-                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK ||
-                            keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE
-                    )
-                ) {
-                    if (activeSubPage != null) {
-                        activeSubPage = null
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            },
+        isCustomBackActive = activeSubPage != null,
+        onCustomBack = { activeSubPage = null },
         sidebarContent = {
             SettingsCategory.entries.forEach { category ->
                 GamepadCategoryTile(
