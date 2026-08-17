@@ -782,7 +782,6 @@ fun GlobalSettingsScreen(
                             CreateBackupSubPage(
                                 effectiveAccent = effectiveAccent,
                                 onExport = { metadata, includeBackgrounds ->
-                                    activeSubPage = null
                                     ConfigManager.requestExport(
                                         metadata = metadata,
                                         filename = buildExportFilename(metadata),
@@ -796,7 +795,6 @@ fun GlobalSettingsScreen(
                             ShareProfileSubPage(
                                 effectiveAccent = effectiveAccent,
                                 onExportProfile = { metadata, profile, includeBackgrounds ->
-                                    activeSubPage = null
                                     ConfigManager.requestProfileExport(
                                         metadata = metadata,
                                         profile = profile,
