@@ -619,6 +619,16 @@ fun GlobalSettingsScreen(
                                 )
 
                                 GamepadActionCard(
+                                    title = stringResource(R.string.settings_config_import_profile),
+                                    description = stringResource(R.string.help_settings_import_profile_desc),
+                                    actionText = stringResource(R.string.gamepad_action_browse),
+                                    icon = Icons.Rounded.FileDownload,
+                                    onClick = {
+                                        ConfigManager.requestImport(ConfigManager.ImportMode.PROFILE_SHARE)
+                                    },
+                                )
+
+                                GamepadActionCard(
                                     title = stringResource(R.string.settings_add_to_obtainium),
                                     description = stringResource(R.string.help_settings_add_to_obtainium_desc),
                                     actionText = stringResource(R.string.gamepad_action_add),
