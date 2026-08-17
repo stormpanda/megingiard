@@ -291,12 +291,14 @@ fun GlobalSettingsScreen(
             val inputModeManager = LocalInputModeManager.current
 
             LaunchedEffect(activeSubPage) {
-                delay(GS_SUBPAGE_FOCUS_DELAY_MS)
-                try {
-                    inputModeManager?.requestInputMode(InputMode.Keyboard)
-                    firstContentRequester?.requestFocus()
-                } catch (_: IllegalStateException) {
-                    // Requester unattached
+                if (activeSubPage != null) {
+                    delay(GS_SUBPAGE_FOCUS_DELAY_MS)
+                    try {
+                        inputModeManager?.requestInputMode(InputMode.Keyboard)
+                        firstContentRequester?.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        // Requester unattached
+                    }
                 }
             }
 
