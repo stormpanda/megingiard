@@ -1,49 +1,20 @@
 package com.stormpanda.megingiard.settings
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.config.ConfigManager
-import com.stormpanda.megingiard.config.ExportMetadata
-import com.stormpanda.megingiard.config.MegingiardExport
+import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.ui.AppColors
 import com.stormpanda.megingiard.ui.AppModalDialog
 
@@ -64,9 +35,19 @@ internal fun InTreeMessageDialog(
     accentColor: Color,
     onDismiss: () -> Unit,
 ) {
-    BackHandler(onBack = onDismiss)
+    LaunchedEffect(title) {
+        AppLog.d(TAG, "InTreeMessageDialog shown: title='$title'")
+    }
+
+    BackHandler(onBack = {
+        AppLog.d(TAG, "InTreeMessageDialog dismissed via back: title='$title'")
+        onDismiss()
+    })
     AppModalDialog(
-        onDismiss = onDismiss,
+        onDismiss = {
+            AppLog.d(TAG, "InTreeMessageDialog dismissed: title='$title'")
+            onDismiss()
+        },
         widthFraction = GSD_DIALOG_WIDTH_FRACTION,
         cornerRadius = GSD_DIALOG_CORNER,
         contentPadding = GSD_DIALOG_PADDING,
@@ -82,7 +63,10 @@ internal fun InTreeMessageDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                AppLog.d(TAG, "InTreeMessageDialog confirmed with button: title='$title'")
+                onDismiss()
+            }) {
                 Text(buttonText, color = accentColor)
             }
         }
@@ -101,9 +85,19 @@ internal fun InTreeConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    BackHandler(onBack = onDismiss)
+    LaunchedEffect(title) {
+        AppLog.d(TAG, "InTreeConfirmDialog shown: title='$title'")
+    }
+
+    BackHandler(onBack = {
+        AppLog.d(TAG, "InTreeConfirmDialog dismissed via back: title='$title'")
+        onDismiss()
+    })
     AppModalDialog(
-        onDismiss = onDismiss,
+        onDismiss = {
+            AppLog.d(TAG, "InTreeConfirmDialog dismissed: title='$title'")
+            onDismiss()
+        },
         widthFraction = GSD_DIALOG_WIDTH_FRACTION,
         cornerRadius = GSD_DIALOG_CORNER,
         contentPadding = GSD_DIALOG_PADDING,
@@ -119,10 +113,19 @@ internal fun InTreeConfirmDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = {
+                AppLog.d(TAG, "InTreeConfirmDialog cancelled: title='$title'")
+                onDismiss()
+            }) {
                 Text(dismissText, color = colors.onSurfaceSecondary)
             }
-            TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+            TextButton(
+                onClick = {
+                    AppLog.d(TAG, "InTreeConfirmDialog confirmed: title='$title'")
+                    onConfirm()
+                },
+                enabled = confirmEnabled,
+            ) {
                 Text(
                     text = confirmText,
                     color = if (confirmEnabled) accentColor else colors.onSurfaceSecondary,
