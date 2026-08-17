@@ -84,6 +84,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1297,6 +1298,44 @@ private fun CustomAccentSubPage(
         }
     }
 
+    val hueGradient =
+        remember {
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        Color(0xFFFF0000),
+                        Color(0xFFFFFF00),
+                        Color(0xFF00FF00),
+                        Color(0xFF00FFFF),
+                        Color(0xFF0000FF),
+                        Color(0xFFFF00FF),
+                        Color(0xFFFF0000),
+                    ),
+            )
+        }
+
+    val saturationGradient =
+        remember(hue, bri) {
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, 0f, bri))),
+                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, bri))),
+                    ),
+            )
+        }
+
+    val brightnessGradient =
+        remember(hue, sat) {
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        Color.Black,
+                        Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, 1f))),
+                    ),
+            )
+        }
+
     GamepadSectionHeader(
         text = "${stringResource(
             R.string.settings_section_appearance,
@@ -1312,6 +1351,8 @@ private fun CustomAccentSubPage(
         onValueChange = { hue = it },
         valueLabel = "${hue.roundToInt()}°",
         step = 5f,
+        trackBrush = hueGradient,
+        thumbColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))),
         icon = Icons.Rounded.ColorLens,
         modifier = Modifier.firstDeckItem(),
     )
@@ -1324,6 +1365,8 @@ private fun CustomAccentSubPage(
         onValueChange = { sat = it },
         valueLabel = "${(sat * 100).roundToInt()}%",
         step = 0.02f,
+        trackBrush = saturationGradient,
+        thumbColor = workingColor,
         icon = Icons.Rounded.Gradient,
     )
 
@@ -1335,6 +1378,8 @@ private fun CustomAccentSubPage(
         onValueChange = { bri = it },
         valueLabel = "${(bri * 100).roundToInt()}%",
         step = 0.02f,
+        trackBrush = brightnessGradient,
+        thumbColor = workingColor,
         icon = Icons.Rounded.BrightnessMedium,
     )
 

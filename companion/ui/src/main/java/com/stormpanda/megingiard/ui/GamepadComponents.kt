@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
@@ -1346,6 +1347,8 @@ fun GamepadSliderCard(
     icon: ImageVector? = null,
     valueLabel: String = "%.0f%%".format(value * 100f),
     step: Float = GC_DEFAULT_SLIDER_STEP,
+    trackBrush: Brush? = null,
+    thumbColor: Color? = null,
     enabled: Boolean = true,
 ) {
     val colors = LocalAppColors.current
@@ -1396,22 +1399,56 @@ fun GamepadSliderCard(
                 },
             )
 
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                enabled = enabled,
-                colors =
-                    SliderDefaults.colors(
-                        thumbColor = if (isAdjusting) colors.accent else colors.onSurface,
-                        activeTrackColor = colors.accent,
-                        inactiveTrackColor = colors.subduedBorder,
-                    ),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(GC_SLIDER_HEIGHT),
-            )
+            if (trackBrush != null) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(GC_SLIDER_HEIGHT),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(trackBrush)
+                                .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(4.dp)),
+                    )
+
+                    Slider(
+                        value = value,
+                        onValueChange = onValueChange,
+                        valueRange = valueRange,
+                        enabled = enabled,
+                        colors =
+                            SliderDefaults.colors(
+                                thumbColor = thumbColor ?: if (isAdjusting) colors.accent else colors.onSurface,
+                                activeTrackColor = Color.Transparent,
+                                inactiveTrackColor = Color.Transparent,
+                            ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            } else {
+                Slider(
+                    value = value,
+                    onValueChange = onValueChange,
+                    valueRange = valueRange,
+                    enabled = enabled,
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = thumbColor ?: if (isAdjusting) colors.accent else colors.onSurface,
+                            activeTrackColor = colors.accent,
+                            inactiveTrackColor = colors.subduedBorder,
+                        ),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(GC_SLIDER_HEIGHT),
+                )
+            }
         }
     }
 }
