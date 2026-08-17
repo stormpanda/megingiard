@@ -61,7 +61,6 @@ fun PrimaryModalHost(
 
     when (config.type) {
         PrimaryModalType.GLOBAL_SETTINGS -> {
-            var showHelp by remember { mutableStateOf(false) }
             PrimaryOverlayContainer(
                 title = stringResource(R.string.settings_global_title),
                 icon = Icons.Rounded.Settings,
@@ -90,13 +89,10 @@ fun PrimaryModalHost(
                                     }
                                 }.focusProperties { canFocus = false },
                     )
-                    HelpIconButton(onClick = { showHelp = true })
                 },
             ) {
                 GlobalSettingsScreen(
                     onBack = onDismiss,
-                    showHelp = showHelp,
-                    onDismissHelp = { showHelp = false },
                 )
             }
         }

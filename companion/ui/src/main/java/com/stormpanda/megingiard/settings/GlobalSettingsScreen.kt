@@ -116,11 +116,6 @@ import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIconButton
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
@@ -171,8 +166,6 @@ private val ACCENT_PALETTE_PRESETS =
 @Composable
 fun GlobalSettingsScreen(
     onBack: () -> Unit,
-    showHelp: Boolean = false,
-    onDismissHelp: () -> Unit = {},
     viewModel: GlobalSettingsViewModel = viewModel(),
 ) {
     val accentColorArgb by viewModel.accentColor.collectAsState()
@@ -219,9 +212,6 @@ fun GlobalSettingsScreen(
 
     var showRestoreDefaultsConfirm by rememberSaveable { mutableStateOf(false) }
     var restoreCountdown by rememberSaveable { mutableStateOf(GS_RESTORE_COUNTDOWN_SECONDS) }
-
-    var showSettingsHelp by rememberSaveable { mutableStateOf(false) }
-    val effectiveShowHelp = showHelp || showSettingsHelp
     LaunchedEffect(showRestoreDefaultsConfirm) {
         if (showRestoreDefaultsConfirm) {
             restoreCountdown = GS_RESTORE_COUNTDOWN_SECONDS
@@ -1023,14 +1013,6 @@ fun GlobalSettingsScreen(
 
         null -> {}
     }
-
-    GlobalSettingsHelpModal(
-        visible = effectiveShowHelp,
-        onDismiss = {
-            showSettingsHelp = false
-            onDismissHelp()
-        },
-    )
 }
 
 @Composable
@@ -1105,122 +1087,6 @@ private fun SteamGridDbTokenSubPage(
             }
         },
     )
-}
-
-@Composable
-private fun GlobalSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_settings_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_settings_intro))
-
-        HelpSection(stringResource(R.string.settings_section_general))
-        HelpEntry(
-            label = stringResource(R.string.settings_start_welcome_tour),
-            description = stringResource(R.string.settings_start_welcome_tour_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_title),
-            description = stringResource(R.string.help_settings_privd_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_language),
-            description = stringResource(R.string.help_settings_language_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_exclude_from_recents),
-            description = stringResource(R.string.help_settings_recents_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_steamgriddb_token),
-            description = stringResource(R.string.settings_steamgriddb_token_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_input))
-        HelpEntry(
-            label = stringResource(R.string.settings_gamepad_swap_face_buttons),
-            description = stringResource(R.string.help_settings_gamepad_swap_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.privd_deadzone_title),
-            description = stringResource(R.string.help_settings_deadzone_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_appearance))
-        HelpEntry(
-            label = stringResource(R.string.settings_theme),
-            description = stringResource(R.string.help_settings_theme_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_accent_color),
-            description = stringResource(R.string.help_settings_accent_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_overlay_position),
-            description = stringResource(R.string.help_settings_overlay_position_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_overlay_fade_out),
-            description = stringResource(R.string.help_settings_overlay_fade_out_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_data))
-        HelpEntry(
-            label = stringResource(R.string.settings_restore_defaults),
-            description = stringResource(R.string.help_settings_restore_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_reset_tutorials),
-            description = stringResource(R.string.help_settings_reset_tutorials_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_config))
-        HelpEntry(
-            label = stringResource(R.string.settings_config_export),
-            description = stringResource(R.string.help_settings_export_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_config_import),
-            description = stringResource(R.string.help_settings_import_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_config_export_profile),
-            description = stringResource(R.string.help_settings_export_profile_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_config_import_profile),
-            description = stringResource(R.string.help_settings_import_profile_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_add_to_obtainium),
-            description = stringResource(R.string.help_settings_add_to_obtainium_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_updates))
-        HelpEntry(
-            label = stringResource(R.string.settings_auto_update_check),
-            description = stringResource(R.string.help_settings_auto_update_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_check_for_updates),
-            description = stringResource(R.string.help_settings_check_updates_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_diagnostics))
-        HelpEntry(
-            label = stringResource(R.string.settings_log_level),
-            description = stringResource(R.string.help_settings_log_level_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_save_log_report),
-            description = stringResource(R.string.help_settings_save_log_desc),
-        )
-    }
 }
 
 @Composable

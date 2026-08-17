@@ -89,7 +89,6 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 | `MacroListEditor.kt` | `MacroListHelpModal` |
 | `MacroTimelineEditor.kt` | `MacroTimelineHelpModal` |
 | `BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` |
-| `GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` |
 | `QuickMenu.kt` | `QuickMenuHelpModal` |
 | `CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` |
 
@@ -152,7 +151,6 @@ help_close_cd  — content description for the Close button
 | `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |
 | `macropad/MacroTimelineEditor.kt` | `MacroTimelineHelpModal` content + icon wiring |
 | `macropad/BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` content + icon wiring |
-| `settings/GlobalSettingsScreen.kt` | `GlobalSettingsHelpModal` content + icon wiring |
 | `ui/QuickMenu.kt` | `QuickMenuHelpModal` content + icon wiring |
 | `mirror/CutoutLayoutEditor.kt` | `CutoutLayoutEditorHelpModal` content + icon wiring |
 | `res/values/strings.xml` | English help and onboarding strings (prefix `help_` / `welcome_`) |
