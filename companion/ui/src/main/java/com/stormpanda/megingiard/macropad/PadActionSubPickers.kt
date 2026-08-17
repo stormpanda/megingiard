@@ -66,12 +66,12 @@ internal fun KeyboardKeyPicker(
         onChange(PadAction.KeyboardKey(keycode, label, listOfNotNull(newMod1, newMod2)))
     }
 
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // ── Base key ──────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 stringResource(R.string.macropad_picker_label_key),
                 color = colors.onSurfaceSecondary,
@@ -86,57 +86,63 @@ internal fun KeyboardKeyPicker(
                     emitChange(code, label, mod1, mod2)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                horizontalPadding = 12.dp,
                 verticalPadding = 10.dp,
                 fillMaxWidth = true,
             )
         }
 
-        // ── Modifier 1 ──────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_mod_1),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = mod1,
-                options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 },
-                optionText = { code -> modifierLabel(code) },
-                onSelected = { code ->
-                    mod1 = code
-                    emitChange(current.keycode, current.label, code, mod2)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
-        }
+        // ── Modifiers Row ──────────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // Modifier 1
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.macropad_picker_label_mod_1),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                AppDropdown(
+                    selected = mod1,
+                    options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 },
+                    optionText = { code -> modifierLabel(code) },
+                    onSelected = { code ->
+                        mod1 = code
+                        emitChange(current.keycode, current.label, code, mod2)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    horizontalPadding = 10.dp,
+                    verticalPadding = 10.dp,
+                    fillMaxWidth = true,
+                )
+            }
 
-        // ── Modifier 2 ──────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_mod_2),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = mod2,
-                options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 },
-                optionText = { code -> modifierLabel(code) },
-                onSelected = { code ->
-                    mod2 = code
-                    emitChange(current.keycode, current.label, mod1, code)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
+            // Modifier 2
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.macropad_picker_label_mod_2),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                AppDropdown(
+                    selected = mod2,
+                    options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 },
+                    optionText = { code -> modifierLabel(code) },
+                    onSelected = { code ->
+                        mod2 = code
+                        emitChange(current.keycode, current.label, mod1, code)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    horizontalPadding = 10.dp,
+                    verticalPadding = 10.dp,
+                    fillMaxWidth = true,
+                )
+            }
         }
     }
 }
@@ -192,12 +198,12 @@ internal fun GamepadButtonPicker(
         onChange(PadAction.GamepadButton(primary.code, primary.displayShortLabel(swapFaceButtons), listOfNotNull(e1, e2, e3)))
     }
 
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // ── Primary button ────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 stringResource(R.string.macropad_picker_label_button),
                 color = colors.onSurfaceSecondary,
@@ -209,86 +215,92 @@ internal fun GamepadButtonPicker(
                 optionText = { preset -> preset.localizedDisplayLabel(swapFaceButtons) },
                 onSelected = { preset -> emitChange(preset, extra1, extra2, extra3) },
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                horizontalPadding = 12.dp,
                 verticalPadding = 10.dp,
                 fillMaxWidth = true,
             )
         }
 
-        // ── Extra button 1 ────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_extra_1),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = extra1,
-                options =
-                    listOf<Int?>(null) +
-                        GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra2, extra3) },
-                optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
-                onSelected = { code ->
-                    extra1 = code
-                    emitChange(currentPreset, code, extra2, extra3)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
-        }
+        // ── Extra combo buttons ───────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            // Extra button 1
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.macropad_picker_label_extra_1),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                AppDropdown(
+                    selected = extra1,
+                    options =
+                        listOf<Int?>(null) +
+                            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra2, extra3) },
+                    optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
+                    onSelected = { code ->
+                        extra1 = code
+                        emitChange(currentPreset, code, extra2, extra3)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 10.dp,
+                    fillMaxWidth = true,
+                )
+            }
 
-        // ── Extra button 2 ────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_extra_2),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = extra2,
-                options =
-                    listOf<Int?>(null) +
-                        GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra3) },
-                optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
-                onSelected = { code ->
-                    extra2 = code
-                    emitChange(currentPreset, extra1, code, extra3)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
-        }
+            // Extra button 2
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.macropad_picker_label_extra_2),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                AppDropdown(
+                    selected = extra2,
+                    options =
+                        listOf<Int?>(null) +
+                            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra3) },
+                    optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
+                    onSelected = { code ->
+                        extra2 = code
+                        emitChange(currentPreset, extra1, code, extra3)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 10.dp,
+                    fillMaxWidth = true,
+                )
+            }
 
-        // ── Extra button 3 ────────────────────────────────────────────
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_extra_3),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = extra3,
-                options =
-                    listOf<Int?>(null) +
-                        GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra2) },
-                optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
-                onSelected = { code ->
-                    extra3 = code
-                    emitChange(currentPreset, extra1, extra2, code)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodySmall,
-                horizontalPadding = 8.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
+            // Extra button 3
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.macropad_picker_label_extra_3),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                AppDropdown(
+                    selected = extra3,
+                    options =
+                        listOf<Int?>(null) +
+                            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra2) },
+                    optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
+                    onSelected = { code ->
+                        extra3 = code
+                        emitChange(currentPreset, extra1, extra2, code)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 10.dp,
+                    fillMaxWidth = true,
+                )
+            }
         }
     }
 }

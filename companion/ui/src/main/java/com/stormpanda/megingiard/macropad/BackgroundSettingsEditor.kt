@@ -17,7 +17,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,22 +35,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Pinch
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AlertDialogDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.rounded.ZoomIn
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -65,10 +63,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -83,7 +79,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -94,12 +89,11 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
-import com.stormpanda.megingiard.ui.AppAlertDialog
-import com.stormpanda.megingiard.ui.AppColors
-import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadConfirmDialog
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -108,9 +102,7 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.appSwitchColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
-import com.stormpanda.megingiard.ui.rememberBezelBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -119,132 +111,130 @@ import kotlin.math.roundToInt
 
 private const val TAG = "BackgroundSettingsEditor"
 
-private const val BSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.85f
-private val BSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
-private const val BSE_PREVIEW_MODAL_BG_ALPHA = 0.6f
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
-private const val BSE_CROP_MIN_SCALE = 1f
-private const val BSE_CROP_MAX_SCALE = 5f
-
+private val BSE_BORDER_WIDTH_1 = 1.dp
+private val BSE_ICON_SIZE_48 = 48.dp
+private val BSE_ICON_SIZE_40 = 40.dp
+private val BSE_ICON_SIZE_72 = 72.dp
 private val BSE_SPACING_8 = 8.dp
 private val BSE_SPACING_12 = 12.dp
 private val BSE_SPACING_16 = 16.dp
 private val BSE_SPACING_40 = 40.dp
-private val BSE_ICON_SIZE_18 = 18.dp
-private val BSE_ICON_SIZE_40 = 40.dp
-private val BSE_ICON_SIZE_48 = 48.dp
-private val BSE_ICON_SIZE_72 = 72.dp
-private val BSE_BORDER_WIDTH_1 = 1.dp
+
+private const val BSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.95f
+private val BSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
+private const val BSE_PREVIEW_MODAL_BG_ALPHA = 0.7f
+
+private const val BSE_CROP_MIN_SCALE = 1.0f
+private const val BSE_CROP_MAX_SCALE = 5.0f
 
 @Composable
-internal fun BackgroundSettingsEditor(
-    title: String,
-    layoutId: String,
+internal fun LayoutBackgroundSubPageContent(
+    layout: PadLayout,
     profileName: String,
-    initialBackgroundImagePath: String?,
-    initialUseAsMask: Boolean,
-    initialBgImageScale: Float = 1f,
-    initialBgImageOffsetX: Float = 0f,
-    initialBgImageOffsetY: Float = 0f,
-    initialBackgroundImageDim: Float = 0f,
+    accentColor: Color,
     onConfirm: (
-        bgImagePath: String?,
+        backgroundImagePath: String?,
         useAsMask: Boolean,
-        bgChanged: Boolean,
+        bgImageChanged: Boolean,
         bgScale: Float,
         bgOffsetX: Float,
         bgOffsetY: Float,
         bgImageDim: Float,
     ) -> Unit,
-    onDismiss: () -> Unit,
 ) {
-    val colors = LocalAppColors.current
-    val accentColor = colors.accent
     val context = LocalContext.current
+    val colors = LocalAppColors.current
     val scope = rememberCoroutineScope()
-    val windowManager = remember { context.getSystemService(Context.WINDOW_SERVICE) as WindowManager }
 
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
-    var currentBgPath by remember { mutableStateOf(initialBackgroundImagePath) }
-    var useAsMask by remember { mutableStateOf(initialUseAsMask) }
+    var currentBgPath by remember(layout) { mutableStateOf(layout.backgroundImagePath) }
+    var useAsMask by remember(layout) { mutableStateOf(layout.useBackgroundImageAsMask) }
+    var bgScale by remember(layout) { mutableFloatStateOf(layout.bgImageScale) }
+    var bgOffsetX by remember(layout) { mutableFloatStateOf(layout.bgImageOffsetX) }
+    var bgOffsetY by remember(layout) { mutableFloatStateOf(layout.bgImageOffsetY) }
+    var bgImageDim by remember(layout) { mutableFloatStateOf(layout.backgroundImageDim) }
 
-    var bgScale by remember { mutableFloatStateOf(initialBgImageScale) }
-    var bgOffsetX by remember { mutableFloatStateOf(initialBgImageOffsetX) }
-    var bgOffsetY by remember { mutableFloatStateOf(initialBgImageOffsetY) }
-    var bgImageDim by remember { mutableFloatStateOf(initialBackgroundImageDim) }
-
-    val bgImageDimFilter =
-        remember(bgImageDim) {
-            if (bgImageDim > 0f) {
-                val scale = 1f - bgImageDim
-                ColorFilter.colorMatrix(
-                    ColorMatrix(
-                        floatArrayOf(
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            scale,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            1f,
-                            0f,
-                        ),
-                    ),
-                )
-            } else {
-                null
-            }
-        }
-
-    val bounds = remember { windowManager.currentWindowMetrics.bounds }
-    val aspectRatio =
-        remember(bounds) {
-            val w = bounds.width().toFloat()
-            val h = bounds.height().toFloat()
-            if (h > 0f) w / h else 16f / 9f
-        }
-
-    var previewBitmap by remember(pendingImageUri, currentBgPath) { mutableStateOf<ImageBitmap?>(null) }
+    var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var showPreviewModal by remember { mutableStateOf(false) }
     var showScrapeDialog by remember { mutableStateOf(false) }
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
-    var showHelpMenu by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
+    val bgImageDimFilter =
+        remember(bgImageDim) {
+            val brightness = 1f - bgImageDim
+            val matrix =
+                ColorMatrix(
+                    floatArrayOf(
+                        brightness,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        brightness,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        brightness,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        0f,
+                        1f,
+                        0f,
+                    ),
+                )
+            ColorFilter.colorMatrix(matrix)
+        }
+
+    val aspectRatio =
+        remember {
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val bounds = wm.currentWindowMetrics.bounds
+            bounds.width().toFloat() / bounds.height().toFloat()
+        }
+
     LaunchedEffect(pendingImageUri, currentBgPath) {
-        if (pendingImageUri != null) {
-            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
-            withContext(Dispatchers.IO) {
-                try {
-                    val decoded = BitmapUtils.decodeScaledBitmapFromUri(context, pendingImageUri!!, targetW, targetH)
-                    previewBitmap = decoded?.asImageBitmap()
-                } catch (e: Exception) {
-                    AppLog.e(TAG, "Failed to decode pending image uri $pendingImageUri", e)
-                    previewBitmap = null
+        withContext(Dispatchers.IO) {
+            val bitmap =
+                when {
+                    pendingImageUri != null -> {
+                        try {
+                            context.contentResolver.openInputStream(pendingImageUri!!)?.use {
+                                BitmapFactory.decodeStream(it)
+                            }
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Failed to load pending image URI", e)
+                            null
+                        }
+                    }
+
+                    currentBgPath != null -> {
+                        try {
+                            val file = File(currentBgPath!!)
+                            if (file.exists()) {
+                                BitmapFactory.decodeFile(file.absolutePath)
+                            } else {
+                                null
+                            }
+                        } catch (e: Exception) {
+                            AppLog.e(TAG, "Failed to load current background path", e)
+                            null
+                        }
+                    }
+
+                    else -> {
+                        null
+                    }
                 }
+            withContext(Dispatchers.Main) {
+                previewBitmap = bitmap?.asImageBitmap()
             }
-        } else if (currentBgPath != null) {
-            try {
-                val decoded = MacroPadMediaRepository.loadScaledBitmap(context, currentBgPath!!)
-                previewBitmap = decoded?.asImageBitmap()
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to decode current background image $currentBgPath", e)
-                previewBitmap = null
-            }
-        } else {
-            previewBitmap = null
         }
     }
 
@@ -261,273 +251,200 @@ internal fun BackgroundSettingsEditor(
             }
         }
 
-    BackHandler(onBack = onDismiss)
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.macropad_editor_section_layout),
+        subPageTitle = stringResource(R.string.help_layout_settings_bg_title),
+        accentColor = accentColor,
+    )
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize().blockPointerEvents(),
-            containerColor = colors.appBackground,
-            topBar = {
-                FullScreenTopBar(
-                    title = title,
-                    onDismiss = onDismiss,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(
-                            onClick = {
-                                if (!isSaving) {
-                                    isSaving = true
-                                    scope.launch {
-                                        var bgChanged = false
-                                        val pending = pendingImageUri
-                                        val finalBgPath =
-                                            if (pending != null) {
-                                                bgChanged = true
-                                                MacroPadMediaRepository.saveBackgroundImage(context, layoutId, pending)
-                                            } else if (currentBgPath == null && initialBackgroundImagePath != null) {
-                                                bgChanged = true
-                                                MacroPadMediaRepository.deleteBackgroundImage(context, layoutId)
-                                                null
-                                            } else {
-                                                currentBgPath
-                                            }
-                                        onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim)
-                                        isSaving = false
-                                    }
-                                }
-                            },
-                            enabled = !isSaving,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.macropad_editor_done),
-                                color = if (!isSaving) accentColor else colors.onSurfaceSecondary,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                        Spacer(Modifier.width(BSE_SPACING_8))
-                        HelpIconButton(onClick = { showHelpMenu = true })
-                    }
-                }
-            },
-        ) { paddingValues ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(horizontal = BSE_SPACING_16)
-                        .verticalScroll(rememberScrollState()),
-            ) {
-                Spacer(Modifier.height(BSE_SPACING_16))
-
-                val configuration = LocalConfiguration.current
-                val screenHeight = configuration.screenHeightDp.dp
-                val previewHeight = screenHeight * 0.35f
-
-                // 1. Preview Frame
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(previewHeight)
-                            .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                            .background(colors.surfaceVariant)
-                            .border(
-                                BSE_BORDER_WIDTH_1,
-                                colors.divider.copy(alpha = 0.5f),
-                                RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val bitmap = previewBitmap
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
-                            contentScale = ContentScale.Fit,
-                            colorFilter = bgImageDimFilter,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Rounded.Image,
-                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
-                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                            modifier = Modifier.size(BSE_ICON_SIZE_48),
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(BSE_SPACING_16))
-
-                Text(
-                    text = stringResource(R.string.macropad_editor_section_artwork_source).uppercase(),
-                    color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.layout_settings_bg_image_scrape),
-                    description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
-                    actionText = stringResource(R.string.gamepad_action_search),
-                    icon = Icons.Rounded.Search,
-                    onClick = {
-                        val token = SettingsManager.steamGridDbApiToken.value
-                        if (token.isBlank()) {
-                            showApiTokenMissingDialog = true
-                        } else {
-                            showScrapeDialog = true
-                        }
-                    },
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.layout_settings_bg_image_browse_local),
-                    description = stringResource(R.string.macropad_editor_bg_storage_desc),
-                    actionText = stringResource(R.string.gamepad_action_browse),
-                    icon = Icons.Rounded.Image,
-                    onClick = { launcher.launch("image/*") },
-                )
-
-                if (previewBitmap != null) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_section_adjustments_effects).uppercase(),
-                        color = accentColor,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-
-                    GamepadActionCard(
-                        title = stringResource(R.string.layout_settings_bg_image_crop),
-                        description = stringResource(R.string.macropad_editor_bg_crop_desc),
-                        actionText = stringResource(R.string.gamepad_action_crop),
-                        icon = Icons.Rounded.Crop,
-                        onClick = { showPreviewModal = true },
-                    )
-
-                    GamepadToggleCard(
-                        title = stringResource(R.string.layout_settings_bg_image_use_as_mask),
-                        description = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
-                        checked = useAsMask,
-                        icon = Icons.Rounded.Pinch,
-                        onCheckedChange = { useAsMask = it },
-                    )
-
-                    GamepadStepperCard(
-                        title = stringResource(R.string.layout_settings_bg_image_dimming_title),
-                        description = stringResource(R.string.macropad_editor_bg_dim_desc),
-                        valueText = "${(bgImageDim * 100).roundToInt()}%",
-                        icon = Icons.Rounded.Crop,
-                        onDecrement = {
-                            bgImageDim = (bgImageDim - 0.05f).coerceIn(0f, 0.9f)
-                        },
-                        onIncrement = {
-                            bgImageDim = (bgImageDim + 0.05f).coerceIn(0f, 0.9f)
-                        },
-                    )
-
-                    GamepadActionCard(
-                        title = stringResource(R.string.macropad_editor_delete_button),
-                        description = stringResource(R.string.macropad_editor_bg_delete_desc),
-                        actionText = stringResource(R.string.gamepad_action_delete),
-                        isDestructive = true,
-                        icon = Icons.Rounded.Delete,
-                        onClick = {
-                            pendingImageUri = null
-                            currentBgPath = null
-                            useAsMask = false
-                            bgScale = 1f
-                            bgOffsetX = 0f
-                            bgOffsetY = 0f
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(BSE_SPACING_40))
-            }
+    // 1. Preview Frame
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
+                .background(colors.surfaceVariant)
+                .border(
+                    BSE_BORDER_WIDTH_1,
+                    colors.divider.copy(alpha = 0.5f),
+                    RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        val bitmap = previewBitmap
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap,
+                contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
+                contentScale = ContentScale.Fit,
+                colorFilter = bgImageDimFilter,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Rounded.Image,
+                contentDescription = stringResource(R.string.layout_settings_bg_image_none),
+                tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                modifier = Modifier.size(BSE_ICON_SIZE_48),
+            )
         }
+    }
 
-        BackgroundSettingsHelpModal(
-            visible = showHelpMenu,
-            onDismiss = { showHelpMenu = false },
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_artwork_source),
+        color = accentColor,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_bg_image_scrape),
+        description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
+        actionText = stringResource(R.string.gamepad_action_search),
+        icon = Icons.Rounded.Search,
+        onClick = {
+            if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
+                showApiTokenMissingDialog = true
+            } else {
+                showScrapeDialog = true
+            }
+        },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_bg_image_browse_local),
+        description = stringResource(R.string.macropad_editor_bg_storage_desc),
+        actionText = stringResource(R.string.gamepad_action_browse),
+        icon = Icons.Rounded.Folder,
+        onClick = { launcher.launch("image/*") },
+    )
+
+    if (previewBitmap != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_bg_image_none),
+            description = stringResource(R.string.macropad_editor_bg_storage_desc),
+            actionText = stringResource(R.string.gamepad_action_clear),
+            isDestructive = true,
+            icon = Icons.Rounded.Delete,
+            onClick = {
+                pendingImageUri = null
+                currentBgPath = null
+                previewBitmap = null
+                bgScale = 1f
+                bgOffsetX = 0f
+                bgOffsetY = 0f
+            },
         )
 
-        if (showPreviewModal && previewBitmap != null) {
-            ImageCropDialog(
-                bitmap = previewBitmap!!,
-                aspectRatio = aspectRatio,
-                initialScale = bgScale,
-                initialOffsetX = bgOffsetX,
-                initialOffsetY = bgOffsetY,
-                onConfirmCrop = { scale, ox, oy ->
-                    bgScale = scale
-                    bgOffsetX = ox
-                    bgOffsetY = oy
-                    showPreviewModal = false
-                },
-                onDismiss = { showPreviewModal = false },
-            )
-        }
+        GamepadSectionHeader(
+            text = stringResource(R.string.layout_settings_bg_image_crop),
+            color = accentColor,
+        )
 
-        if (showScrapeDialog) {
-            SteamGridDbScrapeDialog(
-                initialSearchQuery = profileName,
-                onImageSelected = { uri ->
-                    pendingImageUri = uri
-                    currentBgPath = null
-                    bgScale = 1f
-                    bgOffsetX = 0f
-                    bgOffsetY = 0f
-                },
-                onDismiss = { showScrapeDialog = false },
-                accentColor = accentColor,
-            )
-        }
+        GamepadActionCard(
+            title = stringResource(R.string.layout_settings_bg_image_crop),
+            description = stringResource(R.string.macropad_editor_appearance_desc),
+            actionText = stringResource(R.string.gamepad_action_crop),
+            icon = Icons.Rounded.Crop,
+            onClick = { showPreviewModal = true },
+        )
 
-        if (showApiTokenMissingDialog) {
-            AppAlertDialog(
-                onDismissRequest = { showApiTokenMissingDialog = false },
-                title = {
-                    Text(
-                        text = stringResource(R.string.steamgriddb_token_missing_title),
-                        color = colors.onSurface,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(R.string.steamgriddb_token_missing_message),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showApiTokenMissingDialog = false
-                            AppStateManager.setGlobalSettingsOpen(true)
-                        },
-                    ) {
-                        Text(
-                            text = stringResource(R.string.steamgriddb_token_missing_go_settings),
-                            color = colors.accent,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showApiTokenMissingDialog = false }) {
-                        Text(
-                            text = stringResource(R.string.settings_color_cancel),
-                            color = colors.onSurfaceSecondary,
-                        )
-                    }
-                },
-            )
-        }
+        GamepadStepperCard(
+            title = stringResource(R.string.layout_settings_bg_image_dimming_title),
+            description = stringResource(R.string.help_bg_settings_dimming_desc),
+            valueText = "${(bgImageDim * 100).roundToInt()}%",
+            icon = Icons.Rounded.BrightnessMedium,
+            onDecrement = {
+                val newVal = (bgImageDim - 0.05f).coerceIn(0f, 0.95f)
+                bgImageDim = (newVal * 100).roundToInt() / 100f
+            },
+            onIncrement = {
+                val newVal = (bgImageDim + 0.05f).coerceIn(0f, 0.95f)
+                bgImageDim = (newVal * 100).roundToInt() / 100f
+            },
+        )
+
+        GamepadToggleCard(
+            title = stringResource(R.string.layout_settings_bg_image_use_as_mask),
+            description = stringResource(R.string.layout_settings_bg_image_use_as_mask_desc),
+            checked = useAsMask,
+            icon = Icons.Rounded.Layers,
+            onCheckedChange = { useAsMask = it },
+        )
+    }
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_done),
+        description = stringResource(R.string.macropad_editor_appearance_desc),
+        actionText = stringResource(R.string.macropad_editor_done),
+        enabled = !isSaving,
+        onClick = {
+            if (!isSaving) {
+                isSaving = true
+                scope.launch {
+                    var bgChanged = false
+                    val pending = pendingImageUri
+                    val finalBgPath =
+                        if (pending != null) {
+                            bgChanged = true
+                            MacroPadMediaRepository.saveBackgroundImage(context, layout.id, pending)
+                        } else if (currentBgPath == null && layout.backgroundImagePath != null) {
+                            bgChanged = true
+                            MacroPadMediaRepository.deleteBackgroundImage(context, layout.id)
+                            null
+                        } else {
+                            currentBgPath
+                        }
+                    onConfirm(finalBgPath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgImageDim)
+                    isSaving = false
+                }
+            }
+        },
+    )
+
+    if (showPreviewModal && previewBitmap != null) {
+        ImageCropDialog(
+            bitmap = previewBitmap!!,
+            aspectRatio = aspectRatio,
+            initialScale = bgScale,
+            initialOffsetX = bgOffsetX,
+            initialOffsetY = bgOffsetY,
+            onConfirmCrop = { scale, ox, oy ->
+                bgScale = scale
+                bgOffsetX = ox
+                bgOffsetY = oy
+                showPreviewModal = false
+            },
+            onDismiss = { showPreviewModal = false },
+        )
+    }
+
+    if (showScrapeDialog) {
+        SteamGridDbScrapeDialog(
+            initialSearchQuery = profileName,
+            onImageSelected = { uri ->
+                pendingImageUri = uri
+                currentBgPath = null
+                bgScale = 1f
+                bgOffsetX = 0f
+                bgOffsetY = 0f
+            },
+            onDismiss = { showScrapeDialog = false },
+            accentColor = accentColor,
+        )
+    }
+
+    if (showApiTokenMissingDialog) {
+        GamepadConfirmDialog(
+            title = stringResource(R.string.steamgriddb_token_missing_title),
+            message = stringResource(R.string.steamgriddb_token_missing_message),
+            confirmText = stringResource(R.string.steamgriddb_token_missing_go_settings),
+            cancelText = stringResource(R.string.settings_color_cancel),
+            onConfirm = {
+                showApiTokenMissingDialog = false
+                AppStateManager.setGlobalSettingsOpen(true)
+            },
+            onDismiss = { showApiTokenMissingDialog = false },
+        )
     }
 }
 
@@ -718,13 +635,44 @@ private fun ImageCropDialog(
             }
         }
 
-        Text(
-            text = stringResource(R.string.layout_settings_crop_image_instructions),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = BSE_SPACING_12),
-        )
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = BSE_SPACING_12)
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            GamepadStepperCard(
+                title = stringResource(R.string.gamepad_action_zoom),
+                description = stringResource(R.string.layout_settings_crop_image_instructions),
+                valueText = "${((scale * 10f).roundToInt() / 10f)}x",
+                icon = Icons.Rounded.ZoomIn,
+                onDecrement = {
+                    hasInteracted = true
+                    scale = ((scale - 0.1f) * 10f).roundToInt() / 10f
+                    scale = scale.coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
+                },
+                onIncrement = {
+                    hasInteracted = true
+                    scale = ((scale + 0.1f) * 10f).roundToInt() / 10f
+                    scale = scale.coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
+                },
+            )
+
+            GamepadActionCard(
+                title = stringResource(R.string.gamepad_action_reset),
+                description = stringResource(R.string.help_bg_settings_crop_desc),
+                actionText = stringResource(R.string.gamepad_action_reset),
+                icon = Icons.Rounded.Refresh,
+                onClick = {
+                    scale = 1.0f
+                    offsetXState = 0f
+                    offsetYState = 0f
+                    hasInteracted = true
+                },
+            )
+        }
     }
 }
 

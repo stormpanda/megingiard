@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -38,20 +36,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.ColorWheelPicker
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.AppTextField
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
+import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -62,458 +61,280 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 
 private const val TAG = "LayoutSettingsEditor"
-private val LSE_PREVIEW_BUTTON_SIZE = 54.dp
-private val LSE_RECENT_COLORS_GRID_HEIGHT = 120.dp
+private val LSE_PREVIEW_BUTTON_SIZE = 56.dp
+private val LSE_PREVIEW_CONTAINER_PADDING = 12.dp
+private val LSE_PREVIEW_CONTAINER_CORNER = 12.dp
+
+private val LSE_PALETTE_PRESETS =
+    listOf(
+        Color(0xFFFF5252), // Red
+        Color(0xFFFF7043), // Deep Orange
+        Color(0xFFFFA726), // Orange
+        Color(0xFFFFCA28), // Amber
+        Color(0xFF66BB6A), // Green
+        Color(0xFF26A69A), // Teal
+        Color(0xFF29B6F6), // Light Blue
+        Color(0xFF42A5F5), // Blue
+        Color(0xFF7E57C2), // Deep Purple
+        Color(0xFFEC407A), // Pink
+        Color(0xFFFFFFFF), // White
+        Color(0xFF212121), // Dark Grey
+    )
 
 private enum class ColorPickerTarget { TEXT, BORDER, BG }
 
 @Composable
-internal fun LayoutSettingsEditor(
-    title: String,
-    layoutId: String,
-    initialName: String,
-    initialButtonTextColor: ColorOption,
-    initialButtonBorderColor: ColorOption,
-    initialButtonBgColor: ColorOption,
-    initialInvisibleButtons: Boolean = false,
-    accentColor: Color,
+internal fun LayoutAppearanceSubPageContent(
+    layout: PadLayout,
     existingNames: List<String>,
-    onConfirm: (String, ColorOption, ColorOption, ColorOption, Boolean) -> Unit,
-    onDismiss: () -> Unit,
+    accentColor: Color,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onSave: (Color) -> Unit) -> Unit,
+    onSave: (name: String, textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption, invisibleButtons: Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
-    var nameText by remember { mutableStateOf(initialName) }
-    var textColorOption by remember { mutableStateOf(initialButtonTextColor) }
-    var borderColorOption by remember { mutableStateOf(initialButtonBorderColor) }
-    var bgColorOption by remember { mutableStateOf(initialButtonBgColor) }
-    var invisibleButtons by remember { mutableStateOf(initialInvisibleButtons) }
-
-    var activeColorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
-    var activePaletteDialogTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
-    var showHelpMenu by remember { mutableStateOf(false) }
-    var isSaving by remember { mutableStateOf(false) }
+    var nameText by remember(layout) { mutableStateOf(layout.name) }
+    var textColorOption by remember(layout) { mutableStateOf(layout.buttonTextColor) }
+    var borderColorOption by remember(layout) { mutableStateOf(layout.buttonBorderColor) }
+    var bgColorOption by remember(layout) { mutableStateOf(layout.buttonBgColor) }
+    var invisibleButtons by remember(layout) { mutableStateOf(layout.invisibleButtons) }
 
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
-    val isConfirmEnabled = !hasError && !isSaving
+    val isConfirmEnabled = !hasError
 
-    val recentColors by MacroPadSettings.recentColors.collectAsState()
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    fun colorOptionLabel(option: ColorOption): String =
-        when (option) {
-            ColorOption.Neutral -> "Default Neutral"
-            ColorOption.Accent -> "Global Theme Accent"
-            is ColorOption.Custom -> "Custom Color"
-        }
+    val currentResolvedText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val currentResolvedBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val currentResolvedBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
 
-    BackHandler(onBack = onDismiss)
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.macropad_editor_section_layout),
+        subPageTitle = stringResource(R.string.layout_settings_colors_section_title),
+        accentColor = accentColor,
+    )
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize().blockPointerEvents(),
-            containerColor = colors.appBackground,
-            topBar = {
-                FullScreenTopBar(
-                    title = title,
-                    onDismiss = {
-                        AppLog.d(TAG, "LayoutSettingsEditor: dismissed for layoutId='$layoutId'")
-                        onDismiss()
+    // Live Button Preview Container
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant, RoundedCornerShape(LSE_PREVIEW_CONTAINER_CORNER))
+                .padding(LSE_PREVIEW_CONTAINER_PADDING),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SwordsButtonPreview(
+                textColor = currentResolvedText,
+                borderColor = currentResolvedBorder,
+                bgColor = currentResolvedBg,
+                size = LSE_PREVIEW_BUTTON_SIZE,
+            )
+            Text(
+                text =
+                    if (invisibleButtons) {
+                        stringResource(R.string.layout_settings_invisible_buttons_desc)
+                    } else {
+                        stringResource(R.string.layout_settings_colors_section_title)
                     },
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(
-                            onClick = {
-                                if (isConfirmEnabled) {
-                                    AppLog.d(TAG, "LayoutSettingsEditor: confirmed for layoutId='$layoutId', name='$normalizedName'")
-                                    isSaving = true
-                                    onConfirm(
-                                        normalizedName,
-                                        textColorOption,
-                                        borderColorOption,
-                                        bgColorOption,
-                                        invisibleButtons,
-                                    )
-                                    isSaving = false
-                                }
-                            },
-                            enabled = isConfirmEnabled,
-                        ) {
-                            Text(
-                                text = stringResource(R.string.macropad_editor_done),
-                                color = if (isConfirmEnabled) accentColor else colors.onSurfaceSecondary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        HelpIconButton(onClick = { showHelpMenu = true })
-                    }
-                }
-            },
-        ) { paddingValues ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.macropad_editor_section_layout_identity).uppercase(),
-                    color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                AppTextField(
-                    value = nameText,
-                    onValueChange = { nameText = it },
-                    label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = hasError,
-                    supportingText = {
-                        when {
-                            normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
-                            isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
-                        }
-                    },
-                )
-
-                Text(
-                    text = stringResource(R.string.layout_settings_colors_section_title).uppercase(),
-                    color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-
-                // Text Color
-                val colorOptionsList = listOf(ColorOption.Neutral, ColorOption.Accent)
-                GamepadChoiceCard(
-                    title = stringResource(R.string.layout_settings_color_text),
-                    description = stringResource(R.string.macropad_editor_color_palette_desc),
-                    selectedText = colorOptionLabel(textColorOption),
-                    icon = Icons.Rounded.FormatColorText,
-                    onPrevious = {
-                        val curIdx = if (textColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(textColorOption)
-                        val nextIdx = (curIdx - 1 + colorOptionsList.size) % colorOptionsList.size
-                        textColorOption = colorOptionsList[nextIdx]
-                    },
-                    onNext = {
-                        val curIdx = if (textColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(textColorOption)
-                        val nextIdx = (curIdx + 1) % colorOptionsList.size
-                        textColorOption = colorOptionsList[nextIdx]
-                    },
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.macropad_editor_text_color_title),
-                    description = stringResource(R.string.macropad_editor_color_wheel_desc),
-                    actionText = stringResource(R.string.gamepad_action_color_wheel),
-                    icon = Icons.Rounded.Palette,
-                    onClick = { activeColorPickerTarget = ColorPickerTarget.TEXT },
-                )
-
-                // Border Color
-                GamepadChoiceCard(
-                    title = stringResource(R.string.layout_settings_color_border),
-                    description = stringResource(R.string.macropad_editor_border_style_desc),
-                    selectedText = colorOptionLabel(borderColorOption),
-                    icon = Icons.Rounded.Palette,
-                    onPrevious = {
-                        val curIdx = if (borderColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(borderColorOption)
-                        val nextIdx = (curIdx - 1 + colorOptionsList.size) % colorOptionsList.size
-                        borderColorOption = colorOptionsList[nextIdx]
-                    },
-                    onNext = {
-                        val curIdx = if (borderColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(borderColorOption)
-                        val nextIdx = (curIdx + 1) % colorOptionsList.size
-                        borderColorOption = colorOptionsList[nextIdx]
-                    },
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.macropad_editor_border_color_title),
-                    description = stringResource(R.string.macropad_editor_color_wheel_desc),
-                    actionText = stringResource(R.string.gamepad_action_color_wheel),
-                    icon = Icons.Rounded.Palette,
-                    onClick = { activeColorPickerTarget = ColorPickerTarget.BORDER },
-                )
-
-                // Background Color
-                GamepadChoiceCard(
-                    title = stringResource(R.string.layout_settings_color_bg),
-                    description = stringResource(R.string.macropad_editor_fill_style_desc),
-                    selectedText = colorOptionLabel(bgColorOption),
-                    icon = Icons.Rounded.Palette,
-                    onPrevious = {
-                        val curIdx = if (bgColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(bgColorOption)
-                        val nextIdx = (curIdx - 1 + colorOptionsList.size) % colorOptionsList.size
-                        bgColorOption = colorOptionsList[nextIdx]
-                    },
-                    onNext = {
-                        val curIdx = if (bgColorOption is ColorOption.Custom) 0 else colorOptionsList.indexOf(bgColorOption)
-                        val nextIdx = (curIdx + 1) % colorOptionsList.size
-                        bgColorOption = colorOptionsList[nextIdx]
-                    },
-                )
-
-                GamepadActionCard(
-                    title = stringResource(R.string.macropad_editor_bg_color_title),
-                    description = stringResource(R.string.macropad_editor_color_wheel_desc),
-                    actionText = stringResource(R.string.gamepad_action_color_wheel),
-                    icon = Icons.Rounded.Palette,
-                    onClick = { activeColorPickerTarget = ColorPickerTarget.BG },
-                )
-
-                Text(
-                    text = stringResource(R.string.macropad_editor_section_visibility_behavior).uppercase(),
-                    color = accentColor,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-
-                GamepadToggleCard(
-                    title = stringResource(R.string.layout_settings_invisible_buttons),
-                    description = stringResource(R.string.layout_settings_invisible_buttons_desc),
-                    checked = invisibleButtons,
-                    icon = Icons.Rounded.VisibilityOff,
-                    onCheckedChange = { invisibleButtons = it },
-                )
-
-                Spacer(Modifier.height(32.dp))
-            }
-        }
-
-        // Color Wheel overlays
-        val activeWheelTarget = activeColorPickerTarget
-        if (activeWheelTarget != null) {
-            val currentText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-            val currentBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-            val currentBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
-            val initialColor =
-                when (activeWheelTarget) {
-                    ColorPickerTarget.TEXT -> currentText
-                    ColorPickerTarget.BORDER -> currentBorder
-                    ColorPickerTarget.BG -> currentBg
-                }
-            ColorWheelPicker(
-                initialColor = initialColor,
-                title =
-                    when (activeWheelTarget) {
-                        ColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-                        ColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-                        ColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
-                    },
-                showAlphaSlider = true,
-                onColorSelected = { selectedColor ->
-                    val customOpt = ColorOption.Custom(selectedColor.toArgb())
-                    when (activeWheelTarget) {
-                        ColorPickerTarget.TEXT -> textColorOption = customOpt
-                        ColorPickerTarget.BORDER -> borderColorOption = customOpt
-                        ColorPickerTarget.BG -> bgColorOption = customOpt
-                    }
-                    MacroPadSettings.addRecentColor(selectedColor.toArgb())
-                    activeColorPickerTarget = null
-                },
-                onDismiss = { activeColorPickerTarget = null },
-                preview = { liveColor ->
-                    SwordsButtonPreview(
-                        textColor = if (activeWheelTarget == ColorPickerTarget.TEXT) liveColor else currentText,
-                        borderColor = if (activeWheelTarget == ColorPickerTarget.BORDER) liveColor else currentBorder,
-                        bgColor = if (activeWheelTarget == ColorPickerTarget.BG) liveColor else currentBg,
-                        size = LSE_PREVIEW_BUTTON_SIZE,
-                    )
-                },
+                color = colors.onSurfaceSecondary,
+                style = MaterialTheme.typography.labelSmall,
             )
         }
-
-        // Palette Overlay Dialogs
-        val activePaletteTarget = activePaletteDialogTarget
-        if (activePaletteTarget != null) {
-            val defaultNeutralColor =
-                when (activePaletteTarget) {
-                    ColorPickerTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
-                    ColorPickerTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
-                    ColorPickerTarget.BG -> MP_AMBIENT_NEUTRAL_BG
-                }
-            val currentText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-            val currentBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-            val currentBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
-            QuickColorSelectionDialog(
-                title =
-                    when (activePaletteTarget) {
-                        ColorPickerTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
-                        ColorPickerTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
-                        ColorPickerTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
-                    },
-                recentColors = recentColors,
-                onSelected = { opt ->
-                    when (activePaletteTarget) {
-                        ColorPickerTarget.TEXT -> textColorOption = opt
-                        ColorPickerTarget.BORDER -> borderColorOption = opt
-                        ColorPickerTarget.BG -> bgColorOption = opt
-                    }
-                    if (opt is ColorOption.Custom) {
-                        MacroPadSettings.addRecentColor(opt.argb)
-                    }
-                    activePaletteDialogTarget = null
-                },
-                onDismiss = { activePaletteDialogTarget = null },
-                preview = { option ->
-                    val resolved =
-                        when (option) {
-                            ColorOption.Neutral -> defaultNeutralColor
-                            ColorOption.Accent -> globalAccentColor
-                            is ColorOption.Custom -> Color(option.argb)
-                        }
-                    SwordsButtonPreview(
-                        textColor = if (activePaletteTarget == ColorPickerTarget.TEXT) resolved else currentText,
-                        borderColor = if (activePaletteTarget == ColorPickerTarget.BORDER) resolved else currentBorder,
-                        bgColor = if (activePaletteTarget == ColorPickerTarget.BG) resolved else currentBg,
-                        size = LSE_PREVIEW_BUTTON_SIZE,
-                    )
-                },
-            )
-        }
-
-        LayoutSettingsHelpModal(
-            visible = showHelpMenu,
-            onDismiss = { showHelpMenu = false },
-        )
     }
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_layout_identity),
+        color = accentColor,
+    )
+
+    AppTextField(
+        value = nameText,
+        onValueChange = { nameText = it },
+        label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        isError = hasError,
+        supportingText = {
+            when {
+                normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
+            }
+        },
+    )
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.layout_settings_colors_section_title),
+        color = accentColor,
+    )
+
+    // ── Text Color ──────────────────────────────────────────────
+    val selectTextColorTitle = stringResource(R.string.layout_settings_select_text_color)
+    val textBreadcrumbs =
+        listOf(
+            stringResource(R.string.macropad_editor_section_layout),
+            stringResource(R.string.layout_settings_colors_section_title),
+            stringResource(R.string.layout_settings_color_text),
+        )
+    ColorOptionPaletteSection(
+        title = stringResource(R.string.layout_settings_color_text),
+        description = stringResource(R.string.macropad_editor_color_palette_desc),
+        icon = Icons.Rounded.FormatColorText,
+        colorOption = textColorOption,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
+        globalAccentColor = globalAccentColor,
+        onOptionSelected = { textColorOption = it },
+        onOpenColorWheel = {
+            onOpenColorWheel(
+                selectTextColorTitle,
+                textBreadcrumbs,
+                currentResolvedText,
+            ) { selectedColor ->
+                textColorOption = ColorOption.Custom(selectedColor.toArgb())
+            }
+        },
+    )
+
+    // ── Border Color ────────────────────────────────────────────
+    val selectBorderColorTitle = stringResource(R.string.layout_settings_select_border_color)
+    val borderBreadcrumbs =
+        listOf(
+            stringResource(R.string.macropad_editor_section_layout),
+            stringResource(R.string.layout_settings_colors_section_title),
+            stringResource(R.string.layout_settings_color_border),
+        )
+    ColorOptionPaletteSection(
+        title = stringResource(R.string.layout_settings_color_border),
+        description = stringResource(R.string.macropad_editor_border_style_desc),
+        icon = Icons.Rounded.Palette,
+        colorOption = borderColorOption,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
+        globalAccentColor = globalAccentColor,
+        onOptionSelected = { borderColorOption = it },
+        onOpenColorWheel = {
+            onOpenColorWheel(
+                selectBorderColorTitle,
+                borderBreadcrumbs,
+                currentResolvedBorder,
+            ) { selectedColor ->
+                borderColorOption = ColorOption.Custom(selectedColor.toArgb())
+            }
+        },
+    )
+
+    // ── Background Color ────────────────────────────────────────
+    val selectBgColorTitle = stringResource(R.string.layout_settings_select_bg_color)
+    val bgBreadcrumbs =
+        listOf(
+            stringResource(R.string.macropad_editor_section_layout),
+            stringResource(R.string.layout_settings_colors_section_title),
+            stringResource(R.string.layout_settings_color_bg),
+        )
+    ColorOptionPaletteSection(
+        title = stringResource(R.string.layout_settings_color_bg),
+        description = stringResource(R.string.macropad_editor_fill_style_desc),
+        icon = Icons.Rounded.FormatColorFill,
+        colorOption = bgColorOption,
+        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
+        globalAccentColor = globalAccentColor,
+        onOptionSelected = { bgColorOption = it },
+        onOpenColorWheel = {
+            onOpenColorWheel(
+                selectBgColorTitle,
+                bgBreadcrumbs,
+                currentResolvedBg,
+            ) { selectedColor ->
+                bgColorOption = ColorOption.Custom(selectedColor.toArgb())
+            }
+        },
+    )
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_visibility_behavior),
+        color = accentColor,
+    )
+
+    GamepadToggleCard(
+        title = stringResource(R.string.layout_settings_invisible_buttons),
+        description = stringResource(R.string.layout_settings_invisible_buttons_desc),
+        checked = invisibleButtons,
+        icon = Icons.Rounded.VisibilityOff,
+        onCheckedChange = { invisibleButtons = it },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_done),
+        description = stringResource(R.string.macropad_editor_appearance_desc),
+        actionText = stringResource(R.string.macropad_editor_done),
+        enabled = isConfirmEnabled,
+        onClick = {
+            if (isConfirmEnabled) {
+                onSave(normalizedName, textColorOption, borderColorOption, bgColorOption, invisibleButtons)
+            }
+        },
+    )
 }
 
 @Composable
-private fun QuickColorSelectionDialog(
-    title: String,
-    recentColors: List<Int>,
-    onSelected: (ColorOption) -> Unit,
-    onDismiss: () -> Unit,
-    preview: @Composable (ColorOption) -> Unit,
+internal fun NewLayoutSubPageContent(
+    existingNames: List<String>,
+    accentColor: Color,
+    onCreate: (name: String, invisibleButtons: Boolean) -> Unit,
 ) {
+    var nameText by remember { mutableStateOf("") }
+    var invisibleButtons by remember { mutableStateOf(false) }
+
+    val normalizedName = nameText.trim()
+    val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
+    val hasError = normalizedName.isEmpty() || isDuplicate
+    val isConfirmEnabled = !hasError
     val colors = LocalAppColors.current
 
-    AppModalDialog(
-        onDismiss = onDismiss,
-        widthFraction = 0.85f,
-        cornerRadius = 12.dp,
-        contentPadding = 16.dp,
-    ) {
-        Text(
-            text = title,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
+    GamepadSubPageHeader(
+        parentTitle = stringResource(R.string.macropad_editor_section_layout),
+        subPageTitle = stringResource(R.string.settings_macropad_new_layout),
+        accentColor = accentColor,
+    )
 
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                        .clickable { onSelected(ColorOption.Neutral) }
-                        .padding(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    preview(ColorOption.Neutral)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.layout_settings_color_neutral),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelSmall,
-                )
+    AppTextField(
+        value = nameText,
+        onValueChange = { nameText = it },
+        label = { Text(stringResource(R.string.quick_menu_layout_name_hint), color = colors.onSurfaceSecondary) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+        isError = hasError,
+        supportingText = {
+            when {
+                normalizedName.isEmpty() -> Text(stringResource(R.string.settings_name_error_empty))
+                isDuplicate -> Text(stringResource(R.string.settings_name_error_duplicate))
             }
+        },
+    )
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .background(colors.surfaceVariant, RoundedCornerShape(8.dp))
-                        .clickable { onSelected(ColorOption.Accent) }
-                        .padding(8.dp),
-            ) {
-                Box(
-                    modifier = Modifier.size(LSE_PREVIEW_BUTTON_SIZE),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    preview(ColorOption.Accent)
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.layout_settings_color_accent),
-                    color = colors.onSurface,
-                    style = MaterialTheme.typography.labelSmall,
-                )
+    GamepadToggleCard(
+        title = stringResource(R.string.layout_settings_invisible_buttons),
+        description = stringResource(R.string.layout_settings_invisible_buttons_desc),
+        checked = invisibleButtons,
+        icon = Icons.Rounded.VisibilityOff,
+        onCheckedChange = { invisibleButtons = it },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_macropad_new_layout),
+        description = stringResource(R.string.macropad_editor_new_layout_desc),
+        actionText = stringResource(R.string.macropad_editor_done),
+        enabled = isConfirmEnabled,
+        onClick = {
+            if (isConfirmEnabled) {
+                onCreate(normalizedName, invisibleButtons)
             }
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.layout_settings_recent_colors),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(Modifier.height(8.dp))
-
-        if (recentColors.isEmpty()) {
-            Text(
-                text = stringResource(R.string.layout_settings_no_recent_colors),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            )
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth().height(LSE_RECENT_COLORS_GRID_HEIGHT),
-            ) {
-                items(recentColors) { argb ->
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(LSE_PREVIEW_BUTTON_SIZE)
-                                .clickable { onSelected(ColorOption.Custom(argb)) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        preview(ColorOption.Custom(argb))
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.macropad_editor_cancel), color = colors.onSurfaceSecondary)
-            }
-        }
-    }
+        },
+    )
 }
 
 @Composable

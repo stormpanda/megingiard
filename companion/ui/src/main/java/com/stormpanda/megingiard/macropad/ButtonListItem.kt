@@ -2,7 +2,8 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.primaryOverlayFocusable
 
 private const val TAG = "ButtonListItem"
 
@@ -59,6 +61,8 @@ internal fun ButtonListItem(
 ) {
     val colors = LocalAppColors.current
     var menuExpanded by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
     val isTrackpoint = btn.action is PadAction.TrackpointMove
     val isDeviceDisabled =
@@ -85,10 +89,7 @@ internal fun ButtonListItem(
                 !enableGamepad
             }
 
-            is PadAction.BackgroundPeek -> {
-                false
-            }
-
+            is PadAction.BackgroundPeek,
             is PadAction.LayoutNext,
             is PadAction.LayoutPrevious,
             is PadAction.ProfileSwitcher,
@@ -118,9 +119,17 @@ internal fun ButtonListItem(
             modifier
                 .fillMaxWidth()
                 .alpha(if (isDeviceDisabled) 0.38f else 1f)
-                .background(if (isDragging) colors.surfaceVariant else colors.surface)
-                .clickable { onEdit() }
-                .padding(start = MPE_PADDING, top = 10.dp, bottom = 10.dp),
+                .background(
+                    when {
+                        isDragging -> colors.surfaceVariant
+                        isFocused -> colors.surfaceVariant
+                        else -> colors.surface
+                    },
+                ).primaryOverlayFocusable(
+                    onClick = onEdit,
+                    interactionSource = interactionSource,
+                    enabled = true,
+                ).padding(start = MPE_PADDING, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Shape indicator

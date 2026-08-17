@@ -1091,6 +1091,9 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_clear">Clear</string>
     <string name="gamepad_action_choose_app">Choose App</string>
     <string name="gamepad_action_rename">Rename</string>
+    <string name="gamepad_action_zoom">Zoom &amp; Scale</string>
+    <string name="gamepad_action_custom_color">Custom Color</string>
+    <string name="gamepad_action_choose_icon">Choose Icon</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Left: %1$d%% • Right: %2$d%%</string>
@@ -1214,5 +1217,12 @@ Open Settings to create a layout.</string>
     <string name="gamepad_category_all">All</string>
     <string name="gamepad_confirm_dialog_confirm">Confirm</string>
     <string name="gamepad_confirm_dialog_cancel">Cancel</string>
+    <string name="gamepad_prompt_select">Select</string>
+    <string name="gamepad_prompt_back">Back</string>
+    <string name="gamepad_prompt_switch_tab">Switch Tab</string>
+    <string name="gamepad_prompt_navigate">Navigate</string>
+    <string name="quick_menu_layouts_count">%1$d Layouts</string>
+    <string name="quick_menu_buttons_count">%1$d Buttons</string>
+    <string name="macropad_macro_section_timing">Timing &amp; Offset</string>
 </resources>
 

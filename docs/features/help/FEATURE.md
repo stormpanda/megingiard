@@ -86,7 +86,6 @@ Each screen contains a `private` composable named `<ScreenName>HelpModal` that c
 |---|---|
 | `IntegrationHomeScreen.kt` | `CompanionHubHelpModal` |
 | `MacroPadEditor.kt` | `MacroPadEditorHelpModal` |
-| `MacroListEditor.kt` | `MacroListHelpModal` |
 | `MacroTimelineEditor.kt` | `MacroTimelineHelpModal` |
 | `BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` |
 | `QuickMenu.kt` | `QuickMenuHelpModal` |
@@ -148,7 +147,6 @@ help_close_cd  — content description for the Close button
 | `ui/QuickMenuTutorialDialog.kt` | Step 2 (`QuickMenuStepContent`) gesture trial onboarding content |
 | `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
-| `macropad/MacroListEditor.kt` | `MacroListHelpModal` content + icon wiring |
 | `macropad/MacroTimelineEditor.kt` | `MacroTimelineHelpModal` content + icon wiring |
 | `macropad/BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` content + icon wiring |
 | `ui/QuickMenu.kt` | `QuickMenuHelpModal` content + icon wiring |

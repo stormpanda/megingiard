@@ -222,6 +222,7 @@ fun GamepadTwoPaneScaffold(
     footerContent: (@Composable () -> Unit)? = null,
     sidebarFooter: (@Composable () -> Unit)? = null,
     sidebarWidth: Dp = GS_SIDEBAR_WIDTH,
+    scrollableDeck: Boolean = true,
 ) {
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
@@ -386,8 +387,10 @@ fun GamepadTwoPaneScaffold(
                         Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .padding(horizontal = GS_DECK_PADDING_H, vertical = GS_DECK_PADDING_V)
-                            .onFocusChanged { focusState ->
+                            .padding(
+                                horizontal = if (scrollableDeck) GS_DECK_PADDING_H else 0.dp,
+                                vertical = if (scrollableDeck) GS_DECK_PADDING_V else 0.dp,
+                            ).onFocusChanged { focusState ->
                                 isDeckFocused = focusState.hasFocus
                             }.onKeyEvent { keyEvent ->
                                 if (keyEvent.type == KeyEventType.KeyDown &&
@@ -403,8 +406,14 @@ fun GamepadTwoPaneScaffold(
                                 } else {
                                     false
                                 }
-                            }.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(GS_DECK_SPACING),
+                            }.then(
+                                if (scrollableDeck) {
+                                    Modifier.verticalScroll(rememberScrollState())
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    verticalArrangement = if (scrollableDeck) Arrangement.spacedBy(GS_DECK_SPACING) else Arrangement.Top,
                 ) {
                     content()
                 }
