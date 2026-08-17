@@ -194,6 +194,8 @@ fun GlobalSettingsScreen(
     val updateAvailable by viewModel.updateAvailable.collectAsState()
     val latestReleaseInfo by viewModel.latestReleaseInfo.collectAsState()
     val isCheckingUpdates by viewModel.isCheckingUpdates.collectAsState()
+    val lastUpdateCheckTime by viewModel.lastUpdateCheckTime.collectAsState()
+    val updateCheckError by viewModel.updateCheckError.collectAsState()
 
     val colors = LocalAppColors.current
     val effectiveAccent = colors.accent
@@ -642,24 +644,79 @@ fun GlobalSettingsScreen(
                                     modifier = Modifier.firstDeckItem(isFirst = selectedCategory == SettingsCategory.UPDATES),
                                 )
 
+                                var hasTriggeredManualCheck by rememberSaveable(selectedCategory) {
+                                    mutableStateOf(false)
+                                }
+
+                                val updateBadgeText: String
+                                val updateBadgeAccent: Boolean
+                                val updateBadgeHighlighted: Boolean
+                                val updateBadgeDestructive: Boolean
+
+                                when {
+                                    !hasTriggeredManualCheck -> {
+                                        updateBadgeText = stringResource(R.string.gamepad_action_check)
+                                        updateBadgeAccent = false
+                                        updateBadgeHighlighted = false
+                                        updateBadgeDestructive = false
+                                    }
+
+                                    isCheckingUpdates -> {
+                                        updateBadgeText = stringResource(R.string.gamepad_action_checking)
+                                        updateBadgeAccent = false
+                                        updateBadgeHighlighted = true
+                                        updateBadgeDestructive = false
+                                    }
+
+                                    updateAvailable -> {
+                                        updateBadgeText = stringResource(R.string.settings_update_now_btn)
+                                        updateBadgeAccent = true
+                                        updateBadgeHighlighted = false
+                                        updateBadgeDestructive = false
+                                    }
+
+                                    updateCheckError != null -> {
+                                        updateBadgeText = stringResource(R.string.settings_check_failed)
+                                        updateBadgeAccent = false
+                                        updateBadgeHighlighted = false
+                                        updateBadgeDestructive = true
+                                    }
+
+                                    else -> {
+                                        updateBadgeText = stringResource(R.string.settings_up_to_date)
+                                        updateBadgeAccent = false
+                                        updateBadgeHighlighted = false
+                                        updateBadgeDestructive = false
+                                    }
+                                }
+
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_check_for_updates),
                                     description =
-                                        if (updateAvailable) {
+                                        if (hasTriggeredManualCheck && updateAvailable) {
                                             stringResource(R.string.settings_update_available_tag, latestReleaseInfo?.tagName ?: "")
                                         } else {
                                             stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME)
                                         },
-                                    actionText =
-                                        if (isCheckingUpdates) {
-                                            stringResource(
-                                                R.string.gamepad_action_checking,
-                                            )
-                                        } else {
-                                            stringResource(R.string.gamepad_action_check)
-                                        },
                                     icon = Icons.Rounded.Refresh,
-                                    onClick = { viewModel.checkForUpdatesManually() },
+                                    actionLeadingContent = {
+                                        GamepadPill(
+                                            text = updateBadgeText,
+                                            isAccent = updateBadgeAccent,
+                                            isHighlighted = updateBadgeHighlighted,
+                                            isDestructive = updateBadgeDestructive,
+                                        )
+                                    },
+                                    onClick = {
+                                        if (isCheckingUpdates) return@GamepadActionCard
+
+                                        if (hasTriggeredManualCheck && updateAvailable) {
+                                            showUpdatePromptDialog = true
+                                        } else {
+                                            hasTriggeredManualCheck = true
+                                            viewModel.checkForUpdatesManually()
+                                        }
+                                    },
                                 )
                             }
 

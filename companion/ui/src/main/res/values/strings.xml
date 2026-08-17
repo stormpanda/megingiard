@@ -1044,6 +1044,8 @@ Open Settings to create a layout.</string>
 
     <!-- Update Check Strings -->
     <string name="settings_update_available_short">Update available</string>
+    <string name="settings_up_to_date">You are up-to-date!</string>
+    <string name="settings_check_failed">Check Failed</string>
     <string name="settings_auto_update_check">Automatic Update Checks</string>
     <string name="settings_check_for_updates">Check for Updates</string>
     <string name="settings_update_available_banner">Update Available: %1$s</string>
