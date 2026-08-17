@@ -286,9 +286,20 @@ fun GlobalSettingsScreen(
         content = {
             val firstContentRequester = LocalFirstContentRequester.current
             val inputModeManager = LocalInputModeManager.current
+            var wasInSubPage by remember { mutableStateOf(false) }
 
             LaunchedEffect(activeSubPage) {
                 if (activeSubPage != null) {
+                    wasInSubPage = true
+                    delay(GS_SUBPAGE_FOCUS_DELAY_MS)
+                    try {
+                        inputModeManager?.requestInputMode(InputMode.Keyboard)
+                        firstContentRequester?.requestFocus()
+                    } catch (_: IllegalStateException) {
+                        // Requester unattached
+                    }
+                } else if (wasInSubPage) {
+                    wasInSubPage = false
                     delay(GS_SUBPAGE_FOCUS_DELAY_MS)
                     try {
                         inputModeManager?.requestInputMode(InputMode.Keyboard)
