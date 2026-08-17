@@ -4,7 +4,6 @@ import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -62,7 +60,6 @@ import kotlinx.coroutines.launch
 private val POC_CARD_CORNER = 16.dp
 private val POC_CARD_ELEVATION = 16.dp
 private val POC_BORDER_WIDTH = 1.dp
-private val POC_BORDER_THIN = 1.dp
 private const val POC_SCRIM_ALPHA = 0.78f
 private const val POC_CARD_SURFACE_ALPHA = 0.96f
 private const val POC_HEADER_BG_ALPHA = 0.8f
@@ -267,14 +264,12 @@ fun PrimaryOverlayContainer(
                             modifier =
                                 Modifier
                                     .size(POC_CLOSE_BTN_SIZE)
-                                    .background(colors.surface, CircleShape)
-                                    .border(POC_BORDER_THIN, colors.controlOverlayBorder, CircleShape)
                                     .focusProperties { canFocus = false },
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = stringResource(R.string.settings_close),
-                                tint = colors.onSurface,
+                                tint = colors.onSurfaceSecondary,
                                 modifier = Modifier.size(POC_CLOSE_ICON_SIZE),
                             )
                         }
