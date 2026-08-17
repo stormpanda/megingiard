@@ -38,6 +38,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import java.util.Locale
 
@@ -794,16 +796,28 @@ fun GamepadTextFieldCard(
     val cardFocusRequester = remember { FocusRequester() }
     val textFieldFocusRequester = remember { FocusRequester() }
 
+    DisposableEffect(isEditing) {
+        if (isEditing) {
+            AppStateManager.setFullscreenKeyboardActive(true)
+        }
+        onDispose {
+            if (isEditing) {
+                AppStateManager.setFullscreenKeyboardActive(false)
+            }
+        }
+    }
+
     LaunchedEffect(isEditing) {
         if (isEditing) {
+            keyboardController?.hide()
             try {
                 textFieldFocusRequester.requestFocus()
-                keyboardController?.show()
             } catch (_: IllegalStateException) {
                 // Focus requester unattached
             }
         } else {
             keyboardController?.hide()
+            AppStateManager.setFullscreenKeyboardActive(false)
             try {
                 cardFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
