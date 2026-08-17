@@ -498,6 +498,13 @@
     <string name="config_restore_option_external">外部檔案…</string>
     <string name="config_restore_option_external_sub">從儲存空間選擇 .mgrd 檔案</string>
     <string name="config_restore_option_internal_sub">%1$d 個設定檔 • %2$d 個配置 • %3$d 個巨集</string>
+    <string name="config_restore_automatic_backups">自動備份</string>
+    <string name="config_import_review_title">檢閱並套用</string>
+    <string name="config_import_archive_title">Megingiard 備份封存</string>
+    <string name="config_import_warning_title">覆蓋提示</string>
+    <string name="config_import_apply_desc">從此封存還原所有設定檔與配置</string>
+    <string name="config_import_show_details">顯示詳細資訊</string>
+    <string name="config_import_hide_details">隱藏詳細資訊</string>
     <string name="macropad_editor_copy_to_profile">複製到設定檔…</string>
     <string name="macropad_editor_copy_to_layout">複製到配置…</string>
     <string name="macropad_editor_copy_profile_select">選擇目標設定檔</string>

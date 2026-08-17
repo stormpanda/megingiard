@@ -220,12 +220,21 @@ object ConfigManager {
         _pendingInAppUri.value = null
     }
 
+    private val _inAppImportError = MutableStateFlow<String?>(null)
+    val inAppImportError: StateFlow<String?> = _inAppImportError.asStateFlow()
+
+    fun setInAppImportError(error: String?) {
+        AppLog.d(TAG, "setInAppImportError: $error")
+        _inAppImportError.value = error
+    }
+
     /** Clears in-app import state — call after confirm or dismiss of ImportPreviewDialog. */
     fun clearInAppPendingImport() {
         AppLog.d(TAG, "clearInAppPendingImport")
         _pendingInAppUri.value = null
         _pendingInAppParsedImport.value = null
         _pendingInAppImportImages.value = emptyMap()
+        _inAppImportError.value = null
         _pendingInAppImportMode.value = ImportMode.BACKUP_RESTORE
     }
 

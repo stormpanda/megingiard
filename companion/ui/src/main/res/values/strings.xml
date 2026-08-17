@@ -598,6 +598,13 @@ Open Settings to create a layout.</string>
     <string name="config_restore_option_external">External File…</string>
     <string name="config_restore_option_external_sub">Select a .mgrd file from storage</string>
     <string name="config_restore_option_internal_sub">%1$d profiles • %2$d layouts • %3$d macros</string>
+    <string name="config_restore_automatic_backups">Automatic Backups</string>
+    <string name="config_import_review_title">Review &amp; Apply</string>
+    <string name="config_import_archive_title">Megingiard Backup Archive</string>
+    <string name="config_import_warning_title">Overwrite Notice</string>
+    <string name="config_import_apply_desc">Restore all configuration profiles and settings from this archive</string>
+    <string name="config_import_show_details">Show Details</string>
+    <string name="config_import_hide_details">Hide Details</string>
 
     <!-- Copy macros/buttons/layouts to other profiles/layouts -->
     <string name="macropad_editor_copy_to_profile">Copy to Profile…</string>

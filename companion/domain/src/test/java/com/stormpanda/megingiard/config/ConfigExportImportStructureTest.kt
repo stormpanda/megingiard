@@ -522,4 +522,29 @@ class ConfigExportImportStructureTest {
         assertEquals(1, parsed.profiles.size)
         assertEquals("SharedProfileWithBg", parsed.profiles[0].name)
     }
+
+    @Test
+    fun testInAppImportCoordinatorStateFlows() {
+        val testExport =
+            MegingiardExport(
+                schemaVersion = 4,
+                metadata = testMetadata,
+                checksum = "dummy",
+                settings = emptyMap(),
+                profiles = listOf(testProfile),
+            )
+
+        // Set in-app parsed import
+        ConfigManager.setInAppParsedImport(testExport)
+        assertEquals(testExport, ConfigManager.pendingInAppParsedImport.value)
+
+        // Set in-app error
+        ConfigManager.setInAppImportError("Corrupted archive")
+        assertEquals("Corrupted archive", ConfigManager.inAppImportError.value)
+
+        // Clear in-app pending import
+        ConfigManager.clearInAppPendingImport()
+        assertEquals(null, ConfigManager.pendingInAppParsedImport.value)
+        assertEquals(null, ConfigManager.inAppImportError.value)
+    }
 }

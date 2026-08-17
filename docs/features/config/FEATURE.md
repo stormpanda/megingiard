@@ -87,12 +87,12 @@ the same device or share individual profiles with other Megingiard users.
 - If no backup exists for the current day, a full backup (including all settings and MacroPad profiles) MUST be automatically captured and saved in the DataStore under `KEY_INTERNAL_BACKUPS`.
 - Backups MUST be retained for the last 5 individual days the app was used on. When a 6th day is added, the oldest backup is automatically pruned to keep exactly 5 days of history.
 
-### FR-CF9: Enhanced Restore Dialog
+### FR-CF9: Enhanced Restore Sub-Menu & In-Deck Review
 
-- When invoking the "Restore Backup" function under Global Settings, a custom dialog styled similarly to the layout template creation list (`NewLayoutOverlay`) MUST be displayed.
-- The first option in the selection list MUST be "External File…", which routes the user to the standard SAF file picker upon selection and confirmation.
+- When invoking the "Restore Backup" function under Global Settings, a dedicated sub-menu within the two-pane scaffold (`RestoreBackupSubPage`) MUST be displayed.
+- The first option in the selection list MUST be "External File…", which routes the user to the standard SAF file picker upon selection.
 - Subsequent options in the list MUST show the 5 internal daily backups, labelled by their localized creation weekday, date, and time (e.g. `Sunday, 2026-05-24 21:15`), and showing the count of profiles, layouts, and macros.
-- Selecting an internal daily backup and confirming MUST display the standard `ImportPreviewDialog` showing the content of the configuration before importing, completely bypassing the SAF file picker.
+- Selecting an internal daily backup or an external file MUST transition the right-pane deck into a dedicated in-deck **Review & Apply** view showing archive metadata, contents breakdown, overwrite notice, and an "Apply & Restore" gamepad action card without showing floating popup modals. Pressing back smoothly returns to the backup selection list.
 
 ---
 
@@ -101,7 +101,7 @@ the same device or share individual profiles with other Megingiard users.
 ### Architecture Overview
 
 ```
-GlobalSettingsScreen (Compose UI, in-tree overlay dialogs)
+GlobalSettingsScreen (Compose UI, 2-Pane Console Navigation)
         │
         │  user taps Export / Import / Share Profile / Import Shared Profile
         ▼
@@ -133,7 +133,7 @@ MainActivity  ← holds ActivityResultLaunchers
                 ConfigManager.readFromUri()  →  ConfigManager.setParsedImport()
                         │
                         ▼
-                GlobalSettingsScreen ImportPreviewDialog (in-tree, mode-aware)
+                GlobalSettingsScreen RestoreBackupSubPage (In-Deck Review & Apply)
                         ├── BACKUP_RESTORE → ConfigManager.applyImport()
                         └── PROFILE_SHARE  → ConfigManager.applyProfileImport()
 ```
@@ -269,14 +269,7 @@ corresponding `*_KEYS` set in `SettingsManager` (e.g. `GLOBAL_KEYS`, `MIRROR_KEY
 
 ### In-Tree Overlays & Sub-Pages
 
-Configuration exports (`CreateBackupSubPage` and `ShareProfileSubPage`) are rendered as dedicated **sub-pages** within the two-pane scaffold, supporting gamepad-first input cards. Dialogs in `GlobalSettingsScreen` (import preview, restore selection, success / error messages)
-are rendered as **in-tree overlays** — a full-screen `Box` with a semi-transparent scrim and a
-centered card, not as Compose `AlertDialog`. This is required because `GlobalSettingsScreen` may
-be rendered inside `MirrorPresentation` (`android.app.Presentation`), which has no valid Activity
-window token. Compose's `AlertDialog` creates an Android sub-window and would throw
-`BadTokenException: Unable to add window -- token null is not valid`.
-
-The pattern matches the existing `ColorWheelPicker` in the same file.
+Configuration exports (`CreateBackupSubPage` and `ShareProfileSubPage`) and restores (`RestoreBackupSubPage`) are rendered as dedicated **sub-pages** within the two-pane scaffold, supporting gamepad-first input cards. Import review and confirmation is seamlessly handled in-deck within `RestoreBackupSubPage`, eliminating floating modal dialogs during backup restoration.
 
 ### Internal Daily Backups
 
@@ -285,6 +278,6 @@ To protect configuration data, Megingiard automates daily configuration backups 
 1. **Storage Isolation**: The internal backups list (`KEY_INTERNAL_BACKUPS` preference key) is kept separate from `SECTION_MAP`. This ensures backups are isolated, are never included in custom config exports, and are not modified or cleared by external imports.
 2. **First-Load Auto-Backup**: Upon app startup, the first emission of `dataStore.data` collects the fully loaded configuration. A volatile thread-safe flag `autoBackupTriggered` ensures that `triggerAutoBackupIfNeeded(context)` is invoked exactly once per process lifetime. The function checks for a backup matching today's local date string (`java.time.LocalDate.now().toString()`). If absent, it builds a full configuration snapshot using `ConfigManager.buildExport` and saves it.
 3. **5-Day Retention**: Backups are kept as a serialized list of `@Serializable data class InternalBackup` entries. When a new backup is appended, the list is sorted by `timestampMs` descending and capped at 5 entries via `.take(5)`. This ensures backups representing the last 5 days the app was actually used on are preserved indefinitely.
-4. **Direct Restore Selection Dialog**: `RestoreBackupSelectionDialog` renders an in-tree overlay presenting the "External File…" option first, followed by the 5 daily backups. Option labels are formatted using localized weekdays and exact creation times (e.g. `Sunday, 2026-05-24 21:15`). Sub-labels display a detailed profiles, layouts, and macros count. Confirming an internal backup sets the `showImportPreviewDialog` state to show the standard overview warning and summary contains dialog before applying the configuration, bypassing the SAF system file picker and preserving the standard import preview flow.
+4. **Direct Restore Selection Sub-Page & In-Deck Review**: `RestoreBackupSubPage` renders a dedicated sub-menu within Global Settings presenting the "External File…" option first, followed by the daily automatic backups. Option labels are formatted using localized weekdays and exact creation times (e.g. `Sunday, 2026-05-24 21:15`). Sub-labels display a detailed profiles, layouts, and macros count. Selecting an internal backup or external file transitions the sub-page directly into the in-deck Review & Apply deck view showing archive metadata, contents overview, overwrite notice, and an Apply action card.
 5. **CPU Serialization Optimization**: To prevent redundant CPU cycles during continuous settings updates (such as high-frequency coordinate saves from active MacroPad dragging actions), the preference observer caches the last-seen raw JSON string. The full JSON list is only decoded and updated into `_internalBackups` if the string content of `KEY_INTERNAL_BACKUPS` actually changes. Any serialization/decoding errors are caught and logged with diagnostic warnings (`AppLog.w`) containing detailed failure diagnostics to prevent silent failure.
 

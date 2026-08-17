@@ -193,8 +193,10 @@ fun MainAppScreen() {
                 ConfigManager.setInAppParsedImport(export)
             }.onFailure { err ->
                 AppLog.e(TAG, "In-app import parse failed: ${err.message}")
+                val errorMsg = err.message ?: context.getString(R.string.config_error_unknown)
                 ConfigManager.clearInAppPendingImport()
-                importError = err.message ?: context.getString(R.string.config_error_unknown)
+                ConfigManager.setInAppImportError(errorMsg)
+                importError = errorMsg
             }
     }
 
