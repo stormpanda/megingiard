@@ -171,6 +171,7 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 - Theme selection uses a picker/dropdown row, not a binary switch.
 - The Accent Color section is only shown when `themeMode.supportsCustomAccent` is `true`.
 - Accent color selection provides an inline palette card (`GamepadColorPaletteCard`) containing preset swatches (`ACCENT_PALETTE_PRESETS`) and an action card opening a dedicated custom accent sub-page (`CustomAccentSubPage`) with Hue, Saturation, and Brightness (HSV) sliders and a Save action card.
+- The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when an `ACCENT_PALETTE_PRESETS` preset is actively selected.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
 ### Shared Dropdowns — `ui/AppDropdown.kt`

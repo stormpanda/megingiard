@@ -87,6 +87,9 @@ object SettingsManager {
     private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
     val accentColor: StateFlow<Int> = _accentColor.asStateFlow()
 
+    private val _customAccentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
+    val customAccentColor: StateFlow<Int> = _customAccentColor.asStateFlow()
+
     private val _themeMode = MutableStateFlow(ThemeMode.DARK)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
@@ -146,6 +149,7 @@ object SettingsManager {
 
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
+                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _steamGridDbApiToken.value = prefs[KEY_STEAMGRIDDB_API_TOKEN] ?: ""
                 } else {
                     AppLog.w(TAG, "DataStore bootstrap timed out — retaining default log level")
@@ -176,6 +180,7 @@ object SettingsManager {
                     _autoSwitchProfiles.value = prefs[KEY_AUTO_SWITCH_PROFILES] ?: true
                     _excludeFromRecents.value = prefs[KEY_EXCLUDE_FROM_RECENTS] ?: false
                     _accentColor.value = prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
+                    _customAccentColor.value = prefs[KEY_CUSTOM_ACCENT_COLOR] ?: prefs[KEY_ACCENT_COLOR] ?: DEFAULT_ACCENT_COLOR
                     _themeMode.value = ThemeMode.entries.firstOrNull { it.name == prefs[KEY_THEME_MODE] } ?: ThemeMode.DARK
                     _overlayAtBottom.value = prefs[KEY_OVERLAY_AT_BOTTOM] ?: false
                     _overlayFadeOut.value = prefs[KEY_OVERLAY_FADE_OUT] ?: false
@@ -273,6 +278,10 @@ object SettingsManager {
     fun setAccentColor(argb: Int) {
         updateSettingPref(KEY_ACCENT_COLOR, argb, _accentColor, scope, optionalDataStore, TAG, "setAccentColor")
         onThemeChangedListener?.invoke()
+    }
+
+    fun setCustomAccentColor(argb: Int) {
+        updateSettingPref(KEY_CUSTOM_ACCENT_COLOR, argb, _customAccentColor, scope, optionalDataStore, TAG, "setCustomAccentColor")
     }
 
     fun setThemeMode(value: ThemeMode) {

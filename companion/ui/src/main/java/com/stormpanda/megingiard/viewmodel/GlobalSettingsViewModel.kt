@@ -58,6 +58,7 @@ class GlobalSettingsViewModel : ViewModel() {
     val internalBackups: StateFlow<List<InternalBackup>> = SettingsManager.internalBackups
 
     val accentColor: StateFlow<Int> = SettingsManager.accentColor
+    val customAccentColor: StateFlow<Int> = SettingsManager.customAccentColor
     val themeMode: StateFlow<ThemeMode> = SettingsManager.themeMode
     val overlayAtBottom: StateFlow<Boolean> = SettingsManager.overlayAtBottom
     val overlayFadeOut: StateFlow<Boolean> = SettingsManager.overlayFadeOut
@@ -94,6 +95,8 @@ class GlobalSettingsViewModel : ViewModel() {
     val hasCredentials: StateFlow<Boolean?> = _hasCredentials.asStateFlow()
 
     fun setAccentColor(argb: Int) = SettingsManager.setAccentColor(argb)
+
+    fun setCustomAccentColor(argb: Int) = SettingsManager.setCustomAccentColor(argb)
 
     fun setThemeMode(mode: ThemeMode) = SettingsManager.setThemeMode(mode)
 

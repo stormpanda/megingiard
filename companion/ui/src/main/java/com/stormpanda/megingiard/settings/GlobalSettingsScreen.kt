@@ -187,6 +187,8 @@ fun GlobalSettingsScreen(
 ) {
     val accentColorArgb by viewModel.accentColor.collectAsState()
     val accentColor = Color(accentColorArgb)
+    val customAccentColorArgb by viewModel.customAccentColor.collectAsState()
+    val customAccentColor = Color(customAccentColorArgb)
     val overlayAtBottom by viewModel.overlayAtBottom.collectAsState()
     val overlayFadeOut by viewModel.overlayFadeOut.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
@@ -467,7 +469,7 @@ fun GlobalSettingsScreen(
                                 )
 
                                 if (themeMode.supportsCustomAccent) {
-                                    val isCustomAccent = accentColor !in ACCENT_PALETTE_PRESETS
+                                    val isCustomAccent = accentColorArgb == customAccentColorArgb && accentColor !in ACCENT_PALETTE_PRESETS
 
                                     GamepadColorPaletteCard(
                                         title = stringResource(R.string.settings_accent_color),
@@ -483,17 +485,12 @@ fun GlobalSettingsScreen(
                                         description = stringResource(R.string.settings_accent_custom_desc),
                                         actionText = stringResource(R.string.gamepad_action_edit),
                                         icon = Icons.Rounded.Colorize,
-                                        actionLeadingContent =
-                                            if (isCustomAccent) {
-                                                {
-                                                    GamepadColorSwatch(
-                                                        color = accentColor,
-                                                        isSelected = true,
-                                                    )
-                                                }
-                                            } else {
-                                                null
-                                            },
+                                        actionLeadingContent = {
+                                            GamepadColorSwatch(
+                                                color = customAccentColor,
+                                                isSelected = isCustomAccent,
+                                            )
+                                        },
                                         onClick = { activeSubPage = SettingsSubPage.CUSTOM_ACCENT },
                                     )
                                 }
@@ -777,10 +774,12 @@ fun GlobalSettingsScreen(
 
                         SettingsSubPage.CUSTOM_ACCENT -> {
                             CustomAccentSubPage(
-                                initialColor = accentColor,
+                                initialColor = customAccentColor,
                                 effectiveAccent = effectiveAccent,
                                 onSaveColor = { newColor ->
-                                    viewModel.setAccentColor(newColor.toArgb())
+                                    val argb = newColor.toArgb()
+                                    viewModel.setCustomAccentColor(argb)
+                                    viewModel.setAccentColor(argb)
                                 },
                             )
                         }
