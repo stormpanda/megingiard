@@ -174,8 +174,6 @@ Open Settings to create a layout.</string>
     <string name="config_export_author_desc">Creator or author name attached to metadata</string>
     <string name="config_export_description">Description</string>
     <string name="config_export_description_desc">Summary or notes about this export</string>
-    <string name="config_export_tags">Tags (comma-separated)</string>
-    <string name="config_export_tags_desc">Comma-separated tags for categorizing</string>
     <string name="config_export_include_backgrounds_desc">Bundle custom background wallpaper images in the .mgrd file</string>
     <string name="config_export_confirm">Export</string>
     <string name="config_export_cancel">Cancel</string>

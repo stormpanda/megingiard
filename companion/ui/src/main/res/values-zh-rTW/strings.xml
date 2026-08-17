@@ -150,8 +150,6 @@
     <string name="config_export_author_desc">附加在後設資料中的建立者或作者名稱</string>
     <string name="config_export_description">描述</string>
     <string name="config_export_description_desc">關於此匯出的摘要或備註</string>
-    <string name="config_export_tags">標籤 (逗號分隔)</string>
-    <string name="config_export_tags_desc">以逗號分隔的標籤，用於分類</string>
     <string name="config_export_include_backgrounds_desc">在 .mgrd 檔案中綑綁自定義背景圖片</string>
     <string name="config_export_confirm">匯出</string>
     <string name="config_export_cancel">取消</string>

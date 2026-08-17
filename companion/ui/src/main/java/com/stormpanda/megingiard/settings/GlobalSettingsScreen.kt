@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
-import androidx.compose.material.icons.automirrored.rounded.Label
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.BugReport
@@ -1142,7 +1141,6 @@ private fun CreateBackupSubPage(
     val context = LocalContext.current
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var tags by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
 
     GamepadSectionHeader(
@@ -1171,15 +1169,6 @@ private fun CreateBackupSubPage(
         icon = Icons.AutoMirrored.Rounded.Notes,
     )
 
-    GamepadTextFieldCard(
-        title = stringResource(R.string.config_export_tags),
-        description = stringResource(R.string.config_export_tags_desc),
-        placeholder = stringResource(R.string.config_export_tags),
-        value = tags,
-        onValueChange = { tags = it },
-        icon = Icons.AutoMirrored.Rounded.Label,
-    )
-
     GamepadToggleCard(
         title = stringResource(R.string.config_export_include_backgrounds),
         description = stringResource(R.string.config_export_include_backgrounds_desc),
@@ -1194,12 +1183,10 @@ private fun CreateBackupSubPage(
         actionText = stringResource(R.string.gamepad_action_export),
         icon = Icons.Rounded.FileDownload,
         onClick = {
-            val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val metadata =
                 ConfigManager.defaultMetadata(context).copy(
                     author = author.trim().ifEmpty { null },
                     description = description.trim().ifEmpty { null },
-                    tags = parsedTags,
                 )
             onExport(metadata, includeBackgrounds)
         },
@@ -1222,7 +1209,6 @@ private fun ShareProfileSubPage(
 
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
-    var tags by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
 
     GamepadSectionHeader(
@@ -1270,15 +1256,6 @@ private fun ShareProfileSubPage(
         icon = Icons.AutoMirrored.Rounded.Notes,
     )
 
-    GamepadTextFieldCard(
-        title = stringResource(R.string.config_export_tags),
-        description = stringResource(R.string.config_export_tags_desc),
-        placeholder = stringResource(R.string.config_export_tags),
-        value = tags,
-        onValueChange = { tags = it },
-        icon = Icons.AutoMirrored.Rounded.Label,
-    )
-
     GamepadToggleCard(
         title = stringResource(R.string.config_export_include_backgrounds),
         description = stringResource(R.string.config_export_include_backgrounds_desc),
@@ -1295,12 +1272,10 @@ private fun ShareProfileSubPage(
         enabled = currentProfile != null,
         onClick = {
             val targetProfile = currentProfile ?: return@GamepadActionCard
-            val parsedTags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val metadata =
                 ConfigManager.defaultMetadata(context).copy(
                     author = author.trim().ifEmpty { null },
                     description = description.trim().ifEmpty { null },
-                    tags = parsedTags,
                 )
             onExportProfile(metadata, targetProfile, includeBackgrounds)
         },
