@@ -3,7 +3,10 @@ package com.stormpanda.megingiard.ui
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +53,7 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +78,7 @@ private val GS_SIDEBAR_SPACING = 4.dp
 private val GS_DECK_PADDING_H = 16.dp
 private val GS_DECK_PADDING_V = 12.dp
 private val GS_DECK_SPACING = 10.dp
+private val GS_DECK_SCROLL_EXTRA_PADDING = 64.dp
 private const val GS_SIDEBAR_SELECTED_FOCUSED_ALPHA = 0.35f
 private const val GS_SIDEBAR_SELECTED_ALPHA = 0.2f
 private const val GS_CARD_FOCUSED_BG_ALPHA = 0.95f
@@ -93,6 +98,35 @@ val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
 fun Modifier.firstDeckItem(isFirst: Boolean = true): Modifier {
     val requester = LocalFirstContentRequester.current
     return if (requester != null && isFirst) this.focusRequester(requester) else this
+}
+
+/**
+ * Creates a custom [BringIntoViewSpec] that scrolls with extra top/bottom padding
+ * so adjacent menu items or deck headers remain visible during gamepad D-pad navigation.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun rememberGamepadBringIntoViewSpec(extraPadding: Dp = GS_DECK_SCROLL_EXTRA_PADDING): BringIntoViewSpec {
+    val density = LocalDensity.current
+    val extraPaddingPx = with(density) { extraPadding.toPx() }
+    return remember(extraPaddingPx) {
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
+                val topThreshold = extraPaddingPx
+                val bottomThreshold = (containerSize - extraPaddingPx).coerceAtLeast(topThreshold)
+
+                return when {
+                    offset < topThreshold -> offset - topThreshold
+                    offset + size > bottomThreshold -> (offset + size) - bottomThreshold
+                    else -> 0f
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -211,7 +245,7 @@ fun GamepadCategoryTile(
 /**
  * Standardized split-screen two-pane scaffold for primary screen settings and editors.
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun GamepadTwoPaneScaffold(
     sidebarContent: @Composable ColumnScope.() -> Unit,
@@ -286,12 +320,15 @@ fun GamepadTwoPaneScaffold(
         handleBackNavigation()
     }
 
+    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
+
     CompositionLocalProvider(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
         LocalTransferFocusToDeck provides transferFocusToDeck,
         LocalLastFocusedDeckTracker provides { req -> lastFocusedContentRequester = req },
         LocalResetLastFocusedTracker provides { lastFocusedContentRequester = null },
+        LocalBringIntoViewSpec provides bringIntoViewSpec,
     ) {
         LaunchedEffect(Unit) {
             delay(GS_INITIAL_FOCUS_DELAY_MS)
