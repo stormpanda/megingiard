@@ -84,6 +84,7 @@ fun PrimaryModalHost(
                                         val options = ActivityOptions.makeBasic()
                                         options.setLaunchDisplayId(Display.DEFAULT_DISPLAY)
                                         context.startActivity(intent, options.toBundle())
+                                        onDismiss()
                                     } catch (e: Exception) {
                                         AppLog.e(TAG, "Failed to open Ko-fi link: ${e.message}")
                                     }
