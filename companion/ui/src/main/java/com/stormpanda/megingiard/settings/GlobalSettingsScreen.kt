@@ -36,7 +36,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.Animation
+import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
@@ -44,6 +46,7 @@ import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.Games
+import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
@@ -58,6 +61,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material.icons.rounded.VerticalAlignBottom
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -69,7 +73,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -131,6 +137,7 @@ import com.stormpanda.megingiard.viewmodel.SteamGridDbTestStatus
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import android.graphics.Color as AndroidColor
 
 private const val TAG = "GlobalSettingsScreen"
 
@@ -142,6 +149,7 @@ internal enum class SettingsSubPage(
 ) {
     DEADZONES(SettingsCategory.INPUT),
     STEAMGRIDDB_TOKEN(SettingsCategory.GENERAL),
+    CUSTOM_ACCENT(SettingsCategory.APPEARANCE),
     CREATE_BACKUP(SettingsCategory.CONFIGURATION),
     SHARE_PROFILE(SettingsCategory.CONFIGURATION),
 }
@@ -203,7 +211,6 @@ fun GlobalSettingsScreen(
 
     var showRestoreBackupDialog by rememberSaveable { mutableStateOf(false) }
     var showUpdatePromptDialog by rememberSaveable { mutableStateOf(false) }
-    var showColorPicker by rememberSaveable { mutableStateOf(false) }
     val exportResult by ConfigManager.exportResult.collectAsState()
     val logReportSaveResult by LogReportManager.saveResult.collectAsState()
 
@@ -471,9 +478,9 @@ fun GlobalSettingsScreen(
                                     )
 
                                     GamepadActionCard(
-                                        title = stringResource(R.string.settings_accent_wheel_title),
-                                        description = stringResource(R.string.settings_accent_wheel_desc),
-                                        actionText = stringResource(R.string.gamepad_action_wheel),
+                                        title = stringResource(R.string.settings_accent_custom_title),
+                                        description = stringResource(R.string.settings_accent_custom_desc),
+                                        actionText = stringResource(R.string.gamepad_action_edit),
                                         icon = Icons.Rounded.Colorize,
                                         actionLeadingContent =
                                             if (isCustomAccent) {
@@ -486,7 +493,7 @@ fun GlobalSettingsScreen(
                                             } else {
                                                 null
                                             },
-                                        onClick = { showColorPicker = true },
+                                        onClick = { activeSubPage = SettingsSubPage.CUSTOM_ACCENT },
                                     )
                                 }
 
@@ -767,6 +774,16 @@ fun GlobalSettingsScreen(
                             )
                         }
 
+                        SettingsSubPage.CUSTOM_ACCENT -> {
+                            CustomAccentSubPage(
+                                initialColor = accentColor,
+                                effectiveAccent = effectiveAccent,
+                                onSaveColor = { newColor ->
+                                    viewModel.setAccentColor(newColor.toArgb())
+                                },
+                            )
+                        }
+
                         SettingsSubPage.CREATE_BACKUP -> {
                             CreateBackupSubPage(
                                 effectiveAccent = effectiveAccent,
@@ -798,17 +815,6 @@ fun GlobalSettingsScreen(
             }
         },
     )
-
-    if (showColorPicker) {
-        ColorWheelPicker(
-            initialColor = accentColor,
-            onColorSelected = { color ->
-                viewModel.setAccentColor(color.toArgb())
-                showColorPicker = false
-            },
-            onDismiss = { showColorPicker = false },
-        )
-    }
     if (showRestoreBackupDialog) {
         RestoreBackupSelectionDialog(
             internalBackups = internalBackups,
@@ -1267,6 +1273,84 @@ private fun ShareProfileSubPage(
                     description = description.trim().ifEmpty { null },
                 )
             onExportProfile(metadata, targetProfile, includeBackgrounds)
+        },
+    )
+}
+
+@Composable
+private fun CustomAccentSubPage(
+    initialColor: Color,
+    effectiveAccent: Color,
+    onSaveColor: (Color) -> Unit,
+) {
+    val initHsv =
+        remember(initialColor) {
+            FloatArray(3).also { AndroidColor.colorToHSV(initialColor.toArgb(), it) }
+        }
+    var hue by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[0]) }
+    var sat by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[1]) }
+    var bri by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[2]) }
+
+    val workingColor by remember {
+        derivedStateOf {
+            Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+        }
+    }
+
+    GamepadSectionHeader(
+        text = "${stringResource(
+            R.string.settings_section_appearance,
+        ).uppercase()}  ›  ${stringResource(R.string.settings_accent_custom_title).uppercase()}",
+        color = effectiveAccent,
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.settings_color_hue),
+        description = stringResource(R.string.settings_color_hue_desc),
+        value = hue,
+        valueRange = 0f..360f,
+        onValueChange = { hue = it },
+        valueLabel = "${hue.roundToInt()}°",
+        step = 5f,
+        icon = Icons.Rounded.ColorLens,
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.settings_color_saturation),
+        description = stringResource(R.string.settings_color_saturation_desc),
+        value = sat,
+        valueRange = 0f..1f,
+        onValueChange = { sat = it },
+        valueLabel = "${(sat * 100).roundToInt()}%",
+        step = 0.02f,
+        icon = Icons.Rounded.Gradient,
+    )
+
+    GamepadSliderCard(
+        title = stringResource(R.string.settings_color_brightness),
+        description = stringResource(R.string.settings_color_brightness_desc),
+        value = bri,
+        valueRange = 0f..1f,
+        onValueChange = { bri = it },
+        valueLabel = "${(bri * 100).roundToInt()}%",
+        step = 0.02f,
+        icon = Icons.Rounded.BrightnessMedium,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_color_save_title),
+        description = stringResource(R.string.settings_color_save_desc),
+        actionText = stringResource(R.string.gamepad_action_save),
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = workingColor,
+                isSelected = false,
+            )
+        },
+        onClick = {
+            onSaveColor(workingColor)
         },
     )
 }

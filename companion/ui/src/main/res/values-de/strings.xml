@@ -1095,8 +1095,17 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>
     <string name="settings_steamgriddb_token_configured">API-Token konfiguriert (%1$s…)</string>
-    <string name="settings_accent_wheel_title">Eigenes Farbrad</string>
-    <string name="settings_accent_wheel_desc">Wähle eine benutzerdefinierte RGB/HSV-Akzentfarbe</string>
+    <string name="settings_accent_wheel_title">Eigene Akzentfarbe</string>
+    <string name="settings_accent_wheel_desc">Eigenen Farbton, Sättigung und Helligkeit anpassen</string>
+    <string name="settings_accent_custom_title">Eigene Akzentfarbe</string>
+    <string name="settings_accent_custom_desc">Eigenen Farbton, Sättigung und Helligkeit anpassen</string>
+    <string name="settings_color_hue">Farbton</string>
+    <string name="settings_color_hue_desc">Farbtonwinkel anpassen</string>
+    <string name="settings_color_saturation">Sättigung</string>
+    <string name="settings_color_saturation_desc">Farbintensität anpassen</string>
+    <string name="settings_color_brightness_desc">Helligkeit der Farbe anpassen</string>
+    <string name="settings_color_save_title">Akzentfarbe speichern</string>
+    <string name="settings_color_save_desc">Diese eigene Akzentfarbe anwenden und speichern</string>
     <string name="settings_config_import_card_desc">Konfiguration aus einer bestehenden .mgrd-Sicherungsdatei wiederherstellen</string>
     <string name="settings_update_available_tag">Update verfügbar: %1$s</string>
     <string name="settings_app_version">Version %1$s</string>

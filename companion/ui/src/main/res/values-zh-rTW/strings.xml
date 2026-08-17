@@ -892,4 +892,16 @@
     <string name="update_dialog_btn_cancel">取消</string>
     <!-- Settings card description -->
     <string name="help_settings_auto_update_desc">啟用時，Megingiard 會每 24 小時靜默檢查一次新版本。若發現更新，您可以備份設定並在上方螢幕的預設瀏覽器中開啟發布頁面。</string>
+    <string name="gamepad_action_save">儲存</string>
+    <string name="settings_accent_wheel_title">自訂主題色</string>
+    <string name="settings_accent_wheel_desc">自訂色相、飽和度與亮度</string>
+    <string name="settings_accent_custom_title">自訂主題色</string>
+    <string name="settings_accent_custom_desc">自訂色相、飽和度與亮度</string>
+    <string name="settings_color_hue">色相</string>
+    <string name="settings_color_hue_desc">調整色相角度</string>
+    <string name="settings_color_saturation">飽和度</string>
+    <string name="settings_color_saturation_desc">調整色彩彩度</string>
+    <string name="settings_color_brightness_desc">調整色彩明度</string>
+    <string name="settings_color_save_title">儲存主題色</string>
+    <string name="settings_color_save_desc">套用並儲存此自訂主題色</string>
 </resources>
