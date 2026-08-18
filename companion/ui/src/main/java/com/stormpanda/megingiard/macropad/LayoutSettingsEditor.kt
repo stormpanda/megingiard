@@ -1,6 +1,10 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Edit
@@ -9,16 +13,19 @@ import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -26,9 +33,13 @@ import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "LayoutSettingsEditor"
+private val LSE_SAVE_PREVIEW_SPACING = 6.dp
+private val LSE_ARROW_SIZE = 14.dp
+private const val LSE_ARROW_ALPHA = 0.6f
 
 @Composable
 private fun describeColorOption(
@@ -49,6 +60,7 @@ internal fun LayoutAppearanceSubPageContent(
     onOpenColorSubMenu: (target: LayoutColorTarget, currentDraft: PadLayout) -> Unit,
     onSave: (name: String, textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption, invisibleButtons: Boolean) -> Unit,
 ) {
+    val colors = LocalAppColors.current
     var nameText by remember(layout.id, layout.name) { mutableStateOf(layout.name) }
     var textColorOption by remember(layout.id, layout.buttonTextColor) { mutableStateOf(layout.buttonTextColor) }
     var borderColorOption by remember(layout.id, layout.buttonBorderColor) { mutableStateOf(layout.buttonBorderColor) }
@@ -72,6 +84,10 @@ internal fun LayoutAppearanceSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
+    val savedResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val savedResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val savedResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+
     val currentResolvedText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val currentResolvedBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val currentResolvedBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
@@ -84,6 +100,46 @@ internal fun LayoutAppearanceSubPageContent(
             isIconOnly = invisibleButtons,
         )
     }
+
+    // ── Save Option at the Very Top (with Saved vs In-Flight Previews) ──
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_save_layout_title),
+        description = stringResource(R.string.macropad_editor_appearance_desc),
+        actionLeadingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LSE_SAVE_PREVIEW_SPACING),
+            ) {
+                SwordsButtonPreview(
+                    textColor = savedResolvedText,
+                    borderColor = savedResolvedBorder,
+                    bgColor = savedResolvedBg,
+                    isIconOnly = layout.invisibleButtons,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary.copy(alpha = LSE_ARROW_ALPHA),
+                    modifier = Modifier.size(LSE_ARROW_SIZE),
+                )
+                SwordsButtonPreview(
+                    textColor = currentResolvedText,
+                    borderColor = currentResolvedBorder,
+                    bgColor = currentResolvedBg,
+                    isIconOnly = invisibleButtons,
+                )
+            }
+        },
+        actionText = stringResource(R.string.gamepad_action_save),
+        icon = Icons.Rounded.Save,
+        enabled = isConfirmEnabled,
+        onClick = {
+            if (isConfirmEnabled) {
+                onSave(normalizedName, textColorOption, borderColorOption, bgColorOption, invisibleButtons)
+            }
+        },
+        modifier = Modifier.firstDeckItem(),
+    )
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
@@ -98,7 +154,6 @@ internal fun LayoutAppearanceSubPageContent(
         onValueChange = { nameText = it },
         icon = Icons.Rounded.Edit,
         isError = hasError,
-        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadSectionHeader(
@@ -148,38 +203,37 @@ internal fun LayoutAppearanceSubPageContent(
         icon = Icons.Rounded.VisibilityOff,
         onCheckedChange = { invisibleButtons = it },
     )
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_save_layout_title),
-        description = stringResource(R.string.macropad_editor_appearance_desc),
-        actionText = stringResource(R.string.gamepad_action_save),
-        icon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
-        onClick = {
-            if (isConfirmEnabled) {
-                onSave(normalizedName, textColorOption, borderColorOption, bgColorOption, invisibleButtons)
-            }
-        },
-    )
 }
 
 @Composable
 internal fun LayoutColorSubPageContent(
     layout: PadLayout,
+    savedLayout: PadLayout?,
     target: LayoutColorTarget,
     accentColor: Color,
-    onColorOptionSelected: (ColorOption) -> Unit,
-    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
+    onSave: (inFlightLayout: PadLayout) -> Unit,
 ) {
-    val globalAccentInt by SettingsManager.accentColor.collectAsState()
-    val globalAccentColor = Color(globalAccentInt)
-
-    val currentOption =
+    val initialOption =
         when (target) {
             LayoutColorTarget.TEXT -> layout.buttonTextColor
             LayoutColorTarget.BORDER -> layout.buttonBorderColor
             LayoutColorTarget.BG -> layout.buttonBgColor
         }
+    var selectedOption by remember(layout.id, target, initialOption) { mutableStateOf(initialOption) }
+
+    fun buildInFlightLayout(): PadLayout =
+        when (target) {
+            LayoutColorTarget.TEXT -> layout.copy(buttonTextColor = selectedOption)
+            LayoutColorTarget.BORDER -> layout.copy(buttonBorderColor = selectedOption)
+            LayoutColorTarget.BG -> layout.copy(buttonBgColor = selectedOption)
+        }
+
+    val inFlightLayout = buildInFlightLayout()
+
+    val colors = LocalAppColors.current
+    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentColor = Color(globalAccentInt)
 
     val defaultNeutralColor =
         when (target) {
@@ -188,7 +242,17 @@ internal fun LayoutColorSubPageContent(
             LayoutColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
         }
 
-    val currentColor = resolveColorOption(currentOption, globalAccentColor, defaultNeutralColor)
+    val currentColor = resolveColorOption(selectedOption, globalAccentColor, defaultNeutralColor)
+
+    val effectiveSavedLayout = savedLayout ?: layout
+
+    val savedResolvedText = resolveColorOption(effectiveSavedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val savedResolvedBorder = resolveColorOption(effectiveSavedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val savedResolvedBg = resolveColorOption(effectiveSavedLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+
+    val currentResolvedText = resolveColorOption(inFlightLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val currentResolvedBorder = resolveColorOption(inFlightLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val currentResolvedBg = resolveColorOption(inFlightLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
 
     val targetTitle =
         when (target) {
@@ -209,12 +273,47 @@ internal fun LayoutColorSubPageContent(
             stringResource(R.string.macropad_editor_section_layout),
             stringResource(R.string.macropad_editor_appearance_title),
             targetTitle,
-            stringResource(R.string.settings_accent_custom_title),
+            stringResource(R.string.gamepad_action_custom_color),
         )
 
-    val isNeutralSelected = currentOption is ColorOption.Neutral
-    val isAccentSelected = currentOption is ColorOption.Accent
-    val isCustomSelected = currentOption is ColorOption.Custom
+    val isNeutralSelected = selectedOption is ColorOption.Neutral
+    val isAccentSelected = selectedOption is ColorOption.Accent
+    val isCustomSelected = selectedOption is ColorOption.Custom
+
+    // ── Save Option at the Very Top (with Saved vs In-Flight Previews) ──
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_save_layout_title),
+        description = stringResource(R.string.macropad_editor_appearance_desc),
+        actionLeadingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LSE_SAVE_PREVIEW_SPACING),
+            ) {
+                SwordsButtonPreview(
+                    textColor = savedResolvedText,
+                    borderColor = savedResolvedBorder,
+                    bgColor = savedResolvedBg,
+                    isIconOnly = effectiveSavedLayout.invisibleButtons,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary.copy(alpha = LSE_ARROW_ALPHA),
+                    modifier = Modifier.size(LSE_ARROW_SIZE),
+                )
+                SwordsButtonPreview(
+                    textColor = currentResolvedText,
+                    borderColor = currentResolvedBorder,
+                    bgColor = currentResolvedBg,
+                    isIconOnly = inFlightLayout.invisibleButtons,
+                )
+            }
+        },
+        actionText = stringResource(R.string.gamepad_action_save),
+        icon = Icons.Rounded.Save,
+        onClick = { onSave(inFlightLayout) },
+        modifier = Modifier.firstDeckItem(),
+    )
 
     // Option 1: Theme Neutral
     GamepadActionCard(
@@ -227,9 +326,13 @@ internal fun LayoutColorSubPageContent(
                 isSelected = isNeutralSelected,
             )
         },
-        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionSelected(ColorOption.Neutral) },
-        modifier = Modifier.firstDeckItem(),
+        actionText =
+            if (isNeutralSelected) {
+                stringResource(R.string.gamepad_color_selected)
+            } else {
+                stringResource(R.string.gamepad_action_select)
+            },
+        onClick = { selectedOption = ColorOption.Neutral },
     )
 
     // Option 2: App Accent
@@ -243,13 +346,18 @@ internal fun LayoutColorSubPageContent(
                 isSelected = isAccentSelected,
             )
         },
-        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
-        onClick = { onColorOptionSelected(ColorOption.Accent) },
+        actionText =
+            if (isAccentSelected) {
+                stringResource(R.string.gamepad_color_selected)
+            } else {
+                stringResource(R.string.gamepad_action_select)
+            },
+        onClick = { selectedOption = ColorOption.Accent },
     )
 
     // Option 3: Custom Color (Color Wheel)
     GamepadActionCard(
-        title = stringResource(R.string.settings_accent_custom_title),
+        title = stringResource(R.string.gamepad_action_custom_color),
         description =
             if (isCustomSelected) {
                 String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
@@ -263,12 +371,18 @@ internal fun LayoutColorSubPageContent(
                 isSelected = isCustomSelected,
             )
         },
-        actionText = stringResource(R.string.gamepad_action_color_wheel),
+        actionText =
+            if (isCustomSelected) {
+                stringResource(R.string.gamepad_color_selected)
+            } else {
+                stringResource(R.string.gamepad_action_choose)
+            },
         onClick = {
             onOpenColorWheel(
                 selectColorWheelTitle,
                 colorWheelBreadcrumbs,
                 currentColor,
+                inFlightLayout,
             )
         },
     )

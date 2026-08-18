@@ -1099,6 +1099,8 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_zoom">Zoom &amp; Scale</string>
     <string name="gamepad_action_custom_color">Custom Color</string>
     <string name="gamepad_action_choose_icon">Choose Icon</string>
+    <string name="gamepad_action_select">Select</string>
+    <string name="gamepad_action_choose">Choose</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Left: %1$d%% • Right: %2$d%%</string>

@@ -1107,6 +1107,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_zoom">Zoom &amp; Skalierung</string>
     <string name="gamepad_action_custom_color">Eigene Farbe</string>
     <string name="gamepad_action_choose_icon">Symbol wählen</string>
+    <string name="gamepad_action_select">Auswählen</string>
+    <string name="gamepad_action_choose">Wählen</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>
