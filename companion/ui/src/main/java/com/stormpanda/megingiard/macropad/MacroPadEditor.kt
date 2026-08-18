@@ -856,7 +856,7 @@ fun MacroPadEditor(
                                                 LayoutTouchpadSubPageContent(
                                                     layout = lay,
                                                     accentColor = colors.accent,
-                                                    onConfirm = { updatedConfig, disableProjection ->
+                                                    onUpdate = { updatedConfig, disableProjection ->
                                                         val newCutouts =
                                                             if (disableProjection) {
                                                                 lay.mirrorCutouts.map { it.copy(touchProjectionEnabled = false) }
@@ -869,7 +869,6 @@ fun MacroPadEditor(
                                                                 mirrorCutouts = newCutouts,
                                                             ),
                                                         )
-                                                        subPageStack = subPageStack.dropLast(1)
                                                     },
                                                 )
                                             }

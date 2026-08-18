@@ -1,20 +1,12 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Speed
@@ -24,12 +16,9 @@ import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,13 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.ui.FullScreenTopBar
-import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
@@ -59,46 +43,24 @@ private const val TAG = "BackgroundTouchpadSettingsEditor"
 internal fun LayoutTouchpadSubPageContent(
     layout: PadLayout,
     accentColor: Color,
-    onConfirm: (BackgroundTouchpadConfig, disableProjection: Boolean) -> Unit,
+    onUpdate: (BackgroundTouchpadConfig, disableProjection: Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
-    val initialCfg = remember(layout) { layout.backgroundTouchpad }
-    val initialHasTouchProjection =
-        remember(layout) {
-            layout.mirrorCutouts.any { it.touchProjectionEnabled }
-        }
-
-    var enabled by remember(layout) { mutableStateOf(initialCfg.enabled) }
-    var sensitivity by remember(layout) { mutableFloatStateOf(initialCfg.sensitivity) }
-    var tapToClick by remember(layout) { mutableStateOf(initialCfg.tapToClick) }
-    var twoFingerTap by remember(layout) { mutableStateOf(initialCfg.twoFingerTap) }
-    var threeFingerTap by remember(layout) { mutableStateOf(initialCfg.threeFingerTap) }
-    var tapDrag by remember(layout) { mutableStateOf(initialCfg.tapDrag) }
-    var twoFingerScroll by remember(layout) { mutableStateOf(initialCfg.twoFingerScroll) }
-    var naturalScroll by remember(layout) { mutableStateOf(initialCfg.naturalScroll) }
-    var scrollSpeed by remember(layout) { mutableFloatStateOf(initialCfg.scrollSpeed) }
-    var hapticsEnabled by remember(layout) { mutableStateOf(initialCfg.hapticsEnabled) }
+    val cfg = layout.backgroundTouchpad
+    val hasTouchProjection = layout.mirrorCutouts.any { it.touchProjectionEnabled }
 
     var showConflictDialog by remember { mutableStateOf(false) }
-    var touchProjectionCleared by remember { mutableStateOf(false) }
-
-    val hasTouchProjection = initialHasTouchProjection && !touchProjectionCleared
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.settings_section_master_touchpad),
-        color = accentColor,
-    )
 
     GamepadToggleCard(
         title = stringResource(R.string.layout_settings_touchpad_enable),
         description = stringResource(R.string.layout_settings_touchpad_enable_desc),
-        checked = enabled,
+        checked = cfg.enabled,
         icon = Icons.Rounded.Mouse,
         onCheckedChange = { targetState ->
             if (targetState && hasTouchProjection) {
                 showConflictDialog = true
             } else {
-                enabled = targetState
+                onUpdate(cfg.copy(enabled = targetState), false)
             }
         },
         modifier = Modifier.firstDeckItem(),
@@ -128,7 +90,7 @@ internal fun LayoutTouchpadSubPageContent(
         }
     }
 
-    if (enabled) {
+    if (cfg.enabled) {
         GamepadSectionHeader(
             text = stringResource(R.string.settings_section_pointer_speed),
             color = accentColor,
@@ -137,10 +99,10 @@ internal fun LayoutTouchpadSubPageContent(
         GamepadSliderCard(
             title = stringResource(R.string.settings_touchpad_sensitivity),
             description = stringResource(R.string.settings_touchpad_sensitivity_desc),
-            value = sensitivity,
+            value = cfg.sensitivity,
             valueRange = 0.5f..3.0f,
-            onValueChange = { sensitivity = it },
-            valueLabel = "${(sensitivity * 10f).roundToInt() / 10f}x",
+            onValueChange = { onUpdate(cfg.copy(sensitivity = it), false) },
+            valueLabel = "${(cfg.sensitivity * 10f).roundToInt() / 10f}x",
             step = 0.1f,
             icon = Icons.Rounded.Speed,
         )
@@ -153,33 +115,33 @@ internal fun LayoutTouchpadSubPageContent(
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_tap_to_click),
             description = stringResource(R.string.settings_touchpad_tap_to_click_desc),
-            checked = tapToClick,
+            checked = cfg.tapToClick,
             icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { tapToClick = it },
+            onCheckedChange = { onUpdate(cfg.copy(tapToClick = it), false) },
         )
 
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_two_finger_tap),
             description = stringResource(R.string.settings_touchpad_two_finger_tap_desc),
-            checked = twoFingerTap,
+            checked = cfg.twoFingerTap,
             icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { twoFingerTap = it },
+            onCheckedChange = { onUpdate(cfg.copy(twoFingerTap = it), false) },
         )
 
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_three_finger_tap),
             description = stringResource(R.string.settings_touchpad_three_finger_tap_desc),
-            checked = threeFingerTap,
+            checked = cfg.threeFingerTap,
             icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { threeFingerTap = it },
+            onCheckedChange = { onUpdate(cfg.copy(threeFingerTap = it), false) },
         )
 
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_tap_drag),
             description = stringResource(R.string.settings_touchpad_tap_drag_desc),
-            checked = tapDrag,
+            checked = cfg.tapDrag,
             icon = Icons.Rounded.TouchApp,
-            onCheckedChange = { tapDrag = it },
+            onCheckedChange = { onUpdate(cfg.copy(tapDrag = it), false) },
         )
 
         GamepadSectionHeader(
@@ -190,31 +152,31 @@ internal fun LayoutTouchpadSubPageContent(
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_two_finger_scroll),
             description = stringResource(R.string.settings_touchpad_two_finger_scroll_desc),
-            checked = twoFingerScroll,
+            checked = cfg.twoFingerScroll,
             icon = Icons.Rounded.SwapVert,
-            onCheckedChange = { twoFingerScroll = it },
+            onCheckedChange = { onUpdate(cfg.copy(twoFingerScroll = it), false) },
         )
 
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_natural_scroll),
             description = stringResource(R.string.settings_touchpad_natural_scroll_desc),
-            checked = naturalScroll,
+            checked = cfg.naturalScroll,
             icon = Icons.Rounded.SwapVert,
-            onCheckedChange = { naturalScroll = it },
+            onCheckedChange = { onUpdate(cfg.copy(naturalScroll = it), false) },
         )
 
         GamepadStepperCard(
             title = stringResource(R.string.settings_touchpad_scroll_speed),
             description = stringResource(R.string.settings_touchpad_scroll_speed_desc),
-            valueText = "${(scrollSpeed * 10f).roundToInt() / 10f}x",
+            valueText = "${(cfg.scrollSpeed * 10f).roundToInt() / 10f}x",
             icon = Icons.Rounded.Speed,
             onDecrement = {
-                val newVal = ((scrollSpeed - 0.1f) * 10f).roundToInt() / 10f
-                scrollSpeed = newVal.coerceIn(0.1f, 3.0f)
+                val newVal = ((cfg.scrollSpeed - 0.1f) * 10f).roundToInt() / 10f
+                onUpdate(cfg.copy(scrollSpeed = newVal.coerceIn(0.1f, 3.0f)), false)
             },
             onIncrement = {
-                val newVal = ((scrollSpeed + 0.1f) * 10f).roundToInt() / 10f
-                scrollSpeed = newVal.coerceIn(0.1f, 3.0f)
+                val newVal = ((cfg.scrollSpeed + 0.1f) * 10f).roundToInt() / 10f
+                onUpdate(cfg.copy(scrollSpeed = newVal.coerceIn(0.1f, 3.0f)), false)
             },
         )
 
@@ -226,34 +188,11 @@ internal fun LayoutTouchpadSubPageContent(
         GamepadToggleCard(
             title = stringResource(R.string.settings_touchpad_haptics),
             description = stringResource(R.string.settings_touchpad_haptics_desc),
-            checked = hapticsEnabled,
+            checked = cfg.hapticsEnabled,
             icon = Icons.Rounded.Vibration,
-            onCheckedChange = { hapticsEnabled = it },
+            onCheckedChange = { onUpdate(cfg.copy(hapticsEnabled = it), false) },
         )
     }
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_done),
-        description = stringResource(R.string.macropad_editor_appearance_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
-        onClick = {
-            val updated =
-                initialCfg.copy(
-                    enabled = enabled,
-                    sensitivity = sensitivity,
-                    tapToClick = tapToClick,
-                    twoFingerTap = twoFingerTap,
-                    threeFingerTap = threeFingerTap,
-                    tapDrag = tapDrag,
-                    twoFingerScroll = twoFingerScroll,
-                    naturalScroll = naturalScroll,
-                    scrollSpeed = scrollSpeed,
-                    hapticsEnabled = hapticsEnabled,
-                )
-            val disableProjection = touchProjectionCleared || (enabled && initialHasTouchProjection)
-            onConfirm(updated, disableProjection)
-        },
-    )
 
     if (showConflictDialog) {
         GamepadConfirmDialog(
@@ -262,8 +201,7 @@ internal fun LayoutTouchpadSubPageContent(
             confirmText = stringResource(R.string.macropad_editor_confirm),
             cancelText = stringResource(R.string.settings_cancel),
             onConfirm = {
-                touchProjectionCleared = true
-                enabled = true
+                onUpdate(cfg.copy(enabled = true), true)
                 showConflictDialog = false
             },
             onDismiss = { showConflictDialog = false },
