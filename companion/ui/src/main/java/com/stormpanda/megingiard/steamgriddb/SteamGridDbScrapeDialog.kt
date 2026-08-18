@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -41,8 +42,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -100,8 +103,7 @@ private val STATUS_BOX_HEIGHT = 160.dp
 private val SG_BADGE_PADDING = 6.dp
 private val SG_BADGE_SIZE = 22.dp
 private val SG_BADGE_ICON_SIZE = 14.dp
-private val SG_ROW_SPACING = 10.dp
-private val SG_ROW_H_PADDING = 2.dp
+private val SG_ROW_SPACING = 12.dp
 private val SG_ROW_V_PADDING = 4.dp
 private val SG_PROGRESS_SIZE = 24.dp
 private val SG_PROGRESS_STROKE = 2.dp
@@ -109,6 +111,7 @@ private val SG_SPACING_12 = 12.dp
 private val SG_SPACING_8 = 8.dp
 private val SG_ICON_SIZE_36 = 36.dp
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 internal fun SteamGridDbScrapeSubPageContent(
     initialSearchQuery: String,
@@ -440,98 +443,108 @@ internal fun SteamGridDbScrapeSubPageContent(
                 description = stringResource(R.string.steamgriddb_empty_images_desc),
             )
         } else {
-            LazyRow(
-                state = rowState,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = SG_ROW_H_PADDING, vertical = SG_ROW_V_PADDING),
-                horizontalArrangement = Arrangement.spacedBy(SG_ROW_SPACING),
-            ) {
-                itemsIndexed(imagesList, key = { _, it -> it.id }) { index, image ->
-                    val isSelected = selectedImage?.id == image.id
-                    val focusRequester = itemFocusRequesters.getOrNull(index) ?: remember { FocusRequester() }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val itemWidth = thumbHeight * thumbAspectRatio
+                val horizontalPadding = ((maxWidth - itemWidth) / 2).coerceAtLeast(0.dp)
 
-                    GamepadFocusCard(
-                        onClick = {
-                            selectedImage = if (isSelected) null else image
-                        },
-                        cardFocusRequester = focusRequester,
-                        modifier =
-                            Modifier
-                                .height(thumbHeight)
-                                .aspectRatio(thumbAspectRatio),
-                        cardBgColor = if (isSelected) accentColor.copy(alpha = SELECTION_BG_ALPHA) else colors.surface,
-                        onCustomKeyEvent = { keyEvent ->
-                            if (keyEvent.type == KeyEventType.KeyDown) {
-                                when (keyEvent.nativeKeyEvent.keyCode) {
-                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
-                                        if (index > 0) {
-                                            scope.launch {
-                                                rowState.animateScrollToItem(index - 1)
+                LazyRow(
+                    state = rowState,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .focusProperties {
+                                enter = {
+                                    itemFocusRequesters.firstOrNull() ?: FocusRequester.Default
+                                }
+                            },
+                    contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = SG_ROW_V_PADDING),
+                    horizontalArrangement = Arrangement.spacedBy(SG_ROW_SPACING),
+                ) {
+                    itemsIndexed(imagesList, key = { _, it -> it.id }) { index, image ->
+                        val isSelected = selectedImage?.id == image.id
+                        val focusRequester = itemFocusRequesters.getOrNull(index) ?: remember { FocusRequester() }
+
+                        GamepadFocusCard(
+                            onClick = {
+                                selectedImage = if (isSelected) null else image
+                            },
+                            cardFocusRequester = focusRequester,
+                            onFocusChanged = { isFocused ->
+                                if (isFocused) {
+                                    scope.launch {
+                                        rowState.animateScrollToItem(index)
+                                    }
+                                }
+                            },
+                            modifier =
+                                Modifier
+                                    .height(thumbHeight)
+                                    .aspectRatio(thumbAspectRatio),
+                            cardBgColor = if (isSelected) accentColor.copy(alpha = SELECTION_BG_ALPHA) else colors.surface,
+                            onCustomKeyEvent = { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown) {
+                                    when (keyEvent.nativeKeyEvent.keyCode) {
+                                        KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                            if (index > 0) {
+                                                try {
+                                                    itemFocusRequesters.getOrNull(index - 1)?.requestFocus()
+                                                } catch (_: IllegalStateException) {
+                                                    // Focus requester unattached
+                                                }
                                             }
-                                            try {
-                                                itemFocusRequesters.getOrNull(index - 1)?.requestFocus()
-                                            } catch (_: IllegalStateException) {
-                                                // Focus requester unattached
-                                            }
+                                            // Always consume DPAD_LEFT so pressing left never backs out of the menu
                                             true
-                                        } else {
+                                        }
+
+                                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                            if (index < imagesList.size - 1) {
+                                                try {
+                                                    itemFocusRequesters.getOrNull(index + 1)?.requestFocus()
+                                                } catch (_: IllegalStateException) {
+                                                    // Focus requester unattached
+                                                }
+                                            }
+                                            // Consume DPAD_RIGHT
+                                            true
+                                        }
+
+                                        else -> {
                                             false
                                         }
                                     }
-
-                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                        if (index < imagesList.size - 1) {
-                                            scope.launch {
-                                                rowState.animateScrollToItem(index + 1)
-                                            }
-                                            try {
-                                                itemFocusRequesters.getOrNull(index + 1)?.requestFocus()
-                                            } catch (_: IllegalStateException) {
-                                                // Focus requester unattached
-                                            }
-                                            true
-                                        } else {
-                                            false
-                                        }
+                                } else if (keyEvent.type == KeyEventType.KeyUp) {
+                                    when (keyEvent.nativeKeyEvent.keyCode) {
+                                        KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> true
+                                        else -> false
                                     }
-
-                                    else -> {
-                                        false
+                                } else {
+                                    false
+                                }
+                            },
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                SteamGridDbImageThumbnail(
+                                    url = image.thumb.ifBlank { image.url },
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                if (isSelected) {
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(SG_BADGE_PADDING)
+                                                .size(SG_BADGE_SIZE)
+                                                .background(accentColor, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            tint = colors.onAccent,
+                                            modifier = Modifier.size(SG_BADGE_ICON_SIZE),
+                                        )
                                     }
-                                }
-                            } else if (keyEvent.type == KeyEventType.KeyUp) {
-                                when (keyEvent.nativeKeyEvent.keyCode) {
-                                    KeyEvent.KEYCODE_DPAD_LEFT -> index > 0
-                                    KeyEvent.KEYCODE_DPAD_RIGHT -> index < imagesList.size - 1
-                                    else -> false
-                                }
-                            } else {
-                                false
-                            }
-                        },
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            SteamGridDbImageThumbnail(
-                                url = image.thumb.ifBlank { image.url },
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                            if (isSelected) {
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(SG_BADGE_PADDING)
-                                            .size(SG_BADGE_SIZE)
-                                            .background(accentColor, CircleShape),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Check,
-                                        contentDescription = null,
-                                        tint = colors.onAccent,
-                                        modifier = Modifier.size(SG_BADGE_ICON_SIZE),
-                                    )
                                 }
                             }
                         }
