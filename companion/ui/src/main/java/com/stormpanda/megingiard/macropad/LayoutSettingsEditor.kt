@@ -1,10 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Colorize
@@ -20,12 +15,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -33,13 +26,9 @@ import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
-import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "LayoutSettingsEditor"
-private val LSE_PREVIEW_PADDING = 12.dp
-private val LSE_PREVIEW_CORNER = 12.dp
-private val LSE_PREVIEW_SIZE = 60.dp
 
 @Composable
 private fun describeColorOption(
@@ -182,7 +171,6 @@ internal fun LayoutColorSubPageContent(
     onColorOptionSelected: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color) -> Unit,
 ) {
-    val colors = LocalAppColors.current
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
@@ -200,9 +188,6 @@ internal fun LayoutColorSubPageContent(
             LayoutColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
         }
 
-    val currentResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-    val currentResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val currentResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
     val currentColor = resolveColorOption(currentOption, globalAccentColor, defaultNeutralColor)
 
     val targetTitle =
@@ -230,29 +215,6 @@ internal fun LayoutColorSubPageContent(
     val isNeutralSelected = currentOption is ColorOption.Neutral
     val isAccentSelected = currentOption is ColorOption.Accent
     val isCustomSelected = currentOption is ColorOption.Custom
-
-    // Live preview banner
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surfaceVariant, RoundedCornerShape(LSE_PREVIEW_CORNER))
-                .padding(LSE_PREVIEW_PADDING),
-        contentAlignment = Alignment.Center,
-    ) {
-        SwordsButtonPreview(
-            textColor = currentResolvedText,
-            borderColor = currentResolvedBorder,
-            bgColor = currentResolvedBg,
-            isIconOnly = layout.invisibleButtons,
-            size = LSE_PREVIEW_SIZE,
-        )
-    }
-
-    GamepadSectionHeader(
-        text = targetTitle,
-        color = accentColor,
-    )
 
     // Option 1: Theme Neutral
     GamepadActionCard(
