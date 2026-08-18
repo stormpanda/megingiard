@@ -507,7 +507,7 @@
     <string name="config_import_hide_details">隱藏詳細資訊</string>
     <string name="macropad_editor_copy_to_profile">複製到設定檔…</string>
     <string name="macropad_editor_copy_to_layout">複製到配置…</string>
-    <string name="macropad_editor_copy_profile_select">選擇目標設定檔</string>
+    <string name="macropad_editor_copy_profile_select">複製版面配置至…</string>
     <string name="macropad_editor_copy_layout_select">選擇目標配置</string>
     <string name="macropad_editor_copy_button_duplicate">重複按鈕</string>
     <string name="macropad_duplicate_profile">重複設定檔</string>

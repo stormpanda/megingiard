@@ -1,12 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Folder
@@ -21,6 +15,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "CopyDialogs"
 
@@ -43,19 +38,15 @@ internal fun CopyLayoutSubPageContent(
             modifier = Modifier.padding(vertical = 16.dp),
         )
     } else {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            filteredProfiles.forEach { profile ->
-                GamepadActionCard(
-                    title = profile.name,
-                    description = stringResource(R.string.quick_menu_layouts_count, profile.layouts.size),
-                    actionText = stringResource(R.string.gamepad_prompt_select),
-                    icon = Icons.Rounded.Folder,
-                    onClick = { onSelect(profile.id) },
-                )
-            }
+        filteredProfiles.forEachIndexed { index, profile ->
+            GamepadActionCard(
+                title = profile.name,
+                description = stringResource(R.string.quick_menu_layouts_count, profile.layouts.size),
+                actionText = stringResource(R.string.gamepad_prompt_select),
+                icon = Icons.Rounded.Folder,
+                modifier = Modifier.firstDeckItem(index == 0),
+                onClick = { onSelect(profile.id) },
+            )
         }
     }
 }
@@ -82,26 +73,25 @@ internal fun CopyButtonSubPageContent(
             modifier = Modifier.padding(vertical = 16.dp),
         )
     } else {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            profiles.forEach { profile ->
-                val layouts = profile.layouts.filter { it.id != excludeLayoutId }
-                if (layouts.isNotEmpty()) {
-                    GamepadSectionHeader(
-                        text = profile.name,
-                        color = accentColor,
+        var isFirst = true
+        profiles.forEach { profile ->
+            val layouts = profile.layouts.filter { it.id != excludeLayoutId }
+            if (layouts.isNotEmpty()) {
+                GamepadSectionHeader(
+                    text = profile.name,
+                    color = accentColor,
+                )
+                layouts.forEach { layout ->
+                    val first = isFirst
+                    isFirst = false
+                    GamepadActionCard(
+                        title = layout.name,
+                        description = stringResource(R.string.quick_menu_buttons_count, layout.buttons.size),
+                        actionText = stringResource(R.string.gamepad_action_copy),
+                        icon = Icons.Rounded.ContentCopy,
+                        modifier = Modifier.firstDeckItem(first),
+                        onClick = { onSelect(profile.id, layout.id) },
                     )
-                    layouts.forEach { layout ->
-                        GamepadActionCard(
-                            title = layout.name,
-                            description = stringResource(R.string.quick_menu_buttons_count, layout.buttons.size),
-                            actionText = stringResource(R.string.gamepad_action_copy),
-                            icon = Icons.Rounded.ContentCopy,
-                            onClick = { onSelect(profile.id, layout.id) },
-                        )
-                    }
                 }
             }
         }

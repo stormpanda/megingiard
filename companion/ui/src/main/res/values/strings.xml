@@ -609,7 +609,7 @@ Open Settings to create a layout.</string>
     <!-- Copy macros/buttons/layouts to other profiles/layouts -->
     <string name="macropad_editor_copy_to_profile">Copy to Profile…</string>
     <string name="macropad_editor_copy_to_layout">Copy to Layout…</string>
-    <string name="macropad_editor_copy_profile_select">Select Target Profile</string>
+    <string name="macropad_editor_copy_profile_select">Copy Layout to…</string>
     <string name="macropad_editor_copy_layout_select">Select Target Layout</string>
     <string name="macropad_editor_copy_button_duplicate">Duplicate Button</string>
     <string name="macropad_duplicate_profile">Duplicate Profile</string>

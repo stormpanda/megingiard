@@ -617,7 +617,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Copy macros/buttons/layouts to other profiles/layouts -->
     <string name="macropad_editor_copy_to_profile">In Profil kopieren…</string>
     <string name="macropad_editor_copy_to_layout">In Layout kopieren…</string>
-    <string name="macropad_editor_copy_profile_select">Zielprofil auswählen</string>
+    <string name="macropad_editor_copy_profile_select">Layout kopieren nach…</string>
     <string name="macropad_editor_copy_layout_select">Ziellayout auswählen</string>
     <string name="macropad_editor_copy_button_duplicate">Taste duplizieren</string>
     <string name="macropad_duplicate_profile">Profil duplizieren</string>
