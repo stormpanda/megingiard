@@ -159,7 +159,7 @@ internal fun LayoutAppearanceSubPageContent(
                     textColor = savedResolvedText,
                     borderColor = savedResolvedBorder,
                     bgColor = savedResolvedBg,
-                    isIconOnly = savedLayout.invisibleButtons,
+                    isIconOnly = false,
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
@@ -171,7 +171,7 @@ internal fun LayoutAppearanceSubPageContent(
                     textColor = currentResolvedText,
                     borderColor = currentResolvedBorder,
                     bgColor = currentResolvedBg,
-                    isIconOnly = savedLayout.invisibleButtons,
+                    isIconOnly = false,
                 )
             }
         },
@@ -372,7 +372,7 @@ internal fun LayoutColorSubPageContent(
                     textColor = savedResolvedText,
                     borderColor = savedResolvedBorder,
                     bgColor = savedResolvedBg,
-                    isIconOnly = effectiveSavedLayout.invisibleButtons,
+                    isIconOnly = false,
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
@@ -384,7 +384,7 @@ internal fun LayoutColorSubPageContent(
                     textColor = currentResolvedText,
                     borderColor = currentResolvedBorder,
                     bgColor = currentResolvedBg,
-                    isIconOnly = inFlightLayout.invisibleButtons,
+                    isIconOnly = false,
                 )
             }
         },
