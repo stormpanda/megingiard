@@ -918,4 +918,14 @@
     <string name="macropad_layout_duplicated_toast">已複製並選取版面配置「%1$s」</string>
     <string name="macropad_button_deleted_toast">已刪除按鈕</string>
     <string name="macropad_macro_deleted_toast">已刪除巨集「%1$s」</string>
+    <string name="macropad_editor_action_group_desc">主要輸入類別</string>
+    <string name="macropad_editor_action_category_desc">特定動作類型</string>
+    <string name="macropad_picker_label_key_desc">要傳送的鍵盤按鍵</string>
+    <string name="macropad_picker_label_mod_desc">選用的修飾鍵</string>
+    <string name="macropad_picker_label_button_desc">要按下的手把按鈕</string>
+    <string name="macropad_picker_label_extra_desc">選用的組合按鈕</string>
+    <string name="macropad_picker_mouse_button_desc">要模擬的滑鼠點擊</string>
+    <string name="macropad_picker_macro_desc">要觸發的已儲存巨集序列</string>
+    <string name="macropad_picker_macro_edit_desc">編輯 %1$s 的步驟</string>
+    <string name="macropad_picker_macro_new_desc">錄製新的巨集序列</string>
 </resources>

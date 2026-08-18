@@ -1198,6 +1198,16 @@ Open Settings to create a layout.</string>
     <string name="macropad_btn_haptic_desc">Vibration feedback triggered on tap</string>
     <string name="macropad_btn_haptic_duration_desc">Duration in milliseconds</string>
     <string name="macropad_btn_haptic_amplitude_desc">Vibration motor power percentage</string>
+    <string name="macropad_editor_action_group_desc">Primary input category</string>
+    <string name="macropad_editor_action_category_desc">Specific action type</string>
+    <string name="macropad_picker_label_key_desc">Keyboard key to send</string>
+    <string name="macropad_picker_label_mod_desc">Optional modifier key</string>
+    <string name="macropad_picker_label_button_desc">Gamepad button to press</string>
+    <string name="macropad_picker_label_extra_desc">Optional combo button</string>
+    <string name="macropad_picker_mouse_button_desc">Mouse click to simulate</string>
+    <string name="macropad_picker_macro_desc">Saved macro sequence to trigger</string>
+    <string name="macropad_picker_macro_edit_desc">Edit steps for %1$s</string>
+    <string name="macropad_picker_macro_new_desc">Record a new macro sequence</string>
 
     <!-- Macro Step Edit Dialog -->
     <string name="macro_step_action_type_title">Step Action Type</string>

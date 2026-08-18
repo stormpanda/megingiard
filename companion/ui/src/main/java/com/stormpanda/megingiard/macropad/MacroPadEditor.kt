@@ -569,26 +569,67 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.AppPicker -> {
+                                        val isButtonTarget = currentSubPage.target is AppPickerTarget.EditButton
                                         val assigned =
-                                            profiles
-                                                .mapNotNull { it.association?.packageName }
-                                                .map { it.trim().lowercase() }
-                                                .toSet()
+                                            if (isButtonTarget) {
+                                                emptySet()
+                                            } else {
+                                                profiles
+                                                    .mapNotNull { it.association?.packageName }
+                                                    .map { it.trim().lowercase() }
+                                                    .toSet()
+                                            }
                                         GamepadDeck(
                                             breadcrumbs =
-                                                listOf(
-                                                    stringResource(R.string.quick_menu_profile_label),
-                                                    stringResource(R.string.profile_settings_app_mapping),
-                                                    stringResource(R.string.profile_settings_search_apps),
-                                                ),
+                                                if (isButtonTarget) {
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_buttons),
+                                                        stringResource(R.string.app_launcher_picker_title),
+                                                    )
+                                                } else {
+                                                    listOf(
+                                                        stringResource(R.string.quick_menu_profile_label),
+                                                        stringResource(R.string.profile_settings_app_mapping),
+                                                        stringResource(R.string.profile_settings_search_apps),
+                                                    )
+                                                },
                                             scrollable = false,
                                         ) {
                                             AppPickerSubPageContent(
                                                 assignedPackages = assigned,
                                                 accentColor = colors.accent,
                                                 onSelectApp = { pkg ->
-                                                    pendingProfilePackage = pkg
-                                                    subPageStack = subPageStack.dropLast(1)
+                                                    when (currentSubPage.target) {
+                                                        is AppPickerTarget.NewProfile,
+                                                        is AppPickerTarget.EditProfile,
+                                                        -> {
+                                                            pendingProfilePackage = pkg
+                                                            subPageStack = subPageStack.dropLast(1)
+                                                        }
+
+                                                        is AppPickerTarget.EditButton -> {
+                                                            subPageStack =
+                                                                subPageStack.dropLast(1).map { subPage ->
+                                                                    if (subPage is MacroPadSubPage.EditButton) {
+                                                                        val draft =
+                                                                            subPage.draftButton
+                                                                                ?: subPage.button
+                                                                                ?: PadButton(
+                                                                                    id = UUID.randomUUID().toString(),
+                                                                                    label = "",
+                                                                                    posX = 0.5f,
+                                                                                    posY = 0.5f,
+                                                                                    action = PadAction.AppLauncher(pkg),
+                                                                                )
+                                                                        subPage.copy(
+                                                                            draftButton = draft.copy(action = PadAction.AppLauncher(pkg)),
+                                                                        )
+                                                                    } else {
+                                                                        subPage
+                                                                    }
+                                                                }
+                                                        }
+                                                    }
                                                 },
                                             )
                                         }
@@ -947,6 +988,15 @@ fun MacroPadEditor(
                                                             draftButton = currentDraft,
                                                         ) +
                                                         MacroPadSubPage.ChooseIcon
+                                                },
+                                                onOpenAppPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.AppPicker(AppPickerTarget.EditButton)
                                                 },
                                                 onOpenColorWheel = { title, breadcrumbs, initialColor, onApplyColor ->
                                                     subPageStack =

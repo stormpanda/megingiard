@@ -1,24 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
@@ -28,9 +12,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,31 +21,23 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.ColorWheelPicker
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
-import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
-import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
-import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.UUID
 
 private const val TAG = "PadButtonEditDialog"
@@ -78,9 +52,6 @@ private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
 private const val PBD_ICON_MACRO = "smart_button"
 private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
 private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
-private val PBD_PREVIEW_BUTTON_SIZE = 60.dp
-
-private enum class ButtonColorPickerTarget { TEXT, BORDER, BG }
 
 /**
  * Maps a [PadAction] type to its localised label string resource.
@@ -128,6 +99,7 @@ internal fun EditButtonSubPageContent(
     initialAction: PadAction? = null,
     selectedIcon: String? = null,
     onOpenIconPicker: (currentDraft: PadButton) -> Unit,
+    onOpenAppPicker: (currentDraft: PadButton) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onApplyColor: (Color) -> PadButton) -> Unit,
     onEditMacro: ((Macro) -> Unit)? = null,
     onSave: (PadButton) -> Unit,
@@ -190,7 +162,6 @@ internal fun EditButtonSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    val colors = LocalAppColors.current
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros = profile?.macros ?: emptyList()
 
@@ -309,51 +280,10 @@ internal fun EditButtonSubPageContent(
             else -> button.label.ifBlank { stringResource(R.string.settings_macropad_edit) }
         }
 
-    // Live preview banner
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surfaceVariant, RoundedCornerShape(12.dp))
-                .padding(12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        PadButtonFace(
-            width = PBD_PREVIEW_BUTTON_SIZE,
-            height = PBD_PREVIEW_BUTTON_SIZE,
-            shape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(8.dp),
-            isIconOnly = buttonShape == ButtonShape.ICON_ONLY,
-            isDeviceDisabled = false,
-            borderColor = currentBorder,
-            bgColor = currentBg,
-            bgAlpha = 0.25f,
-            gradientScale = 2.8f,
-        ) {
-            if (iconName != null) {
-                MaterialSymbol(
-                    name = iconName!!,
-                    size = 32.dp,
-                    tint = currentText,
-                    filled = iconFilled,
-                )
-            } else {
-                Text(
-                    text = label.ifBlank { "A" },
-                    color = currentText,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        }
-    }
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_button_settings),
-        color = accentColor,
-    )
+    val showLabelAndIcon = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
 
     // Label & Icon input
-    if (action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher) {
+    if (showLabelAndIcon) {
         GamepadTextFieldCard(
             title = stringResource(R.string.macropad_editor_button_label),
             description = stringResource(R.string.macropad_editor_button_label_desc),
@@ -361,6 +291,7 @@ internal fun EditButtonSubPageContent(
             value = label,
             onValueChange = { label = it },
             icon = Icons.Rounded.Edit,
+            modifier = Modifier.firstDeckItem(),
         )
 
         GamepadActionCard(
@@ -396,6 +327,9 @@ internal fun EditButtonSubPageContent(
         onEditMacro = { macro ->
             actionBeforeEdit = action
             onEditMacro?.invoke(macro)
+        },
+        onOpenAppPicker = {
+            onOpenAppPicker(buildCurrentButton())
         },
         onChange = ::onActionChanged,
     )
@@ -691,49 +625,4 @@ internal fun EditButtonSubPageContent(
             }
         },
     )
-}
-
-@Composable
-internal fun ButtonEditDialog(
-    button: PadButton?, // null → create new
-    accentColor: Color,
-    enableKeyboard: Boolean = true,
-    enableGamepad: Boolean = true,
-    enableMouse: Boolean = true,
-    initialAction: PadAction? = null,
-    onEditMacro: ((Macro) -> Unit)? = null,
-    onConfirm: (PadButton) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-    var showIconPicker by remember { mutableStateOf(false) }
-    var activeColorPickerTarget by remember { mutableStateOf<ButtonColorPickerTarget?>(null) }
-
-    // TODO: State management for color wheel and icon picker
-    // This implementation is a placeholder for the integration pattern
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.appBackground)
-                .blockPointerEvents(),
-    ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = colors.appBackground,
-        ) { paddingValues ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Implementation would call EditButtonSubPageContent
-            }
-        }
-    }
 }

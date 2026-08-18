@@ -1,9 +1,27 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.ControlCamera
+import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
@@ -23,6 +41,17 @@ internal enum class ActionGroup {
     MIRROR,
     OTHER,
 }
+
+internal fun ActionGroup.icon(): ImageVector =
+    when (this) {
+        ActionGroup.KEYBOARD -> Icons.Rounded.Keyboard
+        ActionGroup.GAMEPAD -> Icons.Rounded.SportsEsports
+        ActionGroup.MOUSE -> Icons.Rounded.Mouse
+        ActionGroup.MACRO -> Icons.Rounded.SmartButton
+        ActionGroup.LAYOUT -> Icons.AutoMirrored.Rounded.ViewQuilt
+        ActionGroup.MIRROR -> Icons.Rounded.Cast
+        ActionGroup.OTHER -> Icons.Rounded.Apps
+    }
 
 internal fun ActionGroup.labelResId(): Int =
     when (this) {
@@ -123,6 +152,27 @@ internal fun ActionCategory.labelResId(): Int =
         ActionCategory.FULLSCREEN_MOUSE -> R.string.macropad_action_fullscreen_mouse
         ActionCategory.FULLSCREEN_KEYBOARD -> R.string.macropad_action_fullscreen_keyboard
         ActionCategory.APP_LAUNCHER -> R.string.macropad_action_app_launcher
+    }
+
+internal fun ActionCategory.icon(): ImageVector =
+    when (this) {
+        ActionCategory.KEYBOARD_KEY -> Icons.Rounded.Keyboard
+        ActionCategory.GAMEPAD_BUTTON -> Icons.Rounded.SportsEsports
+        ActionCategory.MOUSE_BUTTON -> Icons.Rounded.Mouse
+        ActionCategory.SCROLL_WHEEL -> Icons.Rounded.SwapVert
+        ActionCategory.TRACKPOINT -> Icons.Rounded.ControlCamera
+        ActionCategory.MACRO -> Icons.Rounded.SmartButton
+        ActionCategory.BACKGROUND_PEEK -> Icons.Rounded.Visibility
+        ActionCategory.LAYOUT_NEXT -> Icons.AutoMirrored.Rounded.ArrowForward
+        ActionCategory.LAYOUT_PREVIOUS -> Icons.AutoMirrored.Rounded.ArrowBack
+        ActionCategory.PROFILE_SWITCHER -> Icons.Rounded.SwapHoriz
+        ActionCategory.MIRROR_PLAY_STOP -> Icons.Rounded.Cast
+        ActionCategory.MIRROR_FREEZE -> Icons.Rounded.PauseCircle
+        ActionCategory.MIRROR_VIEWPORT_EDIT -> Icons.Rounded.CropFree
+        ActionCategory.MIRROR_TOUCH_PROJECTION -> Icons.Rounded.TouchApp
+        ActionCategory.FULLSCREEN_MOUSE -> Icons.Rounded.Mouse
+        ActionCategory.FULLSCREEN_KEYBOARD -> Icons.Rounded.Keyboard
+        ActionCategory.APP_LAUNCHER -> Icons.Rounded.Apps
     }
 
 internal fun ActionCategory.defaultAction(): PadAction =

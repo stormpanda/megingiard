@@ -1206,6 +1206,16 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_btn_haptic_desc">Vibrationsfeedback beim Antippen</string>
     <string name="macropad_btn_haptic_duration_desc">Dauer in Millisekunden</string>
     <string name="macropad_btn_haptic_amplitude_desc">Stärke des Vibrationsmotors in Prozent</string>
+    <string name="macropad_editor_action_group_desc">Hauptkategorie der Eingabe</string>
+    <string name="macropad_editor_action_category_desc">Spezifischer Aktionstyp</string>
+    <string name="macropad_picker_label_key_desc">Zu sendende Tastaturtaste</string>
+    <string name="macropad_picker_label_mod_desc">Optionaler Zusatztasten-Modifikator</string>
+    <string name="macropad_picker_label_button_desc">Gamepad-Taste zum Drücken</string>
+    <string name="macropad_picker_label_extra_desc">Optionale Combo-Taste</string>
+    <string name="macropad_picker_mouse_button_desc">Zu simulierender Mausklick</string>
+    <string name="macropad_picker_macro_desc">Gespeicherte Makro-Sequenz ausführen</string>
+    <string name="macropad_picker_macro_edit_desc">Schritte für %1$s bearbeiten</string>
+    <string name="macropad_picker_macro_new_desc">Eine neue Makro-Sequenz aufzeichnen</string>
 
     <!-- Macro Step Edit Dialog -->
     <string name="macro_step_action_type_title">Aktionstyp des Schritts</string>

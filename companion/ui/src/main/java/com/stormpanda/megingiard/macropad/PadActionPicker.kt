@@ -1,23 +1,15 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
-import com.stormpanda.megingiard.ui.AppDropdown
-import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
 
 private const val TAG = "PadActionPicker"
 
@@ -29,9 +21,9 @@ internal fun ActionPicker(
     enableGamepad: Boolean = true,
     enableMouse: Boolean = true,
     onEditMacro: ((Macro) -> Unit)? = null,
+    onOpenAppPicker: (() -> Unit)? = null,
     onChange: (PadAction) -> Unit,
 ) {
-    val colors = LocalAppColors.current
     val profile by MacroPadState.activeProfile.collectAsState()
 
     val hasMacros = profile?.macros?.isNotEmpty() == true
@@ -58,82 +50,91 @@ internal fun ActionPicker(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = stringResource(R.string.macropad_picker_label_group),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.labelSmall,
-        )
-
-        AppDropdown(
-            selected = currentGroup,
-            options = availableGroups,
-            optionText = { group -> stringResource(group.labelResId()) },
-            onSelected = { group ->
-                val defaultCategory =
-                    group.actions().firstOrNull { category ->
-                        category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
-                    }
-                if (defaultCategory != null) {
-                    onChange(defaultCategory.defaultAction())
+    val groupIdx = availableGroups.indexOf(currentGroup).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_group),
+        description = stringResource(R.string.macropad_editor_action_group_desc),
+        selectedText = stringResource(currentGroup.labelResId()),
+        icon = currentGroup.icon(),
+        onPrevious = {
+            val nextIdx = (groupIdx - 1 + availableGroups.size) % availableGroups.size
+            val group = availableGroups[nextIdx]
+            val defaultCategory =
+                group.actions().firstOrNull { category ->
+                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
                 }
+            if (defaultCategory != null) {
+                onChange(defaultCategory.defaultAction())
+            }
+        },
+        onNext = {
+            val nextIdx = (groupIdx + 1) % availableGroups.size
+            val group = availableGroups[nextIdx]
+            val defaultCategory =
+                group.actions().firstOrNull { category ->
+                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+                }
+            if (defaultCategory != null) {
+                onChange(defaultCategory.defaultAction())
+            }
+        },
+    )
+
+    if (groupActions.size > 1) {
+        val catIdx = groupActions.indexOf(currentCategory).coerceAtLeast(0)
+        GamepadChoiceCard(
+            title = stringResource(R.string.macropad_editor_action),
+            description = stringResource(R.string.macropad_editor_action_category_desc),
+            selectedText = stringResource(currentCategory.labelResId()),
+            icon = currentCategory.icon(),
+            onPrevious = {
+                val nextIdx = (catIdx - 1 + groupActions.size) % groupActions.size
+                onChange(groupActions[nextIdx].defaultAction())
             },
-            modifier = Modifier.fillMaxWidth(),
-            fillMaxWidth = true,
+            onNext = {
+                val nextIdx = (catIdx + 1) % groupActions.size
+                onChange(groupActions[nextIdx].defaultAction())
+            },
         )
+    }
 
-        if (groupActions.size > 1) {
-            Text(
-                text = stringResource(R.string.macropad_editor_action),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
+    when (current) {
+        is PadAction.KeyboardKey -> {
+            KeyboardKeyPicker(current, onChange)
+        }
 
-            AppDropdown(
-                selected = currentCategory,
-                options = groupActions,
-                optionText = { category -> stringResource(category.labelResId()) },
-                onSelected = { category -> onChange(category.defaultAction()) },
-                modifier = Modifier.fillMaxWidth(),
-                fillMaxWidth = true,
+        is PadAction.GamepadButton -> {
+            GamepadButtonPicker(current, onChange)
+        }
+
+        is PadAction.MouseButton -> {
+            MouseButtonPicker(current, onChange)
+        }
+
+        is PadAction.Macro -> {
+            MacroPicker(current, accentColor, onEditMacro, onChange)
+        }
+
+        is PadAction.AppLauncher -> {
+            AppLauncherPicker(
+                current = current,
+                onOpenPicker = onOpenAppPicker ?: {},
             )
         }
 
-        when (current) {
-            is PadAction.KeyboardKey -> {
-                KeyboardKeyPicker(current, onChange)
-            }
-
-            is PadAction.GamepadButton -> {
-                GamepadButtonPicker(current, onChange)
-            }
-
-            is PadAction.MouseButton -> {
-                MouseButtonPicker(current, onChange)
-            }
-
-            is PadAction.Macro -> {
-                MacroPicker(current, accentColor, onEditMacro, onChange)
-            }
-
-            is PadAction.AppLauncher -> {
-                AppLauncherPicker(current, onChange)
-            }
-
-            is PadAction.ScrollWheel,
-            is PadAction.TrackpointMove,
-            is PadAction.BackgroundPeek,
-            is PadAction.LayoutNext,
-            is PadAction.LayoutPrevious,
-            is PadAction.ProfileSwitcher,
-            is PadAction.MirrorPlayStop,
-            is PadAction.MirrorFreeze,
-            is PadAction.MirrorViewportEdit,
-            is PadAction.MirrorTouchProjection,
-            is PadAction.FullScreenMouse,
-            is PadAction.FullScreenKeyboard,
-            -> { /* no further config needed */ }
-        }
+        is PadAction.ScrollWheel,
+        is PadAction.TrackpointMove,
+        is PadAction.BackgroundPeek,
+        is PadAction.LayoutNext,
+        is PadAction.LayoutPrevious,
+        is PadAction.ProfileSwitcher,
+        is PadAction.MirrorPlayStop,
+        is PadAction.MirrorFreeze,
+        is PadAction.MirrorViewportEdit,
+        is PadAction.MirrorTouchProjection,
+        is PadAction.FullScreenMouse,
+        is PadAction.FullScreenKeyboard,
+        -> { /* no further config needed */ }
     }
 }
 

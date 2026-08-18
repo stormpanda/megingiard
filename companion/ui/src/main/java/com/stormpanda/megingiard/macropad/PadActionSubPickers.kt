@@ -1,42 +1,25 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
-import com.stormpanda.megingiard.ui.AppDropdown
-import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import java.util.UUID
 
 private const val TAG = "PadActionSubPickers"
@@ -48,7 +31,6 @@ internal fun KeyboardKeyPicker(
 ) {
     var mod1 by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(0)) }
     var mod2 by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(1)) }
-    val colors = LocalAppColors.current
     val noneLabel = stringResource(R.string.macropad_modifier_none)
 
     fun modifierLabel(code: Int?): String =
@@ -66,85 +48,65 @@ internal fun KeyboardKeyPicker(
         onChange(PadAction.KeyboardKey(keycode, label, listOfNotNull(newMod1, newMod2)))
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // ── Base key ──────────────────────────────────────────────
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_key),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = current.keycode,
-                options = KEYBOARD_KEY_PRESETS.map { it.first },
-                optionText = { code -> KEYBOARD_KEY_PRESETS.firstOrNull { it.first == code }?.second ?: current.label },
-                onSelected = { code ->
-                    val label = KEYBOARD_KEY_PRESETS.firstOrNull { it.first == code }?.second ?: current.label
-                    emitChange(code, label, mod1, mod2)
-                },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodyMedium,
-                horizontalPadding = 12.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
-        }
+    val keyIdx = KEYBOARD_KEY_PRESETS.indexOfFirst { it.first == current.keycode }.coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_key),
+        description = stringResource(R.string.macropad_picker_label_key_desc),
+        selectedText = KEYBOARD_KEY_PRESETS[keyIdx].second,
+        icon = Icons.Rounded.Keyboard,
+        onPrevious = {
+            val nextIdx = (keyIdx - 1 + KEYBOARD_KEY_PRESETS.size) % KEYBOARD_KEY_PRESETS.size
+            val nextPreset = KEYBOARD_KEY_PRESETS[nextIdx]
+            emitChange(nextPreset.first, nextPreset.second, mod1, mod2)
+        },
+        onNext = {
+            val nextIdx = (keyIdx + 1) % KEYBOARD_KEY_PRESETS.size
+            val nextPreset = KEYBOARD_KEY_PRESETS[nextIdx]
+            emitChange(nextPreset.first, nextPreset.second, mod1, mod2)
+        },
+    )
 
-        // ── Modifiers Row ──────────────────────────────────────────
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Modifier 1
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    stringResource(R.string.macropad_picker_label_mod_1),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                AppDropdown(
-                    selected = mod1,
-                    options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 },
-                    optionText = { code -> modifierLabel(code) },
-                    onSelected = { code ->
-                        mod1 = code
-                        emitChange(current.keycode, current.label, code, mod2)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    horizontalPadding = 10.dp,
-                    verticalPadding = 10.dp,
-                    fillMaxWidth = true,
-                )
-            }
+    val mod1Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 }
+    val mod1Idx = mod1Options.indexOf(mod1).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_mod_1),
+        description = stringResource(R.string.macropad_picker_label_mod_desc),
+        selectedText = modifierLabel(mod1),
+        icon = Icons.Rounded.Keyboard,
+        onPrevious = {
+            val nextIdx = (mod1Idx - 1 + mod1Options.size) % mod1Options.size
+            val code = mod1Options[nextIdx]
+            mod1 = code
+            emitChange(current.keycode, current.label, code, mod2)
+        },
+        onNext = {
+            val nextIdx = (mod1Idx + 1) % mod1Options.size
+            val code = mod1Options[nextIdx]
+            mod1 = code
+            emitChange(current.keycode, current.label, code, mod2)
+        },
+    )
 
-            // Modifier 2
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    stringResource(R.string.macropad_picker_label_mod_2),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                AppDropdown(
-                    selected = mod2,
-                    options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 },
-                    optionText = { code -> modifierLabel(code) },
-                    onSelected = { code ->
-                        mod2 = code
-                        emitChange(current.keycode, current.label, mod1, code)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    horizontalPadding = 10.dp,
-                    verticalPadding = 10.dp,
-                    fillMaxWidth = true,
-                )
-            }
-        }
-    }
+    val mod2Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod1 }
+    val mod2Idx = mod2Options.indexOf(mod2).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_mod_2),
+        description = stringResource(R.string.macropad_picker_label_mod_desc),
+        selectedText = modifierLabel(mod2),
+        icon = Icons.Rounded.Keyboard,
+        onPrevious = {
+            val nextIdx = (mod2Idx - 1 + mod2Options.size) % mod2Options.size
+            val code = mod2Options[nextIdx]
+            mod2 = code
+            emitChange(current.keycode, current.label, mod1, code)
+        },
+        onNext = {
+            val nextIdx = (mod2Idx + 1) % mod2Options.size
+            val code = mod2Options[nextIdx]
+            mod2 = code
+            emitChange(current.keycode, current.label, mod1, code)
+        },
+    )
 }
 
 @Composable
@@ -152,13 +114,22 @@ internal fun MouseButtonPicker(
     current: PadAction.MouseButton,
     onChange: (PadAction) -> Unit,
 ) {
-    AppDropdown(
-        selected = current.button,
-        options = MouseButton.entries,
-        optionText = { btn -> btn.displayLabel() },
-        onSelected = { btn -> onChange(PadAction.MouseButton(btn)) },
-        modifier = Modifier.fillMaxWidth(),
-        fillMaxWidth = true,
+    val entries = MouseButton.entries
+    val currentIdx = entries.indexOf(current.button).coerceAtLeast(0)
+
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_action_mouse_button),
+        description = stringResource(R.string.macropad_picker_mouse_button_desc),
+        selectedText = current.button.displayLabel(),
+        icon = Icons.Rounded.Mouse,
+        onPrevious = {
+            val nextIdx = (currentIdx - 1 + entries.size) % entries.size
+            onChange(PadAction.MouseButton(entries[nextIdx]))
+        },
+        onNext = {
+            val nextIdx = (currentIdx + 1) % entries.size
+            onChange(PadAction.MouseButton(entries[nextIdx]))
+        },
     )
 }
 
@@ -170,7 +141,6 @@ internal fun GamepadButtonPicker(
     var extra1 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(0)) }
     var extra2 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(1)) }
     var extra3 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(2)) }
-    val colors = LocalAppColors.current
     val noneLabel = stringResource(R.string.macropad_modifier_none)
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
@@ -198,111 +168,92 @@ internal fun GamepadButtonPicker(
         onChange(PadAction.GamepadButton(primary.code, primary.displayShortLabel(swapFaceButtons), listOfNotNull(e1, e2, e3)))
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // ── Primary button ────────────────────────────────────────────
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.macropad_picker_label_button),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            AppDropdown(
-                selected = currentPreset,
-                options = GamepadKeycodes.PRESETS,
-                optionText = { preset -> preset.localizedDisplayLabel(swapFaceButtons) },
-                onSelected = { preset -> emitChange(preset, extra1, extra2, extra3) },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodyMedium,
-                horizontalPadding = 12.dp,
-                verticalPadding = 10.dp,
-                fillMaxWidth = true,
-            )
-        }
+    val primaryIdx = GamepadKeycodes.PRESETS.indexOf(currentPreset).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_button),
+        description = stringResource(R.string.macropad_picker_label_button_desc),
+        selectedText = currentPreset.localizedDisplayLabel(swapFaceButtons),
+        icon = Icons.Rounded.SportsEsports,
+        onPrevious = {
+            val nextIdx = (primaryIdx - 1 + GamepadKeycodes.PRESETS.size) % GamepadKeycodes.PRESETS.size
+            val preset = GamepadKeycodes.PRESETS[nextIdx]
+            emitChange(preset, extra1, extra2, extra3)
+        },
+        onNext = {
+            val nextIdx = (primaryIdx + 1) % GamepadKeycodes.PRESETS.size
+            val preset = GamepadKeycodes.PRESETS[nextIdx]
+            emitChange(preset, extra1, extra2, extra3)
+        },
+    )
 
-        // ── Extra combo buttons ───────────────────────────────────────
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            // Extra button 1
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    stringResource(R.string.macropad_picker_label_extra_1),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                AppDropdown(
-                    selected = extra1,
-                    options =
-                        listOf<Int?>(null) +
-                            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra2, extra3) },
-                    optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
-                    onSelected = { code ->
-                        extra1 = code
-                        emitChange(currentPreset, code, extra2, extra3)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    horizontalPadding = 8.dp,
-                    verticalPadding = 10.dp,
-                    fillMaxWidth = true,
-                )
-            }
+    val extra1Options =
+        listOf<Int?>(null) +
+            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra2, extra3) }
+    val extra1Idx = extra1Options.indexOf(extra1).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_extra_1),
+        description = stringResource(R.string.macropad_picker_label_extra_desc),
+        selectedText = presetShortLabel(extra1) ?: presetMenuLabel(extra1),
+        icon = Icons.Rounded.SportsEsports,
+        onPrevious = {
+            val nextIdx = (extra1Idx - 1 + extra1Options.size) % extra1Options.size
+            val code = extra1Options[nextIdx]
+            extra1 = code
+            emitChange(currentPreset, code, extra2, extra3)
+        },
+        onNext = {
+            val nextIdx = (extra1Idx + 1) % extra1Options.size
+            val code = extra1Options[nextIdx]
+            extra1 = code
+            emitChange(currentPreset, code, extra2, extra3)
+        },
+    )
 
-            // Extra button 2
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    stringResource(R.string.macropad_picker_label_extra_2),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                AppDropdown(
-                    selected = extra2,
-                    options =
-                        listOf<Int?>(null) +
-                            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra3) },
-                    optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
-                    onSelected = { code ->
-                        extra2 = code
-                        emitChange(currentPreset, extra1, code, extra3)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    horizontalPadding = 8.dp,
-                    verticalPadding = 10.dp,
-                    fillMaxWidth = true,
-                )
-            }
+    val extra2Options =
+        listOf<Int?>(null) +
+            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra3) }
+    val extra2Idx = extra2Options.indexOf(extra2).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_extra_2),
+        description = stringResource(R.string.macropad_picker_label_extra_desc),
+        selectedText = presetShortLabel(extra2) ?: presetMenuLabel(extra2),
+        icon = Icons.Rounded.SportsEsports,
+        onPrevious = {
+            val nextIdx = (extra2Idx - 1 + extra2Options.size) % extra2Options.size
+            val code = extra2Options[nextIdx]
+            extra2 = code
+            emitChange(currentPreset, extra1, code, extra3)
+        },
+        onNext = {
+            val nextIdx = (extra2Idx + 1) % extra2Options.size
+            val code = extra2Options[nextIdx]
+            extra2 = code
+            emitChange(currentPreset, extra1, code, extra3)
+        },
+    )
 
-            // Extra button 3
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    stringResource(R.string.macropad_picker_label_extra_3),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-                AppDropdown(
-                    selected = extra3,
-                    options =
-                        listOf<Int?>(null) +
-                            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra2) },
-                    optionText = { code -> presetShortLabel(code) ?: presetMenuLabel(code) },
-                    onSelected = { code ->
-                        extra3 = code
-                        emitChange(currentPreset, extra1, extra2, code)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    horizontalPadding = 8.dp,
-                    verticalPadding = 10.dp,
-                    fillMaxWidth = true,
-                )
-            }
-        }
-    }
+    val extra3Options =
+        listOf<Int?>(null) +
+            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra2) }
+    val extra3Idx = extra3Options.indexOf(extra3).coerceAtLeast(0)
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_picker_label_extra_3),
+        description = stringResource(R.string.macropad_picker_label_extra_desc),
+        selectedText = presetShortLabel(extra3) ?: presetMenuLabel(extra3),
+        icon = Icons.Rounded.SportsEsports,
+        onPrevious = {
+            val nextIdx = (extra3Idx - 1 + extra3Options.size) % extra3Options.size
+            val code = extra3Options[nextIdx]
+            extra3 = code
+            emitChange(currentPreset, extra1, extra2, code)
+        },
+        onNext = {
+            val nextIdx = (extra3Idx + 1) % extra3Options.size
+            val code = extra3Options[nextIdx]
+            extra3 = code
+            emitChange(currentPreset, extra1, extra2, code)
+        },
+    )
 }
 
 @Composable
@@ -313,93 +264,63 @@ internal fun MacroPicker(
     onChange: (PadAction) -> Unit,
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
-    val colors = LocalAppColors.current
     val macros = profile?.macros ?: emptyList()
-    val folderEmptyLabel = stringResource(R.string.macropad_picker_folder_empty)
     val defaultName = stringResource(R.string.macropad_macro_default_name)
 
     val selectedMacro =
         macros.firstOrNull { it.id == current.macroId }
             ?: macros.firstOrNull()
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AppDropdown(
-                selected = selectedMacro,
-                options = macros,
-                optionText = { macro -> macro?.name ?: folderEmptyLabel },
-                onSelected = { macro -> if (macro != null) onChange(PadAction.Macro(macro.id)) },
-                modifier = Modifier.weight(1f),
-                enabled = macros.isNotEmpty(),
-                fillMaxWidth = true,
-            )
-            if (onEditMacro != null && selectedMacro != null) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, colors.subduedBorder, RoundedCornerShape(8.dp))
-                            .clickable { onEditMacro(selectedMacro) }
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Rounded.Edit,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.settings_macropad_edit),
-                        color = accentColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+    val macroIdx = macros.indexOf(selectedMacro).coerceAtLeast(0)
+
+    GamepadChoiceCard(
+        title = stringResource(R.string.macropad_action_macro),
+        description = stringResource(R.string.macropad_picker_macro_desc),
+        selectedText = selectedMacro?.name ?: stringResource(R.string.macropad_picker_folder_empty),
+        icon = Icons.Rounded.SmartButton,
+        enabled = macros.isNotEmpty(),
+        onPrevious = {
+            if (macros.isNotEmpty()) {
+                val nextIdx = (macroIdx - 1 + macros.size) % macros.size
+                onChange(PadAction.Macro(macros[nextIdx].id))
             }
-            if (onEditMacro != null) {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, colors.subduedBorder, RoundedCornerShape(8.dp))
-                            .clickable {
-                                val newMacroId = UUID.randomUUID().toString()
-                                val newMacro =
-                                    Macro(
-                                        id = newMacroId,
-                                        name = defaultName,
-                                        steps = emptyList(),
-                                    )
-                                MacroPadState.addMacro(newMacro)
-                                onChange(PadAction.Macro(newMacroId))
-                                onEditMacro(newMacro)
-                            }.padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Rounded.Add,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        stringResource(R.string.settings_macropad_new),
-                        color = accentColor,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+        },
+        onNext = {
+            if (macros.isNotEmpty()) {
+                val nextIdx = (macroIdx + 1) % macros.size
+                onChange(PadAction.Macro(macros[nextIdx].id))
             }
-        }
+        },
+    )
+
+    if (onEditMacro != null && selectedMacro != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.settings_macropad_edit),
+            description = stringResource(R.string.macropad_picker_macro_edit_desc, selectedMacro.name),
+            actionText = stringResource(R.string.gamepad_action_edit),
+            icon = Icons.Rounded.Edit,
+            onClick = { onEditMacro(selectedMacro) },
+        )
+    }
+
+    if (onEditMacro != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.settings_macropad_new),
+            description = stringResource(R.string.macropad_picker_macro_new_desc),
+            actionText = stringResource(R.string.gamepad_action_create),
+            icon = Icons.Rounded.Add,
+            onClick = {
+                val newMacroId = UUID.randomUUID().toString()
+                val newMacro =
+                    Macro(
+                        id = newMacroId,
+                        name = defaultName,
+                        steps = emptyList(),
+                    )
+                MacroPadState.addMacro(newMacro)
+                onChange(PadAction.Macro(newMacroId))
+                onEditMacro(newMacro)
+            },
+        )
     }
 }

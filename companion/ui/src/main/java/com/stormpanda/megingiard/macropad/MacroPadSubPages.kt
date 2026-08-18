@@ -71,7 +71,8 @@ internal sealed interface MacroPadSubPage {
     data class AppPicker(
         val target: AppPickerTarget,
     ) : MacroPadSubPage {
-        override val parentSection = EditorSection.PROFILES
+        override val parentSection: EditorSection
+            get() = if (target is AppPickerTarget.EditButton) EditorSection.BUTTONS else EditorSection.PROFILES
     }
 
     data object ReorderProfiles : MacroPadSubPage {
