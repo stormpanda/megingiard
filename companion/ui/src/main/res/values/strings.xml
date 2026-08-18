@@ -916,6 +916,15 @@ Open Settings to create a layout.</string>
     <string name="steamgriddb_token_missing_title">API Token Required</string>
     <string name="steamgriddb_token_missing_message">SteamGridDB scraping requires an API token. Please create an API key in your SteamGridDB account preferences and add it in Megingiard\'s Global Settings.</string>
     <string name="steamgriddb_token_missing_go_settings">Go to Settings</string>
+    <string name="steamgriddb_scrape_search_title">Search Game</string>
+    <string name="steamgriddb_scrape_search_desc">Search SteamGridDB for posters, banners, and logos</string>
+    <string name="steamgriddb_scrape_type_title">Asset Category</string>
+    <string name="steamgriddb_scrape_type_desc">Switch between grid posters, hero banners, logos, or icons</string>
+    <string name="steamgriddb_scrape_game_title">Matched Game</string>
+    <string name="steamgriddb_scrape_game_desc">Cycle through matching game titles</string>
+    <string name="steamgriddb_scrape_apply_title">Apply Artwork</string>
+    <string name="steamgriddb_scrape_apply_desc">Download and set as layout background</string>
+    <string name="steamgriddb_scrape_images_section">Available Artwork</string>
     <string name="steamgriddb_scrape_search_placeholder">e.g. Half-Life 2</string>
     <string name="steamgriddb_scrape_type_grid">Grid</string>
     <string name="steamgriddb_scrape_type_hero">Hero</string>
