@@ -1130,7 +1130,6 @@ fun MacroPadEditor(
                                                     stringResource(R.string.macropad_editor_section_buttons),
                                                     stringResource(R.string.macropad_icon_picker_title),
                                                 ),
-                                            scrollable = false,
                                         ) {
                                             ChooseIconSubPageContent(
                                                 selectedIcon = parentDraftButton?.iconName,

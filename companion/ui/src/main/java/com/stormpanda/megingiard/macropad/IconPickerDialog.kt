@@ -1,11 +1,13 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.relocation.BringIntoViewResponder
+import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FormatPaint
@@ -20,13 +24,16 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,10 +58,14 @@ private val IP_PREVIEW_ICON_SIZE = 24.dp
 private val IP_ICON_NAME_SIZE = 8.sp
 private const val IP_GRID_COLUMNS = 5
 private val IP_CELL_CORNER = 8.dp
+private val IP_GRID_SPACING = 4.dp
+private val IP_GRID_VERTICAL_PADDING = 4.dp
+private val IP_GRID_4_ROWS_HEIGHT = (IP_ICON_CELL_SIZE * 4) + (IP_GRID_SPACING * 3) + (IP_GRID_VERTICAL_PADDING * 2)
 
 /**
  * Full-screen icon picker that lets the user choose a Material Symbol icon by name.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChooseIconSubPageContent(
     selectedIcon: String?,
@@ -67,6 +78,20 @@ internal fun ChooseIconSubPageContent(
     var query by remember { mutableStateOf("") }
     var pendingIcon by remember(selectedIcon) { mutableStateOf(selectedIcon) }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
+
+    var gridHeightPx by remember { mutableFloatStateOf(0f) }
+    var gridWidthPx by remember { mutableFloatStateOf(0f) }
+
+    val gridResponder =
+        remember(gridWidthPx, gridHeightPx) {
+            object : BringIntoViewResponder {
+                override fun calculateRectForParent(localRect: Rect): Rect = Rect(0f, 0f, gridWidthPx, gridHeightPx)
+
+                override suspend fun bringChildIntoView(localRect: () -> Rect?) {
+                    // Internal cell scrolling is handled by LazyVerticalGrid.
+                }
+            }
+        }
 
     // ── Search bar ─────────────────────────────────────────────────────────
     GamepadTextFieldCard(
@@ -135,55 +160,66 @@ internal fun ChooseIconSubPageContent(
             )
         }
     } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(IP_GRID_COLUMNS),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth().height(320.dp),
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(IP_GRID_4_ROWS_HEIGHT)
+                    .onSizeChanged { size ->
+                        gridWidthPx = size.width.toFloat()
+                        gridHeightPx = size.height.toFloat()
+                    }.bringIntoViewResponder(gridResponder),
         ) {
-            items(results, key = { it }) { name ->
-                val isSelected = name == pendingIcon
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(IP_GRID_COLUMNS),
+                contentPadding = PaddingValues(vertical = IP_GRID_VERTICAL_PADDING),
+                horizontalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
+                verticalArrangement = Arrangement.spacedBy(IP_GRID_SPACING),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                items(results, key = { it }) { name ->
+                    val isSelected = name == pendingIcon
 
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier =
-                        Modifier
-                            .size(IP_ICON_CELL_SIZE)
-                            .clip(RoundedCornerShape(IP_CELL_CORNER))
-                            .background(
-                                if (isSelected) accentColor.copy(alpha = 0.25f) else colors.surface,
-                            ).border(
-                                width = if (isSelected) 2.dp else 1.dp,
-                                color = if (isSelected) accentColor else colors.subduedBorder,
-                                shape = RoundedCornerShape(IP_CELL_CORNER),
-                            ).primaryOverlayFocusable(
-                                onClick = {
-                                    pendingIcon = name
-                                    onSelect(name)
-                                },
-                                shape = RoundedCornerShape(IP_CELL_CORNER),
-                            ),
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier =
+                            Modifier
+                                .size(IP_ICON_CELL_SIZE)
+                                .clip(RoundedCornerShape(IP_CELL_CORNER))
+                                .background(
+                                    if (isSelected) accentColor.copy(alpha = 0.25f) else colors.surface,
+                                ).border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) accentColor else colors.subduedBorder,
+                                    shape = RoundedCornerShape(IP_CELL_CORNER),
+                                ).primaryOverlayFocusable(
+                                    onClick = {
+                                        pendingIcon = name
+                                        onSelect(name)
+                                    },
+                                    shape = RoundedCornerShape(IP_CELL_CORNER),
+                                ),
                     ) {
-                        MaterialSymbol(
-                            name = name,
-                            size = IP_ICON_SIZE,
-                            tint = if (isSelected) accentColor else colors.onSurface,
-                            filled = filled,
-                        )
-                        Text(
-                            text = name,
-                            color = if (isSelected) accentColor else colors.onSurfaceSecondary,
-                            fontSize = IP_ICON_NAME_SIZE,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 2.dp),
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            MaterialSymbol(
+                                name = name,
+                                size = IP_ICON_SIZE,
+                                tint = if (isSelected) accentColor else colors.onSurface,
+                                filled = filled,
+                            )
+                            Text(
+                                text = name,
+                                color = if (isSelected) accentColor else colors.onSurfaceSecondary,
+                                fontSize = IP_ICON_NAME_SIZE,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 2.dp),
+                            )
+                        }
                     }
                 }
             }
