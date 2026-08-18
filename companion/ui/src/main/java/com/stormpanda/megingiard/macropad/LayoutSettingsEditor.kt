@@ -33,14 +33,23 @@ internal fun LayoutAppearanceSubPageContent(
     layout: PadLayout,
     existingNames: List<String>,
     accentColor: Color,
-    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onSave: (Color) -> Unit) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onApplyColor: (Color) -> PadLayout) -> Unit,
     onSave: (name: String, textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption, invisibleButtons: Boolean) -> Unit,
 ) {
-    var nameText by remember(layout) { mutableStateOf(layout.name) }
-    var textColorOption by remember(layout) { mutableStateOf(layout.buttonTextColor) }
-    var borderColorOption by remember(layout) { mutableStateOf(layout.buttonBorderColor) }
-    var bgColorOption by remember(layout) { mutableStateOf(layout.buttonBgColor) }
-    var invisibleButtons by remember(layout) { mutableStateOf(layout.invisibleButtons) }
+    var nameText by remember(layout.id, layout.name) { mutableStateOf(layout.name) }
+    var textColorOption by remember(layout.id, layout.buttonTextColor) { mutableStateOf(layout.buttonTextColor) }
+    var borderColorOption by remember(layout.id, layout.buttonBorderColor) { mutableStateOf(layout.buttonBorderColor) }
+    var bgColorOption by remember(layout.id, layout.buttonBgColor) { mutableStateOf(layout.buttonBgColor) }
+    var invisibleButtons by remember(layout.id, layout.invisibleButtons) { mutableStateOf(layout.invisibleButtons) }
+
+    fun buildWorkingLayout(): PadLayout =
+        layout.copy(
+            name = nameText,
+            buttonTextColor = textColorOption,
+            buttonBorderColor = borderColorOption,
+            buttonBgColor = bgColorOption,
+            invisibleButtons = invisibleButtons,
+        )
 
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
@@ -102,12 +111,13 @@ internal fun LayoutAppearanceSubPageContent(
         onOptionSelected = { textColorOption = it },
         trailingContent = previewButton,
         onOpenColorWheel = {
+            val draft = buildWorkingLayout()
             onOpenColorWheel(
                 selectTextColorTitle,
                 textBreadcrumbs,
                 currentResolvedText,
             ) { selectedColor ->
-                textColorOption = ColorOption.Custom(selectedColor.toArgb())
+                draft.copy(buttonTextColor = ColorOption.Custom(selectedColor.toArgb()))
             }
         },
     )
@@ -130,12 +140,13 @@ internal fun LayoutAppearanceSubPageContent(
         onOptionSelected = { borderColorOption = it },
         trailingContent = previewButton,
         onOpenColorWheel = {
+            val draft = buildWorkingLayout()
             onOpenColorWheel(
                 selectBorderColorTitle,
                 borderBreadcrumbs,
                 currentResolvedBorder,
             ) { selectedColor ->
-                borderColorOption = ColorOption.Custom(selectedColor.toArgb())
+                draft.copy(buttonBorderColor = ColorOption.Custom(selectedColor.toArgb()))
             }
         },
     )
@@ -158,12 +169,13 @@ internal fun LayoutAppearanceSubPageContent(
         onOptionSelected = { bgColorOption = it },
         trailingContent = previewButton,
         onOpenColorWheel = {
+            val draft = buildWorkingLayout()
             onOpenColorWheel(
                 selectBgColorTitle,
                 bgBreadcrumbs,
                 currentResolvedBg,
             ) { selectedColor ->
-                bgColorOption = ColorOption.Custom(selectedColor.toArgb())
+                draft.copy(buttonBgColor = ColorOption.Custom(selectedColor.toArgb()))
             }
         },
     )

@@ -137,7 +137,7 @@ fun MacroPadEditor(
 
     // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
     var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
-    var pendingButtonIcon by remember { mutableStateOf<String?>(null) }
+    var macroTimelineFocusStepIndex by remember { mutableStateOf<Int?>(null) }
 
     BackHandler(enabled = true) {
         if (subPageStack.isNotEmpty()) {
@@ -402,7 +402,6 @@ fun MacroPadEditor(
                                                 isLocked = isCanvasLocked,
                                                 onToggleLock = { isCanvasLocked = !isCanvasLocked },
                                                 onAddButton = {
-                                                    pendingButtonIcon = null
                                                     subPageStack = subPageStack + MacroPadSubPage.EditButton(null)
                                                 },
                                             )
@@ -414,11 +413,9 @@ fun MacroPadEditor(
                                                 layout = activeLayout,
                                                 accentColor = colors.accent,
                                                 onAddButton = {
-                                                    pendingButtonIcon = null
                                                     subPageStack = subPageStack + MacroPadSubPage.EditButton(null)
                                                 },
                                                 onEditButton = { btn ->
-                                                    pendingButtonIcon = btn.iconName
                                                     subPageStack = subPageStack + MacroPadSubPage.EditButton(btn)
                                                 },
                                                 onDuplicateButton = { btn ->
@@ -616,8 +613,9 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.LayoutAppearance -> {
-                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
-                                        if (lay != null) {
+                                        val baseLayout = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        val effectiveLayout = currentSubPage.draftLayout ?: baseLayout
+                                        if (effectiveLayout != null) {
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
@@ -626,10 +624,10 @@ fun MacroPadEditor(
                                                     ),
                                             ) {
                                                 LayoutAppearanceSubPageContent(
-                                                    layout = lay,
-                                                    existingNames = profile.layouts.filter { it.id != lay.id }.map { it.name },
+                                                    layout = effectiveLayout,
+                                                    existingNames = profile.layouts.filter { it.id != effectiveLayout.id }.map { it.name },
                                                     accentColor = colors.accent,
-                                                    onOpenColorWheel = { title, breadcrumbs, initialColor, onSave ->
+                                                    onOpenColorWheel = { title, breadcrumbs, initialColor, onApplyColor ->
                                                         subPageStack =
                                                             subPageStack +
                                                             MacroPadSubPage.ColorWheel(
@@ -638,14 +636,23 @@ fun MacroPadEditor(
                                                                 initialColor = initialColor,
                                                                 section = EditorSection.LAYOUTS,
                                                                 onSave = { saved ->
-                                                                    onSave(saved)
-                                                                    subPageStack = subPageStack.dropLast(1)
+                                                                    val updatedLayout = onApplyColor(saved)
+                                                                    subPageStack =
+                                                                        subPageStack.dropLast(1).map { subPage ->
+                                                                            if (subPage is MacroPadSubPage.LayoutAppearance &&
+                                                                                subPage.layoutId == effectiveLayout.id
+                                                                            ) {
+                                                                                subPage.copy(draftLayout = updatedLayout)
+                                                                            } else {
+                                                                                subPage
+                                                                            }
+                                                                        }
                                                                 },
                                                             )
                                                     },
                                                     onSave = { name, textCol, borderCol, bgCol, invisibleBtns ->
                                                         MacroPadState.updateLayout(
-                                                            lay.copy(
+                                                            effectiveLayout.copy(
                                                                 name = name,
                                                                 buttonTextColor = textCol,
                                                                 buttonBorderColor = borderCol,
@@ -758,14 +765,13 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.EditButton -> {
+                                        val effectiveButton = currentSubPage.draftButton ?: currentSubPage.button
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
                                                     stringResource(R.string.macropad_editor_section_buttons),
                                                     stringResource(
-                                                        if (currentSubPage.button !=
-                                                            null
-                                                        ) {
+                                                        if (effectiveButton != null) {
                                                             R.string.macropad_editor_section_button_settings
                                                         } else {
                                                             R.string.macropad_editor_add_button
@@ -774,13 +780,18 @@ fun MacroPadEditor(
                                                 ),
                                         ) {
                                             EditButtonSubPageContent(
-                                                button = currentSubPage.button,
+                                                button = effectiveButton,
                                                 accentColor = colors.accent,
-                                                selectedIcon = pendingButtonIcon,
-                                                onOpenIconPicker = {
-                                                    subPageStack = subPageStack + MacroPadSubPage.ChooseIcon
+                                                onOpenIconPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseIcon
                                                 },
-                                                onOpenColorWheel = { title, breadcrumbs, initialColor, onSave ->
+                                                onOpenColorWheel = { title, breadcrumbs, initialColor, onApplyColor ->
                                                     subPageStack =
                                                         subPageStack +
                                                         MacroPadSubPage.ColorWheel(
@@ -789,8 +800,15 @@ fun MacroPadEditor(
                                                             initialColor = initialColor,
                                                             section = EditorSection.BUTTONS,
                                                             onSave = { saved ->
-                                                                onSave(saved)
-                                                                subPageStack = subPageStack.dropLast(1)
+                                                                val updatedBtn = onApplyColor(saved)
+                                                                subPageStack =
+                                                                    subPageStack.dropLast(1).map { subPage ->
+                                                                        if (subPage is MacroPadSubPage.EditButton) {
+                                                                            subPage.copy(draftButton = updatedBtn)
+                                                                        } else {
+                                                                            subPage
+                                                                        }
+                                                                    }
                                                             },
                                                         )
                                                 },
@@ -816,6 +834,10 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseIcon -> {
+                                        val parentDraftButton =
+                                            subPageStack.filterIsInstance<MacroPadSubPage.EditButton>().lastOrNull()?.let {
+                                                it.draftButton ?: it.button
+                                            }
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -825,13 +847,20 @@ fun MacroPadEditor(
                                             scrollable = false,
                                         ) {
                                             ChooseIconSubPageContent(
-                                                selectedIcon = pendingButtonIcon,
+                                                selectedIcon = parentDraftButton?.iconName,
                                                 accentColor = colors.accent,
                                                 filled = true,
                                                 onFilledChange = {},
                                                 onSelect = { icon ->
-                                                    pendingButtonIcon = icon
-                                                    subPageStack = subPageStack.dropLast(1)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                val cur = subPage.draftButton ?: subPage.button
+                                                                subPage.copy(draftButton = cur?.copy(iconName = icon))
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
                                                 },
                                             )
                                         }

@@ -127,8 +127,8 @@ internal fun EditButtonSubPageContent(
     enableMouse: Boolean = true,
     initialAction: PadAction? = null,
     selectedIcon: String? = null,
-    onOpenIconPicker: () -> Unit,
-    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onSave: (Color) -> Unit) -> Unit,
+    onOpenIconPicker: (currentDraft: PadButton) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onApplyColor: (Color) -> PadButton) -> Unit,
     onEditMacro: ((Macro) -> Unit)? = null,
     onSave: (PadButton) -> Unit,
 ) {
@@ -248,6 +248,40 @@ internal fun EditButtonSubPageContent(
         }
     }
 
+    fun buildCurrentButton(): PadButton =
+        button?.copy(
+            label = label,
+            iconName = iconName,
+            iconFilled = iconFilled,
+            buttonShape = buttonShape,
+            buttonSize = buttonSize,
+            action = action,
+            hapticStrength = hapticStrength,
+            hapticCustomDurationMs = hapticCustomDurationMs,
+            hapticCustomAmplitude = hapticCustomAmplitude,
+            buttonTextColor = buttonTextColor,
+            buttonBorderColor = buttonBorderColor,
+            buttonBgColor = buttonBgColor,
+            invisible = invisible,
+        ) ?: PadButton(
+            id = UUID.randomUUID().toString(),
+            label = label,
+            iconName = iconName,
+            iconFilled = iconFilled,
+            posX = 0.5f,
+            posY = 0.5f,
+            buttonShape = buttonShape,
+            buttonSize = buttonSize,
+            action = action,
+            hapticStrength = hapticStrength,
+            hapticCustomDurationMs = hapticCustomDurationMs,
+            hapticCustomAmplitude = hapticCustomAmplitude,
+            buttonTextColor = buttonTextColor,
+            buttonBorderColor = buttonBorderColor,
+            buttonBgColor = buttonBgColor,
+            invisible = invisible,
+        )
+
     val isConfirmEnabled =
         when {
             action is PadAction.ScrollWheel || action is PadAction.TrackpointMove -> true
@@ -344,7 +378,7 @@ internal fun EditButtonSubPageContent(
                     )
                 }
             },
-            onClick = onOpenIconPicker,
+            onClick = { onOpenIconPicker(buildCurrentButton()) },
         )
     }
 
@@ -509,7 +543,7 @@ internal fun EditButtonSubPageContent(
         }
 
         GamepadSectionHeader(
-            text = stringResource(R.string.button_settings_colors_section_title),
+            text = stringResource(R.string.layout_settings_colors_section_title),
             color = accentColor,
         )
 
@@ -561,12 +595,13 @@ internal fun EditButtonSubPageContent(
             onOptionSelected = { buttonTextColor = it },
             trailingContent = buttonPreviewContent,
             onOpenColorWheel = {
+                val draft = buildCurrentButton()
                 onOpenColorWheel(
                     selectTextColorTitle,
                     textBreadcrumbs,
                     currentText,
                 ) { selected ->
-                    buttonTextColor = ColorOption.Custom(selected.toArgb())
+                    draft.copy(buttonTextColor = ColorOption.Custom(selected.toArgb()))
                 }
             },
         )
@@ -589,12 +624,13 @@ internal fun EditButtonSubPageContent(
             onOptionSelected = { buttonBorderColor = it },
             trailingContent = buttonPreviewContent,
             onOpenColorWheel = {
+                val draft = buildCurrentButton()
                 onOpenColorWheel(
                     selectBorderColorTitle,
                     borderBreadcrumbs,
                     currentBorder,
                 ) { selected ->
-                    buttonBorderColor = ColorOption.Custom(selected.toArgb())
+                    draft.copy(buttonBorderColor = ColorOption.Custom(selected.toArgb()))
                 }
             },
         )
@@ -617,12 +653,13 @@ internal fun EditButtonSubPageContent(
             onOptionSelected = { buttonBgColor = it },
             trailingContent = buttonPreviewContent,
             onOpenColorWheel = {
+                val draft = buildCurrentButton()
                 onOpenColorWheel(
                     selectBgColorTitle,
                     bgBreadcrumbs,
                     currentBg,
                 ) { selected ->
-                    buttonBgColor = ColorOption.Custom(selected.toArgb())
+                    draft.copy(buttonBgColor = ColorOption.Custom(selected.toArgb()))
                 }
             },
         )
@@ -648,39 +685,7 @@ internal fun EditButtonSubPageContent(
         enabled = isConfirmEnabled,
         onClick = {
             if (isConfirmEnabled) {
-                val result =
-                    button?.copy(
-                        label = label,
-                        iconName = iconName,
-                        iconFilled = iconFilled,
-                        buttonShape = buttonShape,
-                        buttonSize = buttonSize,
-                        action = action,
-                        hapticStrength = hapticStrength,
-                        hapticCustomDurationMs = hapticCustomDurationMs,
-                        hapticCustomAmplitude = hapticCustomAmplitude,
-                        buttonTextColor = buttonTextColor,
-                        buttonBorderColor = buttonBorderColor,
-                        buttonBgColor = buttonBgColor,
-                        invisible = invisible,
-                    ) ?: PadButton(
-                        id = UUID.randomUUID().toString(),
-                        label = label,
-                        iconName = iconName,
-                        iconFilled = iconFilled,
-                        posX = 0.5f,
-                        posY = 0.5f,
-                        buttonShape = buttonShape,
-                        buttonSize = buttonSize,
-                        action = action,
-                        hapticStrength = hapticStrength,
-                        hapticCustomDurationMs = hapticCustomDurationMs,
-                        hapticCustomAmplitude = hapticCustomAmplitude,
-                        buttonTextColor = buttonTextColor,
-                        buttonBorderColor = buttonBorderColor,
-                        buttonBgColor = buttonBgColor,
-                        invisible = invisible,
-                    )
+                val result = buildCurrentButton()
                 AppLog.d(TAG, "Confirm button edit: id=${result.id} label=${result.label} action=${result.action}")
                 onSave(result)
             }
