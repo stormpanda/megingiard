@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -67,6 +68,8 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -128,12 +131,17 @@ private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 private const val BSE_CROP_MIN_SCALE = 1.0f
 private const val BSE_CROP_MAX_SCALE = 5.0f
 
+private const val BSE_PULSE_DURATION_MS = 1200
+private const val BSE_PULSE_SURFACE_ALPHA = 0.85f
+private const val BSE_PULSE_ACCENT_ALPHA = 0.45f
+
 @Composable
 internal fun LayoutBackgroundSubPageContent(
     layout: PadLayout,
     profileName: String,
     accentColor: Color,
     onOpenScrape: () -> Unit,
+    onOpenCrop: (scale: Float, offsetX: Float, offsetY: Float) -> Unit,
     onConfirm: (
         backgroundImagePath: String?,
         useAsMask: Boolean,
@@ -157,7 +165,6 @@ internal fun LayoutBackgroundSubPageContent(
     var bgImageDim by remember(layout) { mutableFloatStateOf(layout.backgroundImageDim) }
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-    var showPreviewModal by remember { mutableStateOf(false) }
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
@@ -352,7 +359,7 @@ internal fun LayoutBackgroundSubPageContent(
             description = stringResource(R.string.macropad_editor_appearance_desc),
             actionText = stringResource(R.string.gamepad_action_crop),
             icon = Icons.Rounded.Crop,
-            onClick = { showPreviewModal = true },
+            onClick = { onOpenCrop(bgScale, bgOffsetX, bgOffsetY) },
         )
 
         GamepadStepperCard(
@@ -408,23 +415,6 @@ internal fun LayoutBackgroundSubPageContent(
         },
     )
 
-    if (showPreviewModal && previewBitmap != null) {
-        ImageCropDialog(
-            bitmap = previewBitmap!!,
-            aspectRatio = BSE_BOTTOM_SCREEN_ASPECT_RATIO,
-            initialScale = bgScale,
-            initialOffsetX = bgOffsetX,
-            initialOffsetY = bgOffsetY,
-            onConfirmCrop = { scale, ox, oy ->
-                bgScale = scale
-                bgOffsetX = ox
-                bgOffsetY = oy
-                showPreviewModal = false
-            },
-            onDismiss = { showPreviewModal = false },
-        )
-    }
-
     if (showApiTokenMissingDialog) {
         GamepadConfirmDialog(
             title = stringResource(R.string.steamgriddb_token_missing_title),
@@ -462,35 +452,43 @@ private fun getMaxOffsets(
 }
 
 @Composable
-private fun ImageCropDialog(
-    bitmap: ImageBitmap,
-    aspectRatio: Float,
+internal fun BackgroundCropSubPageContent(
+    layout: PadLayout,
     initialScale: Float,
     initialOffsetX: Float,
     initialOffsetY: Float,
+    accentColor: Color,
     onConfirmCrop: (scale: Float, offsetX: Float, offsetY: Float) -> Unit,
-    onDismiss: () -> Unit,
 ) {
+    val context = LocalContext.current
     val colors = LocalAppColors.current
 
-    var scale by remember { mutableFloatStateOf(initialScale) }
+    var cropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var scale by remember(initialScale) { mutableFloatStateOf(initialScale) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var offsetXState by remember { mutableFloatStateOf(0f) }
     var offsetYState by remember { mutableFloatStateOf(0f) }
     var isInitialized by remember { mutableStateOf(false) }
-    var hasInteracted by remember { mutableStateOf(false) }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pinchIconTransition")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.8f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = 1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "pinchIconAlpha",
-    )
+    LaunchedEffect(layout.backgroundImagePath, layout.backgroundImageVersion) {
+        withContext(Dispatchers.IO) {
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
+            val path = layout.backgroundImagePath
+            val bitmap =
+                if (path != null) {
+                    if (path.startsWith("/")) {
+                        BitmapUtils.decodeScaledBitmap(File(path), targetW, targetH)
+                    } else {
+                        MacroPadMediaRepository.loadScaledBitmap(context, path)
+                    }
+                } else {
+                    null
+                }
+            withContext(Dispatchers.Main) {
+                cropBitmap = bitmap?.asImageBitmap()
+            }
+        }
+    }
 
     LaunchedEffect(containerSize) {
         if (containerSize.width > 0 && containerSize.height > 0 && !isInitialized) {
@@ -500,169 +498,194 @@ private fun ImageCropDialog(
         }
     }
 
-    AppModalDialog(
-        onDismiss = onDismiss,
-        widthFraction = BSE_PREVIEW_MODAL_WIDTH_FRACTION,
-        cornerRadius = BSE_PREVIEW_MODAL_CORNER_RADIUS,
-        contentPadding = BSE_SPACING_16,
-        scrimAlpha = BSE_PREVIEW_MODAL_BG_ALPHA,
+    // Top Section: Preview on Left (55%), Hints on Right (45%)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(BSE_SPACING_16),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = stringResource(R.string.macropad_editor_cancel),
-                    color = colors.onSurfaceSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            Text(
-                text = stringResource(R.string.layout_settings_crop_image_title),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
-
-            TextButton(
-                onClick = {
-                    val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
-                    val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
-                    onConfirmCrop(scale, finalOffsetX, finalOffsetY)
-                },
-            ) {
-                Text(
-                    text = stringResource(R.string.macropad_editor_done),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(BSE_SPACING_16))
-
         Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(aspectRatio)
-                    .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                    .clipToBounds()
-                    .background(Color.Black)
-                    .onSizeChanged { containerSize = it }
-                    .pointerInput(bitmap, isInitialized) {
-                        if (!isInitialized) return@pointerInput
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            hasInteracted = true
-                            val imageSize = IntSize(bitmap.width, bitmap.height)
-                            val newScale = (scale * zoom).coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
-                            scale = newScale
-
-                            val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
-                            offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
-                            offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
-                        }
-                    },
-            contentAlignment = Alignment.Center,
+            modifier = Modifier.weight(0.55f),
         ) {
-            if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
-                val imageSize = IntSize(bitmap.width, bitmap.height)
-                val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, scale)
-                val clampedX = offsetXState.coerceIn(-maxTx, maxTx)
-                val clampedY = offsetYState.coerceIn(-maxTy, maxTy)
-
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val cw = size.width
-                    val ch = size.height
-                    val iw = bitmap.width.toFloat()
-                    val ih = bitmap.height.toFloat()
-                    if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
-                        val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
-                        val ws = iw * scaleBase
-                        val hs = ih * scaleBase
-
-                        drawImage(
-                            image = bitmap,
-                            dstOffset =
-                                IntOffset(
-                                    ((cw - ws * scale) / 2f + clampedX).toInt(),
-                                    ((ch - hs * scale) / 2f + clampedY).toInt(),
-                                ),
-                            dstSize =
-                                IntSize(
-                                    (ws * scale).toInt(),
-                                    (hs * scale).toInt(),
-                                ),
-                        )
-                    }
-                }
-            }
-
-            if (!hasInteracted) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(BSE_ICON_SIZE_72)
-                            .background(Color.Black.copy(alpha = 0.5f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Pinch,
-                        contentDescription = null,
-                        tint = Color.White,
+            GamepadFocusCard(
+                onClick = null,
+                modifier =
+                    Modifier
+                        .aspectRatio(BSE_BOTTOM_SCREEN_ASPECT_RATIO)
+                        .firstDeckItem(),
+                cardBgColor = Color.Black,
+                shape = RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
+            ) {
+                val bitmap = cropBitmap
+                if (bitmap != null) {
+                    Box(
                         modifier =
                             Modifier
-                                .size(BSE_ICON_SIZE_40)
-                                .graphicsLayer {
-                                    this.alpha = alpha
+                                .fillMaxSize()
+                                .clipToBounds()
+                                .onSizeChanged { containerSize = it }
+                                .pointerInput(bitmap, isInitialized) {
+                                    if (!isInitialized) return@pointerInput
+                                    detectTransformGestures { _, pan, zoom, _ ->
+                                        val imageSize = IntSize(bitmap.width, bitmap.height)
+                                        val newScale = (scale * zoom).coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
+                                        scale = newScale
+
+                                        val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, newScale)
+                                        offsetXState = (offsetXState + pan.x).coerceIn(-maxTx, maxTx)
+                                        offsetYState = (offsetYState + pan.y).coerceIn(-maxTy, maxTy)
+                                    }
                                 },
-                    )
+                    ) {
+                        if (isInitialized && containerSize.width > 0 && containerSize.height > 0) {
+                            val imageSize = IntSize(bitmap.width, bitmap.height)
+                            val (maxTx, maxTy) = getMaxOffsets(containerSize, imageSize, scale)
+                            val clampedX = offsetXState.coerceIn(-maxTx, maxTx)
+                            val clampedY = offsetYState.coerceIn(-maxTy, maxTy)
+
+                            Canvas(modifier = Modifier.fillMaxSize()) {
+                                val cw = size.width
+                                val ch = size.height
+                                val iw = bitmap.width.toFloat()
+                                val ih = bitmap.height.toFloat()
+                                if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                                    val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                                    val ws = iw * scaleBase
+                                    val hs = ih * scaleBase
+
+                                    drawImage(
+                                        image = bitmap,
+                                        dstOffset =
+                                            IntOffset(
+                                                ((cw - ws * scale) / 2f + clampedX).toInt(),
+                                                ((ch - hs * scale) / 2f + clampedY).toInt(),
+                                            ),
+                                        dstSize =
+                                            IntSize(
+                                                (ws * scale).toInt(),
+                                                (hs * scale).toInt(),
+                                            ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Image,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
+                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(BSE_ICON_SIZE_48),
+                        )
+                    }
                 }
             }
         }
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = BSE_SPACING_12)
-                    .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(0.45f),
+            verticalArrangement = Arrangement.spacedBy(BSE_SPACING_8),
         ) {
-            GamepadStepperCard(
-                title = stringResource(R.string.gamepad_action_zoom),
-                description = stringResource(R.string.layout_settings_crop_image_instructions),
-                valueText = "${((scale * 10f).roundToInt() / 10f)}x",
-                icon = Icons.Rounded.ZoomIn,
-                onDecrement = {
-                    hasInteracted = true
-                    scale = ((scale - 0.1f) * 10f).roundToInt() / 10f
-                    scale = scale.coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
-                },
-                onIncrement = {
-                    hasInteracted = true
-                    scale = ((scale + 0.1f) * 10f).roundToInt() / 10f
-                    scale = scale.coerceIn(BSE_CROP_MIN_SCALE, BSE_CROP_MAX_SCALE)
-                },
+            CropHintItem(
+                icon = Icons.Rounded.Pinch,
+                title = stringResource(R.string.macropad_editor_bg_crop_zoom_hint_title),
+                description = stringResource(R.string.macropad_editor_bg_crop_zoom_hint_desc),
+                accentColor = accentColor,
+            )
+            CropHintItem(
+                icon = Icons.Rounded.OpenWith,
+                title = stringResource(R.string.macropad_editor_bg_crop_pan_hint_title),
+                description = stringResource(R.string.macropad_editor_bg_crop_pan_hint_desc),
+                accentColor = accentColor,
+            )
+        }
+    }
+
+    val initialPixelOffsetX = if (containerSize.width > 0) initialOffsetX * containerSize.width else 0f
+    val initialPixelOffsetY = if (containerSize.height > 0) initialOffsetY * containerSize.height else 0f
+    val hasCropChanges =
+        isInitialized &&
+            (
+                kotlin.math.abs(scale - initialScale) > 0.001f ||
+                    kotlin.math.abs(offsetXState - initialPixelOffsetX) > 0.5f ||
+                    kotlin.math.abs(offsetYState - initialPixelOffsetY) > 0.5f
             )
 
-            GamepadActionCard(
-                title = stringResource(R.string.gamepad_action_reset),
-                description = stringResource(R.string.help_bg_settings_crop_desc),
-                actionText = stringResource(R.string.gamepad_action_reset),
-                icon = Icons.Rounded.Refresh,
-                onClick = {
-                    scale = 1.0f
-                    offsetXState = 0f
-                    offsetYState = 0f
-                    hasInteracted = true
-                },
+    val pulseTransition = rememberInfiniteTransition(label = "cropSavePulse")
+    val pulseFraction by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = BSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "savePulseFraction",
+    )
+    val saveCardBgColor =
+        if (hasCropChanges) {
+            lerp(
+                colors.surface.copy(alpha = BSE_PULSE_SURFACE_ALPHA),
+                colors.accent.copy(alpha = BSE_PULSE_ACCENT_ALPHA),
+                pulseFraction,
+            )
+        } else {
+            null
+        }
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_editor_bg_crop_save_title),
+        description = stringResource(R.string.macropad_editor_bg_crop_save_desc),
+        actionText = stringResource(R.string.macropad_editor_done),
+        icon = Icons.Rounded.Crop,
+        cardBgColor = saveCardBgColor,
+        onClick = {
+            val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f
+            val finalOffsetY = if (containerSize.height > 0) offsetYState / containerSize.height else 0f
+            onConfirmCrop(scale, finalOffsetX, finalOffsetY)
+        },
+    )
+}
+
+@Composable
+private fun CropHintItem(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    accentColor: Color,
+) {
+    val colors = LocalAppColors.current
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surface, RoundedCornerShape(8.dp))
+                .border(1.dp, colors.subduedBorder, RoundedCornerShape(8.dp))
+                .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accentColor,
+            modifier = Modifier.size(24.dp),
+        )
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = colors.onSurface,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onSurfaceSecondary,
             )
         }
     }

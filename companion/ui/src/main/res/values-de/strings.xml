@@ -1191,6 +1191,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_bg_storage_desc">Bild aus dem Gerätespeicher wählen</string>
     <string name="macropad_editor_section_adjustments_effects">Anpassungen &amp; Effekte</string>
     <string name="macropad_editor_bg_crop_desc">Bild skalieren und relativ zum unteren Bildschirm positionieren</string>
+    <string name="macropad_editor_bg_crop_zoom_hint_title">Mit zwei Fingern zoomen</string>
+    <string name="macropad_editor_bg_crop_zoom_hint_desc" formatted="false">Bildgröße zwischen 100% und 500% skalieren</string>
+    <string name="macropad_editor_bg_crop_pan_hint_title">Verschieben zum Positionieren</string>
+    <string name="macropad_editor_bg_crop_pan_hint_desc">Ziehen, um sichtbaren Ausschnitt zu wählen</string>
+    <string name="macropad_editor_bg_crop_save_title">Hintergrundausschnitt speichern</string>
+    <string name="macropad_editor_bg_crop_save_desc">Zoom und Position auf dieses Layout anwenden</string>
     <string name="macropad_editor_bg_dim_desc">Hintergrund abdunkeln, um Tasten lesbar zu halten</string>
     <string name="macropad_editor_bg_delete_desc">Hintergrundbild aus diesem Layout entfernen</string>
 

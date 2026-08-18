@@ -1183,6 +1183,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_bg_storage_desc">Pick an image from your device storage</string>
     <string name="macropad_editor_section_adjustments_effects">Adjustments &amp; Effects</string>
     <string name="macropad_editor_bg_crop_desc">Scale and reposition artwork relative to bottom screen</string>
+    <string name="macropad_editor_bg_crop_zoom_hint_title">Pinch to zoom</string>
+    <string name="macropad_editor_bg_crop_zoom_hint_desc" formatted="false">Scale image between 100% and 500%</string>
+    <string name="macropad_editor_bg_crop_pan_hint_title">Pan to position</string>
+    <string name="macropad_editor_bg_crop_pan_hint_desc">Drag to choose visible section</string>
+    <string name="macropad_editor_bg_crop_save_title">Save Background Crop</string>
+    <string name="macropad_editor_bg_crop_save_desc">Apply zoom and position changes to this layout</string>
     <string name="macropad_editor_bg_dim_desc">Dim background to keep buttons readable</string>
     <string name="macropad_editor_bg_delete_desc">Remove background artwork from this layout</string>
 

@@ -756,6 +756,16 @@ fun MacroPadEditor(
                                                     onOpenScrape = {
                                                         subPageStack = subPageStack + MacroPadSubPage.SteamGridDbScrape(lay.id)
                                                     },
+                                                    onOpenCrop = { scale, ox, oy ->
+                                                        subPageStack =
+                                                            subPageStack +
+                                                            MacroPadSubPage.BackgroundCrop(
+                                                                layoutId = lay.id,
+                                                                initialScale = scale,
+                                                                initialOffsetX = ox,
+                                                                initialOffsetY = oy,
+                                                            )
+                                                    },
                                                     onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgDim ->
                                                         MacroPadState.updateLayout(
                                                             lay.copy(
@@ -767,6 +777,38 @@ fun MacroPadEditor(
                                                                 bgImageOffsetX = bgOffsetX,
                                                                 bgImageOffsetY = bgOffsetY,
                                                                 backgroundImageDim = bgDim,
+                                                            ),
+                                                        )
+                                                        subPageStack = subPageStack.dropLast(1)
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.BackgroundCrop -> {
+                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        if (lay != null) {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.layout_settings_bg_section_title),
+                                                        stringResource(R.string.layout_settings_bg_image_crop),
+                                                    ),
+                                            ) {
+                                                BackgroundCropSubPageContent(
+                                                    layout = lay,
+                                                    initialScale = currentSubPage.initialScale,
+                                                    initialOffsetX = currentSubPage.initialOffsetX,
+                                                    initialOffsetY = currentSubPage.initialOffsetY,
+                                                    accentColor = colors.accent,
+                                                    onConfirmCrop = { scale, ox, oy ->
+                                                        MacroPadState.updateLayout(
+                                                            lay.copy(
+                                                                bgImageScale = scale,
+                                                                bgImageOffsetX = ox,
+                                                                bgImageOffsetY = oy,
                                                             ),
                                                         )
                                                         subPageStack = subPageStack.dropLast(1)
