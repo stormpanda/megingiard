@@ -101,6 +101,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }
 
+    data class SteamGridDbScrape(
+        val layoutId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
     data class LayoutTouchpad(
         val layoutId: String,
     ) : MacroPadSubPage {

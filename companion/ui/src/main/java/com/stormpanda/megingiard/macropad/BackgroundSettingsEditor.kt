@@ -84,7 +84,6 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeDialog
 import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -130,6 +129,7 @@ internal fun LayoutBackgroundSubPageContent(
     layout: PadLayout,
     profileName: String,
     accentColor: Color,
+    onOpenScrape: () -> Unit,
     onConfirm: (
         backgroundImagePath: String?,
         useAsMask: Boolean,
@@ -154,7 +154,6 @@ internal fun LayoutBackgroundSubPageContent(
 
     var previewBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     var showPreviewModal by remember { mutableStateOf(false) }
-    var showScrapeDialog by remember { mutableStateOf(false) }
     var showApiTokenMissingDialog by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
@@ -238,7 +237,6 @@ internal fun LayoutBackgroundSubPageContent(
     Box(
         modifier =
             Modifier
-                .firstDeckItem()
                 .fillMaxWidth()
                 .height(180.dp)
                 .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
@@ -279,11 +277,12 @@ internal fun LayoutBackgroundSubPageContent(
         description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
         actionText = stringResource(R.string.gamepad_action_search),
         icon = Icons.Rounded.Search,
+        modifier = Modifier.firstDeckItem(),
         onClick = {
             if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
                 showApiTokenMissingDialog = true
             } else {
-                showScrapeDialog = true
+                onOpenScrape()
             }
         },
     )
@@ -393,21 +392,6 @@ internal fun LayoutBackgroundSubPageContent(
                 showPreviewModal = false
             },
             onDismiss = { showPreviewModal = false },
-        )
-    }
-
-    if (showScrapeDialog) {
-        SteamGridDbScrapeDialog(
-            initialSearchQuery = profileName,
-            onImageSelected = { uri ->
-                pendingImageUri = uri
-                currentBgPath = null
-                bgScale = 1f
-                bgOffsetX = 0f
-                bgOffsetY = 0f
-            },
-            onDismiss = { showScrapeDialog = false },
-            accentColor = accentColor,
         )
     }
 

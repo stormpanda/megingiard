@@ -70,6 +70,7 @@ import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
@@ -752,6 +753,9 @@ fun MacroPadEditor(
                                                     layout = lay,
                                                     profileName = profile.name,
                                                     accentColor = colors.accent,
+                                                    onOpenScrape = {
+                                                        subPageStack = subPageStack + MacroPadSubPage.SteamGridDbScrape(lay.id)
+                                                    },
                                                     onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgDim ->
                                                         MacroPadState.updateLayout(
                                                             lay.copy(
@@ -765,6 +769,30 @@ fun MacroPadEditor(
                                                                 backgroundImageDim = bgDim,
                                                             ),
                                                         )
+                                                        subPageStack = subPageStack.dropLast(1)
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.SteamGridDbScrape -> {
+                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        if (lay != null) {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.layout_settings_bg_section_title),
+                                                        stringResource(R.string.layout_settings_bg_image_scrape),
+                                                    ),
+                                                scrollable = false,
+                                            ) {
+                                                SteamGridDbScrapeSubPageContent(
+                                                    initialSearchQuery = profile.name,
+                                                    accentColor = colors.accent,
+                                                    onImageSelected = { uri ->
+                                                        BackgroundPickerManager.setPickedUri(uri)
                                                         subPageStack = subPageStack.dropLast(1)
                                                     },
                                                 )
