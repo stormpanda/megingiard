@@ -139,6 +139,17 @@ fun MacroPadEditor(
     // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
     var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
     var macroTimelineFocusStepIndex by remember { mutableStateOf<Int?>(null) }
+    var appearanceDraft by remember { mutableStateOf<PadLayout?>(null) }
+
+    LaunchedEffect(subPageStack) {
+        if (subPageStack.none {
+                it is MacroPadSubPage.LayoutAppearance || it is MacroPadSubPage.LayoutColor ||
+                    (it is MacroPadSubPage.ColorWheel && it.section == EditorSection.LAYOUTS)
+            }
+        ) {
+            appearanceDraft = null
+        }
+    }
 
     BackHandler(enabled = true) {
         if (subPageStack.isNotEmpty()) {
@@ -616,6 +627,7 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.LayoutAppearance -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
+                                            val currentDraft = appearanceDraft?.takeIf { it.id == lay.id } ?: lay
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
@@ -624,22 +636,34 @@ fun MacroPadEditor(
                                                     ),
                                             ) {
                                                 LayoutAppearanceSubPageContent(
-                                                    layout = lay,
+                                                    layout = currentDraft,
+                                                    savedLayout = lay,
                                                     existingNames = profile.layouts.filter { it.id != lay.id }.map { it.name },
                                                     accentColor = colors.accent,
+                                                    onNameChange = { newName ->
+                                                        MacroPadState.updateLayout(lay.copy(name = newName))
+                                                        if (appearanceDraft != null && appearanceDraft?.id == lay.id) {
+                                                            appearanceDraft = appearanceDraft?.copy(name = newName)
+                                                        }
+                                                    },
+                                                    onInvisibleButtonsChange = { newInvisible ->
+                                                        MacroPadState.updateLayout(lay.copy(invisibleButtons = newInvisible))
+                                                        if (appearanceDraft != null && appearanceDraft?.id == lay.id) {
+                                                            appearanceDraft = appearanceDraft?.copy(invisibleButtons = newInvisible)
+                                                        }
+                                                    },
                                                     onOpenColorSubMenu = { target ->
                                                         subPageStack = subPageStack + MacroPadSubPage.LayoutColor(lay.id, target)
                                                     },
-                                                    onSave = { name, textCol, borderCol, bgCol, invisibleBtns ->
+                                                    onSaveColors = { textCol, borderCol, bgCol ->
                                                         MacroPadState.updateLayout(
                                                             lay.copy(
-                                                                name = name,
                                                                 buttonTextColor = textCol,
                                                                 buttonBorderColor = borderCol,
                                                                 buttonBgColor = bgCol,
-                                                                invisibleButtons = invisibleBtns,
                                                             ),
                                                         )
+                                                        appearanceDraft = null
                                                         subPageStack = subPageStack.dropLast(1)
                                                     },
                                                 )
@@ -650,6 +674,7 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.LayoutColor -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
+                                            val currentDraft = appearanceDraft?.takeIf { it.id == lay.id } ?: lay
                                             val targetTitle =
                                                 when (currentSubPage.target) {
                                                     LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
@@ -665,12 +690,12 @@ fun MacroPadEditor(
                                                     ),
                                             ) {
                                                 LayoutColorSubPageContent(
-                                                    layout = lay,
+                                                    layout = currentDraft,
                                                     savedLayout = lay,
                                                     target = currentSubPage.target,
                                                     accentColor = colors.accent,
-                                                    onSave = { layoutToSave ->
-                                                        MacroPadState.updateLayout(layoutToSave)
+                                                    onSave = { updatedDraft ->
+                                                        appearanceDraft = updatedDraft
                                                         subPageStack = subPageStack.dropLast(1)
                                                     },
                                                     onOpenColorWheel = { title, breadcrumbs, initialColor, inFlightLayout ->
@@ -703,7 +728,7 @@ fun MacroPadEditor(
                                                                                 )
                                                                             }
                                                                         }
-                                                                    MacroPadState.updateLayout(updatedLayout)
+                                                                    appearanceDraft = updatedLayout
                                                                     subPageStack = subPageStack.dropLast(1)
                                                                 },
                                                             )

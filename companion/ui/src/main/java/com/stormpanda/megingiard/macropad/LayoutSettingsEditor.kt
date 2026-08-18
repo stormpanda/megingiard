@@ -65,38 +65,25 @@ private fun describeColorOption(
 @Composable
 internal fun LayoutAppearanceSubPageContent(
     layout: PadLayout,
+    savedLayout: PadLayout,
     existingNames: List<String>,
     accentColor: Color,
+    onNameChange: (String) -> Unit,
+    onInvisibleButtonsChange: (Boolean) -> Unit,
     onOpenColorSubMenu: (target: LayoutColorTarget) -> Unit,
-    onSave: (name: String, textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption, invisibleButtons: Boolean) -> Unit,
+    onSaveColors: (textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption) -> Unit,
 ) {
     val colors = LocalAppColors.current
-    var nameText by remember(layout.id, layout.name) { mutableStateOf(layout.name) }
-    var textColorOption by remember(layout.id, layout.buttonTextColor) { mutableStateOf(layout.buttonTextColor) }
-    var borderColorOption by remember(layout.id, layout.buttonBorderColor) { mutableStateOf(layout.buttonBorderColor) }
-    var bgColorOption by remember(layout.id, layout.buttonBgColor) { mutableStateOf(layout.buttonBgColor) }
-    var invisibleButtons by remember(layout.id, layout.invisibleButtons) { mutableStateOf(layout.invisibleButtons) }
-
-    fun buildWorkingLayout(): PadLayout =
-        layout.copy(
-            name = nameText,
-            buttonTextColor = textColorOption,
-            buttonBorderColor = borderColorOption,
-            buttonBgColor = bgColorOption,
-            invisibleButtons = invisibleButtons,
-        )
+    var nameText by remember(savedLayout.id, savedLayout.name) { mutableStateOf(savedLayout.name) }
 
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
-    val isConfirmEnabled = !hasError
 
-    val hasChanges =
-        normalizedName != layout.name ||
-            textColorOption != layout.buttonTextColor ||
-            borderColorOption != layout.buttonBorderColor ||
-            bgColorOption != layout.buttonBgColor ||
-            invisibleButtons != layout.invisibleButtons
+    val hasColorChanges =
+        layout.buttonTextColor != savedLayout.buttonTextColor ||
+            layout.buttonBorderColor != savedLayout.buttonBorderColor ||
+            layout.buttonBgColor != savedLayout.buttonBgColor
 
     val pulseTransition = rememberInfiniteTransition(label = "appearanceSavePulse")
     val pulseFraction by pulseTransition.animateFloat(
@@ -110,7 +97,7 @@ internal fun LayoutAppearanceSubPageContent(
         label = "savePulseFraction",
     )
     val saveCardBgColor =
-        if (hasChanges) {
+        if (hasColorChanges) {
             lerp(
                 colors.surface.copy(alpha = LSE_PULSE_SURFACE_ALPHA),
                 colors.accent.copy(alpha = LSE_PULSE_ACCENT_ALPHA),
@@ -123,13 +110,13 @@ internal fun LayoutAppearanceSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    val savedResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-    val savedResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val savedResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val savedResolvedText = resolveColorOption(savedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val savedResolvedBorder = resolveColorOption(savedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val savedResolvedBg = resolveColorOption(savedLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
 
-    val currentResolvedText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-    val currentResolvedBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val currentResolvedBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val currentResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val currentResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val currentResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
@@ -141,7 +128,13 @@ internal fun LayoutAppearanceSubPageContent(
             },
         placeholder = stringResource(R.string.quick_menu_layout_name_placeholder),
         value = nameText,
-        onValueChange = { nameText = it },
+        onValueChange = {
+            nameText = it
+            val trimmed = it.trim()
+            if (trimmed.isNotEmpty() && !existingNames.any { existing -> existing.equals(trimmed, ignoreCase = true) }) {
+                onNameChange(trimmed)
+            }
+        },
         icon = Icons.Rounded.Edit,
         isError = hasError,
         modifier = Modifier.firstDeckItem(),
@@ -166,7 +159,7 @@ internal fun LayoutAppearanceSubPageContent(
                     textColor = savedResolvedText,
                     borderColor = savedResolvedBorder,
                     bgColor = savedResolvedBg,
-                    isIconOnly = layout.invisibleButtons,
+                    isIconOnly = savedLayout.invisibleButtons,
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
@@ -178,24 +171,26 @@ internal fun LayoutAppearanceSubPageContent(
                     textColor = currentResolvedText,
                     borderColor = currentResolvedBorder,
                     bgColor = currentResolvedBg,
-                    isIconOnly = invisibleButtons,
+                    isIconOnly = savedLayout.invisibleButtons,
                 )
             }
         },
         actionText = stringResource(R.string.gamepad_action_save),
         icon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
+        enabled = true,
         onClick = {
-            if (isConfirmEnabled) {
-                onSave(normalizedName, textColorOption, borderColorOption, bgColorOption, invisibleButtons)
-            }
+            onSaveColors(
+                layout.buttonTextColor,
+                layout.buttonBorderColor,
+                layout.buttonBgColor,
+            )
         },
     )
 
     // ── Text Color Menu Item ────────────────────────────────────
     GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_text),
-        description = describeColorOption(textColorOption, currentResolvedText),
+        description = describeColorOption(layout.buttonTextColor, currentResolvedText),
         icon = Icons.Rounded.FormatColorText,
         actionLeadingContent = {
             SwordsButtonPreview(
@@ -212,7 +207,7 @@ internal fun LayoutAppearanceSubPageContent(
     // ── Border Color Menu Item ──────────────────────────────────
     GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_border),
-        description = describeColorOption(borderColorOption, currentResolvedBorder),
+        description = describeColorOption(layout.buttonBorderColor, currentResolvedBorder),
         icon = Icons.Rounded.Palette,
         actionLeadingContent = {
             SwordsButtonPreview(
@@ -229,7 +224,7 @@ internal fun LayoutAppearanceSubPageContent(
     // ── Background / Fading Color Menu Item ─────────────────────
     GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_bg),
-        description = describeColorOption(bgColorOption, currentResolvedBg),
+        description = describeColorOption(layout.buttonBgColor, currentResolvedBg),
         icon = Icons.Rounded.FormatColorFill,
         actionLeadingContent = {
             SwordsButtonPreview(
@@ -251,9 +246,9 @@ internal fun LayoutAppearanceSubPageContent(
     GamepadToggleCard(
         title = stringResource(R.string.layout_settings_invisible_buttons),
         description = stringResource(R.string.layout_settings_invisible_buttons_desc),
-        checked = invisibleButtons,
+        checked = savedLayout.invisibleButtons,
         icon = Icons.Rounded.VisibilityOff,
-        onCheckedChange = { invisibleButtons = it },
+        onCheckedChange = onInvisibleButtonsChange,
     )
 }
 
