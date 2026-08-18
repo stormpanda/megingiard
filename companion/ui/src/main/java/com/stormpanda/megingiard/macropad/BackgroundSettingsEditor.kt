@@ -1,12 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.net.Uri
-import android.view.WindowManager
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -103,6 +99,7 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -192,40 +189,39 @@ internal fun LayoutBackgroundSubPageContent(
             ColorFilter.colorMatrix(matrix)
         }
 
+    val configuration = LocalConfiguration.current
     val aspectRatio =
-        remember {
-            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val bounds = wm.currentWindowMetrics.bounds
-            bounds.width().toFloat() / bounds.height().toFloat()
+        remember(configuration) {
+            if (configuration.screenHeightDp > 0) {
+                configuration.screenWidthDp.toFloat() / configuration.screenHeightDp.toFloat()
+            } else {
+                16f / 9f
+            }
         }
+
+    val pickedUri by BackgroundPickerManager.pickedUri.collectAsState()
+    LaunchedEffect(pickedUri) {
+        val uri = pickedUri ?: return@LaunchedEffect
+        pendingImageUri = uri
+        currentBgPath = null
+        bgScale = 1f
+        bgOffsetX = 0f
+        bgOffsetY = 0f
+        BackgroundPickerManager.clearPickedUri()
+    }
 
     LaunchedEffect(pendingImageUri, currentBgPath) {
         withContext(Dispatchers.IO) {
+            val (targetW, targetH) = BitmapUtils.getScreenTargetDimensions(context)
             val bitmap =
                 when {
                     pendingImageUri != null -> {
-                        try {
-                            context.contentResolver.openInputStream(pendingImageUri!!)?.use {
-                                BitmapFactory.decodeStream(it)
-                            }
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Failed to load pending image URI", e)
-                            null
-                        }
+                        BitmapUtils.decodeScaledBitmapFromUri(context, pendingImageUri!!, targetW, targetH)
                     }
 
                     currentBgPath != null -> {
-                        try {
-                            val file = File(currentBgPath!!)
-                            if (file.exists()) {
-                                BitmapFactory.decodeFile(file.absolutePath)
-                            } else {
-                                null
-                            }
-                        } catch (e: Exception) {
-                            AppLog.e(TAG, "Failed to load current background path", e)
-                            null
-                        }
+                        val file = File(currentBgPath!!)
+                        BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
                     }
 
                     else -> {
@@ -238,23 +234,11 @@ internal fun LayoutBackgroundSubPageContent(
         }
     }
 
-    val launcher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent(),
-        ) { uri: Uri? ->
-            if (uri != null) {
-                pendingImageUri = uri
-                currentBgPath = null
-                bgScale = 1f
-                bgOffsetX = 0f
-                bgOffsetY = 0f
-            }
-        }
-
     // 1. Preview Frame
     Box(
         modifier =
             Modifier
+                .firstDeckItem()
                 .fillMaxWidth()
                 .height(180.dp)
                 .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
@@ -309,7 +293,7 @@ internal fun LayoutBackgroundSubPageContent(
         description = stringResource(R.string.macropad_editor_bg_storage_desc),
         actionText = stringResource(R.string.gamepad_action_browse),
         icon = Icons.Rounded.Folder,
-        onClick = { launcher.launch("image/*") },
+        onClick = { BackgroundPickerManager.requestImagePicker() },
     )
 
     if (previewBitmap != null) {

@@ -65,6 +65,7 @@ import com.stormpanda.megingiard.config.ConfigManager
 import com.stormpanda.megingiard.config.MGRD_MIME_TYPE
 import com.stormpanda.megingiard.log.LogReportManager
 import com.stormpanda.megingiard.macropad.AppLauncherManager
+import com.stormpanda.megingiard.macropad.BackgroundPickerManager
 import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadLayout
@@ -190,6 +191,14 @@ class MainActivity : ComponentActivity() {
                     pid = Process.myPid(),
                 )
             }
+        }
+
+    private val pickImageLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { uri ->
+            AppStateManager.setFilePickerOpen(false)
+            BackgroundPickerManager.setPickedUri(uri)
         }
 
     // The manifest declares configChanges that prevent activity recreation when the app
@@ -325,6 +334,14 @@ class MainActivity : ComponentActivity() {
                     val filename = LogReportManager.buildReportFilename(timestamp)
                     AppStateManager.setFilePickerOpen(true)
                     createLogDocumentLauncher.launch(filename)
+                }
+            }
+        }
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                BackgroundPickerManager.pickRequest.collect {
+                    AppStateManager.setFilePickerOpen(true)
+                    pickImageLauncher.launch("image/*")
                 }
             }
         }
