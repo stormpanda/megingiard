@@ -118,6 +118,7 @@ internal fun PadCanvas(
     accentColor: Color,
     gridMode: GridMode,
     isLocked: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var lastTouchedButtonId by remember { mutableStateOf<String?>(null) }
@@ -181,10 +182,9 @@ internal fun PadCanvas(
         }
 
     val padModifier =
-        Modifier
+        modifier
             .width(padWidth)
             .height(padHeight)
-            .border(1.dp, colors.macroPadAccentBorder, RoundedCornerShape(0.dp))
             .clip(RoundedCornerShape(0.dp))
             .background(Color.Black)
             .onSizeChanged { canvasSize = it }

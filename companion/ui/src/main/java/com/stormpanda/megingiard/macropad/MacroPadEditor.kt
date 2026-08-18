@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
@@ -80,6 +81,7 @@ import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
@@ -1396,13 +1398,19 @@ private fun CanvasDeck(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
-        PadCanvas(
-            profile = profile,
-            layout = layout,
-            accentColor = accentColor,
-            gridMode = gridMode,
-            isLocked = isLocked,
-        )
+        GamepadFocusCard(
+            onClick = null,
+            cardBgColor = Color.Black,
+            shape = RoundedCornerShape(4.dp),
+        ) {
+            PadCanvas(
+                profile = profile,
+                layout = layout,
+                accentColor = accentColor,
+                gridMode = gridMode,
+                isLocked = isLocked,
+            )
+        }
     }
 }
 

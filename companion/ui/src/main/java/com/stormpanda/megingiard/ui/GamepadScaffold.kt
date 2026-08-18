@@ -66,7 +66,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "GamepadScaffold"
 
-private val GS_SIDEBAR_WIDTH = 210.dp
+private val GS_SIDEBAR_WIDTH = 180.dp
 private val GS_SIDEBAR_ITEM_HEIGHT = 40.dp
 private val GS_SIDEBAR_CORNER = 10.dp
 private val GS_SIDEBAR_ICON_SIZE = 20.dp
