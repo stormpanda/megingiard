@@ -692,8 +692,8 @@ The layout editor's `PadCanvas` reads the screen dimensions from `LocalConfigura
   - **Canvas (`Preview`):** Canvas Drag Lock toggle, Snap Grid Mode carousel (Off, Rectangular, Radial), Add Button action, and pixel-precise static 1240x1080 canvas preview.
   - **Buttons (`SmartButton`):** Add Button trigger and reorderable button list with focus indicators, edit, duplicate, copy to layout, and delete actions.
   - **Macros (`PlaylistPlay`):** Macro Library launcher and list of active profile macros with step count badges.
-- **Right Content Deck:** Dynamically presents gamepad-first cards (`GamepadChoiceCard`, `GamepadToggleCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadSliderCard`) with clear `GamepadSectionHeader` dividers.
-- **Navigation & Sub-Pages:** Managed through a clean `subPageStack: List<MacroPadSubPage>` backstack. Sub-pages (ButtonEdit, Background, Touchpad, MacroTimeline, MacroStepEdit, ColorWheel, AppPicker, Reorder, Copy) render directly in the content deck with breadcrumbs (`GamepadSubPageHeader`) and focusable controls.
+- **Right Content Deck:** Dynamically presents gamepad-first cards (`GamepadChoiceCard`, `GamepadToggleCard`, `GamepadActionCard`, `GamepadColorPaletteCard`, `GamepadSliderCard`) wrapped in unified `GamepadDeck` containers with automatic category header dividers.
+- **Navigation & Sub-Pages:** Managed through a clean `subPageStack: List<MacroPadSubPage>` backstack. Sub-pages (ButtonEdit, Background, Touchpad, MacroTimeline, MacroStepEdit, ColorWheel, AppPicker, Reorder, Copy) render directly in unified `GamepadDeck` instances with automatic breadcrumbs (`'PARENT  ›  SUBPAGE'`) and focusable controls.
 - **Dialogs & Confirmations:** All destructive actions and alerts use `GamepadConfirmDialog` with B-button dismissal support.
 
 ### Grid Snap Overlay

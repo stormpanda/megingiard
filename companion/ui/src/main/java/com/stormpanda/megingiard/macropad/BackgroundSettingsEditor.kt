@@ -251,12 +251,6 @@ internal fun LayoutBackgroundSubPageContent(
             }
         }
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_layout),
-        subPageTitle = stringResource(R.string.help_layout_settings_bg_title),
-        accentColor = accentColor,
-    )
-
     // 1. Preview Frame
     Box(
         modifier =

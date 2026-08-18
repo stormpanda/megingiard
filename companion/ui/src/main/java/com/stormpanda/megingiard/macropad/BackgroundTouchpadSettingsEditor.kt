@@ -84,12 +84,6 @@ internal fun LayoutTouchpadSubPageContent(
 
     val hasTouchProjection = initialHasTouchProjection && !touchProjectionCleared
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_layout),
-        subPageTitle = stringResource(R.string.settings_touchpad_title),
-        accentColor = accentColor,
-    )
-
     GamepadSectionHeader(
         text = stringResource(R.string.settings_section_master_touchpad),
         color = accentColor,

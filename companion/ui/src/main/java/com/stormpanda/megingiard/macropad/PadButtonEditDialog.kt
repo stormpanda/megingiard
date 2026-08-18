@@ -291,12 +291,6 @@ internal fun EditButtonSubPageContent(
             else -> button.label.ifBlank { stringResource(R.string.settings_macropad_edit) }
         }
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_buttons),
-        subPageTitle = subPageTitle,
-        accentColor = accentColor,
-    )
-
     // Live preview banner
     Box(
         modifier =

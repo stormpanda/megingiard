@@ -107,6 +107,7 @@ import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
@@ -266,6 +267,7 @@ fun GlobalSettingsScreen(
     }
 
     GamepadTwoPaneScaffold(
+        scrollableDeck = false,
         isCustomBackActive = subPageStack.isNotEmpty(),
         onCustomBack = {
             subPageStack = subPageStack.dropLast(1)
@@ -302,12 +304,13 @@ fun GlobalSettingsScreen(
                 label = "SettingsSubPageAnimation",
             ) { stack ->
                 val subPage = stack.lastOrNull()
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    when (subPage) {
-                        null -> {
+                when (subPage) {
+                    null -> {
+                        val categoryTitle = stringResource(selectedCategory.titleResId)
+                        GamepadDeck(
+                            title = categoryTitle,
+                            accentColor = effectiveAccent,
+                        ) {
                             // GENERAL
                             if (selectedCategory == SettingsCategory.GENERAL) {
                                 if (updateAvailable && latestReleaseInfo != null) {
@@ -320,13 +323,6 @@ fun GlobalSettingsScreen(
                                         modifier = Modifier.firstDeckItem(),
                                     )
                                 }
-
-                                Text(
-                                    text = stringResource(R.string.settings_section_general).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
 
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_start_welcome_tour),
@@ -400,13 +396,6 @@ fun GlobalSettingsScreen(
 
                             // INPUT
                             if (selectedCategory == SettingsCategory.INPUT) {
-                                Text(
-                                    text = stringResource(R.string.settings_section_input).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-
                                 GamepadToggleCard(
                                     title = stringResource(R.string.settings_gamepad_swap_face_buttons),
                                     description = stringResource(R.string.settings_gamepad_swap_face_buttons_desc),
@@ -432,13 +421,6 @@ fun GlobalSettingsScreen(
 
                             // APPEARANCE
                             if (selectedCategory == SettingsCategory.APPEARANCE) {
-                                Text(
-                                    text = stringResource(R.string.settings_section_appearance).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-
                                 val allThemes = remember { ThemeMode.entries }
                                 val currentThemeIdx = allThemes.indexOf(themeMode)
                                 val themeDisplayName = stringResource(themeMode.displayNameResId())
@@ -503,13 +485,6 @@ fun GlobalSettingsScreen(
 
                             // DATA
                             if (selectedCategory == SettingsCategory.DATA) {
-                                Text(
-                                    text = stringResource(R.string.settings_section_data).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_restore_defaults),
                                     description = stringResource(R.string.settings_restore_defaults_desc),
@@ -536,13 +511,6 @@ fun GlobalSettingsScreen(
 
                             // CONFIGURATION
                             if (selectedCategory == SettingsCategory.CONFIGURATION) {
-                                Text(
-                                    text = stringResource(R.string.settings_section_config).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-
                                 GamepadActionCard(
                                     title = stringResource(R.string.settings_config_export),
                                     description = stringResource(R.string.help_settings_export_desc),
@@ -602,13 +570,6 @@ fun GlobalSettingsScreen(
 
                             // UPDATES
                             if (selectedCategory == SettingsCategory.UPDATES) {
-                                Text(
-                                    text = stringResource(R.string.settings_section_updates).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-
                                 GamepadToggleCard(
                                     title = stringResource(R.string.settings_auto_update_check),
                                     description = stringResource(R.string.help_settings_auto_update_desc),
@@ -696,13 +657,6 @@ fun GlobalSettingsScreen(
 
                             // DIAGNOSTICS
                             if (selectedCategory == SettingsCategory.DIAGNOSTICS) {
-                                Text(
-                                    text = stringResource(R.string.settings_section_diagnostics).uppercase(),
-                                    color = effectiveAccent,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-
                                 val allLogLevels = remember { AppLog.Level.entries }
                                 val currentLogLevelIdx = allLogLevels.indexOf(logLevel)
 
@@ -732,31 +686,55 @@ fun GlobalSettingsScreen(
                                 )
                             }
                         }
+                    }
 
-                        SettingsSubPage.DEADZONES -> {
+                    SettingsSubPage.DEADZONES -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_input),
+                                    stringResource(R.string.privd_deadzone_title),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
                             DeadzonesSubPage(
                                 deadzoneLeft = deadzoneLeft,
                                 deadzoneRight = deadzoneRight,
                                 onLeftChange = { viewModel.setPrivdDeadzoneLeft(it) },
                                 onRightChange = { viewModel.setPrivdDeadzoneRight(it) },
-                                effectiveAccent = effectiveAccent,
                             )
                         }
+                    }
 
-                        SettingsSubPage.STEAMGRIDDB_TOKEN -> {
+                    SettingsSubPage.STEAMGRIDDB_TOKEN -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_general),
+                                    stringResource(R.string.settings_steamgriddb_token),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
                             SteamGridDbTokenSubPage(
                                 token = steamGridDbApiToken,
                                 onTokenChange = { viewModel.setSteamGridDbApiToken(it) },
-                                effectiveAccent = effectiveAccent,
                                 testStatus = steamGridDbTestStatus,
                                 onTestConnection = { viewModel.testSteamGridDbConnection(steamGridDbApiToken) },
                             )
                         }
+                    }
 
-                        SettingsSubPage.CUSTOM_ACCENT -> {
+                    SettingsSubPage.CUSTOM_ACCENT -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_appearance),
+                                    stringResource(R.string.settings_accent_custom_title),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
                             CustomAccentSubPage(
                                 initialColor = customAccentColor,
-                                effectiveAccent = effectiveAccent,
                                 onSaveColor = { newColor ->
                                     val argb = newColor.toArgb()
                                     viewModel.setCustomAccentColor(argb)
@@ -764,10 +742,18 @@ fun GlobalSettingsScreen(
                                 },
                             )
                         }
+                    }
 
-                        SettingsSubPage.CREATE_BACKUP -> {
+                    SettingsSubPage.CREATE_BACKUP -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_config),
+                                    stringResource(R.string.settings_config_export),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
                             CreateBackupSubPage(
-                                effectiveAccent = effectiveAccent,
                                 onExport = { metadata, includeBackgrounds ->
                                     ConfigManager.requestExport(
                                         metadata = metadata,
@@ -777,10 +763,18 @@ fun GlobalSettingsScreen(
                                 },
                             )
                         }
+                    }
 
-                        SettingsSubPage.SHARE_PROFILE -> {
+                    SettingsSubPage.SHARE_PROFILE -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_config),
+                                    stringResource(R.string.settings_config_export_profile),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
                             ShareProfileSubPage(
-                                effectiveAccent = effectiveAccent,
                                 onExportProfile = { metadata, profile, includeBackgrounds ->
                                     ConfigManager.requestProfileExport(
                                         metadata = metadata,
@@ -791,8 +785,17 @@ fun GlobalSettingsScreen(
                                 },
                             )
                         }
+                    }
 
-                        SettingsSubPage.RESTORE_BACKUP -> {
+                    SettingsSubPage.RESTORE_BACKUP -> {
+                        GamepadDeck(
+                            breadcrumbs =
+                                listOf(
+                                    stringResource(R.string.settings_section_config),
+                                    stringResource(R.string.config_restore_dialog_title),
+                                ),
+                            accentColor = effectiveAccent,
+                        ) {
                             RestoreBackupSubPage(
                                 internalBackups = internalBackups,
                                 effectiveAccent = effectiveAccent,
@@ -805,13 +808,22 @@ fun GlobalSettingsScreen(
                                 },
                             )
                         }
+                    }
 
-                        SettingsSubPage.RESTORE_REVIEW -> {
-                            val reviewExport = activeImportPreview ?: lastReviewExport
-                            if (reviewExport != null) {
+                    SettingsSubPage.RESTORE_REVIEW -> {
+                        val reviewExport = activeImportPreview ?: lastReviewExport
+                        if (reviewExport != null) {
+                            GamepadDeck(
+                                breadcrumbs =
+                                    listOf(
+                                        stringResource(R.string.settings_section_config),
+                                        stringResource(R.string.config_restore_dialog_title),
+                                        stringResource(R.string.config_import_review_title),
+                                    ),
+                                accentColor = effectiveAccent,
+                            ) {
                                 RestoreReviewSubPage(
                                     export = reviewExport,
-                                    effectiveAccent = effectiveAccent,
                                     pendingInAppImportMode = pendingInAppImportMode,
                                     onConfirmImport = { exp, mode ->
                                         showImportPreviewDialog = null
@@ -971,42 +983,12 @@ fun GlobalSettingsScreen(
 }
 
 @Composable
-private fun GamepadSubPageHeader(
-    breadcrumbs: List<String>,
-    accentColor: Color,
-) {
-    GamepadSectionHeader(
-        text = breadcrumbs.joinToString("  ›  ") { it.uppercase() },
-        color = accentColor,
-    )
-}
-
-@Composable
-private fun GamepadSubPageHeader(
-    parentTitle: String,
-    subPageTitle: String,
-    accentColor: Color,
-) {
-    GamepadSubPageHeader(
-        breadcrumbs = listOf(parentTitle, subPageTitle),
-        accentColor = accentColor,
-    )
-}
-
-@Composable
 private fun SteamGridDbTokenSubPage(
     token: String,
     onTokenChange: (String) -> Unit,
-    effectiveAccent: Color,
     testStatus: SteamGridDbTestStatus,
     onTestConnection: () -> Unit,
 ) {
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.settings_section_general),
-        subPageTitle = stringResource(R.string.settings_steamgriddb_token),
-        accentColor = effectiveAccent,
-    )
-
     GamepadTextFieldCard(
         title = stringResource(R.string.settings_steamgriddb_token),
         description = stringResource(R.string.settings_steamgriddb_token_desc),
@@ -1072,14 +1054,7 @@ private fun DeadzonesSubPage(
     deadzoneRight: Float,
     onLeftChange: (Float) -> Unit,
     onRightChange: (Float) -> Unit,
-    effectiveAccent: Color,
 ) {
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.settings_section_input),
-        subPageTitle = stringResource(R.string.privd_deadzone_title),
-        accentColor = effectiveAccent,
-    )
-
     GamepadSliderCard(
         title = stringResource(R.string.privd_deadzone_left),
         description = stringResource(R.string.help_settings_deadzone_desc),
@@ -1105,20 +1080,11 @@ private fun DeadzonesSubPage(
 }
 
 @Composable
-private fun CreateBackupSubPage(
-    effectiveAccent: Color,
-    onExport: (ExportMetadata, Boolean) -> Unit,
-) {
+private fun CreateBackupSubPage(onExport: (ExportMetadata, Boolean) -> Unit) {
     val context = LocalContext.current
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
-
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.settings_section_config),
-        subPageTitle = stringResource(R.string.settings_config_export),
-        accentColor = effectiveAccent,
-    )
 
     GamepadTextFieldCard(
         title = stringResource(R.string.config_export_author),
@@ -1164,10 +1130,7 @@ private fun CreateBackupSubPage(
 }
 
 @Composable
-private fun ShareProfileSubPage(
-    effectiveAccent: Color,
-    onExportProfile: (ExportMetadata, PadProfile, Boolean) -> Unit,
-) {
+private fun ShareProfileSubPage(onExportProfile: (ExportMetadata, PadProfile, Boolean) -> Unit) {
     val context = LocalContext.current
     val rawProfiles by MacroPadState.profiles.collectAsState()
     val profiles = remember(rawProfiles) { rawProfiles.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }) }
@@ -1181,12 +1144,6 @@ private fun ShareProfileSubPage(
     var author by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var includeBackgrounds by rememberSaveable { mutableStateOf(true) }
-
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.settings_section_config),
-        subPageTitle = stringResource(R.string.settings_config_export_profile),
-        accentColor = effectiveAccent,
-    )
 
     if (profiles.size > 1) {
         GamepadChoiceCard(
@@ -1256,7 +1213,6 @@ private fun ShareProfileSubPage(
 @Composable
 private fun CustomAccentSubPage(
     initialColor: Color,
-    effectiveAccent: Color,
     onSaveColor: (Color) -> Unit,
 ) {
     val initHsv =
@@ -1310,12 +1266,6 @@ private fun CustomAccentSubPage(
                     ),
             )
         }
-
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.settings_section_appearance),
-        subPageTitle = stringResource(R.string.settings_accent_custom_title),
-        accentColor = effectiveAccent,
-    )
 
     GamepadSliderCard(
         title = stringResource(R.string.settings_color_hue),
@@ -1381,12 +1331,6 @@ private fun RestoreBackupSubPage(
     onPickExternalFile: () -> Unit,
     onSelectInternalBackup: (InternalBackup) -> Unit,
 ) {
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.settings_section_config),
-        subPageTitle = stringResource(R.string.config_restore_dialog_title),
-        accentColor = effectiveAccent,
-    )
-
     GamepadActionCard(
         title = stringResource(R.string.config_restore_option_external),
         description = stringResource(R.string.config_restore_option_external_sub),
@@ -1438,22 +1382,11 @@ private fun RestoreBackupSubPage(
 @Composable
 private fun RestoreReviewSubPage(
     export: MegingiardExport,
-    effectiveAccent: Color,
     pendingInAppImportMode: ConfigManager.ImportMode,
     onConfirmImport: (MegingiardExport, ConfigManager.ImportMode) -> Unit,
 ) {
     var isDetailsExpanded by rememberSaveable(export) { mutableStateOf(false) }
     val colors = LocalAppColors.current
-
-    GamepadSubPageHeader(
-        breadcrumbs =
-            listOf(
-                stringResource(R.string.settings_section_config),
-                stringResource(R.string.config_restore_dialog_title),
-                stringResource(R.string.config_import_review_title),
-            ),
-        accentColor = effectiveAccent,
-    )
 
     val metadata = export.metadata
     val authorText = metadata.author?.ifBlank { null }

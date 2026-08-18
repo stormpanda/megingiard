@@ -173,16 +173,6 @@ internal fun MacroStepEditSubPageContent(
             },
         )
 
-    GamepadSubPageHeader(
-        breadcrumbs =
-            listOf(
-                stringResource(R.string.macropad_macro_list_title),
-                macroName,
-                subPageTitle,
-            ),
-        accentColor = accentColor,
-    )
-
     GamepadSectionHeader(
         text = stringResource(R.string.macro_step_action_type_title),
         color = accentColor,

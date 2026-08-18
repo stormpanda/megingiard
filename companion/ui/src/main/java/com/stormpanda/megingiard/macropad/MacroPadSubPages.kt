@@ -227,10 +227,12 @@ internal fun ColorWheelSubPageContent(
             )
         }
 
-    GamepadSubPageHeader(
-        breadcrumbs = breadcrumbs,
-        accentColor = accentColor,
-    )
+    if (breadcrumbs.isNotEmpty()) {
+        GamepadSubPageHeader(
+            breadcrumbs = breadcrumbs,
+            accentColor = accentColor,
+        )
+    }
 
     val hex = String.format("#%06X", 0xFFFFFF and workingColor.toArgb())
 

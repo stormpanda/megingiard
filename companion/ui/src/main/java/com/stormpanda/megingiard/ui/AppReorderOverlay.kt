@@ -1,10 +1,7 @@
 package com.stormpanda.megingiard.ui
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,7 +10,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,15 +36,15 @@ private const val RO_SCROLL_THRESHOLD_PX = 4
  *
  * Automatically centers the actively moving item in the viewport during D-pad movement.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun <T> GamepadReorderDeck(
-    headerTitle: String,
     items: List<T>,
     itemKey: (T) -> Any,
     itemTitle: (T) -> String,
     onReorder: (List<T>) -> Unit,
     modifier: Modifier = Modifier,
+    breadcrumbs: List<String>? = null,
+    headerTitle: String? = null,
     headerDescription: String? = null,
     itemDescription: ((T) -> String?)? = null,
     itemIcon: ((T) -> ImageVector?)? = null,
@@ -59,7 +55,12 @@ fun <T> GamepadReorderDeck(
     var movingItemKey by remember { mutableStateOf<Any?>(null) }
     val movingIndex = if (movingItemKey != null) items.indexOfFirst { itemKey(it) == movingItemKey } else -1
 
-    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
+    val breadcrumbTrail =
+        when {
+            !breadcrumbs.isNullOrEmpty() -> breadcrumbs
+            !headerTitle.isNullOrBlank() -> listOf(headerTitle)
+            else -> emptyList()
+        }
 
     val reorderState =
         rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -68,7 +69,7 @@ fun <T> GamepadReorderDeck(
             if (fromIdx in items.indices && toIdx in items.indices) {
                 val mutable = items.toMutableList()
                 mutable.add(toIdx, mutable.removeAt(fromIdx))
-                AppLog.d(TAG, "GamepadReorderDeck: drag reordered from $fromIdx to $toIdx in '$headerTitle'")
+                AppLog.d(TAG, "GamepadReorderDeck: drag reordered from $fromIdx to $toIdx")
                 onReorder(mutable)
             }
         }
@@ -105,15 +106,12 @@ fun <T> GamepadReorderDeck(
         }
     }
 
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(RO_DECK_SPACING),
+    GamepadDeck(
+        breadcrumbs = breadcrumbTrail,
+        scrollable = false,
+        modifier = modifier,
+        accentColor = colors.accent,
     ) {
-        GamepadSectionHeader(
-            text = headerTitle,
-            color = colors.accent,
-        )
-
         if (items.isEmpty()) {
             Text(
                 text = emptyMessage,
@@ -122,50 +120,46 @@ fun <T> GamepadReorderDeck(
                 modifier = Modifier.padding(vertical = RO_EMPTY_PADDING_V),
             )
         } else {
-            CompositionLocalProvider(
-                LocalBringIntoViewSpec provides bringIntoViewSpec,
+            LazyColumn(
+                state = lazyListState,
+                verticalArrangement = Arrangement.spacedBy(RO_DECK_SPACING),
+                modifier = Modifier.fillMaxSize(),
             ) {
-                LazyColumn(
-                    state = lazyListState,
-                    verticalArrangement = Arrangement.spacedBy(RO_DECK_SPACING),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    itemsIndexed(items, key = { _, item -> itemKey(item) }) { index, item ->
-                        val key = itemKey(item)
-                        ReorderableItem(reorderState, key = key) { isDragging ->
-                            val isMoving = movingItemKey == key
-                            GamepadReorderCard(
-                                title = itemTitle(item),
-                                description = itemDescription?.invoke(item),
-                                icon = itemIcon?.invoke(item),
-                                index = index,
-                                totalCount = items.size,
-                                isMoving = isMoving,
-                                isDragging = isDragging,
-                                onToggleMoving = {
-                                    movingItemKey = if (isMoving) null else key
-                                },
-                                onMoveUp = {
-                                    if (index > 0) {
-                                        val mutable = items.toMutableList()
-                                        Collections.swap(mutable, index, index - 1)
-                                        AppLog.d(TAG, "GamepadReorderDeck: moved item '$key' up to ${index - 1}")
-                                        onReorder(mutable)
-                                    }
-                                },
-                                onMoveDown = {
-                                    if (index < items.size - 1) {
-                                        val mutable = items.toMutableList()
-                                        Collections.swap(mutable, index, index + 1)
-                                        AppLog.d(TAG, "GamepadReorderDeck: moved item '$key' down to ${index + 1}")
-                                        onReorder(mutable)
-                                    }
-                                },
-                                dragHandleModifier = Modifier.draggableHandle(),
-                                modifier = Modifier.firstDeckItem(isFirst = index == 0 && movingItemKey == null),
-                                itemKey = key,
-                            )
-                        }
+                itemsIndexed(items, key = { _, item -> itemKey(item) }) { index, item ->
+                    val key = itemKey(item)
+                    ReorderableItem(reorderState, key = key) { isDragging ->
+                        val isMoving = movingItemKey == key
+                        GamepadReorderCard(
+                            title = itemTitle(item),
+                            description = itemDescription?.invoke(item),
+                            icon = itemIcon?.invoke(item),
+                            index = index,
+                            totalCount = items.size,
+                            isMoving = isMoving,
+                            isDragging = isDragging,
+                            onToggleMoving = {
+                                movingItemKey = if (isMoving) null else key
+                            },
+                            onMoveUp = {
+                                if (index > 0) {
+                                    val mutable = items.toMutableList()
+                                    Collections.swap(mutable, index, index - 1)
+                                    AppLog.d(TAG, "GamepadReorderDeck: moved item '$key' up to ${index - 1}")
+                                    onReorder(mutable)
+                                }
+                            },
+                            onMoveDown = {
+                                if (index < items.size - 1) {
+                                    val mutable = items.toMutableList()
+                                    Collections.swap(mutable, index, index + 1)
+                                    AppLog.d(TAG, "GamepadReorderDeck: moved item '$key' down to ${index + 1}")
+                                    onReorder(mutable)
+                                }
+                            },
+                            dragHandleModifier = Modifier.draggableHandle(),
+                            modifier = Modifier.firstDeckItem(isFirst = index == 0 && movingItemKey == null),
+                            itemKey = key,
+                        )
                     }
                 }
             }

@@ -236,12 +236,6 @@ internal fun MacroTimelineSubPageContent(
         showPhysicalRecordingSheet = false
     }
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_macro_list_title),
-        subPageTitle = localName.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
-        accentColor = accentColor,
-    )
-
     GamepadTextFieldCard(
         title = stringResource(R.string.help_timeline_name_label),
         value = localName,

@@ -76,6 +76,7 @@ import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -262,7 +263,15 @@ fun MacroPadEditor(
                         ) { stack ->
                             val currentSubPage = stack.lastOrNull()
                             if (currentSubPage == null) {
-                                SubPageScrollColumn {
+                                val sectionTitle =
+                                    when (selectedSection) {
+                                        EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
+                                        EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
+                                        EditorSection.CANVAS -> stringResource(R.string.macropad_editor_section_canvas)
+                                        EditorSection.BUTTONS -> stringResource(R.string.macropad_editor_section_buttons)
+                                        EditorSection.MACROS -> stringResource(R.string.macropad_editor_manage_macros)
+                                    }
+                                GamepadDeck(title = sectionTitle) {
                                     // ── Main Section Decks ─────────────────────────────
                                     when (selectedSection) {
                                         EditorSection.PROFILES -> {
@@ -463,7 +472,13 @@ fun MacroPadEditor(
                                 // ── In-Deck Sub-Pages ──────────────────────────────
                                 when (currentSubPage) {
                                     is MacroPadSubPage.NewProfile -> {
-                                        SubPageScrollColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.quick_menu_profile_label),
+                                                    stringResource(R.string.settings_macropad_new_profile),
+                                                ),
+                                        ) {
                                             NewProfileSubPageContent(
                                                 existingNames = profiles.map { it.name },
                                                 selectedPackage = pendingProfilePackage,
@@ -489,7 +504,13 @@ fun MacroPadEditor(
 
                                     is MacroPadSubPage.EditProfile -> {
                                         val prof = profiles.firstOrNull { it.id == currentSubPage.profileId } ?: profile
-                                        SubPageScrollColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.quick_menu_profile_label),
+                                                    stringResource(R.string.profile_settings_title),
+                                                ),
+                                        ) {
                                             EditProfileSubPageContent(
                                                 profile = prof,
                                                 existingNames = profiles.filter { it.id != prof.id }.map { it.name },
@@ -525,7 +546,15 @@ fun MacroPadEditor(
                                                 .mapNotNull { it.association?.packageName }
                                                 .map { it.trim().lowercase() }
                                                 .toSet()
-                                        SubPageFillColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.quick_menu_profile_label),
+                                                    stringResource(R.string.profile_settings_app_mapping),
+                                                    stringResource(R.string.profile_settings_search_apps),
+                                                ),
+                                            scrollable = false,
+                                        ) {
                                             AppPickerSubPageContent(
                                                 assignedPackages = assigned,
                                                 accentColor = colors.accent,
@@ -538,15 +567,19 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ReorderProfiles -> {
-                                        SubPageFillColumn {
-                                            ReorderProfilesSubPage(
-                                                profiles = profiles,
-                                            )
-                                        }
+                                        ReorderProfilesSubPage(
+                                            profiles = profiles,
+                                        )
                                     }
 
                                     is MacroPadSubPage.NewLayout -> {
-                                        SubPageScrollColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_layout),
+                                                    stringResource(R.string.settings_macropad_new_layout),
+                                                ),
+                                        ) {
                                             NewLayoutSubPageContent(
                                                 existingNames = profile.layouts.map { it.name },
                                                 accentColor = colors.accent,
@@ -585,7 +618,13 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.LayoutAppearance -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
-                                            SubPageScrollColumn {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.macropad_editor_appearance_title),
+                                                    ),
+                                            ) {
                                                 LayoutAppearanceSubPageContent(
                                                     layout = lay,
                                                     existingNames = profile.layouts.filter { it.id != lay.id }.map { it.name },
@@ -624,7 +663,13 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.LayoutBackground -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
-                                            SubPageScrollColumn {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.layout_settings_bg_section_title),
+                                                    ),
+                                            ) {
                                                 LayoutBackgroundSubPageContent(
                                                     layout = lay,
                                                     profileName = profile.name,
@@ -652,7 +697,13 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.LayoutTouchpad -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
-                                            SubPageScrollColumn {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.settings_touchpad_title),
+                                                    ),
+                                            ) {
                                                 LayoutTouchpadSubPageContent(
                                                     layout = lay,
                                                     accentColor = colors.accent,
@@ -679,7 +730,13 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.CopyLayout -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
-                                            SubPageScrollColumn {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.macropad_editor_copy_profile_select),
+                                                    ),
+                                            ) {
                                                 CopyLayoutSubPageContent(
                                                     title = stringResource(R.string.macropad_editor_copy_profile_select),
                                                     profiles = profiles,
@@ -695,15 +752,27 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ReorderLayouts -> {
-                                        SubPageFillColumn {
-                                            ReorderLayoutsSubPage(
-                                                layouts = profile.layouts,
-                                            )
-                                        }
+                                        ReorderLayoutsSubPage(
+                                            layouts = profile.layouts,
+                                        )
                                     }
 
                                     is MacroPadSubPage.EditButton -> {
-                                        SubPageScrollColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(
+                                                        if (currentSubPage.button !=
+                                                            null
+                                                        ) {
+                                                            R.string.macropad_editor_section_button_settings
+                                                        } else {
+                                                            R.string.macropad_editor_add_button
+                                                        },
+                                                    ),
+                                                ),
+                                        ) {
                                             EditButtonSubPageContent(
                                                 button = currentSubPage.button,
                                                 accentColor = colors.accent,
@@ -747,7 +816,14 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseIcon -> {
-                                        SubPageFillColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(R.string.macropad_icon_picker_title),
+                                                ),
+                                            scrollable = false,
+                                        ) {
                                             ChooseIconSubPageContent(
                                                 selectedIcon = pendingButtonIcon,
                                                 accentColor = colors.accent,
@@ -762,7 +838,13 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.CopyButton -> {
-                                        SubPageScrollColumn {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(R.string.macropad_editor_copy_layout_select),
+                                                ),
+                                        ) {
                                             CopyButtonSubPageContent(
                                                 title = stringResource(R.string.macropad_editor_copy_layout_select),
                                                 profiles = profiles,
@@ -784,7 +866,13 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.MacroTimeline -> {
                                         val macro = profile.macros.firstOrNull { it.id == currentSubPage.macroId }
                                         if (macro != null) {
-                                            SubPageScrollColumn {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_manage_macros),
+                                                        macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
+                                                    ),
+                                            ) {
                                                 MacroTimelineSubPageContent(
                                                     macro = macro,
                                                     accentColor = colors.accent,
@@ -811,7 +899,22 @@ fun MacroPadEditor(
                                         val macro = profile.macros.firstOrNull { it.id == currentSubPage.macroId }
                                         if (macro != null) {
                                             val step = currentSubPage.stepIndex?.let { macro.steps.getOrNull(it) }
-                                            SubPageScrollColumn {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_manage_macros),
+                                                        macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
+                                                        stringResource(
+                                                            if (step ==
+                                                                null
+                                                            ) {
+                                                                R.string.macropad_macro_step_new
+                                                            } else {
+                                                                R.string.macropad_macro_step_edit
+                                                            },
+                                                        ),
+                                                    ),
+                                            ) {
                                                 MacroStepEditSubPageContent(
                                                     macroName = macro.name,
                                                     step = step,
@@ -836,10 +939,12 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ColorWheel -> {
-                                        SubPageScrollColumn {
+                                        GamepadDeck(
+                                            breadcrumbs = currentSubPage.breadcrumbs,
+                                        ) {
                                             ColorWheelSubPageContent(
                                                 title = currentSubPage.title,
-                                                breadcrumbs = currentSubPage.breadcrumbs,
+                                                breadcrumbs = emptyList(),
                                                 initialColor = currentSubPage.initialColor,
                                                 accentColor = colors.accent,
                                                 onSaveColor = currentSubPage.onSave,
@@ -880,11 +985,6 @@ private fun ProfilesDeck(
 ) {
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.quick_menu_profile_label),
-        color = accentColor,
-    )
 
     val profileIdx = profiles.indexOf(activeProfile).coerceAtLeast(0)
     GamepadChoiceCard(
@@ -972,11 +1072,6 @@ private fun LayoutsDeck(
 ) {
     val scope = rememberCoroutineScope()
     val firstItemFocusRequester = remember { FocusRequester() }
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_layout),
-        color = accentColor,
-    )
 
     val layouts = profile.layouts
     val layoutIdx = layouts.indexOf(activeLayout).coerceAtLeast(0)
@@ -1090,11 +1185,6 @@ private fun CanvasDeck(
 ) {
     var gridMode by remember { mutableStateOf(GridMode.OFF) }
 
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_canvas_controls),
-        color = accentColor,
-    )
-
     GamepadToggleCard(
         title = stringResource(R.string.macropad_editor_lock_canvas),
         description =
@@ -1172,11 +1262,6 @@ private fun ButtonsDeck(
             }
         }
 
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_buttons),
-        color = accentColor,
-    )
-
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_add_button),
         description = stringResource(R.string.macropad_editor_create_button_desc),
@@ -1232,11 +1317,6 @@ private fun MacrosDeck(
     onEditMacro: (Macro) -> Unit,
     onDeleteMacro: (Macro) -> Unit,
 ) {
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_manage_macros),
-        color = accentColor,
-    )
-
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_open_timeline_title),
         description = stringResource(R.string.macropad_editor_open_timeline_desc),
@@ -1357,41 +1437,4 @@ private fun MacroPadEditorHelpModal(
             description = stringResource(R.string.help_editor_button_reorder_desc),
         )
     }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SubPageScrollColumn(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
-    CompositionLocalProvider(
-        LocalBringIntoViewSpec provides bringIntoViewSpec,
-    ) {
-        Column(
-            modifier =
-                modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = content,
-        )
-    }
-}
-
-@Composable
-private fun SubPageFillColumn(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        content = content,
-    )
 }

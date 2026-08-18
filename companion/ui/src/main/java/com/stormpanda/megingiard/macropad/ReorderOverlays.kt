@@ -12,7 +12,11 @@ internal fun ReorderProfilesSubPage(
     modifier: Modifier = Modifier,
 ) {
     GamepadReorderDeck(
-        headerTitle = stringResource(R.string.macropad_reorder_profiles),
+        breadcrumbs =
+            listOf(
+                stringResource(R.string.quick_menu_profile_label),
+                stringResource(R.string.macropad_reorder_profiles),
+            ),
         items = profiles,
         itemKey = { it.id },
         itemTitle = { it.name },
@@ -31,7 +35,11 @@ internal fun ReorderLayoutsSubPage(
     modifier: Modifier = Modifier,
 ) {
     GamepadReorderDeck(
-        headerTitle = stringResource(R.string.macropad_reorder_layouts),
+        breadcrumbs =
+            listOf(
+                stringResource(R.string.macropad_editor_section_layout),
+                stringResource(R.string.macropad_reorder_layouts),
+            ),
         items = layouts,
         itemKey = { it.id },
         itemTitle = { it.name },

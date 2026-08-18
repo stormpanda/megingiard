@@ -114,12 +114,6 @@ internal fun LayoutAppearanceSubPageContent(
     val currentResolvedBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val currentResolvedBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_layout),
-        subPageTitle = stringResource(R.string.layout_settings_colors_section_title),
-        accentColor = accentColor,
-    )
-
     // Live Button Preview Container
     Box(
         modifier =
@@ -312,12 +306,6 @@ internal fun NewLayoutSubPageContent(
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
     val colors = LocalAppColors.current
-
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_layout),
-        subPageTitle = stringResource(R.string.settings_macropad_new_layout),
-        accentColor = accentColor,
-    )
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),

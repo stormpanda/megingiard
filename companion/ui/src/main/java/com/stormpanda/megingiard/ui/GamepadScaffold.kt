@@ -132,6 +132,65 @@ fun rememberGamepadBringIntoViewSpec(extraPadding: Dp = GS_DECK_SCROLL_EXTRA_PAD
 }
 
 /**
+ * Unified right-pane deck container used across root sidebar categories and nested subpages.
+ *
+ * Automatically manages:
+ * - Top breadcrumb / category header trail formatted with ' › ' in uppercase.
+ * - Standardized 16.dp horizontal & 12.dp vertical padding and 10.dp vertical spacing.
+ * - Gamepad [BringIntoViewSpec] focus scrolling behavior.
+ * - Optional vertical scrolling container vs non-scrollable fill (e.g. for LazyLists or custom canvas).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun GamepadDeck(
+    breadcrumbs: List<String>,
+    modifier: Modifier = Modifier,
+    scrollable: Boolean = true,
+    accentColor: Color = LocalAppColors.current.accent,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val bringIntoViewSpec = rememberGamepadBringIntoViewSpec()
+
+    CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoViewSpec) {
+        Column(
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                    .padding(horizontal = GS_DECK_PADDING_H, vertical = GS_DECK_PADDING_V),
+            verticalArrangement = Arrangement.spacedBy(GS_DECK_SPACING),
+        ) {
+            if (breadcrumbs.isNotEmpty()) {
+                GamepadSectionHeader(
+                    text = breadcrumbs.joinToString("  ›  ") { it.uppercase() },
+                    color = accentColor,
+                )
+            }
+
+            content()
+        }
+    }
+}
+
+/**
+ * Convenience overload of [GamepadDeck] for root sidebar categories with a single title.
+ */
+@Composable
+fun GamepadDeck(
+    title: String,
+    modifier: Modifier = Modifier,
+    scrollable: Boolean = true,
+    accentColor: Color = LocalAppColors.current.accent,
+    content: @Composable ColumnScope.() -> Unit,
+) = GamepadDeck(
+    breadcrumbs = if (title.isNotBlank()) listOf(title) else emptyList(),
+    modifier = modifier,
+    scrollable = scrollable,
+    accentColor = accentColor,
+    content = content,
+)
+
+/**
  * Unified gamepad-first category sidebar item tile used across split-screen dialogs and editors.
  */
 @Composable

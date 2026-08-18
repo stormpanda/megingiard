@@ -68,15 +68,6 @@ internal fun ChooseIconSubPageContent(
     var pendingIcon by remember(selectedIcon) { mutableStateOf(selectedIcon) }
     val results = remember(query) { MaterialIconRegistry.searchIcons(query) }
 
-    GamepadSubPageHeader(
-        breadcrumbs =
-            listOf(
-                stringResource(R.string.macropad_editor_section_buttons),
-                stringResource(R.string.macropad_icon_picker_title),
-            ),
-        accentColor = accentColor,
-    )
-
     // ── Search bar ─────────────────────────────────────────────────────────
     GamepadTextFieldCard(
         title = stringResource(R.string.macropad_icon_picker_search),

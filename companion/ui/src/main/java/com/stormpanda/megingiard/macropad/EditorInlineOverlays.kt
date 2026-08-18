@@ -91,12 +91,6 @@ internal fun NewProfileSubPageContent(
         }
     }
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.quick_menu_profile_label),
-        subPageTitle = stringResource(R.string.settings_macropad_new_profile),
-        accentColor = accentColor,
-    )
-
     GamepadTextFieldCard(
         title = stringResource(R.string.profile_settings_name),
         description =
@@ -185,12 +179,6 @@ internal fun EditProfileSubPageContent(
         }
     }
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.quick_menu_profile_label),
-        subPageTitle = stringResource(R.string.profile_settings_title),
-        accentColor = accentColor,
-    )
-
     GamepadTextFieldCard(
         title = stringResource(R.string.profile_settings_name),
         description =
@@ -260,16 +248,6 @@ internal fun AppPickerSubPageContent(
         appsList = queryInstalledLauncherApps(context)
         isLoadingApps = false
     }
-
-    GamepadSubPageHeader(
-        breadcrumbs =
-            listOf(
-                stringResource(R.string.quick_menu_profile_label),
-                stringResource(R.string.profile_settings_app_mapping),
-                stringResource(R.string.profile_settings_search_apps),
-            ),
-        accentColor = accentColor,
-    )
 
     GamepadTextFieldCard(
         title = stringResource(R.string.profile_settings_search_apps),

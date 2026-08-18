@@ -35,12 +35,6 @@ internal fun CopyLayoutSubPageContent(
     val colors = LocalAppColors.current
     val filteredProfiles = profiles.filter { it.id != excludeProfileId }
 
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_layout),
-        subPageTitle = title,
-        accentColor = accentColor,
-    )
-
     if (filteredProfiles.isEmpty()) {
         Text(
             text = stringResource(R.string.macropad_copy_no_profiles_available),
@@ -79,12 +73,6 @@ internal fun CopyButtonSubPageContent(
         profiles.any { profile ->
             profile.layouts.any { it.id != excludeLayoutId }
         }
-
-    GamepadSubPageHeader(
-        parentTitle = stringResource(R.string.macropad_editor_section_buttons),
-        subPageTitle = title,
-        accentColor = accentColor,
-    )
 
     if (!hasSelectableLayouts) {
         Text(
