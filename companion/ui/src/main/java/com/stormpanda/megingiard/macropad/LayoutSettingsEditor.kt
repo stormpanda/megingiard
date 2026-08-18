@@ -63,11 +63,6 @@ internal fun LayoutAppearanceSubPageContent(
         )
     }
 
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_layout_identity),
-        color = accentColor,
-    )
-
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
         description =
