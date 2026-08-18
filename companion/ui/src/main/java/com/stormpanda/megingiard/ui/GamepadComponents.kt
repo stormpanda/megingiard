@@ -651,7 +651,12 @@ fun GamepadCardRow(
 
         if (trailingContent != null) {
             Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
-            trailingContent()
+            Box(
+                modifier = Modifier.height(GC_ICON_BOX_SIZE),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                trailingContent()
+            }
         }
     }
 }
@@ -993,7 +998,7 @@ fun GamepadTextFieldCard(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 if (icon != null) {
                     GamepadCardIcon(
@@ -1013,10 +1018,22 @@ fun GamepadTextFieldCard(
 
                 Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
 
-                GamepadPill(
-                    text = if (isEditing) stringResource(R.string.gamepad_action_save) else stringResource(R.string.gamepad_action_edit),
-                    isAccent = isEditing,
-                )
+                Box(
+                    modifier = Modifier.height(GC_ICON_BOX_SIZE),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    GamepadPill(
+                        text =
+                            if (isEditing) {
+                                stringResource(
+                                    R.string.gamepad_action_save,
+                                )
+                            } else {
+                                stringResource(R.string.gamepad_action_edit)
+                            },
+                        isAccent = isEditing,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(GC_SPACING_8))
