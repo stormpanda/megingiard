@@ -1,7 +1,13 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
@@ -14,26 +20,44 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "LayoutSettingsEditor"
+private val LSE_PREVIEW_PADDING = 12.dp
+private val LSE_PREVIEW_CORNER = 12.dp
+private val LSE_PREVIEW_SIZE = 60.dp
+
+@Composable
+private fun describeColorOption(
+    option: ColorOption,
+    resolvedColor: Color,
+): String =
+    when (option) {
+        is ColorOption.Neutral -> stringResource(R.string.layout_settings_color_neutral)
+        is ColorOption.Accent -> stringResource(R.string.layout_settings_color_accent)
+        is ColorOption.Custom -> String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
+    }
 
 @Composable
 internal fun LayoutAppearanceSubPageContent(
     layout: PadLayout,
     existingNames: List<String>,
     accentColor: Color,
-    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, onApplyColor: (Color) -> PadLayout) -> Unit,
+    onOpenColorSubMenu: (target: LayoutColorTarget, currentDraft: PadLayout) -> Unit,
     onSave: (name: String, textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption, invisibleButtons: Boolean) -> Unit,
 ) {
     var nameText by remember(layout.id, layout.name) { mutableStateOf(layout.name) }
@@ -93,91 +117,34 @@ internal fun LayoutAppearanceSubPageContent(
         color = accentColor,
     )
 
-    // ── Text Color ──────────────────────────────────────────────
-    val selectTextColorTitle = stringResource(R.string.layout_settings_select_text_color)
-    val textBreadcrumbs =
-        listOf(
-            stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.macropad_editor_appearance_title),
-            stringResource(R.string.layout_settings_color_text),
-        )
-    ColorOptionPaletteSection(
+    // ── Text Color Menu Item ────────────────────────────────────
+    GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_text),
-        description = stringResource(R.string.macropad_editor_color_palette_desc),
+        description = describeColorOption(textColorOption, currentResolvedText),
         icon = Icons.Rounded.FormatColorText,
-        colorOption = textColorOption,
-        defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
-        globalAccentColor = globalAccentColor,
-        onOptionSelected = { textColorOption = it },
-        trailingContent = previewButton,
-        onOpenColorWheel = {
-            val draft = buildWorkingLayout()
-            onOpenColorWheel(
-                selectTextColorTitle,
-                textBreadcrumbs,
-                currentResolvedText,
-            ) { selectedColor ->
-                draft.copy(buttonTextColor = ColorOption.Custom(selectedColor.toArgb()))
-            }
-        },
+        actionLeadingContent = previewButton,
+        actionText = stringResource(R.string.gamepad_action_edit),
+        onClick = { onOpenColorSubMenu(LayoutColorTarget.TEXT, buildWorkingLayout()) },
     )
 
-    // ── Border Color ────────────────────────────────────────────
-    val selectBorderColorTitle = stringResource(R.string.layout_settings_select_border_color)
-    val borderBreadcrumbs =
-        listOf(
-            stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.macropad_editor_appearance_title),
-            stringResource(R.string.layout_settings_color_border),
-        )
-    ColorOptionPaletteSection(
+    // ── Border Color Menu Item ──────────────────────────────────
+    GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_border),
-        description = stringResource(R.string.macropad_editor_border_style_desc),
+        description = describeColorOption(borderColorOption, currentResolvedBorder),
         icon = Icons.Rounded.Palette,
-        colorOption = borderColorOption,
-        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
-        globalAccentColor = globalAccentColor,
-        onOptionSelected = { borderColorOption = it },
-        trailingContent = previewButton,
-        onOpenColorWheel = {
-            val draft = buildWorkingLayout()
-            onOpenColorWheel(
-                selectBorderColorTitle,
-                borderBreadcrumbs,
-                currentResolvedBorder,
-            ) { selectedColor ->
-                draft.copy(buttonBorderColor = ColorOption.Custom(selectedColor.toArgb()))
-            }
-        },
+        actionLeadingContent = previewButton,
+        actionText = stringResource(R.string.gamepad_action_edit),
+        onClick = { onOpenColorSubMenu(LayoutColorTarget.BORDER, buildWorkingLayout()) },
     )
 
-    // ── Background Color ────────────────────────────────────────
-    val selectBgColorTitle = stringResource(R.string.layout_settings_select_bg_color)
-    val bgBreadcrumbs =
-        listOf(
-            stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.macropad_editor_appearance_title),
-            stringResource(R.string.layout_settings_color_bg),
-        )
-    ColorOptionPaletteSection(
+    // ── Background / Fading Color Menu Item ─────────────────────
+    GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_bg),
-        description = stringResource(R.string.macropad_editor_fill_style_desc),
+        description = describeColorOption(bgColorOption, currentResolvedBg),
         icon = Icons.Rounded.FormatColorFill,
-        colorOption = bgColorOption,
-        defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
-        globalAccentColor = globalAccentColor,
-        onOptionSelected = { bgColorOption = it },
-        trailingContent = previewButton,
-        onOpenColorWheel = {
-            val draft = buildWorkingLayout()
-            onOpenColorWheel(
-                selectBgColorTitle,
-                bgBreadcrumbs,
-                currentResolvedBg,
-            ) { selectedColor ->
-                draft.copy(buttonBgColor = ColorOption.Custom(selectedColor.toArgb()))
-            }
-        },
+        actionLeadingContent = previewButton,
+        actionText = stringResource(R.string.gamepad_action_edit),
+        onClick = { onOpenColorSubMenu(LayoutColorTarget.BG, buildWorkingLayout()) },
     )
 
     GamepadSectionHeader(
@@ -203,6 +170,144 @@ internal fun LayoutAppearanceSubPageContent(
             if (isConfirmEnabled) {
                 onSave(normalizedName, textColorOption, borderColorOption, bgColorOption, invisibleButtons)
             }
+        },
+    )
+}
+
+@Composable
+internal fun LayoutColorSubPageContent(
+    layout: PadLayout,
+    target: LayoutColorTarget,
+    accentColor: Color,
+    onColorOptionSelected: (ColorOption) -> Unit,
+    onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color) -> Unit,
+) {
+    val colors = LocalAppColors.current
+    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentColor = Color(globalAccentInt)
+
+    val currentOption =
+        when (target) {
+            LayoutColorTarget.TEXT -> layout.buttonTextColor
+            LayoutColorTarget.BORDER -> layout.buttonBorderColor
+            LayoutColorTarget.BG -> layout.buttonBgColor
+        }
+
+    val defaultNeutralColor =
+        when (target) {
+            LayoutColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
+            LayoutColorTarget.BORDER -> MP_AMBIENT_NEUTRAL_BORDER
+            LayoutColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
+        }
+
+    val currentResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val currentResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val currentResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val currentColor = resolveColorOption(currentOption, globalAccentColor, defaultNeutralColor)
+
+    val targetTitle =
+        when (target) {
+            LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
+            LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
+            LayoutColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
+        }
+
+    val selectColorWheelTitle =
+        when (target) {
+            LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_select_text_color)
+            LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_select_border_color)
+            LayoutColorTarget.BG -> stringResource(R.string.layout_settings_select_bg_color)
+        }
+
+    val colorWheelBreadcrumbs =
+        listOf(
+            stringResource(R.string.macropad_editor_section_layout),
+            stringResource(R.string.macropad_editor_appearance_title),
+            targetTitle,
+            stringResource(R.string.settings_accent_custom_title),
+        )
+
+    val isNeutralSelected = currentOption is ColorOption.Neutral
+    val isAccentSelected = currentOption is ColorOption.Accent
+    val isCustomSelected = currentOption is ColorOption.Custom
+
+    // Live preview banner
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(colors.surfaceVariant, RoundedCornerShape(LSE_PREVIEW_CORNER))
+                .padding(LSE_PREVIEW_PADDING),
+        contentAlignment = Alignment.Center,
+    ) {
+        SwordsButtonPreview(
+            textColor = currentResolvedText,
+            borderColor = currentResolvedBorder,
+            bgColor = currentResolvedBg,
+            isIconOnly = layout.invisibleButtons,
+            size = LSE_PREVIEW_SIZE,
+        )
+    }
+
+    GamepadSectionHeader(
+        text = targetTitle,
+        color = accentColor,
+    )
+
+    // Option 1: Theme Neutral
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_neutral),
+        description = stringResource(R.string.macropad_editor_color_palette_desc),
+        icon = Icons.Rounded.FormatColorText,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = defaultNeutralColor,
+                isSelected = isNeutralSelected,
+            )
+        },
+        actionText = if (isNeutralSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionSelected(ColorOption.Neutral) },
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    // Option 2: App Accent
+    GamepadActionCard(
+        title = stringResource(R.string.layout_settings_color_accent),
+        description = stringResource(R.string.settings_accent_color_desc),
+        icon = Icons.Rounded.Palette,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = globalAccentColor,
+                isSelected = isAccentSelected,
+            )
+        },
+        actionText = if (isAccentSelected) stringResource(R.string.gamepad_color_selected) else null,
+        onClick = { onColorOptionSelected(ColorOption.Accent) },
+    )
+
+    // Option 3: Custom Color (Color Wheel)
+    GamepadActionCard(
+        title = stringResource(R.string.settings_accent_custom_title),
+        description =
+            if (isCustomSelected) {
+                String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
+            } else {
+                stringResource(R.string.macropad_editor_color_wheel_desc)
+            },
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = if (isCustomSelected) currentColor else Color.Transparent,
+                isSelected = isCustomSelected,
+            )
+        },
+        actionText = stringResource(R.string.gamepad_action_color_wheel),
+        onClick = {
+            onOpenColorWheel(
+                selectColorWheelTitle,
+                colorWheelBreadcrumbs,
+                currentColor,
+            )
         },
     )
 }

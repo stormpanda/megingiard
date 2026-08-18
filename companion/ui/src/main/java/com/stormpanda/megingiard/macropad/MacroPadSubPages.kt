@@ -39,6 +39,12 @@ internal enum class EditorSection {
     MACROS,
 }
 
+internal enum class LayoutColorTarget {
+    TEXT,
+    BORDER,
+    BG,
+}
+
 internal sealed interface AppPickerTarget {
     data object NewProfile : AppPickerTarget
 
@@ -78,6 +84,14 @@ internal sealed interface MacroPadSubPage {
 
     data class LayoutAppearance(
         val layoutId: String,
+        val draftLayout: PadLayout? = null,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
+    }
+
+    data class LayoutColor(
+        val layoutId: String,
+        val target: LayoutColorTarget,
         val draftLayout: PadLayout? = null,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS

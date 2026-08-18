@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -627,27 +628,17 @@ fun MacroPadEditor(
                                                     layout = effectiveLayout,
                                                     existingNames = profile.layouts.filter { it.id != effectiveLayout.id }.map { it.name },
                                                     accentColor = colors.accent,
-                                                    onOpenColorWheel = { title, breadcrumbs, initialColor, onApplyColor ->
+                                                    onOpenColorSubMenu = { target, currentDraft ->
                                                         subPageStack =
-                                                            subPageStack +
-                                                            MacroPadSubPage.ColorWheel(
-                                                                title = title,
-                                                                breadcrumbs = breadcrumbs,
-                                                                initialColor = initialColor,
-                                                                section = EditorSection.LAYOUTS,
-                                                                onSave = { saved ->
-                                                                    val updatedLayout = onApplyColor(saved)
-                                                                    subPageStack =
-                                                                        subPageStack.dropLast(1).map { subPage ->
-                                                                            if (subPage is MacroPadSubPage.LayoutAppearance &&
-                                                                                subPage.layoutId == effectiveLayout.id
-                                                                            ) {
-                                                                                subPage.copy(draftLayout = updatedLayout)
-                                                                            } else {
-                                                                                subPage
-                                                                            }
-                                                                        }
-                                                                },
+                                                            subPageStack.dropLast(1) +
+                                                            MacroPadSubPage.LayoutAppearance(
+                                                                layoutId = effectiveLayout.id,
+                                                                draftLayout = currentDraft,
+                                                            ) +
+                                                            MacroPadSubPage.LayoutColor(
+                                                                layoutId = effectiveLayout.id,
+                                                                target = target,
+                                                                draftLayout = currentDraft,
                                                             )
                                                     },
                                                     onSave = { name, textCol, borderCol, bgCol, invisibleBtns ->
@@ -661,6 +652,122 @@ fun MacroPadEditor(
                                                             ),
                                                         )
                                                         subPageStack = subPageStack.dropLast(1)
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.LayoutColor -> {
+                                        val baseLayout = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        val effectiveLayout = currentSubPage.draftLayout ?: baseLayout
+                                        if (effectiveLayout != null) {
+                                            val targetTitle =
+                                                when (currentSubPage.target) {
+                                                    LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
+                                                    LayoutColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
+                                                    LayoutColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
+                                                }
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_section_layout),
+                                                        stringResource(R.string.macropad_editor_appearance_title),
+                                                        targetTitle,
+                                                    ),
+                                            ) {
+                                                LayoutColorSubPageContent(
+                                                    layout = effectiveLayout,
+                                                    target = currentSubPage.target,
+                                                    accentColor = colors.accent,
+                                                    onColorOptionSelected = { option ->
+                                                        val updatedLayout =
+                                                            when (currentSubPage.target) {
+                                                                LayoutColorTarget.TEXT -> effectiveLayout.copy(buttonTextColor = option)
+                                                                LayoutColorTarget.BORDER -> effectiveLayout.copy(buttonBorderColor = option)
+                                                                LayoutColorTarget.BG -> effectiveLayout.copy(buttonBgColor = option)
+                                                            }
+                                                        subPageStack =
+                                                            subPageStack.map { subPage ->
+                                                                when (subPage) {
+                                                                    is MacroPadSubPage.LayoutAppearance -> {
+                                                                        if (subPage.layoutId == effectiveLayout.id) {
+                                                                            subPage.copy(draftLayout = updatedLayout)
+                                                                        } else {
+                                                                            subPage
+                                                                        }
+                                                                    }
+
+                                                                    is MacroPadSubPage.LayoutColor -> {
+                                                                        if (subPage.layoutId == effectiveLayout.id) {
+                                                                            subPage.copy(draftLayout = updatedLayout)
+                                                                        } else {
+                                                                            subPage
+                                                                        }
+                                                                    }
+
+                                                                    else -> {
+                                                                        subPage
+                                                                    }
+                                                                }
+                                                            }
+                                                    },
+                                                    onOpenColorWheel = { title, breadcrumbs, initialColor ->
+                                                        subPageStack =
+                                                            subPageStack +
+                                                            MacroPadSubPage.ColorWheel(
+                                                                title = title,
+                                                                breadcrumbs = breadcrumbs,
+                                                                initialColor = initialColor,
+                                                                section = EditorSection.LAYOUTS,
+                                                                onSave = { savedColor ->
+                                                                    val option = ColorOption.Custom(savedColor.toArgb())
+                                                                    val updatedLayout =
+                                                                        when (currentSubPage.target) {
+                                                                            LayoutColorTarget.TEXT -> {
+                                                                                effectiveLayout.copy(
+                                                                                    buttonTextColor = option,
+                                                                                )
+                                                                            }
+
+                                                                            LayoutColorTarget.BORDER -> {
+                                                                                effectiveLayout.copy(
+                                                                                    buttonBorderColor = option,
+                                                                                )
+                                                                            }
+
+                                                                            LayoutColorTarget.BG -> {
+                                                                                effectiveLayout.copy(
+                                                                                    buttonBgColor = option,
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    subPageStack =
+                                                                        subPageStack.dropLast(1).map { subPage ->
+                                                                            when (subPage) {
+                                                                                is MacroPadSubPage.LayoutAppearance -> {
+                                                                                    if (subPage.layoutId == effectiveLayout.id) {
+                                                                                        subPage.copy(draftLayout = updatedLayout)
+                                                                                    } else {
+                                                                                        subPage
+                                                                                    }
+                                                                                }
+
+                                                                                is MacroPadSubPage.LayoutColor -> {
+                                                                                    if (subPage.layoutId == effectiveLayout.id) {
+                                                                                        subPage.copy(draftLayout = updatedLayout)
+                                                                                    } else {
+                                                                                        subPage
+                                                                                    }
+                                                                                }
+
+                                                                                else -> {
+                                                                                    subPage
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                },
+                                                            )
                                                     },
                                                 )
                                             }
