@@ -88,6 +88,7 @@ import com.stormpanda.megingiard.ui.AppModalDialog
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadConfirmDialog
+import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -120,6 +121,9 @@ private val BSE_SPACING_40 = 40.dp
 private const val BSE_PREVIEW_MODAL_WIDTH_FRACTION = 0.95f
 private val BSE_PREVIEW_MODAL_CORNER_RADIUS = 12.dp
 private const val BSE_PREVIEW_MODAL_BG_ALPHA = 0.7f
+
+private const val BSE_BOTTOM_SCREEN_ASPECT_RATIO = 31f / 27f // 1240 x 1080
+private const val BSE_PREVIEW_WIDTH_FRACTION = 0.5f
 
 private const val BSE_CROP_MIN_SCALE = 1.0f
 private const val BSE_CROP_MAX_SCALE = 5.0f
@@ -188,16 +192,6 @@ internal fun LayoutBackgroundSubPageContent(
             ColorFilter.colorMatrix(matrix)
         }
 
-    val configuration = LocalConfiguration.current
-    val aspectRatio =
-        remember(configuration) {
-            if (configuration.screenHeightDp > 0) {
-                configuration.screenWidthDp.toFloat() / configuration.screenHeightDp.toFloat()
-            } else {
-                16f / 9f
-            }
-        }
-
     val pickedUri by BackgroundPickerManager.pickedUri.collectAsState()
     LaunchedEffect(pickedUri) {
         val uri = pickedUri ?: return@LaunchedEffect
@@ -219,8 +213,12 @@ internal fun LayoutBackgroundSubPageContent(
                     }
 
                     currentBgPath != null -> {
-                        val file = File(currentBgPath!!)
-                        BitmapUtils.decodeScaledBitmap(file, targetW, targetH)
+                        val path = currentBgPath!!
+                        if (path.startsWith("/")) {
+                            BitmapUtils.decodeScaledBitmap(File(path), targetW, targetH)
+                        } else {
+                            MacroPadMediaRepository.loadScaledBitmap(context, path)
+                        }
                     }
 
                     else -> {
@@ -235,35 +233,68 @@ internal fun LayoutBackgroundSubPageContent(
 
     // 1. Preview Frame
     Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(180.dp)
-                .clip(RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING))
-                .background(colors.surfaceVariant)
-                .border(
-                    BSE_BORDER_WIDTH_1,
-                    colors.divider.copy(alpha = 0.5f),
-                    RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
-                ),
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
-        val bitmap = previewBitmap
-        if (bitmap != null) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = stringResource(R.string.layout_settings_bg_image_preview_desc),
-                contentScale = ContentScale.Fit,
-                colorFilter = bgImageDimFilter,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            Icon(
-                imageVector = Icons.Rounded.Image,
-                contentDescription = stringResource(R.string.layout_settings_bg_image_none),
-                tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
-                modifier = Modifier.size(BSE_ICON_SIZE_48),
-            )
+        Box(
+            modifier = Modifier.fillMaxWidth(BSE_PREVIEW_WIDTH_FRACTION),
+        ) {
+            GamepadFocusCard(
+                onClick = null,
+                modifier =
+                    Modifier
+                        .aspectRatio(BSE_BOTTOM_SCREEN_ASPECT_RATIO)
+                        .firstDeckItem(),
+                cardBgColor = Color.Black,
+                shape = RoundedCornerShape(BSE_PREVIEW_IMAGE_ROUNDING),
+            ) {
+                val bitmap = previewBitmap
+                if (bitmap != null) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val cw = size.width
+                        val ch = size.height
+                        val iw = bitmap.width.toFloat()
+                        val ih = bitmap.height.toFloat()
+                        if (cw > 0f && ch > 0f && iw > 0f && ih > 0f) {
+                            val scaleBase = ViewportMath.calculateAspectFillScale(cw, ch, iw, ih)
+                            val ws = iw * scaleBase
+                            val hs = ih * scaleBase
+
+                            val maxTx = ((ws * bgScale - cw) / 2f).coerceAtLeast(0f)
+                            val maxTy = ((hs * bgScale - ch) / 2f).coerceAtLeast(0f)
+                            val clampedX = (bgOffsetX * cw).coerceIn(-maxTx, maxTx)
+                            val clampedY = (bgOffsetY * ch).coerceIn(-maxTy, maxTy)
+
+                            drawImage(
+                                image = bitmap,
+                                dstOffset =
+                                    IntOffset(
+                                        ((cw - ws * bgScale) / 2f + clampedX).toInt(),
+                                        ((ch - hs * bgScale) / 2f + clampedY).toInt(),
+                                    ),
+                                dstSize =
+                                    IntSize(
+                                        (ws * bgScale).toInt(),
+                                        (hs * bgScale).toInt(),
+                                    ),
+                                colorFilter = bgImageDimFilter,
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Image,
+                            contentDescription = stringResource(R.string.layout_settings_bg_image_none),
+                            tint = colors.onSurfaceSecondary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(BSE_ICON_SIZE_48),
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -277,7 +308,6 @@ internal fun LayoutBackgroundSubPageContent(
         description = stringResource(R.string.macropad_editor_bg_steamgriddb_desc),
         actionText = stringResource(R.string.gamepad_action_search),
         icon = Icons.Rounded.Search,
-        modifier = Modifier.firstDeckItem(),
         onClick = {
             if (SettingsManager.steamGridDbApiToken.value.isBlank()) {
                 showApiTokenMissingDialog = true
@@ -381,7 +411,7 @@ internal fun LayoutBackgroundSubPageContent(
     if (showPreviewModal && previewBitmap != null) {
         ImageCropDialog(
             bitmap = previewBitmap!!,
-            aspectRatio = aspectRatio,
+            aspectRatio = BSE_BOTTOM_SCREEN_ASPECT_RATIO,
             initialScale = bgScale,
             initialOffsetX = bgOffsetX,
             initialOffsetY = bgOffsetY,
