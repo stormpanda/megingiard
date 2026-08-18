@@ -786,7 +786,6 @@ fun MacroPadEditor(
                                                         stringResource(R.string.layout_settings_bg_section_title),
                                                         stringResource(R.string.layout_settings_bg_image_scrape),
                                                     ),
-                                                scrollable = false,
                                             ) {
                                                 SteamGridDbScrapeSubPageContent(
                                                     initialSearchQuery = profile.name,
