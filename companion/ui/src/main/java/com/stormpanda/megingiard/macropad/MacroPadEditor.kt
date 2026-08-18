@@ -324,6 +324,11 @@ fun MacroPadEditor(
                                                                 }
                                                             }
                                                         }
+                                                        val duplicatedProfile = MacroPadState.activeProfile.value
+                                                        val duplicatedName = duplicatedProfile?.name ?: originalProfile.name
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_profile_duplicated_toast, duplicatedName),
+                                                        )
                                                     }
                                                 },
                                                 onReorderProfiles = {
@@ -376,14 +381,25 @@ fun MacroPadEditor(
                                                     val originalLayout = activeLayout
                                                     val originalPath = originalLayout?.backgroundImagePath
                                                     val newLayoutId = originalLayout?.id?.let { MacroPadState.duplicateLayout(it) }
-                                                    if (originalLayout != null && originalPath != null && newLayoutId != null) {
-                                                        scope.launch {
-                                                            MacroPadMediaRepository.duplicateBackgroundImage(
-                                                                context,
-                                                                originalLayout.id,
-                                                                newLayoutId,
-                                                            )
+                                                    if (originalLayout != null && newLayoutId != null) {
+                                                        if (originalPath != null) {
+                                                            scope.launch {
+                                                                MacroPadMediaRepository.duplicateBackgroundImage(
+                                                                    context,
+                                                                    originalLayout.id,
+                                                                    newLayoutId,
+                                                                )
+                                                            }
                                                         }
+                                                        val duplicatedLayout =
+                                                            MacroPadState.activeProfile.value?.layouts?.firstOrNull {
+                                                                it.id ==
+                                                                    newLayoutId
+                                                            }
+                                                        val duplicatedName = duplicatedLayout?.name ?: originalLayout.name
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_layout_duplicated_toast, duplicatedName),
+                                                        )
                                                     }
                                                 },
                                                 onCopyLayout = {
@@ -1194,7 +1210,15 @@ private fun ProfilesDeck(
         description = stringResource(R.string.macropad_editor_duplicate_profile_desc, activeProfile.name),
         actionText = stringResource(R.string.gamepad_action_duplicate),
         icon = Icons.Rounded.ContentCopy,
-        onClick = onDuplicateProfile,
+        onClick = {
+            onDuplicateProfile()
+            scope.launch {
+                try {
+                    firstItemFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
+            }
+        },
     )
 
     GamepadActionCard(
@@ -1303,7 +1327,15 @@ private fun LayoutsDeck(
         description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
         actionText = stringResource(R.string.gamepad_action_duplicate),
         icon = Icons.Rounded.ContentCopy,
-        onClick = onDuplicateLayout,
+        onClick = {
+            onDuplicateLayout()
+            scope.launch {
+                try {
+                    firstItemFocusRequester.requestFocus()
+                } catch (_: IllegalStateException) {
+                }
+            }
+        },
     )
 
     GamepadActionCard(
