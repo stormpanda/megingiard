@@ -45,6 +45,12 @@ internal enum class LayoutColorTarget {
     BG,
 }
 
+internal enum class ButtonColorTarget {
+    TEXT,
+    BORDER,
+    BG,
+}
+
 internal sealed interface AppPickerTarget {
     data object NewProfile : AppPickerTarget
 
@@ -136,6 +142,14 @@ internal sealed interface MacroPadSubPage {
     data class EditButton(
         val button: PadButton?,
         val draftButton: PadButton? = null,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data class ButtonColor(
+        val button: PadButton?,
+        val draftButton: PadButton,
+        val target: ButtonColorTarget,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }

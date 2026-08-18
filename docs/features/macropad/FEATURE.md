@@ -171,10 +171,11 @@ Each button supports one of the following actions:
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 - **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and fading color.
   - Colors are stored using the `ColorOption` schema, which supports **Neutral Style** (neutral theme-independent palette), **Accent Color** (dynamically resolved system accent color), or a **Custom Color** (fixed ARGB).
-  - Defaults are configured inside the full-screen **Layout Settings Editor** or individual button settings editor using color picker wheels and quick selection palettes featuring the 10 most recently used colors.
-    - **Swords Button Preview**: Both the color picker wheel and quick selection palette display a circular preview button styled with the `swords` icon.
-      - In the color wheel, the swords preview updates in real-time as the user drags to adjust the color, showing how the live-updated color looks on the target slot (text, border, or background) alongside currently configured colors on other slots.
-      - In the quick selection palette, the swatches for Layout Default, Neutral, Accent, and recent colors are replaced by the same swords button preview with the respective color applied to the edited slot, keeping other slots at their currently selected values.
+  - Configured through dedicated sub-menus in the gamepad navigation hierarchy:
+    - In **Layout Settings** (`LayoutAppearanceSubPageContent`): 3 menu items (Text, Border, Background) lead to dedicated color selection sub-pages (`LayoutColorSubPageContent`) with live preview and color wheel integration.
+    - In **Button Settings** (`EditButtonSubPageContent`): 3 menu items (Text, Border, Background) lead to dedicated color selection sub-pages (`ButtonColorSubPageContent`) supporting Layout Default (`null`), Neutral, Accent, and Custom color options.
+    - **Swords / Button Preview**: Both the color picker wheel and sub-page action cards display preview buttons with live-rendered text, border, and background styles.
+    - In the color wheel, preview updates in real-time as the user drags to adjust the color, showing how the live-updated color looks on the target slot alongside other slots.
   - **Opacity Slider**: The custom color picker wheel incorporates an opacity/alpha slider that operates in the 10% to 100% range (`0.1f..1.0f`). Any values parsed or configured are clamped to this range.
   - **Luminance-aware Apply Button**: The "Apply" button inside the color picker dynamically changes its text color to black or white based on the luminance and transparency of the currently picked color, ensuring maximum readability.
   - **Invisible Buttons**: Both the layout settings editor and the button editor include an "Invisible Buttons" switch toggle.

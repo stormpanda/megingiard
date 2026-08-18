@@ -1216,6 +1216,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_picker_macro_desc">Gespeicherte Makro-Sequenz ausführen</string>
     <string name="macropad_picker_macro_edit_desc">Schritte für %1$s bearbeiten</string>
     <string name="macropad_picker_macro_new_desc">Eine neue Makro-Sequenz aufzeichnen</string>
+    <string name="macropad_btn_color_save_desc">Farbänderungen auf diese Taste anwenden</string>
+    <string name="macropad_btn_color_layout_default_desc">Standardfarbe des Layouts übernehmen</string>
 
     <!-- Macro Step Edit Dialog -->
     <string name="macro_step_action_type_title">Aktionstyp des Schritts</string>

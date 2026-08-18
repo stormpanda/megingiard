@@ -928,4 +928,6 @@
     <string name="macropad_picker_macro_desc">要觸發的已儲存巨集序列</string>
     <string name="macropad_picker_macro_edit_desc">編輯 %1$s 的步驟</string>
     <string name="macropad_picker_macro_new_desc">錄製新的巨集序列</string>
+    <string name="macropad_btn_color_save_desc">將色彩變更套用至此按鈕</string>
+    <string name="macropad_btn_color_layout_default_desc">繼承配置預設色彩</string>
 </resources>

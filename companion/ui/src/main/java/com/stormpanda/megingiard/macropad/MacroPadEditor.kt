@@ -998,25 +998,17 @@ fun MacroPadEditor(
                                                         ) +
                                                         MacroPadSubPage.AppPicker(AppPickerTarget.EditButton)
                                                 },
-                                                onOpenColorWheel = { title, breadcrumbs, initialColor, onApplyColor ->
+                                                onOpenColorSubMenu = { currentDraft, target ->
                                                     subPageStack =
-                                                        subPageStack +
-                                                        MacroPadSubPage.ColorWheel(
-                                                            title = title,
-                                                            breadcrumbs = breadcrumbs,
-                                                            initialColor = initialColor,
-                                                            section = EditorSection.BUTTONS,
-                                                            onSave = { saved ->
-                                                                val updatedBtn = onApplyColor(saved)
-                                                                subPageStack =
-                                                                    subPageStack.dropLast(1).map { subPage ->
-                                                                        if (subPage is MacroPadSubPage.EditButton) {
-                                                                            subPage.copy(draftButton = updatedBtn)
-                                                                        } else {
-                                                                            subPage
-                                                                        }
-                                                                    }
-                                                            },
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ButtonColor(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                            target = target,
                                                         )
                                                 },
                                                 onEditMacro = { macro ->
@@ -1035,6 +1027,93 @@ fun MacroPadEditor(
                                                         MacroPadState.updateLayout(lay.copy(buttons = updatedButtons))
                                                     }
                                                     subPageStack = subPageStack.dropLast(1)
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ButtonColor -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        val targetTitle =
+                                            when (currentSubPage.target) {
+                                                ButtonColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
+                                                ButtonColorTarget.BORDER -> stringResource(R.string.layout_settings_color_border)
+                                                ButtonColorTarget.BG -> stringResource(R.string.layout_settings_color_bg)
+                                            }
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    targetTitle,
+                                                ),
+                                        ) {
+                                            ButtonColorSubPageContent(
+                                                button = effectiveButton,
+                                                savedButton = currentSubPage.button,
+                                                activeLayout = activeLayout,
+                                                target = currentSubPage.target,
+                                                accentColor = colors.accent,
+                                                onSave = { updatedDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
+                                                },
+                                                onOpenColorWheel = { title, breadcrumbs, initialColor, inFlightButton ->
+                                                    subPageStack =
+                                                        subPageStack +
+                                                        MacroPadSubPage.ColorWheel(
+                                                            title = title,
+                                                            breadcrumbs = breadcrumbs,
+                                                            initialColor = initialColor,
+                                                            section = EditorSection.BUTTONS,
+                                                            onSave = { savedColor ->
+                                                                val option = ColorOption.Custom(savedColor.toArgb())
+                                                                val updatedDraft =
+                                                                    when (currentSubPage.target) {
+                                                                        ButtonColorTarget.TEXT -> {
+                                                                            inFlightButton.copy(
+                                                                                buttonTextColor = option,
+                                                                            )
+                                                                        }
+
+                                                                        ButtonColorTarget.BORDER -> {
+                                                                            inFlightButton.copy(
+                                                                                buttonBorderColor = option,
+                                                                            )
+                                                                        }
+
+                                                                        ButtonColorTarget.BG -> {
+                                                                            inFlightButton.copy(
+                                                                                buttonBgColor = option,
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                subPageStack =
+                                                                    subPageStack.dropLast(1).map { subPage ->
+                                                                        if (subPage is MacroPadSubPage.EditButton) {
+                                                                            subPage.copy(draftButton = updatedDraft)
+                                                                        } else if (subPage is MacroPadSubPage.ButtonColor) {
+                                                                            subPage.copy(draftButton = updatedDraft)
+                                                                        } else {
+                                                                            subPage
+                                                                        }
+                                                                    }
+                                                            },
+                                                        )
                                                 },
                                             )
                                         }
