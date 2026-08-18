@@ -1,5 +1,11 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -23,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,6 +47,9 @@ private const val TAG = "LayoutSettingsEditor"
 private val LSE_SAVE_PREVIEW_SPACING = 6.dp
 private val LSE_ARROW_SIZE = 14.dp
 private const val LSE_ARROW_ALPHA = 0.6f
+private const val LSE_PULSE_DURATION_MS = 1400
+private const val LSE_PULSE_ACCENT_ALPHA = 0.35f
+private const val LSE_PULSE_SURFACE_ALPHA = 0.55f
 
 @Composable
 private fun describeColorOption(
@@ -81,6 +91,35 @@ internal fun LayoutAppearanceSubPageContent(
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
 
+    val hasChanges =
+        normalizedName != layout.name ||
+            textColorOption != layout.buttonTextColor ||
+            borderColorOption != layout.buttonBorderColor ||
+            bgColorOption != layout.buttonBgColor ||
+            invisibleButtons != layout.invisibleButtons
+
+    val pulseTransition = rememberInfiniteTransition(label = "appearanceSavePulse")
+    val pulseFraction by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = LSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "savePulseFraction",
+    )
+    val saveCardBgColor =
+        if (hasChanges) {
+            lerp(
+                colors.surface.copy(alpha = LSE_PULSE_SURFACE_ALPHA),
+                colors.accent.copy(alpha = LSE_PULSE_ACCENT_ALPHA),
+                pulseFraction,
+            )
+        } else {
+            null
+        }
+
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
@@ -91,15 +130,6 @@ internal fun LayoutAppearanceSubPageContent(
     val currentResolvedText = resolveColorOption(textColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val currentResolvedBorder = resolveColorOption(borderColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val currentResolvedBg = resolveColorOption(bgColorOption, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
-
-    val previewButton: @Composable () -> Unit = {
-        SwordsButtonPreview(
-            textColor = currentResolvedText,
-            borderColor = currentResolvedBorder,
-            bgColor = currentResolvedBg,
-            isIconOnly = invisibleButtons,
-        )
-    }
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
@@ -126,6 +156,7 @@ internal fun LayoutAppearanceSubPageContent(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
+        cardBgColor = saveCardBgColor,
         actionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -166,7 +197,14 @@ internal fun LayoutAppearanceSubPageContent(
         title = stringResource(R.string.layout_settings_color_text),
         description = describeColorOption(textColorOption, currentResolvedText),
         icon = Icons.Rounded.FormatColorText,
-        actionLeadingContent = previewButton,
+        actionLeadingContent = {
+            SwordsButtonPreview(
+                textColor = currentResolvedText,
+                borderColor = Color.Transparent,
+                bgColor = Color.Transparent,
+                isIconOnly = true,
+            )
+        },
         actionText = stringResource(R.string.gamepad_action_edit),
         onClick = { onOpenColorSubMenu(LayoutColorTarget.TEXT) },
     )
@@ -176,7 +214,14 @@ internal fun LayoutAppearanceSubPageContent(
         title = stringResource(R.string.layout_settings_color_border),
         description = describeColorOption(borderColorOption, currentResolvedBorder),
         icon = Icons.Rounded.Palette,
-        actionLeadingContent = previewButton,
+        actionLeadingContent = {
+            SwordsButtonPreview(
+                textColor = Color.Transparent,
+                borderColor = currentResolvedBorder,
+                bgColor = Color.Transparent,
+                isIconOnly = false,
+            )
+        },
         actionText = stringResource(R.string.gamepad_action_edit),
         onClick = { onOpenColorSubMenu(LayoutColorTarget.BORDER) },
     )
@@ -186,7 +231,14 @@ internal fun LayoutAppearanceSubPageContent(
         title = stringResource(R.string.layout_settings_color_bg),
         description = describeColorOption(bgColorOption, currentResolvedBg),
         icon = Icons.Rounded.FormatColorFill,
-        actionLeadingContent = previewButton,
+        actionLeadingContent = {
+            SwordsButtonPreview(
+                textColor = Color.Transparent,
+                borderColor = Color.Transparent,
+                bgColor = currentResolvedBg,
+                isIconOnly = false,
+            )
+        },
         actionText = stringResource(R.string.gamepad_action_edit),
         onClick = { onOpenColorSubMenu(LayoutColorTarget.BG) },
     )
@@ -214,6 +266,10 @@ internal fun LayoutColorSubPageContent(
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
     onSave: (inFlightLayout: PadLayout) -> Unit,
 ) {
+    val colors = LocalAppColors.current
+    val globalAccentInt by SettingsManager.accentColor.collectAsState()
+    val globalAccentColor = Color(globalAccentInt)
+
     val initialOption =
         when (target) {
             LayoutColorTarget.TEXT -> layout.buttonTextColor
@@ -221,6 +277,39 @@ internal fun LayoutColorSubPageContent(
             LayoutColorTarget.BG -> layout.buttonBgColor
         }
     var selectedOption by remember(layout.id, target, initialOption) { mutableStateOf(initialOption) }
+
+    val effectiveSavedLayout = savedLayout ?: layout
+
+    val savedBaselineOption =
+        when (target) {
+            LayoutColorTarget.TEXT -> effectiveSavedLayout.buttonTextColor
+            LayoutColorTarget.BORDER -> effectiveSavedLayout.buttonBorderColor
+            LayoutColorTarget.BG -> effectiveSavedLayout.buttonBgColor
+        }
+
+    val hasChanges = selectedOption != savedBaselineOption
+
+    val pulseTransition = rememberInfiniteTransition(label = "colorSubPageSavePulse")
+    val pulseFraction by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = LSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "colorSavePulseFraction",
+    )
+    val saveCardBgColor =
+        if (hasChanges) {
+            lerp(
+                colors.surface.copy(alpha = LSE_PULSE_SURFACE_ALPHA),
+                colors.accent.copy(alpha = LSE_PULSE_ACCENT_ALPHA),
+                pulseFraction,
+            )
+        } else {
+            null
+        }
 
     fun buildInFlightLayout(): PadLayout =
         when (target) {
@@ -231,10 +320,6 @@ internal fun LayoutColorSubPageContent(
 
     val inFlightLayout = buildInFlightLayout()
 
-    val colors = LocalAppColors.current
-    val globalAccentInt by SettingsManager.accentColor.collectAsState()
-    val globalAccentColor = Color(globalAccentInt)
-
     val defaultNeutralColor =
         when (target) {
             LayoutColorTarget.TEXT -> MP_AMBIENT_NEUTRAL_TEXT
@@ -243,8 +328,6 @@ internal fun LayoutColorSubPageContent(
         }
 
     val currentColor = resolveColorOption(selectedOption, globalAccentColor, defaultNeutralColor)
-
-    val effectiveSavedLayout = savedLayout ?: layout
 
     val savedResolvedText = resolveColorOption(effectiveSavedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val savedResolvedBorder = resolveColorOption(effectiveSavedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
@@ -284,6 +367,7 @@ internal fun LayoutColorSubPageContent(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
+        cardBgColor = saveCardBgColor,
         actionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

@@ -146,6 +146,7 @@ fun GamepadFocusCard(
     itemKey: Any? = null,
     enabled: Boolean = true,
     shape: Shape = RoundedCornerShape(GC_CARD_CORNER),
+    cardBgColor: Color? = null,
     onCustomKeyEvent: ((ComposeKeyEvent) -> Boolean)? = null,
     onLeftKey: (() -> Unit)? = null,
     onRightKey: (() -> Unit)? = null,
@@ -187,16 +188,23 @@ fun GamepadFocusCard(
         animationSpec = tween(GC_ANIM_DURATION_MS),
         label = "cardBorderColor",
     )
-    val animatedBgColor by animateColorAsState(
-        targetValue =
-            if (isEffectivelyFocused) {
-                colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
-            } else {
-                colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
-            },
-        animationSpec = tween(GC_ANIM_DURATION_MS),
-        label = "cardBgColor",
-    )
+    val animatedBgColor =
+        if (cardBgColor != null) {
+            cardBgColor
+        } else {
+            val targetBg =
+                if (isEffectivelyFocused) {
+                    colors.surface.copy(alpha = GC_CARD_FOCUSED_BG_ALPHA)
+                } else {
+                    colors.surface.copy(alpha = GC_CARD_UNFOCUSED_BG_ALPHA)
+                }
+            val bg by animateColorAsState(
+                targetValue = targetBg,
+                animationSpec = tween(GC_ANIM_DURATION_MS),
+                label = "cardBgColor",
+            )
+            bg
+        }
     val animatedElevation by animateDpAsState(
         targetValue = if (isEffectivelyFocused) GC_FOCUS_ELEVATION else GC_DEFAULT_ELEVATION,
         animationSpec = tween(GC_ANIM_DURATION_MS),
@@ -1082,6 +1090,7 @@ fun GamepadActionCard(
     actionText: String? = null,
     actionGlyph: GamePadGlyph? = null,
     actionLeadingContent: (@Composable () -> Unit)? = null,
+    cardBgColor: Color? = null,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
     itemKey: Any? = title,
@@ -1093,6 +1102,7 @@ fun GamepadActionCard(
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,
+        cardBgColor = cardBgColor,
     ) { isFocused ->
         GamepadCardRow(
             title = title,
