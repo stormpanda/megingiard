@@ -1517,6 +1517,7 @@ fun GamepadColorPaletteCard(
     modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
 ) {
@@ -1580,12 +1581,13 @@ fun GamepadColorPaletteCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(GC_COLOR_CARD_CONTENT_SPACING),
         ) {
-            if (icon != null || description != null) {
+            if (icon != null || description != null || trailingContent != null) {
                 GamepadCardRow(
                     title = title,
                     description = description,
                     icon = icon,
                     isFocused = isFocused,
+                    trailingContent = trailingContent,
                 )
             } else {
                 Text(

@@ -51,10 +51,10 @@ import java.util.Locale
 
 private const val TAG = "EditorBaseComponents"
 
-internal val EBC_PREVIEW_DEFAULT_SIZE = 60.dp
+internal val EBC_PREVIEW_DEFAULT_SIZE = 36.dp
 private const val EBC_PREVIEW_BG_ALPHA = 0.25f
 private const val EBC_PREVIEW_GRADIENT_SCALE = 2.8f
-private val EBC_PREVIEW_ICON_SIZE = 44.dp
+private val EBC_PREVIEW_ICON_SIZE = 20.dp
 
 @Composable
 internal fun EditorSectionHeader(
@@ -281,6 +281,7 @@ internal fun ColorOptionPaletteSection(
     globalAccentColor: Color,
     onOptionSelected: (ColorOption) -> Unit,
     onOpenColorWheel: () -> Unit,
+    trailingContent: (@Composable () -> Unit)? = null,
 ) {
     val currentColor = resolveColorOption(colorOption, globalAccentColor, defaultNeutralColor)
     val isCustom = colorOption is ColorOption.Custom && EBC_PALETTE_PRESETS.none { it.toArgb() == colorOption.argb }
@@ -296,6 +297,7 @@ internal fun ColorOptionPaletteSection(
         icon = icon,
         paletteColors = paletteList,
         selectedColor = if (isCustom) Color.Transparent else currentColor,
+        trailingContent = trailingContent,
         onColorSelected = { selected ->
             val option =
                 when (selected) {

@@ -513,6 +513,36 @@ internal fun EditButtonSubPageContent(
             color = accentColor,
         )
 
+        val buttonPreviewContent: @Composable () -> Unit = {
+            PadButtonFace(
+                width = 36.dp,
+                height = 36.dp,
+                shape = if (buttonShape == ButtonShape.CIRCLE) CircleShape else RoundedCornerShape(6.dp),
+                isIconOnly = buttonShape == ButtonShape.ICON_ONLY,
+                isDeviceDisabled = false,
+                borderColor = currentBorder,
+                bgColor = currentBg,
+                bgAlpha = 0.25f,
+                gradientScale = 2.8f,
+            ) {
+                if (iconName != null) {
+                    MaterialSymbol(
+                        name = iconName!!,
+                        size = 20.dp,
+                        tint = currentText,
+                        filled = iconFilled,
+                    )
+                } else {
+                    Text(
+                        text = label.ifBlank { "A" },
+                        color = currentText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+
         val selectTextColorTitle = stringResource(R.string.layout_settings_select_text_color)
         val textBreadcrumbs =
             listOf(
@@ -529,6 +559,7 @@ internal fun EditButtonSubPageContent(
             defaultNeutralColor = MP_AMBIENT_NEUTRAL_TEXT,
             globalAccentColor = globalAccentColor,
             onOptionSelected = { buttonTextColor = it },
+            trailingContent = buttonPreviewContent,
             onOpenColorWheel = {
                 onOpenColorWheel(
                     selectTextColorTitle,
@@ -556,6 +587,7 @@ internal fun EditButtonSubPageContent(
             defaultNeutralColor = MP_AMBIENT_NEUTRAL_BORDER,
             globalAccentColor = globalAccentColor,
             onOptionSelected = { buttonBorderColor = it },
+            trailingContent = buttonPreviewContent,
             onOpenColorWheel = {
                 onOpenColorWheel(
                     selectBorderColorTitle,
@@ -583,6 +615,7 @@ internal fun EditButtonSubPageContent(
             defaultNeutralColor = MP_AMBIENT_NEUTRAL_BG,
             globalAccentColor = globalAccentColor,
             onOptionSelected = { buttonBgColor = it },
+            trailingContent = buttonPreviewContent,
             onOpenColorWheel = {
                 onOpenColorWheel(
                     selectBgColorTitle,
