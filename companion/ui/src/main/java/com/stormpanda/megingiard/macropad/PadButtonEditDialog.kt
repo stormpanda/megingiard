@@ -80,22 +80,6 @@ private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
 private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
 private val PBD_PREVIEW_BUTTON_SIZE = 60.dp
 
-private val PBD_PALETTE_PRESETS =
-    listOf(
-        Color(0xFFFF5252), // Red
-        Color(0xFFFF7043), // Deep Orange
-        Color(0xFFFFA726), // Orange
-        Color(0xFFFFCA28), // Amber
-        Color(0xFF66BB6A), // Green
-        Color(0xFF26A69A), // Teal
-        Color(0xFF29B6F6), // Light Blue
-        Color(0xFF42A5F5), // Blue
-        Color(0xFF7E57C2), // Deep Purple
-        Color(0xFFEC407A), // Pink
-        Color(0xFFFFFFFF), // White
-        Color(0xFF212121), // Dark Grey
-    )
-
 private enum class ButtonColorPickerTarget { TEXT, BORDER, BG }
 
 /**
@@ -714,55 +698,4 @@ internal fun ButtonEditDialog(
             }
         }
     }
-}
-
-@Composable
-internal fun ColorOptionPaletteSection(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    colorOption: ColorOption,
-    defaultNeutralColor: Color,
-    globalAccentColor: Color,
-    onOptionSelected: (ColorOption) -> Unit,
-    onOpenColorWheel: () -> Unit,
-) {
-    val currentColor = resolveColorOption(colorOption, globalAccentColor, defaultNeutralColor)
-    val isCustom = colorOption is ColorOption.Custom && PBD_PALETTE_PRESETS.none { it.toArgb() == colorOption.argb }
-
-    val paletteList =
-        remember(globalAccentColor, defaultNeutralColor) {
-            listOf(defaultNeutralColor, globalAccentColor) + PBD_PALETTE_PRESETS
-        }
-
-    GamepadColorPaletteCard(
-        title = title,
-        description = description,
-        icon = icon,
-        paletteColors = paletteList,
-        selectedColor = if (isCustom) Color.Transparent else currentColor,
-        onColorSelected = { selected ->
-            val option =
-                when (selected) {
-                    defaultNeutralColor -> ColorOption.Neutral
-                    globalAccentColor -> ColorOption.Accent
-                    else -> ColorOption.Custom(selected.toArgb())
-                }
-            onOptionSelected(option)
-        },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.settings_accent_custom_title),
-        description = stringResource(R.string.macropad_editor_color_wheel_desc),
-        actionText = stringResource(R.string.gamepad_action_color_wheel),
-        icon = Icons.Rounded.Colorize,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = currentColor,
-                isSelected = isCustom,
-            )
-        },
-        onClick = onOpenColorWheel,
-    )
 }

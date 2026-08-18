@@ -1,24 +1,14 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
@@ -26,9 +16,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,53 +27,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.settings.ColorWheelPicker
-import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
-import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIconButton
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "LayoutSettingsEditor"
 private val LSE_PREVIEW_BUTTON_SIZE = 56.dp
 private val LSE_PREVIEW_CONTAINER_PADDING = 12.dp
 private val LSE_PREVIEW_CONTAINER_CORNER = 12.dp
-
-private val LSE_PALETTE_PRESETS =
-    listOf(
-        Color(0xFFFF5252), // Red
-        Color(0xFFFF7043), // Deep Orange
-        Color(0xFFFFA726), // Orange
-        Color(0xFFFFCA28), // Amber
-        Color(0xFF66BB6A), // Green
-        Color(0xFF26A69A), // Teal
-        Color(0xFF29B6F6), // Light Blue
-        Color(0xFF42A5F5), // Blue
-        Color(0xFF7E57C2), // Deep Purple
-        Color(0xFFEC407A), // Pink
-        Color(0xFFFFFFFF), // White
-        Color(0xFF212121), // Dark Grey
-    )
-
-private enum class ColorPickerTarget { TEXT, BORDER, BG }
 
 @Composable
 internal fun LayoutAppearanceSubPageContent(
@@ -132,6 +88,7 @@ internal fun LayoutAppearanceSubPageContent(
                 borderColor = currentResolvedBorder,
                 bgColor = currentResolvedBg,
                 size = LSE_PREVIEW_BUTTON_SIZE,
+                isIconOnly = invisibleButtons,
             )
             Text(
                 text =
@@ -164,6 +121,7 @@ internal fun LayoutAppearanceSubPageContent(
         onValueChange = { nameText = it },
         icon = Icons.Rounded.Edit,
         isError = hasError,
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadSectionHeader(
@@ -176,7 +134,7 @@ internal fun LayoutAppearanceSubPageContent(
     val textBreadcrumbs =
         listOf(
             stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.layout_settings_colors_section_title),
+            stringResource(R.string.macropad_editor_appearance_title),
             stringResource(R.string.layout_settings_color_text),
         )
     ColorOptionPaletteSection(
@@ -203,7 +161,7 @@ internal fun LayoutAppearanceSubPageContent(
     val borderBreadcrumbs =
         listOf(
             stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.layout_settings_colors_section_title),
+            stringResource(R.string.macropad_editor_appearance_title),
             stringResource(R.string.layout_settings_color_border),
         )
     ColorOptionPaletteSection(
@@ -230,7 +188,7 @@ internal fun LayoutAppearanceSubPageContent(
     val bgBreadcrumbs =
         listOf(
             stringResource(R.string.macropad_editor_section_layout),
-            stringResource(R.string.layout_settings_colors_section_title),
+            stringResource(R.string.macropad_editor_appearance_title),
             stringResource(R.string.layout_settings_color_bg),
         )
     ColorOptionPaletteSection(
@@ -343,34 +301,4 @@ internal fun NewLayoutSubPageContent(
             }
         },
     )
-}
-
-@Composable
-private fun LayoutSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_layout_settings_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_layout_settings_intro_no_bg))
-
-        HelpSection(stringResource(R.string.help_layout_settings_sec_properties))
-        HelpEntry(
-            label = stringResource(R.string.help_layout_settings_name_title),
-            description = stringResource(R.string.help_layout_settings_name_desc),
-        )
-
-        HelpSection(stringResource(R.string.help_layout_settings_sec_colors))
-        HelpEntry(
-            label = stringResource(R.string.help_layout_settings_colors_title),
-            description = stringResource(R.string.help_layout_settings_colors_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.help_layout_settings_palette_title),
-            description = stringResource(R.string.help_layout_settings_palette_desc),
-        )
-    }
 }

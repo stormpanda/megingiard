@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.GridOff
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +43,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadColorPaletteCard
+import com.stormpanda.megingiard.ui.GamepadColorSwatch
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
@@ -220,6 +225,22 @@ internal fun EditorToolbar(
     }
 }
 
+internal val EBC_PALETTE_PRESETS =
+    listOf(
+        Color(0xFFFF5252), // Red
+        Color(0xFFFF7043), // Deep Orange
+        Color(0xFFFFA726), // Orange
+        Color(0xFFFFCA28), // Amber
+        Color(0xFF66BB6A), // Green
+        Color(0xFF26A69A), // Teal
+        Color(0xFF29B6F6), // Light Blue
+        Color(0xFF42A5F5), // Blue
+        Color(0xFF7E57C2), // Deep Purple
+        Color(0xFFEC407A), // Pink
+        Color(0xFFFFFFFF), // White
+        Color(0xFF212121), // Dark Grey
+    )
+
 @Composable
 internal fun SwordsButtonPreview(
     textColor: Color,
@@ -227,12 +248,13 @@ internal fun SwordsButtonPreview(
     bgColor: Color,
     modifier: Modifier = Modifier,
     size: Dp = EBC_PREVIEW_DEFAULT_SIZE,
+    isIconOnly: Boolean = false,
 ) {
     PadButtonFace(
         width = size,
         height = size,
         shape = CircleShape,
-        isIconOnly = false,
+        isIconOnly = isIconOnly,
         isDeviceDisabled = false,
         borderColor = borderColor,
         bgColor = bgColor,
@@ -247,4 +269,55 @@ internal fun SwordsButtonPreview(
             filled = true,
         )
     }
+}
+
+@Composable
+internal fun ColorOptionPaletteSection(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    colorOption: ColorOption,
+    defaultNeutralColor: Color,
+    globalAccentColor: Color,
+    onOptionSelected: (ColorOption) -> Unit,
+    onOpenColorWheel: () -> Unit,
+) {
+    val currentColor = resolveColorOption(colorOption, globalAccentColor, defaultNeutralColor)
+    val isCustom = colorOption is ColorOption.Custom && EBC_PALETTE_PRESETS.none { it.toArgb() == colorOption.argb }
+
+    val paletteList =
+        remember(globalAccentColor, defaultNeutralColor) {
+            listOf(defaultNeutralColor, globalAccentColor) + EBC_PALETTE_PRESETS
+        }
+
+    GamepadColorPaletteCard(
+        title = title,
+        description = description,
+        icon = icon,
+        paletteColors = paletteList,
+        selectedColor = if (isCustom) Color.Transparent else currentColor,
+        onColorSelected = { selected ->
+            val option =
+                when (selected) {
+                    defaultNeutralColor -> ColorOption.Neutral
+                    globalAccentColor -> ColorOption.Accent
+                    else -> ColorOption.Custom(selected.toArgb())
+                }
+            onOptionSelected(option)
+        },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.settings_accent_custom_title),
+        description = stringResource(R.string.macropad_editor_color_wheel_desc),
+        actionText = stringResource(R.string.gamepad_action_color_wheel),
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = currentColor,
+                isSelected = isCustom,
+            )
+        },
+        onClick = onOpenColorWheel,
+    )
 }
