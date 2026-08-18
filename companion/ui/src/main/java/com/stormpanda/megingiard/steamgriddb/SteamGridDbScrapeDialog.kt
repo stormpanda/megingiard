@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.steamgriddb
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.view.KeyEvent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
@@ -40,9 +42,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -91,7 +96,7 @@ private const val THUMB_CONNECT_TIMEOUT_MS = 5000
 private const val THUMB_READ_TIMEOUT_MS = 8000
 private const val SELECTION_BG_ALPHA = 0.25f
 
-private val STATUS_BOX_HEIGHT = 120.dp
+private val STATUS_BOX_HEIGHT = 160.dp
 private val SG_BADGE_PADDING = 6.dp
 private val SG_BADGE_SIZE = 22.dp
 private val SG_BADGE_ICON_SIZE = 14.dp
@@ -133,7 +138,9 @@ internal fun SteamGridDbScrapeSubPageContent(
     var activeFetchJob by remember { mutableStateOf<Job?>(null) }
 
     val apiKey = SettingsManager.steamGridDbApiToken.value
+    val rowState = rememberLazyListState()
     val imagesCache = remember { HashMap<Pair<Int, String>, List<SteamGridDbImage>>() }
+    val itemFocusRequesters = remember(imagesList) { imagesList.indices.map { FocusRequester() } }
 
     fun loadImagesForGame(
         gameId: Int,
@@ -434,22 +441,74 @@ internal fun SteamGridDbScrapeSubPageContent(
             )
         } else {
             LazyRow(
+                state = rowState,
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = SG_ROW_H_PADDING, vertical = SG_ROW_V_PADDING),
                 horizontalArrangement = Arrangement.spacedBy(SG_ROW_SPACING),
             ) {
-                items(imagesList, key = { it.id }) { image ->
+                itemsIndexed(imagesList, key = { _, it -> it.id }) { index, image ->
                     val isSelected = selectedImage?.id == image.id
+                    val focusRequester = itemFocusRequesters.getOrNull(index) ?: remember { FocusRequester() }
 
                     GamepadFocusCard(
                         onClick = {
                             selectedImage = if (isSelected) null else image
                         },
+                        cardFocusRequester = focusRequester,
                         modifier =
                             Modifier
                                 .height(thumbHeight)
                                 .aspectRatio(thumbAspectRatio),
                         cardBgColor = if (isSelected) accentColor.copy(alpha = SELECTION_BG_ALPHA) else colors.surface,
+                        onCustomKeyEvent = { keyEvent ->
+                            if (keyEvent.type == KeyEventType.KeyDown) {
+                                when (keyEvent.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        if (index > 0) {
+                                            scope.launch {
+                                                rowState.animateScrollToItem(index - 1)
+                                            }
+                                            try {
+                                                itemFocusRequesters.getOrNull(index - 1)?.requestFocus()
+                                            } catch (_: IllegalStateException) {
+                                                // Focus requester unattached
+                                            }
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        if (index < imagesList.size - 1) {
+                                            scope.launch {
+                                                rowState.animateScrollToItem(index + 1)
+                                            }
+                                            try {
+                                                itemFocusRequesters.getOrNull(index + 1)?.requestFocus()
+                                            } catch (_: IllegalStateException) {
+                                                // Focus requester unattached
+                                            }
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+
+                                    else -> {
+                                        false
+                                    }
+                                }
+                            } else if (keyEvent.type == KeyEventType.KeyUp) {
+                                when (keyEvent.nativeKeyEvent.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> index > 0
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> index < imagesList.size - 1
+                                    else -> false
+                                }
+                            } else {
+                                false
+                            }
+                        },
                     ) {
                         Box(modifier = Modifier.fillMaxSize()) {
                             SteamGridDbImageThumbnail(
