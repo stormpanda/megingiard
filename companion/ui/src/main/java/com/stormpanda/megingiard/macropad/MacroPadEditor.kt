@@ -614,9 +614,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.LayoutAppearance -> {
-                                        val baseLayout = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
-                                        val effectiveLayout = currentSubPage.draftLayout ?: baseLayout
-                                        if (effectiveLayout != null) {
+                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        if (lay != null) {
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
@@ -625,25 +624,15 @@ fun MacroPadEditor(
                                                     ),
                                             ) {
                                                 LayoutAppearanceSubPageContent(
-                                                    layout = effectiveLayout,
-                                                    existingNames = profile.layouts.filter { it.id != effectiveLayout.id }.map { it.name },
+                                                    layout = lay,
+                                                    existingNames = profile.layouts.filter { it.id != lay.id }.map { it.name },
                                                     accentColor = colors.accent,
-                                                    onOpenColorSubMenu = { target, currentDraft ->
-                                                        subPageStack =
-                                                            subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.LayoutAppearance(
-                                                                layoutId = effectiveLayout.id,
-                                                                draftLayout = currentDraft,
-                                                            ) +
-                                                            MacroPadSubPage.LayoutColor(
-                                                                layoutId = effectiveLayout.id,
-                                                                target = target,
-                                                                draftLayout = currentDraft,
-                                                            )
+                                                    onOpenColorSubMenu = { target ->
+                                                        subPageStack = subPageStack + MacroPadSubPage.LayoutColor(lay.id, target)
                                                     },
                                                     onSave = { name, textCol, borderCol, bgCol, invisibleBtns ->
                                                         MacroPadState.updateLayout(
-                                                            effectiveLayout.copy(
+                                                            lay.copy(
                                                                 name = name,
                                                                 buttonTextColor = textCol,
                                                                 buttonBorderColor = borderCol,
@@ -659,9 +648,8 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.LayoutColor -> {
-                                        val baseLayout = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
-                                        val effectiveLayout = currentSubPage.draftLayout ?: baseLayout
-                                        if (effectiveLayout != null) {
+                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
+                                        if (lay != null) {
                                             val targetTitle =
                                                 when (currentSubPage.target) {
                                                     LayoutColorTarget.TEXT -> stringResource(R.string.layout_settings_color_text)
@@ -677,22 +665,17 @@ fun MacroPadEditor(
                                                     ),
                                             ) {
                                                 LayoutColorSubPageContent(
-                                                    layout = effectiveLayout,
-                                                    savedLayout = baseLayout,
+                                                    layout = lay,
+                                                    savedLayout = lay,
                                                     target = currentSubPage.target,
                                                     accentColor = colors.accent,
                                                     onSave = { layoutToSave ->
                                                         MacroPadState.updateLayout(layoutToSave)
-                                                        subPageStack = subPageStack.dropLast(2)
+                                                        subPageStack = subPageStack.dropLast(1)
                                                     },
                                                     onOpenColorWheel = { title, breadcrumbs, initialColor, inFlightLayout ->
                                                         subPageStack =
-                                                            subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.LayoutColor(
-                                                                layoutId = effectiveLayout.id,
-                                                                target = currentSubPage.target,
-                                                                draftLayout = inFlightLayout,
-                                                            ) +
+                                                            subPageStack +
                                                             MacroPadSubPage.ColorWheel(
                                                                 title = title,
                                                                 breadcrumbs = breadcrumbs,
@@ -720,16 +703,8 @@ fun MacroPadEditor(
                                                                                 )
                                                                             }
                                                                         }
-                                                                    subPageStack =
-                                                                        subPageStack.dropLast(1).map { subPage ->
-                                                                            if (subPage is MacroPadSubPage.LayoutColor &&
-                                                                                subPage.layoutId == effectiveLayout.id
-                                                                            ) {
-                                                                                subPage.copy(draftLayout = updatedLayout)
-                                                                            } else {
-                                                                                subPage
-                                                                            }
-                                                                        }
+                                                                    MacroPadState.updateLayout(updatedLayout)
+                                                                    subPageStack = subPageStack.dropLast(1)
                                                                 },
                                                             )
                                                     },

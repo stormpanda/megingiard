@@ -57,7 +57,7 @@ internal fun LayoutAppearanceSubPageContent(
     layout: PadLayout,
     existingNames: List<String>,
     accentColor: Color,
-    onOpenColorSubMenu: (target: LayoutColorTarget, currentDraft: PadLayout) -> Unit,
+    onOpenColorSubMenu: (target: LayoutColorTarget) -> Unit,
     onSave: (name: String, textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption, invisibleButtons: Boolean) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -101,10 +101,31 @@ internal fun LayoutAppearanceSubPageContent(
         )
     }
 
-    // ── Save Option at the Very Top (with Saved vs In-Flight Previews) ──
+    GamepadTextFieldCard(
+        title = stringResource(R.string.quick_menu_layout_name_hint),
+        description =
+            when {
+                normalizedName.isEmpty() -> stringResource(R.string.settings_name_error_empty)
+                isDuplicate -> stringResource(R.string.settings_name_error_duplicate)
+                else -> stringResource(R.string.macropad_editor_layout_name_desc)
+            },
+        placeholder = stringResource(R.string.quick_menu_layout_name_placeholder),
+        value = nameText,
+        onValueChange = { nameText = it },
+        icon = Icons.Rounded.Edit,
+        isError = hasError,
+        modifier = Modifier.firstDeckItem(),
+    )
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.layout_settings_colors_section_title),
+        color = accentColor,
+    )
+
+    // ── Save Option inside Button Color Defaults section (with Saved vs In-Flight Previews) ──
     GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_save_layout_title),
-        description = stringResource(R.string.macropad_editor_appearance_desc),
+        title = stringResource(R.string.macropad_editor_save_button_colors_title),
+        description = stringResource(R.string.macropad_editor_save_button_colors_desc),
         actionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -138,27 +159,6 @@ internal fun LayoutAppearanceSubPageContent(
                 onSave(normalizedName, textColorOption, borderColorOption, bgColorOption, invisibleButtons)
             }
         },
-        modifier = Modifier.firstDeckItem(),
-    )
-
-    GamepadTextFieldCard(
-        title = stringResource(R.string.quick_menu_layout_name_hint),
-        description =
-            when {
-                normalizedName.isEmpty() -> stringResource(R.string.settings_name_error_empty)
-                isDuplicate -> stringResource(R.string.settings_name_error_duplicate)
-                else -> stringResource(R.string.macropad_editor_layout_name_desc)
-            },
-        placeholder = stringResource(R.string.quick_menu_layout_name_placeholder),
-        value = nameText,
-        onValueChange = { nameText = it },
-        icon = Icons.Rounded.Edit,
-        isError = hasError,
-    )
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.layout_settings_colors_section_title),
-        color = accentColor,
     )
 
     // ── Text Color Menu Item ────────────────────────────────────
@@ -168,7 +168,7 @@ internal fun LayoutAppearanceSubPageContent(
         icon = Icons.Rounded.FormatColorText,
         actionLeadingContent = previewButton,
         actionText = stringResource(R.string.gamepad_action_edit),
-        onClick = { onOpenColorSubMenu(LayoutColorTarget.TEXT, buildWorkingLayout()) },
+        onClick = { onOpenColorSubMenu(LayoutColorTarget.TEXT) },
     )
 
     // ── Border Color Menu Item ──────────────────────────────────
@@ -178,7 +178,7 @@ internal fun LayoutAppearanceSubPageContent(
         icon = Icons.Rounded.Palette,
         actionLeadingContent = previewButton,
         actionText = stringResource(R.string.gamepad_action_edit),
-        onClick = { onOpenColorSubMenu(LayoutColorTarget.BORDER, buildWorkingLayout()) },
+        onClick = { onOpenColorSubMenu(LayoutColorTarget.BORDER) },
     )
 
     // ── Background / Fading Color Menu Item ─────────────────────
@@ -188,7 +188,7 @@ internal fun LayoutAppearanceSubPageContent(
         icon = Icons.Rounded.FormatColorFill,
         actionLeadingContent = previewButton,
         actionText = stringResource(R.string.gamepad_action_edit),
-        onClick = { onOpenColorSubMenu(LayoutColorTarget.BG, buildWorkingLayout()) },
+        onClick = { onOpenColorSubMenu(LayoutColorTarget.BG) },
     )
 
     GamepadSectionHeader(
@@ -282,8 +282,8 @@ internal fun LayoutColorSubPageContent(
 
     // ── Save Option at the Very Top (with Saved vs In-Flight Previews) ──
     GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_save_layout_title),
-        description = stringResource(R.string.macropad_editor_appearance_desc),
+        title = stringResource(R.string.macropad_editor_save_button_colors_title),
+        description = stringResource(R.string.macropad_editor_save_button_colors_desc),
         actionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
