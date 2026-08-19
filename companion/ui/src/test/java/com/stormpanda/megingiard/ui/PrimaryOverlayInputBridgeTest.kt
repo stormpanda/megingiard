@@ -3,10 +3,15 @@ package com.stormpanda.megingiard.ui
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,9 +25,18 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class PrimaryOverlayInputBridgeTest {
+    private val testDispatcher = StandardTestDispatcher()
+
     @Before
     fun setUp() {
+        Dispatchers.setMain(testDispatcher)
         PrimaryOverlayInputBridge.resetJoystickState()
+    }
+
+    @After
+    fun tearDown() {
+        PrimaryOverlayInputBridge.resetJoystickState()
+        Dispatchers.resetMain()
     }
 
     private fun createJoystickMotionEvent(
@@ -190,4 +204,31 @@ class PrimaryOverlayInputBridgeTest {
         assertEquals(KeyEvent.ACTION_DOWN, actionDispatched)
         assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, keyDispatched)
     }
+
+    @Test
+    fun testProcessGenericMotionEvent_continuousHoldingRepeat() =
+        runTest {
+            val motionEvent = createJoystickMotionEvent(axisY = 0.8f)
+            val downEvents = mutableListOf<Int>()
+            val handled =
+                PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                    if (action == KeyEvent.ACTION_DOWN) {
+                        downEvents.add(key)
+                    }
+                }
+            assertTrue(handled)
+            assertEquals(1, downEvents.size)
+
+            // Advance virtual time past initial delay (250ms) and first repeat tick (120ms)
+            testScheduler.advanceTimeBy(400)
+            assertTrue("Expected repeated ACTION_DOWN events while holding, got ${downEvents.size}", downEvents.size >= 2)
+
+            // Release stick to center
+            val releaseEvent = createJoystickMotionEvent(axisY = 0f)
+            PrimaryOverlayInputBridge.processGenericMotionEvent(releaseEvent) { _, _ -> }
+
+            val countAfterRelease = downEvents.size
+            testScheduler.advanceTimeBy(500)
+            assertEquals("Repeat must stop after releasing to center", countAfterRelease, downEvents.size)
+        }
 }

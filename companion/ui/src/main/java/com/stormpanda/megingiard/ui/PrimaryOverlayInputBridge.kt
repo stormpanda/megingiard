@@ -20,14 +20,26 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.max
 
 private const val TAG = "PrimaryOverlayInputBridge"
 
 private const val STICK_DEADZONE = 0.5f
+private const val REPEAT_INITIAL_DELAY_MS = 250L
+private const val REPEAT_START_DELAY_MS = 120L
+private const val REPEAT_MIN_DELAY_MS = 60L
+private const val REPEAT_ACCEL_FACTOR = 0.90f
 private val FOCUS_BORDER_WIDTH = 2.dp
 private val FOCUS_CORNER_RADIUS = 8.dp
 
@@ -50,6 +62,8 @@ object PrimaryOverlayInputBridge {
     private val _focusRecoveryEvents = MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val focusRecoveryEvents: SharedFlow<Int> = _focusRecoveryEvents.asSharedFlow()
 
+    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+    private var repeatJob: Job? = null
     private var lastJoystickKeyCode = 0
 
     fun sendBumper(direction: BumperDirection) {
@@ -68,7 +82,7 @@ object PrimaryOverlayInputBridge {
 
     /**
      * Translates continuous analog stick / hat switch movements into discrete D-pad KeyEvents
-     * with deadzone filtering and stateful press/release transitions.
+     * with deadzone filtering, stateful press/release transitions, and accelerating repeat.
      *
      * @param event The generic motion event from the gamepad.
      * @param onDpadKey Callback receiving the action ([KeyEvent.ACTION_DOWN] / [KeyEvent.ACTION_UP]) and translated [KeyEvent.KEYCODE_DPAD_*].
@@ -106,6 +120,9 @@ object PrimaryOverlayInputBridge {
             return targetKeyCode != 0
         }
 
+        repeatJob?.cancel()
+        repeatJob = null
+
         if (lastJoystickKeyCode != 0) {
             val oldKey = lastJoystickKeyCode
             lastJoystickKeyCode = 0
@@ -115,6 +132,16 @@ object PrimaryOverlayInputBridge {
         if (targetKeyCode != 0) {
             lastJoystickKeyCode = targetKeyCode
             onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
+            repeatJob =
+                scope.launch {
+                    delay(REPEAT_INITIAL_DELAY_MS)
+                    var delayMs = REPEAT_START_DELAY_MS
+                    while (isActive && lastJoystickKeyCode == targetKeyCode) {
+                        onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
+                        delay(delayMs)
+                        delayMs = max(REPEAT_MIN_DELAY_MS, (delayMs * REPEAT_ACCEL_FACTOR).toLong())
+                    }
+                }
         }
 
         return true
@@ -125,6 +152,8 @@ object PrimaryOverlayInputBridge {
      */
     fun resetJoystickState() {
         AppLog.d(TAG, "resetJoystickState")
+        repeatJob?.cancel()
+        repeatJob = null
         lastJoystickKeyCode = 0
     }
 }
