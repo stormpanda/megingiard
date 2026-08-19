@@ -1135,6 +1135,18 @@ Open Settings to create a layout.</string>
     <string name="macropad_mouse_btn_back_desc">Navigate backward</string>
     <string name="macropad_mouse_btn_forward">Forward (Mouse 5)</string>
     <string name="macropad_mouse_btn_forward_desc">Navigate forward</string>
+    <string name="macropad_gamepad_btn_dpad_up">D-Pad Up</string>
+    <string name="macropad_gamepad_btn_dpad_down">D-Pad Down</string>
+    <string name="macropad_gamepad_btn_dpad_left">D-Pad Left</string>
+    <string name="macropad_gamepad_btn_dpad_right">D-Pad Right</string>
+    <string name="macropad_gamepad_btn_ls_up">Left Stick Up</string>
+    <string name="macropad_gamepad_btn_ls_down">Left Stick Down</string>
+    <string name="macropad_gamepad_btn_ls_left">Left Stick Left</string>
+    <string name="macropad_gamepad_btn_ls_right">Left Stick Right</string>
+    <string name="macropad_gamepad_btn_rs_up">Right Stick Up</string>
+    <string name="macropad_gamepad_btn_rs_down">Right Stick Down</string>
+    <string name="macropad_gamepad_btn_rs_left">Right Stick Left</string>
+    <string name="macropad_gamepad_btn_rs_right">Right Stick Right</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Left: %1$d%% • Right: %2$d%%</string>

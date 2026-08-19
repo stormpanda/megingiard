@@ -1144,6 +1144,18 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_mouse_btn_back_desc">Rückwärts navigieren</string>
     <string name="macropad_mouse_btn_forward">Vorwärts (Maus 5)</string>
     <string name="macropad_mouse_btn_forward_desc">Vorwärts navigieren</string>
+    <string name="macropad_gamepad_btn_dpad_up">Steuerkreuz Oben</string>
+    <string name="macropad_gamepad_btn_dpad_down">Steuerkreuz Unten</string>
+    <string name="macropad_gamepad_btn_dpad_left">Steuerkreuz Links</string>
+    <string name="macropad_gamepad_btn_dpad_right">Steuerkreuz Rechts</string>
+    <string name="macropad_gamepad_btn_ls_up">Linker Stick Oben</string>
+    <string name="macropad_gamepad_btn_ls_down">Linker Stick Unten</string>
+    <string name="macropad_gamepad_btn_ls_left">Linker Stick Links</string>
+    <string name="macropad_gamepad_btn_ls_right">Linker Stick Rechts</string>
+    <string name="macropad_gamepad_btn_rs_up">Rechter Stick Oben</string>
+    <string name="macropad_gamepad_btn_rs_down">Rechter Stick Unten</string>
+    <string name="macropad_gamepad_btn_rs_left">Rechter Stick Links</string>
+    <string name="macropad_gamepad_btn_rs_right">Rechter Stick Rechts</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>

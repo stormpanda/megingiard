@@ -27,6 +27,24 @@ object GamepadKeycodes {
     const val BTN_SELECT = 314
     const val BTN_MODE = 316 // Guide / Home
 
+    // D-Pad buttons (Linux BTN_DPAD_* codes)
+    const val BTN_DPAD_UP = 544
+    const val BTN_DPAD_DOWN = 545
+    const val BTN_DPAD_LEFT = 546
+    const val BTN_DPAD_RIGHT = 547
+
+    // Left Stick directional pseudo-codes
+    const val CODE_LS_UP = 600
+    const val CODE_LS_DOWN = 601
+    const val CODE_LS_LEFT = 602
+    const val CODE_LS_RIGHT = 603
+
+    // Right Stick directional pseudo-codes
+    const val CODE_RS_UP = 604
+    const val CODE_RS_DOWN = 605
+    const val CODE_RS_LEFT = 606
+    const val CODE_RS_RIGHT = 607
+
     // -------------------------------------------------------------------------
     // Analog joystick axes (Linux ABS_* codes from <linux/input-event-codes.h>)
     // -------------------------------------------------------------------------
@@ -56,11 +74,23 @@ object GamepadKeycodes {
             GamepadButtonPreset(BTN_TR, "R1 (Right Shoulder)", "R1"),
             GamepadButtonPreset(BTN_TL2, "L2 (Left Trigger)", "L2"),
             GamepadButtonPreset(BTN_TR2, "R2 (Right Trigger)", "R2"),
-            GamepadButtonPreset(BTN_THUMBL, "L3 (Left Stick)", "L3"),
-            GamepadButtonPreset(BTN_THUMBR, "R3 (Right Stick)", "R3"),
+            GamepadButtonPreset(BTN_THUMBL, "L3 (Left Stick Click)", "L3"),
+            GamepadButtonPreset(BTN_THUMBR, "R3 (Right Stick Click)", "R3"),
             GamepadButtonPreset(BTN_START, "Start", "ST"),
             GamepadButtonPreset(BTN_SELECT, "Select", "SE"),
             GamepadButtonPreset(BTN_MODE, "Guide / Home", "🏠"),
+            GamepadButtonPreset(BTN_DPAD_UP, "D-Pad Up", "D-Up"),
+            GamepadButtonPreset(BTN_DPAD_DOWN, "D-Pad Down", "D-Down"),
+            GamepadButtonPreset(BTN_DPAD_LEFT, "D-Pad Left", "D-Left"),
+            GamepadButtonPreset(BTN_DPAD_RIGHT, "D-Pad Right", "D-Right"),
+            GamepadButtonPreset(CODE_LS_UP, "Left Stick Up", "LS Up"),
+            GamepadButtonPreset(CODE_LS_DOWN, "Left Stick Down", "LS Down"),
+            GamepadButtonPreset(CODE_LS_LEFT, "Left Stick Left", "LS Left"),
+            GamepadButtonPreset(CODE_LS_RIGHT, "Left Stick Right", "LS Right"),
+            GamepadButtonPreset(CODE_RS_UP, "Right Stick Up", "RS Up"),
+            GamepadButtonPreset(CODE_RS_DOWN, "Right Stick Down", "RS Down"),
+            GamepadButtonPreset(CODE_RS_LEFT, "Right Stick Left", "RS Left"),
+            GamepadButtonPreset(CODE_RS_RIGHT, "Right Stick Right", "RS Right"),
         )
 }
 
