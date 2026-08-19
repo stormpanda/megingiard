@@ -160,17 +160,15 @@ Primary Display
       │
       ▼ MediaProjection (API token, requires user consent)
       │
- VirtualDisplay ─────── hardware DRM kernel buffer ──────► Secondary Display
-                                                            └── MirrorPresentation
-                                                                 (android.app.Presentation)
-                                                                 └── FrameLayout
-                                                                      ├── SurfaceView  ← hardware buffer
-                                                                      └── ComposeView  ← MirrorScreen UI
+ VirtualDisplay ─────── hardware DRM kernel buffer ──────► Secondary Display (MainActivity)
+                                                            └── MainAppScreen / MacroPadScreen
+                                                                 └── EmbeddedMirrorView
+                                                                      └── MultiCutoutContainer
+                                                                           └── ThrottledTextureView
 ```
 
-- **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the `SurfaceView` — bypassing CPU composition entirely (the Android Hardware Composer routes the signal via DRM kernel buffers).
-- **Presentation focus policy:** in the primary-screen heavy architecture, all interactive settings, dialogs, editors, and wizards render on Display 0. Consequently, `MirrorPresentation` and `MainActivity` on the secondary display (Display 4) unconditionally maintain `FLAG_NOT_FOCUSABLE` (and `FLAG_ALT_FOCUSABLE_IM`) at all times. This guarantees that the companion screen operates purely via touch event dispatch and NEVER steals window focus from the primary-display game or top-screen overlay.
-- **`SurfaceView.setZOrderMediaOverlay(true)`** is critical: without it, the hardware buffer renders _behind_ the window background, producing a black screen even though GPU rendering succeeds.
+- **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the target `Surface` registered in `MasterSurfaceRegistry` by `EmbeddedMirrorView`.
+- **Embedded View Architecture:** Screen mirroring renders seamlessly inside `MainActivity` / `MainAppScreen` using `EmbeddedMirrorView` (`MultiCutoutContainer` wrapping `ThrottledTextureView`). This avoids window type mismatch issues, removes secondary-display `Presentation` window Z-order conflicts, and allows modals, editors, and Quick Menu overlays to composite directly in the standard Jetpack Compose hierarchy.
 
 ### Architecture: Privileged Capture Pipeline (FR-M9)
 
@@ -192,7 +190,7 @@ App (UID 10xxx)                          megingiard_privd (UID 2000, u:r:shell:s
   │  "MIRROR_DIRECT_READY\n"                 │ after readiness socket is bound
   │◄────────────── socket ───────────────────┤
   │                                          │
-  │  send MirrorPresentation Surface          │
+  │  send MasterSurfaceRegistry Surface       │
   ├─────────────── Binder ───────────────────►│ createDisplay() + setDisplaySurface(surface)
 ```
 
@@ -203,34 +201,30 @@ Primary display layer stack (0)
    │
    ▼ SurfaceControl virtual display (shell UID)
    │
-   └──── setDisplaySurface(app Surface) ─────► MirrorPresentation.SurfaceView
-                                                Compose / Macro overlays stay above it
+   └──── setDisplaySurface(app Surface) ─────► MultiCutoutContainer.ThrottledTextureView
+                                                Compose / Macro overlays composite natively above it
 ```
 
 - **`:mirrorserver` Gradle module** (Java only, `compileOnly` against `android.jar`) is compiled and dexed via a custom `DexTask` that invokes `d8 --min-api 33`. The output `megingiard_mirror.dex` is bundled into `companion/ui/src/main/assets/`.
 - **`PrivdBootstrapper`** pushes the daemon binary _and_ the mirror DEX during ADB-Wireless bootstrap. DEX push failure is non-fatal (standard MediaProjection path remains usable).
 - **Daemon control protocol** adds `MIRROR START_DIRECT w h` and `MIRROR STOP` commands. The direct path `fork()`+`execv("/system/bin/app_process")` launches `DirectMirrorServer`, polls `/proc/net/unix` for its readiness socket, and replies `MIRROR_DIRECT_READY` or `MIRROR_DIRECT_ERR <reason>`. `QUIT` and connection-end paths terminate any running mirror child.
-- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current `MirrorPresentation.SurfaceView` `Surface` to the server. If the initial transaction fails right after reconnection while `PrivdManager.state` is `RUNNING`, `ScreenCaptureService` retries the surface send up to 3 times (with 200ms delay) before evaluating fallback.
-- **`DirectMirrorServer.java`** runs in the shell `app_process`, registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, receives the app-owned `Surface` over Binder, creates a hidden `SurfaceControl` display, and points that display at the app Surface with `setDisplaySurface()`. This preserves the app's `MirrorPresentation` `ComposeView` overlay without an intermediate codec stream.
-- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, while `ScreenCaptureService` sends the current app Surface to the direct server and launches the MediaProjection consent flow when either step fails (guarded to skip consent fallback when `PrivdManager.state` is `RUNNING` to prevent unwanted permission dialog popups).
-- **Surface-start race guard:** `ScreenCaptureService` assigns a monotonically increasing generation to each privileged `SurfaceView` ready/destroy event. Only the latest generation may complete a direct mirror start or launch the MediaProjection fallback; stale coroutine results are ignored so an older timed-out `START_DIRECT` round trip cannot tear down a newer running privileged mirror session.
+- **`DirectMirrorSurfaceBridge`** fetches the shell-registered `ServiceManager` Binder after the daemon reports the direct server ready, then sends the current master `Surface` from `MasterSurfaceRegistry` to the server. If the initial transaction fails right after reconnection while `PrivdManager.state` is `RUNNING`, `ScreenCaptureService` retries the surface send up to 3 times (with 200ms delay) before evaluating fallback.
+- **`DirectMirrorServer.java`** runs in the shell `app_process`, registers a temporary `ServiceManager` Binder named `megingiard.direct.surface`, receives the app-owned `Surface` over Binder, creates a hidden `SurfaceControl` display, and points that display at the app Surface with `setDisplaySurface()`. This composites seamlessly under the app's Compose UI hierarchy without an intermediate codec stream.
+- **`DirectPrivdMirrorSession`** (app, in `:domain`) owns the direct transport attempt. It coordinates the daemon `START_DIRECT` round trip, while `ScreenCaptureService` sends the master Surface to the direct server and launches the MediaProjection consent flow when either step fails (guarded to skip consent fallback when `PrivdManager.state` is `RUNNING` to prevent unwanted permission dialog popups).
+- **Surface-start race guard:** `ScreenCaptureService` assigns a monotonically increasing generation to each privileged surface ready/destroy event. Only the latest generation may complete a direct mirror start or launch the MediaProjection fallback; stale coroutine results are ignored so an older timed-out `START_DIRECT` round trip cannot tear down a newer running privileged mirror session.
 - **`ScreenCaptureService`** routes `ACTION_START_PRIVD` to a separate `startPrivdPath()` which uses `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` (vs. `FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION` for the standard path). All viewport/touch-projection state is shared between the two paths.
 - **DRM caveat:** `SurfaceControl.createDisplay(name, secure=false)` produces a non-secure virtual display. DRM-protected surfaces (Widevine, Netflix, etc.) are blanked by SurfaceFlinger when composited to a non-secure target — the same behaviour as `scrcpy`. Setting `secure=true` would require `INTERNAL_SYSTEM_WINDOW`, which the shell UID does not have.
 
-### Synthetic Lifecycle Owner
+### Synthetic Lifecycle Owner for Primary Screen Overlays
 
-Jetpack Compose requires a `LifecycleOwner`, `SavedStateRegistryOwner`, and `ViewModelStoreOwner`. These are not natively available in a `Presentation` window spawned by a background service.
+Jetpack Compose requires a `LifecycleOwner`, `SavedStateRegistryOwner`, and `ViewModelStoreOwner`.
 
-**`MirrorPresentationLifecycleOwner`** is a synthetic implementation that:
+**`WindowOverlayLifecycleOwner`** (in `com.stormpanda.megingiard.ui`) is a synthetic implementation that serves Display 0 WindowManager overlays (such as `PrimaryOverlayManager` and `FloatingBubbleOverlay`):
 
 1. Fires `ON_CREATE → ON_START → ON_RESUME` lifecycle transitions immediately on instantiation.
-2. Is injected into the `Presentation`'s DecorView via `setViewTreeLifecycleOwner()`, `setViewTreeSavedStateRegistryOwner()`, and `setViewTreeViewModelStoreOwner()`.
-3. Implements `HasDefaultViewModelProviderFactory` so that `AndroidViewModel` subclasses (e.g. `MirrorViewModel`) can be created via `viewModel()` inside the Compose tree.
-4. Is destroyed (`ON_PAUSE → ON_STOP → ON_DESTROY`) via `destroy()` called in `setOnDismissListener`, which also clears the `ViewModelStore`.
-
-This lets Compose run inside the detached `Presentation` window exactly as it would inside a normal `Activity`, with proper recomposition, ViewModel scoping, and coroutine cleanup.
-
-**ComposeView window context:** The `ComposeView` is created with a dedicated `TYPE_APPLICATION` window context on the secondary display (via `context.createWindowContext(display, TYPE_APPLICATION, null)`), separate from the Presentation's own `TYPE_PRIVATE_PRESENTATION` context. Without this, any Compose `Dialog()` composable would throw a "Window type mismatch" error, because `Dialog.show()` inherits the context's window type (2037) but can only create windows of type 2 (`TYPE_APPLICATION`).
+2. Is injected into the overlay `ComposeView` via `setViewTreeLifecycleOwner()`, `setViewTreeSavedStateRegistryOwner()`, and `setViewTreeViewModelStoreOwner()`.
+3. Implements `HasDefaultViewModelProviderFactory` so that `AndroidViewModel` subclasses can be created via `viewModel()` inside the overlay Compose tree.
+4. Is destroyed (`ON_PAUSE → ON_STOP → ON_DESTROY`) via `destroy()` when the overlay is removed.
 
 ### Aspect Ratio Preservation (Letterboxing / Pillarboxing)
 
@@ -293,45 +287,11 @@ Follow Touch Mode centers the designated cutout's source crop viewport in real-t
 6. **Macro Execution Guard:** By default, `ScreenCaptureManager.onTouchReceived(nx, ny)` checks `MacroExecutor.runningMacroIds` before proceeding. If any macro is currently executing, it returns early without updating the target offsets, effectively pausing the camera tracking.
 
 
-### Mode Switching: `show()` / `hide()` vs. `dismiss()`
-
-| Operation                | When                             | Effect                                               |
-| ------------------------ | -------------------------------- | ---------------------------------------------------- |
-| `Presentation.show()`    | Entering MIRROR mode             | Restores window to Z-order; resumes capture          |
-| `Presentation.hide()`    | Leaving MIRROR mode (in-session) | Removes window from Z-order; VirtualDisplay retained |
-| `Presentation.dismiss()` | `Service.onDestroy()` only       | Destroys the window permanently                      |
-
-Presentation visibility is driven by a combined `StateFlow` in `MirrorPresentation`:
-
-```kotlin
-combine(
-    isOnValidScreen, isCapturing,
-    isFilePickerOpen, isEditorActive, isBackgroundSettingsActive,
-    isAmbientPreviewActive, recordingRequested
-) { values ->
-    val isValid = values[0] as Boolean
-    val capturing = values[1] as Boolean
-    val filePickerOpen = values[2] as Boolean
-    val editorActive = values[3] as Boolean
-    val ambientSettingsActive = values[4] as Boolean
-    val ambientPreviewActive = values[5] as Boolean
-    val recordingRequested = values[6] as Boolean
-    capturing && isValid &&
-        !filePickerOpen && !editorActive &&
-        (!ambientSettingsActive || ambientPreviewActive) &&
-        !recordingRequested
-}.collect { shouldShow -> if (shouldShow) show() else hide() }
-```
-
-The Presentation hides when the MacroPad Editor or Ambient Settings overlay opens. These modals
-run in the Activity window which sits below `TYPE_PRIVATE_PRESENTATION` in the Z-order; hiding
-the Presentation ensures touch input reaches the Activity-level modals.
-
 ### Service Lifecycle
 
 - `onStartCommand()` returns `START_NOT_STICKY`: the system MUST NOT auto-restart the service after being killed, since re-acquiring `MediaProjection` requires fresh user consent.
 - Class-level scope: `CoroutineScope(SupervisorJob() + Dispatchers.Main)`.
-- `onDestroy()` cancels the scope, calls `virtualDisplay?.release()`, `mediaProjection?.stop()`, and `mirrorPresentation?.dismiss()`.
+- `onDestroy()` cancels the scope, calls `virtualDisplay?.release()`, `mediaProjection?.stop()`, and clears direct mirror surfaces if in privileged mode.
 
 ### View Lock & Touch Projection
 

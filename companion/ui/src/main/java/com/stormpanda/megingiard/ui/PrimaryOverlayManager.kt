@@ -34,7 +34,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.catalog.DisplayDetector
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
-import com.stormpanda.megingiard.mirror.MirrorPresentationLifecycleOwner
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.AppLanguage
 import com.stormpanda.megingiard.settings.SettingsManager
@@ -61,7 +60,7 @@ object PrimaryOverlayManager {
     private var scope: CoroutineScope? = null
     private var overlayView: ComposeView? = null
     private var overlayWindowManager: WindowManager? = null
-    private var lifecycleOwner: MirrorPresentationLifecycleOwner? = null
+    private var lifecycleOwner: WindowOverlayLifecycleOwner? = null
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun init(app: Application) {
@@ -156,7 +155,7 @@ object PrimaryOverlayManager {
             overlayWindowManager = wm
 
             val owner =
-                MirrorPresentationLifecycleOwner(app) {
+                WindowOverlayLifecycleOwner(app) {
                     AppStateManager.closePrimaryModal()
                     AppStateManager.setActiveCropCutoutId(null)
                 }

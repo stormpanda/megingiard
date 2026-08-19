@@ -81,8 +81,11 @@ import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
+import com.stormpanda.megingiard.mirror.CutoutLayoutEditor
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.TouchRecordingOverlay
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
@@ -99,6 +102,7 @@ import com.stormpanda.megingiard.ui.PrivdReconnectPromptDialog
 import com.stormpanda.megingiard.ui.QuickMenuBar
 import com.stormpanda.megingiard.ui.QuickMenuBarLayout
 import com.stormpanda.megingiard.ui.QuickMenuTutorialDialog
+import com.stormpanda.megingiard.ui.ScreenshotPreviewOverlay
 import com.stormpanda.megingiard.ui.WelcomeTutorialDialog
 import com.stormpanda.megingiard.ui.onboarding.OnboardingWizardDialog
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -381,11 +385,11 @@ fun MainAppScreen() {
                 MacroPadScreen()
             }
 
+            val recordingRequested by TouchRecordingManager.recordingRequested.collectAsState()
+
             // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
-            // Suppressed when ambient mode is active: the overlays are rendered on the
-            // secondary display inside MirrorPresentation instead.
             AnimatedVisibility(
-                visible = isFullscreenMouseActive && !isCapturing,
+                visible = isFullscreenMouseActive,
                 enter =
                     slideInVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
@@ -401,7 +405,7 @@ fun MainAppScreen() {
                 FullscreenMouseOverlay()
             }
             AnimatedVisibility(
-                visible = isFullscreenKeyboardActive && !isCapturing,
+                visible = isFullscreenKeyboardActive,
                 enter =
                     slideInVertically(
                         animationSpec = tween(MAS_KB_SLIDE_ANIM_DURATION_MS),
@@ -419,6 +423,15 @@ fun MainAppScreen() {
                     forcedLayout = fullscreenKeyboardLayout,
                 )
             }
+
+            if (isViewportEditActive) {
+                CutoutLayoutEditor()
+            }
+
+            if (recordingRequested) {
+                TouchRecordingOverlay()
+            }
+
             AnimatedVisibility(
                 visible = isEditorActive && !isDualScreen,
                 enter = slideInVertically { it } + fadeIn(),
@@ -447,6 +460,8 @@ fun MainAppScreen() {
             if (!isSingleScreenModalActive && !isFullscreenKeyboardActive && !isFullscreenMouseActive) {
                 QuickMenuBar()
             }
+
+            ScreenshotPreviewOverlay(modifier = Modifier.align(Alignment.Center))
 
             AnimatedVisibility(
                 visible = isGlobalSettingsOpen && !isDualScreen,

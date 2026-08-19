@@ -145,11 +145,8 @@ Before marking a task as done, verify:
 - [ ] `snapshotFlow` imported from `androidx.compose.runtime`
 - [ ] Deprecated API branches annotated with `@Suppress("DEPRECATION")`
 - [ ] New `Activity` launches on correct display via `ActivityOptions.setLaunchDisplayId()`
-- [ ] `Presentation` mode switching uses `hide()`/`show()`, not `dismiss()` (except in `onDestroy()`)
-- [ ] `MirrorPresentationLifecycleOwner.destroy()` called in `setOnDismissListener`
-- [ ] `SurfaceView` receiving `VirtualDisplay` output has `setZOrderMediaOverlay(true)`
+- [ ] `WindowOverlayLifecycleOwner.destroy()` called when overlay view is removed
 - [ ] Service `onStartCommand` returns `START_NOT_STICKY`
-- [ ] `MirrorPresentation` show/hide reacts to presentation visibility conditions
 - [ ] Touch injector process stopped in `DisposableEffect` when leaving `TOUCHPAD` mode
 - [ ] Key injector process stopped in `DisposableEffect` when leaving `KEYBOARD` mode
 - [ ] No suspected compile errors (verified via static analysis or build compiles)

@@ -1,4 +1,4 @@
-package com.stormpanda.megingiard.mirror
+package com.stormpanda.megingiard.ui
 
 import android.app.Application
 import androidx.activity.OnBackPressedDispatcher
@@ -17,9 +17,9 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import com.stormpanda.megingiard.AppLog
 
-private const val TAG = "MPresentationLifecycle"
+private const val TAG = "WindowOverlayLifecycle"
 
-class MirrorPresentationLifecycleOwner(
+class WindowOverlayLifecycleOwner(
     private val application: Application,
     private val onFallbackBackPressed: (() -> Unit)? = null,
 ) : LifecycleOwner,

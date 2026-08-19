@@ -52,12 +52,18 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroExecutor
+import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.TouchProjectionController
+import com.stormpanda.megingiard.mirror.TouchScreenObserver
+import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.TouchpadGestureProcessor
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.rememberQuickMenuGestureMetrics
 import com.stormpanda.megingiard.viewmodel.MacroPadViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -111,10 +117,19 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+    val cutouts by ScreenCaptureManager.cutouts.collectAsState()
+    val hasCutouts = cutouts.isNotEmpty()
+    val showEmbeddedMirror = isCapturing && hasCutouts
+
     Box(
         modifier = modifier.fillMaxSize().background(colors.appBackground).padding(MP_SCREEN_PADDING),
         contentAlignment = Alignment.Center,
     ) {
+        if (showEmbeddedMirror) {
+            EmbeddedMirrorView(modifier = Modifier.fillMaxSize())
+        }
+
         val p = profile
         val l = layout
         if (p == null || l == null) {
@@ -140,6 +155,7 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 profile = p,
                 layout = l,
                 accentColor = colors.accent,
+                transparentBackground = showEmbeddedMirror,
                 onDisabledActionFeedback = { reason ->
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastFeedbackAtMs < MP_DISABLED_FEEDBACK_RATE_LIMIT_MS) return@PadSurface
@@ -289,6 +305,52 @@ internal fun PadSurface(
     val runningMacroIds by MacroExecutor.runningMacroIds.collectAsState()
 
     val isTouchProjectionActive by ScreenCaptureManager.isTouchProjectionActive.collectAsState()
+    val isFollowActive by ScreenCaptureManager.isFollowActive.collectAsState()
+    val isCapturing by ScreenCaptureManager.isCapturing.collectAsState()
+    val overlayAtBottom by SettingsManager.overlayAtBottom.collectAsState()
+    val (
+        edgeZonePx,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+    ) = rememberQuickMenuGestureMetrics()
+
+    val projectionController =
+        remember(edgeZonePx, overlayAtBottom) {
+            TouchProjectionController(edgeZonePx, overlayAtBottom)
+        }
+
+    LaunchedEffect(isTouchProjectionActive) {
+        if (isTouchProjectionActive) {
+            TouchInjector.start(context, "TouchProjection")
+        } else {
+            TouchInjector.stop("TouchProjection")
+        }
+    }
+
+    LaunchedEffect(isFollowActive, isCapturing) {
+        if (isFollowActive && isCapturing) {
+            TouchScreenObserver.onTouchNormalized = { nx, ny ->
+                ScreenCaptureManager.onTouchReceived(nx, ny)
+            }
+            TouchScreenObserver.start()
+        } else {
+            TouchScreenObserver.stop()
+            TouchScreenObserver.onTouchNormalized = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            TouchInjector.stop("TouchProjection")
+            TouchScreenObserver.stop()
+        }
+    }
+
     val bgTouchpadActive = layout.backgroundTouchpad.enabled && !isTouchProjectionActive
     val coroutineScope = rememberCoroutineScope()
     val bgTouchpadProcessor =
@@ -323,7 +385,15 @@ internal fun PadSurface(
                     .clip(RoundedCornerShape(MP_CORNER_RADIUS))
                     .background(if (transparentBackground) Color.Transparent else Color.Black)
                     .onSizeChanged { canvasSizeState.value = it }
-                    .pointerInput(profile, layout, canvasSizeState.value, bgTouchpadActive) {
+                    .pointerInput(
+                        profile,
+                        layout,
+                        canvasSizeState.value,
+                        bgTouchpadActive,
+                        isTouchProjectionActive,
+                        overlayAtBottom,
+                        edgeZonePx,
+                    ) {
                         try {
                             awaitPointerEventScope {
                                 while (true) {
@@ -347,6 +417,14 @@ internal fun PadSurface(
                                             if (engine.isPointerTracked(id)) {
                                                 engine.onRelease(id, layout.buttons, profile)
                                                 change.consume()
+                                            } else if (isTouchProjectionActive) {
+                                                projectionController.onRelease(
+                                                    pointerId = id,
+                                                    x = change.position.x,
+                                                    y = change.position.y,
+                                                    boxW = w,
+                                                    boxH = h,
+                                                )
                                             } else if (bgTouchpadActive) {
                                                 bgTouchpadProcessor.onRelease(id, change.position.x, change.position.y, w, h)
                                                 change.consume()
@@ -391,6 +469,24 @@ internal fun PadSurface(
                                                             }
                                                         }
                                                         change.consume()
+                                                    } else if (isTouchProjectionActive) {
+                                                        val nearEdge =
+                                                            if (overlayAtBottom) {
+                                                                change.position.y >= h - edgeZonePx
+                                                            } else {
+                                                                change.position.y <= edgeZonePx
+                                                            }
+                                                        if (!nearEdge) {
+                                                            projectionController.onPress(
+                                                                pointerId = id,
+                                                                x = change.position.x,
+                                                                y = change.position.y,
+                                                                boxW = w,
+                                                                boxH = h,
+                                                                isConsumed = change.isConsumed,
+                                                                pointerCount = event.changes.size,
+                                                            )
+                                                        }
                                                     } else if (bgTouchpadActive) {
                                                         bgTouchpadProcessor.onPress(
                                                             id,
@@ -418,6 +514,15 @@ internal fun PadSurface(
                                                         profile,
                                                     )
                                                     change.consume()
+                                                } else if (isTouchProjectionActive) {
+                                                    projectionController.onMove(
+                                                        pointerId = id,
+                                                        x = change.position.x,
+                                                        y = change.position.y,
+                                                        boxW = w,
+                                                        boxH = h,
+                                                        isConsumed = change.isConsumed,
+                                                    )
                                                 } else if (bgTouchpadActive) {
                                                     val delta = change.positionChange()
                                                     bgTouchpadProcessor.onMove(
@@ -442,6 +547,9 @@ internal fun PadSurface(
                             }
                         } finally {
                             engine.releaseAll(layout.buttons)
+                            if (isTouchProjectionActive) {
+                                projectionController.reset()
+                            }
                             if (bgTouchpadActive) {
                                 bgTouchpadProcessor.onCancel()
                             }

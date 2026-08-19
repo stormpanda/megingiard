@@ -74,7 +74,7 @@ import com.stormpanda.megingiard.input.MouseInjector
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHaptic
-import com.stormpanda.megingiard.mirror.LocalMirrorPresentation
+import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
@@ -432,18 +432,7 @@ fun FullscreenMouseOverlay() {
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isMirroringActive) {
-                                    val presentation = LocalMirrorPresentation.current
-                                    if (presentation != null) {
-                                        AndroidView(
-                                            factory = { ctx ->
-                                                presentation.acquireMasterTextureView() ?: TextureView(ctx)
-                                            },
-                                            modifier = Modifier.fillMaxSize(),
-                                            onRelease = {
-                                                presentation.releaseMasterTextureView()
-                                            },
-                                        )
-                                    }
+                                    EmbeddedMirrorView(modifier = Modifier.fillMaxSize())
                                     Box(
                                         modifier =
                                             Modifier
