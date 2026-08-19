@@ -375,7 +375,7 @@ fun MainAppScreen() {
         ) {
             val showIntegrationHome by AppStateManager.showIntegrationHome.collectAsState()
 
-            if (showIntegrationHome) {
+            if (showIntegrationHome && !isEditorActive) {
                 IntegrationHomeScreen()
             } else {
                 MacroPadScreen()
