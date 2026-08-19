@@ -34,22 +34,6 @@ private const val TAG = "TimelineBaseComponents"
 
 private const val MTE_PADDING = 16
 private val MTE_ACTION_BTN_HEIGHT = 44.dp
-private val MTE_SECTION_HEADER_V_PADDING = 10.dp
-
-@Composable
-internal fun MtSectionHeader(textRes: Int) {
-    val colors = LocalAppColors.current
-    Text(
-        text = stringResource(textRes).uppercase(Locale.ROOT),
-        color = colors.sectionHeaderColor,
-        style = MaterialTheme.typography.labelSmall,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(colors.surfaceVariant)
-                .padding(horizontal = MTE_PADDING.dp, vertical = MTE_SECTION_HEADER_V_PADDING),
-    )
-}
 
 @Composable
 internal fun StepActionRow(

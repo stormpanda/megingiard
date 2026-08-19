@@ -29,17 +29,13 @@ import com.stormpanda.megingiard.AppLog
 
 private const val TAG = "GamepadGlyphs"
 
-private val GG_FOOTER_HEIGHT = 44.dp
-private val GG_FOOTER_H_PADDING = 16.dp
 private val GG_GLYPH_SIZE = 20.dp
 private val GG_DEFAULT_BORDER_WIDTH = 1.dp
 private val GG_PILL_CORNER = 4.dp
 private val GG_PILL_H_PADDING = 6.dp
 private val GG_SPACING_ZERO = 0.dp
 private val GG_ACTION_PROMPT_SPACING = 6.dp
-private val GG_ACTIONS_SPACING = 16.dp
 private val GG_TEXT_SIZE_GLYPH = 11.sp
-private const val GG_FOOTER_BG_ALPHA = 0.85f
 
 /**
  * Standard gamepad button glyph descriptors.
@@ -134,32 +130,5 @@ fun GamePadActionPrompt(
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
         )
-    }
-}
-
-/**
- * Unified bottom footer bar displaying contextual gamepad button action prompts.
- */
-@Composable
-fun PrimaryOverlayFooter(
-    actions: List<Pair<GamePadGlyph, String>>,
-    modifier: Modifier = Modifier,
-) {
-    val colors = LocalAppColors.current
-
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .height(GG_FOOTER_HEIGHT)
-                .background(colors.surfaceVariant.copy(alpha = GG_FOOTER_BG_ALPHA))
-                .border(GG_DEFAULT_BORDER_WIDTH, colors.subduedBorder)
-                .padding(horizontal = GG_FOOTER_H_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(GG_ACTIONS_SPACING),
-    ) {
-        actions.forEach { (glyph, label) ->
-            GamePadActionPrompt(glyph = glyph, text = label)
-        }
     }
 }
