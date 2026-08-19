@@ -75,6 +75,66 @@ object GamepadInjector {
                 router.dispatch({ PrivdGamepadInjector.buttonDown(btnCode) }, { ShellGamepadInjector.buttonDown(btnCode) })
             }
 
+            GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
+                hat(HAT_AXIS_X, HAT_DIR_NEG)
+                hat(HAT_AXIS_Y, HAT_DIR_NEG)
+                router.dispatch(
+                    {
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
+                    },
+                    {
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
+                    },
+                )
+            }
+
+            GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
+                hat(HAT_AXIS_X, HAT_DIR_POS)
+                hat(HAT_AXIS_Y, HAT_DIR_NEG)
+                router.dispatch(
+                    {
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
+                    },
+                    {
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_UP)
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
+                    },
+                )
+            }
+
+            GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
+                hat(HAT_AXIS_X, HAT_DIR_NEG)
+                hat(HAT_AXIS_Y, HAT_DIR_POS)
+                router.dispatch(
+                    {
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
+                    },
+                    {
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_LEFT)
+                    },
+                )
+            }
+
+            GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
+                hat(HAT_AXIS_X, HAT_DIR_POS)
+                hat(HAT_AXIS_Y, HAT_DIR_POS)
+                router.dispatch(
+                    {
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                        PrivdGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
+                    },
+                    {
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_DOWN)
+                        ShellGamepadInjector.buttonDown(GamepadKeycodes.BTN_DPAD_RIGHT)
+                    },
+                )
+            }
+
             GamepadKeycodes.CODE_LS_UP -> {
                 joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
             }
@@ -91,6 +151,26 @@ object GamepadInjector {
                 joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX)
             }
 
+            GamepadKeycodes.CODE_LS_UP_LEFT -> {
+                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MIN)
+                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
+            }
+
+            GamepadKeycodes.CODE_LS_UP_RIGHT -> {
+                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX)
+                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MIN)
+            }
+
+            GamepadKeycodes.CODE_LS_DOWN_LEFT -> {
+                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MIN)
+                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MAX)
+            }
+
+            GamepadKeycodes.CODE_LS_DOWN_RIGHT -> {
+                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_MAX)
+                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_MAX)
+            }
+
             GamepadKeycodes.CODE_RS_UP -> {
                 joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
             }
@@ -105,6 +185,26 @@ object GamepadInjector {
 
             GamepadKeycodes.CODE_RS_RIGHT -> {
                 joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX)
+            }
+
+            GamepadKeycodes.CODE_RS_UP_LEFT -> {
+                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MIN)
+                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
+            }
+
+            GamepadKeycodes.CODE_RS_UP_RIGHT -> {
+                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX)
+                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MIN)
+            }
+
+            GamepadKeycodes.CODE_RS_DOWN_LEFT -> {
+                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MIN)
+                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
+            }
+
+            GamepadKeycodes.CODE_RS_DOWN_RIGHT -> {
+                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_MAX)
+                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_MAX)
             }
 
             else -> {
@@ -125,20 +225,69 @@ object GamepadInjector {
                 router.dispatch({ PrivdGamepadInjector.buttonUp(btnCode) }, { ShellGamepadInjector.buttonUp(btnCode) })
             }
 
-            GamepadKeycodes.CODE_LS_UP, GamepadKeycodes.CODE_LS_DOWN -> {
+            GamepadKeycodes.CODE_DPAD_UP_LEFT,
+            GamepadKeycodes.CODE_DPAD_UP_RIGHT,
+            GamepadKeycodes.CODE_DPAD_DOWN_LEFT,
+            GamepadKeycodes.CODE_DPAD_DOWN_RIGHT,
+            -> {
+                hat(HAT_AXIS_X, HAT_DIR_CENTER)
+                hat(HAT_AXIS_Y, HAT_DIR_CENTER)
+                router.dispatch(
+                    {
+                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_UP)
+                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_DOWN)
+                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_LEFT)
+                        PrivdGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
+                    },
+                    {
+                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_UP)
+                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_DOWN)
+                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_LEFT)
+                        ShellGamepadInjector.buttonUp(GamepadKeycodes.BTN_DPAD_RIGHT)
+                    },
+                )
+            }
+
+            GamepadKeycodes.CODE_LS_UP,
+            GamepadKeycodes.CODE_LS_DOWN,
+            -> {
                 joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_CENTER)
             }
 
-            GamepadKeycodes.CODE_LS_LEFT, GamepadKeycodes.CODE_LS_RIGHT -> {
+            GamepadKeycodes.CODE_LS_LEFT,
+            GamepadKeycodes.CODE_LS_RIGHT,
+            -> {
                 joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_CENTER)
             }
 
-            GamepadKeycodes.CODE_RS_UP, GamepadKeycodes.CODE_RS_DOWN -> {
+            GamepadKeycodes.CODE_LS_UP_LEFT,
+            GamepadKeycodes.CODE_LS_UP_RIGHT,
+            GamepadKeycodes.CODE_LS_DOWN_LEFT,
+            GamepadKeycodes.CODE_LS_DOWN_RIGHT,
+            -> {
+                joystick(GamepadKeycodes.ABS_X, JOYSTICK_DEFLECTION_CENTER)
+                joystick(GamepadKeycodes.ABS_Y, JOYSTICK_DEFLECTION_CENTER)
+            }
+
+            GamepadKeycodes.CODE_RS_UP,
+            GamepadKeycodes.CODE_RS_DOWN,
+            -> {
                 joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_CENTER)
             }
 
-            GamepadKeycodes.CODE_RS_LEFT, GamepadKeycodes.CODE_RS_RIGHT -> {
+            GamepadKeycodes.CODE_RS_LEFT,
+            GamepadKeycodes.CODE_RS_RIGHT,
+            -> {
                 joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_CENTER)
+            }
+
+            GamepadKeycodes.CODE_RS_UP_LEFT,
+            GamepadKeycodes.CODE_RS_UP_RIGHT,
+            GamepadKeycodes.CODE_RS_DOWN_LEFT,
+            GamepadKeycodes.CODE_RS_DOWN_RIGHT,
+            -> {
+                joystick(GamepadKeycodes.ABS_Z, JOYSTICK_DEFLECTION_CENTER)
+                joystick(GamepadKeycodes.ABS_RZ, JOYSTICK_DEFLECTION_CENTER)
             }
 
             else -> {

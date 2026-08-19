@@ -589,6 +589,22 @@ internal fun gamepadCodeDisplayLabel(
             context.getString(R.string.macropad_gamepad_btn_dpad_right)
         }
 
+        GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
+            context.getString(R.string.macropad_gamepad_btn_dpad_up_left)
+        }
+
+        GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
+            context.getString(R.string.macropad_gamepad_btn_dpad_up_right)
+        }
+
+        GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
+            context.getString(R.string.macropad_gamepad_btn_dpad_down_left)
+        }
+
+        GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
+            context.getString(R.string.macropad_gamepad_btn_dpad_down_right)
+        }
+
         GamepadKeycodes.CODE_LS_UP -> {
             context.getString(R.string.macropad_gamepad_btn_ls_up)
         }
@@ -605,6 +621,22 @@ internal fun gamepadCodeDisplayLabel(
             context.getString(R.string.macropad_gamepad_btn_ls_right)
         }
 
+        GamepadKeycodes.CODE_LS_UP_LEFT -> {
+            context.getString(R.string.macropad_gamepad_btn_ls_up_left)
+        }
+
+        GamepadKeycodes.CODE_LS_UP_RIGHT -> {
+            context.getString(R.string.macropad_gamepad_btn_ls_up_right)
+        }
+
+        GamepadKeycodes.CODE_LS_DOWN_LEFT -> {
+            context.getString(R.string.macropad_gamepad_btn_ls_down_left)
+        }
+
+        GamepadKeycodes.CODE_LS_DOWN_RIGHT -> {
+            context.getString(R.string.macropad_gamepad_btn_ls_down_right)
+        }
+
         GamepadKeycodes.CODE_RS_UP -> {
             context.getString(R.string.macropad_gamepad_btn_rs_up)
         }
@@ -619,6 +651,22 @@ internal fun gamepadCodeDisplayLabel(
 
         GamepadKeycodes.CODE_RS_RIGHT -> {
             context.getString(R.string.macropad_gamepad_btn_rs_right)
+        }
+
+        GamepadKeycodes.CODE_RS_UP_LEFT -> {
+            context.getString(R.string.macropad_gamepad_btn_rs_up_left)
+        }
+
+        GamepadKeycodes.CODE_RS_UP_RIGHT -> {
+            context.getString(R.string.macropad_gamepad_btn_rs_up_right)
+        }
+
+        GamepadKeycodes.CODE_RS_DOWN_LEFT -> {
+            context.getString(R.string.macropad_gamepad_btn_rs_down_left)
+        }
+
+        GamepadKeycodes.CODE_RS_DOWN_RIGHT -> {
+            context.getString(R.string.macropad_gamepad_btn_rs_down_right)
         }
 
         else -> {
@@ -686,6 +734,22 @@ internal fun gamepadCodeDisplayLabel(
             stringResource(R.string.macropad_gamepad_btn_dpad_right)
         }
 
+        GamepadKeycodes.CODE_DPAD_UP_LEFT -> {
+            stringResource(R.string.macropad_gamepad_btn_dpad_up_left)
+        }
+
+        GamepadKeycodes.CODE_DPAD_UP_RIGHT -> {
+            stringResource(R.string.macropad_gamepad_btn_dpad_up_right)
+        }
+
+        GamepadKeycodes.CODE_DPAD_DOWN_LEFT -> {
+            stringResource(R.string.macropad_gamepad_btn_dpad_down_left)
+        }
+
+        GamepadKeycodes.CODE_DPAD_DOWN_RIGHT -> {
+            stringResource(R.string.macropad_gamepad_btn_dpad_down_right)
+        }
+
         GamepadKeycodes.CODE_LS_UP -> {
             stringResource(R.string.macropad_gamepad_btn_ls_up)
         }
@@ -702,6 +766,22 @@ internal fun gamepadCodeDisplayLabel(
             stringResource(R.string.macropad_gamepad_btn_ls_right)
         }
 
+        GamepadKeycodes.CODE_LS_UP_LEFT -> {
+            stringResource(R.string.macropad_gamepad_btn_ls_up_left)
+        }
+
+        GamepadKeycodes.CODE_LS_UP_RIGHT -> {
+            stringResource(R.string.macropad_gamepad_btn_ls_up_right)
+        }
+
+        GamepadKeycodes.CODE_LS_DOWN_LEFT -> {
+            stringResource(R.string.macropad_gamepad_btn_ls_down_left)
+        }
+
+        GamepadKeycodes.CODE_LS_DOWN_RIGHT -> {
+            stringResource(R.string.macropad_gamepad_btn_ls_down_right)
+        }
+
         GamepadKeycodes.CODE_RS_UP -> {
             stringResource(R.string.macropad_gamepad_btn_rs_up)
         }
@@ -716,6 +796,22 @@ internal fun gamepadCodeDisplayLabel(
 
         GamepadKeycodes.CODE_RS_RIGHT -> {
             stringResource(R.string.macropad_gamepad_btn_rs_right)
+        }
+
+        GamepadKeycodes.CODE_RS_UP_LEFT -> {
+            stringResource(R.string.macropad_gamepad_btn_rs_up_left)
+        }
+
+        GamepadKeycodes.CODE_RS_UP_RIGHT -> {
+            stringResource(R.string.macropad_gamepad_btn_rs_up_right)
+        }
+
+        GamepadKeycodes.CODE_RS_DOWN_LEFT -> {
+            stringResource(R.string.macropad_gamepad_btn_rs_down_left)
+        }
+
+        GamepadKeycodes.CODE_RS_DOWN_RIGHT -> {
+            stringResource(R.string.macropad_gamepad_btn_rs_down_right)
         }
 
         else -> {

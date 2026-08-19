@@ -1139,14 +1139,26 @@ Open Settings to create a layout.</string>
     <string name="macropad_gamepad_btn_dpad_down">D-Pad Down</string>
     <string name="macropad_gamepad_btn_dpad_left">D-Pad Left</string>
     <string name="macropad_gamepad_btn_dpad_right">D-Pad Right</string>
+    <string name="macropad_gamepad_btn_dpad_up_left">D-Pad Up-Left</string>
+    <string name="macropad_gamepad_btn_dpad_up_right">D-Pad Up-Right</string>
+    <string name="macropad_gamepad_btn_dpad_down_left">D-Pad Down-Left</string>
+    <string name="macropad_gamepad_btn_dpad_down_right">D-Pad Down-Right</string>
     <string name="macropad_gamepad_btn_ls_up">Left Stick Up</string>
     <string name="macropad_gamepad_btn_ls_down">Left Stick Down</string>
     <string name="macropad_gamepad_btn_ls_left">Left Stick Left</string>
     <string name="macropad_gamepad_btn_ls_right">Left Stick Right</string>
+    <string name="macropad_gamepad_btn_ls_up_left">Left Stick Up-Left</string>
+    <string name="macropad_gamepad_btn_ls_up_right">Left Stick Up-Right</string>
+    <string name="macropad_gamepad_btn_ls_down_left">Left Stick Down-Left</string>
+    <string name="macropad_gamepad_btn_ls_down_right">Left Stick Down-Right</string>
     <string name="macropad_gamepad_btn_rs_up">Right Stick Up</string>
     <string name="macropad_gamepad_btn_rs_down">Right Stick Down</string>
     <string name="macropad_gamepad_btn_rs_left">Right Stick Left</string>
     <string name="macropad_gamepad_btn_rs_right">Right Stick Right</string>
+    <string name="macropad_gamepad_btn_rs_up_left">Right Stick Up-Left</string>
+    <string name="macropad_gamepad_btn_rs_up_right">Right Stick Up-Right</string>
+    <string name="macropad_gamepad_btn_rs_down_left">Right Stick Down-Left</string>
+    <string name="macropad_gamepad_btn_rs_down_right">Right Stick Down-Right</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Left: %1$d%% • Right: %2$d%%</string>

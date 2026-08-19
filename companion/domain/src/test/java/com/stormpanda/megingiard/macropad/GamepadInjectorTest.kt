@@ -28,5 +28,13 @@ class GamepadInjectorTest {
         GamepadInjector.buttonUp(GamepadKeycodes.CODE_LS_UP)
         GamepadInjector.buttonDown(GamepadKeycodes.CODE_RS_RIGHT)
         GamepadInjector.buttonUp(GamepadKeycodes.CODE_RS_RIGHT)
+
+        // Diagonal codes
+        GamepadInjector.buttonDown(GamepadKeycodes.CODE_DPAD_UP_LEFT)
+        GamepadInjector.buttonUp(GamepadKeycodes.CODE_DPAD_UP_LEFT)
+        GamepadInjector.buttonDown(GamepadKeycodes.CODE_LS_DOWN_RIGHT)
+        GamepadInjector.buttonUp(GamepadKeycodes.CODE_LS_DOWN_RIGHT)
+        GamepadInjector.buttonDown(GamepadKeycodes.CODE_RS_UP_LEFT)
+        GamepadInjector.buttonUp(GamepadKeycodes.CODE_RS_UP_LEFT)
     }
 }

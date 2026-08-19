@@ -1148,14 +1148,26 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_gamepad_btn_dpad_down">Steuerkreuz Unten</string>
     <string name="macropad_gamepad_btn_dpad_left">Steuerkreuz Links</string>
     <string name="macropad_gamepad_btn_dpad_right">Steuerkreuz Rechts</string>
+    <string name="macropad_gamepad_btn_dpad_up_left">Steuerkreuz Oben-Links</string>
+    <string name="macropad_gamepad_btn_dpad_up_right">Steuerkreuz Oben-Rechts</string>
+    <string name="macropad_gamepad_btn_dpad_down_left">Steuerkreuz Unten-Links</string>
+    <string name="macropad_gamepad_btn_dpad_down_right">Steuerkreuz Unten-Rechts</string>
     <string name="macropad_gamepad_btn_ls_up">Linker Stick Oben</string>
     <string name="macropad_gamepad_btn_ls_down">Linker Stick Unten</string>
     <string name="macropad_gamepad_btn_ls_left">Linker Stick Links</string>
     <string name="macropad_gamepad_btn_ls_right">Linker Stick Rechts</string>
+    <string name="macropad_gamepad_btn_ls_up_left">Linker Stick Oben-Links</string>
+    <string name="macropad_gamepad_btn_ls_up_right">Linker Stick Oben-Rechts</string>
+    <string name="macropad_gamepad_btn_ls_down_left">Linker Stick Unten-Links</string>
+    <string name="macropad_gamepad_btn_ls_down_right">Linker Stick Unten-Rechts</string>
     <string name="macropad_gamepad_btn_rs_up">Rechter Stick Oben</string>
     <string name="macropad_gamepad_btn_rs_down">Rechter Stick Unten</string>
     <string name="macropad_gamepad_btn_rs_left">Rechter Stick Links</string>
     <string name="macropad_gamepad_btn_rs_right">Rechter Stick Rechts</string>
+    <string name="macropad_gamepad_btn_rs_up_left">Rechter Stick Oben-Links</string>
+    <string name="macropad_gamepad_btn_rs_up_right">Rechter Stick Oben-Rechts</string>
+    <string name="macropad_gamepad_btn_rs_down_left">Rechter Stick Unten-Links</string>
+    <string name="macropad_gamepad_btn_rs_down_right">Rechter Stick Unten-Rechts</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>

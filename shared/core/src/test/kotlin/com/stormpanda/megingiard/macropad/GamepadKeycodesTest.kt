@@ -31,15 +31,37 @@ class GamepadKeycodesTest {
         assertTrue(codes.contains(GamepadKeycodes.BTN_DPAD_LEFT))
         assertTrue(codes.contains(GamepadKeycodes.BTN_DPAD_RIGHT))
 
+        assertTrue(codes.contains(GamepadKeycodes.CODE_DPAD_UP_LEFT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_DPAD_UP_RIGHT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_DPAD_DOWN_LEFT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_DPAD_DOWN_RIGHT))
+
         assertTrue(codes.contains(GamepadKeycodes.CODE_LS_UP))
         assertTrue(codes.contains(GamepadKeycodes.CODE_LS_DOWN))
         assertTrue(codes.contains(GamepadKeycodes.CODE_LS_LEFT))
         assertTrue(codes.contains(GamepadKeycodes.CODE_LS_RIGHT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_LS_UP_LEFT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_LS_UP_RIGHT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_LS_DOWN_LEFT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_LS_DOWN_RIGHT))
 
         assertTrue(codes.contains(GamepadKeycodes.CODE_RS_UP))
         assertTrue(codes.contains(GamepadKeycodes.CODE_RS_DOWN))
         assertTrue(codes.contains(GamepadKeycodes.CODE_RS_LEFT))
         assertTrue(codes.contains(GamepadKeycodes.CODE_RS_RIGHT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_RS_UP_LEFT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_RS_UP_RIGHT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_RS_DOWN_LEFT))
+        assertTrue(codes.contains(GamepadKeycodes.CODE_RS_DOWN_RIGHT))
+    }
+
+    @Test
+    fun testSelectAndStartShortLabels() {
+        val selectPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_SELECT }
+        val startPreset = GamepadKeycodes.PRESETS.first { it.code == GamepadKeycodes.BTN_START }
+
+        assertEquals("Select", selectPreset.shortLabel)
+        assertEquals("Start", startPreset.shortLabel)
     }
 
     @Test
