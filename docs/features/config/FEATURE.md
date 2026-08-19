@@ -105,8 +105,8 @@ GlobalSettingsScreen (Compose UI, 2-Pane Console Navigation)
         │
         │  user taps Export / Import / Share Profile / Import Shared Profile
         ▼
-ConfigManager  ← StateFlow bridge (GlobalSettingsScreen has no ActivityResultRegistryOwner
-        │         when rendered inside MirrorPresentation)
+ConfigManager  ← StateFlow bridge (GlobalSettingsScreen has no direct ActivityResultRegistryOwner
+        │         when rendered inside PrimaryOverlayActivity)
         │
         │  exportRequest: SharedFlow<ExportKind>   (Backup | ProfileShare)
         │  importRequest: SharedFlow<ImportMode>   (BACKUP_RESTORE | PROFILE_SHARE)
@@ -262,8 +262,7 @@ corresponding `*_KEYS` set in `SettingsManager` (e.g. `GLOBAL_KEYS`, `MIRROR_KEY
 ### Error Handling
 
 - SAF read failures (permission denied, file not found) surface as `Result.failure` and are
-  displayed as **in-tree overlay** dialogs (not `AlertDialog`) to avoid `BadTokenException`
-  inside `MirrorPresentation`.
+  displayed as **in-tree overlay** dialogs.
 - Checksum mismatch rejects the import with a localized error message.
 - The 10 MB file size cap in `ConfigManager.readFromUri()` prevents OOM when opening arbitrary files.
 

@@ -44,8 +44,7 @@ the universal "go back" mechanism throughout the app.
   - **Quick Menu is open** → closes the Quick Menu (`closeQuickMenu()`).
   - **Nothing is open** → opens the Quick Menu (`openQuickMenu()`) or toggles the keyboard/mouse overlays if initiated in their respective zones.
 - The edge zone width (`QuickMenuBarLayout.SWIPE_EDGE_ZONE = 40 dp`) and the minimum swipe distance threshold
-  (`QuickMenuBarLayout.SWIPE_THRESHOLD = 50 dp`) are consistent across all screens that host the bar
-  (`MainAppScreen`, `BackgroundMacroPadOverlay`, `MirrorPresentation`).
+  (`QuickMenuBarLayout.SWIPE_THRESHOLD = 50 dp`) are consistent across `MainAppScreen` and `MacroPadScreen`.
 - To give the visual Quick Menu Bar absolute touch precedence over underlying buttons, keys, or touchpad overlay zones, the active swipe gesture is horizontally constrained to a **"quick menu bar zone"** of `120 dp` width centered at the screen edge. Within this 120 dp zone, the parent swipe gesture detectors consume all pointer events in Compose's `PointerEventPass.Initial` pass, preventing them from being delivered to underlying child composables. Outside the horizontal bounds of this 120 dp zone, edge touches remain clickable and holdable for any buttons or keys placed near the sides.
 - Tapping the scrim (the darkened area outside the Quick Menu cards) MUST dismiss the Quick Menu.
 

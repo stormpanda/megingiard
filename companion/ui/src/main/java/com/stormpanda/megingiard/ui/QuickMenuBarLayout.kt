@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
  *
  * Consolidating these parameters in a single location guarantees that the visual tab
  * alignments in [QuickMenuBar][com.stormpanda.megingiard.ui.QuickMenuBar] and the edge-swipe gesture zones in the host screens
- * ([MainAppScreen][com.stormpanda.megingiard.MainAppScreen], [BackgroundMacroPadOverlay][com.stormpanda.megingiard.macropad.BackgroundMacroPadOverlay], [MirrorPresentation][com.stormpanda.megingiard.mirror.MirrorPresentation])
+ * ([MainAppScreen][com.stormpanda.megingiard.MainAppScreen], [MacroPadScreen][com.stormpanda.megingiard.macropad.MacroPadScreen])
  * always remain perfectly in sync.
  */
 object QuickMenuBarLayout {

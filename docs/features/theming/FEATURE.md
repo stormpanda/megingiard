@@ -36,7 +36,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 ### FR-TH3: Real-Time Application
 
 - The theme MUST apply immediately when the user changes the theme selection — no restart required.
-- All screens visible on both the primary display (via `MainActivity`) and the secondary display (via `MirrorPresentation`) MUST respect the active theme.
+- All screens visible on both the primary display (via `PrimaryOverlayActivity`) and the secondary display (via `MainActivity`) MUST respect the active theme.
 
 ### FR-TH4: Centralized Modal Container & Bezel Light Refraction Border
 
@@ -162,9 +162,9 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 - **Provider Host (`MegingiardSettingsProvider.kt` in `:app`):** Exposes `/theme` and `/settings` endpoints. Listens to `SettingsManager.onThemeChangedListener` and invokes `contentResolver.notifyChange()` whenever the user changes the theme mode or custom accent color.
 - **Observer Client (`MegingiardThemeClient.kt` in `:gamefocus`):** Consumes `observeContentProvider()` to query initial state synchronously on launch and reactively update `LocalAppColors` whenever theme change notifications arrive.
 
-### Secondary Display — `MirrorPresentation.kt`
+### Secondary Display — `MainActivity.kt`
 
-`MirrorPresentation` independently collects `SettingsManager.themeMode` and `SettingsManager.accentColor` and wraps its own Compose tree with the same provider, ensuring the Mirror screen also responds to theme changes and uses the same effective accent.
+`MainActivity` wraps its Compose tree with `ProvideAppColors` derived from `SettingsManager.themeMode` and `SettingsManager.accentColor`, ensuring all screens, overlays, and embedded cutouts respond to theme changes and use the effective accent.
 
 ### Settings UI — `GlobalSettingsScreen.kt`
 

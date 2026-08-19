@@ -154,16 +154,15 @@ In **Touch Mode** (shared absolute coordinate injection, e.g. for Mirror Touch P
 
 ### Secondary Display Rendering & Touchpad Mirroring
 
-When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `FullscreenMouseOverlay` is composed inside `MirrorPresentation` as **Layer 4** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
+`FullscreenMouseOverlay` is composed directly inside `MainAppScreen` on the secondary display as an animated overlay layer above `MacroPadScreen`.
 
-`MainAppScreen` suppresses the `FullscreenMouseOverlay` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `MouseInjector` runs at a time.
+`MainAppScreen` ensures only one instance of `MouseInjector` runs at a time.
 
-Dismissal on the secondary display reuses the existing swipe-to-close path in `BackgroundMacroPadOverlay`: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
+Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGestureProcessor` → `AppStateManager.handleEdgeSwipe()` → `AppStateManager.closeActiveModal()` → `_isFullscreenMouseActive.value = false`.
 
 **Touchpad Mirroring Integration:**
 
-- When absolute touchpad mirroring is active, the touchpad Composable (`FullscreenMouseOverlay`) dynamically acquires the master `TextureView` instance from the `MirrorPresentation` via `LocalMirrorPresentation.current` and renders it directly inside the Compose layout using an `AndroidView`.
-- Upon disposal or mirroring deactivation, the master `TextureView` is safely detached and returned back to the background `MultiCutoutContainer` (`mcc`) for standard MacroPad cutout rendering.
+- When absolute touchpad mirroring is active (`touchpadMirrorActive == true`), `FullscreenMouseOverlay` renders `EmbeddedMirrorView` with a single full-screen master cutout directly inside its touch pad area.
 - A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
 - The lifecycle of the capture service is managed: if the capture service was started _by_ the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
 

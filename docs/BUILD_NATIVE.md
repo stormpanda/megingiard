@@ -398,7 +398,7 @@ CLASSPATH=/data/local/tmp/megingiard_mirror.dex \
 
 `DirectMirrorServer` registers a temporary `ServiceManager` Binder named
 `megingiard.direct.surface`, binds its readiness socket, then waits for the app
-to send the currently published `MirrorPresentation.SurfaceView` `Surface` over
+to send the currently published `MasterSurfaceRegistry` `Surface` over
 Binder. Once received, it configures a hidden `SurfaceControl` virtual display
 directly onto that Surface. If this path fails, the app falls back to the normal
 MediaProjection consent flow.

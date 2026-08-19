@@ -114,7 +114,7 @@ On a handheld device, the user should never be forced to reach up and touch the 
 
 ### 4.3 Static Dual-Screen Focus Invariant
 * **Primary Screen (Display 0): Always Focusable.** Both background games and `PrimaryOverlayManager` modal overlays are focusable. When a modal opens on Display 0, it receives gamepad D-pad, controller buttons (A/B/X/Y), and keyboard events directly.
-* **Secondary Screen (Display 4): Always `FLAG_NOT_FOCUSABLE`.** `MainActivity` and `MirrorPresentation` unconditionally maintain `FLAG_NOT_FOCUSABLE` (and `FLAG_ALT_FOCUSABLE_IM`) at all times. The companion screen operates purely via touch event dispatch (`MotionEvent`), guaranteeing that MacroPad presses, QuickMenu swipes, and Touchpad actions NEVER steal window focus from the top-screen game.
+* **Secondary Screen (Display 4): Always `FLAG_NOT_FOCUSABLE`.** `MainActivity` unconditionally maintains `FLAG_NOT_FOCUSABLE` (and `FLAG_ALT_FOCUSABLE_IM`) at all times. The companion screen operates purely via touch event dispatch (`MotionEvent`), guaranteeing that MacroPad presses, QuickMenu swipes, and Touchpad actions NEVER steal window focus from the top-screen game.
 * **Dual-Screen Touch Concurrency:** By specifying `WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL` on the top overlay, both screens receive touch events concurrently without interference.
 
 ### 4.4 16:9 Widescreen Master-Detail Layouts

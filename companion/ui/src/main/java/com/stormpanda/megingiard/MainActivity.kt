@@ -118,8 +118,7 @@ private const val TAG = "MainActivity"
 class MainActivity : ComponentActivity() {
     // ── File picker launchers ─────────────────────────────────────────────────
     // Registered here because ActivityResultLaunchers require an Activity context.
-    // GlobalSettingsScreen (which may be inside MirrorPresentation) posts requests
-    // to ConfigManager and these launchers pick them up.
+    // Settings screens post requests to ConfigManager and these launchers pick them up.
 
     private var pendingExportKind: ConfigManager.ExportKind? = null
     private var pendingInAppImportMode = ConfigManager.ImportMode.BACKUP_RESTORE
@@ -128,7 +127,6 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.CreateDocument(MGRD_MIME_TYPE),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             val kind = pendingExportKind ?: return@registerForActivityResult
             pendingExportKind = null
             if (uri == null) return@registerForActivityResult
@@ -168,7 +166,6 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.GetContent(),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             if (uri == null) {
                 return@registerForActivityResult
             }
@@ -179,7 +176,6 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.CreateDocument("text/plain"),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             if (uri == null) return@registerForActivityResult
             lifecycleScope.launch {
                 LogReportManager.writeReportToUri(
@@ -197,7 +193,6 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.GetContent(),
         ) { uri ->
-            AppStateManager.setFilePickerOpen(false)
             BackgroundPickerManager.setPickedUri(uri)
         }
 
@@ -208,6 +203,8 @@ class MainActivity : ComponentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         display?.displayId?.let { displayId ->
+            val isValid = displayId != Display.DEFAULT_DISPLAY
+            AppStateManager.setOnValidScreen(isValid)
         }
     }
 
@@ -304,13 +301,11 @@ class MainActivity : ComponentActivity() {
         // Handle .mgrd config files opened from a file manager or share sheet.
         handleIncomingIntent(intent)
 
-        // Collect export/import requests posted by GlobalSettingsScreen (which may be
-        // inside MirrorPresentation and thus cannot hold ActivityResultLaunchers itself).
+        // Collect export/import requests posted by settings / macro screens.
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.exportRequest.collect { kind ->
                     pendingExportKind = kind
-                    AppStateManager.setFilePickerOpen(true)
                     createDocumentLauncher.launch(ConfigManager.exportFilename.value)
                 }
             }
@@ -319,7 +314,6 @@ class MainActivity : ComponentActivity() {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 ConfigManager.importRequest.collect { mode ->
                     pendingInAppImportMode = mode
-                    AppStateManager.setFilePickerOpen(true)
                     openDocumentLauncher.launch("*/*")
                 }
             }
@@ -332,7 +326,6 @@ class MainActivity : ComponentActivity() {
                             .now()
                             .format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
                     val filename = LogReportManager.buildReportFilename(timestamp)
-                    AppStateManager.setFilePickerOpen(true)
                     createLogDocumentLauncher.launch(filename)
                 }
             }
@@ -340,7 +333,6 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 BackgroundPickerManager.pickRequest.collect {
-                    AppStateManager.setFilePickerOpen(true)
                     pickImageLauncher.launch("image/*")
                 }
             }

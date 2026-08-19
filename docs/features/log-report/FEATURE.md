@@ -82,16 +82,13 @@ GlobalSettingsScreen (collectAsState) → InTreeMessageDialog feedback
 `readLogcatLines` is blocking I/O and **must** be called from a background thread
 (`Dispatchers.IO` in the `MainActivity` launcher callback).
 
-### SAF File Picker (`:app` — `MainActivity`)
+### SAF File Picker (`:companion:ui` — `MainActivity`)
 
 `createLogDocumentLauncher` is a standard `ActivityResultContracts.CreateDocument("text/plain")` launcher registered in `MainActivity`. Its callback:
 
-1. Sets `AppStateManager.setFilePickerOpen(false)`.
-2. If the user cancels (URI is null), returns early.
-3. On `Dispatchers.IO`: calls `LogReportManager.readLogcatLines(pid)` and `buildReportHeader(...)`, writes header + body to the URI via `contentResolver.openOutputStream`.
-4. Posts `LogReportManager.setSaveResult(Success | Failure)`.
-
-`AppStateManager.setFilePickerOpen(true)` is set before launching, consistent with the rest of the file-picker flow, so the focus-policy logic in `MainActivity` correctly disables game-focus while the picker is open.
+1. If the user cancels (URI is null), returns early.
+2. On `Dispatchers.IO`: calls `LogReportManager.readLogcatLines(pid)` and `buildReportHeader(...)`, writes header + body to the URI via `contentResolver.openOutputStream`.
+3. Posts `LogReportManager.setSaveResult(Success | Failure)`.
 
 ### Pure Helper Unit Tests (`:domain`)
 

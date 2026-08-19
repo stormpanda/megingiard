@@ -287,11 +287,11 @@ When a full-screen UI overlay is visible:
 | Binary Asset | `companion/ui/src/main/assets/keyinjector_arm64` | Pre-built virtual keyboard injection executable |
 | Binary Asset | `companion/ui/src/main/assets/mouseinjector_arm64` | Pre-built virtual relative-mouse injection executable |
 
-### Secondary Display Rendering (Background Display Mode)
+### Secondary Display Rendering
 
-When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`), `KeyboardScreen` is composed inside `MirrorPresentation` as **Layer 5** — above `BackgroundMacroPadOverlay` — so it appears on the secondary display.
+`KeyboardScreen` is composed directly inside `MainAppScreen` on the secondary display as an animated overlay layer above `MacroPadScreen`.
 
-`MainAppScreen` suppresses the `KeyboardScreen` instance on the primary display whenever screen mirroring is active, ensuring only one instance of `KeyInjector` runs at a time.
+`MainAppScreen` ensures only one instance of `KeyInjector` runs at a time.
 
 Both screens feature a left-aligned visual `QuickKeyboardBarTab` and use a dedicated `SwipeGestureProcessor` covering the left-most 120 dp edge zone (representing the `QuickKeyboardBar`) to swipe and toggle the virtual keyboard overlay. 
 

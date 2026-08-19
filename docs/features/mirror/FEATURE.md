@@ -16,7 +16,7 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 - The mirror MUST remain perfectly synchronised even while resource-intensive applications (games) are running on the primary screen.
 - The mirror MUST be DRM-free; it MUST NOT produce a black screen on hardware-secured content.
 - `ImageReader` and software bitmap-copy approaches are explicitly excluded due to latency and DRM interference.
-- **Reconnect Dialog Priority**: When the Privileged Mode reconnect prompt dialog (`AppStateManager.isPrivdPromptActive`) is active, `ScreenCaptureService` MUST hide `MirrorPresentation` (`shouldShowMirrorPresentation() = false`), and `MirrorPresentation` MUST render `PrivdReconnectPromptDialog` in its overlay hierarchy to guarantee the reconnect dialog is never hidden behind screen mirroring.
+- **Reconnect Dialog Priority**: When the Privileged Mode reconnect prompt dialog (`AppStateManager.isPrivdPromptActive`) is active, `MainAppScreen` renders `PrivdReconnectPromptDialog` in its modal hierarchy to guarantee the reconnect dialog is clearly accessible.
 
 ### FR-M2: Cutout Layout Editor (Placement & Sizing)
 
@@ -228,7 +228,7 @@ Jetpack Compose requires a `LifecycleOwner`, `SavedStateRegistryOwner`, and `Vie
 
 ### Aspect Ratio Preservation (Letterboxing / Pillarboxing)
 
-On `MirrorPresentation.onCreate()`, the secondary display's window metrics are read and the `SurfaceView` dimensions are computed to preserve the source aspect ratio without distortion:
+The secondary display's window metrics are read and the destination cutout dimensions are computed to preserve the source aspect ratio without distortion:
 
 ```kotlin
 if (srcRatio > targetRatio) {
@@ -238,14 +238,14 @@ if (srcRatio > targetRatio) {
 }
 ```
 
-The `SurfaceView` uses `setFixedSize(srcWidth, srcHeight)` so the hardware buffer allocation exactly matches the source resolution. The rendered display size is constrained via `FrameLayout.LayoutParams`.
+The master texture surface buffer allocation matches the source resolution. The rendered display size is constrained via layout geometry in `MultiCutoutContainer`.
 
 ### Custom Background Image & Masking Support
 
-- `MirrorPresentation` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
+- `EmbeddedMirrorView` collects updates from `MacroPadState.activeLayout` to dynamically react to layout changes.
 - When a layout custom background image is selected, it is decoded asynchronously (`Dispatchers.IO`) as a `Bitmap`.
-- **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied as a `BitmapDrawable` background on the root presentation `FrameLayout` container. The mirrored cutouts are drawn on top. If no background image is set (or it is removed), the presentation container falls back to a solid `Color.BLACK`.
-- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to the `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, the bitmap is drawn *on top* of the rendered mirrored cutouts, serving as an overlay mask. The root container background is set to solid `Color.BLACK`. This allows the mirrored screen viewports to show through any transparent regions in the background image.
+- **Background Mode (`useBackgroundImageAsMask = false`)**: The bitmap is applied behind the cutouts. Mirrored cutouts are drawn on top. If no background image is set (or it is removed), the background falls back to the app theme background.
+- **Mask Mode (`useBackgroundImageAsMask = true`)**: The bitmap is passed directly to `MultiCutoutContainer`. Inside `MultiCutoutContainer.dispatchDraw`, the bitmap is drawn *on top* of the rendered mirrored cutouts, serving as an overlay mask. This allows the mirrored screen viewports to show through any transparent regions in the background image.
 
 ### Cutout Layout Editor & Viewport Centering
 
@@ -321,7 +321,7 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
    If the touch is outside the destination bounds of the active cutout, the coordinates are null (or a slot-aware UP is sent if a gesture was in progress for that pointer).
 3. **Injection**: normalised coordinates are forwarded to slot-aware `TouchInjector.injectTouch(slot, action, nx, ny)` (the shared `input/` package), mapping each pointer to its respective uinput slot `0..9`, which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop(token)` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
 
-During MacroPad touch recording, `RecordingMirrorPresentation` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
+During MacroPad touch recording, `TouchRecordingOverlay` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
 
 **Shared injection infrastructure** (`input/` package):
 
@@ -414,9 +414,9 @@ When the predicate becomes `true`, `startMirrorByPolicy()` selects the mirror st
 
 ### Multi-Cutout Edge Blending
 
-To allow seamless transitions between adjacent or independent cutouts, we implement a hybrid border gradient mask in `MirrorPresentation`'s `MultiCutoutContainer`:
+To allow seamless transitions between adjacent or independent cutouts, we implement a hybrid border gradient mask in `MultiCutoutContainer`:
 
-- **Per-Layout Value Storage & Sync**: The edge blending width is defined per-layout via the `mirrorEdgeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` observes `activeLayout` and publishes updates via the read-only `edgeBlendWidthDp` state flow. `MirrorPresentation` collects this flow to invalidate drawing.
+- **Per-Layout Value Storage & Sync**: The edge blending width is defined per-layout via the `mirrorEdgeBlendWidth` property in `PadLayout`. At runtime, `ScreenCaptureManager` observes `activeLayout` and publishes updates via the read-only `edgeBlendWidthDp` state flow. `MultiCutoutContainer` uses this value to invalidate and redraw.
 - **Edge Touching Detection**: We check each of the four edges (left, right, top, bottom) of each cutout against all other cutouts. If the distance between their destination boundaries is within a tolerance (`TOUCH_TOLERANCE = 0.005f`), they are flagged as touching (`touchesOtherLeft`, etc.).
 - **Hybrid Gradient Coordinates**:
    - For background-facing edges (e.g. `touchesOtherLeft == false`), the gradient goes from `-leftExt` (TRANSPARENT) to `0f` (BLACK). Using `Shader.TileMode.CLAMP`, the interior of the cutout remains 100% opaque.
@@ -427,7 +427,7 @@ To allow seamless transitions between adjacent or independent cutouts, we implem
 ### Cutout Shape Rendering (Circular Clipping & Edge Blending)
 
 When a cutout's shape is set to `CIRCLE`:
-1. **Clipping in Presentation**: During `dispatchDraw` in `MirrorPresentation`, we translate the canvas to the cutout's destination coordinates `(dx, dy)`. If the shape is circular, we define a circular clipping path centered at `(dw / 2f, dh / 2f)` with a radius of `min(dw, dh) / 2f` (inscribing the circle perfectly within the destination bounds). We clip the canvas using `canvas.clipPath(path)` prior to drawing the source view/bitmap.
+1. **Clipping in Container**: During `dispatchDraw` in `MultiCutoutContainer`, we translate the canvas to the cutout's destination coordinates `(dx, dy)`. If the shape is circular, we define a circular clipping path centered at `(dw / 2f, dh / 2f)` with a radius of `min(dw, dh) / 2f` (inscribing the circle perfectly within the destination bounds). We clip the canvas using `canvas.clipPath(path)` prior to drawing the source view/bitmap.
 2. **Circular Edge Blending**: If edge blending is active, instead of rectangular edge gradients, a radial gradient is applied. We construct a `RadialGradient` centered at the circle's center with a radius of `r`. The gradient transitions from opaque (`BLACK`) at the inner boundary (`r - blendW`) to transparent (`TRANSPARENT`) at the outer boundary (`r`). Applying this shader with `PorterDuff.Mode.DST_IN` creates a feathered, soft boundary for the circular cutout.
 3. **Clipping in Editor Preview**: In `CutoutLayoutEditor.kt`, the editor uses standard Compose `Box` elements positioned and sized to the rectangular bounds of the cutout. If the cutout is configured as a circle, the editor displays an inner circular `Box` centered inside the layout container, using `shape = CircleShape` for background and borders. This allows the user to resize and position the cutout using rectangular handles while visualizing the exact circular crop area.
 
@@ -437,11 +437,7 @@ When a cutout's shape is set to `CIRCLE`:
 
 To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support limiting the refresh rate of the mirrored screens:
 
-1. **System-Level Throttling (`Surface.setFrameRate`)**:
-   In `MirrorPresentation`, when the target display surface becomes available, we invoke `Surface.setFrameRate(maxFps, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)`. This requests Android's system compositor (SurfaceFlinger) to pace the composition of the virtual display's frames.
-2. **Dynamic Updates**:
-   `MirrorPresentation` collects the `ScreenCaptureManager.maxFps` flow within the presentation coroutine scope. If the limit changes on the active layout, the frame rate limit of the active surface is updated in real-time.
-3. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
+1. **App-Level Rendering Conservation (`ThrottledTextureView`)**:
    Since Android's compositor (SurfaceFlinger) often ignores the `Surface.setFrameRate` hint for virtual displays and pushes frames as fast as they update, we enforce the limit in the application layer. We use `ThrottledTextureView` which overrides `invalidate()` to drop invalidation requests if they arrive faster than the configured `maxFps` interval. This prevents the view hierarchy from redrawing and avoids enqueuing new GPU textures too frequently, directly reducing rendering resource usage.
 
 ### Motion Smoothing / Temporal Blending
@@ -449,7 +445,7 @@ To reduce power consumption, CPU/GPU overhead, and memory bandwidth, we support 
 To stabilize mirrored UI elements against fast-moving backgrounds, we support 100% GPU-accelerated motion smoothing:
 
 1. **Unified GPU Pipeline (`GpuMotionSmoother`)**:
-   `MirrorPresentation` routes video frames through `GpuMotionSmoother`, a 100% GPU-accelerated temporal frame blender running on a dedicated GL thread (`GpuMotionSmootherGL`). Video frames from `DirectMirrorServer` or `MediaProjection` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
+   Video frames from `DirectMirrorServer` or `MediaProjection` are received on `GpuMotionSmoother.inputSurface`, providing a constant target surface that never changes during profile, layout, or touchpad transitions.
 2. **0% Pass-Through Mode**:
    When motion smoothing is disabled (0% strength or active Touchpad mode), `GpuMotionSmoother` executes a single-pass 2D quad texture copy (`drawProgram`) directly into `masterSurface`, bypassing FBO blending with ~0.05ms GPU overhead and 0 input latency.
 3. **Temporal FBO Blending (>0%)**:
@@ -460,11 +456,11 @@ To stabilize mirrored UI elements against fast-moving backgrounds, we support 10
 | File                                  | Responsibility                                                                                             |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `ScreenCaptureService.kt`             | Foreground service; `MediaProjection` token; `VirtualDisplay` lifecycle                                    |
-| `MirrorPresentation.kt`               | `Presentation` window on secondary display; surface/compose setup; mode-switching logic                    |
-| `MirrorPresentationLifecycleOwner.kt` | Synthetic `LifecycleOwner` + `SavedStateRegistryOwner` + `ViewModelStoreOwner` for Compose-in-Presentation |
+| `EmbeddedMirrorView.kt`               | Main Compose embedded mirror view hosting `MultiCutoutContainer`                                           |
+| `MasterSurfaceRegistry.kt`            | Process-wide master surface holder bridging `ThrottledTextureView` to `ScreenCaptureService`               |
+| `MultiCutoutContainer.kt`             | Multi-cutout canvas rendering, clipping, and hybrid edge blending                                          |
 | `ScreenCaptureManager.kt`             | Singleton state: scale, offset, freeze, lock, touch-projection state, frozen bitmap, follow state          |
 | `TouchScreenObserver.kt`              | Listens to raw `/dev/input/event6` touchscreen events in background thread and maps coordinates            |
-| `MirrorScreen.kt`                     | Compose UI: gesture handling, control buttons, touch projection                                            |
 | `CropSelectorOverlay.kt`              | Primary display crop selector overlay Composable UI                                                        |
 | `CropSelectorActivity.kt`             | Translucent Activity hosting CropSelectorOverlay on the primary display                                    |
 | `CutoutLayoutEditor.kt`               | Secondary display cutout placement arrange editor                                                          |

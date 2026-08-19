@@ -53,9 +53,6 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchInjector
-import com.stormpanda.megingiard.macropad.ButtonColorStyle
-import com.stormpanda.megingiard.macropad.HapticStrength
-import com.stormpanda.megingiard.macropad.MacroExecutor
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController

@@ -217,7 +217,7 @@ Each button supports one of the following actions:
 - When a background image is selected, a slightly dimmed thumbnail preview of the image is shown to the left of the delete icon, with a crop icon overlaid on it. Tapping this thumbnail opens an interactive crop selector dialog in the aspect ratio of the secondary display where the user can drag to pan and pinch to zoom the background image.
 - To prevent permissions from expiring and keep layouts self-contained, the chosen image is copied to the app's internal files directory as `backgrounds/bg_<layoutId>`.
 - The `backgroundImagePath` parameter in `PadLayout` stores a relative path (e.g. `backgrounds/bg_<layoutId>`) along with `bgImageScale`, `bgImageOffsetX`, and `bgImageOffsetY` crop properties to maintain portability and compatibility with Megingiard's profile import/export features.
-- In **Use Mode** (`PadSurface`), **Layout Editor** (`PadCanvas`), and **Mirror Presentation** (`MirrorPresentation`), the image is loaded asynchronously and rendered applying the layout's background image crop settings (scale and translations) behind the buttons.
+- In **Use Mode** (`PadSurface`), **Layout Editor** (`PadCanvas`), and **Embedded Mirror** (`EmbeddedMirrorView`), the image is loaded asynchronously and rendered applying the layout's background image crop settings (scale and translations) behind the buttons.
 - **Use as Mask**: The layout settings overlay includes a "Use as mask" toggle (visible only when an image is selected). When enabled (`useBackgroundImageAsMask = true`), the background image is layered *on top* of the screen mirroring cutouts but *below* the MacroPad buttons. This allows the mirrored screen regions to show through any transparent/semi-transparent windows of the background image, serving as a custom overlay frame.
 - When a layout is deleted or its background image is removed/cleared, the associated image file on disk is deleted.
 
@@ -268,7 +268,7 @@ Each button supports one of the following actions:
 - Users can dim the background image using a slider in the background settings overlay.
 - Dimming ranges from **0%** (no dimming) up to **90%** (maximum dimming) to prevent complete obscurity.
 - Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
-- Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), the active **MacroPad Screen** (`MacroPadScreen`), and the secondary display **Screen Mirror Overlay** (`MirrorPresentation`).
+- Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), and the active **MacroPad Screen** (`MacroPadScreen`).
 
 ### FR-P15: App Launcher Button & Floating Bubble Overlay
 
@@ -443,7 +443,7 @@ MacroTimelineEditor (Composable in-deck sub-page, opened from Macros Deck)
   │       └── Macro settings section header & Loop toggle + pause slider
   │     Timeline mode:
   │       └── MacroVerticalTimeline (Canvas-rendered step bars, tap to edit)
-  ├── Record Touch → TouchRecordingManager → RecordingMirrorPresentation
+  ├── Record Touch → TouchRecordingManager → TouchRecordingOverlay
   └── Record Gamepad → GamepadRecordingOverlay
      ├── live passthrough via GamepadInjector (gamepadinjector_arm64)
      └── timed step compilation via GamepadRecordingManager
@@ -451,15 +451,13 @@ MacroTimelineEditor (Composable in-deck sub-page, opened from Macros Deck)
 
 #### Background Display Rendering Pipeline
 
-When Background Display is enabled and `ScreenCaptureService` is capturing:
+When screen mirroring is active (`ScreenCaptureManager.isCapturing == true`) and cutouts are present on the active layout:
 
-1. `MirrorPresentation` detects `mode == MACROPAD && ambientEnabled && isCapturing` and renders `BackgroundMacroPadOverlay` in its `ComposeView`.
-2. The `SurfaceView` receives the `VirtualDisplay` output directly (live hardware path — no PixelCopy overhead).
-3. A dim overlay (`Color.Black.copy(alpha = ambientDim)`) is drawn on top.
-
-4. `PadSurface` (extracted as `internal` from `MacroPadScreen`) renders the MacroPad buttons with `transparentBackground = true`.
-5. When `isPeekActive` is true, only `BackgroundPeek` buttons are rendered (the Press hit-test list is also filtered to `BackgroundPeek` buttons so hidden buttons cannot be triggered), and dim is overridden to 0.
-   - **Peek state reset:** `MacroPadState.resetPeek()` is called in two places: in `BackgroundMacroPadOverlay`'s `DisposableEffect.onDispose` (leaving background display mode), and in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode entirely). This ensures peek state never leaks across mode switches, regardless of which screen was active when the mode changed.
+1. `MacroPadScreen` detects `isCapturing && cutouts.isNotEmpty()` and embeds `EmbeddedMirrorView` directly beneath `PadSurface`.
+2. Mirrored cutouts are rendered via `MultiCutoutContainer` and `ThrottledTextureView` on the secondary display.
+3. `PadSurface` renders the MacroPad buttons with `transparentBackground = true`.
+4. When `isPeekActive` is true, only `BackgroundPeek` buttons are rendered (the Press hit-test list is also filtered to `BackgroundPeek` buttons so hidden buttons cannot be triggered).
+   - **Peek state reset:** `MacroPadState.resetPeek()` is called in `MacroPadScreen`'s `DisposableEffect.onDispose` (leaving MacroPad mode). This ensures peek state never leaks across mode switches.
 
 #### App-Aware Auto-Switching Architecture
 
@@ -636,8 +634,6 @@ Supported button codes: `BTN_SOUTH (304)`, `BTN_EAST (305)`, `BTN_NORTH (308)`, 
 - `R\n` on stdout when ready
 
 MOVE events (`MM`) are coalesced in the writer thread (keep-latest) to avoid latency backlog during trackpoint drag.
-
-When the MacroPad is rendered as an ambient overlay inside `MirrorPresentation`, the Presentation window follows the same focus policy. This preserves pointer capture both with and without active mirroring.
 
 ### State Management
 

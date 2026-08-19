@@ -27,19 +27,19 @@ sealed interface TouchRecordingState {
  *
  * Flow:
  * 1. [requestRecording] — called from the timeline editor when the user taps "Record Touch"
- *    and selects a mode. Sets [recordingRequested] to `true`, which [ScreenCaptureService]
- *    observes to show [RecordingMirrorPresentation] on the secondary display.
- * 2. [onTapRecorded] — called by [RecordingMirrorPresentation] for TAP mode and keeps
+ *    and selects a mode. Sets [recordingRequested] to `true`, which [MainAppScreen]
+ *    observes to show [TouchRecordingOverlay] on the secondary display.
+ * 2. [onTapRecorded] — called by [TouchRecordingOverlay] for TAP mode and keeps
  *    the legacy one-shot flow.
  * 3. [recordGestureCompleted] — called for each completed GESTURE segment. The
- *    presentation stays open until [finishRecording] or [cancelRecording].
+ *    overlay stays open until [finishRecording] or [cancelRecording].
  * 4. The timeline editor observes [recordedTap] or [state] and appends the
  *    corresponding step(s), then calls [consumeRecordedTap] / [resetState].
  */
 object TouchRecordingManager {
     private val _recordingRequested = MutableStateFlow(false)
 
-    /** `true` while the recording mirror is expected to be shown. */
+    /** `true` while the recording overlay is expected to be shown. */
     val recordingRequested: StateFlow<Boolean> = _recordingRequested.asStateFlow()
 
     private val _recordingMode = MutableStateFlow(TouchRecordingMode.TAP)
@@ -61,7 +61,7 @@ object TouchRecordingManager {
     val recordedTap: StateFlow<Pair<Float, Float>?> = _recordedTap.asStateFlow()
 
     /**
-     * Signals that the recording mirror should be shown with the specified mode.
+     * Signals that the recording overlay should be shown with the specified mode.
      * Clears any stale recorded inputs first.
      */
     fun requestRecording(mode: TouchRecordingMode) {
@@ -78,7 +78,7 @@ object TouchRecordingManager {
     }
 
     /**
-     * Called by [RecordingMirrorPresentation] when the user taps the mirror in TAP mode.
+     * Called by [TouchRecordingOverlay] when the user taps the mirror in TAP mode.
      * Stores the coordinates and clears the recording request.
      */
     fun onTapRecorded(
@@ -92,8 +92,8 @@ object TouchRecordingManager {
     }
 
     /**
-     * Called by [RecordingMirrorPresentation] when the user completes one gesture segment.
-     * The recording mirror stays open so more gestures can be added before Stop & Save.
+     * Called by [TouchRecordingOverlay] when the user completes one gesture segment.
+     * The recording overlay stays open so more gestures can be added before Stop & Save.
      */
     fun recordGestureCompleted(
         samples: List<TouchSample>,

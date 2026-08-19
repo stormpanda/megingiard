@@ -41,7 +41,7 @@ adb shell rm -f /data/local/tmp/megingiard_mirror.dex
 
 ### 2.1 Screen Mirroring (Standard Mode)
 
-The companion app runs screen mirroring as a background layer under the MacroPad buttons, hosted inside `MirrorPresentation` on the secondary display.
+The companion app runs screen mirroring as an embedded background layer under the MacroPad buttons, hosted inside `MainActivity` on the secondary display.
 
 | Action / Test Step | Expected Behavior / Visual Verification | Failure Recovery / Notes |
 | :--- | :--- | :--- |
