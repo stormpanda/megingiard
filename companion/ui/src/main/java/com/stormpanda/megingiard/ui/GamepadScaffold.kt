@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -55,6 +56,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -323,6 +325,7 @@ fun GamepadTwoPaneScaffold(
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     val inputModeManager = LocalInputModeManager.current
+    val focusManager = LocalFocusManager.current
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
     val activeDeckCardRequesters = remember { mutableMapOf<Any, FocusRequester>() }
@@ -559,13 +562,18 @@ fun GamepadTwoPaneScaffold(
                                 if (keyEvent.type == KeyEventType.KeyDown &&
                                     keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                                 ) {
-                                    try {
-                                        activeCategoryRequester.requestFocus()
-                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: navigated back to sidebar category")
-                                    } catch (_: IllegalStateException) {
-                                        AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on D-pad left")
+                                    val moved = focusManager.moveFocus(FocusDirection.Left)
+                                    if (!moved && !isCustomBackActive) {
+                                        try {
+                                            activeCategoryRequester.requestFocus()
+                                            AppLog.d(TAG, "GamepadTwoPaneScaffold: navigated back to sidebar category")
+                                        } catch (_: IllegalStateException) {
+                                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on D-pad left")
+                                        }
+                                        true
+                                    } else {
+                                        moved
                                     }
-                                    true
                                 } else {
                                     false
                                 }

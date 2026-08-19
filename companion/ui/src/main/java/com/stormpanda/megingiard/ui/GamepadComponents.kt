@@ -454,6 +454,7 @@ fun GamepadCardText(
     isFocused: Boolean = false,
     isDestructive: Boolean = false,
     isError: Boolean = false,
+    alwaysShowFullDescription: Boolean = false,
 ) {
     val colors = LocalAppColors.current
     Column(
@@ -471,8 +472,8 @@ fun GamepadCardText(
                 text = description,
                 color = if (isError) colors.error else colors.onSurfaceSecondary,
                 style = MaterialTheme.typography.bodySmall,
-                maxLines = if (isFocused) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
-                overflow = if (isFocused) TextOverflow.Clip else TextOverflow.Ellipsis,
+                maxLines = if (isFocused || alwaysShowFullDescription) Int.MAX_VALUE else GC_UNFOCUSED_MAX_LINES,
+                overflow = if (isFocused || alwaysShowFullDescription) TextOverflow.Clip else TextOverflow.Ellipsis,
             )
         }
     }
@@ -630,6 +631,7 @@ fun GamepadCardRow(
     isFocused: Boolean = false,
     isDestructive: Boolean = false,
     isError: Boolean = false,
+    alwaysShowFullDescription: Boolean = false,
     trailingContent: (@Composable () -> Unit)? = null,
 ) {
     Row(
@@ -654,6 +656,7 @@ fun GamepadCardRow(
             isFocused = isFocused,
             isDestructive = isDestructive,
             isError = isError,
+            alwaysShowFullDescription = alwaysShowFullDescription,
             modifier = Modifier.weight(1f),
         )
 
@@ -1093,6 +1096,7 @@ fun GamepadActionCard(
     cardBgColor: Color? = null,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
+    alwaysShowFullDescription: Boolean = false,
     itemKey: Any? = title,
 ) {
     val colors = LocalAppColors.current
@@ -1111,6 +1115,7 @@ fun GamepadActionCard(
             leadingContent = leadingContent,
             isFocused = isFocused,
             isDestructive = isDestructive,
+            alwaysShowFullDescription = alwaysShowFullDescription,
             trailingContent =
                 if (actionText != null || actionGlyph != null || actionLeadingContent != null) {
                     {

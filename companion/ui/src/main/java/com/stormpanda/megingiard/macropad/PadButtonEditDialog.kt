@@ -7,7 +7,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -82,6 +87,7 @@ private val PBD_ARROW_SIZE = 16.dp
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
 private val PBD_ICON_SIZE_DP = 20.dp
+private val PBD_GRID_SPACING = 10.dp
 
 /**
  * Maps a [PadAction] type to its localised label string resource.
@@ -152,15 +158,33 @@ internal fun ChooseButtonTypeSubPageContent(
             }
         }
 
-    availableGroups.forEachIndexed { index, group ->
-        GamepadActionCard(
-            title = stringResource(group.labelResId()),
-            description = stringResource(group.descriptionResId()),
-            icon = group.icon(),
-            actionText = stringResource(R.string.gamepad_action_choose),
-            onClick = { onSelectType(group) },
-            modifier = if (index == 0) Modifier.firstDeckItem() else Modifier,
-        )
+    val chunkedGroups = remember(availableGroups) { availableGroups.chunked(2) }
+
+    chunkedGroups.forEachIndexed { rowIndex, rowGroups ->
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(PBD_GRID_SPACING),
+        ) {
+            rowGroups.forEachIndexed { colIndex, group ->
+                val isFirstItem = rowIndex == 0 && colIndex == 0
+                GamepadActionCard(
+                    title = stringResource(group.labelResId()),
+                    description = stringResource(group.descriptionResId()),
+                    icon = group.icon(),
+                    actionText = stringResource(R.string.gamepad_action_choose),
+                    alwaysShowFullDescription = true,
+                    onClick = { onSelectType(group) },
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .then(if (isFirstItem) Modifier.firstDeckItem() else Modifier),
+                )
+            }
+            if (rowGroups.size == 1) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
