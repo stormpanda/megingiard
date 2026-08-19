@@ -71,15 +71,15 @@ object PrimaryOverlayInputBridge {
 
     /**
      * Translates continuous analog stick / hat switch movements into discrete D-pad KeyEvents
-     * with deadzone filtering and repeat throttling.
+     * with deadzone filtering and stateful press/release transitions.
      *
      * @param event The generic motion event from the gamepad.
-     * @param onDpadKey Callback receiving the translated [KeyEvent.KEYCODE_DPAD_*].
+     * @param onDpadKey Callback receiving the action ([KeyEvent.ACTION_DOWN] / [KeyEvent.ACTION_UP]) and translated [KeyEvent.KEYCODE_DPAD_*].
      * @return true if the event was handled as a navigation movement.
      */
     fun processGenericMotionEvent(
         event: MotionEvent,
-        onDpadKey: (Int) -> Unit,
+        onDpadKey: (action: Int, keyCode: Int) -> Unit,
     ): Boolean {
         if ((event.source and InputDevice.SOURCE_JOYSTICK) != InputDevice.SOURCE_JOYSTICK &&
             (event.source and InputDevice.SOURCE_GAMEPAD) != InputDevice.SOURCE_GAMEPAD &&
@@ -105,17 +105,19 @@ object PrimaryOverlayInputBridge {
                 else -> 0
             }
 
-        if (targetKeyCode == 0) {
-            lastJoystickKeyCode = 0
-            return false
+        if (targetKeyCode == lastJoystickKeyCode) {
+            return targetKeyCode != 0
         }
 
-        val now = SystemClock.elapsedRealtime()
-        if (targetKeyCode != lastJoystickKeyCode || (now - lastJoystickMotionMs) >= STICK_REPEAT_INTERVAL_MS) {
+        if (lastJoystickKeyCode != 0) {
+            val oldKey = lastJoystickKeyCode
+            lastJoystickKeyCode = 0
+            onDpadKey(KeyEvent.ACTION_UP, oldKey)
+        }
+
+        if (targetKeyCode != 0) {
             lastJoystickKeyCode = targetKeyCode
-            lastJoystickMotionMs = now
-            onDpadKey(targetKeyCode)
-            return true
+            onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
         }
 
         return true

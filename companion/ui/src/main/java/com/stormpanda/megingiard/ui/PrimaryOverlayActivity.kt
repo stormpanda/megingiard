@@ -105,12 +105,10 @@ class PrimaryOverlayActivity : ComponentActivity() {
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        if (PrimaryOverlayInputBridge.processGenericMotionEvent(event) { dpadKeyCode ->
-                val down = KeyEvent(KeyEvent.ACTION_DOWN, dpadKeyCode)
-                val up = KeyEvent(KeyEvent.ACTION_UP, dpadKeyCode)
-                val downHandled = dispatchKeyEvent(down)
-                val upHandled = dispatchKeyEvent(up)
-                if (!downHandled && !upHandled) {
+        if (PrimaryOverlayInputBridge.processGenericMotionEvent(event) { action, dpadKeyCode ->
+                val keyEvent = KeyEvent(action, dpadKeyCode)
+                val handled = dispatchKeyEvent(keyEvent)
+                if (!handled && action == KeyEvent.ACTION_DOWN) {
                     PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
                 }
             }

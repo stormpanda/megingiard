@@ -942,10 +942,15 @@
     <string name="macropad_btn_color_save_desc">將色彩變更套用至此按鈕</string>
     <string name="macropad_btn_color_layout_default_desc">繼承配置預設色彩</string>
     <string name="macropad_editor_edit_button_positions">編輯按鈕位置</string>
+    <string name="macropad_editor_edit_button_positions_card_desc">透過觸控或十字鍵精確移動按鈕</string>
     <string name="macropad_editor_edit_button_positions_enabled_desc">可於下螢幕自由拖曳按鈕</string>
     <string name="macropad_editor_edit_button_positions_disabled_desc">下螢幕按鈕位置已鎖定</string>
+    <string name="macropad_editor_move_buttons_info">直接在下方螢幕拖曳按鈕，或在下方選取按鈕以透過十字鍵或左搖桿逐像素移動。</string>
+    <string name="macropad_editor_badge_move">移動</string>
+    <string name="macropad_editor_badge_moving">移動中</string>
     <string name="macropad_editor_manage_buttons">管理按鈕</string>
     <string name="macropad_editor_reorder_buttons">重新排列按鈕</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">調整按鈕排列順序</string>
     <string name="macropad_editor_reorder_buttons_disabled_desc">選擇按鈕以編輯設定</string>
+    <string name="gamepad_action_done">完成</string>
 </resources>

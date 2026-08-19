@@ -1099,6 +1099,7 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_reorder">Reorder</string>
     <string name="gamepad_action_move">Move</string>
     <string name="gamepad_action_moving">Moving</string>
+    <string name="gamepad_action_done">Done</string>
     <string name="gamepad_action_delete">Delete</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
@@ -1219,8 +1220,12 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_delete_layout_desc">Delete \'%1$s\' from this profile</string>
     <string name="macropad_editor_section_canvas_controls">Canvas Controls</string>
     <string name="macropad_editor_edit_button_positions">Edit Button Positions</string>
+    <string name="macropad_editor_edit_button_positions_card_desc">Move buttons via touch or D-pad precision</string>
     <string name="macropad_editor_edit_button_positions_enabled_desc">Buttons can be dragged freely on the bottom screen</string>
     <string name="macropad_editor_edit_button_positions_disabled_desc">Button positions on the bottom screen are locked</string>
+    <string name="macropad_editor_move_buttons_info">Drag buttons directly on the bottom screen, or select a button below to move it pixel-by-pixel with the D-pad or Left Stick.</string>
+    <string name="macropad_editor_badge_move">Move</string>
+    <string name="macropad_editor_badge_moving">Moving</string>
     <string name="macropad_editor_manage_buttons">Manage Buttons</string>
     <string name="macropad_editor_reorder_buttons">Reorder Buttons</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">Use controls to rearrange the button list</string>

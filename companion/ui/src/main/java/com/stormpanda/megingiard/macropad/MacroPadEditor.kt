@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import android.content.Context
+import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -10,15 +11,18 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -36,6 +40,7 @@ import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Grid4x4
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Mouse
@@ -45,6 +50,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +59,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,6 +70,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -81,11 +90,13 @@ import com.stormpanda.megingiard.ui.BumperDirection
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadReorderCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
@@ -100,15 +111,27 @@ import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.UUID
+import kotlin.math.max
 
 private const val TAG = "MacroPadEditor"
 private val MPE_DECK_SPACING = 10.dp
 private val MPE_EMPTY_PADDING_V = 12.dp
 private const val MPE_BUTTON_HEADER_COUNT = 5
+private const val MPE_CANVAS_WIDTH_PX = 1920f
+private const val MPE_CANVAS_HEIGHT_PX = 1080f
+private const val MPE_EDGE_MARGIN = 0.05f
+private const val MPE_MOVE_INITIAL_DELAY_MS = 250L
+private const val MPE_MOVE_START_DELAY_MS = 80L
+private const val MPE_MOVE_MIN_DELAY_MS = 16L
+private const val MPE_MOVE_ACCEL_FACTOR = 0.88f
+private val MPE_INFO_BANNER_RADIUS = 8.dp
 
 private fun applyActionToDraftButton(
     context: Context,
@@ -175,6 +198,7 @@ fun MacroPadEditor(
         onDispose {
             AppLog.i(TAG, "MacroPadEditor dismissed")
             MacroPadState.setEditingButtonPositions(false)
+            MacroPadState.setSelectedButtonId(null)
         }
     }
 
@@ -190,10 +214,11 @@ fun MacroPadEditor(
     var internalShowEditorHelp by remember { mutableStateOf(false) }
     val effectiveShowHelp = showHelp || internalShowEditorHelp
 
-    LaunchedEffect(selectedSection) {
-        if (selectedSection != EditorSection.BUTTONS) {
-            MacroPadState.setEditingButtonPositions(false)
-        }
+    LaunchedEffect(selectedSection, subPageStack) {
+        val isEditingPositionsSubPage =
+            selectedSection == EditorSection.BUTTONS &&
+                subPageStack.any { it is MacroPadSubPage.EditButtonPositions }
+        MacroPadState.setEditingButtonPositions(isEditingPositionsSubPage)
     }
 
     // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
@@ -480,6 +505,9 @@ fun MacroPadEditor(
                                                 profile = profile,
                                                 layout = activeLayout,
                                                 accentColor = colors.accent,
+                                                onEditButtonPositions = {
+                                                    subPageStack = subPageStack + MacroPadSubPage.EditButtonPositions
+                                                },
                                                 onAddButton = {
                                                     subPageStack = subPageStack + MacroPadSubPage.ChooseButtonType
                                                 },
@@ -981,6 +1009,22 @@ fun MacroPadEditor(
                                         ReorderLayoutsSubPage(
                                             layouts = profile.layouts,
                                         )
+                                    }
+
+                                    is MacroPadSubPage.EditButtonPositions -> {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(R.string.macropad_editor_edit_button_positions),
+                                                ),
+                                            scrollable = false,
+                                        ) {
+                                            EditButtonPositionsSubPageContent(
+                                                layout = activeLayout,
+                                                accentColor = colors.accent,
+                                            )
+                                        }
                                     }
 
                                     is MacroPadSubPage.ChooseButtonType -> {
@@ -1906,6 +1950,7 @@ private fun ButtonsDeck(
     profile: PadProfile,
     layout: PadLayout?,
     accentColor: Color,
+    onEditButtonPositions: () -> Unit,
     onAddButton: () -> Unit,
     onEditButton: (PadButton) -> Unit,
 ) {
@@ -1944,17 +1989,12 @@ private fun ButtonsDeck(
         modifier = Modifier.fillMaxSize(),
     ) {
         item {
-            GamepadToggleCard(
+            GamepadActionCard(
                 title = stringResource(R.string.macropad_editor_edit_button_positions),
-                description =
-                    if (isEditingPositions) {
-                        stringResource(R.string.macropad_editor_edit_button_positions_enabled_desc)
-                    } else {
-                        stringResource(R.string.macropad_editor_edit_button_positions_disabled_desc)
-                    },
-                checked = isEditingPositions,
-                icon = if (isEditingPositions) Icons.Rounded.OpenWith else Icons.Rounded.Lock,
-                onCheckedChange = { MacroPadState.setEditingButtonPositions(it) },
+                description = stringResource(R.string.macropad_editor_edit_button_positions_card_desc),
+                actionText = stringResource(R.string.gamepad_action_open),
+                icon = Icons.Rounded.OpenWith,
+                onClick = onEditButtonPositions,
                 modifier = Modifier.firstDeckItem(),
             )
         }
@@ -2115,6 +2155,286 @@ private fun ButtonsDeck(
 }
 
 @Composable
+private fun EditButtonPositionsSubPageContent(
+    layout: PadLayout?,
+    accentColor: Color,
+) {
+    val colors = LocalAppColors.current
+    val buttons = layout?.buttons ?: emptyList()
+    val coroutineScope = rememberCoroutineScope()
+    var movingButtonId by remember { mutableStateOf<String?>(null) }
+    var activeRepeatJob by remember { mutableStateOf<Job?>(null) }
+    var activeDirectionKey by remember { mutableIntStateOf(0) }
+
+    fun stopMovingImmediate() {
+        activeRepeatJob?.cancel()
+        activeRepeatJob = null
+        activeDirectionKey = 0
+    }
+
+    // Intercept back button when precision moving
+    BackHandler(enabled = movingButtonId != null) {
+        stopMovingImmediate()
+        movingButtonId = null
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            stopMovingImmediate()
+            MacroPadState.setSelectedButtonId(null)
+        }
+    }
+
+    fun moveButton(
+        btnId: String,
+        dx: Int,
+        dy: Int,
+    ) {
+        val currentLayout = MacroPadState.activeLayout.value ?: return
+        val targetBtn = currentLayout.buttons.firstOrNull { it.id == btnId } ?: return
+        val stepX = 1f / MPE_CANVAS_WIDTH_PX
+        val stepY = 1f / MPE_CANVAS_HEIGHT_PX
+        val newX = (targetBtn.posX + dx * stepX).coerceIn(MPE_EDGE_MARGIN, 1f - MPE_EDGE_MARGIN)
+        val newY = (targetBtn.posY + dy * stepY).coerceIn(MPE_EDGE_MARGIN, 1f - MPE_EDGE_MARGIN)
+        if (newX != targetBtn.posX || newY != targetBtn.posY) {
+            val updated =
+                currentLayout.buttons.map {
+                    if (it.id == btnId) it.copy(posX = newX, posY = newY) else it
+                }
+            MacroPadState.updateLayout(currentLayout.copy(buttons = updated))
+        }
+    }
+
+    fun startMoving(
+        btnId: String,
+        keyCode: Int,
+        dx: Int,
+        dy: Int,
+    ) {
+        if (activeDirectionKey == keyCode && activeRepeatJob?.isActive == true) {
+            return
+        }
+        activeRepeatJob?.cancel()
+        activeDirectionKey = keyCode
+        moveButton(btnId, dx, dy)
+        activeRepeatJob =
+            coroutineScope.launch {
+                delay(MPE_MOVE_INITIAL_DELAY_MS)
+                var delayMs = MPE_MOVE_START_DELAY_MS
+                while (isActive && activeDirectionKey == keyCode) {
+                    moveButton(btnId, dx, dy)
+                    delay(delayMs)
+                    delayMs = max(MPE_MOVE_MIN_DELAY_MS, (delayMs * MPE_MOVE_ACCEL_FACTOR).toLong())
+                }
+            }
+    }
+
+    fun stopMoving(keyCode: Int) {
+        if (activeDirectionKey == keyCode) {
+            stopMovingImmediate()
+        }
+    }
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(MPE_DECK_SPACING),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item {
+            // Non-highlightable Info Box
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = colors.surface.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(MPE_INFO_BANNER_RADIUS),
+                        ).border(
+                            width = 1.dp,
+                            color = colors.onSurfaceSecondary.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(MPE_INFO_BANNER_RADIUS),
+                        ).padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Info,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.macropad_editor_move_buttons_info),
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+
+        if (buttons.isEmpty()) {
+            item {
+                Text(
+                    text = stringResource(R.string.macropad_editor_no_buttons_in_layout),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = MPE_EMPTY_PADDING_V),
+                )
+            }
+        } else {
+            itemsIndexed(buttons, key = { _, btn -> btn.id }) { index, btn ->
+                val isMoving = movingButtonId == btn.id
+                val isTrackpoint = btn.action is PadAction.TrackpointMove
+                val hapticLabel =
+                    when (btn.hapticStrength) {
+                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
+                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
+                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+                    }
+                val desc =
+                    if (isTrackpoint) {
+                        val sizeLabel =
+                            when ((btn.action as PadAction.TrackpointMove).size) {
+                                TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
+                                TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
+                                TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
+                            }
+                        listOf(sizeLabel, hapticLabel).joinToString(" • ")
+                    } else {
+                        val actionLabel = btn.action.displayLabel()
+                        val sizeLabel =
+                            if (btn.action !is PadAction.ScrollWheel) {
+                                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+                            } else {
+                                null
+                            }
+                        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
+                    }
+
+                GamepadFocusCard(
+                    onClick = {
+                        if (isMoving) {
+                            stopMovingImmediate()
+                            movingButtonId = null
+                        } else {
+                            movingButtonId = btn.id
+                            MacroPadState.setSelectedButtonId(btn.id)
+                        }
+                    },
+                    itemKey = btn.id,
+                    modifier = Modifier.firstDeckItem(index == 0),
+                    isAdjusting = isMoving,
+                    onFocusChanged = { isFocused ->
+                        if (isFocused && movingButtonId == null) {
+                            MacroPadState.setSelectedButtonId(btn.id)
+                        }
+                    },
+                    onCustomKeyEvent = { keyEvent ->
+                        val keyCode = keyEvent.nativeKeyEvent.keyCode
+                        if (isMoving) {
+                            if (keyEvent.type == KeyEventType.KeyDown) {
+                                when (keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_UP -> {
+                                        startMoving(btn.id, keyCode, 0, -1)
+                                        true
+                                    }
+
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        startMoving(btn.id, keyCode, 0, 1)
+                                        true
+                                    }
+
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        startMoving(btn.id, keyCode, -1, 0)
+                                        true
+                                    }
+
+                                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                        startMoving(btn.id, keyCode, 1, 0)
+                                        true
+                                    }
+
+                                    KeyEvent.KEYCODE_BUTTON_B,
+                                    KeyEvent.KEYCODE_BACK,
+                                    KeyEvent.KEYCODE_ESCAPE,
+                                    -> {
+                                        stopMovingImmediate()
+                                        movingButtonId = null
+                                        true
+                                    }
+
+                                    KeyEvent.KEYCODE_BUTTON_A,
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER,
+                                    -> {
+                                        true
+                                    }
+
+                                    else -> {
+                                        false
+                                    }
+                                }
+                            } else if (keyEvent.type == KeyEventType.KeyUp) {
+                                when (keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_UP,
+                                    KeyEvent.KEYCODE_DPAD_DOWN,
+                                    KeyEvent.KEYCODE_DPAD_LEFT,
+                                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                                    -> {
+                                        stopMoving(keyCode)
+                                        true
+                                    }
+
+                                    KeyEvent.KEYCODE_BUTTON_B,
+                                    KeyEvent.KEYCODE_BACK,
+                                    KeyEvent.KEYCODE_ESCAPE,
+                                    KeyEvent.KEYCODE_BUTTON_A,
+                                    KeyEvent.KEYCODE_DPAD_CENTER,
+                                    KeyEvent.KEYCODE_ENTER,
+                                    -> {
+                                        true
+                                    }
+
+                                    else -> {
+                                        false
+                                    }
+                                }
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    },
+                ) { isFocused ->
+                    GamepadCardRow(
+                        title = btn.label.ifBlank { btn.action.displayLabel() },
+                        description = desc,
+                        icon = btn.action.toCategory().icon(),
+                        trailingContent = {
+                            if (isMoving) {
+                                GamepadPill(
+                                    text = stringResource(R.string.gamepad_action_moving),
+                                    isAccent = true,
+                                )
+                            } else {
+                                GamepadPill(
+                                    text = stringResource(R.string.gamepad_action_move),
+                                    isHighlighted = isFocused,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun MacrosDeck(
     profile: PadProfile,
     accentColor: Color,
@@ -2202,7 +2522,7 @@ private fun MacroPadEditorHelpModal(
         HelpEntry(
             icon = Icons.Rounded.OpenWith,
             label = stringResource(R.string.macropad_editor_edit_button_positions),
-            description = stringResource(R.string.macropad_editor_edit_button_positions_enabled_desc),
+            description = stringResource(R.string.macropad_editor_edit_button_positions_card_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Grid4x4,

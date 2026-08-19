@@ -109,10 +109,16 @@ class PrimaryOverlayInputBridgeTest {
     fun testProcessGenericMotionEvent_nonJoystickSource_returnsFalse() {
         val motionEvent = createJoystickMotionEvent(axisX = 0.8f, source = InputDevice.SOURCE_TOUCHSCREEN)
 
+        var actionDispatched = -1
         var keyDispatched = 0
-        val handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
+        val handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                actionDispatched = action
+                keyDispatched = key
+            }
 
         assertFalse(handled)
+        assertEquals(-1, actionDispatched)
         assertEquals(0, keyDispatched)
     }
 
@@ -120,10 +126,16 @@ class PrimaryOverlayInputBridgeTest {
     fun testProcessGenericMotionEvent_deadzoneFiltering() {
         val motionEvent = createJoystickMotionEvent(axisX = 0.2f, axisY = -0.3f)
 
+        var actionDispatched = -1
         var keyDispatched = 0
-        val handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
+        val handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                actionDispatched = action
+                keyDispatched = key
+            }
 
         assertFalse(handled)
+        assertEquals(-1, actionDispatched)
         assertEquals(0, keyDispatched)
     }
 
@@ -131,37 +143,51 @@ class PrimaryOverlayInputBridgeTest {
     fun testProcessGenericMotionEvent_analogStickDirections() {
         // UP
         var motionEvent = createJoystickMotionEvent(axisY = -0.8f)
+        var actionDispatched = -1
         var keyDispatched = 0
-        var handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
+        var handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                actionDispatched = action
+                keyDispatched = key
+            }
         assertTrue(handled)
+        assertEquals(KeyEvent.ACTION_DOWN, actionDispatched)
         assertEquals(KeyEvent.KEYCODE_DPAD_UP, keyDispatched)
 
-        // DOWN
+        // DOWN (transition UP -> DOWN fires UP release then DOWN press)
         motionEvent = createJoystickMotionEvent(axisY = 0.8f)
-        handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
+        val events = mutableListOf<Pair<Int, Int>>()
+        handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                events.add(action to key)
+            }
         assertTrue(handled)
-        assertEquals(KeyEvent.KEYCODE_DPAD_DOWN, keyDispatched)
+        assertEquals(listOf(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_DPAD_UP, KeyEvent.ACTION_DOWN to KeyEvent.KEYCODE_DPAD_DOWN), events)
 
-        // LEFT
-        motionEvent = createJoystickMotionEvent(axisX = -0.8f)
-        handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
+        // RELEASE TO CENTER (fires release of DOWN)
+        motionEvent = createJoystickMotionEvent(axisY = 0f)
+        events.clear()
+        handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                events.add(action to key)
+            }
         assertTrue(handled)
-        assertEquals(KeyEvent.KEYCODE_DPAD_LEFT, keyDispatched)
-
-        // RIGHT
-        motionEvent = createJoystickMotionEvent(axisX = 0.8f)
-        handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
-        assertTrue(handled)
-        assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, keyDispatched)
+        assertEquals(listOf(KeyEvent.ACTION_UP to KeyEvent.KEYCODE_DPAD_DOWN), events)
     }
 
     @Test
     fun testProcessGenericMotionEvent_hatSwitchDirections() {
         val motionEvent = createJoystickMotionEvent(hatX = 1f)
 
+        var actionDispatched = -1
         var keyDispatched = 0
-        val handled = PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { keyDispatched = it }
+        val handled =
+            PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, key ->
+                actionDispatched = action
+                keyDispatched = key
+            }
         assertTrue(handled)
+        assertEquals(KeyEvent.ACTION_DOWN, actionDispatched)
         assertEquals(KeyEvent.KEYCODE_DPAD_RIGHT, keyDispatched)
     }
 }

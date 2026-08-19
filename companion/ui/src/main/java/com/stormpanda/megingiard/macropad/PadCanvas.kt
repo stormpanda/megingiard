@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -135,6 +136,7 @@ internal fun PadCanvas(
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var lastTouchedButtonId by remember { mutableStateOf<String?>(null) }
+    val selectedButtonId by MacroPadState.selectedButtonId.collectAsState()
     val colors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -309,8 +311,9 @@ internal fun PadCanvas(
             )
         }
 
-        // Render handles for the last touched button if not locked
-        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == lastTouchedButtonId }
+        // Render handles for the active button if not locked
+        val effectiveActiveButtonId = lastTouchedButtonId ?: selectedButtonId
+        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == effectiveActiveButtonId }
         if (!isLocked && activeBtn != null) {
             val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
             val tpMultiplier = if (isTrackpoint) (activeBtn.action as PadAction.TrackpointMove).size.multiplier else 1f

@@ -1108,6 +1108,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_reorder">Neu anordnen</string>
     <string name="gamepad_action_move">Verschieben</string>
     <string name="gamepad_action_moving">Verschieben…</string>
+    <string name="gamepad_action_done">Fertig</string>
     <string name="gamepad_action_delete">Löschen</string>
     <string name="cd_move_up">Nach oben verschieben</string>
     <string name="cd_move_down">Nach unten verschieben</string>
@@ -1228,8 +1229,12 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
     <string name="macropad_editor_section_canvas_controls">Arbeitsflächen-Steuerung</string>
     <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
+    <string name="macropad_editor_edit_button_positions_card_desc">Tasten per Touch oder D-Pad präzise bewegen</string>
     <string name="macropad_editor_edit_button_positions_enabled_desc">Tasten können auf dem unteren Bildschirm frei verschoben werden</string>
     <string name="macropad_editor_edit_button_positions_disabled_desc">Tastenpositionen auf dem unteren Bildschirm sind gesperrt</string>
+    <string name="macropad_editor_move_buttons_info">Bewege Tasten direkt durch Ziehen auf dem unteren Bildschirm oder wähle unten eine Taste, um sie mit dem Steuerkreuz oder linken Stick pixelgenau zu verschieben.</string>
+    <string name="macropad_editor_badge_move">Bewegen</string>
+    <string name="macropad_editor_badge_moving">Verschieben</string>
     <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
     <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">Tastenreihenfolge anpassen</string>

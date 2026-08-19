@@ -197,6 +197,18 @@ Each button supports one of the following actions:
   - Color options survive profile imports/exports and migrate legacy button color formats (`buttonColorNoMirror` / `buttonColorMirror`) automatically.
 
 
+### FR-P8b: Edit Button Positions & Precision Movement
+
+- **Sub-Menu Navigation:** Accessible from the **Edit button positions** menu item in the Buttons category deck (`MacroPadSubPage.EditButtonPositions`).
+- **Live Canvas Unlocking:** Entering the sub-menu automatically activates `MacroPadState.isEditingButtonPositions = true`, rendering the active 5dp-rounded highlight border around the bottom-screen `PadCanvas` and unlocking touch dragging. Leaving the sub-menu or closing the editor restores locked mode (`false`).
+- **Instructional Info Banner:** A non-highlightable info box at the top of the sub-menu informs the user that buttons can be dragged directly on the bottom display via touch or nudged with pixel precision via D-pad or Left Stick.
+- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with a "Move" badge. Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders directional drag handles on the corresponding button on the bottom display.
+- **Pixel Precision & Frequency Acceleration:**
+  - Pressing `(A)` on any button in the list activates **Precision Movement Mode** (`isMoving = true`).
+  - Directional inputs (`D-Pad Up/Down/Left/Right` or `Left Stick`) move the button exactly 1 pixel per tick.
+  - Holding a direction down continuously accelerates the tick frequency (starting at 100 ms intervals down to 16 ms intervals / ~60 Hz) for smooth, high-precision positioning without skipping pixels.
+  - Pressing `(B)` deactivates precision movement mode, returning control to list navigation.
+
 ### FR-P9a: Custom Background Image
 
 - Users can choose a **custom background image** to be displayed behind the MacroPad buttons.

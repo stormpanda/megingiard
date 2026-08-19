@@ -142,6 +142,10 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
+    data object EditButtonPositions : MacroPadSubPage {
+        override val parentSection = EditorSection.BUTTONS
+    }
+
     data class EditButton(
         val button: PadButton?,
         val draftButton: PadButton? = null,

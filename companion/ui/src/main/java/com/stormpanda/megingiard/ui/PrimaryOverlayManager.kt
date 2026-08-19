@@ -189,12 +189,10 @@ object PrimaryOverlayManager {
                     isFocusableInTouchMode = true
 
                     setOnGenericMotionListener { _, motionEvent ->
-                        PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { dpadKeyCode ->
-                            val down = KeyEvent(KeyEvent.ACTION_DOWN, dpadKeyCode)
-                            val up = KeyEvent(KeyEvent.ACTION_UP, dpadKeyCode)
-                            val downHandled = dispatchKeyEvent(down)
-                            val upHandled = dispatchKeyEvent(up)
-                            if (!downHandled && !upHandled) {
+                        PrimaryOverlayInputBridge.processGenericMotionEvent(motionEvent) { action, dpadKeyCode ->
+                            val keyEvent = KeyEvent(action, dpadKeyCode)
+                            val handled = dispatchKeyEvent(keyEvent)
+                            if (!handled && action == KeyEvent.ACTION_DOWN) {
                                 PrimaryOverlayInputBridge.sendFocusRecovery(dpadKeyCode)
                             }
                         }
