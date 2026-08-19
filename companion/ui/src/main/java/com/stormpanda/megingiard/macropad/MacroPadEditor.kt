@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -103,6 +104,47 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.UUID
 
 private const val TAG = "MacroPadEditor"
+
+private fun applyActionToDraftButton(
+    context: Context,
+    draftButton: PadButton,
+    newAction: PadAction,
+): PadButton {
+    var shape = draftButton.buttonShape
+    var size = draftButton.buttonSize
+    var label = draftButton.label
+    var icon = draftButton.iconName
+
+    if (newAction is PadAction.ScrollWheel) {
+        size = ButtonSize.SIZE_1X2
+        label = ""
+        icon = null
+    } else if (newAction is PadAction.TrackpointMove) {
+        shape = ButtonShape.CIRCLE
+        label = ""
+        icon = null
+    } else if (newAction is PadAction.AppLauncher) {
+        label = ""
+        icon = null
+    } else {
+        val defaultRes = newAction.defaultLabelRes()
+        if (defaultRes != null) {
+            label = context.getString(defaultRes)
+        }
+        val defaultIcon = newAction.editorDefaultIconName()
+        if (defaultIcon != null) {
+            icon = defaultIcon
+        }
+    }
+
+    return draftButton.copy(
+        action = newAction,
+        label = label,
+        iconName = icon,
+        buttonShape = shape,
+        buttonSize = size,
+    )
+}
 
 internal val MPE_TOP_BAR_HEIGHT = 56.dp
 internal val MPE_PADDING = 16.dp
@@ -1080,7 +1122,43 @@ fun MacroPadEditor(
                                                             button = currentSubPage.button,
                                                             draftButton = currentDraft,
                                                         ) +
-                                                        MacroPadSubPage.ChooseMouseButton(
+                                                        MacroPadSubPage.ChooseMouseAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        )
+                                                },
+                                                onOpenMirrorPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseMirrorAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        )
+                                                },
+                                                onOpenOverlayPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseOverlayAction(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        )
+                                                },
+                                                onOpenLayoutPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseLayoutAction(
                                                             button = currentSubPage.button,
                                                             draftButton = currentDraft,
                                                         )
@@ -1299,10 +1377,8 @@ fun MacroPadEditor(
                                         }
                                     }
 
-                                    is MacroPadSubPage.ChooseMouseButton -> {
+                                    is MacroPadSubPage.ChooseMouseAction -> {
                                         val effectiveButton = currentSubPage.draftButton
-                                        val currentMouseAction = effectiveButton.action as? PadAction.MouseButton
-                                        val currentMouseButton = currentMouseAction?.button ?: MouseButton.LEFT
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1320,19 +1396,118 @@ fun MacroPadEditor(
                                                 ),
                                         ) {
                                             VisualMousePicker(
-                                                selectedButton = currentMouseButton,
+                                                currentAction = effectiveButton.action,
                                                 accentColor = colors.accent,
-                                                onSelectButton = { btn ->
-                                                    val newAction = PadAction.MouseButton(button = btn)
-                                                    val newLabel =
-                                                        if (effectiveButton.label.isBlank() ||
-                                                            effectiveButton.label == currentMouseAction?.button?.displayLabel()
-                                                        ) {
-                                                            btn.displayLabel()
-                                                        } else {
-                                                            effectiveButton.label
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
                                                         }
-                                                    val updatedDraft = effectiveButton.copy(action = newAction, label = newLabel)
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseMirrorAction -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_mirror_title),
+                                                ),
+                                        ) {
+                                            MirrorActionPickerSubPageContent(
+                                                currentAction = effectiveButton.action,
+                                                accentColor = colors.accent,
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseOverlayAction -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_overlay_title),
+                                                ),
+                                        ) {
+                                            OverlayActionPickerSubPageContent(
+                                                currentAction = effectiveButton.action,
+                                                accentColor = colors.accent,
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseLayoutAction -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_layout_title),
+                                                ),
+                                        ) {
+                                            LayoutActionPickerSubPageContent(
+                                                currentAction = effectiveButton.action,
+                                                accentColor = colors.accent,
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {

@@ -15,9 +15,11 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -120,6 +122,7 @@ private val GC_SPACING_2 = 2.dp
 private val GC_SPACING_4 = 4.dp
 private val GC_SPACING_6 = 6.dp
 private val GC_SPACING_8 = 8.dp
+private val GC_SPACING_10 = 10.dp
 private val GC_CORNER_4 = 4.dp
 private val GC_CORNER_8 = 8.dp
 
@@ -1858,6 +1861,46 @@ fun GamepadSliderCard(
                             .fillMaxWidth()
                             .height(GC_SLIDER_HEIGHT),
                 )
+            }
+        }
+    }
+}
+
+/**
+ * A reusable 2-column grid layout for [GamepadActionCard] items, ensuring balanced row heights,
+ * consistent spacing, and proper focus styling on the first item in the deck.
+ */
+@Composable
+fun <T> GamepadTwoColumnGrid(
+    items: List<T>,
+    modifier: Modifier = Modifier,
+    spacing: Dp = GC_SPACING_10,
+    cardContent: @Composable (item: T, isFirstItem: Boolean, modifier: Modifier) -> Unit,
+) {
+    val chunked = remember(items) { items.chunked(2) }
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(spacing),
+    ) {
+        chunked.forEachIndexed { rowIndex, rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+            ) {
+                rowItems.forEachIndexed { colIndex, item ->
+                    val isFirstItem = rowIndex == 0 && colIndex == 0
+                    cardContent(
+                        item,
+                        isFirstItem,
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .then(if (isFirstItem) Modifier.firstDeckItem() else Modifier),
+                    )
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
     }

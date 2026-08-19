@@ -59,6 +59,7 @@ import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.UUID
@@ -72,6 +73,9 @@ private const val PBD_ICON_MIRROR_VIEWPORT_EDIT = "crop_free"
 private const val PBD_ICON_MIRROR_TOUCH_PROJECTION = "touch_app"
 private const val PBD_ICON_FULLSCREEN_MOUSE = "mouse"
 private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
+private const val PBD_ICON_APPS = "apps"
+private const val PBD_ICON_SWAP_VERT = "swap_vert"
+private const val PBD_ICON_TRACKPOINT = "control_camera"
 private const val PBD_ICON_MACRO = "smart_button"
 private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
 private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
@@ -89,11 +93,23 @@ private val PBD_CORNER_RADIUS_DP = 6.dp
 private val PBD_ICON_SIZE_DP = 20.dp
 private val PBD_GRID_SPACING = 10.dp
 
+internal fun MouseButton.labelRes(): Int =
+    when (this) {
+        MouseButton.LEFT -> R.string.macropad_mouse_btn_left
+        MouseButton.RIGHT -> R.string.macropad_mouse_btn_right
+        MouseButton.MIDDLE -> R.string.macropad_mouse_btn_middle
+        MouseButton.MOUSE4 -> R.string.macropad_mouse_btn_back
+        MouseButton.MOUSE5 -> R.string.macropad_mouse_btn_forward
+    }
+
 /**
  * Maps a [PadAction] type to its localised label string resource.
  */
-private fun PadAction.defaultLabelRes(): Int? =
+internal fun PadAction.defaultLabelRes(): Int? =
     when (this) {
+        is PadAction.MouseButton -> this.button.labelRes()
+        is PadAction.ScrollWheel -> R.string.macropad_action_scroll_wheel
+        is PadAction.TrackpointMove -> R.string.macropad_action_trackpoint
         is PadAction.LayoutNext -> R.string.macropad_action_layout_next
         is PadAction.LayoutPrevious -> R.string.macropad_action_layout_previous
         is PadAction.ProfileSwitcher -> R.string.macropad_action_profile_switcher
@@ -104,13 +120,19 @@ private fun PadAction.defaultLabelRes(): Int? =
         is PadAction.FullScreenMouse -> R.string.macropad_action_fullscreen_mouse
         is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
         is PadAction.Macro -> R.string.macropad_action_macro
+        is PadAction.AppLauncher -> R.string.macropad_action_app_launcher
         is PadAction.BackgroundPeek -> R.string.macropad_action_ambient_peek
         else -> null
     }
 
-/** Default Material Symbols icon name for actions that behave like regular buttons in the editor. */
-private fun PadAction.editorDefaultIconName(): String? =
+/**
+ * Resolves the default icon name for a [PadAction] when initially selected in the button editor.
+ */
+internal fun PadAction.editorDefaultIconName(): String? =
     when (this) {
+        is PadAction.MouseButton -> PBD_ICON_FULLSCREEN_MOUSE
+        is PadAction.ScrollWheel -> PBD_ICON_SWAP_VERT
+        is PadAction.TrackpointMove -> PBD_ICON_TRACKPOINT
         is PadAction.LayoutNext -> PBD_ICON_LAYOUT_NEXT
         is PadAction.LayoutPrevious -> PBD_ICON_LAYOUT_PREVIOUS
         is PadAction.ProfileSwitcher -> PBD_ICON_PROFILE_SWITCHER
@@ -120,6 +142,7 @@ private fun PadAction.editorDefaultIconName(): String? =
         is PadAction.MirrorTouchProjection -> PBD_ICON_MIRROR_TOUCH_PROJECTION
         is PadAction.FullScreenMouse -> PBD_ICON_FULLSCREEN_MOUSE
         is PadAction.FullScreenKeyboard -> PBD_ICON_FULLSCREEN_KEYBOARD
+        is PadAction.AppLauncher -> PBD_ICON_APPS
         is PadAction.Macro -> PBD_ICON_MACRO
         is PadAction.BackgroundPeek -> PBD_ICON_BACKGROUND_PEEK
         else -> null
@@ -158,33 +181,18 @@ internal fun ChooseButtonTypeSubPageContent(
             }
         }
 
-    val chunkedGroups = remember(availableGroups) { availableGroups.chunked(2) }
-
-    chunkedGroups.forEachIndexed { rowIndex, rowGroups ->
-        Row(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(PBD_GRID_SPACING),
-        ) {
-            rowGroups.forEachIndexed { colIndex, group ->
-                val isFirstItem = rowIndex == 0 && colIndex == 0
-                GamepadActionCard(
-                    title = stringResource(group.labelResId()),
-                    description = stringResource(group.descriptionResId()),
-                    icon = group.icon(),
-                    actionText = stringResource(R.string.gamepad_action_choose),
-                    alwaysShowFullDescription = true,
-                    onClick = { onSelectType(group) },
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .then(if (isFirstItem) Modifier.firstDeckItem() else Modifier),
-                )
-            }
-            if (rowGroups.size == 1) {
-                Spacer(modifier = Modifier.weight(1f))
-            }
-        }
+    GamepadTwoColumnGrid(
+        items = availableGroups,
+    ) { group, _, cardModifier ->
+        GamepadActionCard(
+            title = stringResource(group.labelResId()),
+            description = stringResource(group.descriptionResId()),
+            icon = group.icon(),
+            actionText = stringResource(R.string.gamepad_action_choose),
+            alwaysShowFullDescription = true,
+            onClick = { onSelectType(group) },
+            modifier = cardModifier,
+        )
     }
 }
 
@@ -203,6 +211,9 @@ internal fun EditButtonSubPageContent(
     onOpenKeyboardPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenGamepadPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onEditMacro: ((Macro) -> Unit)? = null,
     onSave: (PadButton) -> Unit,
 ) {
@@ -434,6 +445,15 @@ internal fun EditButtonSubPageContent(
         },
         onOpenMousePicker = {
             onOpenMousePicker?.invoke(buildCurrentButton())
+        },
+        onOpenMirrorPicker = {
+            onOpenMirrorPicker?.invoke(buildCurrentButton())
+        },
+        onOpenOverlayPicker = {
+            onOpenOverlayPicker?.invoke(buildCurrentButton())
+        },
+        onOpenLayoutPicker = {
+            onOpenLayoutPicker?.invoke(buildCurrentButton())
         },
         onChange = ::onActionChanged,
     )

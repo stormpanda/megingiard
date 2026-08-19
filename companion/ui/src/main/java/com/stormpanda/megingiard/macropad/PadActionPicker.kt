@@ -1,15 +1,16 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
-import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadActionCard
 
 private const val TAG = "PadActionPicker"
 
@@ -25,46 +26,11 @@ internal fun ActionPicker(
     onOpenKeyboardPicker: () -> Unit = {},
     onOpenGamepadPicker: () -> Unit = {},
     onOpenMousePicker: () -> Unit = {},
+    onOpenMirrorPicker: () -> Unit = {},
+    onOpenOverlayPicker: () -> Unit = {},
+    onOpenLayoutPicker: () -> Unit = {},
     onChange: (PadAction) -> Unit,
 ) {
-    val profile by MacroPadState.activeProfile.collectAsState()
-
-    val hasMacros = profile?.macros?.isNotEmpty() == true
-    val currentCategory = current.toCategory()
-    val currentGroup = currentCategory.group()
-    val groupActions =
-        currentGroup.actions().filter { category ->
-            category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
-        }
-
-    LaunchedEffect(groupActions, currentCategory) {
-        if (groupActions.size == 1) {
-            val singleCategory = groupActions.first()
-            if (currentCategory != singleCategory) {
-                AppLog.d(TAG, "Only one enabled category for group $currentGroup -> auto-selecting in background: $singleCategory")
-                onChange(singleCategory.defaultAction())
-            }
-        }
-    }
-
-    if (groupActions.size > 1) {
-        val catIdx = groupActions.indexOf(currentCategory).coerceAtLeast(0)
-        GamepadChoiceCard(
-            title = stringResource(R.string.macropad_editor_action),
-            description = stringResource(R.string.macropad_editor_action_category_desc),
-            selectedText = stringResource(currentCategory.labelResId()),
-            icon = currentCategory.icon(),
-            onPrevious = {
-                val nextIdx = (catIdx - 1 + groupActions.size) % groupActions.size
-                onChange(groupActions[nextIdx].defaultAction())
-            },
-            onNext = {
-                val nextIdx = (catIdx + 1) % groupActions.size
-                onChange(groupActions[nextIdx].defaultAction())
-            },
-        )
-    }
-
     when (current) {
         is PadAction.KeyboardKey -> {
             KeyboardKeyPicker(current, onOpenKeyboardPicker, onChange)
@@ -74,34 +40,76 @@ internal fun ActionPicker(
             GamepadButtonPicker(current, onOpenGamepadPicker, onChange)
         }
 
-        is PadAction.MouseButton -> {
-            MouseButtonPicker(current, onOpenMousePicker)
+        is PadAction.MouseButton,
+        is PadAction.ScrollWheel,
+        is PadAction.TrackpointMove,
+        -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_group_mouse),
+                description = stringResource(R.string.macropad_action_group_mouse_desc),
+                actionText = current.displayLabel(),
+                icon = Icons.Rounded.Mouse,
+                onClick = onOpenMousePicker,
+            )
         }
 
-        is PadAction.Macro -> {
-            MacroPicker(current, accentColor, onEditMacro, onChange)
+        is PadAction.MirrorPlayStop,
+        is PadAction.MirrorFreeze,
+        is PadAction.MirrorViewportEdit,
+        is PadAction.MirrorTouchProjection,
+        is PadAction.BackgroundPeek,
+        -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_group_mirror),
+                description = stringResource(R.string.macropad_action_group_mirror_desc),
+                actionText = current.displayLabel(),
+                icon = Icons.Rounded.Cast,
+                onClick = onOpenMirrorPicker,
+            )
+        }
+
+        is PadAction.FullScreenMouse,
+        is PadAction.FullScreenKeyboard,
+        -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_group_other),
+                description = stringResource(R.string.macropad_action_group_other_desc),
+                actionText = current.displayLabel(),
+                icon = Icons.Rounded.Apps,
+                onClick = onOpenOverlayPicker,
+            )
         }
 
         is PadAction.AppLauncher -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_group_other),
+                description = stringResource(R.string.macropad_action_group_other_desc),
+                actionText = current.displayLabel(),
+                icon = Icons.Rounded.Apps,
+                onClick = onOpenOverlayPicker,
+            )
             AppLauncherPicker(
                 current = current,
                 onOpenPicker = onOpenAppPicker ?: {},
             )
         }
 
-        is PadAction.ScrollWheel,
-        is PadAction.TrackpointMove,
-        is PadAction.BackgroundPeek,
         is PadAction.LayoutNext,
         is PadAction.LayoutPrevious,
         is PadAction.ProfileSwitcher,
-        is PadAction.MirrorPlayStop,
-        is PadAction.MirrorFreeze,
-        is PadAction.MirrorViewportEdit,
-        is PadAction.MirrorTouchProjection,
-        is PadAction.FullScreenMouse,
-        is PadAction.FullScreenKeyboard,
-        -> { /* no further config needed */ }
+        -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_group_layout),
+                description = stringResource(R.string.macropad_action_group_layout_desc),
+                actionText = current.displayLabel(),
+                icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                onClick = onOpenLayoutPicker,
+            )
+        }
+
+        is PadAction.Macro -> {
+            MacroPicker(current, accentColor, onEditMacro, onChange)
+        }
     }
 }
 
