@@ -427,6 +427,7 @@ internal fun EditButtonSubPageContent(
     ActionPicker(
         current = action,
         accentColor = accentColor,
+        isFirstItem = !showLabelAndIcon,
         enableKeyboard = enableKeyboard,
         enableGamepad = enableGamepad,
         enableMouse = enableMouse,

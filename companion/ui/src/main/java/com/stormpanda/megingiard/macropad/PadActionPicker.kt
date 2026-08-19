@@ -6,11 +6,13 @@ import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.firstDeckItem
 
 private const val TAG = "PadActionPicker"
 
@@ -29,15 +31,16 @@ internal fun ActionPicker(
     onOpenMirrorPicker: () -> Unit = {},
     onOpenOverlayPicker: () -> Unit = {},
     onOpenLayoutPicker: () -> Unit = {},
+    isFirstItem: Boolean = false,
     onChange: (PadAction) -> Unit,
 ) {
     when (current) {
         is PadAction.KeyboardKey -> {
-            KeyboardKeyPicker(current, onOpenKeyboardPicker, onChange)
+            KeyboardKeyPicker(current, onOpenKeyboardPicker, onChange, isFirstItem = isFirstItem)
         }
 
         is PadAction.GamepadButton -> {
-            GamepadButtonPicker(current, onOpenGamepadPicker, onChange)
+            GamepadButtonPicker(current, onOpenGamepadPicker, onChange, isFirstItem = isFirstItem)
         }
 
         is PadAction.MouseButton,
@@ -50,6 +53,7 @@ internal fun ActionPicker(
                 actionText = current.displayLabel(),
                 icon = Icons.Rounded.Mouse,
                 onClick = onOpenMousePicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }
 
@@ -65,6 +69,7 @@ internal fun ActionPicker(
                 actionText = current.displayLabel(),
                 icon = Icons.Rounded.Cast,
                 onClick = onOpenMirrorPicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }
 
@@ -77,6 +82,7 @@ internal fun ActionPicker(
                 actionText = current.displayLabel(),
                 icon = Icons.Rounded.Apps,
                 onClick = onOpenOverlayPicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }
 
@@ -87,6 +93,7 @@ internal fun ActionPicker(
                 actionText = current.displayLabel(),
                 icon = Icons.Rounded.Apps,
                 onClick = onOpenOverlayPicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
             )
             AppLauncherPicker(
                 current = current,
@@ -104,11 +111,12 @@ internal fun ActionPicker(
                 actionText = current.displayLabel(),
                 icon = Icons.AutoMirrored.Rounded.ViewQuilt,
                 onClick = onOpenLayoutPicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }
 
         is PadAction.Macro -> {
-            MacroPicker(current, accentColor, onEditMacro, onChange)
+            MacroPicker(current, accentColor, onEditMacro, onChange, isFirstItem = isFirstItem)
         }
     }
 }

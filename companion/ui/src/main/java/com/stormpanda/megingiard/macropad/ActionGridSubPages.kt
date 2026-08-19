@@ -1,8 +1,5 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -21,15 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 
 private const val TAG = "ActionGridSubPages"
-private val AGS_SECTION_SPACING = 12.dp
 
 internal data class ActionGridItem(
     val action: PadAction,
@@ -83,35 +77,26 @@ internal fun MirrorActionPickerSubPageContent(
             )
         }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(AGS_SECTION_SPACING),
-    ) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macropad_picker_mirror_title),
-            color = accentColor,
+    GamepadTwoColumnGrid(
+        items = items,
+        modifier = modifier,
+    ) { item, _, cardModifier ->
+        val isSelected = currentAction::class == item.action::class
+
+        GamepadActionCard(
+            title = stringResource(item.titleRes),
+            description = stringResource(item.descRes),
+            icon = item.icon,
+            actionText =
+                if (isSelected) {
+                    stringResource(R.string.gamepad_color_selected)
+                } else {
+                    stringResource(R.string.gamepad_action_select)
+                },
+            alwaysShowFullDescription = true,
+            onClick = { onSelectAction(item.action) },
+            modifier = cardModifier,
         )
-
-        GamepadTwoColumnGrid(
-            items = items,
-        ) { item, _, cardModifier ->
-            val isSelected = currentAction::class == item.action::class
-
-            GamepadActionCard(
-                title = stringResource(item.titleRes),
-                description = stringResource(item.descRes),
-                icon = item.icon,
-                actionText =
-                    if (isSelected) {
-                        stringResource(R.string.gamepad_color_selected)
-                    } else {
-                        stringResource(R.string.gamepad_action_select)
-                    },
-                alwaysShowFullDescription = true,
-                onClick = { onSelectAction(item.action) },
-                modifier = cardModifier,
-            )
-        }
     }
 }
 
@@ -148,35 +133,26 @@ internal fun OverlayActionPickerSubPageContent(
             )
         }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(AGS_SECTION_SPACING),
-    ) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macropad_picker_overlay_title),
-            color = accentColor,
+    GamepadTwoColumnGrid(
+        items = items,
+        modifier = modifier,
+    ) { item, _, cardModifier ->
+        val isSelected = currentAction::class == item.action::class
+
+        GamepadActionCard(
+            title = stringResource(item.titleRes),
+            description = stringResource(item.descRes),
+            icon = item.icon,
+            actionText =
+                if (isSelected) {
+                    stringResource(R.string.gamepad_color_selected)
+                } else {
+                    stringResource(R.string.gamepad_action_select)
+                },
+            alwaysShowFullDescription = true,
+            onClick = { onSelectAction(item.action) },
+            modifier = cardModifier,
         )
-
-        GamepadTwoColumnGrid(
-            items = items,
-        ) { item, _, cardModifier ->
-            val isSelected = currentAction::class == item.action::class
-
-            GamepadActionCard(
-                title = stringResource(item.titleRes),
-                description = stringResource(item.descRes),
-                icon = item.icon,
-                actionText =
-                    if (isSelected) {
-                        stringResource(R.string.gamepad_color_selected)
-                    } else {
-                        stringResource(R.string.gamepad_action_select)
-                    },
-                alwaysShowFullDescription = true,
-                onClick = { onSelectAction(item.action) },
-                modifier = cardModifier,
-            )
-        }
     }
 }
 
@@ -213,34 +189,25 @@ internal fun LayoutActionPickerSubPageContent(
             )
         }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(AGS_SECTION_SPACING),
-    ) {
-        GamepadSectionHeader(
-            text = stringResource(R.string.macropad_picker_layout_title),
-            color = accentColor,
+    GamepadTwoColumnGrid(
+        items = items,
+        modifier = modifier,
+    ) { item, _, cardModifier ->
+        val isSelected = currentAction::class == item.action::class
+
+        GamepadActionCard(
+            title = stringResource(item.titleRes),
+            description = stringResource(item.descRes),
+            icon = item.icon,
+            actionText =
+                if (isSelected) {
+                    stringResource(R.string.gamepad_color_selected)
+                } else {
+                    stringResource(R.string.gamepad_action_select)
+                },
+            alwaysShowFullDescription = true,
+            onClick = { onSelectAction(item.action) },
+            modifier = cardModifier,
         )
-
-        GamepadTwoColumnGrid(
-            items = items,
-        ) { item, _, cardModifier ->
-            val isSelected = currentAction::class == item.action::class
-
-            GamepadActionCard(
-                title = stringResource(item.titleRes),
-                description = stringResource(item.descRes),
-                icon = item.icon,
-                actionText =
-                    if (isSelected) {
-                        stringResource(R.string.gamepad_color_selected)
-                    } else {
-                        stringResource(R.string.gamepad_action_select)
-                    },
-                alwaysShowFullDescription = true,
-                onClick = { onSelectAction(item.action) },
-                modifier = cardModifier,
-            )
-        }
     }
 }

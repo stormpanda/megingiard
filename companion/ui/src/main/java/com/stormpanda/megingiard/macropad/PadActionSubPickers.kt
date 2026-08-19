@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
@@ -20,6 +21,7 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.UUID
 
 private const val TAG = "PadActionSubPickers"
@@ -29,6 +31,7 @@ internal fun KeyboardKeyPicker(
     current: PadAction.KeyboardKey,
     onOpenPicker: () -> Unit,
     onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
 ) {
     var mod1 by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(0)) }
     var mod2 by remember(current.modifiers) { mutableStateOf(current.modifiers.getOrNull(1)) }
@@ -55,6 +58,7 @@ internal fun KeyboardKeyPicker(
         actionText = current.label.ifBlank { stringResource(R.string.gamepad_action_choose_key) },
         icon = Icons.Rounded.Keyboard,
         onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
     val mod1Options = listOf<Int?>(null) + MODIFIER_PRESETS.map { it.first }.filter { it != mod2 }
@@ -119,6 +123,7 @@ internal fun GamepadButtonPicker(
     current: PadAction.GamepadButton,
     onOpenPicker: () -> Unit,
     onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
 ) {
     var extra1 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(0)) }
     var extra2 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(1)) }
@@ -156,6 +161,7 @@ internal fun GamepadButtonPicker(
         actionText = currentPreset.localizedDisplayLabel(swapFaceButtons),
         icon = Icons.Rounded.SportsEsports,
         onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
     val extra1Options =
@@ -234,6 +240,7 @@ internal fun MacroPicker(
     accentColor: Color,
     onEditMacro: ((Macro) -> Unit)? = null,
     onChange: (PadAction) -> Unit,
+    isFirstItem: Boolean = false,
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros = profile?.macros ?: emptyList()
@@ -251,6 +258,7 @@ internal fun MacroPicker(
         selectedText = selectedMacro?.name ?: stringResource(R.string.macropad_picker_folder_empty),
         icon = Icons.Rounded.SmartButton,
         enabled = macros.isNotEmpty(),
+        modifier = Modifier.firstDeckItem(isFirstItem),
         onPrevious = {
             if (macros.isNotEmpty()) {
                 val nextIdx = (macroIdx - 1 + macros.size) % macros.size
