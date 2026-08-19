@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -80,24 +81,17 @@ internal fun ActionPicker(
                 title = stringResource(R.string.macropad_action_group_other),
                 description = stringResource(R.string.macropad_action_group_other_desc),
                 actionText = current.displayLabel(),
-                icon = Icons.Rounded.Apps,
+                icon = Icons.Rounded.Layers,
                 onClick = onOpenOverlayPicker,
                 modifier = Modifier.firstDeckItem(isFirstItem),
             )
         }
 
         is PadAction.AppLauncher -> {
-            GamepadActionCard(
-                title = stringResource(R.string.macropad_action_group_other),
-                description = stringResource(R.string.macropad_action_group_other_desc),
-                actionText = current.displayLabel(),
-                icon = Icons.Rounded.Apps,
-                onClick = onOpenOverlayPicker,
-                modifier = Modifier.firstDeckItem(isFirstItem),
-            )
             AppLauncherPicker(
                 current = current,
                 onOpenPicker = onOpenAppPicker ?: {},
+                isFirstItem = isFirstItem,
             )
         }
 

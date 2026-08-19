@@ -599,8 +599,10 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_group_layout_desc">Layouts wechseln oder den Profilwechsler öffnen</string>
     <string name="macropad_action_group_mirror">Mirror-Menü</string>
     <string name="macropad_action_group_mirror_desc">Bildschirmübertragung, Einfrieren oder Touch-Projektion steuern</string>
+    <string name="macropad_action_group_app_launcher">App-Starter</string>
+    <string name="macropad_action_group_app_launcher_desc">Eine installierte Android-App oder ein Spiel starten</string>
     <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_action_group_other_desc">Installierte Apps starten und Vollbild-Overlays öffnen</string>
+    <string name="macropad_action_group_other_desc">Vollbild-Maus- und Tastatur-Overlays öffnen</string>
     <string name="macropad_picker_label_group">Tastentyp</string>
     <string name="macropad_editor_button_type">Tastentyp</string>
     <string name="macropad_editor_button_type_desc">Funktionalen Typ für diese Taste auswählen</string>

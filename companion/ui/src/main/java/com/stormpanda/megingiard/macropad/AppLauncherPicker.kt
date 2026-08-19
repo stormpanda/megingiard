@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.firstDeckItem
 
 private val ALP_ICON_SIZE = 24.dp
 
@@ -18,6 +19,7 @@ private val ALP_ICON_SIZE = 24.dp
 internal fun AppLauncherPicker(
     current: PadAction.AppLauncher,
     onOpenPicker: () -> Unit,
+    isFirstItem: Boolean = false,
 ) {
     val context = LocalContext.current
     val resolvedName = resolveAppName(context, current.packageName)
@@ -42,5 +44,6 @@ internal fun AppLauncherPicker(
             }
         },
         onClick = onOpenPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
     )
 }

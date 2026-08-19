@@ -590,8 +590,10 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_layout_desc">Switch layouts or open the profile switcher</string>
     <string name="macropad_action_group_mirror">Mirror Menu</string>
     <string name="macropad_action_group_mirror_desc">Control screen mirroring stream, freezing, or touch projection</string>
+    <string name="macropad_action_group_app_launcher">App Launcher</string>
+    <string name="macropad_action_group_app_launcher_desc">Launch an installed Android app or game</string>
     <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_action_group_other_desc">Launch installed apps and open fullscreen overlays</string>
+    <string name="macropad_action_group_other_desc">Open fullscreen mouse and keyboard overlays</string>
     <string name="macropad_picker_label_group">Button Type</string>
     <string name="macropad_editor_button_type">Button Type</string>
     <string name="macropad_editor_button_type_desc">Select the functional type for this button</string>

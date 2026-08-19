@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ControlCamera
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
 import androidx.compose.material.icons.rounded.SmartButton
@@ -36,6 +37,7 @@ internal enum class ActionGroup {
     KEYBOARD,
     GAMEPAD,
     MOUSE,
+    APP_LAUNCHER,
     MACRO,
     LAYOUT,
     MIRROR,
@@ -47,10 +49,11 @@ internal fun ActionGroup.icon(): ImageVector =
         ActionGroup.KEYBOARD -> Icons.Rounded.Keyboard
         ActionGroup.GAMEPAD -> Icons.Rounded.SportsEsports
         ActionGroup.MOUSE -> Icons.Rounded.Mouse
+        ActionGroup.APP_LAUNCHER -> Icons.Rounded.Apps
         ActionGroup.MACRO -> Icons.Rounded.SmartButton
         ActionGroup.LAYOUT -> Icons.AutoMirrored.Rounded.ViewQuilt
         ActionGroup.MIRROR -> Icons.Rounded.Cast
-        ActionGroup.OTHER -> Icons.Rounded.Apps
+        ActionGroup.OTHER -> Icons.Rounded.Layers
     }
 
 internal fun ActionGroup.labelResId(): Int =
@@ -58,6 +61,7 @@ internal fun ActionGroup.labelResId(): Int =
         ActionGroup.KEYBOARD -> R.string.macropad_action_group_keyboard
         ActionGroup.GAMEPAD -> R.string.macropad_action_group_gamepad
         ActionGroup.MOUSE -> R.string.macropad_action_group_mouse
+        ActionGroup.APP_LAUNCHER -> R.string.macropad_action_group_app_launcher
         ActionGroup.MACRO -> R.string.macropad_action_group_macro
         ActionGroup.LAYOUT -> R.string.macropad_action_group_layout
         ActionGroup.MIRROR -> R.string.macropad_action_group_mirror
@@ -69,6 +73,7 @@ internal fun ActionGroup.descriptionResId(): Int =
         ActionGroup.KEYBOARD -> R.string.macropad_action_group_keyboard_desc
         ActionGroup.GAMEPAD -> R.string.macropad_action_group_gamepad_desc
         ActionGroup.MOUSE -> R.string.macropad_action_group_mouse_desc
+        ActionGroup.APP_LAUNCHER -> R.string.macropad_action_group_app_launcher_desc
         ActionGroup.MACRO -> R.string.macropad_action_group_macro_desc
         ActionGroup.LAYOUT -> R.string.macropad_action_group_layout_desc
         ActionGroup.MIRROR -> R.string.macropad_action_group_mirror_desc
@@ -91,6 +96,10 @@ internal fun ActionGroup.actions(): List<ActionCategory> =
                 ActionCategory.SCROLL_WHEEL,
                 ActionCategory.TRACKPOINT,
             )
+        }
+
+        ActionGroup.APP_LAUNCHER -> {
+            listOf(ActionCategory.APP_LAUNCHER)
         }
 
         ActionGroup.MACRO -> {
@@ -117,7 +126,6 @@ internal fun ActionGroup.actions(): List<ActionCategory> =
 
         ActionGroup.OTHER -> {
             listOf(
-                ActionCategory.APP_LAUNCHER,
                 ActionCategory.FULLSCREEN_MOUSE,
                 ActionCategory.FULLSCREEN_KEYBOARD,
             )
@@ -287,9 +295,10 @@ internal fun ActionCategory.group(): ActionGroup =
         ActionCategory.BACKGROUND_PEEK,
         -> ActionGroup.MIRROR
 
+        ActionCategory.APP_LAUNCHER -> ActionGroup.APP_LAUNCHER
+
         ActionCategory.FULLSCREEN_MOUSE,
         ActionCategory.FULLSCREEN_KEYBOARD,
-        ActionCategory.APP_LAUNCHER,
         -> ActionGroup.OTHER
     }
 

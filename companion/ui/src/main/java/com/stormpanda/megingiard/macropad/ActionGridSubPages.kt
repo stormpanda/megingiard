@@ -3,7 +3,6 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
 import androidx.compose.material.icons.rounded.Keyboard
@@ -112,12 +111,6 @@ internal fun OverlayActionPickerSubPageContent(
     val items =
         remember {
             listOf(
-                ActionGridItem(
-                    PadAction.AppLauncher(),
-                    R.string.macropad_action_app_launcher,
-                    R.string.macropad_action_app_launcher_desc,
-                    Icons.Rounded.Apps,
-                ),
                 ActionGridItem(
                     PadAction.FullScreenMouse(),
                     R.string.macropad_action_fullscreen_mouse,
