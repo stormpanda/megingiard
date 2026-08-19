@@ -22,6 +22,9 @@ internal fun ActionPicker(
     enableMouse: Boolean = true,
     onEditMacro: ((Macro) -> Unit)? = null,
     onOpenAppPicker: (() -> Unit)? = null,
+    onOpenKeyboardPicker: (() -> Unit)? = null,
+    onOpenGamepadPicker: (() -> Unit)? = null,
+    onOpenMousePicker: (() -> Unit)? = null,
     onChange: (PadAction) -> Unit,
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
@@ -64,15 +67,15 @@ internal fun ActionPicker(
 
     when (current) {
         is PadAction.KeyboardKey -> {
-            KeyboardKeyPicker(current, onChange)
+            KeyboardKeyPicker(current, onOpenKeyboardPicker, onChange)
         }
 
         is PadAction.GamepadButton -> {
-            GamepadButtonPicker(current, onChange)
+            GamepadButtonPicker(current, onOpenGamepadPicker, onChange)
         }
 
         is PadAction.MouseButton -> {
-            MouseButtonPicker(current, onChange)
+            MouseButtonPicker(current, onOpenMousePicker, onChange)
         }
 
         is PadAction.Macro -> {

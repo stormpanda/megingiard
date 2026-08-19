@@ -1127,6 +1127,23 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_choose_icon">Symbol wählen</string>
     <string name="gamepad_action_select">Auswählen</string>
     <string name="gamepad_action_choose">Wählen</string>
+    <string name="gamepad_action_choose_key">Taste wählen</string>
+    <string name="gamepad_action_choose_button">Taste wählen</string>
+    <string name="gamepad_action_choose_mouse_action">Mausaktion wählen</string>
+    <string name="macropad_picker_visual_keyboard_title">Tastaturtaste auswählen</string>
+    <string name="macropad_picker_keyboard_nav_title">Navigation &amp; Erweitert</string>
+    <string name="macropad_picker_visual_gamepad_title">Gamepad-Taste auswählen</string>
+    <string name="macropad_picker_visual_mouse_title">Mausaktion auswählen</string>
+    <string name="macropad_mouse_btn_left">Linksklick</string>
+    <string name="macropad_mouse_btn_left_desc">Primäre Maustaste</string>
+    <string name="macropad_mouse_btn_right">Rechtsklick</string>
+    <string name="macropad_mouse_btn_right_desc">Sekundäre Kontext-Taste</string>
+    <string name="macropad_mouse_btn_middle">Mittelklick</string>
+    <string name="macropad_mouse_btn_middle_desc">Mausrad-Taste</string>
+    <string name="macropad_mouse_btn_back">Zurück (Maus 4)</string>
+    <string name="macropad_mouse_btn_back_desc">Rückwärts navigieren</string>
+    <string name="macropad_mouse_btn_forward">Vorwärts (Maus 5)</string>
+    <string name="macropad_mouse_btn_forward_desc">Vorwärts navigieren</string>
 
     <!-- Gamepad Settings Screen -->
     <string name="privd_deadzone_summary">Links: %1$d%% • Rechts: %2$d%%</string>

@@ -69,8 +69,10 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.CompanionViewMode
 import com.stormpanda.megingiard.R
+import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
 import com.stormpanda.megingiard.ui.BumperDirection
@@ -1047,6 +1049,42 @@ fun MacroPadEditor(
                                                             target = target,
                                                         )
                                                 },
+                                                onOpenKeyboardPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseKeyboardKey(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        )
+                                                },
+                                                onOpenGamepadPicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseGamepadButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        )
+                                                },
+                                                onOpenMousePicker = { currentDraft ->
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        ) +
+                                                        MacroPadSubPage.ChooseMouseButton(
+                                                            button = currentSubPage.button,
+                                                            draftButton = currentDraft,
+                                                        )
+                                                },
                                                 onEditMacro = { macro ->
                                                     subPageStack = subPageStack + MacroPadSubPage.MacroTimeline(macro.id)
                                                 },
@@ -1150,6 +1188,159 @@ fun MacroPadEditor(
                                                                     }
                                                             },
                                                         )
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseKeyboardKey -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        val currentKeyAction = effectiveButton.action as? PadAction.KeyboardKey
+                                        val currentKeycode = currentKeyAction?.keycode ?: LinuxKeycodes.KEY_SPACE
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_visual_keyboard_title),
+                                                ),
+                                        ) {
+                                            VisualKeyboardPicker(
+                                                selectedKeycode = currentKeycode,
+                                                accentColor = colors.accent,
+                                                onSelectKey = { keycode, label ->
+                                                    val newAction =
+                                                        PadAction.KeyboardKey(
+                                                            keycode = keycode,
+                                                            label = label,
+                                                            modifiers = currentKeyAction?.modifiers ?: emptyList(),
+                                                        )
+                                                    val newLabel =
+                                                        if (effectiveButton.label.isBlank() ||
+                                                            effectiveButton.label == currentKeyAction?.label
+                                                        ) {
+                                                            label
+                                                        } else {
+                                                            effectiveButton.label
+                                                        }
+                                                    val updatedDraft = effectiveButton.copy(action = newAction, label = newLabel)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseGamepadButton -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        val currentBtnAction = effectiveButton.action as? PadAction.GamepadButton
+                                        val currentBtnCode = currentBtnAction?.btnCode ?: GamepadKeycodes.BTN_SOUTH
+                                        val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_visual_gamepad_title),
+                                                ),
+                                        ) {
+                                            VisualGamepadPicker(
+                                                selectedBtnCode = currentBtnCode,
+                                                accentColor = colors.accent,
+                                                onSelectButton = { preset ->
+                                                    val shortLabel = preset.displayShortLabel(swapFaceButtons)
+                                                    val newAction =
+                                                        PadAction.GamepadButton(
+                                                            btnCode = preset.code,
+                                                            label = shortLabel,
+                                                            extraBtnCodes = currentBtnAction?.extraBtnCodes ?: emptyList(),
+                                                        )
+                                                    val newLabel =
+                                                        if (effectiveButton.label.isBlank() ||
+                                                            effectiveButton.label == currentBtnAction?.label
+                                                        ) {
+                                                            shortLabel
+                                                        } else {
+                                                            effectiveButton.label
+                                                        }
+                                                    val updatedDraft = effectiveButton.copy(action = newAction, label = newLabel)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
+                                                },
+                                            )
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ChooseMouseButton -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        val currentMouseAction = effectiveButton.action as? PadAction.MouseButton
+                                        val currentMouseButton = currentMouseAction?.button ?: MouseButton.LEFT
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_picker_visual_mouse_title),
+                                                ),
+                                        ) {
+                                            VisualMousePicker(
+                                                selectedButton = currentMouseButton,
+                                                accentColor = colors.accent,
+                                                onSelectButton = { btn ->
+                                                    val newAction = PadAction.MouseButton(button = btn)
+                                                    val newLabel =
+                                                        if (effectiveButton.label.isBlank() ||
+                                                            effectiveButton.label == currentMouseAction?.button?.displayLabel()
+                                                        ) {
+                                                            btn.displayLabel()
+                                                        } else {
+                                                            effectiveButton.label
+                                                        }
+                                                    val updatedDraft = effectiveButton.copy(action = newAction, label = newLabel)
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        }
                                                 },
                                             )
                                         }

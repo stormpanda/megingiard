@@ -200,6 +200,9 @@ internal fun EditButtonSubPageContent(
     onOpenIconPicker: (currentDraft: PadButton) -> Unit,
     onOpenAppPicker: (currentDraft: PadButton) -> Unit,
     onOpenColorSubMenu: (currentDraft: PadButton, target: ButtonColorTarget) -> Unit,
+    onOpenKeyboardPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenGamepadPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
     onEditMacro: ((Macro) -> Unit)? = null,
     onSave: (PadButton) -> Unit,
 ) {
@@ -422,6 +425,15 @@ internal fun EditButtonSubPageContent(
         },
         onOpenAppPicker = {
             onOpenAppPicker(buildCurrentButton())
+        },
+        onOpenKeyboardPicker = {
+            onOpenKeyboardPicker?.invoke(buildCurrentButton())
+        },
+        onOpenGamepadPicker = {
+            onOpenGamepadPicker?.invoke(buildCurrentButton())
+        },
+        onOpenMousePicker = {
+            onOpenMousePicker?.invoke(buildCurrentButton())
         },
         onChange = ::onActionChanged,
     )
