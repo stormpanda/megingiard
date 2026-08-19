@@ -126,9 +126,13 @@ class PrimaryOverlayActivity : ComponentActivity() {
     ): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> closing primary modal")
-                AppStateManager.closePrimaryModal()
-                AppStateManager.setActiveCropCutoutId(null)
+                AppLog.i(TAG, "onKeyDown: Back/B-Button pressed -> handling back")
+                if (onBackPressedDispatcher.hasEnabledCallbacks()) {
+                    onBackPressedDispatcher.onBackPressed()
+                } else {
+                    AppStateManager.closePrimaryModal()
+                    AppStateManager.setActiveCropCutoutId(null)
+                }
                 return true
             }
 

@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
@@ -56,7 +57,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -325,13 +325,13 @@ fun GamepadTwoPaneScaffold(
     val colors = LocalAppColors.current
     val coroutineScope = rememberCoroutineScope()
     val inputModeManager = LocalInputModeManager.current
-    val focusManager = LocalFocusManager.current
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
     val activeDeckCardRequesters = remember { mutableMapOf<Any, FocusRequester>() }
     val savedFocusKeyByDepth = remember { mutableMapOf<Int, Any>() }
     var currentDepth by remember { mutableIntStateOf(0) }
     var isDeckFocused by remember { mutableStateOf(false) }
+    var isSidebarFocused by remember { mutableStateOf(false) }
 
     val transferFocusToDeck: () -> Unit = {
         var handled = false
@@ -350,16 +350,28 @@ fun GamepadTwoPaneScaffold(
             try {
                 firstContentRequester.requestFocus()
                 AppLog.d(TAG, "transferFocusToDeck: focused first content deck item")
+                handled = true
             } catch (_: IllegalStateException) {
-                coroutineScope.launch {
-                    delay(GS_INITIAL_FOCUS_DELAY_MS)
+                val fallbackRequester = activeDeckCardRequesters.values.firstOrNull()
+                if (fallbackRequester != null) {
                     try {
-                        firstContentRequester.requestFocus()
+                        fallbackRequester.requestFocus()
+                        AppLog.d(TAG, "transferFocusToDeck: focused first active deck card fallback")
+                        handled = true
                     } catch (_: IllegalStateException) {
+                    }
+                }
+                if (!handled) {
+                    coroutineScope.launch {
+                        delay(GS_INITIAL_FOCUS_DELAY_MS)
                         try {
-                            activeCategoryRequester.requestFocus()
+                            firstContentRequester.requestFocus()
                         } catch (_: IllegalStateException) {
-                            // Focus fallback
+                            try {
+                                activeDeckCardRequesters.values.firstOrNull()?.requestFocus()
+                            } catch (_: IllegalStateException) {
+                                // Retain current focus rather than pulling back to sidebar
+                            }
                         }
                     }
                 }
@@ -472,20 +484,18 @@ fun GamepadTwoPaneScaffold(
 
         LaunchedEffect(Unit) {
             PrimaryOverlayInputBridge.focusRecoveryEvents.collect { keyCode ->
-                AppLog.d(TAG, "GamepadTwoPaneScaffold: focusRecoveryEvent keyCode=$keyCode")
+                AppLog.d(
+                    TAG,
+                    "GamepadTwoPaneScaffold: focusRecoveryEvent keyCode=$keyCode, isDeckFocused=$isDeckFocused, isSidebarFocused=$isSidebarFocused",
+                )
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                when (keyCode) {
-                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                        transferFocusToDeck()
-                    }
-
-                    else -> {
-                        try {
-                            activeCategoryRequester.requestFocus()
-                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
-                        } catch (_: IllegalStateException) {
-                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
-                        }
+                // Only recover focus if focus was completely lost (neither deck nor sidebar is currently focused)
+                if (!isDeckFocused && !isSidebarFocused) {
+                    try {
+                        activeCategoryRequester.requestFocus()
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focus recovered to active category")
+                    } catch (_: IllegalStateException) {
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on focus recovery")
                     }
                 }
             }
@@ -521,14 +531,15 @@ fun GamepadTwoPaneScaffold(
                             .fillMaxHeight()
                             .background(colors.surfaceVariant.copy(alpha = GS_SIDEBAR_BG_ALPHA))
                             .padding(GS_SIDEBAR_PADDING)
-                            .onKeyEvent { keyEvent ->
-                                if (keyEvent.type == KeyEventType.KeyDown &&
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-                                ) {
-                                    transferFocusToDeck()
-                                    true
-                                } else {
-                                    false
+                            .onFocusChanged { focusState ->
+                                isSidebarFocused = focusState.hasFocus
+                            }.focusProperties {
+                                exit = { direction ->
+                                    if (direction == FocusDirection.Right || direction == FocusDirection.Left) {
+                                        FocusRequester.Cancel
+                                    } else {
+                                        FocusRequester.Default
+                                    }
                                 }
                             },
                 ) {
@@ -558,24 +569,15 @@ fun GamepadTwoPaneScaffold(
                                 vertical = if (scrollableDeck) GS_DECK_PADDING_V else 0.dp,
                             ).onFocusChanged { focusState ->
                                 isDeckFocused = focusState.hasFocus
-                            }.onKeyEvent { keyEvent ->
-                                if (keyEvent.type == KeyEventType.KeyDown &&
-                                    keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                                ) {
-                                    val moved = focusManager.moveFocus(FocusDirection.Left)
-                                    if (!moved && !isCustomBackActive) {
-                                        try {
-                                            activeCategoryRequester.requestFocus()
-                                            AppLog.d(TAG, "GamepadTwoPaneScaffold: navigated back to sidebar category")
-                                        } catch (_: IllegalStateException) {
-                                            AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on D-pad left")
-                                        }
-                                        true
+                            }.focusProperties {
+                                exit = { direction ->
+                                    if (direction == FocusDirection.Left || direction == FocusDirection.Right ||
+                                        direction == FocusDirection.Up || direction == FocusDirection.Down
+                                    ) {
+                                        FocusRequester.Cancel
                                     } else {
-                                        moved
+                                        FocusRequester.Default
                                     }
-                                } else {
-                                    false
                                 }
                             }.then(
                                 if (scrollableDeck) {
