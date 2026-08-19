@@ -1,6 +1,5 @@
 package com.stormpanda.megingiard.ui
 
-import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -29,7 +28,6 @@ import kotlin.math.abs
 private const val TAG = "PrimaryOverlayInputBridge"
 
 private const val STICK_DEADZONE = 0.5f
-private const val STICK_REPEAT_INTERVAL_MS = 180L
 private val FOCUS_BORDER_WIDTH = 2.dp
 private val FOCUS_CORNER_RADIUS = 8.dp
 
@@ -52,7 +50,6 @@ object PrimaryOverlayInputBridge {
     private val _focusRecoveryEvents = MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val focusRecoveryEvents: SharedFlow<Int> = _focusRecoveryEvents.asSharedFlow()
 
-    private var lastJoystickMotionMs = 0L
     private var lastJoystickKeyCode = 0
 
     fun sendBumper(direction: BumperDirection) {
@@ -129,7 +126,6 @@ object PrimaryOverlayInputBridge {
     fun resetJoystickState() {
         AppLog.d(TAG, "resetJoystickState")
         lastJoystickKeyCode = 0
-        lastJoystickMotionMs = 0L
     }
 }
 
