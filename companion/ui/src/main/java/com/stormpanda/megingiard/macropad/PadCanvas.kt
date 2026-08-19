@@ -2,6 +2,12 @@ package com.stormpanda.megingiard.macropad
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,6 +67,7 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.ui.LocalAppColors
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.PI
@@ -81,6 +90,18 @@ private val ED_BTN_SQUARE_RADIUS = 4.dp
 // Shared with MacroPadScreen so the editor canvas remains pixel-identical to use mode.
 private val PC_SCREEN_PADDING = MP_SCREEN_PADDING
 private const val ED_EDGE_MARGIN = 0.05f
+
+// Highlight border when button positioning is unlocked
+private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
+private const val PC_HIGHLIGHT_BORDER_ALPHA = 0.85f
+
+// Lock symbol badge timing and dimensions
+private const val PC_LOCK_TOAST_DURATION_MS = 650L
+private const val PC_LOCK_ANIM_IN_MS = 150
+private const val PC_LOCK_ANIM_OUT_MS = 250
+private val PC_LOCK_BADGE_SIZE = 72.dp
+private val PC_LOCK_BADGE_CORNER = 16.dp
+private val PC_LOCK_ICON_SIZE = 40.dp
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
 private val PC_GRID_STEP_DP = 30.dp
@@ -170,12 +191,36 @@ internal fun PadCanvas(
             }
         }
 
+    var lockSymbolVisible by remember { mutableStateOf(false) }
+    var lockSymbolLocked by remember { mutableStateOf(isLocked) }
+    var isFirstComposition by remember { mutableStateOf(true) }
+
+    LaunchedEffect(isLocked) {
+        if (isFirstComposition) {
+            isFirstComposition = false
+            return@LaunchedEffect
+        }
+        lockSymbolLocked = isLocked
+        lockSymbolVisible = true
+        delay(PC_LOCK_TOAST_DURATION_MS)
+        lockSymbolVisible = false
+    }
+
     val padModifier =
         modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(0.dp))
             .background(Color.Black)
-            .onSizeChanged { canvasSize = it }
+            .then(
+                if (!isLocked) {
+                    Modifier.border(
+                        width = PC_HIGHLIGHT_BORDER_WIDTH,
+                        color = accentColor.copy(alpha = PC_HIGHLIGHT_BORDER_ALPHA),
+                    )
+                } else {
+                    Modifier
+                },
+            ).onSizeChanged { canvasSize = it }
 
     Box(modifier = padModifier) {
         if (bgBitmap != null) {
@@ -360,6 +405,39 @@ internal fun PadCanvas(
                 layoutId = layout?.id,
                 accentColor = accentColor,
             )
+        }
+
+        AnimatedVisibility(
+            visible = lockSymbolVisible,
+            enter =
+                fadeIn(animationSpec = tween(PC_LOCK_ANIM_IN_MS)) +
+                    scaleIn(initialScale = 0.8f, animationSpec = tween(PC_LOCK_ANIM_IN_MS)),
+            exit =
+                fadeOut(animationSpec = tween(PC_LOCK_ANIM_OUT_MS)) +
+                    scaleOut(targetScale = 1.1f, animationSpec = tween(PC_LOCK_ANIM_OUT_MS)),
+            modifier = Modifier.align(Alignment.Center),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(PC_LOCK_BADGE_SIZE)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.75f),
+                            shape = RoundedCornerShape(PC_LOCK_BADGE_CORNER),
+                        ).border(
+                            width = 1.dp,
+                            color = if (!lockSymbolLocked) accentColor else Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(PC_LOCK_BADGE_CORNER),
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (lockSymbolLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                    contentDescription = null,
+                    tint = if (!lockSymbolLocked) accentColor else Color.White,
+                    modifier = Modifier.size(PC_LOCK_ICON_SIZE),
+                )
+            }
         }
     }
 }

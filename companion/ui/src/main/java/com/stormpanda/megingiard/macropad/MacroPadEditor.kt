@@ -172,7 +172,10 @@ fun MacroPadEditor(
 
     DisposableEffect(Unit) {
         AppLog.i(TAG, "MacroPadEditor visible")
-        onDispose { AppLog.i(TAG, "MacroPadEditor dismissed") }
+        onDispose {
+            AppLog.i(TAG, "MacroPadEditor dismissed")
+            MacroPadState.setEditingButtonPositions(false)
+        }
     }
 
     val profile = profiles.firstOrNull { it.id == activeId } ?: profiles.firstOrNull()
@@ -186,6 +189,12 @@ fun MacroPadEditor(
     var subPageStack by remember { mutableStateOf<List<MacroPadSubPage>>(emptyList()) }
     var internalShowEditorHelp by remember { mutableStateOf(false) }
     val effectiveShowHelp = showHelp || internalShowEditorHelp
+
+    LaunchedEffect(selectedSection) {
+        if (selectedSection != EditorSection.BUTTONS) {
+            MacroPadState.setEditingButtonPositions(false)
+        }
+    }
 
     // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
     var pendingProfilePackage by remember { mutableStateOf<String?>(null) }

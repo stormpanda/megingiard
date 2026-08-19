@@ -779,15 +779,15 @@ class MacroPadStateTest {
     }
 
     @Test
-    fun `isEditingButtonPositions defaults to true and updates correctly`() {
-        // Default is true (enabled for editing)
-        assertTrue(MacroPadState.isEditingButtonPositions.value)
-
-        MacroPadState.setEditingButtonPositions(false)
+    fun `isEditingButtonPositions defaults to false and updates correctly`() {
+        // Default is false (off by default)
         assertEquals(false, MacroPadState.isEditingButtonPositions.value)
 
         MacroPadState.setEditingButtonPositions(true)
         assertEquals(true, MacroPadState.isEditingButtonPositions.value)
+
+        MacroPadState.setEditingButtonPositions(false)
+        assertEquals(false, MacroPadState.isEditingButtonPositions.value)
     }
 
     @Test

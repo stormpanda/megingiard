@@ -136,7 +136,7 @@ object MacroPadState {
         _selectedButtonId.value = id
     }
 
-    private val _isEditingButtonPositions = MutableStateFlow(true)
+    private val _isEditingButtonPositions = MutableStateFlow(false)
     val isEditingButtonPositions: StateFlow<Boolean> = _isEditingButtonPositions.asStateFlow()
 
     fun setEditingButtonPositions(editing: Boolean) {
