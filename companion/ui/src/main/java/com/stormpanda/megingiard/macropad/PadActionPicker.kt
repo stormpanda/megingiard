@@ -29,12 +29,6 @@ internal fun ActionPicker(
     val hasMacros = profile?.macros?.isNotEmpty() == true
     val currentCategory = current.toCategory()
     val currentGroup = currentCategory.group()
-    val availableGroups =
-        ActionGroup.entries.filter { group ->
-            group.actions().any { category ->
-                category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
-            }
-        }
     val groupActions =
         currentGroup.actions().filter { category ->
             category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
@@ -49,36 +43,6 @@ internal fun ActionPicker(
             }
         }
     }
-
-    val groupIdx = availableGroups.indexOf(currentGroup).coerceAtLeast(0)
-    GamepadChoiceCard(
-        title = stringResource(R.string.macropad_picker_label_group),
-        description = stringResource(R.string.macropad_editor_action_group_desc),
-        selectedText = stringResource(currentGroup.labelResId()),
-        icon = currentGroup.icon(),
-        onPrevious = {
-            val nextIdx = (groupIdx - 1 + availableGroups.size) % availableGroups.size
-            val group = availableGroups[nextIdx]
-            val defaultCategory =
-                group.actions().firstOrNull { category ->
-                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
-                }
-            if (defaultCategory != null) {
-                onChange(defaultCategory.defaultAction())
-            }
-        },
-        onNext = {
-            val nextIdx = (groupIdx + 1) % availableGroups.size
-            val group = availableGroups[nextIdx]
-            val defaultCategory =
-                group.actions().firstOrNull { category ->
-                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
-                }
-            if (defaultCategory != null) {
-                onChange(defaultCategory.defaultAction())
-            }
-        },
-    )
 
     if (groupActions.size > 1) {
         val catIdx = groupActions.indexOf(currentCategory).coerceAtLeast(0)

@@ -64,6 +64,17 @@ internal fun ActionGroup.labelResId(): Int =
         ActionGroup.OTHER -> R.string.macropad_action_group_other
     }
 
+internal fun ActionGroup.descriptionResId(): Int =
+    when (this) {
+        ActionGroup.KEYBOARD -> R.string.macropad_action_group_keyboard_desc
+        ActionGroup.GAMEPAD -> R.string.macropad_action_group_gamepad_desc
+        ActionGroup.MOUSE -> R.string.macropad_action_group_mouse_desc
+        ActionGroup.MACRO -> R.string.macropad_action_group_macro_desc
+        ActionGroup.LAYOUT -> R.string.macropad_action_group_layout_desc
+        ActionGroup.MIRROR -> R.string.macropad_action_group_mirror_desc
+        ActionGroup.OTHER -> R.string.macropad_action_group_other_desc
+    }
+
 internal fun ActionGroup.actions(): List<ActionCategory> =
     when (this) {
         ActionGroup.KEYBOARD -> {

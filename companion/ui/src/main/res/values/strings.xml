@@ -578,15 +578,23 @@ Open Settings to create a layout.</string>
     <string name="quick_menu_layout_name_hint">Layout name</string>
     <string name="cd_viewport_edit">Edit viewport</string>
 
-    <!-- Touchpad hints -->
     <string name="macropad_action_group_keyboard">Keyboard</string>
+    <string name="macropad_action_group_keyboard_desc">Send single keystrokes or modifier combinations</string>
     <string name="macropad_action_group_gamepad">Gamepad</string>
+    <string name="macropad_action_group_gamepad_desc">Simulate standard gamepad buttons and triggers</string>
     <string name="macropad_action_group_mouse">Mouse</string>
+    <string name="macropad_action_group_mouse_desc">Simulate mouse clicks, scroll wheels, or trackpoint input</string>
     <string name="macropad_action_group_macro">Macro</string>
+    <string name="macropad_action_group_macro_desc">Trigger a recorded sequence of timed inputs</string>
     <string name="macropad_action_group_layout">Profile/Layout</string>
+    <string name="macropad_action_group_layout_desc">Switch layouts or open the profile switcher</string>
     <string name="macropad_action_group_mirror">Mirror Menu</string>
+    <string name="macropad_action_group_mirror_desc">Control screen mirroring stream, freezing, or touch projection</string>
     <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_picker_label_group">Group</string>
+    <string name="macropad_action_group_other_desc">Launch installed apps and open fullscreen overlays</string>
+    <string name="macropad_picker_label_group">Button Type</string>
+    <string name="macropad_editor_button_type">Button Type</string>
+    <string name="macropad_editor_button_type_desc">Select the functional type for this button</string>
 
     <!-- Log report export -->
     <string name="settings_save_log_report">Save log report</string>

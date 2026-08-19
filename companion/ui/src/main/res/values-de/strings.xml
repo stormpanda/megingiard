@@ -588,13 +588,22 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="quick_menu_layout_name_hint">Layoutname</string>
     <string name="cd_viewport_edit">Viewport bearbeiten</string>
     <string name="macropad_action_group_keyboard">Tastatur</string>
+    <string name="macropad_action_group_keyboard_desc">Einzelne Tastaturanschläge oder Tastenkombinationen senden</string>
     <string name="macropad_action_group_gamepad">Gamepad</string>
+    <string name="macropad_action_group_gamepad_desc">Standard-Gamepad-Tasten und Trigger simulieren</string>
     <string name="macropad_action_group_mouse">Maus</string>
+    <string name="macropad_action_group_mouse_desc">Mausklicks, Scrollräder oder Trackpoint-Eingaben simulieren</string>
     <string name="macropad_action_group_macro">Makro</string>
+    <string name="macropad_action_group_macro_desc">Aufgezeichnete Sequenz zeitgesteuerter Eingaben ausführen</string>
     <string name="macropad_action_group_layout">Profil/Layout</string>
+    <string name="macropad_action_group_layout_desc">Layouts wechseln oder den Profilwechsler öffnen</string>
     <string name="macropad_action_group_mirror">Mirror-Menü</string>
+    <string name="macropad_action_group_mirror_desc">Bildschirmübertragung, Einfrieren oder Touch-Projektion steuern</string>
     <string name="macropad_action_group_other">Overlays</string>
-    <string name="macropad_picker_label_group">Gruppe</string>
+    <string name="macropad_action_group_other_desc">Installierte Apps starten und Vollbild-Overlays öffnen</string>
+    <string name="macropad_picker_label_group">Tastentyp</string>
+    <string name="macropad_editor_button_type">Tastentyp</string>
+    <string name="macropad_editor_button_type_desc">Funktionalen Typ für diese Taste auswählen</string>
 
     <!-- Log-Bericht exportieren -->
     <string name="settings_save_log_report">Log-Bericht speichern</string>

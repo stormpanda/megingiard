@@ -433,7 +433,7 @@ fun MacroPadEditor(
                                                 isLocked = isCanvasLocked,
                                                 onToggleLock = { isCanvasLocked = !isCanvasLocked },
                                                 onAddButton = {
-                                                    subPageStack = subPageStack + MacroPadSubPage.EditButton(null)
+                                                    subPageStack = subPageStack + MacroPadSubPage.ChooseButtonType
                                                 },
                                             )
                                         }
@@ -444,7 +444,7 @@ fun MacroPadEditor(
                                                 layout = activeLayout,
                                                 accentColor = colors.accent,
                                                 onAddButton = {
-                                                    subPageStack = subPageStack + MacroPadSubPage.EditButton(null)
+                                                    subPageStack = subPageStack + MacroPadSubPage.ChooseButtonType
                                                 },
                                                 onEditButton = { btn ->
                                                     subPageStack = subPageStack + MacroPadSubPage.EditButton(btn)
@@ -962,14 +962,50 @@ fun MacroPadEditor(
                                         )
                                     }
 
+                                    is MacroPadSubPage.ChooseButtonType -> {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(R.string.macropad_editor_add_button),
+                                                    stringResource(R.string.macropad_editor_button_type),
+                                                ),
+                                        ) {
+                                            ChooseButtonTypeSubPageContent(
+                                                onSelectType = { group ->
+                                                    val hasMacros = profile.macros.isNotEmpty()
+                                                    val defaultCategory =
+                                                        group.actions().firstOrNull { it.isEnabled(true, true, true, hasMacros) }
+                                                            ?: group.actions().first()
+                                                    val defaultAction = defaultCategory.defaultAction()
+                                                    val newDraft =
+                                                        PadButton(
+                                                            id = UUID.randomUUID().toString(),
+                                                            label = "",
+                                                            posX = 0.5f,
+                                                            posY = 0.5f,
+                                                            action = defaultAction,
+                                                        )
+                                                    subPageStack =
+                                                        subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.EditButton(
+                                                            button = null,
+                                                            draftButton = newDraft,
+                                                        )
+                                                },
+                                            )
+                                        }
+                                    }
+
                                     is MacroPadSubPage.EditButton -> {
                                         val effectiveButton = currentSubPage.draftButton ?: currentSubPage.button
+                                        val isNew = currentSubPage.button == null
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
                                                     stringResource(R.string.macropad_editor_section_buttons),
                                                     stringResource(
-                                                        if (effectiveButton != null) {
+                                                        if (!isNew) {
                                                             R.string.macropad_editor_section_button_settings
                                                         } else {
                                                             R.string.macropad_editor_add_button

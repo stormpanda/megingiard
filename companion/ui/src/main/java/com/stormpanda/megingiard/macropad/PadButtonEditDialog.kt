@@ -131,6 +131,39 @@ internal fun describeButtonColorOption(
         is ColorOption.Custom -> String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
     }
 
+/**
+ * Deck sub-page allowing the user to select the Button Type (ActionGroup) before editing button details.
+ */
+@Composable
+internal fun ChooseButtonTypeSubPageContent(
+    enableKeyboard: Boolean = true,
+    enableGamepad: Boolean = true,
+    enableMouse: Boolean = true,
+    onSelectType: (ActionGroup) -> Unit,
+) {
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val hasMacros = profile?.macros?.isNotEmpty() == true
+    val availableGroups =
+        remember(hasMacros, enableKeyboard, enableGamepad, enableMouse) {
+            ActionGroup.entries.filter { group ->
+                group.actions().any { category ->
+                    category.isEnabled(enableKeyboard, enableGamepad, enableMouse, hasMacros)
+                }
+            }
+        }
+
+    availableGroups.forEachIndexed { index, group ->
+        GamepadActionCard(
+            title = stringResource(group.labelResId()),
+            description = stringResource(group.descriptionResId()),
+            icon = group.icon(),
+            actionText = stringResource(R.string.gamepad_action_choose),
+            onClick = { onSelectType(group) },
+            modifier = if (index == 0) Modifier.firstDeckItem() else Modifier,
+        )
+    }
+}
+
 @Composable
 internal fun EditButtonSubPageContent(
     button: PadButton?, // null → create new

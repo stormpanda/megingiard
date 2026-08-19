@@ -26,6 +26,9 @@ The MacroPad feature turns the secondary display into a fully configurable butto
 - Each profile can contain an **arbitrary number of buttons** placed anywhere on the pad canvas.
 - Button positions are stored as **normalised coordinates** [0.0, 1.0] relative to the pad dimensions, so the layout scales correctly at any pad size.
 - Each button has a user-defined **label**, a **shape** (circle, square, or icon only), a **size weight** (1.0 = default unit size), and an **action** (see FR-P3).
+- **Adding Buttons (`ChooseButtonType`)**: When the user taps "Add Button" from the Canvas or Buttons decks, a dedicated **Button Type** sub-menu opens first (`MacroPadSubPage.ChooseButtonType`) where they select the functional type (Keyboard, Gamepad, Mouse, Macro, Layout, Mirror, Other).
+  - Upon selecting a type, the button editor (`EditButtonSubPageContent`) opens with the button type pre-selected, skipping redundant group pickers inside the button config screen.
+  - When configuring the button action, only sub-category choices (if multiple exist for that type, e.g. Mouse Button vs Scroll Wheel vs Trackpoint) and detailed input parameters are displayed.
 - Buttons MUST be repositioned by **drag** inside the editor canvas.
 - The editor provides a **grid snap overlay** that can be toggled on and off at any time during layout editing. Two grid modes are available:
   - **Rectangular** — vertical and horizontal lines spaced at 30 dp (half the 60 dp button unit), forming a uniform grid. Crossing points are the snap targets.
