@@ -323,6 +323,9 @@ object AppStateManager {
     private val _uiMode = MutableStateFlow(UiMode.MACROPAD_USE)
     val uiMode: StateFlow<UiMode> = _uiMode.asStateFlow()
 
+    private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
+    val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
+
     val isGlobalSettingsOpen: StateFlow<Boolean> =
         _uiMode.map { it == UiMode.GLOBAL_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -336,7 +339,14 @@ object AppStateManager {
         _uiMode.map { it == UiMode.BACKGROUND_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
 
     val isEditorActive: StateFlow<Boolean> =
-        _uiMode.map { it == UiMode.LAYOUT_EDITOR }.stateIn(scope, SharingStarted.Eagerly, false)
+        combine(_uiMode, _activePrimaryModal) { mode, modal ->
+            mode == UiMode.LAYOUT_EDITOR ||
+                modal?.type == PrimaryModalType.MACROPAD_EDITOR ||
+                modal?.type == PrimaryModalType.MACROPAD_INSPECTOR ||
+                modal?.type == PrimaryModalType.LAYOUT_SETTINGS ||
+                modal?.type == PrimaryModalType.PROFILE_SETTINGS ||
+                modal?.type == PrimaryModalType.MACRO_TIMELINE_EDITOR
+        }.stateIn(scope, SharingStarted.Eagerly, false)
 
     val isQuickMenuOpen: StateFlow<Boolean> =
         _uiMode.map { it == UiMode.QUICK_MENU }.stateIn(scope, SharingStarted.Eagerly, false)
@@ -468,9 +478,6 @@ object AppStateManager {
     private val _selectedCutoutId = MutableStateFlow<String?>(null)
     val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
 
-    private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
-    val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
-
     fun openPrimaryModal(config: PrimaryModalConfig) {
         AppLog.i(TAG, "openPrimaryModal: type=${config.type}")
         _activePrimaryModal.value = config
@@ -491,7 +498,12 @@ object AppStateManager {
                 _uiMode.value = UiMode.BACKGROUND_SETTINGS
             }
 
-            PrimaryModalType.MACROPAD_EDITOR -> {
+            PrimaryModalType.MACROPAD_EDITOR,
+            PrimaryModalType.MACROPAD_INSPECTOR,
+            PrimaryModalType.LAYOUT_SETTINGS,
+            PrimaryModalType.PROFILE_SETTINGS,
+            PrimaryModalType.MACRO_TIMELINE_EDITOR,
+            -> {
                 _uiMode.value = UiMode.LAYOUT_EDITOR
             }
 
@@ -653,7 +665,12 @@ object AppStateManager {
         _uiMode.value = if (active) UiMode.LAYOUT_EDITOR else UiMode.MACROPAD_USE
         if (active) {
             _activePrimaryModal.value = PrimaryModalConfig(PrimaryModalType.MACROPAD_EDITOR)
-        } else if (_activePrimaryModal.value?.type == PrimaryModalType.MACROPAD_EDITOR) {
+        } else if (_activePrimaryModal.value?.type == PrimaryModalType.MACROPAD_EDITOR ||
+            _activePrimaryModal.value?.type == PrimaryModalType.MACROPAD_INSPECTOR ||
+            _activePrimaryModal.value?.type == PrimaryModalType.LAYOUT_SETTINGS ||
+            _activePrimaryModal.value?.type == PrimaryModalType.PROFILE_SETTINGS ||
+            _activePrimaryModal.value?.type == PrimaryModalType.MACRO_TIMELINE_EDITOR
+        ) {
             _activePrimaryModal.value = null
         }
     }

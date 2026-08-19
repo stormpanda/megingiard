@@ -760,10 +760,12 @@ class AppStateManagerTest {
         runTest {
             AppStateManager.openPrimaryModal(PrimaryModalType.MACROPAD_INSPECTOR)
             assertEquals(PrimaryModalType.MACROPAD_INSPECTOR, AppStateManager.activePrimaryModal.value?.type)
+            assertTrue(AppStateManager.isEditorActive.value)
 
             AppStateManager.closeActiveModal()
             assertEquals(null, AppStateManager.activePrimaryModal.value)
             assertEquals(UiMode.MACROPAD_USE, AppStateManager.uiMode.value)
+            assertFalse(AppStateManager.isEditorActive.value)
         }
 
     @Test
