@@ -93,6 +93,7 @@ private const val ED_EDGE_MARGIN = 0.05f
 
 // Highlight border when button positioning is unlocked
 private val PC_HIGHLIGHT_BORDER_WIDTH = 2.dp
+private val PC_HIGHLIGHT_BORDER_RADIUS = 10.dp
 private const val PC_HIGHLIGHT_BORDER_ALPHA = 0.85f
 
 // Lock symbol badge timing and dimensions
@@ -209,13 +210,14 @@ internal fun PadCanvas(
     val padModifier =
         modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(0.dp))
+            .clip(RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS))
             .background(Color.Black)
             .then(
                 if (!isLocked) {
                     Modifier.border(
                         width = PC_HIGHLIGHT_BORDER_WIDTH,
                         color = accentColor.copy(alpha = PC_HIGHLIGHT_BORDER_ALPHA),
+                        shape = RoundedCornerShape(PC_HIGHLIGHT_BORDER_RADIUS),
                     )
                 } else {
                     Modifier
