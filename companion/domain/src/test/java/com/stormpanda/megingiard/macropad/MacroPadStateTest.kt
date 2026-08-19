@@ -777,4 +777,30 @@ class MacroPadStateTest {
                 ?.map { it.id },
         )
     }
+
+    @Test
+    fun `isEditingButtonPositions defaults to true and updates correctly`() {
+        // Default is true (enabled for editing)
+        assertTrue(MacroPadState.isEditingButtonPositions.value)
+
+        MacroPadState.setEditingButtonPositions(false)
+        assertEquals(false, MacroPadState.isEditingButtonPositions.value)
+
+        MacroPadState.setEditingButtonPositions(true)
+        assertEquals(true, MacroPadState.isEditingButtonPositions.value)
+    }
+
+    @Test
+    fun `gridMode defaults to OFF and updates correctly`() {
+        assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
+
+        MacroPadState.setGridMode(GridMode.RECTANGULAR)
+        assertEquals(GridMode.RECTANGULAR, MacroPadState.gridMode.value)
+
+        MacroPadState.setGridMode(GridMode.RADIAL)
+        assertEquals(GridMode.RADIAL, MacroPadState.gridMode.value)
+
+        MacroPadState.setGridMode(GridMode.OFF)
+        assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
+    }
 }

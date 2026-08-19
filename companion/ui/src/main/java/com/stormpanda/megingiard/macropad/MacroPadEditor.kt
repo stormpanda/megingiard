@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -38,8 +39,8 @@ import androidx.compose.material.icons.rounded.Grid4x4
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Mouse
+import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Preview
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SwapVert
@@ -85,6 +86,7 @@ import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadReorderCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
@@ -104,6 +106,9 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.UUID
 
 private const val TAG = "MacroPadEditor"
+private val MPE_DECK_SPACING = 10.dp
+private val MPE_EMPTY_PADDING_V = 12.dp
+private const val MPE_BUTTON_HEADER_COUNT = 5
 
 private fun applyActionToDraftButton(
     context: Context,
@@ -179,7 +184,6 @@ fun MacroPadEditor(
 
     var selectedSection by remember { mutableStateOf(EditorSection.PROFILES) }
     var subPageStack by remember { mutableStateOf<List<MacroPadSubPage>>(emptyList()) }
-    var isCanvasLocked by remember { mutableStateOf(true) }
     var internalShowEditorHelp by remember { mutableStateOf(false) }
     val effectiveShowHelp = showHelp || internalShowEditorHelp
 
@@ -277,15 +281,6 @@ fun MacroPadEditor(
                             },
                         )
                         GamepadCategoryTile(
-                            title = stringResource(R.string.macropad_editor_section_canvas),
-                            icon = Icons.Rounded.Preview,
-                            selected = selectedSection == EditorSection.CANVAS,
-                            onClick = {
-                                subPageStack = emptyList()
-                                selectedSection = EditorSection.CANVAS
-                            },
-                        )
-                        GamepadCategoryTile(
                             title = stringResource(R.string.macropad_editor_section_buttons),
                             icon = Icons.Rounded.SmartButton,
                             selected = selectedSection == EditorSection.BUTTONS,
@@ -326,11 +321,13 @@ fun MacroPadEditor(
                                     when (selectedSection) {
                                         EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
                                         EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
-                                        EditorSection.CANVAS -> stringResource(R.string.macropad_editor_section_canvas)
                                         EditorSection.BUTTONS -> stringResource(R.string.macropad_editor_section_buttons)
                                         EditorSection.MACROS -> stringResource(R.string.macropad_editor_manage_macros)
                                     }
-                                GamepadDeck(title = sectionTitle) {
+                                GamepadDeck(
+                                    title = sectionTitle,
+                                    scrollable = selectedSection != EditorSection.BUTTONS,
+                                ) {
                                     // ── Main Section Decks ─────────────────────────────
                                     when (selectedSection) {
                                         EditorSection.PROFILES -> {
@@ -469,19 +466,6 @@ fun MacroPadEditor(
                                             )
                                         }
 
-                                        EditorSection.CANVAS -> {
-                                            CanvasDeck(
-                                                profile = profile,
-                                                layout = activeLayout,
-                                                accentColor = colors.accent,
-                                                isLocked = isCanvasLocked,
-                                                onToggleLock = { isCanvasLocked = !isCanvasLocked },
-                                                onAddButton = {
-                                                    subPageStack = subPageStack + MacroPadSubPage.ChooseButtonType
-                                                },
-                                            )
-                                        }
-
                                         EditorSection.BUTTONS -> {
                                             ButtonsDeck(
                                                 profile = profile,
@@ -492,22 +476,6 @@ fun MacroPadEditor(
                                                 },
                                                 onEditButton = { btn ->
                                                     subPageStack = subPageStack + MacroPadSubPage.EditButton(btn)
-                                                },
-                                                onDuplicateButton = { btn ->
-                                                    activeLayout?.id?.let { MacroPadState.duplicateButtonInLayout(btn, it) }
-                                                },
-                                                onCopyButton = { btn ->
-                                                    subPageStack = subPageStack + MacroPadSubPage.CopyButton(btn)
-                                                },
-                                                onDeleteButton = { btn ->
-                                                    activeLayout?.let { lay ->
-                                                        MacroPadState.updateLayout(
-                                                            lay.copy(buttons = lay.buttons.filter { it.id != btn.id }),
-                                                        )
-                                                    }
-                                                    DialogToastManager.show(
-                                                        context.getString(R.string.macropad_button_deleted_toast),
-                                                    )
                                                 },
                                             )
                                         }
@@ -1165,6 +1133,24 @@ fun MacroPadEditor(
                                                 },
                                                 onEditMacro = { macro ->
                                                     subPageStack = subPageStack + MacroPadSubPage.MacroTimeline(macro.id)
+                                                },
+                                                onDuplicate = { btn ->
+                                                    activeLayout?.id?.let { MacroPadState.duplicateButtonInLayout(btn, it) }
+                                                    subPageStack = subPageStack.dropLast(1)
+                                                },
+                                                onCopyToLayout = { btn ->
+                                                    subPageStack = subPageStack + MacroPadSubPage.CopyButton(btn)
+                                                },
+                                                onDelete = { btn ->
+                                                    activeLayout?.let { lay ->
+                                                        MacroPadState.updateLayout(
+                                                            lay.copy(buttons = lay.buttons.filter { it.id != btn.id }),
+                                                        )
+                                                    }
+                                                    DialogToastManager.show(
+                                                        context.getString(R.string.macropad_button_deleted_toast),
+                                                    )
+                                                    subPageStack = subPageStack.dropLast(1)
                                                 },
                                                 onSave = { savedBtn ->
                                                     val lay = activeLayout
@@ -1907,140 +1893,212 @@ private fun LayoutsDeck(
 }
 
 @Composable
-private fun CanvasDeck(
-    profile: PadProfile,
-    layout: PadLayout?,
-    accentColor: Color,
-    isLocked: Boolean,
-    onToggleLock: () -> Unit,
-    onAddButton: () -> Unit,
-) {
-    var gridMode by remember { mutableStateOf(GridMode.OFF) }
-
-    GamepadToggleCard(
-        title = stringResource(R.string.macropad_editor_lock_canvas),
-        description =
-            if (isLocked) {
-                stringResource(R.string.macropad_editor_canvas_locked_desc)
-            } else {
-                stringResource(R.string.macropad_editor_canvas_unlocked_desc)
-            },
-        checked = isLocked,
-        icon = if (isLocked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
-        onCheckedChange = { onToggleLock() },
-        modifier = Modifier.firstDeckItem(),
-    )
-
-    val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
-    val gridIdx = gridModes.indexOf(gridMode)
-    GamepadChoiceCard(
-        title = stringResource(R.string.macropad_editor_snap_grid),
-        description = stringResource(R.string.macropad_editor_snap_grid_desc),
-        selectedText =
-            when (gridMode) {
-                GridMode.OFF -> stringResource(R.string.macropad_editor_grid_off_label)
-                GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular_label)
-                GridMode.RADIAL -> stringResource(R.string.macropad_editor_grid_radial_label)
-            },
-        icon = Icons.Rounded.Grid4x4,
-        onPrevious = { gridMode = gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size] },
-        onNext = { gridMode = gridModes[(gridIdx + 1) % gridModes.size] },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_add_button),
-        description = stringResource(R.string.macropad_editor_add_button_card_desc),
-        actionText = stringResource(R.string.gamepad_action_add),
-        icon = Icons.Rounded.Add,
-        onClick = onAddButton,
-    )
-
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center,
-    ) {
-        GamepadFocusCard(
-            onClick = null,
-            cardBgColor = Color.Black,
-            shape = RoundedCornerShape(4.dp),
-        ) {
-            PadCanvas(
-                profile = profile,
-                layout = layout,
-                accentColor = accentColor,
-                gridMode = gridMode,
-                isLocked = isLocked,
-            )
-        }
-    }
-}
-
-@Composable
 private fun ButtonsDeck(
     profile: PadProfile,
     layout: PadLayout?,
     accentColor: Color,
     onAddButton: () -> Unit,
     onEditButton: (PadButton) -> Unit,
-    onDuplicateButton: (PadButton) -> Unit,
-    onCopyButton: (PadButton) -> Unit,
-    onDeleteButton: (PadButton) -> Unit,
 ) {
     val colors = LocalAppColors.current
     val buttons = layout?.buttons ?: emptyList()
+    val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsState()
+    val gridMode by MacroPadState.gridMode.collectAsState()
+    var isReordering by remember { mutableStateOf(false) }
+
     val lazyListState = rememberLazyListState()
+    var movingItemKey by remember { mutableStateOf<Any?>(null) }
+    val movingIndex = if (movingItemKey != null) buttons.indexOfFirst { it.id == movingItemKey } else -1
+
     val reorderState =
         rememberReorderableLazyListState(lazyListState) { from, to ->
-            if (layout != null) {
-                val newButtons = layout.buttons.toMutableList()
-                val fromIdx = from.index.coerceIn(0, newButtons.lastIndex)
-                val toIdx = to.index.coerceIn(0, newButtons.lastIndex)
-                newButtons.add(toIdx, newButtons.removeAt(fromIdx))
-                MacroPadState.updateLayout(layout.copy(buttons = newButtons))
+            if (layout != null && buttons.isNotEmpty()) {
+                val fromButtonIdx = (from.index - MPE_BUTTON_HEADER_COUNT).coerceIn(0, buttons.lastIndex)
+                val toButtonIdx = (to.index - MPE_BUTTON_HEADER_COUNT).coerceIn(0, buttons.lastIndex)
+                if (fromButtonIdx != toButtonIdx) {
+                    val mutable = layout.buttons.toMutableList()
+                    mutable.add(toButtonIdx, mutable.removeAt(fromButtonIdx))
+                    MacroPadState.updateLayout(layout.copy(buttons = mutable))
+                }
             }
         }
 
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_add_button),
-        description = stringResource(R.string.macropad_editor_create_button_desc),
-        actionText = stringResource(R.string.gamepad_action_add),
-        icon = Icons.Rounded.Add,
-        onClick = onAddButton,
-        modifier = Modifier.firstDeckItem(),
-    )
+    LaunchedEffect(movingItemKey, movingIndex) {
+        if (movingItemKey != null && movingIndex >= 0) {
+            lazyListState.animateScrollToItem(movingIndex + MPE_BUTTON_HEADER_COUNT)
+        }
+    }
 
-    if (buttons.isEmpty()) {
-        Text(
-            text = stringResource(R.string.macropad_editor_no_buttons_in_layout),
-            color = colors.onSurfaceSecondary,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(vertical = 12.dp),
-        )
-    } else {
-        LazyColumn(
-            state = lazyListState,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height((buttons.size * 72).coerceAtMost(480).dp),
-        ) {
-            itemsIndexed(buttons, key = { _, btn -> btn.id }) { _, btn ->
-                ReorderableItem(reorderState, key = btn.id) { isDragging ->
-                    ButtonListItem(
-                        btn = btn,
-                        accentColor = accentColor,
-                        enableKeyboard = profile.enableKeyboard,
-                        enableGamepad = profile.enableGamepad,
-                        enableMouse = profile.enableMouse,
-                        enableTouch = profile.enableTouch,
+    LazyColumn(
+        state = lazyListState,
+        verticalArrangement = Arrangement.spacedBy(MPE_DECK_SPACING),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item {
+            GamepadToggleCard(
+                title = stringResource(R.string.macropad_editor_edit_button_positions),
+                description =
+                    if (isEditingPositions) {
+                        stringResource(R.string.macropad_editor_edit_button_positions_enabled_desc)
+                    } else {
+                        stringResource(R.string.macropad_editor_edit_button_positions_disabled_desc)
+                    },
+                checked = isEditingPositions,
+                icon = if (isEditingPositions) Icons.Rounded.OpenWith else Icons.Rounded.Lock,
+                onCheckedChange = { MacroPadState.setEditingButtonPositions(it) },
+                modifier = Modifier.firstDeckItem(),
+            )
+        }
+
+        item {
+            val gridModes = listOf(GridMode.OFF, GridMode.RECTANGULAR, GridMode.RADIAL)
+            val gridIdx = gridModes.indexOf(gridMode).coerceAtLeast(0)
+            GamepadChoiceCard(
+                title = stringResource(R.string.macropad_editor_snap_grid),
+                description = stringResource(R.string.macropad_editor_snap_grid_desc),
+                selectedText =
+                    when (gridMode) {
+                        GridMode.OFF -> stringResource(R.string.macropad_editor_grid_off_label)
+                        GridMode.RECTANGULAR -> stringResource(R.string.macropad_editor_grid_rectangular_label)
+                        GridMode.RADIAL -> stringResource(R.string.macropad_editor_grid_radial_label)
+                    },
+                icon = Icons.Rounded.Grid4x4,
+                onPrevious = { MacroPadState.setGridMode(gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size]) },
+                onNext = { MacroPadState.setGridMode(gridModes[(gridIdx + 1) % gridModes.size]) },
+            )
+        }
+
+        item {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_editor_add_button),
+                description = stringResource(R.string.macropad_editor_create_button_desc),
+                actionText = stringResource(R.string.gamepad_action_add),
+                icon = Icons.Rounded.Add,
+                onClick = onAddButton,
+            )
+        }
+
+        item {
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_editor_manage_buttons),
+                color = accentColor,
+            )
+        }
+
+        item {
+            GamepadToggleCard(
+                title = stringResource(R.string.macropad_editor_reorder_buttons),
+                description =
+                    if (isReordering) {
+                        stringResource(R.string.macropad_editor_reorder_buttons_enabled_desc)
+                    } else {
+                        stringResource(R.string.macropad_editor_reorder_buttons_disabled_desc)
+                    },
+                checked = isReordering,
+                icon = Icons.Rounded.SwapVert,
+                onCheckedChange = {
+                    isReordering = it
+                    if (!it) movingItemKey = null
+                },
+            )
+        }
+
+        if (buttons.isEmpty()) {
+            item {
+                Text(
+                    text = stringResource(R.string.macropad_editor_no_buttons_in_layout),
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = MPE_EMPTY_PADDING_V),
+                )
+            }
+        } else if (!isReordering) {
+            items(buttons, key = { it.id }) { btn ->
+                val isTrackpoint = btn.action is PadAction.TrackpointMove
+                val hapticLabel =
+                    when (btn.hapticStrength) {
+                        HapticStrength.OFF -> stringResource(R.string.macropad_haptic_off)
+                        HapticStrength.LIGHT -> stringResource(R.string.macropad_haptic_light)
+                        HapticStrength.MEDIUM -> stringResource(R.string.macropad_haptic_medium)
+                        HapticStrength.STRONG -> stringResource(R.string.macropad_haptic_strong)
+                        HapticStrength.CUSTOM -> stringResource(R.string.macropad_haptic_custom)
+                    }
+                val desc =
+                    if (isTrackpoint) {
+                        val sizeLabel =
+                            when ((btn.action as PadAction.TrackpointMove).size) {
+                                TrackpointSize.SMALL -> stringResource(R.string.macropad_trackpoint_size_small)
+                                TrackpointSize.MEDIUM -> stringResource(R.string.macropad_trackpoint_size_medium)
+                                TrackpointSize.LARGE -> stringResource(R.string.macropad_trackpoint_size_large)
+                            }
+                        listOf(sizeLabel, hapticLabel).joinToString(" • ")
+                    } else {
+                        val actionLabel = btn.action.displayLabel()
+                        val sizeLabel =
+                            if (btn.action !is PadAction.ScrollWheel) {
+                                "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+                            } else {
+                                null
+                            }
+                        listOfNotNull(actionLabel, sizeLabel, hapticLabel).joinToString(" • ")
+                    }
+
+                GamepadActionCard(
+                    title = btn.label.ifBlank { btn.action.displayLabel() },
+                    description = desc,
+                    icon = btn.action.toCategory().icon(),
+                    actionText = stringResource(R.string.gamepad_action_edit),
+                    onClick = { onEditButton(btn) },
+                )
+            }
+        } else {
+            itemsIndexed(buttons, key = { _, btn -> btn.id }) { index, btn ->
+                val key = btn.id
+                ReorderableItem(reorderState, key = key) { isDragging ->
+                    val isMoving = movingItemKey == key
+                    val isTrackpoint = btn.action is PadAction.TrackpointMove
+                    val desc =
+                        if (isTrackpoint) {
+                            stringResource(R.string.macropad_action_trackpoint)
+                        } else {
+                            val actionLabel = btn.action.displayLabel()
+                            val sizeLabel =
+                                if (btn.action !is PadAction.ScrollWheel) {
+                                    "${btn.buttonSize.cols}×${btn.buttonSize.rows}"
+                                } else {
+                                    null
+                                }
+                            listOfNotNull(actionLabel, sizeLabel).joinToString(" • ")
+                        }
+
+                    GamepadReorderCard(
+                        title = btn.label.ifBlank { btn.action.displayLabel() },
+                        description = desc,
+                        icon = btn.action.toCategory().icon(),
+                        index = index,
+                        totalCount = buttons.size,
+                        isMoving = isMoving,
                         isDragging = isDragging,
-                        onEdit = { onEditButton(btn) },
-                        onDuplicate = { onDuplicateButton(btn) },
-                        onCopyToLayout = { onCopyButton(btn) },
-                        onDelete = { onDeleteButton(btn) },
+                        onToggleMoving = {
+                            movingItemKey = if (isMoving) null else key
+                        },
+                        onMoveUp = {
+                            if (index > 0 && layout != null) {
+                                val mutable = buttons.toMutableList()
+                                java.util.Collections.swap(mutable, index, index - 1)
+                                MacroPadState.updateLayout(layout.copy(buttons = mutable))
+                            }
+                        },
+                        onMoveDown = {
+                            if (index < buttons.size - 1 && layout != null) {
+                                val mutable = buttons.toMutableList()
+                                java.util.Collections.swap(mutable, index, index + 1)
+                                MacroPadState.updateLayout(layout.copy(buttons = mutable))
+                            }
+                        },
                         dragHandleModifier = Modifier.draggableHandle(),
+                        itemKey = key,
                     )
-                    AppDivider(modifier = Modifier.padding(horizontal = 8.dp))
                 }
             }
         }
@@ -2131,48 +2189,31 @@ private fun MacroPadEditorHelpModal(
             description = stringResource(R.string.help_editor_add_layout_desc),
         )
 
-        HelpSection(stringResource(R.string.help_editor_section_toolbar))
+        HelpSection(stringResource(R.string.help_editor_section_buttons))
         HelpEntry(
-            icon = Icons.Rounded.Add,
-            label = stringResource(R.string.help_editor_toolbar_button_label),
-            description = stringResource(R.string.help_editor_toolbar_button_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Wallpaper,
-            label = stringResource(R.string.help_editor_toolbar_background_label),
-            description = stringResource(R.string.help_editor_toolbar_background_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Mouse,
-            label = stringResource(R.string.help_editor_toolbar_touchpad_label),
-            description = stringResource(R.string.help_editor_toolbar_touchpad_desc),
+            icon = Icons.Rounded.OpenWith,
+            label = stringResource(R.string.macropad_editor_edit_button_positions),
+            description = stringResource(R.string.macropad_editor_edit_button_positions_enabled_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Grid4x4,
-            label = stringResource(R.string.help_editor_toolbar_grid_label),
-            description = stringResource(R.string.help_editor_toolbar_grid_desc),
+            label = stringResource(R.string.macropad_editor_snap_grid),
+            description = stringResource(R.string.macropad_editor_snap_grid_desc),
         )
         HelpEntry(
-            icon = Icons.Rounded.Lock,
-            label = stringResource(R.string.help_editor_toolbar_lock_label),
-            description = stringResource(R.string.help_editor_toolbar_lock_desc),
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.macropad_editor_add_button),
+            description = stringResource(R.string.macropad_editor_create_button_desc),
         )
-
-        HelpSection(stringResource(R.string.help_editor_section_canvas))
         HelpEntry(
-            label = stringResource(R.string.help_editor_canvas_drag_label),
-            description = stringResource(R.string.help_editor_canvas_drag_desc),
+            icon = Icons.Rounded.SwapVert,
+            label = stringResource(R.string.macropad_editor_reorder_buttons),
+            description = stringResource(R.string.macropad_editor_reorder_buttons_enabled_desc),
         )
-
-        HelpSection(stringResource(R.string.help_editor_section_buttons))
         HelpEntry(
+            icon = Icons.Rounded.Edit,
             label = stringResource(R.string.help_editor_button_edit_label),
             description = stringResource(R.string.help_editor_button_edit_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.DragHandle,
-            label = stringResource(R.string.help_editor_button_reorder_label),
-            description = stringResource(R.string.help_editor_button_reorder_desc),
         )
     }
 }

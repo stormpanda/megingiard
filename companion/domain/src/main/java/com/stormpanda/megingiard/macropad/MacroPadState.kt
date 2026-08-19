@@ -136,6 +136,22 @@ object MacroPadState {
         _selectedButtonId.value = id
     }
 
+    private val _isEditingButtonPositions = MutableStateFlow(true)
+    val isEditingButtonPositions: StateFlow<Boolean> = _isEditingButtonPositions.asStateFlow()
+
+    fun setEditingButtonPositions(editing: Boolean) {
+        AppLog.d(TAG, "setEditingButtonPositions($editing)")
+        _isEditingButtonPositions.value = editing
+    }
+
+    private val _gridMode = MutableStateFlow(GridMode.OFF)
+    val gridMode: StateFlow<GridMode> = _gridMode.asStateFlow()
+
+    fun setGridMode(mode: GridMode) {
+        AppLog.d(TAG, "setGridMode($mode)")
+        _gridMode.value = mode
+    }
+
     /**
      * Resolves the best matching profile for a given package name, optional ROM path, and system ID.
      * Prefers specific ROM-file profile matches over generic package profiles.

@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.macropad.ButtonColorStyle
@@ -90,6 +91,9 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val profile by viewModel.activeProfile.collectAsState()
     val layout by viewModel.activeLayout.collectAsState()
+    val isEditorActive by AppStateManager.isEditorActive.collectAsState()
+    val isEditingPositions by MacroPadState.isEditingButtonPositions.collectAsState()
+    val gridMode by MacroPadState.gridMode.collectAsState()
     val colors = LocalAppColors.current
     var disabledFeedback by remember { mutableStateOf<DisabledReason?>(null) }
     var disabledFeedbackTrigger by remember { mutableIntStateOf(0) }
@@ -121,6 +125,15 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(32.dp),
+            )
+        } else if (isEditorActive) {
+            PadCanvas(
+                profile = p,
+                layout = l,
+                accentColor = colors.accent,
+                gridMode = gridMode,
+                isLocked = !isEditingPositions,
+                modifier = Modifier.fillMaxSize(),
             )
         } else {
             PadSurface(

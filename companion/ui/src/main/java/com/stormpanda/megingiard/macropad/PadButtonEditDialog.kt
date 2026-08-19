@@ -19,13 +19,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Colorize
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FormatColorFill
 import androidx.compose.material.icons.rounded.FormatColorText
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -215,6 +218,9 @@ internal fun EditButtonSubPageContent(
     onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onEditMacro: ((Macro) -> Unit)? = null,
+    onDuplicate: ((PadButton) -> Unit)? = null,
+    onCopyToLayout: ((PadButton) -> Unit)? = null,
+    onDelete: ((PadButton) -> Unit)? = null,
     onSave: (PadButton) -> Unit,
 ) {
     val context = LocalContext.current
@@ -681,6 +687,48 @@ internal fun EditButtonSubPageContent(
             icon = Icons.Rounded.VisibilityOff,
             onCheckedChange = { invisible = it },
         )
+
+        if (button != null) {
+            GamepadSectionHeader(
+                text = stringResource(R.string.macropad_editor_manage_buttons),
+                color = accentColor,
+            )
+
+            if (onDuplicate != null) {
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_copy_button_duplicate),
+                    description = stringResource(R.string.macropad_editor_duplicate_layout_desc),
+                    actionText = stringResource(R.string.gamepad_action_duplicate),
+                    icon = Icons.Rounded.ContentCopy,
+                    onClick = { onDuplicate(button) },
+                )
+            }
+
+            if (onCopyToLayout != null) {
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_copy_to_layout),
+                    description = stringResource(R.string.macropad_editor_copy_layout_desc),
+                    actionText = stringResource(R.string.gamepad_action_copy),
+                    icon = Icons.Rounded.Share,
+                    onClick = { onCopyToLayout(button) },
+                )
+            }
+
+            if (onDelete != null) {
+                GamepadActionCard(
+                    title = stringResource(R.string.macropad_editor_delete_button),
+                    description =
+                        stringResource(
+                            R.string.macropad_editor_delete_layout_desc,
+                            button.label.ifBlank { button.action.displayLabel() },
+                        ),
+                    actionText = stringResource(R.string.gamepad_action_delete),
+                    icon = Icons.Rounded.Delete,
+                    isDestructive = true,
+                    onClick = { onDelete(button) },
+                )
+            }
+        }
     }
 
     GamepadActionCard(

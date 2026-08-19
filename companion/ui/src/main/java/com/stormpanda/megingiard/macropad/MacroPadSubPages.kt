@@ -34,7 +34,6 @@ private const val TAG = "MacroPadSubPages"
 internal enum class EditorSection {
     PROFILES,
     LAYOUTS,
-    CANVAS,
     BUTTONS,
     MACROS,
 }

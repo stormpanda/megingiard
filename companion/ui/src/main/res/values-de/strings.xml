@@ -1227,9 +1227,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_reorder_layouts_desc">Reihenfolge der Layouts in diesem Profil ändern</string>
     <string name="macropad_editor_delete_layout_desc">Löscht \'%1$s\' aus diesem Profil</string>
     <string name="macropad_editor_section_canvas_controls">Arbeitsflächen-Steuerung</string>
-    <string name="macropad_editor_lock_canvas">Arbeitsfläche sperren</string>
-    <string name="macropad_editor_canvas_locked_desc">Arbeitsfläche gesperrt (Tasten können nicht verschoben werden)</string>
-    <string name="macropad_editor_canvas_unlocked_desc">Tasten frei auf der Arbeitsfläche verschieben</string>
+    <string name="macropad_editor_edit_button_positions">Tastenpositionen bearbeiten</string>
+    <string name="macropad_editor_edit_button_positions_enabled_desc">Tasten können auf dem unteren Bildschirm frei verschoben werden</string>
+    <string name="macropad_editor_edit_button_positions_disabled_desc">Tastenpositionen auf dem unteren Bildschirm sind gesperrt</string>
+    <string name="macropad_editor_manage_buttons">Tasten verwalten</string>
+    <string name="macropad_editor_reorder_buttons">Tasten neu anordnen</string>
+    <string name="macropad_editor_reorder_buttons_enabled_desc">Tastenreihenfolge anpassen</string>
+    <string name="macropad_editor_reorder_buttons_disabled_desc">Taste auswählen, um Einstellungen zu bearbeiten</string>
     <string name="macropad_editor_snap_grid">Raster-Modus</string>
     <string name="macropad_editor_snap_grid_desc">Ausrichtungsraster auf der Arbeitsfläche anzeigen</string>
     <string name="macropad_editor_grid_off_label">Aus</string>

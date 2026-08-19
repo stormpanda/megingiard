@@ -78,12 +78,9 @@ private const val TAG = "PadCanvas"
 private val ED_BUTTON_UNIT_DP = 60.dp
 private val ED_BTN_SQUARE_RADIUS = 4.dp
 
-// Reuse the shared screen padding so the editor canvas remains pixel-identical to use mode.
+// Shared with MacroPadScreen so the editor canvas remains pixel-identical to use mode.
 private val PC_SCREEN_PADDING = MP_SCREEN_PADDING
 private const val ED_EDGE_MARGIN = 0.05f
-
-private const val PC_BOTTOM_SCREEN_WIDTH_PX = 1240
-private const val PC_BOTTOM_SCREEN_HEIGHT_PX = 1080
 
 // Grid: half a button unit — two steps apart = buttons touch exactly
 private val PC_GRID_STEP_DP = 30.dp
@@ -100,12 +97,6 @@ private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
 private const val PC_BTN_GRADIENT_OUTER = 0.9f
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Grid mode
-// ─────────────────────────────────────────────────────────────────────────────
-
-internal enum class GridMode { OFF, RECTANGULAR, RADIAL }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pad canvas — drag buttons to reposition
@@ -125,8 +116,6 @@ internal fun PadCanvas(
     val colors = LocalAppColors.current
     val density = LocalDensity.current
     val context = LocalContext.current
-    val padWidth = with(density) { PC_BOTTOM_SCREEN_WIDTH_PX.toDp() } - PC_SCREEN_PADDING * 2
-    val padHeight = with(density) { PC_BOTTOM_SCREEN_HEIGHT_PX.toDp() } - PC_SCREEN_PADDING * 2
     val gridStepPx = with(density) { PC_GRID_STEP_DP.toPx() }
 
     var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) { mutableStateOf<ImageBitmap?>(null) }
@@ -183,8 +172,7 @@ internal fun PadCanvas(
 
     val padModifier =
         modifier
-            .width(padWidth)
-            .height(padHeight)
+            .fillMaxSize()
             .clip(RoundedCornerShape(0.dp))
             .background(Color.Black)
             .onSizeChanged { canvasSize = it }

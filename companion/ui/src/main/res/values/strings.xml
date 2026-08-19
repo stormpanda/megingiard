@@ -1218,9 +1218,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_reorder_layouts_desc">Change the order of layouts in this profile</string>
     <string name="macropad_editor_delete_layout_desc">Delete \'%1$s\' from this profile</string>
     <string name="macropad_editor_section_canvas_controls">Canvas Controls</string>
-    <string name="macropad_editor_lock_canvas">Lock Canvas Dragging</string>
-    <string name="macropad_editor_canvas_locked_desc">Canvas is locked (buttons cannot be accidentally moved)</string>
-    <string name="macropad_editor_canvas_unlocked_desc">Drag buttons freely on the canvas to reposition</string>
+    <string name="macropad_editor_edit_button_positions">Edit Button Positions</string>
+    <string name="macropad_editor_edit_button_positions_enabled_desc">Buttons can be dragged freely on the bottom screen</string>
+    <string name="macropad_editor_edit_button_positions_disabled_desc">Button positions on the bottom screen are locked</string>
+    <string name="macropad_editor_manage_buttons">Manage Buttons</string>
+    <string name="macropad_editor_reorder_buttons">Reorder Buttons</string>
+    <string name="macropad_editor_reorder_buttons_enabled_desc">Use controls to rearrange the button list</string>
+    <string name="macropad_editor_reorder_buttons_disabled_desc">Select a button to edit its configuration</string>
     <string name="macropad_editor_snap_grid">Snap Grid Mode</string>
     <string name="macropad_editor_snap_grid_desc">Display alignment grid on canvas</string>
     <string name="macropad_editor_grid_off_label">Off</string>
