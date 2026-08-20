@@ -137,7 +137,7 @@ private val darkPalette =
         controlIndicatorActive = Color.White,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
         buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
-        controlOverlayBorder = Color.Transparent,
+        controlOverlayBorder = DEFAULT_DARK_LIGHT_ACCENT.copy(alpha = 0.3f),
         navQuickMenuBorder = Color.Transparent,
         mirrorQuickMenuBorder = Color.Transparent,
         buttonIconTint = Color.White,
@@ -179,7 +179,7 @@ private val darkOledPalette =
         controlIndicatorActive = DARK_OLED_TEXT,
         navQuickMenuBody = DEFAULT_DARK_LIGHT_ACCENT,
         buttonBody = DEFAULT_DARK_LIGHT_ACCENT,
-        controlOverlayBorder = Color.Transparent,
+        controlOverlayBorder = DEFAULT_DARK_LIGHT_ACCENT.copy(alpha = 0.3f),
         navQuickMenuBorder = Color.Transparent,
         mirrorQuickMenuBorder = Color.Transparent,
         buttonIconTint = DARK_OLED_TEXT,
@@ -502,7 +502,13 @@ fun paletteFor(
         }
     return if (mode.supportsCustomAccent) {
         val eff = userAccent ?: base.accent
-        base.copy(accent = eff, navQuickMenuBody = eff, buttonBody = eff, sectionHeaderColor = eff)
+        base.copy(
+            accent = eff,
+            navQuickMenuBody = eff,
+            buttonBody = eff,
+            sectionHeaderColor = eff,
+            controlOverlayBorder = eff.copy(alpha = 0.3f),
+        )
     } else {
         base
     }

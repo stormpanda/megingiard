@@ -63,6 +63,8 @@ fun AppSelectableChip(
     val contentColor = if (selected) colors.onAccent else colors.onControlOverlay
     val effectiveAlpha = if (enabled) 1f else 0.38f
 
+    val chipBorderColor = (if (selected) colors.accent else colors.controlOverlayBorder).copy(alpha = effectiveAlpha)
+
     Box(
         modifier =
             modifier
@@ -80,7 +82,7 @@ fun AppSelectableChip(
                     ).copy(alpha = (if (selected) 0.85f else 0.5f) * effectiveAlpha),
                 ).border(
                     1.dp,
-                    colors.subduedBorder.copy(alpha = effectiveAlpha),
+                    chipBorderColor,
                     RoundedCornerShape(CHIP_CORNER),
                 ).primaryOverlayFocusable(
                     onClick = if (enabled) onClick else null,
