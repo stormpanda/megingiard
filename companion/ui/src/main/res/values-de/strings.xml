@@ -246,11 +246,17 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="privd_deadzone_ok">OK</string>
     <string name="privd_deadzone_cancel">Abbrechen</string>
 
-    <string name="privd_recording_physical_title">Physischen Controller aufzeichnen…</string>
-    <string name="privd_recording_physical_hint">Drücke Tasten und bewege die Sticks am physischen Gamepad. Tippe auf Stop, wenn du fertig bist.</string>
+    <string name="privd_recording_physical_title">Controller-Eingabe aufzeichnen…</string>
+    <string name="privd_recording_physical_hint">Drücke Tasten und bewege Sticks am Controller. Leerlaufpausen werden automatisch gekürzt.</string>
     <string name="privd_recording_physical_pressed">Gedrückt: %1$s</string>
     <string name="privd_recording_physical_stick_left">Linker Stick: %1$s, %2$s</string>
     <string name="privd_recording_physical_stick_right">Rechter Stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stick_neutral">Neutral</string>
+    <string name="privd_recording_physical_actions_count" formatted="false">%1$d Aktionen</string>
+    <string name="privd_recording_physical_no_buttons">Warte auf Controller-Eingaben…</string>
+    <string name="privd_recording_physical_dpad_title">Steuerkreuz: %1$s</string>
+    <string name="privd_recording_physical_stick_l_label">L-Stick</string>
+    <string name="privd_recording_physical_stick_r_label">R-Stick</string>
     <string name="privd_recording_physical_stop">Stopp &amp; Speichern</string>
     <string name="privd_recording_physical_cancel">Abbrechen</string>
 

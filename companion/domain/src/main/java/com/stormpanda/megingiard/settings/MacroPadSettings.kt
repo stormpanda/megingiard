@@ -59,9 +59,6 @@ object MacroPadSettings {
     private val _skipTouchRecordDialog = MutableStateFlow(false)
     val skipTouchRecordDialog: StateFlow<Boolean> = _skipTouchRecordDialog.asStateFlow()
 
-    private val _skipGamepadRecordDialog = MutableStateFlow(false)
-    val skipGamepadRecordDialog: StateFlow<Boolean> = _skipGamepadRecordDialog.asStateFlow()
-
     private val _gamepadSwapFaceButtons = MutableStateFlow(false)
     val gamepadSwapFaceButtons: StateFlow<Boolean> = _gamepadSwapFaceButtons.asStateFlow()
 
@@ -101,7 +98,6 @@ object MacroPadSettings {
 
     internal fun loadFrom(prefs: Preferences) {
         _skipTouchRecordDialog.value = prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] ?: false
-        _skipGamepadRecordDialog.value = prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] ?: false
         _gamepadSwapFaceButtons.value = prefs[KEY_GAMEPAD_SWAP_FACE_BUTTONS] ?: false
         _privdPromptDismissed.value = prefs[KEY_PRIVD_PROMPT_DISMISSED] ?: false
         _deadzoneLeft.value = prefs[KEY_PRIVD_DEADZONE_LEFT] ?: PRIVD_DEFAULT_DEADZONE
@@ -141,12 +137,6 @@ object MacroPadSettings {
         AppLog.d(TAG, "setSkipTouchRecordDialog($value)")
         _skipTouchRecordDialog.value = value
         scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_TOUCH_RECORD_DIALOG] = value } }
-    }
-
-    fun setSkipGamepadRecordDialog(value: Boolean) {
-        AppLog.d(TAG, "setSkipGamepadRecordDialog($value)")
-        _skipGamepadRecordDialog.value = value
-        scope.launch { dataStore.edit { prefs -> prefs[KEY_SKIP_GAMEPAD_RECORD_DIALOG] = value } }
     }
 
     fun setGamepadSwapFaceButtons(value: Boolean) {

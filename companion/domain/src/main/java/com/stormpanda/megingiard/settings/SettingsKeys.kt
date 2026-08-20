@@ -72,9 +72,6 @@ internal val KEY_TOUCHPAD_HAPTICS_ENABLED = booleanPreferencesKey("touchpad_hapt
 // MacroPad touch recording
 internal val KEY_SKIP_TOUCH_RECORD_DIALOG = booleanPreferencesKey("skip_touch_record_dialog")
 
-// MacroPad gamepad recording
-internal val KEY_SKIP_GAMEPAD_RECORD_DIALOG = booleanPreferencesKey("skip_gamepad_record_dialog")
-
 // MacroPad — gamepad face-button label swap (display only, keycodes unchanged)
 internal val KEY_GAMEPAD_SWAP_FACE_BUTTONS = booleanPreferencesKey("gamepad_swap_face_buttons")
 
@@ -181,7 +178,6 @@ internal val EXCLUDED_KEYS: Set<Preferences.Key<*>> =
         KEY_MACROPAD_ACTIVE_PROFILE_ID,
         KEY_KB_TOUCHPAD_ENABLED,
         KEY_SKIP_TOUCH_RECORD_DIALOG,
-        KEY_SKIP_GAMEPAD_RECORD_DIALOG,
         KEY_SAVED_LOCKED,
         KEY_SAVED_PROJECTION,
         KEY_SHOW_MACRO_EDITOR_TUTORIAL,
@@ -226,7 +222,6 @@ internal val BOOLEAN_KEYS: Set<Preferences.Key<*>> =
         KEY_TOUCHPAD_NATURAL_SCROLL,
         KEY_TOUCHPAD_HAPTICS_ENABLED,
         KEY_SKIP_TOUCH_RECORD_DIALOG,
-        KEY_SKIP_GAMEPAD_RECORD_DIALOG,
         KEY_GAMEPAD_SWAP_FACE_BUTTONS,
         KEY_MACROPAD_AMBIENT_PREVIEW,
         KEY_MACROPAD_AMBIENT_APPLY_THEME,

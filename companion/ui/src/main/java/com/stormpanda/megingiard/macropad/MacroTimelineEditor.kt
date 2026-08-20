@@ -59,7 +59,6 @@ import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "MacroTimelineEditor"
@@ -69,10 +68,6 @@ private const val MTE_UNDO_STACK_MAX = 50
 private const val MTE_PULSE_DURATION_MS = 1400
 private const val MTE_PULSE_ACCENT_ALPHA = 0.35f
 private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
-
-// Post-start delay before showing the recording overlay: waits for InputFlinger to register
-// the uinput device so early user taps are not silently dropped (mirrors MAC_GAMEPAD_INJECTOR_INIT_MS).
-private const val MTE_GAMEPAD_INJECTOR_INIT_MS = 200L
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -93,18 +88,12 @@ internal fun MacroTimelineSubPageContent(
     var localName by remember(macro) { mutableStateOf(macro.name) }
     var steps by remember(macro) { mutableStateOf(macro.steps) }
     var showRecordTouchDialog by remember { mutableStateOf(false) }
-    var showRecordGamepadDialog by remember { mutableStateOf(false) }
-    var showGamepadRecordingOverlay by remember { mutableStateOf(false) }
-    var gamepadRecordingError by remember { mutableStateOf<String?>(null) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var loopEnabled by remember(macro) { mutableStateOf(macro.loopEnabled) }
     var loopPauseMs by remember(macro) { mutableIntStateOf(macro.loopPauseMs) }
     var randomizeTimingEnabled by remember(macro) { mutableStateOf(macro.randomizeTimingEnabled) }
     var randomizeTimingRangeMs by remember(macro) { mutableIntStateOf(macro.randomizeTimingRangeMs.coerceIn(5, 100)) }
-    var recordingStartedGamepad by remember { mutableStateOf(false) }
-    var usingPhysicalRecorder by remember { mutableStateOf(false) }
-    var showPhysicalRecordingSheet by remember { mutableStateOf(false) }
 
     val currentMacro =
         macro.copy(
@@ -157,7 +146,6 @@ internal fun MacroTimelineSubPageContent(
 
     val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
     val touchRecordingState by TouchRecordingManager.state.collectAsState()
-    val gamepadRecordingState by GamepadRecordingManager.state.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val privdState by PrivdManager.state.collectAsState()
     val physicalRecordingAvailable = privdState == PrivdState.RUNNING
@@ -170,30 +158,22 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun startGamepadRecording() {
-        if (physicalRecordingAvailable) {
-            AppLog.i(TAG, "startGamepadRecording() -> physical path")
-            usingPhysicalRecorder = true
-            showPhysicalRecordingSheet = true
-            showRecordGamepadDialog = false
-            PhysicalGamepadRecordingManager.startRecording()
+        if (!physicalRecordingAvailable) {
+            DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
             return
         }
-        val wasAlreadyRunning = GamepadInjector.isRunning
-        GamepadInjector.start(context)
-        if (!GamepadInjector.isRunning) {
-            AppLog.e(TAG, "gamepad recording overlay aborted because GamepadInjector failed to start")
-            gamepadRecordingError = context.getString(R.string.macropad_macro_record_gamepad_error_start)
-            showRecordGamepadDialog = false
-            showGamepadRecordingOverlay = false
-            return
-        }
-        recordingStartedGamepad = !wasAlreadyRunning
-        scope.launch {
-            delay(MTE_GAMEPAD_INJECTOR_INIT_MS)
-            GamepadRecordingManager.startRecording()
-            showRecordGamepadDialog = false
-            showGamepadRecordingOverlay = true
-        }
+        AppLog.i(TAG, "startGamepadRecording() -> suspending editor and starting physical recording")
+        val suspendConfig =
+            PrimaryModalConfig(
+                type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
+                payload =
+                    PrimaryModalPayload.MacroTimeline(
+                        macroId = macro.id,
+                        focusStepIndex = steps.size,
+                    ),
+            )
+        AppStateManager.suspendCurrentAndDismiss(suspendConfig)
+        PhysicalGamepadRecordingManager.startRecording()
     }
 
     fun requestTouchRecording() {
@@ -201,11 +181,7 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestGamepadRecording() {
-        if (physicalRecordingAvailable || MacroPadSettings.skipGamepadRecordDialog.value) {
-            startGamepadRecording()
-        } else {
-            showRecordGamepadDialog = true
-        }
+        startGamepadRecording()
     }
 
     LaunchedEffect(recordedTap) {
@@ -236,18 +212,6 @@ internal fun MacroTimelineSubPageContent(
         TouchRecordingManager.resetState()
     }
 
-    LaunchedEffect(gamepadRecordingState) {
-        val recorded = gamepadRecordingState as? GamepadRecordingState.Done ?: return@LaunchedEffect
-        val nextStart = steps.totalDurationMs()
-        val shiftedSteps = recorded.steps.offsetBy(nextStart)
-        pushUndo(steps)
-        steps = steps + shiftedSteps
-        if (recordingStartedGamepad) GamepadInjector.stop()
-        recordingStartedGamepad = false
-        GamepadRecordingManager.resetState()
-        showGamepadRecordingOverlay = false
-    }
-
     LaunchedEffect(physicalRecordingState) {
         val recorded = physicalRecordingState as? GamepadRecordingState.Done ?: return@LaunchedEffect
         val nextStart = steps.totalDurationMs()
@@ -255,8 +219,6 @@ internal fun MacroTimelineSubPageContent(
         pushUndo(steps)
         steps = steps + shiftedSteps
         PhysicalGamepadRecordingManager.resetState()
-        usingPhysicalRecorder = false
-        showPhysicalRecordingSheet = false
     }
 
     // ── Save & Exit Action Row ───────────────────────────────────────────────
@@ -506,64 +468,6 @@ internal fun MacroTimelineSubPageContent(
                 showRecordTouchDialog = false
             },
             onCancel = { showRecordTouchDialog = false },
-        )
-    }
-
-    if (showRecordGamepadDialog) {
-        GamepadRecordStartDialog(
-            onStart = { startGamepadRecording() },
-            onCancel = { showRecordGamepadDialog = false },
-            onDontShowAgain = {
-                MacroPadSettings.setSkipGamepadRecordDialog(true)
-                startGamepadRecording()
-            },
-        )
-    }
-
-    if (showPhysicalRecordingSheet) {
-        PhysicalGamepadRecordingSheet(
-            state = physicalRecordingState,
-            swapFaceButtons = swapFaceButtons,
-            onStop = { PhysicalGamepadRecordingManager.finishRecording() },
-            onCancel = { PhysicalGamepadRecordingManager.cancelRecording() },
-        )
-    }
-
-    val activeGamepadRecording = gamepadRecordingState as? GamepadRecordingState.Recording
-    if (showGamepadRecordingOverlay && activeGamepadRecording != null) {
-        GamepadRecordingOverlay(
-            state = activeGamepadRecording,
-            swapFaceButtons = swapFaceButtons,
-            onButtonDown = { code ->
-                GamepadInjector.buttonDown(code)
-                GamepadRecordingManager.recordButtonDown(code)
-            },
-            onButtonUp = { code ->
-                GamepadInjector.buttonUp(code)
-                GamepadRecordingManager.recordButtonUp(code)
-            },
-            onDpadChanged = { x, y ->
-                GamepadInjector.hat(0, x)
-                GamepadInjector.hat(1, y)
-                GamepadRecordingManager.setDpad(x, y)
-            },
-            onJoystickChanged = { stick, x, y ->
-                val snapped = GamepadRecordingManager.setJoystick(stick, x, y)
-                val axisX = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_X else GamepadKeycodes.ABS_Z
-                val axisY = if (stick == JoystickStick.LEFT) GamepadKeycodes.ABS_Y else GamepadKeycodes.ABS_RZ
-                GamepadInjector.joystick(axisX, (snapped.first * 32767).toInt())
-                GamepadInjector.joystick(axisY, (snapped.second * 32767).toInt())
-            },
-            onStop = {
-                scope.launch {
-                    GamepadRecordingManager.finishRecording()
-                }
-            },
-            onCancel = {
-                scope.launch {
-                    GamepadRecordingManager.cancelRecording()
-                }
-            },
         )
     }
 }

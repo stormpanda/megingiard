@@ -80,10 +80,13 @@ import com.stormpanda.megingiard.config.MegingiardExport
 import com.stormpanda.megingiard.keyboard.KeyboardScreen
 import com.stormpanda.megingiard.keyboard.KeyboardSettingsOverlay
 import com.stormpanda.megingiard.macropad.BackgroundSettingsOverlay
+import com.stormpanda.megingiard.macropad.GamepadRecordingState
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.MacroPadEditor
 import com.stormpanda.megingiard.macropad.MacroPadScreen
 import com.stormpanda.megingiard.macropad.MacroPadState
+import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
+import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.CutoutLayoutEditor
@@ -94,6 +97,7 @@ import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
 import com.stormpanda.megingiard.services.MegingiardAccessibilityService
 import com.stormpanda.megingiard.settings.GlobalSettingsScreen
+import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.touchpad.FullscreenMouseOverlay
 import com.stormpanda.megingiard.touchpad.TouchpadSettingsOverlay
@@ -148,6 +152,8 @@ fun MainAppScreen() {
     val isGesturesEnabled = !isAnyMenuOpen && !isFullscreenKeyboardActive && !isFullscreenMouseActive && !isViewportEditActive
 
     val showPromptDialog by AppStateManager.isPrivdPromptActive.collectAsState()
+    val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
+    val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
     LaunchedEffect(isBackgroundSettingsActive) {
         if (isBackgroundSettingsActive) {
@@ -454,6 +460,21 @@ fun MainAppScreen() {
 
             if (recordingRequested) {
                 TouchRecordingOverlay()
+            }
+
+            if (physicalRecordingState is GamepadRecordingState.Recording) {
+                PhysicalGamepadRecordingSheet(
+                    state = physicalRecordingState,
+                    swapFaceButtons = swapFaceButtons,
+                    onStop = {
+                        PhysicalGamepadRecordingManager.finishRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                    onCancel = {
+                        PhysicalGamepadRecordingManager.cancelRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                )
             }
 
             AnimatedVisibility(

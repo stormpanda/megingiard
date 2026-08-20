@@ -292,11 +292,17 @@ Open Settings to create a layout.</string>
     <string name="privd_deadzone_ok">OK</string>
     <string name="privd_deadzone_cancel">Cancel</string>
 
-    <string name="privd_recording_physical_title">Recording Physical Controller…</string>
-    <string name="privd_recording_physical_hint">Press buttons and move the sticks on your physical gamepad. Tap Stop when done.</string>
+    <string name="privd_recording_physical_title">Recording Controller Input…</string>
+    <string name="privd_recording_physical_hint">Press buttons and move sticks on your physical gamepad. Idle pauses are trimmed automatically.</string>
     <string name="privd_recording_physical_pressed">Pressed: %1$s</string>
     <string name="privd_recording_physical_stick_left">Left stick: %1$s, %2$s</string>
     <string name="privd_recording_physical_stick_right">Right stick: %1$s, %2$s</string>
+    <string name="privd_recording_physical_stick_neutral">Neutral</string>
+    <string name="privd_recording_physical_actions_count" formatted="false">%1$d actions</string>
+    <string name="privd_recording_physical_no_buttons">Waiting for controller input…</string>
+    <string name="privd_recording_physical_dpad_title">D-Pad: %1$s</string>
+    <string name="privd_recording_physical_stick_l_label">L Stick</string>
+    <string name="privd_recording_physical_stick_r_label">R Stick</string>
     <string name="privd_recording_physical_stop">Stop &amp; Save</string>
     <string name="privd_recording_physical_cancel">Cancel</string>
 
