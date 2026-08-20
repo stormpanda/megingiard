@@ -4,7 +4,9 @@ import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -15,6 +17,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -24,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -59,6 +63,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -146,6 +151,7 @@ private const val GC_DESTRUCTIVE_BORDER_ALPHA = 0.6f
 private const val GC_SWATCH_BORDER_ALPHA = 0.3f
 private const val GC_SLIDER_TRACK_BORDER_ALPHA = 0.25f
 private const val GC_ANIM_DURATION_MS = 150
+private const val GC_SPLIT_ANIM_DURATION_MS = 220
 private const val GC_UNFOCUSED_MAX_LINES = 2
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
 private const val GC_DISABLED_CARD_ALPHA = 0.38f
@@ -1337,6 +1343,12 @@ fun GamepadSaveExitActionRow(
             Modifier
         }
 
+    val splitFraction by animateFloatAsState(
+        targetValue = if (showExitPrompt) 1f else 0f,
+        animationSpec = tween(durationMillis = GC_SPLIT_ANIM_DURATION_MS, easing = FastOutSlowInEasing),
+        label = "saveExitSplitFraction",
+    )
+
     val effectiveTitle =
         if (showExitPrompt) {
             stringResource(R.string.gamepad_action_save_and_exit)
@@ -1350,35 +1362,79 @@ fun GamepadSaveExitActionRow(
             description
         }
 
-    Row(
-        modifier = modifier.then(bivrModifier).fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(GC_SPACING_10),
-        verticalAlignment = Alignment.CenterVertically,
+    BoxWithConstraints(
+        modifier = modifier.then(bivrModifier).fillMaxWidth().animateContentSize(),
     ) {
-        GamepadActionCard(
-            title = effectiveTitle,
-            description = effectiveDescription,
-            actionText = saveActionText,
-            icon = saveIcon,
-            cardBgColor = cardBgColor,
-            actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
-            enabled = enabled,
-            onClick = onSave,
-            itemKey = itemKey,
-            modifier = Modifier.weight(1f).then(saveReqModifier),
-        )
+        val totalWidth = maxWidth
+        val targetCardWidth = ((totalWidth - GC_SPACING_10) / 2f).coerceAtLeast(0.dp)
+        val currentSpacing = GC_SPACING_10 * splitFraction
+        val card2VisibleWidth = targetCardWidth * splitFraction
+        val card1VisibleWidth =
+            (
+                totalWidth - (
+                    if (splitFraction >
+                        0.001f
+                    ) {
+                        card2VisibleWidth + currentSpacing
+                    } else {
+                        0.dp
+                    }
+                )
+            ).coerceAtLeast(0.dp)
 
-        if (showExitPrompt) {
-            GamepadActionCard(
-                title = stringResource(R.string.gamepad_action_discard_and_exit),
-                description = stringResource(R.string.gamepad_action_discard_and_exit_desc),
-                actionText = stringResource(R.string.gamepad_action_discard),
-                icon = Icons.Rounded.Close,
-                isDestructive = true,
-                onClick = onDiscard,
-                itemKey = "discard_and_exit",
-                modifier = Modifier.weight(1f),
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .width(card1VisibleWidth)
+                        .clipToBounds(),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                GamepadActionCard(
+                    title = effectiveTitle,
+                    description = effectiveDescription,
+                    actionText = saveActionText,
+                    icon = saveIcon,
+                    cardBgColor = cardBgColor,
+                    actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
+                    enabled = enabled,
+                    onClick = onSave,
+                    itemKey = itemKey,
+                    modifier =
+                        Modifier
+                            .requiredWidth(if (showExitPrompt) targetCardWidth else totalWidth)
+                            .then(saveReqModifier),
+                )
+            }
+
+            if (splitFraction > 0.001f) {
+                Spacer(modifier = Modifier.width(currentSpacing))
+
+                Box(
+                    modifier =
+                        Modifier
+                            .width(card2VisibleWidth)
+                            .clipToBounds()
+                            .graphicsLayer {
+                                alpha = splitFraction
+                            },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    GamepadActionCard(
+                        title = stringResource(R.string.gamepad_action_discard_and_exit),
+                        description = stringResource(R.string.gamepad_action_discard_and_exit_desc),
+                        actionText = stringResource(R.string.gamepad_action_discard),
+                        icon = Icons.Rounded.Close,
+                        isDestructive = true,
+                        onClick = onDiscard,
+                        itemKey = "discard_and_exit",
+                        modifier = Modifier.requiredWidth(targetCardWidth),
+                    )
+                }
+            }
         }
     }
 }
