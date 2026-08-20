@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -351,21 +352,6 @@ internal fun ColorWheelSubPageContent(
 
     val hex = String.format("#%06X", 0xFFFFFF and workingColor.toArgb())
 
-    GamepadActionCard(
-        title = title,
-        description = hex,
-        icon = Icons.Rounded.Palette,
-        actionLeadingContent = {
-            GamepadColorSwatch(
-                color = workingColor,
-                isSelected = true,
-            )
-        },
-        actionText = stringResource(R.string.gamepad_action_save),
-        onClick = { onSaveColor(workingColor) },
-        modifier = Modifier.firstDeckItem(),
-    )
-
     GamepadSliderCard(
         title = stringResource(R.string.settings_color_hue),
         description = stringResource(R.string.settings_color_hue_desc),
@@ -376,6 +362,7 @@ internal fun ColorWheelSubPageContent(
         step = 5f,
         trackBrush = hueGradient,
         thumbColor = Color(AndroidColor.HSVToColor(floatArrayOf(hue, 1f, 1f))),
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadSliderCard(
@@ -416,4 +403,18 @@ internal fun ColorWheelSubPageContent(
             icon = Icons.Rounded.Opacity,
         )
     }
+
+    GamepadActionCard(
+        title = title,
+        description = hex,
+        icon = Icons.Rounded.Save,
+        actionLeadingContent = {
+            GamepadColorSwatch(
+                color = workingColor,
+                isSelected = true,
+            )
+        },
+        actionText = stringResource(R.string.gamepad_action_save),
+        onClick = { onSaveColor(workingColor) },
+    )
 }

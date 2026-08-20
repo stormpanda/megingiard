@@ -240,22 +240,6 @@ internal fun MacroTimelineSubPageContent(
         PhysicalGamepadRecordingManager.resetState()
     }
 
-    // ── Save & Exit Action Row ───────────────────────────────────────────────
-    GamepadSaveExitActionRow(
-        title = stringResource(R.string.macropad_macro_editor_save),
-        description = stringResource(R.string.macropad_macro_editor_save),
-        cardBgColor = saveCardBgColor,
-        saveActionText = stringResource(R.string.gamepad_action_save),
-        saveIcon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
-        modifier = Modifier.firstDeckItem(),
-    )
-
     // ── General Section ──────────────────────────────────────────────────────
     GamepadSectionHeader(
         text = stringResource(R.string.macropad_macro_section_general),
@@ -267,6 +251,7 @@ internal fun MacroTimelineSubPageContent(
         value = localName,
         onValueChange = { localName = it },
         icon = Icons.Rounded.Edit,
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadActionCard(
@@ -451,6 +436,21 @@ internal fun MacroTimelineSubPageContent(
             AppLog.i(TAG, "Deleting macro '${macro.name}' (${macro.id})")
             onDelete()
         },
+    )
+
+    // ── Save & Exit Action Row ───────────────────────────────────────────────
+    GamepadSaveExitActionRow(
+        title = stringResource(R.string.macropad_editor_save_macro_title),
+        description = stringResource(R.string.macropad_editor_save_macro_desc),
+        cardBgColor = saveCardBgColor,
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
+        enabled = isConfirmEnabled,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 
     // ── Dialogs & Overlays ───────────────────────────────────────────────────

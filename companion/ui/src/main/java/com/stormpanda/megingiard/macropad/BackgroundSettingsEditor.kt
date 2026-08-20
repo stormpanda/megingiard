@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Pinch
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ZoomIn
 import androidx.compose.material3.Icon
@@ -643,8 +644,8 @@ internal fun BackgroundCropSubPageContent(
     GamepadActionCard(
         title = stringResource(R.string.macropad_editor_bg_crop_save_title),
         description = stringResource(R.string.macropad_editor_bg_crop_save_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
-        icon = Icons.Rounded.Crop,
+        actionText = stringResource(R.string.gamepad_action_save),
+        icon = Icons.Rounded.Save,
         cardBgColor = saveCardBgColor,
         onClick = {
             val finalOffsetX = if (containerSize.width > 0) offsetXState / containerSize.width else 0f

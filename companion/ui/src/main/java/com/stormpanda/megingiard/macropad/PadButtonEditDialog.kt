@@ -348,22 +348,6 @@ internal fun EditButtonSubPageContent(
             onDiscard = onDiscard,
         )
 
-    // ── Save Option at the Very Top ─────────────────────────────────
-    GamepadSaveExitActionRow(
-        title = stringResource(if (isNew) R.string.macropad_editor_create_button_title else R.string.macropad_editor_save_button_title),
-        description = stringResource(if (isNew) R.string.macropad_editor_create_button_desc else R.string.macropad_editor_save_button_desc),
-        cardBgColor = saveCardBgColor,
-        saveActionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
-        saveIcon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
-        modifier = Modifier.firstDeckItem(),
-    )
-
     // Label & Icon input
     if (showLabelAndIcon) {
         GamepadTextFieldCard(
@@ -373,6 +357,7 @@ internal fun EditButtonSubPageContent(
             value = label,
             onValueChange = { label = it },
             icon = Icons.Rounded.Edit,
+            modifier = Modifier.firstDeckItem(),
         )
 
         GamepadActionCard(
@@ -699,6 +684,24 @@ internal fun EditButtonSubPageContent(
                 )
             }
         }
+
+        // ── Save & Exit Action Row ───────────────────────────────────────
+        GamepadSaveExitActionRow(
+            title = stringResource(if (isNew) R.string.macropad_editor_create_button_title else R.string.macropad_editor_save_button_title),
+            description =
+                stringResource(
+                    if (isNew) R.string.macropad_editor_create_button_desc else R.string.macropad_editor_save_button_desc,
+                ),
+            cardBgColor = saveCardBgColor,
+            saveActionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
+            saveIcon = Icons.Rounded.Save,
+            enabled = isConfirmEnabled,
+            showExitPrompt = promptState.showExitPrompt,
+            saveFocusRequester = promptState.focusRequester,
+            bringIntoViewRequester = promptState.bringIntoViewRequester,
+            onSave = promptState.onSave,
+            onDiscard = promptState.onDiscard,
+        )
     }
 }
 
@@ -888,37 +891,6 @@ internal fun ButtonColorSubPageContent(
             onDiscard = onDiscard,
         )
 
-    // ── Save Option at Top (with Saved vs In-Flight Previews) ──
-    GamepadSaveExitActionRow(
-        title = stringResource(R.string.gamepad_action_save),
-        description = stringResource(R.string.macropad_btn_color_save_desc),
-        cardBgColor = saveCardBgColor,
-        saveActionLeadingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(PBD_SAVE_PREVIEW_SPACING),
-            ) {
-                renderPreviewFace(savedResolvedText, savedResolvedBorder, savedResolvedBg)
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = PBD_ARROW_ALPHA),
-                    modifier = Modifier.size(PBD_ARROW_SIZE),
-                )
-                renderPreviewFace(currentResolvedText, currentResolvedBorder, currentResolvedBg)
-            }
-        },
-        saveActionText = stringResource(R.string.gamepad_action_save),
-        saveIcon = Icons.Rounded.Save,
-        enabled = true,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
-        modifier = Modifier.firstDeckItem(),
-    )
-
     // Option 1: Layout Default
     GamepadActionCard(
         title = stringResource(R.string.layout_settings_color_layout_default),
@@ -937,6 +909,7 @@ internal fun ButtonColorSubPageContent(
                 stringResource(R.string.gamepad_action_select)
             },
         onClick = { selectedOption = null },
+        modifier = Modifier.firstDeckItem(),
     )
 
     // Option 2: Theme Neutral
@@ -1009,5 +982,35 @@ internal fun ButtonColorSubPageContent(
                 inFlightButton,
             )
         },
+    )
+
+    // ── Save & Exit Action Row ───────────────────────────────────────
+    GamepadSaveExitActionRow(
+        title = stringResource(R.string.macropad_editor_save_button_colors_title),
+        description = stringResource(R.string.macropad_btn_color_save_desc),
+        cardBgColor = saveCardBgColor,
+        saveActionLeadingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PBD_SAVE_PREVIEW_SPACING),
+            ) {
+                renderPreviewFace(savedResolvedText, savedResolvedBorder, savedResolvedBg)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    tint = colors.onSurfaceSecondary.copy(alpha = PBD_ARROW_ALPHA),
+                    modifier = Modifier.size(PBD_ARROW_SIZE),
+                )
+                renderPreviewFace(currentResolvedText, currentResolvedBorder, currentResolvedBg)
+            }
+        },
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
+        enabled = true,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 }

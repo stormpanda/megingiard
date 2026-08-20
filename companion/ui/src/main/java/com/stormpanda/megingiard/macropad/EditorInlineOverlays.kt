@@ -153,7 +153,7 @@ internal fun NewProfileSubPageContent(
         title = stringResource(R.string.macropad_editor_create_profile_title),
         description = stringResource(R.string.macropad_editor_create_profile_desc),
         saveActionText = stringResource(R.string.gamepad_action_create),
-        saveIcon = Icons.Rounded.Add,
+        saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
         showExitPrompt = promptState.showExitPrompt,
         saveFocusRequester = promptState.focusRequester,

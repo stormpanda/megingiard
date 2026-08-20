@@ -1422,6 +1422,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_create_button_title">Button erstellen</string>
     <string name="macropad_editor_save_button_title">Button speichern</string>
     <string name="macropad_editor_save_button_desc">Änderungen an diesem Button anwenden und speichern</string>
+    <string name="macropad_editor_save_macro_title">Makro speichern</string>
+    <string name="macropad_editor_save_macro_desc">Änderungen und Makrosequenz speichern</string>
+    <string name="macropad_editor_save_step_title">Schritt speichern</string>
+    <string name="macropad_editor_save_step_desc">Änderungen an diesem Makroschritt speichern</string>
+    <string name="macropad_editor_create_step_title">Schritt hinzufügen</string>
+    <string name="macropad_editor_create_step_desc">Neuen Schritt zur Makrosequenz hinzufügen</string>
+    <string name="macropad_editor_save_layout_desc">Layout-Erscheinungsbild speichern</string>
     <string name="macropad_editor_new_layout_default_name">Neues Layout</string>
     <string name="macropad_editor_new_button_default_label">Neuer Button</string>
     <string name="gamepad_action_save_and_exit">Speichern &amp; Beenden</string>

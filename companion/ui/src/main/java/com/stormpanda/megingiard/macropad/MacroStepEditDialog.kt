@@ -261,25 +261,6 @@ internal fun MacroStepEditSubPageContent(
             },
         )
 
-    GamepadSaveExitActionRow(
-        title =
-            if (step == null) {
-                stringResource(R.string.macropad_macro_step_new)
-            } else {
-                stringResource(R.string.macropad_macro_step_edit)
-            },
-        description = stringResource(R.string.macropad_macro_editor_save),
-        saveActionText = stringResource(R.string.gamepad_action_save),
-        saveIcon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
-        modifier = Modifier.firstDeckItem(),
-    )
-
     // ── Action Type Section ──────────────────────────────────────────────────
     GamepadSectionHeader(
         text = stringResource(R.string.macro_step_action_type_title),
@@ -319,6 +300,7 @@ internal fun MacroStepEditSubPageContent(
             val nextIdx = (currentTypeIdx + 1) % availableTypes.size
             stepType = availableTypes[nextIdx]
         },
+        modifier = Modifier.firstDeckItem(),
     )
 
     // ── Action Details Section ───────────────────────────────────────────────
@@ -550,4 +532,33 @@ internal fun MacroStepEditSubPageContent(
             )
         }
     }
+
+    // ── Save & Exit Action Row ───────────────────────────────────────────────
+    GamepadSaveExitActionRow(
+        title =
+            if (step == null) {
+                stringResource(R.string.macropad_editor_create_step_title)
+            } else {
+                stringResource(R.string.macropad_editor_save_step_title)
+            },
+        description =
+            if (step == null) {
+                stringResource(R.string.macropad_editor_create_step_desc)
+            } else {
+                stringResource(R.string.macropad_editor_save_step_desc)
+            },
+        saveActionText =
+            if (step == null) {
+                stringResource(R.string.gamepad_action_create)
+            } else {
+                stringResource(R.string.gamepad_action_save)
+            },
+        saveIcon = Icons.Rounded.Save,
+        enabled = isConfirmEnabled,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
+    )
 }

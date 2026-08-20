@@ -1413,6 +1413,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_create_button_title">Create Button</string>
     <string name="macropad_editor_save_button_title">Save Button</string>
     <string name="macropad_editor_save_button_desc">Apply and save changes to this button</string>
+    <string name="macropad_editor_save_macro_title">Save Macro</string>
+    <string name="macropad_editor_save_macro_desc">Apply and save macro sequence changes</string>
+    <string name="macropad_editor_save_step_title">Save Step</string>
+    <string name="macropad_editor_save_step_desc">Apply and save changes to this macro step</string>
+    <string name="macropad_editor_create_step_title">Add Step</string>
+    <string name="macropad_editor_create_step_desc">Add new step to macro sequence</string>
+    <string name="macropad_editor_save_layout_desc">Apply and save layout appearance configuration</string>
     <string name="macropad_editor_new_layout_default_name">New Layout</string>
     <string name="macropad_editor_new_button_default_label">New Button</string>
     <string name="gamepad_action_save_and_exit">Save &amp; Exit</string>
