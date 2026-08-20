@@ -1285,7 +1285,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_add_button_card_desc">Neue Taste erstellen und auf der Arbeitsfläche platzieren</string>
     <string name="macropad_editor_create_button_desc">Neue interaktive Taste erstellen und konfigurieren</string>
     <string name="macropad_editor_no_buttons_in_layout">Noch keine Tasten in diesem Layout vorhanden.</string>
-    <string name="macropad_editor_open_timeline_title">Makro-Timeline-Editor öffnen</string>
+    <string name="macropad_editor_open_timeline_title">Neues Makro erstellen</string>
     <string name="macropad_editor_open_timeline_desc">Zeitgesteuerte Eingabemakro-Sequenzen erstellen, aufnehmen und bearbeiten</string>
     <string name="macropad_editor_no_macros_title">Noch keine Makros erstellt</string>
     <string name="macropad_editor_no_macros_desc">Eingabemakro-Sequenzen erstellen und bearbeiten</string>

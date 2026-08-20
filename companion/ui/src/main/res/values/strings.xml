@@ -1276,7 +1276,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_add_button_card_desc">Create a new button and place it on this canvas</string>
     <string name="macropad_editor_create_button_desc">Create and configure a new interactive button</string>
     <string name="macropad_editor_no_buttons_in_layout">No buttons in this layout yet.</string>
-    <string name="macropad_editor_open_timeline_title">Open Macro Timeline Editor</string>
+    <string name="macropad_editor_open_timeline_title">Create New Macro</string>
     <string name="macropad_editor_open_timeline_desc">Create, record, and edit timed input macro sequences</string>
     <string name="macropad_editor_no_macros_title">No macros created yet</string>
     <string name="macropad_editor_no_macros_desc">Create and edit input macro sequences</string>
