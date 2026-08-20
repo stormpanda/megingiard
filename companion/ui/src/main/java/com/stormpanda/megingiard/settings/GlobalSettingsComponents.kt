@@ -12,18 +12,29 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.stormpanda.megingiard.R
 
-internal enum class SettingsCategory(
-    @StringRes val titleResId: Int,
-    val icon: ImageVector,
-) {
-    GENERAL(R.string.settings_jump_general, Icons.Rounded.Tune),
-    INPUT(R.string.settings_jump_input, Icons.Rounded.Gamepad),
-    APPEARANCE(R.string.settings_jump_appearance, Icons.Rounded.Palette),
-    DATA(R.string.settings_jump_data, Icons.Rounded.Storage),
-    CONFIGURATION(R.string.settings_jump_config, Icons.Rounded.Build),
-    UPDATES(R.string.settings_jump_updates, Icons.Rounded.SystemUpdate),
-    DIAGNOSTICS(R.string.settings_jump_diagnostics, Icons.Rounded.HealthAndSafety),
-}
+val SettingsCategory.titleResId: Int
+    get() =
+        when (this) {
+            SettingsCategory.GENERAL -> R.string.settings_jump_general
+            SettingsCategory.INPUT -> R.string.settings_jump_input
+            SettingsCategory.APPEARANCE -> R.string.settings_jump_appearance
+            SettingsCategory.DATA -> R.string.settings_jump_data
+            SettingsCategory.CONFIGURATION -> R.string.settings_jump_config
+            SettingsCategory.UPDATES -> R.string.settings_jump_updates
+            SettingsCategory.DIAGNOSTICS -> R.string.settings_jump_diagnostics
+        }
+
+val SettingsCategory.icon: ImageVector
+    get() =
+        when (this) {
+            SettingsCategory.GENERAL -> Icons.Rounded.Tune
+            SettingsCategory.INPUT -> Icons.Rounded.Gamepad
+            SettingsCategory.APPEARANCE -> Icons.Rounded.Palette
+            SettingsCategory.DATA -> Icons.Rounded.Storage
+            SettingsCategory.CONFIGURATION -> Icons.Rounded.Build
+            SettingsCategory.UPDATES -> Icons.Rounded.SystemUpdate
+            SettingsCategory.DIAGNOSTICS -> Icons.Rounded.HealthAndSafety
+        }
 
 internal fun ThemeMode.displayNameResId(): Int =
     when (this) {

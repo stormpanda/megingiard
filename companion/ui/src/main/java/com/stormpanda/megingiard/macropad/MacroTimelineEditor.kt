@@ -89,6 +89,9 @@ import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
+import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberBezelBrush
@@ -564,11 +567,31 @@ internal fun MacroTimelineSubPageContent(
     if (showRecordTouchDialog) {
         TouchRecordStartDialog(
             onRecordTap = {
+                val suspendConfig =
+                    PrimaryModalConfig(
+                        type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
+                        payload =
+                            PrimaryModalPayload.MacroTimeline(
+                                macroId = macro.id,
+                                focusStepIndex = steps.size,
+                            ),
+                    )
+                AppStateManager.suspendCurrentAndDismiss(suspendConfig)
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                 showRecordTouchDialog = false
             },
             onRecordGesture = {
+                val suspendConfig =
+                    PrimaryModalConfig(
+                        type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
+                        payload =
+                            PrimaryModalPayload.MacroTimeline(
+                                macroId = macro.id,
+                                focusStepIndex = steps.size,
+                            ),
+                    )
+                AppStateManager.suspendCurrentAndDismiss(suspendConfig)
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                 showRecordTouchDialog = false

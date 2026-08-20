@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
@@ -166,6 +167,7 @@ private fun TapCaptureOverlay(
                     delay(TRO_FEEDBACK_TAP_DURATION_MS)
                     TouchInjector.injectTouch(TouchAction.UP, normX, normY)
                     TouchRecordingManager.onTapRecorded(normX, normY)
+                    AppStateManager.resumeSuspended()
                 },
     )
 }
@@ -199,10 +201,14 @@ private fun GestureRecordingOverlay(
         TouchRecordingControls(
             modifier = Modifier.align(Alignment.BottomCenter),
             bottomBarHeightPx = bottomBarHeightPx,
-            onCancel = { TouchRecordingManager.cancelRecording() },
+            onCancel = {
+                TouchRecordingManager.cancelRecording()
+                AppStateManager.resumeSuspended()
+            },
             onStop = {
                 flushCurrentSegment()
                 TouchRecordingManager.finishRecording()
+                AppStateManager.resumeSuspended()
             },
         )
     }

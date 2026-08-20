@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
@@ -108,6 +109,8 @@ import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberGamepadBringIntoViewSpec
@@ -193,17 +196,77 @@ fun MacroPadEditor(
     var internalShowEditorHelp by remember { mutableStateOf(false) }
     val effectiveShowHelp = showHelp || internalShowEditorHelp
 
+    // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
+    var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
+    var macroTimelineFocusStepIndex by remember { mutableStateOf<Int?>(null) }
+    var appearanceDraft by remember { mutableStateOf<PadLayout?>(null) }
+
+    val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsState()
+
+    LaunchedEffect(activePrimaryModal) {
+        when (val payload = activePrimaryModal?.payload) {
+            is PrimaryModalPayload.MacroPad -> {
+                selectedSection = payload.section
+                val profId = payload.profileId
+                val layId = payload.layoutId
+                val macId = payload.macroId
+                if (profId != null) {
+                    MacroPadState.setActiveProfileId(profId)
+                    subPageStack = listOf(MacroPadSubPage.EditProfile(profId))
+                } else if (layId != null) {
+                    selectedSection = EditorSection.LAYOUTS
+                    subPageStack = listOf(MacroPadSubPage.LayoutAppearance(layId))
+                } else if (macId != null) {
+                    selectedSection = EditorSection.MACROS
+                    subPageStack = listOf(MacroPadSubPage.MacroTimeline(macId))
+                } else if (payload.editPositions) {
+                    selectedSection = EditorSection.BUTTONS
+                    subPageStack = listOf(MacroPadSubPage.EditButtonPositions)
+                }
+                if (payload.focusStepIndex != null) {
+                    macroTimelineFocusStepIndex = payload.focusStepIndex
+                }
+            }
+
+            is PrimaryModalPayload.LayoutSettings -> {
+                selectedSection = EditorSection.LAYOUTS
+                subPageStack = listOf(MacroPadSubPage.LayoutAppearance(payload.layoutId))
+            }
+
+            is PrimaryModalPayload.ProfileSettings -> {
+                selectedSection = EditorSection.PROFILES
+                val profId = payload.profileId
+                MacroPadState.setActiveProfileId(profId)
+                subPageStack = listOf(MacroPadSubPage.EditProfile(profId))
+            }
+
+            is PrimaryModalPayload.MacroTimeline -> {
+                selectedSection = EditorSection.MACROS
+                val macId = payload.macroId
+                if (macId != null) {
+                    subPageStack = listOf(MacroPadSubPage.MacroTimeline(macId))
+                }
+                if (payload.focusStepIndex != null) {
+                    macroTimelineFocusStepIndex = payload.focusStepIndex
+                }
+            }
+
+            is PrimaryModalPayload.ButtonInspector -> {
+                selectedSection = EditorSection.BUTTONS
+                MacroPadState.setSelectedButtonId(payload.buttonId)
+                subPageStack = listOf(MacroPadSubPage.EditButtonPositions)
+            }
+
+            else -> {}
+        }
+    }
+
     LaunchedEffect(selectedSection, subPageStack) {
         val isEditingPositionsSubPage =
             selectedSection == EditorSection.BUTTONS &&
                 subPageStack.any { it is MacroPadSubPage.EditButtonPositions }
         MacroPadState.setEditingButtonPositions(isEditingPositionsSubPage)
     }
-
-    // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
-    var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
-    var macroTimelineFocusStepIndex by remember { mutableStateOf<Int?>(null) }
-    var appearanceDraft by remember { mutableStateOf<PadLayout?>(null) }
 
     LaunchedEffect(subPageStack) {
         if (subPageStack.none {
@@ -464,6 +527,9 @@ fun MacroPadEditor(
                                                 onReorderLayouts = {
                                                     subPageStack = subPageStack + MacroPadSubPage.ReorderLayouts
                                                 },
+                                                onOpenQuickActions = {
+                                                    subPageStack = subPageStack + MacroPadSubPage.QuickActions
+                                                },
                                                 onDeleteLayout = {
                                                     if (activeLayout != null) {
                                                         val deletedName = activeLayout.name
@@ -690,6 +756,18 @@ fun MacroPadEditor(
                                         ReorderProfilesSubPage(
                                             profiles = profiles,
                                         )
+                                    }
+
+                                    is MacroPadSubPage.QuickActions -> {
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_layout),
+                                                    stringResource(R.string.quick_actions_title),
+                                                ),
+                                        ) {
+                                            QuickActionsSubPageContent()
+                                        }
                                     }
 
                                     is MacroPadSubPage.NewLayout -> {
@@ -1825,6 +1903,7 @@ private fun LayoutsDeck(
     activeLayout: PadLayout?,
     accentColor: Color,
     onSelectLayout: (String) -> Unit,
+    onOpenQuickActions: () -> Unit,
     onNewLayout: () -> Unit,
     onEditAppearance: () -> Unit,
     onEditBackground: () -> Unit,
@@ -1858,6 +1937,14 @@ private fun LayoutsDeck(
             }
         },
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.quick_actions_title),
+        description = stringResource(R.string.quick_actions_desc),
+        actionText = stringResource(R.string.gamepad_action_open),
+        icon = Icons.Rounded.Bolt,
+        onClick = onOpenQuickActions,
     )
 
     GamepadActionCard(
@@ -2529,6 +2616,11 @@ private fun MacroPadEditorHelpModal(
         HelpEntry(
             label = stringResource(R.string.help_editor_layouts_label),
             description = stringResource(R.string.help_editor_layouts_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Bolt,
+            label = stringResource(R.string.quick_actions_title),
+            description = stringResource(R.string.quick_actions_desc),
         )
         HelpEntry(
             icon = Icons.Rounded.Add,

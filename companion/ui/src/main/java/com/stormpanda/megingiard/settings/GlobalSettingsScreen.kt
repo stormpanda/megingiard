@@ -117,6 +117,7 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.LocalFirstContentRequester
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.launchUrlOnPrimaryDisplay
@@ -132,21 +133,6 @@ import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
 private const val TAG = "GlobalSettingsScreen"
-
-/**
- * Sub-pages that can be drilled into within [GlobalSettingsScreen].
- */
-internal enum class SettingsSubPage(
-    val parentCategory: SettingsCategory,
-) {
-    DEADZONES(SettingsCategory.INPUT),
-    STEAMGRIDDB_TOKEN(SettingsCategory.GENERAL),
-    CUSTOM_ACCENT(SettingsCategory.APPEARANCE),
-    CREATE_BACKUP(SettingsCategory.CONFIGURATION),
-    SHARE_PROFILE(SettingsCategory.CONFIGURATION),
-    RESTORE_BACKUP(SettingsCategory.CONFIGURATION),
-    RESTORE_REVIEW(SettingsCategory.CONFIGURATION),
-}
 
 private const val GS_RESTORE_COUNTDOWN_SECONDS = 5
 private const val GS_RESTORE_COUNTDOWN_INTERVAL_MS = 1_000L
@@ -245,6 +231,15 @@ fun GlobalSettingsScreen(
     var selectedCategory by remember { mutableStateOf(SettingsCategory.GENERAL) }
 
     val categoryList = remember { SettingsCategory.entries }
+    val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsState()
+
+    LaunchedEffect(activePrimaryModal) {
+        val payload = activePrimaryModal?.payload as? PrimaryModalPayload.GlobalSettings
+        if (payload != null) {
+            selectedCategory = payload.category
+            subPageStack = payload.subPage?.let { listOf(it) } ?: emptyList()
+        }
+    }
 
     LaunchedEffect(pendingInAppParsedImport) {
         if (pendingInAppParsedImport != null) {

@@ -6,12 +6,15 @@ import com.stormpanda.megingiard.macropad.AutoSwitchCoordinator
 import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PadProfile
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.navigation.NavDestination
+import com.stormpanda.megingiard.navigation.toPrimaryModalConfig
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.KeyboardSettings
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.PrimaryModalConfig
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -312,6 +315,15 @@ object AppStateManager {
     private val _activePrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
     val activePrimaryModal: StateFlow<PrimaryModalConfig?> = _activePrimaryModal.asStateFlow()
 
+    private val _currentNavDestination = MutableStateFlow<NavDestination?>(null)
+    val currentNavDestination: StateFlow<NavDestination?> = _currentNavDestination.asStateFlow()
+
+    private val _suspendedPrimaryModal = MutableStateFlow<PrimaryModalConfig?>(null)
+    val suspendedPrimaryModal: StateFlow<PrimaryModalConfig?> = _suspendedPrimaryModal.asStateFlow()
+
+    val hasSuspendedPrimaryModal: StateFlow<Boolean> =
+        _suspendedPrimaryModal.map { it != null }.stateIn(scope, SharingStarted.Eagerly, false)
+
     val isGlobalSettingsOpen: StateFlow<Boolean> =
         _uiMode.map { it == UiMode.GLOBAL_SETTINGS }.stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -465,8 +477,19 @@ object AppStateManager {
     val selectedCutoutId: StateFlow<String?> = _selectedCutoutId.asStateFlow()
 
     fun openPrimaryModal(config: PrimaryModalConfig) {
-        AppLog.i(TAG, "openPrimaryModal: type=${config.type}")
+        AppLog.i(TAG, "openPrimaryModal: type=${config.type} payload=${config.payload}")
         _activePrimaryModal.value = config
+        when (val payload = config.payload) {
+            is PrimaryModalPayload.CropSelector -> {
+                _activeCropCutoutId.value = payload.cutoutId
+            }
+
+            is PrimaryModalPayload.CutoutInspector -> {
+                _selectedCutoutId.value = payload.cutoutId
+            }
+
+            else -> {}
+        }
         when (config.type) {
             PrimaryModalType.GLOBAL_SETTINGS -> {
                 _uiMode.value = UiMode.GLOBAL_SETTINGS
@@ -501,11 +524,61 @@ object AppStateManager {
         openPrimaryModal(PrimaryModalConfig(type))
     }
 
+    /**
+     * Deep-links directly to any destination across single-screen and dual-screen modes.
+     */
+    fun navigateTo(destination: NavDestination) {
+        AppLog.i(TAG, "navigateTo: $destination")
+        _currentNavDestination.value = destination
+        when (destination) {
+            is NavDestination.CutoutLayoutEditor -> {
+                _selectedCutoutId.value = destination.cutoutId
+                setViewportEditActive(true)
+            }
+
+            else -> {
+                openPrimaryModal(destination.toPrimaryModalConfig())
+            }
+        }
+    }
+
+    /**
+     * Temporarily suspends current navigation/modal state (e.g. before recording touch gestures)
+     * and dismisses open modal overlays so the user can interact with the screen.
+     */
+    fun suspendCurrentAndDismiss(overrideConfig: PrimaryModalConfig? = null) {
+        val configToSuspend = overrideConfig ?: _activePrimaryModal.value
+        AppLog.i(TAG, "suspendCurrentAndDismiss: saving config=$configToSuspend")
+        _suspendedPrimaryModal.value = configToSuspend
+        closePrimaryModal()
+    }
+
+    /**
+     * Resumes the suspended modal destination (if any) back to the exact sub-menu / stack.
+     */
+    fun resumeSuspended() {
+        val suspended = _suspendedPrimaryModal.value
+        AppLog.i(TAG, "resumeSuspended: resuming config=$suspended")
+        _suspendedPrimaryModal.value = null
+        if (suspended != null) {
+            openPrimaryModal(suspended)
+        }
+    }
+
+    /**
+     * Clears any currently suspended modal state without reopening.
+     */
+    fun clearSuspended() {
+        AppLog.d(TAG, "clearSuspended")
+        _suspendedPrimaryModal.value = null
+    }
+
     fun closePrimaryModal() {
         AppLog.i(TAG, "closePrimaryModal: currentModal=${_activePrimaryModal.value?.type} currentUiMode=${_uiMode.value}")
         _activePrimaryModal.value = null
         _activeCropCutoutId.value = null
         _selectedCutoutId.value = null
+        _currentNavDestination.value = null
         wasViewportEditActiveBeforeSettings = false
         if (_uiMode.value == UiMode.LAYOUT_EDITOR ||
             _uiMode.value == UiMode.GLOBAL_SETTINGS ||

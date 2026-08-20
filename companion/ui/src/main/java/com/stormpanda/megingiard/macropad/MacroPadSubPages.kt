@@ -32,13 +32,6 @@ import android.graphics.Color as AndroidColor
 
 private const val TAG = "MacroPadSubPages"
 
-internal enum class EditorSection {
-    PROFILES,
-    LAYOUTS,
-    BUTTONS,
-    MACROS,
-}
-
 internal enum class LayoutColorTarget {
     TEXT,
     BORDER,
@@ -83,6 +76,10 @@ internal sealed interface MacroPadSubPage {
 
     data object ReorderProfiles : MacroPadSubPage {
         override val parentSection = EditorSection.PROFILES
+    }
+
+    data object QuickActions : MacroPadSubPage {
+        override val parentSection = EditorSection.LAYOUTS
     }
 
     data object NewLayout : MacroPadSubPage {

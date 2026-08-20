@@ -1381,6 +1381,26 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_discard_and_exit">Discard &amp; Exit</string>
     <string name="gamepad_action_discard_and_exit_desc">Revert changes and exit</string>
     <string name="gamepad_action_discard">Discard</string>
+    <!-- Quick Actions -->
+    <string name="quick_actions_title">Quick Actions</string>
+    <string name="quick_actions_desc">Jump directly to frequently used layout tools and preferences</string>
+    <string name="quick_actions_section_editor">Editor Shortcuts</string>
+    <string name="quick_actions_section_preferences">Quick Preferences</string>
+    <string name="quick_actions_section_data">Data &amp; Backup</string>
+    <string name="quick_action_edit_buttons">Arrange Button Positions</string>
+    <string name="quick_action_edit_buttons_desc">Move, resize, and position MacroPad buttons visually</string>
+    <string name="quick_action_cutouts">Configure Mirror Cutouts</string>
+    <string name="quick_action_cutouts_desc">Arrange, crop, and place screen mirroring cutouts</string>
+    <string name="quick_action_custom_accent">Custom Accent &amp; Theme</string>
+    <string name="quick_action_custom_accent_desc">Tune app-wide accent colors and visual themes</string>
+    <string name="quick_action_deadzones">Joystick Deadzones</string>
+    <string name="quick_action_deadzones_desc">Adjust stick deadzones and input sensitivity</string>
+    <string name="quick_action_steamgriddb">SteamGridDB API Token</string>
+    <string name="quick_action_steamgriddb_desc">Configure artwork scraping API credentials</string>
+    <string name="quick_action_backup">Create Config Backup</string>
+    <string name="quick_action_backup_desc">Export a portable .mgrd configuration backup archive</string>
+    <string name="quick_action_share_profile">Share Active Profile</string>
+    <string name="quick_action_share_profile_desc">Export the current profile to share or transfer</string>
 </resources>
 
 

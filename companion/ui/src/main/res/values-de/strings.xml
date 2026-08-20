@@ -1390,6 +1390,26 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_discard_and_exit">Verwerfen &amp; Beenden</string>
     <string name="gamepad_action_discard_and_exit_desc">Änderungen verwerfen und beenden</string>
     <string name="gamepad_action_discard">Verwerfen</string>
+    <!-- Quick Actions -->
+    <string name="quick_actions_title">Schnellaktionen</string>
+    <string name="quick_actions_desc">Direkt zu häufig verwendeten Layout-Werkzeugen und Einstellungen springen</string>
+    <string name="quick_actions_section_editor">Editor-Verknüpfungen</string>
+    <string name="quick_actions_section_preferences">Schnelleinstellungen</string>
+    <string name="quick_actions_section_data">Daten &amp; Sicherung</string>
+    <string name="quick_action_edit_buttons">Tastenpositionen anordnen</string>
+    <string name="quick_action_edit_buttons_desc">MacroPad-Tasten visuell verschieben und anpassen</string>
+    <string name="quick_action_cutouts">Spiegelungs-Ausschnitte anpassen</string>
+    <string name="quick_action_cutouts_desc">Ausschnitte der Bildschirmspiegelung anordnen und zuschneiden</string>
+    <string name="quick_action_custom_accent">Eigene Akzentfarbe &amp; Design</string>
+    <string name="quick_action_custom_accent_desc">App-weite Akzentfarben und Farbmodi anpassen</string>
+    <string name="quick_action_deadzones">Stick-Totzonen</string>
+    <string name="quick_action_deadzones_desc">Totzonen und Empfindlichkeit der Analogsticks konfigurieren</string>
+    <string name="quick_action_steamgriddb">SteamGridDB-API-Token</string>
+    <string name="quick_action_steamgriddb_desc">Zugangsdaten für automatischen Cover-Download einrichten</string>
+    <string name="quick_action_backup">Konfigurations-Backup erstellen</string>
+    <string name="quick_action_backup_desc">Ein portables .mgrd-Backup-Archiv exportieren</string>
+    <string name="quick_action_share_profile">Aktives Profil teilen</string>
+    <string name="quick_action_share_profile_desc">Das ausgewählte Profil zum Teilen oder Übertragen exportieren</string>
 </resources>
 
 
