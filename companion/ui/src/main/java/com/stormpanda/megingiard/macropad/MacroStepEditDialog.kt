@@ -517,21 +517,21 @@ internal fun MacroStepEditSubPageContent(
                 onClick = { onDuplicate(constructedStep) },
             )
         }
-
-        if (onDelete != null) {
-            val stepNumber = (stepIndex ?: 0) + 1
-            GamepadTwoStepConfirmCard(
-                title = stringResource(R.string.macropad_macro_step_delete),
-                confirmTitle = stringResource(R.string.macropad_macro_step_delete_confirm_title, stepNumber),
-                description = stringResource(R.string.macropad_macro_step_delete_desc),
-                actionText = stringResource(R.string.gamepad_action_delete),
-                confirmActionText = stringResource(R.string.gamepad_action_confirm),
-                icon = Icons.Rounded.Delete,
-                isDestructive = true,
-                onConfirm = onDelete,
-            )
-        }
     }
+
+    // ── Save / Save & Delete Section ─────────────────────────────────────────
+    val hasDelete = step != null && onDelete != null
+    GamepadSectionHeader(
+        text =
+            stringResource(
+                if (hasDelete) {
+                    R.string.macropad_editor_section_save_and_delete
+                } else {
+                    R.string.macropad_editor_section_save
+                },
+            ),
+        color = accentColor,
+    )
 
     // ── Save & Exit Action Row ───────────────────────────────────────────────
     GamepadSaveExitActionRow(
@@ -561,4 +561,19 @@ internal fun MacroStepEditSubPageContent(
         onSave = promptState.onSave,
         onDiscard = promptState.onDiscard,
     )
+
+    // ── Step Deletion (Last Item) ────────────────────────────────────────────
+    if (step != null && onDelete != null) {
+        val stepNumber = (stepIndex ?: 0) + 1
+        GamepadTwoStepConfirmCard(
+            title = stringResource(R.string.macropad_macro_step_delete),
+            confirmTitle = stringResource(R.string.macropad_macro_step_delete_confirm_title, stepNumber),
+            description = stringResource(R.string.macropad_macro_step_delete_desc),
+            actionText = stringResource(R.string.gamepad_action_delete),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
+            icon = Icons.Rounded.Delete,
+            isDestructive = true,
+            onConfirm = onDelete,
+        )
+    }
 }

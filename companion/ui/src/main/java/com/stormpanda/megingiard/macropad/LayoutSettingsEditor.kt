@@ -227,6 +227,12 @@ internal fun LayoutAppearanceSubPageContent(
         onCheckedChange = onInvisibleButtonsChange,
     )
 
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
+    )
+
     // ── Save & Exit Action Row (with Saved vs In-Flight Previews) ─────────────
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
@@ -456,6 +462,12 @@ internal fun LayoutColorSubPageContent(
         },
     )
 
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
+    )
+
     // ── Save & Exit Action Row (with Saved vs In-Flight Previews) ─────────────
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
@@ -559,6 +571,12 @@ internal fun NewLayoutSubPageContent(
         checked = invisibleButtons,
         icon = Icons.Rounded.VisibilityOff,
         onCheckedChange = { invisibleButtons = it },
+    )
+
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
     )
 
     GamepadSaveExitActionRow(

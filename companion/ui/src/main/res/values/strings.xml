@@ -411,6 +411,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_section_list">List</string>
     <string name="macropad_macro_section_steps">Macro-Steps</string>
     <string name="macropad_macro_section_settings">Macro Settings</string>
+    <string name="macropad_editor_section_save">Save</string>
+    <string name="macropad_editor_section_delete">Delete</string>
+    <string name="macropad_editor_section_save_and_delete">Save &amp; Delete</string>
 
     <!-- MacroPad editor layout settings — button color style -->
 

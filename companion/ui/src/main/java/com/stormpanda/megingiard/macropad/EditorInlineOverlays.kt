@@ -149,6 +149,12 @@ internal fun NewProfileSubPageContent(
         )
     }
 
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
+    )
+
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_create_profile_title),
         description = stringResource(R.string.macropad_editor_create_profile_desc),
@@ -252,6 +258,12 @@ internal fun EditProfileSubPageContent(
             onClick = onOpenAppPicker,
         )
     }
+
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
+    )
 
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_profile_title),

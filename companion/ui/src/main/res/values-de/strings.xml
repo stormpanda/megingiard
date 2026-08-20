@@ -333,6 +333,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_section_list">Liste</string>
     <string name="macropad_macro_section_steps">Makro-Schritte</string>
     <string name="macropad_macro_section_settings">Makro-Einstellungen</string>
+    <string name="macropad_editor_section_save">Speichern</string>
+    <string name="macropad_editor_section_delete">Löschen</string>
+    <string name="macropad_editor_section_save_and_delete">Speichern &amp; Löschen</string>
 
     <!-- MacroPad-Editor Layout-Einstellungen — Tastenfarbe -->
 

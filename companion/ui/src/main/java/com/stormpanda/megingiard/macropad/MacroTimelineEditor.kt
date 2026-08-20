@@ -418,10 +418,24 @@ internal fun MacroTimelineSubPageContent(
         )
     }
 
-    // ── Delete Macro Section ─────────────────────────────────────────────────
+    // ── Save & Delete Section ────────────────────────────────────────────────
     GamepadSectionHeader(
-        text = stringResource(R.string.macropad_macro_delete_title),
+        text = stringResource(R.string.macropad_editor_section_save_and_delete),
         color = accentColor,
+    )
+
+    GamepadSaveExitActionRow(
+        title = stringResource(R.string.macropad_editor_save_macro_title),
+        description = stringResource(R.string.macropad_editor_save_macro_desc),
+        cardBgColor = saveCardBgColor,
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
+        enabled = isConfirmEnabled,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 
     GamepadTwoStepConfirmCard(
@@ -436,21 +450,6 @@ internal fun MacroTimelineSubPageContent(
             AppLog.i(TAG, "Deleting macro '${macro.name}' (${macro.id})")
             onDelete()
         },
-    )
-
-    // ── Save & Exit Action Row ───────────────────────────────────────────────
-    GamepadSaveExitActionRow(
-        title = stringResource(R.string.macropad_editor_save_macro_title),
-        description = stringResource(R.string.macropad_editor_save_macro_desc),
-        cardBgColor = saveCardBgColor,
-        saveActionText = stringResource(R.string.gamepad_action_save),
-        saveIcon = Icons.Rounded.Save,
-        enabled = isConfirmEnabled,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
     )
 
     // ── Dialogs & Overlays ───────────────────────────────────────────────────

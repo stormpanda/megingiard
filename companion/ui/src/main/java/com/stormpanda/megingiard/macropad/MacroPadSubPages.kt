@@ -404,6 +404,12 @@ internal fun ColorWheelSubPageContent(
         )
     }
 
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
+    )
+
     GamepadActionCard(
         title = title,
         description = hex,

@@ -666,24 +666,21 @@ internal fun EditButtonSubPageContent(
                     onClick = { onCopyToLayout(button) },
                 )
             }
-
-            if (onDelete != null) {
-                GamepadTwoStepConfirmCard(
-                    title = stringResource(R.string.macropad_editor_delete_button),
-                    confirmTitle = stringResource(R.string.macropad_button_delete_confirm_title),
-                    description =
-                        stringResource(
-                            R.string.macropad_editor_delete_layout_desc,
-                            button.label.ifBlank { button.action.displayLabel() },
-                        ),
-                    actionText = stringResource(R.string.gamepad_action_delete),
-                    confirmActionText = stringResource(R.string.gamepad_action_confirm),
-                    icon = Icons.Rounded.Delete,
-                    isDestructive = true,
-                    onConfirm = { onDelete(button) },
-                )
-            }
         }
+
+        // ── Save / Save & Delete Section ─────────────────────────────────
+        val hasDelete = button != null && onDelete != null
+        GamepadSectionHeader(
+            text =
+                stringResource(
+                    if (hasDelete) {
+                        R.string.macropad_editor_section_save_and_delete
+                    } else {
+                        R.string.macropad_editor_section_save
+                    },
+                ),
+            color = accentColor,
+        )
 
         // ── Save & Exit Action Row ───────────────────────────────────────
         GamepadSaveExitActionRow(
@@ -702,6 +699,24 @@ internal fun EditButtonSubPageContent(
             onSave = promptState.onSave,
             onDiscard = promptState.onDiscard,
         )
+
+        // ── Button Deletion (Last Item) ──────────────────────────────────
+        if (button != null && onDelete != null) {
+            GamepadTwoStepConfirmCard(
+                title = stringResource(R.string.macropad_editor_delete_button),
+                confirmTitle = stringResource(R.string.macropad_button_delete_confirm_title),
+                description =
+                    stringResource(
+                        R.string.macropad_editor_delete_layout_desc,
+                        button.label.ifBlank { button.action.displayLabel() },
+                    ),
+                actionText = stringResource(R.string.gamepad_action_delete),
+                confirmActionText = stringResource(R.string.gamepad_action_confirm),
+                icon = Icons.Rounded.Delete,
+                isDestructive = true,
+                onConfirm = { onDelete(button) },
+            )
+        }
     }
 }
 
@@ -982,6 +997,12 @@ internal fun ButtonColorSubPageContent(
                 inFlightButton,
             )
         },
+    )
+
+    // ── Save Section ─────────────────────────────────────────────────
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_editor_section_save),
+        color = accentColor,
     )
 
     // ── Save & Exit Action Row ───────────────────────────────────────
