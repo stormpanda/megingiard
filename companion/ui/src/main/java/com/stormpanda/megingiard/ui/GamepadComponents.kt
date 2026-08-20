@@ -1386,29 +1386,18 @@ fun GamepadSaveExitActionRow(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .width(card1VisibleWidth)
-                        .clipToBounds(),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                GamepadActionCard(
-                    title = effectiveTitle,
-                    description = effectiveDescription,
-                    actionText = saveActionText,
-                    icon = saveIcon,
-                    cardBgColor = cardBgColor,
-                    actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
-                    enabled = enabled,
-                    onClick = onSave,
-                    itemKey = itemKey,
-                    modifier =
-                        Modifier
-                            .requiredWidth(if (showExitPrompt) targetCardWidth else totalWidth)
-                            .then(saveReqModifier),
-                )
-            }
+            GamepadActionCard(
+                title = effectiveTitle,
+                description = effectiveDescription,
+                actionText = saveActionText,
+                icon = saveIcon,
+                cardBgColor = cardBgColor,
+                actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
+                enabled = enabled,
+                onClick = onSave,
+                itemKey = itemKey,
+                modifier = Modifier.width(card1VisibleWidth).then(saveReqModifier),
+            )
 
             if (splitFraction > 0.001f) {
                 Spacer(modifier = Modifier.width(currentSpacing))
