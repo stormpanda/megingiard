@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
@@ -65,6 +67,7 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import java.util.UUID
 
 private const val TAG = "PadButtonEditDialog"
@@ -138,6 +141,7 @@ internal fun ChooseButtonTypeSubPageContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun EditButtonSubPageContent(
     button: PadButton?, // null → create new
@@ -161,6 +165,7 @@ internal fun EditButtonSubPageContent(
     onDuplicate: ((PadButton) -> Unit)? = null,
     onCopyToLayout: ((PadButton) -> Unit)? = null,
     onDelete: ((PadButton) -> Unit)? = null,
+    onDiscard: () -> Unit = {},
     onSave: (PadButton) -> Unit,
 ) {
     val context = LocalContext.current
@@ -292,10 +297,7 @@ internal fun EditButtonSubPageContent(
     val isNew = savedButton == null
     val currentButton = buildCurrentButton()
     val hasChanges =
-        isConfirmEnabled && (
-            isNew ||
-                currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
-        )
+        isNew || currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
 
     val pulseTransition = rememberInfiniteTransition(label = "btnEditSavePulse")
     val pulseFraction by pulseTransition.animateFloat(
@@ -333,20 +335,31 @@ internal fun EditButtonSubPageContent(
 
     val showLabelAndIcon = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
 
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = {
+                if (isConfirmEnabled) {
+                    AppLog.d(TAG, "Confirm button edit: id=${currentButton.id} label=${currentButton.label} action=${currentButton.action}")
+                    onSave(currentButton)
+                }
+            },
+            onDiscard = onDiscard,
+        )
+
     // ── Save Option at the Very Top ─────────────────────────────────
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(if (isNew) R.string.macropad_editor_create_button_title else R.string.macropad_editor_save_button_title),
         description = stringResource(if (isNew) R.string.macropad_editor_create_button_desc else R.string.macropad_editor_save_button_desc),
         cardBgColor = saveCardBgColor,
-        actionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
-        icon = Icons.Rounded.Save,
+        saveActionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
-        onClick = {
-            if (isConfirmEnabled) {
-                AppLog.d(TAG, "Confirm button edit: id=${currentButton.id} label=${currentButton.label} action=${currentButton.action}")
-                onSave(currentButton)
-            }
-        },
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
         modifier = Modifier.firstDeckItem(),
     )
 
@@ -686,6 +699,7 @@ internal fun EditButtonSubPageContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ButtonColorSubPageContent(
     button: PadButton,
@@ -694,6 +708,7 @@ internal fun ButtonColorSubPageContent(
     target: ButtonColorTarget,
     accentColor: Color,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightButton: PadButton) -> Unit,
+    onDiscard: () -> Unit = {},
     onSave: (inFlightButton: PadButton) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -863,12 +878,19 @@ internal fun ButtonColorSubPageContent(
         }
     }
 
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = { onSave(inFlightButton) },
+            onDiscard = onDiscard,
+        )
+
     // ── Save Option at Top (with Saved vs In-Flight Previews) ──
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(R.string.gamepad_action_save),
         description = stringResource(R.string.macropad_btn_color_save_desc),
         cardBgColor = saveCardBgColor,
-        actionLeadingContent = {
+        saveActionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(PBD_SAVE_PREVIEW_SPACING),
@@ -883,9 +905,14 @@ internal fun ButtonColorSubPageContent(
                 renderPreviewFace(currentResolvedText, currentResolvedBorder, currentResolvedBg)
             }
         },
-        actionText = stringResource(R.string.gamepad_action_save),
-        icon = Icons.Rounded.Save,
-        onClick = { onSave(inFlightButton) },
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
+        enabled = true,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
         modifier = Modifier.firstDeckItem(),
     )
 

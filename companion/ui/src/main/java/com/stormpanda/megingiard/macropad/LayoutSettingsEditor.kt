@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -37,11 +38,13 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadColorSwatch
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 
 private const val TAG = "LayoutSettingsEditor"
 private val LSE_SAVE_PREVIEW_SPACING = 6.dp
@@ -62,6 +65,7 @@ private fun describeColorOption(
         is ColorOption.Custom -> String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
     }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun LayoutAppearanceSubPageContent(
     layout: PadLayout,
@@ -71,6 +75,7 @@ internal fun LayoutAppearanceSubPageContent(
     onNameChange: (String) -> Unit,
     onInvisibleButtonsChange: (Boolean) -> Unit,
     onOpenColorSubMenu: (target: LayoutColorTarget) -> Unit,
+    onDiscard: () -> Unit = {},
     onSaveColors: (textColor: ColorOption, borderColor: ColorOption, bgColor: ColorOption) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -85,6 +90,19 @@ internal fun LayoutAppearanceSubPageContent(
             layout.buttonBorderColor != savedLayout.buttonBorderColor ||
             layout.buttonBgColor != savedLayout.buttonBgColor
 
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasColorChanges,
+            onSave = {
+                onSaveColors(
+                    layout.buttonTextColor,
+                    layout.buttonBorderColor,
+                    layout.buttonBgColor,
+                )
+            },
+            onDiscard = onDiscard,
+        )
+
     val pulseTransition = rememberInfiniteTransition(label = "appearanceSavePulse")
     val pulseFraction by pulseTransition.animateFloat(
         initialValue = 0f,
@@ -94,7 +112,7 @@ internal fun LayoutAppearanceSubPageContent(
                 animation = tween(durationMillis = LSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
                 repeatMode = RepeatMode.Reverse,
             ),
-        label = "savePulseFraction",
+        label = "appearanceSavePulseFraction",
     )
     val saveCardBgColor =
         if (hasColorChanges) {
@@ -110,13 +128,13 @@ internal fun LayoutAppearanceSubPageContent(
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    val savedResolvedText = resolveColorOption(savedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-    val savedResolvedBorder = resolveColorOption(savedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val savedResolvedBg = resolveColorOption(savedLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
-
     val currentResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val currentResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val currentResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+
+    val savedResolvedText = resolveColorOption(savedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
+    val savedResolvedBorder = resolveColorOption(savedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
+    val savedResolvedBg = resolveColorOption(savedLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
@@ -131,7 +149,7 @@ internal fun LayoutAppearanceSubPageContent(
         onValueChange = {
             nameText = it
             val trimmed = it.trim()
-            if (trimmed.isNotEmpty() && !existingNames.any { existing -> existing.equals(trimmed, ignoreCase = true) }) {
+            if (trimmed.isNotEmpty() && !existingNames.any { n -> n.equals(trimmed, ignoreCase = true) }) {
                 onNameChange(trimmed)
             }
         },
@@ -146,11 +164,11 @@ internal fun LayoutAppearanceSubPageContent(
     )
 
     // ── Save Option inside Button Color Defaults section (with Saved vs In-Flight Previews) ──
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
         cardBgColor = saveCardBgColor,
-        actionLeadingContent = {
+        saveActionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(LSE_SAVE_PREVIEW_SPACING),
@@ -175,16 +193,14 @@ internal fun LayoutAppearanceSubPageContent(
                 )
             }
         },
-        actionText = stringResource(R.string.gamepad_action_save),
-        icon = Icons.Rounded.Save,
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
         enabled = true,
-        onClick = {
-            onSaveColors(
-                layout.buttonTextColor,
-                layout.buttonBorderColor,
-                layout.buttonBgColor,
-            )
-        },
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 
     // ── Text Color Menu Item ────────────────────────────────────
@@ -252,6 +268,7 @@ internal fun LayoutAppearanceSubPageContent(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun LayoutColorSubPageContent(
     layout: PadLayout,
@@ -259,6 +276,7 @@ internal fun LayoutColorSubPageContent(
     target: LayoutColorTarget,
     accentColor: Color,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
+    onDiscard: () -> Unit = {},
     onSave: (inFlightLayout: PadLayout) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -358,12 +376,19 @@ internal fun LayoutColorSubPageContent(
     val isAccentSelected = selectedOption is ColorOption.Accent
     val isCustomSelected = selectedOption is ColorOption.Custom
 
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = { onSave(inFlightLayout) },
+            onDiscard = onDiscard,
+        )
+
     // ── Save Option at the Very Top (with Saved vs In-Flight Previews) ──
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
         cardBgColor = saveCardBgColor,
-        actionLeadingContent = {
+        saveActionLeadingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(LSE_SAVE_PREVIEW_SPACING),
@@ -388,9 +413,14 @@ internal fun LayoutColorSubPageContent(
                 )
             }
         },
-        actionText = stringResource(R.string.gamepad_action_save),
-        icon = Icons.Rounded.Save,
-        onClick = { onSave(inFlightLayout) },
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
+        enabled = true,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
         modifier = Modifier.firstDeckItem(),
     )
 
@@ -467,10 +497,12 @@ internal fun LayoutColorSubPageContent(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun NewLayoutSubPageContent(
     existingNames: List<String>,
     accentColor: Color,
+    onDiscard: () -> Unit = {},
     onCreate: (name: String, invisibleButtons: Boolean) -> Unit,
 ) {
     val defaultLayoutName = stringResource(R.string.macropad_editor_new_layout_default_name)
@@ -493,6 +525,17 @@ internal fun NewLayoutSubPageContent(
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
+
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = true,
+            onSave = {
+                if (isConfirmEnabled) {
+                    onCreate(normalizedName, invisibleButtons)
+                }
+            },
+            onDiscard = onDiscard,
+        )
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
@@ -518,16 +561,16 @@ internal fun NewLayoutSubPageContent(
         onCheckedChange = { invisibleButtons = it },
     )
 
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_create_layout_title),
         description = stringResource(R.string.macropad_editor_create_layout_desc),
-        actionText = stringResource(R.string.gamepad_action_create),
-        icon = Icons.Rounded.Add,
+        saveActionText = stringResource(R.string.gamepad_action_create),
+        saveIcon = Icons.Rounded.Add,
         enabled = isConfirmEnabled,
-        onClick = {
-            if (isConfirmEnabled) {
-                onCreate(normalizedName, invisibleButtons)
-            }
-        },
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 }

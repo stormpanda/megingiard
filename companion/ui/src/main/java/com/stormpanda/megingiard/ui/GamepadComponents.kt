@@ -6,6 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +26,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -33,8 +36,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -46,6 +51,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,6 +91,8 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 
@@ -1176,6 +1185,182 @@ fun GamepadActionCard(
                     null
                 },
         )
+    }
+}
+
+/**
+ * State holder for in-flight changes exit confirmation prompt.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+class SaveExitPromptState(
+    val showExitPrompt: Boolean,
+    val focusRequester: FocusRequester,
+    val bringIntoViewRequester: BringIntoViewRequester,
+    val onSave: () -> Unit,
+    val onDiscard: () -> Unit,
+    val dismissPrompt: () -> Unit,
+)
+
+/**
+ * Remembers a [SaveExitPromptState] that intercepts back navigation (gamepad B button, Escape,
+ * or Android Back gesture) when [hasChanges] is true, transitioning the save action row into a
+ * split "Save & Exit" / "Discard & Exit" confirmation and automatically scrolling & focusing it.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun rememberSaveExitPromptState(
+    hasChanges: Boolean,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+): SaveExitPromptState {
+    val coroutineScope = rememberCoroutineScope()
+    val focusRequester = remember { FocusRequester() }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var showExitPrompt by remember { mutableStateOf(false) }
+
+    LaunchedEffect(hasChanges) {
+        if (!hasChanges) {
+            showExitPrompt = false
+        }
+    }
+
+    val registerBackInterceptor = LocalDeckBackInterceptor.current
+    val currentHasChanges by rememberUpdatedState(hasChanges)
+    val currentShowExitPrompt by rememberUpdatedState(showExitPrompt)
+    val currentOnSave by rememberUpdatedState(onSave)
+    val currentOnDiscard by rememberUpdatedState(onDiscard)
+
+    val handleBack: () -> Boolean = {
+        if (currentHasChanges) {
+            if (!currentShowExitPrompt) {
+                showExitPrompt = true
+                coroutineScope.launch {
+                    delay(50)
+                    try {
+                        bringIntoViewRequester.bringIntoView()
+                    } catch (_: Exception) {
+                    }
+                    try {
+                        focusRequester.requestFocus()
+                    } catch (_: Exception) {
+                    }
+                }
+                true
+            } else {
+                showExitPrompt = false
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    DisposableEffect(registerBackInterceptor) {
+        registerBackInterceptor(handleBack)
+        onDispose {
+            registerBackInterceptor(null)
+        }
+    }
+
+    BackHandler(enabled = hasChanges) {
+        handleBack()
+    }
+
+    return remember(showExitPrompt, focusRequester, bringIntoViewRequester) {
+        SaveExitPromptState(
+            showExitPrompt = showExitPrompt,
+            focusRequester = focusRequester,
+            bringIntoViewRequester = bringIntoViewRequester,
+            onSave = { currentOnSave() },
+            onDiscard = { currentOnDiscard() },
+            dismissPrompt = { showExitPrompt = false },
+        )
+    }
+}
+
+/**
+ * Unified gamepad-first action row for menus and subpages with in-flight changes.
+ *
+ * In normal mode ([showExitPrompt] = false):
+ * - Displays a single full-width [GamepadActionCard] (Save button).
+ *
+ * In exit confirmation mode ([showExitPrompt] = true):
+ * - Splits into two side-by-side cards: "Save & Exit" (accent highlighted / focused) and "Discard & Exit" (destructive).
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun GamepadSaveExitActionRow(
+    title: String,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    saveIcon: ImageVector = Icons.Rounded.Save,
+    saveActionText: String = stringResource(R.string.gamepad_action_save),
+    saveActionLeadingContent: (@Composable () -> Unit)? = null,
+    cardBgColor: Color? = null,
+    enabled: Boolean = true,
+    showExitPrompt: Boolean = false,
+    saveFocusRequester: FocusRequester? = null,
+    bringIntoViewRequester: BringIntoViewRequester? = null,
+    itemKey: Any? = title,
+) {
+    val bivrModifier =
+        if (bringIntoViewRequester != null) {
+            Modifier.bringIntoViewRequester(bringIntoViewRequester)
+        } else {
+            Modifier
+        }
+
+    if (!showExitPrompt) {
+        GamepadActionCard(
+            title = title,
+            description = description,
+            actionText = saveActionText,
+            icon = saveIcon,
+            cardBgColor = cardBgColor,
+            actionLeadingContent = saveActionLeadingContent,
+            enabled = enabled,
+            onClick = onSave,
+            itemKey = itemKey,
+            modifier = modifier.then(bivrModifier),
+        )
+    } else {
+        Row(
+            modifier = modifier.then(bivrModifier).fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(GC_SPACING_10),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val saveReqModifier =
+                if (saveFocusRequester != null) {
+                    Modifier.focusRequester(saveFocusRequester)
+                } else {
+                    Modifier
+                }
+
+            GamepadActionCard(
+                title = stringResource(R.string.gamepad_action_save_and_exit),
+                description = stringResource(R.string.gamepad_action_save_and_exit_desc),
+                actionText = stringResource(R.string.gamepad_action_save),
+                icon = saveIcon,
+                cardBgColor = cardBgColor,
+                enabled = enabled,
+                onClick = onSave,
+                itemKey = "save_and_exit",
+                modifier = Modifier.weight(1f).then(saveReqModifier),
+            )
+
+            GamepadActionCard(
+                title = stringResource(R.string.gamepad_action_discard_and_exit),
+                description = stringResource(R.string.gamepad_action_discard_and_exit_desc),
+                actionText = stringResource(R.string.gamepad_action_discard),
+                icon = Icons.Rounded.Close,
+                isDestructive = true,
+                onClick = onDiscard,
+                itemKey = "discard_and_exit",
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 

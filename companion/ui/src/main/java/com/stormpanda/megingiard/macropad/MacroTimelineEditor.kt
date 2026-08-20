@@ -1,5 +1,12 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +33,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Timeline
@@ -51,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +78,7 @@ import com.stormpanda.megingiard.ui.AppSelectableChip
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.HelpEntry
@@ -81,6 +91,7 @@ import com.stormpanda.megingiard.ui.MacroEditorTutorialDialog
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberBezelBrush
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -91,6 +102,9 @@ private const val MTE_PADDING = 16
 private const val MTE_DEFAULT_TOUCH_DURATION_MS = 100L
 private const val MTE_UNDO_STACK_MAX = 50
 private const val MTE_TIMING_MAX_MS = 10_000L
+private const val MTE_PULSE_DURATION_MS = 1400
+private const val MTE_PULSE_ACCENT_ALPHA = 0.35f
+private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
 
 // Post-start delay before showing the recording overlay: waits for InputFlinger to register
 // the uinput device so early user taps are not silently dropped (mirrors MAC_GAMEPAD_INJECTOR_INIT_MS).
@@ -100,12 +114,14 @@ private const val MTE_VIEW_CHIP_SPACING = 6
 
 private enum class MacroEditorViewMode { LIST, TIMELINE }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MacroTimelineSubPageContent(
     macro: Macro,
     accentColor: Color,
     onOpenAddStep: () -> Unit,
     onOpenEditStep: (stepIndex: Int) -> Unit,
+    onDiscard: () -> Unit = {},
     onSave: (Macro) -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -131,6 +147,51 @@ internal fun MacroTimelineSubPageContent(
     var recordingStartedGamepad by remember { mutableStateOf(false) }
     var usingPhysicalRecorder by remember { mutableStateOf(false) }
     var showPhysicalRecordingSheet by remember { mutableStateOf(false) }
+
+    val currentMacro =
+        macro.copy(
+            name = localName.trim().ifBlank { macro.name },
+            steps = steps,
+            loopEnabled = loopEnabled,
+            loopPauseMs = loopPauseMs,
+            randomizeTimingEnabled = randomizeTimingEnabled,
+            randomizeTimingRangeMs = randomizeTimingRangeMs,
+        )
+    val hasChanges = currentMacro != macro
+    val isConfirmEnabled = localName.isNotBlank()
+
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = {
+                if (isConfirmEnabled) {
+                    onSave(currentMacro)
+                }
+            },
+            onDiscard = onDiscard,
+        )
+
+    val pulseTransition = rememberInfiniteTransition(label = "macroSavePulse")
+    val pulseFraction by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = MTE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "macroSavePulseFraction",
+    )
+    val saveCardBgColor =
+        if (hasChanges) {
+            lerp(
+                colors.surface.copy(alpha = MTE_PULSE_SURFACE_ALPHA),
+                colors.accent.copy(alpha = MTE_PULSE_ACCENT_ALPHA),
+                pulseFraction,
+            )
+        } else {
+            null
+        }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -237,12 +298,26 @@ internal fun MacroTimelineSubPageContent(
         showPhysicalRecordingSheet = false
     }
 
+    GamepadSaveExitActionRow(
+        title = stringResource(R.string.macropad_macro_editor_save),
+        description = stringResource(R.string.macropad_macro_editor_save),
+        cardBgColor = saveCardBgColor,
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
+        enabled = isConfirmEnabled,
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
+        modifier = Modifier.firstDeckItem(),
+    )
+
     GamepadTextFieldCard(
         title = stringResource(R.string.help_timeline_name_label),
         value = localName,
         onValueChange = { localName = it },
         icon = Icons.Rounded.Edit,
-        modifier = Modifier.firstDeckItem(),
     )
 
     Row(
@@ -451,25 +526,6 @@ internal fun MacroTimelineSubPageContent(
             }
         }
     }
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_macro_editor_save),
-        description = stringResource(R.string.macropad_macro_editor_save),
-        actionText = stringResource(R.string.macropad_macro_editor_save),
-        enabled = localName.isNotBlank(),
-        onClick = {
-            onSave(
-                macro.copy(
-                    name = localName.trim().ifBlank { macro.name },
-                    steps = steps,
-                    loopEnabled = loopEnabled,
-                    loopPauseMs = loopPauseMs,
-                    randomizeTimingEnabled = randomizeTimingEnabled,
-                    randomizeTimingRangeMs = randomizeTimingRangeMs,
-                ),
-            )
-        },
-    )
 
     if (deleteStepIndex != null) {
         val idx = deleteStepIndex!!

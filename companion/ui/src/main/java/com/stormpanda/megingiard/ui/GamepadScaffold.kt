@@ -94,6 +94,7 @@ val LocalTransferFocusToDeck = compositionLocalOf<(() -> Unit)?> { null }
 val LocalLastFocusedDeckTracker = compositionLocalOf<((key: Any, requester: FocusRequester) -> Unit)?> { null }
 val LocalDeckCardRegistry = compositionLocalOf<((key: Any, requester: FocusRequester?) -> Unit)?> { null }
 val LocalResetLastFocusedTracker = compositionLocalOf<(() -> Unit)?> { null }
+val LocalDeckBackInterceptor = compositionLocalOf<((() -> Boolean)?) -> Unit> { {} }
 
 /**
  * Modifier extension to mark a composable card as the primary focus target when entering the right deck from the sidebar.
@@ -379,8 +380,13 @@ fun GamepadTwoPaneScaffold(
         }
     }
 
+    var deckBackInterceptor by remember { mutableStateOf<(() -> Boolean)?>(null) }
+
     val handleBackNavigation: () -> Boolean = {
-        if (isCustomBackActive && onCustomBack != null) {
+        val intercepted = deckBackInterceptor?.invoke() ?: false
+        if (intercepted) {
+            true
+        } else if (isCustomBackActive && onCustomBack != null) {
             onCustomBack()
             true
         } else if (isDeckFocused) {
@@ -406,6 +412,7 @@ fun GamepadTwoPaneScaffold(
         LocalActiveCategoryRequester provides activeCategoryRequester,
         LocalFirstContentRequester provides firstContentRequester,
         LocalTransferFocusToDeck provides transferFocusToDeck,
+        LocalDeckBackInterceptor provides { interceptor -> deckBackInterceptor = interceptor },
         LocalLastFocusedDeckTracker provides { key, req ->
             savedFocusKeyByDepth[currentDepth] = key
             activeDeckCardRequesters[key] = req

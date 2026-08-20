@@ -1383,6 +1383,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_editor_save_button_desc">Änderungen an diesem Button anwenden und speichern</string>
     <string name="macropad_editor_new_layout_default_name">Neues Layout</string>
     <string name="macropad_editor_new_button_default_label">Neuer Button</string>
+    <string name="gamepad_action_save_and_exit">Speichern &amp; Beenden</string>
+    <string name="gamepad_action_save_and_exit_desc">Änderungen anwenden und speichern</string>
+    <string name="gamepad_action_discard_and_exit">Verwerfen &amp; Beenden</string>
+    <string name="gamepad_action_discard_and_exit_desc">Änderungen verwerfen und beenden</string>
+    <string name="gamepad_action_discard">Verwerfen</string>
 </resources>
 
 

@@ -561,6 +561,7 @@ fun MacroPadEditor(
                                                     subPageStack = subPageStack + MacroPadSubPage.AppPicker(AppPickerTarget.NewProfile)
                                                 },
                                                 onClearApp = { pendingProfilePackage = null },
+                                                onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                 onCreate = { name, pkg ->
                                                     val assoc = pkg?.let { ProfileAssociation(packageName = it) }
                                                     val newProf =
@@ -595,6 +596,7 @@ fun MacroPadEditor(
                                                         subPageStack + MacroPadSubPage.AppPicker(AppPickerTarget.EditProfile(prof.id))
                                                 },
                                                 onClearApp = { pendingProfilePackage = null },
+                                                onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                 onSave = { name, pkg ->
                                                     val assoc =
                                                         if (pkg != null) {
@@ -701,6 +703,7 @@ fun MacroPadEditor(
                                             NewLayoutSubPageContent(
                                                 existingNames = profile.layouts.map { it.name },
                                                 accentColor = colors.accent,
+                                                onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                 onCreate = { name, invisibleBtns ->
                                                     val sourceW =
                                                         ScreenCaptureManager.captureSourceWidth.value
@@ -764,6 +767,7 @@ fun MacroPadEditor(
                                                     onOpenColorSubMenu = { target ->
                                                         subPageStack = subPageStack + MacroPadSubPage.LayoutColor(lay.id, target)
                                                     },
+                                                    onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                     onSaveColors = { textCol, borderCol, bgCol ->
                                                         MacroPadState.updateLayout(
                                                             lay.copy(
@@ -803,6 +807,7 @@ fun MacroPadEditor(
                                                     savedLayout = lay,
                                                     target = currentSubPage.target,
                                                     accentColor = colors.accent,
+                                                    onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                     onSave = { updatedDraft ->
                                                         appearanceDraft = updatedDraft
                                                         subPageStack = subPageStack.dropLast(1)
@@ -1206,6 +1211,7 @@ fun MacroPadEditor(
                                                     )
                                                     subPageStack = subPageStack.dropLast(1)
                                                 },
+                                                onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                 onSave = { savedBtn ->
                                                     val lay = activeLayout
                                                     if (lay != null) {
@@ -1254,6 +1260,7 @@ fun MacroPadEditor(
                                                 activeLayout = activeLayout,
                                                 target = currentSubPage.target,
                                                 accentColor = colors.accent,
+                                                onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                 onSave = { updatedDraft ->
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
@@ -1626,6 +1633,7 @@ fun MacroPadEditor(
                                                             subPageStack +
                                                             MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = stepIdx)
                                                     },
+                                                    onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                     onSave = { updatedMacro ->
                                                         MacroPadState.updateMacro(updatedMacro)
                                                         subPageStack = subPageStack.dropLast(1)

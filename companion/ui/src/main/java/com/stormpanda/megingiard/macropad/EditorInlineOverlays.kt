@@ -1,5 +1,6 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,9 +35,11 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -44,6 +47,7 @@ private const val TAG = "EditorInlineOverlays"
 private val EIO_APP_ICON_SIZE = 36.dp
 private val EIO_APP_ICON_CORNER = 8.dp
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun NewProfileSubPageContent(
     existingNames: List<String>,
@@ -51,6 +55,7 @@ internal fun NewProfileSubPageContent(
     accentColor: Color,
     onOpenAppPicker: () -> Unit,
     onClearApp: () -> Unit,
+    onDiscard: () -> Unit = {},
     onCreate: (name: String, packageName: String?) -> Unit,
 ) {
     val defaultName = stringResource(R.string.integration_home_new_profile)
@@ -73,6 +78,17 @@ internal fun NewProfileSubPageContent(
     val isConfirmEnabled = !hasError
     val context = LocalContext.current
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
+
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = true,
+            onSave = {
+                if (isConfirmEnabled) {
+                    onCreate(normalizedName, selectedPackage)
+                }
+            },
+            onDiscard = onDiscard,
+        )
 
     LaunchedEffect(selectedPackage) {
         val pkg = selectedPackage
@@ -130,20 +146,21 @@ internal fun NewProfileSubPageContent(
         )
     }
 
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_create_profile_title),
         description = stringResource(R.string.macropad_editor_create_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_create),
-        icon = Icons.Rounded.Add,
+        saveActionText = stringResource(R.string.gamepad_action_create),
+        saveIcon = Icons.Rounded.Add,
         enabled = isConfirmEnabled,
-        onClick = {
-            if (isConfirmEnabled) {
-                onCreate(normalizedName, selectedPackage)
-            }
-        },
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun EditProfileSubPageContent(
     profile: PadProfile,
@@ -152,6 +169,7 @@ internal fun EditProfileSubPageContent(
     accentColor: Color,
     onOpenAppPicker: () -> Unit,
     onClearApp: () -> Unit,
+    onDiscard: () -> Unit = {},
     onSave: (name: String, packageName: String?) -> Unit,
 ) {
     var nameText by remember(profile) { mutableStateOf(profile.name) }
@@ -159,8 +177,20 @@ internal fun EditProfileSubPageContent(
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
     val hasError = normalizedName.isEmpty() || isDuplicate
     val isConfirmEnabled = !hasError
+    val hasChanges = normalizedName != profile.name || selectedPackage != (profile.association?.packageName)
     val context = LocalContext.current
     var selectedAppName by remember(selectedPackage) { mutableStateOf(selectedPackage ?: "") }
+
+    val promptState =
+        rememberSaveExitPromptState(
+            hasChanges = hasChanges,
+            onSave = {
+                if (isConfirmEnabled) {
+                    onSave(normalizedName, selectedPackage)
+                }
+            },
+            onDiscard = onDiscard,
+        )
 
     LaunchedEffect(selectedPackage) {
         val pkg = selectedPackage
@@ -218,17 +248,17 @@ internal fun EditProfileSubPageContent(
         )
     }
 
-    GamepadActionCard(
+    GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_profile_title),
         description = stringResource(R.string.macropad_editor_edit_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_save),
-        icon = Icons.Rounded.Save,
+        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveIcon = Icons.Rounded.Save,
         enabled = isConfirmEnabled,
-        onClick = {
-            if (isConfirmEnabled) {
-                onSave(normalizedName, selectedPackage)
-            }
-        },
+        showExitPrompt = promptState.showExitPrompt,
+        saveFocusRequester = promptState.focusRequester,
+        bringIntoViewRequester = promptState.bringIntoViewRequester,
+        onSave = promptState.onSave,
+        onDiscard = promptState.onDiscard,
     )
 }
 
