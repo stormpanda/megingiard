@@ -95,6 +95,7 @@ import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -333,13 +334,15 @@ internal fun LayoutBackgroundSubPageContent(
     )
 
     if (previewBitmap != null) {
-        GamepadActionCard(
+        GamepadTwoStepConfirmCard(
             title = stringResource(R.string.layout_settings_bg_image_none),
+            confirmTitle = stringResource(R.string.macropad_editor_bg_delete_confirm_title),
             description = stringResource(R.string.macropad_editor_bg_storage_desc),
             actionText = stringResource(R.string.gamepad_action_clear),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
             isDestructive = true,
             icon = Icons.Rounded.Delete,
-            onClick = {
+            onConfirm = {
                 pendingImageUri = null
                 currentBgPath = null
                 previewBitmap = null

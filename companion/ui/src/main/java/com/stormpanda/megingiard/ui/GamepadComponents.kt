@@ -1454,6 +1454,7 @@ fun GamepadTwoStepConfirmCard(
     actionText: String? = null,
     confirmActionText: String = stringResource(R.string.gamepad_action_confirm),
     icon: ImageVector? = null,
+    leadingContent: (@Composable () -> Unit)? = null,
     enabled: Boolean = true,
     isDestructive: Boolean = false,
     itemKey: Any? = title,
@@ -1494,6 +1495,7 @@ fun GamepadTwoStepConfirmCard(
             title = if (isConfirming) confirmTitle else title,
             description = if (isConfirming) confirmDescription else description,
             icon = icon,
+            leadingContent = leadingContent,
             isFocused = isFocused,
             isDestructive = isDestructive,
             trailingContent = {

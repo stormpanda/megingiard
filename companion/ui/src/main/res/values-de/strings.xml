@@ -1369,6 +1369,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_layout_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
     <string name="macropad_button_delete_confirm_title">Diesen Button wirklich löschen?</string>
     <string name="macropad_macro_delete_confirm_title">\"%1$s\" wirklich löschen?</string>
+    <string name="macropad_editor_bg_delete_confirm_title">Hintergrundbild entfernen?</string>
+    <string name="macropad_profile_clear_app_confirm_title">App-Verknüpfung entfernen?</string>
+    <string name="macropad_icon_clear_confirm_title">Ausgewähltes Symbol entfernen?</string>
     <string name="macropad_profile_deleted_toast">Profil \"%1$s\" gelöscht</string>
     <string name="macropad_profile_duplicated_toast">Profil \"%1$s\" dupliziert und ausgewählt</string>
     <string name="macropad_layout_deleted_toast">Layout \"%1$s\" gelöscht</string>

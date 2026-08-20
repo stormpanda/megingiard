@@ -45,6 +45,7 @@ import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.primaryOverlayFocusable
@@ -116,10 +117,12 @@ internal fun ChooseIconSubPageContent(
     // ── Current selection card (only visible when an icon is pending) ────────
     val currentIcon = pendingIcon
     if (currentIcon != null) {
-        GamepadActionCard(
+        GamepadTwoStepConfirmCard(
             title = currentIcon,
+            confirmTitle = stringResource(R.string.macropad_icon_clear_confirm_title),
             description = stringResource(R.string.gamepad_color_selected),
             actionText = stringResource(R.string.gamepad_action_clear),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
             isDestructive = true,
             leadingContent = {
                 Box(
@@ -139,7 +142,7 @@ internal fun ChooseIconSubPageContent(
                     )
                 }
             },
-            onClick = {
+            onConfirm = {
                 AppLog.d(TAG, "ChooseIconSubPageContent: selection cleared")
                 pendingIcon = null
                 onSelect(null)

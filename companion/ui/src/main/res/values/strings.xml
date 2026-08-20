@@ -1360,6 +1360,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_layout_delete_confirm_title">Really delete \"%1$s\"?</string>
     <string name="macropad_button_delete_confirm_title">Really delete this button?</string>
     <string name="macropad_macro_delete_confirm_title">Really delete \"%1$s\"?</string>
+    <string name="macropad_editor_bg_delete_confirm_title">Remove background image?</string>
+    <string name="macropad_profile_clear_app_confirm_title">Clear app mapping?</string>
+    <string name="macropad_icon_clear_confirm_title">Remove selected icon?</string>
     <string name="macropad_profile_deleted_toast">Profile \"%1$s\" deleted</string>
     <string name="macropad_profile_duplicated_toast">Profile \"%1$s\" duplicated and selected</string>
     <string name="macropad_layout_deleted_toast">Layout \"%1$s\" deleted</string>

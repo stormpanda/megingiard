@@ -81,6 +81,7 @@ import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
@@ -123,6 +124,7 @@ internal fun MacroTimelineSubPageContent(
     onOpenEditStep: (stepIndex: Int) -> Unit,
     onDiscard: () -> Unit = {},
     onSave: (Macro) -> Unit,
+    onDelete: () -> Unit = {},
 ) {
     val colors = LocalAppColors.current
 
@@ -526,6 +528,21 @@ internal fun MacroTimelineSubPageContent(
             }
         }
     }
+
+    GamepadSectionHeader(
+        text = stringResource(R.string.macropad_macro_delete_title),
+        color = accentColor,
+    )
+    GamepadTwoStepConfirmCard(
+        title = stringResource(R.string.macropad_macro_delete_title),
+        confirmTitle = stringResource(R.string.macropad_macro_delete_confirm_title, macro.name),
+        description = stringResource(R.string.macropad_macro_delete_confirm),
+        actionText = stringResource(R.string.gamepad_action_delete),
+        confirmActionText = stringResource(R.string.gamepad_action_confirm),
+        icon = Icons.Rounded.Delete,
+        isDestructive = true,
+        onConfirm = onDelete,
+    )
 
     if (deleteStepIndex != null) {
         val idx = deleteStepIndex!!

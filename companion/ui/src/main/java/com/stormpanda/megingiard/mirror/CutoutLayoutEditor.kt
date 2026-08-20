@@ -45,6 +45,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -634,6 +635,11 @@ fun CutoutLayoutEditor() {
         val currentClampedOffset by rememberUpdatedState(clampedOffset)
 
         var showEditorHelp by remember { mutableStateOf(false) }
+        var isConfirmingDelete by remember { mutableStateOf(false) }
+
+        LaunchedEffect(selectedCutoutId) {
+            isConfirmingDelete = false
+        }
 
         Surface(
             modifier =
@@ -898,24 +904,34 @@ fun CutoutLayoutEditor() {
                             icon = Icons.Rounded.Delete,
                             contentDescription = stringResource(R.string.mirror_editor_delete_cutout),
                             color = colors.error,
-                            label = stringResource(R.string.mirror_editor_toolbar_delete),
+                            label =
+                                if (isConfirmingDelete) {
+                                    stringResource(R.string.gamepad_action_confirm)
+                                } else {
+                                    stringResource(R.string.mirror_editor_toolbar_delete)
+                                },
                             enabled = selectedCutoutId != null,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 val targetId = selectedCutoutId ?: return@ToolbarIconButton
-                                val remaining = layout.mirrorCutouts.filter { it.id != targetId }
-                                val wasFollowing = layout.mirrorCutouts.find { it.id == targetId }?.followTouch == true
-                                val newFollowActive = if (wasFollowing) false else layout.mirrorFollowActive
-                                MacroPadState.updateLayout(
-                                    layout.copy(
-                                        mirrorCutouts = remaining,
-                                        mirrorFollowActive = newFollowActive,
-                                    ),
-                                )
-                                if (wasFollowing) {
-                                    ScreenCaptureManager.setFollowActive(false, persist = false)
+                                if (!isConfirmingDelete) {
+                                    isConfirmingDelete = true
+                                } else {
+                                    isConfirmingDelete = false
+                                    val remaining = layout.mirrorCutouts.filter { it.id != targetId }
+                                    val wasFollowing = layout.mirrorCutouts.find { it.id == targetId }?.followTouch == true
+                                    val newFollowActive = if (wasFollowing) false else layout.mirrorFollowActive
+                                    MacroPadState.updateLayout(
+                                        layout.copy(
+                                            mirrorCutouts = remaining,
+                                            mirrorFollowActive = newFollowActive,
+                                        ),
+                                    )
+                                    if (wasFollowing) {
+                                        ScreenCaptureManager.setFollowActive(false, persist = false)
+                                    }
+                                    AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
                                 }
-                                AppStateManager.setSelectedCutoutId(remaining.firstOrNull()?.id)
                             },
                         )
 

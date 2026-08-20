@@ -1637,6 +1637,14 @@ fun MacroPadEditor(
                                                         MacroPadState.updateMacro(updatedMacro)
                                                         subPageStack = subPageStack.dropLast(1)
                                                     },
+                                                    onDelete = {
+                                                        val deletedName = macro.name
+                                                        MacroPadState.deleteMacro(macro.id)
+                                                        subPageStack = subPageStack.dropLast(1)
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_macro_deleted_toast, deletedName),
+                                                        )
+                                                    },
                                                 )
                                             }
                                         }

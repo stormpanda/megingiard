@@ -38,6 +38,7 @@ import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.Dispatchers
@@ -129,13 +130,15 @@ internal fun NewProfileSubPageContent(
     )
 
     if (selectedPackage != null) {
-        GamepadActionCard(
+        GamepadTwoStepConfirmCard(
             title = selectedAppName,
+            confirmTitle = stringResource(R.string.macropad_profile_clear_app_confirm_title),
             description = selectedPackage,
             actionText = stringResource(R.string.gamepad_action_clear),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
             isDestructive = true,
             icon = Icons.Rounded.Delete,
-            onClick = onClearApp,
+            onConfirm = onClearApp,
         )
     } else {
         GamepadActionCard(
@@ -231,13 +234,15 @@ internal fun EditProfileSubPageContent(
     )
 
     if (selectedPackage != null) {
-        GamepadActionCard(
+        GamepadTwoStepConfirmCard(
             title = selectedAppName,
+            confirmTitle = stringResource(R.string.macropad_profile_clear_app_confirm_title),
             description = selectedPackage,
             actionText = stringResource(R.string.gamepad_action_clear),
+            confirmActionText = stringResource(R.string.gamepad_action_confirm),
             isDestructive = true,
             icon = Icons.Rounded.Delete,
-            onClick = onClearApp,
+            onConfirm = onClearApp,
         )
     } else {
         GamepadActionCard(

@@ -922,6 +922,13 @@
     <string name="settings_color_opacity_desc">調整顏色不透明度</string>
     <string name="settings_color_save_title">儲存主題色</string>
     <string name="settings_color_save_desc">套用並儲存此自訂主題色</string>
+    <string name="macropad_profile_delete_confirm_title">確定要刪除「%1$s」？</string>
+    <string name="macropad_layout_delete_confirm_title">確定要刪除「%1$s」？</string>
+    <string name="macropad_button_delete_confirm_title">確定要刪除此按鈕嗎？</string>
+    <string name="macropad_macro_delete_confirm_title">確定要刪除「%1$s」？</string>
+    <string name="macropad_editor_bg_delete_confirm_title">確定要移除背景圖片嗎？</string>
+    <string name="macropad_profile_clear_app_confirm_title">確定要清除應用程式關聯嗎？</string>
+    <string name="macropad_icon_clear_confirm_title">確定要移除選取的圖示嗎？</string>
     <string name="macropad_profile_deleted_toast">已刪除設定檔「%1$s」</string>
     <string name="macropad_profile_duplicated_toast">已複製並選取設定檔「%1$s」</string>
     <string name="macropad_layout_deleted_toast">已刪除版面配置「%1$s」</string>

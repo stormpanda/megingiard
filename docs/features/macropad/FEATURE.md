@@ -241,7 +241,7 @@ Each button supports one of the following actions:
   - Enabling Touch Projection on a layout displays a warning and confirmation dialog offering to turn OFF the Background Touchpad.
   - Enabling Background Touchpad when Touch Projection is active on any cutout displays a warning and confirmation dialog offering to turn OFF Touch Projection for all cutouts of that layout.
 
-- **Two-Step In-Place Confirmation**: Deleting profiles or layouts uses an inline two-step confirmation card (`GamepadTwoStepConfirmCard`). Activating the action changes the card headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*) with a *"Confirm"* badge. Activating again executes the deletion, shifts focus to the first selection card, and displays a toast confirmation. Pressing Button B or navigating away cancels the prompt.
+- **Two-Step In-Place Confirmation**: Deleting or removing profiles, layouts, pad buttons, macros, background artwork, and app associations uses an inline two-step confirmation card (`GamepadTwoStepConfirmCard`). Activating the action changes the card headline to a confirmation prompt (e.g. *"Really delete 'Profile'?"*, *"Really delete this button?"*, *"Really delete 'Macro'?"*) with a *"Confirm"* badge. Activating again executes the action, shifts focus appropriately, and displays a toast confirmation. Pressing Button B or navigating away cancels the prompt.
 - When a profile is deleted, all background image files for its layouts are deleted.
 - Creating a layout from a template layout (deep copy) automatically duplicates the background image file under the new layout's ID, ensuring that layouts do not share dependencies on the same file.
 

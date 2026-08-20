@@ -65,6 +65,7 @@ import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
+import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
@@ -682,17 +683,19 @@ internal fun EditButtonSubPageContent(
             }
 
             if (onDelete != null) {
-                GamepadActionCard(
+                GamepadTwoStepConfirmCard(
                     title = stringResource(R.string.macropad_editor_delete_button),
+                    confirmTitle = stringResource(R.string.macropad_button_delete_confirm_title),
                     description =
                         stringResource(
                             R.string.macropad_editor_delete_layout_desc,
                             button.label.ifBlank { button.action.displayLabel() },
                         ),
                     actionText = stringResource(R.string.gamepad_action_delete),
+                    confirmActionText = stringResource(R.string.gamepad_action_confirm),
                     icon = Icons.Rounded.Delete,
                     isDestructive = true,
-                    onClick = { onDelete(button) },
+                    onConfirm = { onDelete(button) },
                 )
             }
         }
