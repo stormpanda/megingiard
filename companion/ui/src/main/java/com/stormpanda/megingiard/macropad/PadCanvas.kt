@@ -135,7 +135,6 @@ internal fun PadCanvas(
     modifier: Modifier = Modifier,
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var lastTouchedButtonId by remember { mutableStateOf<String?>(null) }
     val selectedButtonId by MacroPadState.selectedButtonId.collectAsState()
     val colors = LocalAppColors.current
     val density = LocalDensity.current
@@ -290,7 +289,9 @@ internal fun PadCanvas(
                 gridMode = gridMode,
                 gridStepPx = gridStepPx,
                 isLocked = isLocked,
-                onTouch = { lastTouchedButtonId = btn.id },
+                onTouch = {
+                    MacroPadState.setSelectedButtonId(btn.id)
+                },
                 onPositionChanged = { nx, ny ->
                     val layoutId = targetLayoutId
                     val activeProfile = MacroPadState.activeProfile.value
@@ -312,8 +313,7 @@ internal fun PadCanvas(
         }
 
         // Render handles for the active button if not locked
-        val effectiveActiveButtonId = lastTouchedButtonId ?: selectedButtonId
-        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == effectiveActiveButtonId }
+        val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == selectedButtonId }
         if (!isLocked && activeBtn != null) {
             val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
             val tpMultiplier = if (isTrackpoint) (activeBtn.action as PadAction.TrackpointMove).size.multiplier else 1f
@@ -947,6 +947,7 @@ private fun DragHandle(
                             startPosY = buttonPosY
                             dragOffsetX = 0f
                             dragOffsetY = 0f
+                            MacroPadState.setSelectedButtonId(buttonId)
                         },
                         onDrag = { change, drag ->
                             change.consume()

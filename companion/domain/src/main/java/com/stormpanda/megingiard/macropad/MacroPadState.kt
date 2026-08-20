@@ -142,6 +142,9 @@ object MacroPadState {
     fun setEditingButtonPositions(editing: Boolean) {
         AppLog.d(TAG, "setEditingButtonPositions($editing)")
         _isEditingButtonPositions.value = editing
+        if (!editing) {
+            _selectedButtonId.value = null
+        }
     }
 
     private val _gridMode = MutableStateFlow(GridMode.OFF)

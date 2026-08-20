@@ -803,4 +803,15 @@ class MacroPadStateTest {
         MacroPadState.setGridMode(GridMode.OFF)
         assertEquals(GridMode.OFF, MacroPadState.gridMode.value)
     }
+
+    @Test
+    fun `setSelectedButtonId updates selectedButtonId and setEditingButtonPositions resets it`() {
+        assertEquals(null, MacroPadState.selectedButtonId.value)
+
+        MacroPadState.setSelectedButtonId("btn-123")
+        assertEquals("btn-123", MacroPadState.selectedButtonId.value)
+
+        MacroPadState.setEditingButtonPositions(false)
+        assertEquals(null, MacroPadState.selectedButtonId.value)
+    }
 }

@@ -202,12 +202,12 @@ Each button supports one of the following actions:
 - **Sub-Menu Navigation:** Accessible from the **Edit button positions** menu item in the Buttons category deck (`MacroPadSubPage.EditButtonPositions`).
 - **Live Canvas Unlocking:** Entering the sub-menu automatically activates `MacroPadState.isEditingButtonPositions = true`, rendering the active 5dp-rounded highlight border around the bottom-screen `PadCanvas` and unlocking touch dragging. Leaving the sub-menu or closing the editor restores locked mode (`false`).
 - **Instructional Info Banner:** A non-highlightable info box at the top of the sub-menu informs the user that buttons can be dragged directly on the bottom display via touch or nudged with pixel precision via D-pad or Left Stick.
-- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with a "Move" badge. Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders directional drag handles on the corresponding button on the bottom display.
+- **Button Selection & Dual-Screen Sync:** The sub-menu lists all buttons with a "Move" badge. Focusing or moving a button sets `MacroPadState.selectedButtonId`, which immediately renders directional drag handles on the corresponding button on the bottom display. Touching any button or drag handle directly on the bottom canvas sets `MacroPadState.selectedButtonId`, which automatically focuses and brings that button into view in the top screen's list.
 - **Pixel Precision & Frequency Acceleration:**
-  - Pressing `(A)` on any button in the list activates **Precision Movement Mode** (`isMoving = true`).
+  - Pressing `(A)` or clicking on any button in the list activates **Precision Movement Mode** (`isMoving = true`).
   - Directional inputs (`D-Pad Up/Down/Left/Right` or `Left Stick`) move the button exactly 1 pixel per tick.
-  - Holding a direction down continuously accelerates the tick frequency (starting at 100 ms intervals down to 16 ms intervals / ~60 Hz) for smooth, high-precision positioning without skipping pixels.
-  - Pressing `(B)` deactivates precision movement mode, returning control to list navigation.
+  - Holding a direction down continuously accelerates the tick frequency (starting at 250 ms initial delay, ramping down to 16 ms intervals / ~60 Hz) for smooth, high-precision positioning without skipping pixels.
+  - Pressing `(B)`, `(A)`, `Enter`, or back navigation deactivates precision movement mode, returning control to standard card navigation without bubbling back to the parent screen.
 
 ### FR-P9a: Custom Background Image
 
