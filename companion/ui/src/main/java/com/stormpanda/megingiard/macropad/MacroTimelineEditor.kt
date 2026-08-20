@@ -162,7 +162,11 @@ internal fun MacroTimelineSubPageContent(
             DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
             return
         }
-        AppLog.i(TAG, "startGamepadRecording() -> suspending editor and starting physical recording")
+        AppLog.i(
+            TAG,
+            "startGamepadRecording() -> preserving current draft in MacroPadState, suspending editor and starting physical recording",
+        )
+        MacroPadState.updateMacro(currentMacro)
         val suspendConfig =
             PrimaryModalConfig(
                 type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
@@ -188,14 +192,18 @@ internal fun MacroTimelineSubPageContent(
         val tap = recordedTap ?: return@LaunchedEffect
         val nextStart = steps.totalDurationMs()
         pushUndo(steps)
-        steps =
+        val newSteps =
             steps +
-            MacroStep.TouchTap(
-                startTimeMs = nextStart,
-                durationMs = MTE_DEFAULT_TOUCH_DURATION_MS,
-                normX = tap.first,
-                normY = tap.second,
-            )
+                MacroStep.TouchTap(
+                    startTimeMs = nextStart,
+                    durationMs = MTE_DEFAULT_TOUCH_DURATION_MS,
+                    normX = tap.first,
+                    normY = tap.second,
+                )
+        steps = newSteps
+        val updated = currentMacro.copy(steps = newSteps)
+        AppLog.i(TAG, "Auto-persisting recorded touch tap into MacroPadState for macro '${updated.name}' (${updated.id})")
+        MacroPadState.updateMacro(updated)
         TouchRecordingManager.consumeRecordedTap()
     }
 
@@ -208,16 +216,27 @@ internal fun MacroTimelineSubPageContent(
         val nextStart = steps.totalDurationMs()
         val shiftedSteps = recorded.steps.offsetBy(nextStart)
         pushUndo(steps)
-        steps = steps + shiftedSteps
+        val newSteps = steps + shiftedSteps
+        steps = newSteps
+        val updated = currentMacro.copy(steps = newSteps)
+        AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
+        MacroPadState.updateMacro(updated)
         TouchRecordingManager.resetState()
     }
 
     LaunchedEffect(physicalRecordingState) {
         val recorded = physicalRecordingState as? GamepadRecordingState.Done ?: return@LaunchedEffect
-        val nextStart = steps.totalDurationMs()
-        val shiftedSteps = recorded.steps.offsetBy(nextStart)
-        pushUndo(steps)
-        steps = steps + shiftedSteps
+        AppLog.i(TAG, "LaunchedEffect(physicalRecordingState) received Done with ${recorded.steps.size} steps")
+        if (recorded.steps.isNotEmpty()) {
+            val nextStart = steps.totalDurationMs()
+            val shiftedSteps = recorded.steps.offsetBy(nextStart)
+            pushUndo(steps)
+            val newSteps = steps + shiftedSteps
+            steps = newSteps
+            val updated = currentMacro.copy(steps = newSteps)
+            AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
+            MacroPadState.updateMacro(updated)
+        }
         PhysicalGamepadRecordingManager.resetState()
     }
 
@@ -438,6 +457,7 @@ internal fun MacroTimelineSubPageContent(
     if (showRecordTouchDialog) {
         TouchRecordStartDialog(
             onRecordTap = {
+                MacroPadState.updateMacro(currentMacro)
                 val suspendConfig =
                     PrimaryModalConfig(
                         type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
@@ -453,6 +473,7 @@ internal fun MacroTimelineSubPageContent(
                 showRecordTouchDialog = false
             },
             onRecordGesture = {
+                MacroPadState.updateMacro(currentMacro)
                 val suspendConfig =
                     PrimaryModalConfig(
                         type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
