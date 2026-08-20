@@ -473,7 +473,7 @@ internal fun NewLayoutSubPageContent(
     accentColor: Color,
     onCreate: (name: String, invisibleButtons: Boolean) -> Unit,
 ) {
-    val defaultLayoutName = stringResource(R.string.macropad_editor_section_layout)
+    val defaultLayoutName = stringResource(R.string.macropad_editor_new_layout_default_name)
     val initialLayoutName =
         remember(existingNames) {
             if (existingNames.none { it.equals(defaultLayoutName, ignoreCase = true) }) {

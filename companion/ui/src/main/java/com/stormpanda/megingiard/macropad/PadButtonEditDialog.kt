@@ -68,21 +68,6 @@ import com.stormpanda.megingiard.ui.firstDeckItem
 import java.util.UUID
 
 private const val TAG = "PadButtonEditDialog"
-private const val PBD_ICON_LAYOUT_NEXT = "arrow_forward"
-private const val PBD_ICON_LAYOUT_PREVIOUS = "arrow_back"
-private const val PBD_ICON_MIRROR_PLAY_STOP = "cast"
-private const val PBD_ICON_MIRROR_FREEZE = "pause_circle"
-private const val PBD_ICON_MIRROR_VIEWPORT_EDIT = "crop_free"
-private const val PBD_ICON_MIRROR_TOUCH_PROJECTION = "touch_app"
-private const val PBD_ICON_FULLSCREEN_MOUSE = "mouse"
-private const val PBD_ICON_FULLSCREEN_KEYBOARD = "keyboard"
-private const val PBD_ICON_APPS = "apps"
-private const val PBD_ICON_SWAP_VERT = "swap_vert"
-private const val PBD_ICON_TRACKPOINT = "control_camera"
-private const val PBD_ICON_MACRO = "smart_button"
-private const val PBD_ICON_PROFILE_SWITCHER = "swap_horiz"
-private const val PBD_ICON_BACKGROUND_PEEK = "visibility"
-
 private const val PBD_PULSE_DURATION_MS = 1400
 private const val PBD_PULSE_ACCENT_ALPHA = 0.35f
 private const val PBD_PULSE_SURFACE_ALPHA = 0.55f
@@ -103,52 +88,6 @@ internal fun MouseButton.labelRes(): Int =
         MouseButton.MIDDLE -> R.string.macropad_mouse_btn_middle
         MouseButton.MOUSE4 -> R.string.macropad_mouse_btn_back
         MouseButton.MOUSE5 -> R.string.macropad_mouse_btn_forward
-    }
-
-/**
- * Maps a [PadAction] type to its localised label string resource.
- */
-internal fun PadAction.defaultLabelRes(): Int? =
-    when (this) {
-        is PadAction.MouseButton -> this.button.labelRes()
-        is PadAction.ScrollWheel -> R.string.macropad_action_scroll_wheel
-        is PadAction.TrackpointMove -> R.string.macropad_action_trackpoint
-        is PadAction.LayoutNext -> R.string.macropad_action_layout_next
-        is PadAction.LayoutPrevious -> R.string.macropad_action_layout_previous
-        is PadAction.ProfileSwitcher -> R.string.macropad_action_profile_switcher
-        is PadAction.MirrorPlayStop -> R.string.macropad_action_mirror_play_stop
-        is PadAction.MirrorFreeze -> R.string.macropad_action_mirror_freeze
-        is PadAction.MirrorViewportEdit -> R.string.macropad_action_mirror_viewport_edit
-        is PadAction.MirrorTouchProjection -> R.string.macropad_action_mirror_touch_projection
-        is PadAction.FullScreenMouse -> R.string.macropad_action_fullscreen_mouse
-        is PadAction.FullScreenKeyboard -> R.string.macropad_action_fullscreen_keyboard
-        is PadAction.Macro -> R.string.macropad_action_macro
-        is PadAction.AppLauncher -> R.string.macropad_action_app_launcher
-        is PadAction.BackgroundPeek -> R.string.macropad_action_ambient_peek
-        else -> null
-    }
-
-/**
- * Resolves the default icon name for a [PadAction] when initially selected in the button editor.
- */
-internal fun PadAction.editorDefaultIconName(): String? =
-    when (this) {
-        is PadAction.MouseButton -> PBD_ICON_FULLSCREEN_MOUSE
-        is PadAction.ScrollWheel -> PBD_ICON_SWAP_VERT
-        is PadAction.TrackpointMove -> PBD_ICON_TRACKPOINT
-        is PadAction.LayoutNext -> PBD_ICON_LAYOUT_NEXT
-        is PadAction.LayoutPrevious -> PBD_ICON_LAYOUT_PREVIOUS
-        is PadAction.ProfileSwitcher -> PBD_ICON_PROFILE_SWITCHER
-        is PadAction.MirrorPlayStop -> PBD_ICON_MIRROR_PLAY_STOP
-        is PadAction.MirrorFreeze -> PBD_ICON_MIRROR_FREEZE
-        is PadAction.MirrorViewportEdit -> PBD_ICON_MIRROR_VIEWPORT_EDIT
-        is PadAction.MirrorTouchProjection -> PBD_ICON_MIRROR_TOUCH_PROJECTION
-        is PadAction.FullScreenMouse -> PBD_ICON_FULLSCREEN_MOUSE
-        is PadAction.FullScreenKeyboard -> PBD_ICON_FULLSCREEN_KEYBOARD
-        is PadAction.AppLauncher -> PBD_ICON_APPS
-        is PadAction.Macro -> PBD_ICON_MACRO
-        is PadAction.BackgroundPeek -> PBD_ICON_BACKGROUND_PEEK
-        else -> null
     }
 
 @Composable
@@ -227,28 +166,15 @@ internal fun EditButtonSubPageContent(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val activeLayout = MacroPadState.activeLayout.collectAsState().value
+    val defaultButtonLabel = stringResource(R.string.macropad_editor_new_button_default_label)
     val initAction =
         button?.action
             ?: initialAction
             ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
     val initLabel =
-        button?.label ?: when (val ia = initialAction) {
-            is PadAction.Macro -> {
-                MacroPadState.activeProfile.value
-                    ?.macros
-                    ?.firstOrNull { it.id == ia.macroId }
-                    ?.name ?: ""
-            }
-
-            null -> {
-                ""
-            }
-
-            else -> {
-                ia.defaultLabelRes()?.let { context.getString(it) } ?: ""
-            }
-        }
-    val initIconName = button?.iconName ?: initialAction?.editorDefaultIconName()
+        button?.label?.ifBlank { defaultButtonLabel }
+            ?: defaultButtonLabel
+    val initIconName = button?.iconName ?: selectedIcon
     var label by remember(button) { mutableStateOf(initLabel) }
     var iconName by remember(button, selectedIcon) { mutableStateOf(selectedIcon ?: initIconName) }
     var buttonShape by remember(button) { mutableStateOf(button?.buttonShape ?: ButtonShape.CIRCLE) }
@@ -313,30 +239,11 @@ internal fun EditButtonSubPageContent(
         action = newAction
         if (newAction is PadAction.ScrollWheel) {
             buttonSize = ButtonSize.SIZE_1X2
-            label = ""
-            iconName = null
             return
         }
         if (newAction is PadAction.TrackpointMove) {
-            label = ""
-            iconName = null
             buttonShape = ButtonShape.CIRCLE
             return
-        }
-        if (newAction is PadAction.AppLauncher) {
-            label = ""
-            iconName = null
-            return
-        }
-        if (newAction is PadAction.Macro && label.isBlank()) {
-            val macroName = macros.firstOrNull { it.id == newAction.macroId }?.name
-            if (macroName != null) label = macroName
-        }
-        if (button == null || label.isBlank()) {
-            val defaultLbl = newAction.defaultLabelRes()?.let { context.getString(it) } ?: ""
-            val defaultIcon = newAction.editorDefaultIconName()
-            if (defaultLbl.isNotEmpty()) label = defaultLbl
-            if (defaultIcon != null) iconName = defaultIcon
         }
     }
 

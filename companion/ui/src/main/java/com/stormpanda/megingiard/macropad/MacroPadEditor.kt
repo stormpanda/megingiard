@@ -134,41 +134,20 @@ private const val MPE_MOVE_ACCEL_FACTOR = 0.88f
 private val MPE_INFO_BANNER_RADIUS = 8.dp
 
 private fun applyActionToDraftButton(
-    context: Context,
     draftButton: PadButton,
     newAction: PadAction,
 ): PadButton {
     var shape = draftButton.buttonShape
     var size = draftButton.buttonSize
-    var label = draftButton.label
-    var icon = draftButton.iconName
 
     if (newAction is PadAction.ScrollWheel) {
         size = ButtonSize.SIZE_1X2
-        label = ""
-        icon = null
     } else if (newAction is PadAction.TrackpointMove) {
         shape = ButtonShape.CIRCLE
-        label = ""
-        icon = null
-    } else if (newAction is PadAction.AppLauncher) {
-        label = ""
-        icon = null
-    } else {
-        val defaultRes = newAction.defaultLabelRes()
-        if (defaultRes != null) {
-            label = context.getString(defaultRes)
-        }
-        val defaultIcon = newAction.editorDefaultIconName()
-        if (defaultIcon != null) {
-            icon = defaultIcon
-        }
     }
 
     return draftButton.copy(
         action = newAction,
-        label = label,
-        iconName = icon,
         buttonShape = shape,
         buttonSize = size,
     )
@@ -522,10 +501,28 @@ fun MacroPadEditor(
                                                 profile = profile,
                                                 accentColor = colors.accent,
                                                 onNewMacro = {
+                                                    val defaultMacroName = context.getString(R.string.macropad_macro_default_name)
+                                                    val existingMacroNames = profile.macros.map { it.name }
+                                                    val newMacroName =
+                                                        if (existingMacroNames.none { it.equals(defaultMacroName, ignoreCase = true) }) {
+                                                            defaultMacroName
+                                                        } else {
+                                                            var index = 2
+                                                            while (existingMacroNames.any {
+                                                                    it.equals(
+                                                                        "$defaultMacroName ($index)",
+                                                                        ignoreCase = true,
+                                                                    )
+                                                                }
+                                                            ) {
+                                                                index++
+                                                            }
+                                                            "$defaultMacroName ($index)"
+                                                        }
                                                     val newMacro =
                                                         Macro(
                                                             id = UUID.randomUUID().toString(),
-                                                            name = context.getString(R.string.macropad_macro_default_name),
+                                                            name = newMacroName,
                                                             steps = emptyList(),
                                                         )
                                                     MacroPadState.addMacro(newMacro)
@@ -665,7 +662,10 @@ fun MacroPadEditor(
                                                                                 ?: subPage.button
                                                                                 ?: PadButton(
                                                                                     id = UUID.randomUUID().toString(),
-                                                                                    label = "",
+                                                                                    label =
+                                                                                        context.getString(
+                                                                                            R.string.macropad_editor_new_button_default_label,
+                                                                                        ),
                                                                                     posX = 0.5f,
                                                                                     posY = 0.5f,
                                                                                     action = PadAction.AppLauncher(pkg),
@@ -1046,7 +1046,7 @@ fun MacroPadEditor(
                                                     val newDraft =
                                                         PadButton(
                                                             id = UUID.randomUUID().toString(),
-                                                            label = "",
+                                                            label = context.getString(R.string.macropad_editor_new_button_default_label),
                                                             posX = 0.5f,
                                                             posY = 0.5f,
                                                             action = defaultAction,
@@ -1341,15 +1341,7 @@ fun MacroPadEditor(
                                                             label = label,
                                                             modifiers = currentKeyAction?.modifiers ?: emptyList(),
                                                         )
-                                                    val newLabel =
-                                                        if (effectiveButton.label.isBlank() ||
-                                                            effectiveButton.label == currentKeyAction?.label
-                                                        ) {
-                                                            label
-                                                        } else {
-                                                            effectiveButton.label
-                                                        }
-                                                    val updatedDraft = effectiveButton.copy(action = newAction, label = newLabel)
+                                                    val updatedDraft = effectiveButton.copy(action = newAction)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
@@ -1395,15 +1387,7 @@ fun MacroPadEditor(
                                                             label = shortLabel,
                                                             extraBtnCodes = currentBtnAction?.extraBtnCodes ?: emptyList(),
                                                         )
-                                                    val newLabel =
-                                                        if (effectiveButton.label.isBlank() ||
-                                                            effectiveButton.label == currentBtnAction?.label
-                                                        ) {
-                                                            shortLabel
-                                                        } else {
-                                                            effectiveButton.label
-                                                        }
-                                                    val updatedDraft = effectiveButton.copy(action = newAction, label = newLabel)
+                                                    val updatedDraft = effectiveButton.copy(action = newAction)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
@@ -1439,7 +1423,7 @@ fun MacroPadEditor(
                                                 currentAction = effectiveButton.action,
                                                 accentColor = colors.accent,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
@@ -1475,7 +1459,7 @@ fun MacroPadEditor(
                                                 currentAction = effectiveButton.action,
                                                 accentColor = colors.accent,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
@@ -1511,7 +1495,7 @@ fun MacroPadEditor(
                                                 currentAction = effectiveButton.action,
                                                 accentColor = colors.accent,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {
@@ -1547,7 +1531,7 @@ fun MacroPadEditor(
                                                 currentAction = effectiveButton.action,
                                                 accentColor = colors.accent,
                                                 onSelectAction = { act ->
-                                                    val updatedDraft = applyActionToDraftButton(context, effectiveButton, act)
+                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
                                                     subPageStack =
                                                         subPageStack.dropLast(1).map { subPage ->
                                                             if (subPage is MacroPadSubPage.EditButton) {

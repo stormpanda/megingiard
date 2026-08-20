@@ -1372,6 +1372,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_editor_create_button_title">Create Button</string>
     <string name="macropad_editor_save_button_title">Save Button</string>
     <string name="macropad_editor_save_button_desc">Apply and save changes to this button</string>
+    <string name="macropad_editor_new_layout_default_name">New Layout</string>
+    <string name="macropad_editor_new_button_default_label">New Button</string>
 </resources>
 
 
