@@ -1235,17 +1235,15 @@ fun rememberSaveExitPromptState(
     val currentOnDiscard by rememberUpdatedState(onDiscard)
 
     val refocusSaveAction: () -> Unit = {
+        try {
+            inputModeManager.requestInputMode(InputMode.Keyboard)
+            focusRequester.requestFocus()
+        } catch (_: Exception) {
+        }
         coroutineScope.launch {
-            delay(50)
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-            } catch (_: Exception) {
-            }
-            try {
                 bringIntoViewRequester.bringIntoView()
-            } catch (_: Exception) {
-            }
-            try {
                 focusRequester.requestFocus()
             } catch (_: Exception) {
             }
@@ -1297,11 +1295,15 @@ fun rememberSaveExitPromptState(
 /**
  * Unified gamepad-first action row for menus and subpages with in-flight changes.
  *
+ * Maintains a stable [GamepadActionCard] node in the composition across both normal and exit
+ * prompt states to prevent focus detachment and eliminate UI flicker during transitions.
+ *
  * In normal mode ([showExitPrompt] = false):
- * - Displays a single full-width [GamepadActionCard] (Save button).
+ * - The primary card expands to full width (weight 1f).
  *
  * In exit confirmation mode ([showExitPrompt] = true):
- * - Splits into two side-by-side cards: "Save & Exit" (accent highlighted / focused) and "Discard & Exit" (destructive).
+ * - The primary card transitions to "Save & Exit" while preserving active focus.
+ * - The secondary "Discard & Exit" card appears beside it sharing the row (weight 1f each).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1335,37 +1337,38 @@ fun GamepadSaveExitActionRow(
             Modifier
         }
 
-    if (!showExitPrompt) {
+    val effectiveTitle =
+        if (showExitPrompt) {
+            stringResource(R.string.gamepad_action_save_and_exit)
+        } else {
+            title
+        }
+    val effectiveDescription =
+        if (showExitPrompt) {
+            stringResource(R.string.gamepad_action_save_and_exit_desc)
+        } else {
+            description
+        }
+
+    Row(
+        modifier = modifier.then(bivrModifier).fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(GC_SPACING_10),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         GamepadActionCard(
-            title = title,
-            description = description,
+            title = effectiveTitle,
+            description = effectiveDescription,
             actionText = saveActionText,
             icon = saveIcon,
             cardBgColor = cardBgColor,
-            actionLeadingContent = saveActionLeadingContent,
+            actionLeadingContent = if (!showExitPrompt) saveActionLeadingContent else null,
             enabled = enabled,
             onClick = onSave,
             itemKey = itemKey,
-            modifier = modifier.then(bivrModifier).then(saveReqModifier),
+            modifier = Modifier.weight(1f).then(saveReqModifier),
         )
-    } else {
-        Row(
-            modifier = modifier.then(bivrModifier).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(GC_SPACING_10),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GamepadActionCard(
-                title = stringResource(R.string.gamepad_action_save_and_exit),
-                description = stringResource(R.string.gamepad_action_save_and_exit_desc),
-                actionText = stringResource(R.string.gamepad_action_save),
-                icon = saveIcon,
-                cardBgColor = cardBgColor,
-                enabled = enabled,
-                onClick = onSave,
-                itemKey = "save_and_exit",
-                modifier = Modifier.weight(1f).then(saveReqModifier),
-            )
 
+        if (showExitPrompt) {
             GamepadActionCard(
                 title = stringResource(R.string.gamepad_action_discard_and_exit),
                 description = stringResource(R.string.gamepad_action_discard_and_exit_desc),
