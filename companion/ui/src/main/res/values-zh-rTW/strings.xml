@@ -40,10 +40,8 @@
     <string name="settings_exclude_from_recents_desc">切換到其他程式時，在最近任務列表中隱藏此應用程式</string>
     <string name="settings_accessibility_status">無障礙服務</string>
     <string name="settings_accessibility_setup">前往設定</string>
-    <string name="settings_accent_color_picker_title">選擇主題重點色</string>
     <string name="settings_color_brightness">亮度</string>
     <string name="settings_color_cancel">取消</string>
-    <string name="settings_color_apply">應用</string>
     <string name="settings_keyboard_title">鍵盤設定</string>
     <string name="cd_keyboard_trackpoint">軌跡點</string>
     <string name="cd_kb_select_all">全選</string>
@@ -921,6 +919,7 @@
     <string name="settings_color_saturation">飽和度</string>
     <string name="settings_color_saturation_desc">調整色彩彩度</string>
     <string name="settings_color_brightness_desc">調整色彩明度</string>
+    <string name="settings_color_opacity_desc">調整顏色不透明度</string>
     <string name="settings_color_save_title">儲存主題色</string>
     <string name="settings_color_save_desc">套用並儲存此自訂主題色</string>
     <string name="macropad_profile_deleted_toast">已刪除設定檔「%1$s」</string>

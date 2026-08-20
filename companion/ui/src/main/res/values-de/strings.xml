@@ -46,10 +46,8 @@
     <string name="settings_exclude_from_recents_desc">Die App aus der Liste der kürzlich geöffneten Apps ausblenden, wenn Sie zu einer anderen App wechseln</string>
     <string name="settings_accessibility_status">Bedienungshilfen-Dienst</string>
     <string name="settings_accessibility_setup">Einrichten</string>
-    <string name="settings_accent_color_picker_title">Akzentfarbe wählen</string>
     <string name="settings_color_brightness">Helligkeit</string>
     <string name="settings_color_cancel">Abbrechen</string>
-    <string name="settings_color_apply">Anwenden</string>
 
     <!-- Keyboard settings -->
     <string name="settings_keyboard_title">Tastatur-Einstellungen</string>
@@ -1203,6 +1201,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="settings_color_saturation">Sättigung</string>
     <string name="settings_color_saturation_desc">Farbintensität anpassen</string>
     <string name="settings_color_brightness_desc">Helligkeit der Farbe anpassen</string>
+    <string name="settings_color_opacity_desc">Deckkraft der Farbe anpassen</string>
     <string name="settings_color_save_title">Akzentfarbe speichern</string>
     <string name="settings_color_save_desc">Diese eigene Akzentfarbe anwenden und speichern</string>
     <string name="settings_config_import_card_desc">Konfiguration aus einer bestehenden .mgrd-Sicherungsdatei wiederherstellen</string>

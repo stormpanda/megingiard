@@ -1694,6 +1694,7 @@ fun MacroPadEditor(
                                                 breadcrumbs = emptyList(),
                                                 initialColor = currentSubPage.initialColor,
                                                 accentColor = colors.accent,
+                                                showAlphaSlider = currentSubPage.showAlphaSlider,
                                                 onSaveColor = currentSubPage.onSave,
                                             )
                                         }

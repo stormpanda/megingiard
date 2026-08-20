@@ -27,7 +27,7 @@ Megingiard supports user-selectable colour themes. The app provides three themes
 
 - All screen and component colours MUST be expressed through the 35 semantic tokens defined in `AppColors`.
 - Screens MUST NOT use hardcoded `Color.Black`, `Color.White`, or other literal `Color` values for surface, background, or text colours. Exceptions are permitted for:
-  - HSV colour-wheel rendering math in `ColorWheelPicker.kt` (saturation gradient, brightness overlay, selector dot ring).
+  - HSV color-wheel and slider rendering math in `MacroPadSubPages.kt` and `GlobalSettingsScreen.kt` (hue, saturation, brightness, and opacity gradients, selector thumb color).
   - Text / icon content placed on `accentColor` container surfaces — the `onAccent` token defines theming-appropriate contrast colour.
   - Standard dialog scrim overlays (`Color.Black.copy(alpha = 0.5f)` behind modal panels).
   - Material 3 component internal styling (`SwitchDefaults.colors`, `CheckboxDefaults.colors`) where tokens do not apply.

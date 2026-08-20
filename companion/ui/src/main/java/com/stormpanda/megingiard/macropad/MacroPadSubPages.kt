@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -231,6 +232,7 @@ internal sealed interface MacroPadSubPage {
         val breadcrumbs: List<String>,
         val initialColor: Color,
         val section: EditorSection,
+        val showAlphaSlider: Boolean = true,
         val onSave: (Color) -> Unit,
     ) : MacroPadSubPage {
         override val parentSection = section
@@ -266,6 +268,7 @@ internal fun ColorWheelSubPageContent(
     breadcrumbs: List<String>,
     initialColor: Color,
     accentColor: Color,
+    showAlphaSlider: Boolean = true,
     onSaveColor: (Color) -> Unit,
 ) {
     val initHsv =
@@ -275,10 +278,14 @@ internal fun ColorWheelSubPageContent(
     var hue by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[0]) }
     var sat by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[1]) }
     var bri by rememberSaveable(initialColor) { mutableFloatStateOf(initHsv[2]) }
+    var alpha by rememberSaveable(initialColor) {
+        mutableFloatStateOf(if (showAlphaSlider) initialColor.alpha.coerceIn(0.1f, 1f) else 1f)
+    }
 
     val workingColor by remember {
         derivedStateOf {
-            Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+            val base = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+            if (showAlphaSlider) base.copy(alpha = alpha) else base
         }
     }
 
@@ -316,6 +323,18 @@ internal fun ColorWheelSubPageContent(
                     listOf(
                         Color.Black,
                         Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, 1f))),
+                    ),
+            )
+        }
+
+    val opacityGradient =
+        remember(hue, sat, bri) {
+            val baseRgb = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
+            Brush.horizontalGradient(
+                colors =
+                    listOf(
+                        baseRgb.copy(alpha = 0.1f),
+                        baseRgb.copy(alpha = 1f),
                     ),
             )
         }
@@ -379,4 +398,19 @@ internal fun ColorWheelSubPageContent(
         trackBrush = brightnessGradient,
         thumbColor = workingColor,
     )
+
+    if (showAlphaSlider) {
+        GamepadSliderCard(
+            title = stringResource(R.string.layout_settings_color_opacity),
+            description = stringResource(R.string.settings_color_opacity_desc),
+            value = alpha,
+            valueRange = 0.1f..1f,
+            onValueChange = { alpha = it },
+            valueLabel = "${(alpha * 100).roundToInt()}%",
+            step = 0.02f,
+            trackBrush = opacityGradient,
+            thumbColor = workingColor,
+            icon = Icons.Rounded.Opacity,
+        )
+    }
 }

@@ -43,10 +43,8 @@
     <string name="settings_exclude_from_recents_desc">Hide the app from the recent apps / overview list when you switch away</string>
     <string name="settings_accessibility_status">Accessibility Service</string>
     <string name="settings_accessibility_setup">Set up</string>
-    <string name="settings_accent_color_picker_title">Pick accent color</string>
     <string name="settings_color_brightness">Brightness</string>
     <string name="settings_color_cancel">Cancel</string>
-    <string name="settings_color_apply">Apply</string>
 
     <!-- Keyboard settings -->
     <string name="settings_keyboard_title">Keyboard Settings</string>
@@ -1194,6 +1192,7 @@ Open Settings to create a layout.</string>
     <string name="settings_color_saturation">Saturation</string>
     <string name="settings_color_saturation_desc">Adjust the color intensity</string>
     <string name="settings_color_brightness_desc">Adjust the color lightness</string>
+    <string name="settings_color_opacity_desc">Adjust the color opacity</string>
     <string name="settings_color_save_title">Save Accent Color</string>
     <string name="settings_color_save_desc">Apply and save this custom accent color</string>
     <string name="settings_config_import_card_desc">Restore configuration from an existing .mgrd backup</string>
