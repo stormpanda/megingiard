@@ -362,6 +362,15 @@ fun MacroPadEditor(
                             },
                         )
                         GamepadCategoryTile(
+                            title = stringResource(R.string.layout_settings_bg_section_title),
+                            icon = Icons.Rounded.Wallpaper,
+                            selected = selectedSection == EditorSection.BACKGROUND,
+                            onClick = {
+                                subPageStack = emptyList()
+                                selectedSection = EditorSection.BACKGROUND
+                            },
+                        )
+                        GamepadCategoryTile(
                             title = stringResource(R.string.macropad_editor_section_buttons),
                             icon = Icons.Rounded.SmartButton,
                             selected = selectedSection == EditorSection.BUTTONS,
@@ -402,6 +411,7 @@ fun MacroPadEditor(
                                     when (selectedSection) {
                                         EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
                                         EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
+                                        EditorSection.BACKGROUND -> stringResource(R.string.layout_settings_bg_section_title)
                                         EditorSection.BUTTONS -> stringResource(R.string.macropad_editor_section_buttons)
                                         EditorSection.MACROS -> stringResource(R.string.macropad_editor_manage_macros)
                                     }
@@ -489,11 +499,6 @@ fun MacroPadEditor(
                                                         subPageStack = subPageStack + MacroPadSubPage.LayoutAppearance(activeLayout.id)
                                                     }
                                                 },
-                                                onEditBackground = {
-                                                    if (activeLayout != null) {
-                                                        subPageStack = subPageStack + MacroPadSubPage.LayoutBackground(activeLayout.id)
-                                                    }
-                                                },
                                                 onEditTouchpad = {
                                                     if (activeLayout != null) {
                                                         subPageStack = subPageStack + MacroPadSubPage.LayoutTouchpad(activeLayout.id)
@@ -548,6 +553,46 @@ fun MacroPadEditor(
                                                     }
                                                 },
                                             )
+                                        }
+
+                                        EditorSection.BACKGROUND -> {
+                                            if (activeLayout != null) {
+                                                LayoutBackgroundSubPageContent(
+                                                    layout = activeLayout,
+                                                    profileName = profile.name,
+                                                    accentColor = colors.accent,
+                                                    onOpenScrape = {
+                                                        subPageStack = subPageStack + MacroPadSubPage.SteamGridDbScrape(activeLayout.id)
+                                                    },
+                                                    onOpenCrop = { scale, ox, oy ->
+                                                        subPageStack =
+                                                            subPageStack +
+                                                            MacroPadSubPage.BackgroundCrop(
+                                                                layoutId = activeLayout.id,
+                                                                initialScale = scale,
+                                                                initialOffsetX = ox,
+                                                                initialOffsetY = oy,
+                                                            )
+                                                    },
+                                                    onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgDim ->
+                                                        MacroPadState.updateLayout(
+                                                            activeLayout.copy(
+                                                                backgroundImagePath = bgImagePath,
+                                                                useBackgroundImageAsMask = useAsMask,
+                                                                backgroundImageVersion =
+                                                                    if (bgChanged) activeLayout.backgroundImageVersion + 1 else activeLayout.backgroundImageVersion,
+                                                                bgImageScale = bgScale,
+                                                                bgImageOffsetX = bgOffsetX,
+                                                                bgImageOffsetY = bgOffsetY,
+                                                                backgroundImageDim = bgDim,
+                                                            ),
+                                                        )
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.gamepad_action_save_and_exit_desc),
+                                                        )
+                                                    },
+                                                )
+                                            }
                                         }
 
                                         EditorSection.BUTTONS -> {
@@ -935,60 +980,12 @@ fun MacroPadEditor(
                                         }
                                     }
 
-                                    is MacroPadSubPage.LayoutBackground -> {
-                                        val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
-                                        if (lay != null) {
-                                            GamepadDeck(
-                                                breadcrumbs =
-                                                    listOf(
-                                                        stringResource(R.string.macropad_editor_section_layout),
-                                                        stringResource(R.string.layout_settings_bg_section_title),
-                                                    ),
-                                            ) {
-                                                LayoutBackgroundSubPageContent(
-                                                    layout = lay,
-                                                    profileName = profile.name,
-                                                    accentColor = colors.accent,
-                                                    onOpenScrape = {
-                                                        subPageStack = subPageStack + MacroPadSubPage.SteamGridDbScrape(lay.id)
-                                                    },
-                                                    onOpenCrop = { scale, ox, oy ->
-                                                        subPageStack =
-                                                            subPageStack +
-                                                            MacroPadSubPage.BackgroundCrop(
-                                                                layoutId = lay.id,
-                                                                initialScale = scale,
-                                                                initialOffsetX = ox,
-                                                                initialOffsetY = oy,
-                                                            )
-                                                    },
-                                                    onConfirm = { bgImagePath, useAsMask, bgChanged, bgScale, bgOffsetX, bgOffsetY, bgDim ->
-                                                        MacroPadState.updateLayout(
-                                                            lay.copy(
-                                                                backgroundImagePath = bgImagePath,
-                                                                useBackgroundImageAsMask = useAsMask,
-                                                                backgroundImageVersion =
-                                                                    if (bgChanged) lay.backgroundImageVersion + 1 else lay.backgroundImageVersion,
-                                                                bgImageScale = bgScale,
-                                                                bgImageOffsetX = bgOffsetX,
-                                                                bgImageOffsetY = bgOffsetY,
-                                                                backgroundImageDim = bgDim,
-                                                            ),
-                                                        )
-                                                        subPageStack = subPageStack.dropLast(1)
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    }
-
                                     is MacroPadSubPage.BackgroundCrop -> {
                                         val lay = profile.layouts.firstOrNull { it.id == currentSubPage.layoutId } ?: activeLayout
                                         if (lay != null) {
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
-                                                        stringResource(R.string.macropad_editor_section_layout),
                                                         stringResource(R.string.layout_settings_bg_section_title),
                                                         stringResource(R.string.layout_settings_bg_image_crop),
                                                     ),
@@ -1020,7 +1017,6 @@ fun MacroPadEditor(
                                             GamepadDeck(
                                                 breadcrumbs =
                                                     listOf(
-                                                        stringResource(R.string.macropad_editor_section_layout),
                                                         stringResource(R.string.layout_settings_bg_section_title),
                                                         stringResource(R.string.layout_settings_bg_image_scrape),
                                                     ),
@@ -1979,7 +1975,6 @@ private fun LayoutsDeck(
     onOpenQuickActions: () -> Unit,
     onNewLayout: () -> Unit,
     onEditAppearance: () -> Unit,
-    onEditBackground: () -> Unit,
     onEditTouchpad: () -> Unit,
     onDuplicateLayout: () -> Unit,
     onCopyLayout: () -> Unit,
@@ -2034,14 +2029,6 @@ private fun LayoutsDeck(
         actionText = stringResource(R.string.gamepad_action_appearance),
         icon = Icons.Rounded.Palette,
         onClick = onEditAppearance,
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.layout_settings_bg_section_title),
-        description = stringResource(R.string.macropad_editor_background_desc),
-        actionText = stringResource(R.string.gamepad_action_background),
-        icon = Icons.Rounded.Wallpaper,
-        onClick = onEditBackground,
     )
 
     GamepadActionCard(

@@ -6,6 +6,7 @@ package com.stormpanda.megingiard.macropad
 enum class EditorSection {
     PROFILES,
     LAYOUTS,
+    BACKGROUND,
     BUTTONS,
     MACROS,
 }

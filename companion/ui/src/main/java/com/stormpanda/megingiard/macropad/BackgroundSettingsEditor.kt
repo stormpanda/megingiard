@@ -324,6 +324,7 @@ internal fun LayoutBackgroundSubPageContent(
                 onOpenScrape()
             }
         },
+        modifier = Modifier.firstDeckItem(),
     )
 
     GamepadActionCard(
