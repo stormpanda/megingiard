@@ -469,8 +469,6 @@ class MainActivity : ComponentActivity() {
                     MacroPadState.activeLayout,
                     AppStateManager.isOnValidScreen,
                     OnboardingWizardManager.isWizardActive,
-                    AppStateManager.showIntegrationHome,
-                    AppStateManager.isFloatingBubbleActive,
                     AppStateManager.isFullscreenMouseActive,
                     AppStateManager.isFullscreenKeyboardActive,
                     AppStateManager.wasMirroringStartedByTouchpad,
@@ -480,11 +478,9 @@ class MainActivity : ComponentActivity() {
                     val currentLayout = values[2] as? PadLayout
                     val onValidScreen = values[3] as Boolean
                     val wizardActive = values[4] as Boolean
-                    val showIntegrationHome = values[5] as Boolean
-                    val isFloatingBubbleActive = values[6] as Boolean
-                    val isFullscreenMouseActive = values[7] as Boolean
-                    val isFullscreenKeyboardActive = values[8] as Boolean
-                    val wasMirroringStartedByTouchpad = values[9] as Boolean
+                    val isFullscreenMouseActive = values[5] as Boolean
+                    val isFullscreenKeyboardActive = values[6] as Boolean
+                    val wasMirroringStartedByTouchpad = values[7] as Boolean
 
                     MirrorRuntimePolicyState(
                         promptInFlight = promptInFlight,
@@ -493,8 +489,6 @@ class MainActivity : ComponentActivity() {
                         layoutId = currentLayout?.id,
                         layoutWantsMirror = currentLayout?.mirrorAutoStart == true,
                         tutorialsActive = wizardActive,
-                        showIntegrationHome = showIntegrationHome,
-                        isFloatingBubbleActive = isFloatingBubbleActive,
                         isFullscreenMouseActive = isFullscreenMouseActive,
                         isFullscreenKeyboardActive = isFullscreenKeyboardActive,
                         wasMirroringStartedByTouchpad = wasMirroringStartedByTouchpad,

@@ -280,9 +280,9 @@ Each button supports one of the following actions:
 - **Unified Button Content Rendering**: Button face contents are rendered via a unified `PadButtonContent` composable shared across Use Mode (`MacroPadButton`), Editor Canvas (`PadCanvas`), and the Buttons Deck, ensuring App Launcher icons are displayed consistently across all editing and usage views.
 - **Execution & App Launch**: Tapping an App Launcher button opens the designated application on the bottom screen display using `ActivityOptions.makeBasic().setLaunchDisplayId(...)`.
 - **Touch-Positioned Floating Bubble Overlay**: Upon launching the target application, Megingiard minimizes to the background (`moveTaskToBack(true)`) and displays a floating bubble overlay centered at the exact screen coordinates where the App Launcher button was pressed.
-- **Temporary Mirroring Pause**: Triggering an App Launcher button or having an active floating bubble temporarily pauses screen capture (`ScreenCaptureService.stopSelf()`) to conserve system resources without altering the layout's saved `mirrorAutoStart` preference. Restoring Megingiard to the foreground automatically resumes screen capture.
+- **Resource Conservation**: When Megingiard is in the background while the external app is open, the embedded mirror view's surface is detached, pausing frame composition and saving GPU/battery without stopping the foreground capture service or resetting the `mirrorAutoStart` preference. Restoring Megingiard to the foreground immediately re-attaches the surface.
 - **Secondary Display Attachment**: The floating bubble window uses `WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY` created via `DisplayManager` targeting the secondary display (bottom screen) and managed by `MegingiardAccessibilityService`.
-- **Interactivity & Restore**: The floating bubble can be freely dragged across the screen. Tapping the floating bubble restores Megingiard (`MainActivity`) to the foreground on the bottom display, dismisses the bubble, and resumes screen mirroring.
+- **Interactivity & Restore**: The floating bubble can be freely dragged across the screen. Tapping the floating bubble restores Megingiard (`MainActivity`) to the foreground on the bottom display, dismisses the bubble, and resumes live display.
 
 
 

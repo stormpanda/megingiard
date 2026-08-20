@@ -131,28 +131,6 @@ class ScreenCaptureService : Service() {
                 }
             }
         }
-
-        scope.launch {
-            AppStateManager.showIntegrationHome.collect { showIntegrationHome ->
-                if (showIntegrationHome && ScreenCaptureManager.isCapturing.value &&
-                    !AppStateManager.isFullscreenMouseActive.value &&
-                    !AppStateManager.isFullscreenKeyboardActive.value &&
-                    !AppStateManager.wasMirroringStartedByTouchpad.value
-                ) {
-                    AppLog.i(TAG, "Companion Hub screen became active -> stopping screen capture to conserve resources")
-                    stopSelf()
-                }
-            }
-        }
-
-        scope.launch {
-            AppStateManager.isFloatingBubbleActive.collect { bubbleActive ->
-                if (bubbleActive && ScreenCaptureManager.isCapturing.value) {
-                    AppLog.i(TAG, "Floating bubble overlay became active -> stopping screen capture to conserve resources")
-                    stopSelf()
-                }
-            }
-        }
     }
 
     override fun onStartCommand(
