@@ -202,6 +202,7 @@ internal fun ChooseButtonTypeSubPageContent(
 @Composable
 internal fun EditButtonSubPageContent(
     button: PadButton?, // null → create new
+    savedButton: PadButton? = null,
     accentColor: Color,
     enableKeyboard: Boolean = true,
     enableGamepad: Boolean = true,
@@ -224,6 +225,7 @@ internal fun EditButtonSubPageContent(
     onSave: (PadButton) -> Unit,
 ) {
     val context = LocalContext.current
+    val colors = LocalAppColors.current
     val activeLayout = MacroPadState.activeLayout.collectAsState().value
     val initAction =
         button?.action
@@ -380,6 +382,36 @@ internal fun EditButtonSubPageContent(
             else -> label.isNotBlank()
         }
 
+    val isNew = savedButton == null
+    val currentButton = buildCurrentButton()
+    val hasChanges =
+        isConfirmEnabled && (
+            isNew ||
+                currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
+        )
+
+    val pulseTransition = rememberInfiniteTransition(label = "btnEditSavePulse")
+    val pulseFraction by pulseTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = PBD_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "btnEditSavePulseFraction",
+    )
+    val saveCardBgColor =
+        if (hasChanges) {
+            lerp(
+                colors.surface.copy(alpha = PBD_PULSE_SURFACE_ALPHA),
+                colors.accent.copy(alpha = PBD_PULSE_ACCENT_ALPHA),
+                pulseFraction,
+            )
+        } else {
+            null
+        }
+
     val layoutTextOpt = activeLayout?.buttonTextColor ?: ColorOption.Neutral
     val layoutBorderOpt = activeLayout?.buttonBorderColor ?: ColorOption.Neutral
     val layoutBgOpt = activeLayout?.buttonBgColor ?: ColorOption.Neutral
@@ -394,6 +426,23 @@ internal fun EditButtonSubPageContent(
 
     val showLabelAndIcon = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
 
+    // ── Save Option at the Very Top ─────────────────────────────────
+    GamepadActionCard(
+        title = stringResource(if (isNew) R.string.macropad_editor_create_button_title else R.string.macropad_editor_save_button_title),
+        description = stringResource(if (isNew) R.string.macropad_editor_create_button_desc else R.string.macropad_editor_save_button_desc),
+        cardBgColor = saveCardBgColor,
+        actionText = stringResource(if (isNew) R.string.gamepad_action_create else R.string.gamepad_action_save),
+        icon = Icons.Rounded.Save,
+        enabled = isConfirmEnabled,
+        onClick = {
+            if (isConfirmEnabled) {
+                AppLog.d(TAG, "Confirm button edit: id=${currentButton.id} label=${currentButton.label} action=${currentButton.action}")
+                onSave(currentButton)
+            }
+        },
+        modifier = Modifier.firstDeckItem(),
+    )
+
     // Label & Icon input
     if (showLabelAndIcon) {
         GamepadTextFieldCard(
@@ -403,7 +452,6 @@ internal fun EditButtonSubPageContent(
             value = label,
             onValueChange = { label = it },
             icon = Icons.Rounded.Edit,
-            modifier = Modifier.firstDeckItem(),
         )
 
         GamepadActionCard(
@@ -421,7 +469,7 @@ internal fun EditButtonSubPageContent(
                     )
                 }
             },
-            onClick = { onOpenIconPicker(buildCurrentButton()) },
+            onClick = { onOpenIconPicker(currentButton) },
         )
     }
 
@@ -433,7 +481,6 @@ internal fun EditButtonSubPageContent(
     ActionPicker(
         current = action,
         accentColor = accentColor,
-        isFirstItem = !showLabelAndIcon,
         enableKeyboard = enableKeyboard,
         enableGamepad = enableGamepad,
         enableMouse = enableMouse,
@@ -442,25 +489,25 @@ internal fun EditButtonSubPageContent(
             onEditMacro?.invoke(macro)
         },
         onOpenAppPicker = {
-            onOpenAppPicker(buildCurrentButton())
+            onOpenAppPicker(currentButton)
         },
         onOpenKeyboardPicker = {
-            onOpenKeyboardPicker?.invoke(buildCurrentButton())
+            onOpenKeyboardPicker?.invoke(currentButton)
         },
         onOpenGamepadPicker = {
-            onOpenGamepadPicker?.invoke(buildCurrentButton())
+            onOpenGamepadPicker?.invoke(currentButton)
         },
         onOpenMousePicker = {
-            onOpenMousePicker?.invoke(buildCurrentButton())
+            onOpenMousePicker?.invoke(currentButton)
         },
         onOpenMirrorPicker = {
-            onOpenMirrorPicker?.invoke(buildCurrentButton())
+            onOpenMirrorPicker?.invoke(currentButton)
         },
         onOpenOverlayPicker = {
-            onOpenOverlayPicker?.invoke(buildCurrentButton())
+            onOpenOverlayPicker?.invoke(currentButton)
         },
         onOpenLayoutPicker = {
-            onOpenLayoutPicker?.invoke(buildCurrentButton())
+            onOpenLayoutPicker?.invoke(currentButton)
         },
         onChange = ::onActionChanged,
     )
@@ -730,20 +777,6 @@ internal fun EditButtonSubPageContent(
             }
         }
     }
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_editor_done),
-        description = stringResource(R.string.macropad_editor_appearance_desc),
-        actionText = stringResource(R.string.macropad_editor_done),
-        enabled = isConfirmEnabled,
-        onClick = {
-            if (isConfirmEnabled) {
-                val result = buildCurrentButton()
-                AppLog.d(TAG, "Confirm button edit: id=${result.id} label=${result.label} action=${result.action}")
-                onSave(result)
-            }
-        },
-    )
 }
 
 @Composable

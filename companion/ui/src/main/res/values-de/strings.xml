@@ -1378,6 +1378,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_deleted_toast">Makro \"%1$s\" gelöscht</string>
     <string name="macropad_editor_save_button_colors_title">Tastenfarben-Standardwerte speichern</string>
     <string name="macropad_editor_save_button_colors_desc">Aktualisierte Tastenfarben-Standardwerte übernehmen und speichern</string>
+    <string name="macropad_editor_create_button_title">Button erstellen</string>
+    <string name="macropad_editor_save_button_title">Button speichern</string>
+    <string name="macropad_editor_save_button_desc">Änderungen an diesem Button anwenden und speichern</string>
 </resources>
 
 

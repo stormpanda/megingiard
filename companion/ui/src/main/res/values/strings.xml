@@ -1369,6 +1369,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_deleted_toast">Macro \"%1$s\" deleted</string>
     <string name="macropad_editor_save_button_colors_title">Save Button Color Defaults</string>
     <string name="macropad_editor_save_button_colors_desc">Apply and save updated default button colors</string>
+    <string name="macropad_editor_create_button_title">Create Button</string>
+    <string name="macropad_editor_save_button_title">Save Button</string>
+    <string name="macropad_editor_save_button_desc">Apply and save changes to this button</string>
 </resources>
 
 

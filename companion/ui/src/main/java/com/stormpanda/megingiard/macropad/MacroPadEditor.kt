@@ -1080,6 +1080,7 @@ fun MacroPadEditor(
                                         ) {
                                             EditButtonSubPageContent(
                                                 button = effectiveButton,
+                                                savedButton = currentSubPage.button,
                                                 accentColor = colors.accent,
                                                 onOpenIconPicker = { currentDraft ->
                                                     subPageStack =
