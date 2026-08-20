@@ -55,6 +55,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -71,9 +72,11 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -1206,7 +1209,7 @@ class SaveExitPromptState(
  * or Android Back gesture) when [hasChanges] is true, transitioning the save action row into a
  * split "Save & Exit" / "Discard & Exit" confirmation and automatically scrolling & focusing it.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun rememberSaveExitPromptState(
     hasChanges: Boolean,
@@ -1216,6 +1219,7 @@ fun rememberSaveExitPromptState(
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val inputModeManager = LocalInputModeManager.current
     var showExitPrompt by remember { mutableStateOf(false) }
 
     LaunchedEffect(hasChanges) {
@@ -1230,24 +1234,33 @@ fun rememberSaveExitPromptState(
     val currentOnSave by rememberUpdatedState(onSave)
     val currentOnDiscard by rememberUpdatedState(onDiscard)
 
+    val refocusSaveAction: () -> Unit = {
+        coroutineScope.launch {
+            delay(50)
+            try {
+                inputModeManager.requestInputMode(InputMode.Keyboard)
+            } catch (_: Exception) {
+            }
+            try {
+                bringIntoViewRequester.bringIntoView()
+            } catch (_: Exception) {
+            }
+            try {
+                focusRequester.requestFocus()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     val handleBack: () -> Boolean = {
         if (currentHasChanges) {
             if (!currentShowExitPrompt) {
                 showExitPrompt = true
-                coroutineScope.launch {
-                    delay(50)
-                    try {
-                        bringIntoViewRequester.bringIntoView()
-                    } catch (_: Exception) {
-                    }
-                    try {
-                        focusRequester.requestFocus()
-                    } catch (_: Exception) {
-                    }
-                }
+                refocusSaveAction()
                 true
             } else {
                 showExitPrompt = false
+                refocusSaveAction()
                 true
             }
         } else {
@@ -1273,7 +1286,10 @@ fun rememberSaveExitPromptState(
             bringIntoViewRequester = bringIntoViewRequester,
             onSave = { currentOnSave() },
             onDiscard = { currentOnDiscard() },
-            dismissPrompt = { showExitPrompt = false },
+            dismissPrompt = {
+                showExitPrompt = false
+                refocusSaveAction()
+            },
         )
     }
 }
@@ -1312,6 +1328,13 @@ fun GamepadSaveExitActionRow(
             Modifier
         }
 
+    val saveReqModifier =
+        if (saveFocusRequester != null) {
+            Modifier.focusRequester(saveFocusRequester)
+        } else {
+            Modifier
+        }
+
     if (!showExitPrompt) {
         GamepadActionCard(
             title = title,
@@ -1323,7 +1346,7 @@ fun GamepadSaveExitActionRow(
             enabled = enabled,
             onClick = onSave,
             itemKey = itemKey,
-            modifier = modifier.then(bivrModifier),
+            modifier = modifier.then(bivrModifier).then(saveReqModifier),
         )
     } else {
         Row(
@@ -1331,13 +1354,6 @@ fun GamepadSaveExitActionRow(
             horizontalArrangement = Arrangement.spacedBy(GC_SPACING_10),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val saveReqModifier =
-                if (saveFocusRequester != null) {
-                    Modifier.focusRequester(saveFocusRequester)
-                } else {
-                    Modifier
-                }
-
             GamepadActionCard(
                 title = stringResource(R.string.gamepad_action_save_and_exit),
                 description = stringResource(R.string.gamepad_action_save_and_exit_desc),
