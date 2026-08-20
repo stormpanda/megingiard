@@ -47,9 +47,13 @@ import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.OpenWith
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SmartButton
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -99,6 +103,7 @@ import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadReorderCard
+import com.stormpanda.megingiard.ui.GamepadReorderDeck
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
@@ -1710,6 +1715,11 @@ fun MacroPadEditor(
                                                             subPageStack +
                                                             MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = stepIdx)
                                                     },
+                                                    onOpenReorderSteps = {
+                                                        subPageStack =
+                                                            subPageStack +
+                                                            MacroPadSubPage.ReorderMacroSteps(macro.id)
+                                                    },
                                                     onDiscard = { subPageStack = subPageStack.dropLast(1) },
                                                     onSave = { updatedMacro ->
                                                         MacroPadState.updateMacro(updatedMacro)
@@ -1738,9 +1748,7 @@ fun MacroPadEditor(
                                                         stringResource(R.string.macropad_editor_manage_macros),
                                                         macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
                                                         stringResource(
-                                                            if (step ==
-                                                                null
-                                                            ) {
+                                                            if (step == null) {
                                                                 R.string.macropad_macro_step_new
                                                             } else {
                                                                 R.string.macropad_macro_step_edit
@@ -1751,23 +1759,88 @@ fun MacroPadEditor(
                                                 MacroStepEditSubPageContent(
                                                     macroName = macro.name,
                                                     step = step,
+                                                    stepIndex = currentSubPage.stepIndex,
                                                     accentColor = colors.accent,
                                                     suggestedStartTimeMs = macro.steps.totalDurationMs(),
                                                     initialShiftMode = ShiftMode.END_DELTA,
                                                     onConfirm = { newStep, shiftMode ->
                                                         val updatedSteps =
-                                                            if (currentSubPage.stepIndex != null) {
-                                                                macro.steps.mapIndexed { idx, s ->
-                                                                    if (idx == currentSubPage.stepIndex) newStep else s
-                                                                }
+                                                            if (currentSubPage.stepIndex != null && step != null) {
+                                                                applyShiftSubsequent(
+                                                                    macro.steps,
+                                                                    currentSubPage.stepIndex,
+                                                                    step,
+                                                                    newStep,
+                                                                    shiftMode,
+                                                                )
                                                             } else {
                                                                 macro.steps + newStep
                                                             }
                                                         MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                         subPageStack = subPageStack.dropLast(1)
                                                     },
+                                                    onDiscard = { subPageStack = subPageStack.dropLast(1) },
+                                                    onDuplicate = { dupStep ->
+                                                        val newStart = macro.steps.totalDurationMs()
+                                                        val duplicated = dupStep.withStartTime(newStart)
+                                                        MacroPadState.updateMacro(macro.copy(steps = macro.steps + duplicated))
+                                                        subPageStack = subPageStack.dropLast(1)
+                                                        DialogToastManager.show(
+                                                            context.getString(R.string.macropad_macro_step_duplicate),
+                                                        )
+                                                    },
+                                                    onDelete = {
+                                                        if (currentSubPage.stepIndex != null) {
+                                                            val updatedSteps =
+                                                                macro.steps.filterIndexed { i, _ ->
+                                                                    i !=
+                                                                        currentSubPage.stepIndex
+                                                                }
+                                                            MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
+                                                            subPageStack = subPageStack.dropLast(1)
+                                                            DialogToastManager.show(
+                                                                context.getString(R.string.macropad_macro_step_delete),
+                                                            )
+                                                        }
+                                                    },
                                                 )
                                             }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ReorderMacroSteps -> {
+                                        val macro = profile.macros.firstOrNull { it.id == currentSubPage.macroId }
+                                        if (macro != null) {
+                                            val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+                                            GamepadReorderDeck(
+                                                items = macro.steps,
+                                                itemKey = { step -> "${step.startTimeMs}_${step.durationMs}_${step.hashCode()}" },
+                                                itemTitle = { step ->
+                                                    val stepIdx = macro.steps.indexOf(step)
+                                                    "${stepIdx + 1}. ${stepTypeLabel(
+                                                        step,
+                                                        context,
+                                                    )}: ${stepActionDescription(step, swapFaceButtons, context)}"
+                                                },
+                                                itemDescription = { step ->
+                                                    context.getString(
+                                                        R.string.macropad_macro_step_timing,
+                                                        step.startTimeMs,
+                                                        step.durationMs,
+                                                    )
+                                                },
+                                                itemIcon = { step -> stepIcon(step) },
+                                                onReorder = { reorderedSteps ->
+                                                    MacroPadState.updateMacro(macro.copy(steps = reorderedSteps))
+                                                },
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_manage_macros),
+                                                        macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
+                                                        stringResource(R.string.macropad_macro_reorder_steps_title),
+                                                    ),
+                                                emptyMessage = stringResource(R.string.macropad_macro_reorder_steps_empty),
+                                            )
                                         }
                                     }
 
@@ -2653,6 +2726,43 @@ private fun MacroPadEditorHelpModal(
             icon = Icons.Rounded.Edit,
             label = stringResource(R.string.help_editor_button_edit_label),
             description = stringResource(R.string.help_editor_button_edit_desc),
+        )
+
+        HelpSection(stringResource(R.string.macropad_editor_manage_macros))
+        HelpEntry(
+            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+            label = stringResource(R.string.macropad_macro_list_title),
+            description = stringResource(R.string.help_editor_profile_macros_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Add,
+            label = stringResource(R.string.macropad_macro_step_new),
+            description = stringResource(R.string.macro_step_action_type_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.SportsEsports,
+            label = stringResource(R.string.macropad_macro_record_gamepad_title),
+            description = stringResource(R.string.macropad_macro_record_gamepad_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.TouchApp,
+            label = stringResource(R.string.macropad_macro_record_touch_dialog_title),
+            description = stringResource(R.string.macropad_macro_record_touch_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.SwapVert,
+            label = stringResource(R.string.macropad_macro_reorder_steps_title),
+            description = stringResource(R.string.macropad_macro_reorder_steps_desc),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.PlayArrow,
+            label = stringResource(R.string.macropad_macro_test_run),
+            description = stringResource(R.string.cd_test_macro),
+        )
+        HelpEntry(
+            icon = Icons.Rounded.Repeat,
+            label = stringResource(R.string.macropad_macro_loop_toggle),
+            description = stringResource(R.string.macropad_macro_loop_pause_label),
         )
     }
 }

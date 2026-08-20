@@ -224,6 +224,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.MACROS
     }
 
+    data class ReorderMacroSteps(
+        val macroId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.MACROS
+    }
+
     data class ColorWheel(
         val title: String,
         val breadcrumbs: List<String>,

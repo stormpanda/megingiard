@@ -557,6 +557,37 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_timeline_tick">%1$dms</string>
     <!-- %1$d = start time ms, %2$d = duration ms -->
     <string name="macropad_macro_step_timing">@%1$dms  ⟶  %2$dms</string>
+    <string name="macropad_macro_reorder_steps_title">Reorder Steps</string>
+    <string name="macropad_macro_reorder_steps_desc">Change the execution sequence of macro steps</string>
+    <string name="macropad_macro_reorder_steps_empty">No steps to reorder.</string>
+    <string name="macropad_macro_step_duplicate">Duplicate Step</string>
+    <string name="macropad_macro_step_duplicate_desc">Create a copy of this step at the end of the timeline</string>
+    <string name="macropad_macro_step_delete">Delete Step</string>
+    <string name="macropad_macro_step_delete_desc">Remove this step from the macro timeline</string>
+    <string name="macropad_macro_step_delete_confirm_title">Delete Step #%1$d?</string>
+    <string name="macropad_macro_step_type_delay">Delay / Pause</string>
+    <string name="macropad_macro_step_delay_desc">Pauses execution for the specified duration before subsequent steps trigger</string>
+    <string name="macropad_macro_dir_up">Up (↑)</string>
+    <string name="macropad_macro_dir_down">Down (↓)</string>
+    <string name="macropad_macro_dir_left">Left (←)</string>
+    <string name="macropad_macro_dir_right">Right (→)</string>
+    <string name="macropad_macro_dir_up_left">Up-Left (↖)</string>
+    <string name="macropad_macro_dir_up_right">Up-Right (↗)</string>
+    <string name="macropad_macro_dir_down_left">Down-Left (↙)</string>
+    <string name="macropad_macro_dir_down_right">Down-Right (↘)</string>
+    <string name="macropad_macro_section_playback">Playback &amp; Looping</string>
+    <string name="macropad_macro_section_actions">Step Actions</string>
+    <string name="macropad_macro_section_general">General</string>
+    <string name="macropad_macro_section_recording">Recording &amp; Quick Actions</string>
+    <string name="macropad_macro_step_start_desc">Timeline offset when this action triggers</string>
+    <string name="macropad_macro_step_duration_desc">How long this action stays active</string>
+    <string name="macropad_macro_step_shift_desc">Automatically adjust subsequent step offsets</string>
+    <string name="macropad_macro_step_pos_x">Touch X Position</string>
+    <string name="macropad_macro_step_pos_y">Touch Y Position</string>
+    <string name="macropad_macro_step_pos_desc" formatted="false">Normalized touch coordinates on screen (0% to 100%)</string>
+    <string name="macropad_macro_test_run_success">Macro \"%1$s\" triggered</string>
+    <string name="macropad_macro_record_gamepad_desc">Record controller button presses and stick motion</string>
+    <string name="macropad_macro_record_touch_desc">Record taps and gestures from screen mirror</string>
 
     <string name="cd_more_options">More options</string>
 
@@ -1099,6 +1130,8 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_moving">Moving</string>
     <string name="gamepad_action_done">Done</string>
     <string name="gamepad_action_delete">Delete</string>
+    <string name="gamepad_action_run">Run</string>
+    <string name="gamepad_action_record">Record</string>
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
     <string name="macropad_reorder_empty">No items to reorder</string>

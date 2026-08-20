@@ -459,6 +459,37 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_timeline_tick">%1$d ms</string>
     <!-- Schritt-Timing: %1$d = Startzeit ms, %2$d = Dauer ms -->
     <string name="macropad_macro_step_timing">@%1$d ms  ⟶  %2$d ms</string>
+    <string name="macropad_macro_reorder_steps_title">Schritte sortieren</string>
+    <string name="macropad_macro_reorder_steps_desc">Reihenfolge der Makroschritte anpassen</string>
+    <string name="macropad_macro_reorder_steps_empty">Keine Schritte zum Sortieren vorhanden.</string>
+    <string name="macropad_macro_step_duplicate">Schritt duplizieren</string>
+    <string name="macropad_macro_step_duplicate_desc">Erstellt eine Kopie dieses Schritts am Ende der Zeitachse</string>
+    <string name="macropad_macro_step_delete">Schritt löschen</string>
+    <string name="macropad_macro_step_delete_desc">Diesen Schritt aus dem Makro entfernen</string>
+    <string name="macropad_macro_step_delete_confirm_title">Schritt #%1$d löschen?</string>
+    <string name="macropad_macro_step_type_delay">Verzögerung / Pause</string>
+    <string name="macropad_macro_step_delay_desc">Pausiert die Ausführung für die angegebene Zeitspanne vor dem nächsten Schritt</string>
+    <string name="macropad_macro_dir_up">Oben (↑)</string>
+    <string name="macropad_macro_dir_down">Unten (↓)</string>
+    <string name="macropad_macro_dir_left">Links (←)</string>
+    <string name="macropad_macro_dir_right">Rechts (→)</string>
+    <string name="macropad_macro_dir_up_left">Oben-Links (↖)</string>
+    <string name="macropad_macro_dir_up_right">Oben-Rechts (↗)</string>
+    <string name="macropad_macro_dir_down_left">Unten-Links (↙)</string>
+    <string name="macropad_macro_dir_down_right">Unten-Rechts (↘)</string>
+    <string name="macropad_macro_section_playback">Wiedergabe &amp; Schleife</string>
+    <string name="macropad_macro_section_actions">Schritt-Aktionen</string>
+    <string name="macropad_macro_section_general">Allgemein</string>
+    <string name="macropad_macro_section_recording">Aufnahme &amp; Schnellaktionen</string>
+    <string name="macropad_macro_step_start_desc">Zeitpunkt auf der Zeitachse, an dem diese Aktion auslöst</string>
+    <string name="macropad_macro_step_duration_desc">Dauer, wie lange diese Aktion aktiv bleibt</string>
+    <string name="macropad_macro_step_shift_desc">Nachfolgende Schritte automatisch verschieben</string>
+    <string name="macropad_macro_step_pos_x">Touch X-Position</string>
+    <string name="macropad_macro_step_pos_y">Touch Y-Position</string>
+    <string name="macropad_macro_step_pos_desc" formatted="false">Normalisierte Bildschirm-Koordinaten (0% bis 100%)</string>
+    <string name="macropad_macro_test_run_success">Makro \"%1$s\" ausgeführt</string>
+    <string name="macropad_macro_record_gamepad_desc">Controller-Tasten und Stick-Bewegungen aufzeichnen</string>
+    <string name="macropad_macro_record_touch_desc">Tippen und Gesten aus der Bildschirmspiegelung aufnehmen</string>
 
     <string name="macropad_picker_folder_empty">Keine Makros verfügbar</string>
     <string name="cd_more_options">Weitere Optionen</string>
@@ -1108,6 +1139,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_moving">Verschieben…</string>
     <string name="gamepad_action_done">Fertig</string>
     <string name="gamepad_action_delete">Löschen</string>
+    <string name="gamepad_action_run">Ausführen</string>
+    <string name="gamepad_action_record">Aufnehmen</string>
     <string name="cd_move_up">Nach oben verschieben</string>
     <string name="cd_move_down">Nach unten verschieben</string>
     <string name="macropad_reorder_empty">Keine Einträge zum Neuanordnen</string>
