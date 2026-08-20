@@ -202,10 +202,18 @@ class MainActivity : ComponentActivity() {
     // visible even after moving to the correct display.
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        display?.displayId?.let { displayId ->
-            val isValid = displayId != Display.DEFAULT_DISPLAY
-            AppStateManager.setOnValidScreen(isValid)
-        }
+        AppLog.i(TAG, "onConfigurationChanged")
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = DisplayDetector.isValidScreen(currentDisplayId)
+        AppStateManager.setOnValidScreen(isValid)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppLog.i(TAG, "onResume")
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = DisplayDetector.isValidScreen(currentDisplayId)
+        AppStateManager.setOnValidScreen(isValid)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -428,7 +436,7 @@ class MainActivity : ComponentActivity() {
             // Synchronous display evaluation gets correct value on frame 0
             val context = LocalContext.current
             val currentDisplayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-            val isOnValidScreenLocal = currentDisplayId != Display.DEFAULT_DISPLAY
+            val isOnValidScreenLocal = DisplayDetector.isValidScreen(currentDisplayId)
 
             // Update global state for other components
             LaunchedEffect(isOnValidScreenLocal) {
@@ -740,10 +748,14 @@ class MainActivity : ComponentActivity() {
         startService(stopIntent)
     }
 
-    /** Called when the app is already running and receives a new ACTION_VIEW intent. */
+    /** Called when the app is already running and receives a new ACTION_VIEW or launch intent. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        AppLog.i(TAG, "onNewIntent")
+        setIntent(intent)
+        val currentDisplayId = display?.displayId ?: Display.DEFAULT_DISPLAY
+        val isValid = DisplayDetector.isValidScreen(currentDisplayId)
+        AppLog.i(TAG, "onNewIntent: displayId=$currentDisplayId isValid=$isValid action=${intent.action}")
+        AppStateManager.setOnValidScreen(isValid)
         handleIncomingIntent(intent)
     }
 

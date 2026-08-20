@@ -7,6 +7,7 @@ import android.content.Intent
 import android.view.Display
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.MainActivity
+import com.stormpanda.megingiard.catalog.DisplayDetector
 
 private const val TAG = "AppLauncherManager"
 
@@ -67,11 +68,17 @@ object AppLauncherManager {
     fun restoreMegingiard(context: Context) {
         try {
             AppLog.i(TAG, "Restoring Megingiard activity to foreground")
+            val secondary = DisplayDetector.findSecondaryDisplay(context)
+            val displayId = secondary?.displayId ?: Display.DEFAULT_DISPLAY
+            val options =
+                ActivityOptions.makeBasic().apply {
+                    setLaunchDisplayId(displayId)
+                }
             val intent =
                 Intent(context, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 }
-            context.startActivity(intent)
+            context.startActivity(intent, options.toBundle())
             FloatingBubbleOverlay.hide()
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to restore Megingiard: ${e.message}")

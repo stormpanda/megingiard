@@ -79,15 +79,25 @@ Configuration menus (Global Settings, MacroPad button/layout inspector, Backgrou
 
 The MacroPad macro editor also uses **inline full-screen overlays in the same secondary-display window** for transient recording workflows: `TouchRecordingOverlay` captures touch tap and gesture paths over the embedded mirror, while gamepad macro recording renders an in-app `GamepadRecordingOverlay` directly above `MacroTimelineEditor`. The gamepad overlay intentionally captures input from on-screen touch surfaces instead of listening to the physical controller device, so recording works without root-only device snooping while still forwarding events live through the existing virtual gamepad injector.
 
-### Wrong-Screen Overlay
+### Display Enforcement & Launch Routing
 
-When `MainActivity` detects that it is running on the **primary display** (`displayId == Display.DEFAULT_DISPLAY`) — either because the app was launched there or moved there at runtime — a global full-screen blocking overlay is shown in `MainAppScreen` on top of all content. The overlay:
+`MainActivity` is intended to execute on the **secondary (bottom) display** (`displayId != Display.DEFAULT_DISPLAY`). To ensure seamless placement on dual-screen hardware such as the AYN Thor:
 
-- Displays a plain-language message instructing the user to move the app to the bottom screen.
-- Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
-- Consumes all pointer events, preventing interaction with any underlying controls.
+1. **Launch Routing via `LaunchTrampolineActivity`**:
+   - The application launcher entry point (`CATEGORY_LAUNCHER` and `ACTION_VIEW`) is registered as `LaunchTrampolineActivity`, a translucent no-history activity (`Theme.Translucent.NoTitleBar`).
+   - When tapped from any launcher (on the top or bottom screen), `LaunchTrampolineActivity` inspects the hardware topology via `DisplayDetector.findSecondaryDisplay(context)`.
+   - It dispatches an explicit intent to `MainActivity` with `ActivityOptions.setLaunchDisplayId(secondaryDisplay.displayId)` and `FLAG_ACTIVITY_NEW_TASK or FLAG_ACTIVITY_REORDER_TO_FRONT or FLAG_ACTIVITY_SINGLE_TOP`, and finishes immediately without drawing any window on the primary display.
+   - `MainActivity` is declared with `android:launchMode="singleTask"`. If already running on the bottom screen, Android smoothly brings the existing instance to the foreground on the secondary display without spawning a duplicate task on the top display.
 
-Display detection is performed synchronously in `MainActivity`'s Compose tree via `LocalContext.current.display?.displayId` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (auto-start on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
+2. **Foreground Validation & Wrong-Screen Overlay**:
+   - In `MainActivity.onConfigurationChanged()` and `MainActivity.onResume()`, the active display ID is continuously validated via `DisplayDetector.isValidScreen(currentDisplayId)` and updated in `AppStateManager.isOnValidScreen`.
+   - When running on the primary display (e.g. on single-screen devices), a global full-screen blocking overlay (`WrongScreenOverlay`) is rendered in `MainAppScreen`.
+   - Displays a plain-language message instructing the user to place the app on the bottom screen.
+   - Shows an animated, vertically bouncing downward arrow (`KeyboardArrowDown`) as a directional hint.
+   - Consumes all pointer events, preventing interaction with underlying controls.
+   - Tapping "Retry detection" triggers an explicit retarget attempt to the secondary display.
+
+Display detection is performed synchronously via `DisplayDetector.isValidScreen(currentDisplayId)` and stored in `AppStateManager.isOnValidScreen`. All capture auto-start paths (auto-start on resume, MacroPad ambient auto-trigger) are gated on `isOnValidScreen` to prevent a `MediaProjection` consent dialog from appearing while the app is on the primary display.
 
 ---
 

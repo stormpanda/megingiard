@@ -1,6 +1,9 @@
 package com.stormpanda.megingiard
 
+import android.app.Activity
+import android.app.ActivityOptions
 import android.content.Context
+import android.content.Intent
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
@@ -209,7 +212,28 @@ fun MainAppScreen() {
             colors = colors,
             onRetry = {
                 val displayId = context.display?.displayId ?: Display.DEFAULT_DISPLAY
-                AppLog.i(TAG, "wrong-screen retry tapped: displayId=$displayId")
+                val secondaryDisplay = DisplayDetector.findSecondaryDisplay(context)
+                AppLog.i(
+                    TAG,
+                    "wrong-screen retry tapped: displayId=$displayId secondaryDisplay=${secondaryDisplay?.displayId}",
+                )
+                if (secondaryDisplay != null && displayId == Display.DEFAULT_DISPLAY) {
+                    val options =
+                        ActivityOptions.makeBasic().apply {
+                            setLaunchDisplayId(secondaryDisplay.displayId)
+                        }
+                    val retryIntent =
+                        Intent(context, MainActivity::class.java).apply {
+                            addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP,
+                            )
+                        }
+                    context.startActivity(retryIntent, options.toBundle())
+                    (context as? Activity)?.finishAndRemoveTask()
+                } else {
+                    val isValid = DisplayDetector.isValidScreen(displayId)
+                    AppStateManager.setOnValidScreen(isValid)
+                }
             },
         )
     } else {

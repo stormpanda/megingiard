@@ -26,10 +26,11 @@
         android:localeConfig="@xml/locales_config"
         android:theme="@style/Theme.Megingiard" >
         <activity
-            android:name=".MainActivity"
+            android:name=".LaunchTrampolineActivity"
             android:exported="true"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
-            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -41,6 +42,13 @@
                 <data android:mimeType="application/vnd.megingiard.config+json" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
 
         <activity
             android:name=".CaptureRequestActivity"
