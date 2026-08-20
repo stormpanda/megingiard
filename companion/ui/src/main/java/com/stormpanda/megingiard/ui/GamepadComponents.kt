@@ -1349,14 +1349,15 @@ fun GamepadSaveExitActionRow(
         label = "saveExitSplitFraction",
     )
 
+    val isPromptActive = showExitPrompt || splitFraction > 0.05f
     val effectiveTitle =
-        if (showExitPrompt) {
+        if (isPromptActive) {
             stringResource(R.string.gamepad_action_save_and_exit)
         } else {
             title
         }
     val effectiveDescription =
-        if (showExitPrompt) {
+        if (isPromptActive) {
             stringResource(R.string.gamepad_action_save_and_exit_desc)
         } else {
             description
