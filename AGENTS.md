@@ -30,6 +30,7 @@
 | `SECURITY_CONCEPT.md`                      | Security concept overview, threat model, hardening layers, and links to detailed docs    |
 | `docs/ARCHITECTURE.md`                     | System architecture overview & key design decisions                                      |
 | `docs/BUILD_NATIVE.md`                     | Build setup, instructions, and protocol specifications for native C binaries             |
+| `docs/GAMEPAD_NAVIGATION.md`               | Gamepad Navigation & Focus Architecture — 2D focus traversal, focus isolation & recovery |
 | `docs/MANUAL_VERIFICATION.md`              | Manual Verification Guide — step-by-step manual regression tests and PR sanity checklists |
 | `docs/REQUIREMENTS.md`                     | Requirements overview & non-functional requirements                                      |
 | `docs/features/config/FEATURE.md`          | Configuration Export/Import — portable `.mgrd` app-wide backup and profile sharing       |
@@ -116,12 +117,12 @@
 >    data compilers, state machines, serialization round-trips).
 > 2. **Update existing tests** if the change modifies the behaviour or signature of
 >    already-tested code.
-> 3. **Run all tests** via `./gradlew :core:test :domain:test :app:testDebugUnitTest :gamefocus:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
+> 3. **Run all tests** via `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` and report the result. Due to Gradle's reliance on local TCP/loopback sockets, this command MUST always be executed with the sandbox bypass enabled (`BypassSandbox: true` / unsandboxed). This, along with sandbox bypass compilation commands for verifying compile safety, are the **only** Gradle commands the agent is permitted to run.
 >
 > Tests must be placed in the correct source set:
 >
-> - `:core` pure-JVM tests → `shared/core/src/test/kotlin/`
-> - `:domain` local tests → `companion/domain/src/test/java/`
+> - `:shared:core` pure-JVM tests → `shared/core/src/test/kotlin/`
+> - `:companion:domain` local tests → `companion/domain/src/test/java/`
 >
 > If logic cannot be unit-tested without significant refactoring, state that explicitly
 > as a follow-up task rather than skipping silently.
@@ -153,7 +154,7 @@ Before marking a task as done, verify:
 - [ ] All modal dialogs and non-fullscreen popups use the centralized AppModalDialog / AppAlertDialog container or rememberBezelBrush() border
 - [ ] New or changed pure logic is covered by unit tests in `:core` or `:domain`
 - [ ] Existing tests updated if the change modifies previously-tested behaviour
-- [ ] `./gradlew :core:test :domain:test` executed and all tests pass (permitted test command)
+- [ ] `./gradlew :shared:core:test :companion:domain:test :companion:ui:testDebugUnitTest :gamefocus:ui:testDebugUnitTest` executed and all tests pass (permitted test command)
 - [ ] If any native C source was modified, the corresponding build script was run and produced a new binary
 - [ ] Help menus, onboardings, and localized strings updated if user interaction behavior changed (verify that every settings preference option has a corresponding explanation entry in its HelpModal)
 
