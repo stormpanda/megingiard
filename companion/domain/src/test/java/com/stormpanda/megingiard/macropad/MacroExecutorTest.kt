@@ -111,4 +111,28 @@ class MacroExecutorTest {
             assertEquals("Macro should stop within timeout", true, stopped)
             assertFalse("Running ID should be cleared after stopping", MacroExecutor.isRunning(macro.id))
         }
+
+    @Test
+    fun testExecuteAndWaitSuspendsUntilMacroFinishes() =
+        runBlocking {
+            val macro =
+                Macro(
+                    id = "sync-macro",
+                    name = "Sync Macro",
+                    steps =
+                        listOf(
+                            MacroStep.GamepadButtonTap(
+                                startTimeMs = 0L,
+                                durationMs = 20L,
+                                btnCode = 96,
+                                label = "A",
+                            ),
+                        ),
+                )
+
+            MacroExecutor.setRunningMacroIdsForTest(emptySet())
+            MacroExecutor.executeAndWait(macro)
+
+            assertFalse("Macro should have finished and cleared running status", MacroExecutor.isRunning(macro.id))
+        }
 }

@@ -84,6 +84,28 @@ object MacroExecutor {
     }
 
     /**
+     * Executes [macro] synchronously in a single shot (suspending until playback completes).
+     * Used for Test Runs to allow the UI to suspend before execution and resume after completion.
+     */
+    suspend fun executeAndWait(
+        macro: Macro,
+        context: Context? = null,
+    ) {
+        if (macro.steps.isEmpty()) return
+        val ctx = context ?: appContext
+        val singleShot = macro.copy(loopEnabled = false)
+        val currentJob = coroutineContext[Job]
+        synchronized(runningJobs) {
+            runningJobs[macro.id]?.cancel()
+            if (currentJob != null) {
+                runningJobs[macro.id] = currentJob
+            }
+        }
+        AppLog.d(TAG, "executeAndWait macro='${singleShot.name}' id=${singleShot.id} steps=${singleShot.steps.size}")
+        executeSuspend(singleShot, ctx)
+    }
+
+    /**
      * Stops a running macro by cancelling its coroutine. The [_runningMacroIds] set is
      * cleaned up in the [executeSuspend] finally block once the cancellation propagates.
      */

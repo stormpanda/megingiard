@@ -50,6 +50,7 @@ import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val TAG = "MacroTimelineEditor"
@@ -59,6 +60,8 @@ private const val MTE_UNDO_STACK_MAX = 50
 private const val MTE_PULSE_DURATION_MS = 1400
 private const val MTE_PULSE_ACCENT_ALPHA = 0.35f
 private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
+private const val MTE_TEST_RUN_PRE_DELAY_MS = 350L
+private const val MTE_TEST_RUN_POST_DELAY_MS = 300L
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -275,11 +278,23 @@ internal fun MacroTimelineSubPageContent(
         itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
-            AppLog.i(TAG, "Executing macro '${currentMacro.name}' (${currentMacro.id}) with ${currentMacro.steps.size} steps")
-            MacroExecutor.execute(currentMacro)
-            DialogToastManager.show(
-                context.getString(R.string.macropad_macro_test_run_success, currentMacro.name),
-            )
+            scope.launch {
+                AppLog.i(
+                    TAG,
+                    "Starting test run for macro '${currentMacro.name}' (${currentMacro.id}) with ${currentMacro.steps.size} steps",
+                )
+                AppStateManager.suspendCurrentAndDismiss()
+                try {
+                    delay(MTE_TEST_RUN_PRE_DELAY_MS)
+                    MacroExecutor.executeAndWait(currentMacro, context)
+                    delay(MTE_TEST_RUN_POST_DELAY_MS)
+                } finally {
+                    AppStateManager.resumeSuspended()
+                    DialogToastManager.show(
+                        context.getString(R.string.macropad_macro_test_run_success, currentMacro.name),
+                    )
+                }
+            }
         },
     )
 
