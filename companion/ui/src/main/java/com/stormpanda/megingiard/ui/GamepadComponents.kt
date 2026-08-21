@@ -54,6 +54,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -243,12 +244,29 @@ fun GamepadFocusCard(
         label = "cardElevation",
     )
 
+    var lastCustomConsumedDownKeyCode by remember { mutableIntStateOf(0) }
+
     val keyModifier =
         Modifier.onKeyEvent { keyEvent ->
-            if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
-                return@onKeyEvent true
+            val keyCode = keyEvent.nativeKeyEvent.keyCode
+            if (keyEvent.type == KeyEventType.KeyDown) {
+                if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
+                    lastCustomConsumedDownKeyCode = keyCode
+                    return@onKeyEvent true
+                }
+                lastCustomConsumedDownKeyCode = 0
+            } else if (keyEvent.type == KeyEventType.KeyUp) {
+                if (lastCustomConsumedDownKeyCode == keyCode && keyCode != 0) {
+                    lastCustomConsumedDownKeyCode = 0
+                    onCustomKeyEvent?.invoke(keyEvent)
+                    return@onKeyEvent true
+                }
+                if (onCustomKeyEvent != null && onCustomKeyEvent(keyEvent)) {
+                    return@onKeyEvent true
+                }
             }
-            when (keyEvent.nativeKeyEvent.keyCode) {
+
+            when (keyCode) {
                 KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     if (keyEvent.type == KeyEventType.KeyUp) {
                         if (enabled && onClick != null) {
@@ -987,9 +1005,14 @@ fun GamepadTextFieldCard(
 
     GamepadFocusCard(
         onClick = {
-            if (enabled && !isEditing) {
-                draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
-                isEditing = true
+            if (enabled) {
+                if (!isEditing) {
+                    draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
+                    isEditing = true
+                } else {
+                    onValueChange(draftValue.text.trim())
+                    isEditing = false
+                }
             }
         },
         cardFocusRequester = cardFocusRequester,
@@ -1006,6 +1029,8 @@ fun GamepadTextFieldCard(
                     KeyEvent.KEYCODE_BUTTON_B,
                     KeyEvent.KEYCODE_BACK,
                     KeyEvent.KEYCODE_ESCAPE,
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
                     -> {
                         onValueChange(draftValue.text.trim())
                         isEditing = false
@@ -1014,7 +1039,6 @@ fun GamepadTextFieldCard(
 
                     KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    KeyEvent.KEYCODE_DPAD_CENTER,
                     -> {
                         if (singleLine) {
                             onValueChange(draftValue.text.trim())
@@ -1034,9 +1058,12 @@ fun GamepadTextFieldCard(
                     KeyEvent.KEYCODE_BUTTON_B,
                     KeyEvent.KEYCODE_BACK,
                     KeyEvent.KEYCODE_ESCAPE,
+                    KeyEvent.KEYCODE_BUTTON_A,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    -> true
+
                     KeyEvent.KEYCODE_ENTER,
                     KeyEvent.KEYCODE_NUMPAD_ENTER,
-                    KeyEvent.KEYCODE_DPAD_CENTER,
                     -> singleLine
 
                     else -> false
@@ -1546,8 +1573,14 @@ fun GamepadTwoStepConfirmCard(
             }
         },
         onCustomKeyEvent = { keyEvent ->
-            if (isConfirming && keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
-                if (keyEvent.type == KeyEventType.KeyUp) {
+            val keyCode = keyEvent.nativeKeyEvent.keyCode
+            if (isConfirming && (
+                    keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                        keyCode == KeyEvent.KEYCODE_BACK ||
+                        keyCode == KeyEvent.KEYCODE_ESCAPE
+                )
+            ) {
+                if (keyEvent.type == KeyEventType.KeyDown) {
                     isConfirming = false
                 }
                 true
