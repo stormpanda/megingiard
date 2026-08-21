@@ -8,18 +8,13 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SportsEsports
-import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.runtime.Composable
@@ -70,9 +65,7 @@ private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
 internal fun MacroTimelineSubPageContent(
     macro: Macro,
     accentColor: Color,
-    onOpenAddStep: () -> Unit,
-    onOpenEditStep: (stepIndex: Int) -> Unit,
-    onOpenReorderSteps: () -> Unit = {},
+    onOpenManualSteps: () -> Unit,
     onDiscard: () -> Unit = {},
     onSave: (Macro) -> Unit,
     onDelete: () -> Unit = {},
@@ -240,8 +233,8 @@ internal fun MacroTimelineSubPageContent(
                     context.getString(R.string.macropad_macro_recorded_steps_toast_multiple, count)
                 }
             DialogToastManager.show(toastMsg)
+            PhysicalGamepadRecordingManager.resetState()
         }
-        PhysicalGamepadRecordingManager.resetState()
     }
 
     // ── General Section ──────────────────────────────────────────────────────
@@ -252,21 +245,27 @@ internal fun MacroTimelineSubPageContent(
 
     GamepadTextFieldCard(
         title = stringResource(R.string.help_timeline_name_label),
+        description = stringResource(R.string.help_timeline_name_desc),
         value = localName,
         onValueChange = { localName = it },
-        icon = Icons.Rounded.Edit,
-        itemKey = "macro_name",
+        placeholder = stringResource(R.string.macropad_macro_default_name),
         modifier = Modifier.firstDeckItem(),
     )
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_macro_test_run),
-        description = stringResource(R.string.cd_test_macro),
-        actionText = stringResource(R.string.gamepad_action_run),
+        description =
+            if (steps.isNotEmpty()) {
+                stringResource(R.string.macropad_macro_step_count_multiple, steps.size)
+            } else {
+                stringResource(R.string.macro_timeline_list_empty_desc)
+            },
+        actionText = stringResource(R.string.macropad_macro_test_run),
         icon = Icons.Rounded.PlayArrow,
         itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
+            AppLog.i(TAG, "Executing macro '${currentMacro.name}' (${currentMacro.id}) with ${currentMacro.steps.size} steps")
             MacroExecutor.execute(currentMacro)
             DialogToastManager.show(
                 context.getString(R.string.macropad_macro_test_run_success, currentMacro.name),
@@ -299,84 +298,13 @@ internal fun MacroTimelineSubPageContent(
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_macro_step_new),
-        description = stringResource(R.string.macro_step_action_type_desc),
-        actionText = stringResource(R.string.gamepad_action_add),
-        icon = Icons.Rounded.Add,
-        itemKey = "macro_add_step",
-        onClick = onOpenAddStep,
+        title = stringResource(R.string.macropad_macro_manual_steps_title),
+        description = stringResource(R.string.macropad_macro_manual_steps_desc, steps.size),
+        actionText = stringResource(R.string.macropad_macro_manual_steps_action),
+        icon = Icons.Rounded.Tune,
+        itemKey = "macro_manual_steps",
+        onClick = onOpenManualSteps,
     )
-
-    if (steps.size > 1) {
-        GamepadActionCard(
-            title = stringResource(R.string.macropad_macro_reorder_steps_title),
-            description = stringResource(R.string.macropad_macro_reorder_steps_desc),
-            actionText = stringResource(R.string.gamepad_action_reorder),
-            icon = Icons.Rounded.SwapVert,
-            itemKey = "macro_reorder_steps",
-            onClick = onOpenReorderSteps,
-        )
-    }
-
-    if (undoStack.isNotEmpty()) {
-        GamepadActionCard(
-            title = stringResource(R.string.macropad_macro_editor_undo),
-            description = stringResource(R.string.macropad_macro_step_count_multiple, undoStack.size),
-            actionText = stringResource(R.string.macropad_macro_editor_undo),
-            icon = Icons.AutoMirrored.Rounded.Undo,
-            onClick = {
-                if (undoStack.isNotEmpty()) {
-                    val previous = undoStack.last()
-                    undoStack = undoStack.dropLast(1)
-                    redoStack = (redoStack + listOf(steps)).takeLast(MTE_UNDO_STACK_MAX)
-                    steps = previous
-                }
-            },
-        )
-    }
-
-    if (redoStack.isNotEmpty()) {
-        GamepadActionCard(
-            title = stringResource(R.string.macropad_macro_editor_redo),
-            description = stringResource(R.string.macropad_macro_step_count_multiple, redoStack.size),
-            actionText = stringResource(R.string.macropad_macro_editor_redo),
-            icon = Icons.AutoMirrored.Rounded.Redo,
-            onClick = {
-                if (redoStack.isNotEmpty()) {
-                    val restored = redoStack.last()
-                    redoStack = redoStack.dropLast(1)
-                    undoStack = (undoStack + listOf(steps)).takeLast(MTE_UNDO_STACK_MAX)
-                    steps = restored
-                }
-            },
-        )
-    }
-
-    // ── Steps Sequence Section ───────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = "${stringResource(R.string.macropad_macro_section_steps)} (${steps.size})",
-        color = accentColor,
-    )
-
-    if (steps.isEmpty()) {
-        GamepadInfoBox(
-            text = stringResource(R.string.macro_timeline_list_empty_desc),
-            iconTint = accentColor,
-        )
-    } else {
-        steps.forEachIndexed { idx, step ->
-            val typeTitle = stepTypeLabel(step)
-            val actionDesc = stepActionDescription(step, swapFaceButtons)
-            GamepadActionCard(
-                title = "${idx + 1}. $typeTitle: $actionDesc",
-                description = stringResource(R.string.macropad_macro_step_timing, step.startTimeMs, step.durationMs),
-                actionText = stringResource(R.string.gamepad_action_edit),
-                icon = stepIcon(step),
-                onClick = { onOpenEditStep(idx) },
-                itemKey = "macro_step_$idx",
-            )
-        }
-    }
 
     // ── Playback & Looping Section ───────────────────────────────────────────
     GamepadSectionHeader(

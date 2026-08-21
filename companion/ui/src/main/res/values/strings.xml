@@ -486,6 +486,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_create_record_touch_desc">Record taps or continuous multi-touch gestures directly on the screen mirror.</string>
     <string name="macropad_macro_create_manual_title">Build Step-by-Step</string>
     <string name="macropad_macro_create_manual_desc">Configure timed input steps manually from scratch with precise millisecond control.</string>
+    <string name="macropad_macro_manual_steps_title">Manually Edit Steps</string>
+    <string name="macropad_macro_manual_steps_desc">Add, edit, reorder, or remove individual timed steps (%1$d steps configured).</string>
+    <string name="macropad_macro_manual_steps_action">Edit</string>
 
     <!-- MacroTimelineEditor -->
     <string name="macropad_macro_editor_save">Save</string>

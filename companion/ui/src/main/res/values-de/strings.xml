@@ -410,6 +410,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_create_record_touch_desc">Nimm Fingertipps oder kontinuierliche Touch-Gesten direkt auf der Bildschirmübertragung auf.</string>
     <string name="macropad_macro_create_manual_title">Schritt für Schritt erstellen</string>
     <string name="macropad_macro_create_manual_desc">Erstelle zeitgesteuerte Eingabeschritte manuell von Grund auf mit millimetergenauer Millisekunden-Kontrolle.</string>
+    <string name="macropad_macro_manual_steps_title">Schritte manuell bearbeiten</string>
+    <string name="macropad_macro_manual_steps_desc">Einzelne getimte Schritte hinzufügen, bearbeiten, sortieren oder löschen (%1$d Schritte konfiguriert).</string>
+    <string name="macropad_macro_manual_steps_action">Bearbeiten</string>
     <string name="macropad_macro_editor_save">Speichern</string>
     <string name="macropad_macro_editor_cancel">Abbrechen</string>
 

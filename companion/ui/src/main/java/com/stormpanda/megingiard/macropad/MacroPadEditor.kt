@@ -1876,22 +1876,10 @@ fun MacroPadEditor(
                                                 MacroTimelineSubPageContent(
                                                     macro = macro,
                                                     accentColor = colors.accent,
-                                                    onOpenAddStep = {
+                                                    onOpenManualSteps = {
                                                         MacroPadNavState.setStack(
                                                             subPageStack +
-                                                                MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = null),
-                                                        )
-                                                    },
-                                                    onOpenEditStep = { stepIdx ->
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack +
-                                                                MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = stepIdx),
-                                                        )
-                                                    },
-                                                    onOpenReorderSteps = {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack +
-                                                                MacroPadSubPage.ReorderMacroSteps(macro.id),
+                                                                MacroPadSubPage.ManualMacroSteps(macro.id),
                                                         )
                                                     },
                                                     onDiscard = {
@@ -1910,6 +1898,45 @@ fun MacroPadEditor(
                                                         MacroPadNavState.pop()
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_macro_deleted_toast, deletedName),
+                                                        )
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    is MacroPadSubPage.ManualMacroSteps -> {
+                                        val macro =
+                                            profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                                ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
+                                        if (macro != null) {
+                                            GamepadDeck(
+                                                breadcrumbs =
+                                                    listOf(
+                                                        stringResource(R.string.macropad_editor_manage_macros),
+                                                        macro.name.ifBlank { stringResource(R.string.macropad_editor_open_timeline_title) },
+                                                        stringResource(R.string.macropad_macro_manual_steps_title),
+                                                    ),
+                                            ) {
+                                                ManualMacroStepsSubPageContent(
+                                                    macro = macro,
+                                                    accentColor = colors.accent,
+                                                    onOpenAddStep = {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack +
+                                                                MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = null),
+                                                        )
+                                                    },
+                                                    onOpenEditStep = { stepIdx ->
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack +
+                                                                MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = stepIdx),
+                                                        )
+                                                    },
+                                                    onOpenReorderSteps = {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack +
+                                                                MacroPadSubPage.ReorderMacroSteps(macro.id),
                                                         )
                                                     },
                                                 )

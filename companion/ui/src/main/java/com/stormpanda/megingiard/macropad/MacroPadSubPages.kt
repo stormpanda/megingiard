@@ -217,6 +217,12 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.MACROS
     }
 
+    data class ManualMacroSteps(
+        val macroId: String,
+    ) : MacroPadSubPage {
+        override val parentSection = EditorSection.MACROS
+    }
+
     data class MacroStepEdit(
         val macroId: String,
         val stepIndex: Int?,
