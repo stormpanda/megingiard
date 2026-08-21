@@ -1,146 +1,92 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Gamepad
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
+import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.R
-import com.stormpanda.megingiard.navigation.NavDestination
-import com.stormpanda.megingiard.settings.SettingsCategory
-import com.stormpanda.megingiard.settings.SettingsSubPage
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadSectionHeader
-import com.stormpanda.megingiard.ui.firstDeckItem
+import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 
-private const val TAG = "QuickActionsSubPage"
+private const val TAG = "QuickActionsDeck"
+
+private data class QuickActionItem(
+    val titleRes: Int,
+    val descRes: Int,
+    val actionRes: Int,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
 
 @Composable
-internal fun QuickActionsSubPageContent() {
-    AppLog.d(TAG, "Rendering QuickActionsSubPageContent")
-    val firstItemFocusRequester = remember { FocusRequester() }
+internal fun QuickActionsDeckContent(
+    onNewButton: () -> Unit,
+    onNewMacro: () -> Unit,
+    onNewLayout: () -> Unit,
+    onNewProfile: () -> Unit,
+    onArrangeButtons: () -> Unit,
+) {
+    AppLog.d(TAG, "Rendering QuickActionsDeckContent")
 
-    GamepadSectionHeader(
-        text = stringResource(R.string.quick_actions_section_editor),
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_edit_buttons),
-        description = stringResource(R.string.quick_action_edit_buttons_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Edit,
-        onClick = {
-            AppStateManager.navigateTo(
-                NavDestination.MacroPad(
-                    section = EditorSection.BUTTONS,
-                    editPositions = true,
+    val items =
+        remember(onNewButton, onNewMacro, onNewLayout, onNewProfile, onArrangeButtons) {
+            listOf(
+                QuickActionItem(
+                    titleRes = R.string.macropad_editor_add_button,
+                    descRes = R.string.macropad_editor_create_button_desc,
+                    actionRes = R.string.gamepad_action_create,
+                    icon = Icons.Rounded.SmartButton,
+                    onClick = onNewButton,
+                ),
+                QuickActionItem(
+                    titleRes = R.string.macropad_editor_open_timeline_title,
+                    descRes = R.string.macropad_editor_open_timeline_desc,
+                    actionRes = R.string.gamepad_action_create,
+                    icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
+                    onClick = onNewMacro,
+                ),
+                QuickActionItem(
+                    titleRes = R.string.settings_macropad_new_layout,
+                    descRes = R.string.macropad_editor_new_layout_desc,
+                    actionRes = R.string.gamepad_action_create,
+                    icon = Icons.AutoMirrored.Rounded.ViewQuilt,
+                    onClick = onNewLayout,
+                ),
+                QuickActionItem(
+                    titleRes = R.string.settings_macropad_new_profile,
+                    descRes = R.string.macropad_editor_new_profile_desc,
+                    actionRes = R.string.gamepad_action_create,
+                    icon = Icons.Rounded.Folder,
+                    onClick = onNewProfile,
+                ),
+                QuickActionItem(
+                    titleRes = R.string.quick_action_edit_buttons,
+                    descRes = R.string.quick_action_edit_buttons_desc,
+                    actionRes = R.string.gamepad_action_open,
+                    icon = Icons.Rounded.OpenWith,
+                    onClick = onArrangeButtons,
                 ),
             )
-        },
-        modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
-    )
+        }
 
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_cutouts),
-        description = stringResource(R.string.quick_action_cutouts_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Crop,
-        onClick = {
-            AppStateManager.navigateTo(NavDestination.CutoutLayoutEditor())
-        },
-    )
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.quick_actions_section_preferences),
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_custom_accent),
-        description = stringResource(R.string.quick_action_custom_accent_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Palette,
-        onClick = {
-            AppStateManager.navigateTo(
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.APPEARANCE,
-                    subPage = SettingsSubPage.CUSTOM_ACCENT,
-                ),
-            )
-        },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_deadzones),
-        description = stringResource(R.string.quick_action_deadzones_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Gamepad,
-        onClick = {
-            AppStateManager.navigateTo(
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.INPUT,
-                    subPage = SettingsSubPage.DEADZONES,
-                ),
-            )
-        },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_steamgriddb),
-        description = stringResource(R.string.quick_action_steamgriddb_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Image,
-        onClick = {
-            AppStateManager.navigateTo(
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.GENERAL,
-                    subPage = SettingsSubPage.STEAMGRIDDB_TOKEN,
-                ),
-            )
-        },
-    )
-
-    GamepadSectionHeader(
-        text = stringResource(R.string.quick_actions_section_data),
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_backup),
-        description = stringResource(R.string.quick_action_backup_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Build,
-        onClick = {
-            AppStateManager.navigateTo(
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.CONFIGURATION,
-                    subPage = SettingsSubPage.CREATE_BACKUP,
-                ),
-            )
-        },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_action_share_profile),
-        description = stringResource(R.string.quick_action_share_profile_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Share,
-        onClick = {
-            AppStateManager.navigateTo(
-                NavDestination.GlobalSettings(
-                    category = SettingsCategory.CONFIGURATION,
-                    subPage = SettingsSubPage.SHARE_PROFILE,
-                ),
-            )
-        },
-    )
+    GamepadTwoColumnGrid(
+        items = items,
+    ) { item, _, cardModifier ->
+        GamepadActionCard(
+            title = stringResource(item.titleRes),
+            description = stringResource(item.descRes),
+            actionText = stringResource(item.actionRes),
+            icon = item.icon,
+            alwaysShowFullDescription = true,
+            onClick = item.onClick,
+            modifier = cardModifier,
+        )
+    }
 }

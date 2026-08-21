@@ -79,10 +79,6 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.PROFILES
     }
 
-    data object QuickActions : MacroPadSubPage {
-        override val parentSection = EditorSection.LAYOUTS
-    }
-
     data object NewLayout : MacroPadSubPage {
         override val parentSection = EditorSection.LAYOUTS
     }

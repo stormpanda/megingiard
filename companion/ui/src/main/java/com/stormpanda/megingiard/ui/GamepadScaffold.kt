@@ -445,13 +445,11 @@ fun GamepadTwoPaneScaffold(
                 // Clean up deeper depth key references when backing out
                 savedFocusKeyByDepth.keys.filter { it > newDepth }.forEach { savedFocusKeyByDepth.remove(it) }
 
-                delay(GS_INITIAL_FOCUS_DELAY_MS)
-                try {
+                fun performFocus(): Boolean {
                     inputModeManager.requestInputMode(InputMode.Keyboard)
                     if (isBackTransition) {
                         val parentKey = savedFocusKeyByDepth[newDepth]
                         val parentRequester = if (parentKey != null) activeDeckCardRequesters[parentKey] else null
-                        var restored = false
                         if (parentRequester != null) {
                             try {
                                 parentRequester.requestFocus()
@@ -459,21 +457,36 @@ fun GamepadTwoPaneScaffold(
                                     TAG,
                                     "GamepadTwoPaneScaffold: restored focus to parent trigger card '$parentKey' at depth $newDepth",
                                 )
-                                restored = true
+                                return true
                             } catch (_: IllegalStateException) {
                                 savedFocusKeyByDepth.remove(newDepth)
                             }
                         }
-                        if (!restored) {
+                        try {
                             firstContentRequester.requestFocus()
                             AppLog.d(TAG, "GamepadTwoPaneScaffold: fallback focus on first item at depth $newDepth")
+                            return true
+                        } catch (_: IllegalStateException) {
+                            return false
                         }
                     } else {
-                        firstContentRequester.requestFocus()
-                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focused first item entering sub-menu at depth $newDepth")
+                        try {
+                            firstContentRequester.requestFocus()
+                            AppLog.d(TAG, "GamepadTwoPaneScaffold: focused first item entering sub-menu at depth $newDepth")
+                            return true
+                        } catch (_: IllegalStateException) {
+                            return false
+                        }
                     }
-                } catch (_: IllegalStateException) {
-                    AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on auto focus restore")
+                }
+
+                if (!performFocus()) {
+                    delay(GS_INITIAL_FOCUS_DELAY_MS)
+                    try {
+                        performFocus()
+                    } catch (_: IllegalStateException) {
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on auto focus restore")
+                    }
                 }
             }
         }
@@ -541,6 +554,7 @@ fun GamepadTwoPaneScaffold(
                             .onFocusChanged { focusState ->
                                 isSidebarFocused = focusState.hasFocus
                             }.focusProperties {
+                                canFocus = !isCustomBackActive
                                 exit = { direction ->
                                     if (direction == FocusDirection.Right || direction == FocusDirection.Left) {
                                         FocusRequester.Cancel

@@ -80,6 +80,7 @@ private const val PBD_PREVIEW_BG_ALPHA = 0.25f
 private const val PBD_PREVIEW_GRADIENT_SCALE = 2.8f
 private val PBD_SAVE_PREVIEW_SPACING = 8.dp
 private val PBD_ARROW_SIZE = 16.dp
+
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
 private val PBD_ICON_SIZE_DP = 20.dp

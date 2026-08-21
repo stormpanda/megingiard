@@ -196,7 +196,7 @@ fun MacroPadEditor(
             profile?.layouts?.firstOrNull { it.id == layoutId } ?: profile?.layouts?.firstOrNull()
         }
 
-    var selectedSection by remember { mutableStateOf(EditorSection.PROFILES) }
+    var selectedSection by remember { mutableStateOf(EditorSection.QUICK_ACTIONS) }
     var subPageStack by remember { mutableStateOf<List<MacroPadSubPage>>(emptyList()) }
     var internalShowEditorHelp by remember { mutableStateOf(false) }
     val effectiveShowHelp = showHelp || internalShowEditorHelp
@@ -266,10 +266,9 @@ fun MacroPadEditor(
         }
     }
 
-    LaunchedEffect(selectedSection, subPageStack) {
+    LaunchedEffect(subPageStack) {
         val isEditingPositionsSubPage =
-            selectedSection == EditorSection.BUTTONS &&
-                subPageStack.any { it is MacroPadSubPage.EditButtonPositions }
+            subPageStack.any { it is MacroPadSubPage.EditButtonPositions }
         MacroPadState.setEditingButtonPositions(isEditingPositionsSubPage)
     }
 
@@ -344,6 +343,15 @@ fun MacroPadEditor(
                     navigationKey = subPageStack,
                     sidebarContent = {
                         GamepadCategoryTile(
+                            title = stringResource(R.string.quick_actions_title),
+                            icon = Icons.Rounded.Bolt,
+                            selected = selectedSection == EditorSection.QUICK_ACTIONS,
+                            onClick = {
+                                subPageStack = emptyList()
+                                selectedSection = EditorSection.QUICK_ACTIONS
+                            },
+                        )
+                        GamepadCategoryTile(
                             title = stringResource(R.string.quick_menu_profile_label),
                             icon = Icons.Rounded.Folder,
                             selected = selectedSection == EditorSection.PROFILES,
@@ -409,6 +417,7 @@ fun MacroPadEditor(
                             if (currentSubPage == null) {
                                 val sectionTitle =
                                     when (selectedSection) {
+                                        EditorSection.QUICK_ACTIONS -> stringResource(R.string.quick_actions_title)
                                         EditorSection.PROFILES -> stringResource(R.string.quick_menu_profile_label)
                                         EditorSection.LAYOUTS -> stringResource(R.string.macropad_editor_section_layout)
                                         EditorSection.BACKGROUND -> stringResource(R.string.layout_settings_bg_section_title)
@@ -421,6 +430,58 @@ fun MacroPadEditor(
                                 ) {
                                     // ── Main Section Decks ─────────────────────────────
                                     when (selectedSection) {
+                                        EditorSection.QUICK_ACTIONS -> {
+                                            QuickActionsDeckContent(
+                                                onNewButton = {
+                                                    subPageStack = listOf(MacroPadSubPage.ChooseButtonType)
+                                                },
+                                                onNewMacro = {
+                                                    val defaultMacroName =
+                                                        context.getString(R.string.macropad_macro_default_name)
+                                                    val existingMacroNames = profile.macros.map { it.name }
+                                                    val newMacroName =
+                                                        if (existingMacroNames.none {
+                                                                it.equals(defaultMacroName, ignoreCase = true)
+                                                            }
+                                                        ) {
+                                                            defaultMacroName
+                                                        } else {
+                                                            var index = 2
+                                                            while (existingMacroNames.any {
+                                                                    it.equals(
+                                                                        "$defaultMacroName ($index)",
+                                                                        ignoreCase = true,
+                                                                    )
+                                                                }
+                                                            ) {
+                                                                index++
+                                                            }
+                                                            "$defaultMacroName ($index)"
+                                                        }
+                                                    val newMacro =
+                                                        Macro(
+                                                            id = UUID.randomUUID().toString(),
+                                                            name = newMacroName,
+                                                            steps = emptyList(),
+                                                        )
+                                                    MacroPadState.addMacro(newMacro)
+                                                    macroTimelineFocusStepIndex = null
+                                                    subPageStack =
+                                                        listOf(MacroPadSubPage.MacroTimeline(newMacro.id))
+                                                },
+                                                onNewLayout = {
+                                                    subPageStack = listOf(MacroPadSubPage.NewLayout)
+                                                },
+                                                onNewProfile = {
+                                                    pendingProfilePackage = null
+                                                    subPageStack = listOf(MacroPadSubPage.NewProfile)
+                                                },
+                                                onArrangeButtons = {
+                                                    subPageStack = listOf(MacroPadSubPage.EditButtonPositions)
+                                                },
+                                            )
+                                        }
+
                                         EditorSection.PROFILES -> {
                                             ProfilesDeck(
                                                 profiles = profiles,
@@ -536,9 +597,6 @@ fun MacroPadEditor(
                                                 },
                                                 onReorderLayouts = {
                                                     subPageStack = subPageStack + MacroPadSubPage.ReorderLayouts
-                                                },
-                                                onOpenQuickActions = {
-                                                    subPageStack = subPageStack + MacroPadSubPage.QuickActions
                                                 },
                                                 onDeleteLayout = {
                                                     if (activeLayout != null) {
@@ -806,18 +864,6 @@ fun MacroPadEditor(
                                         ReorderProfilesSubPage(
                                             profiles = profiles,
                                         )
-                                    }
-
-                                    is MacroPadSubPage.QuickActions -> {
-                                        GamepadDeck(
-                                            breadcrumbs =
-                                                listOf(
-                                                    stringResource(R.string.macropad_editor_section_layout),
-                                                    stringResource(R.string.quick_actions_title),
-                                                ),
-                                        ) {
-                                            QuickActionsSubPageContent()
-                                        }
                                     }
 
                                     is MacroPadSubPage.NewLayout -> {
@@ -1972,7 +2018,6 @@ private fun LayoutsDeck(
     activeLayout: PadLayout?,
     accentColor: Color,
     onSelectLayout: (String) -> Unit,
-    onOpenQuickActions: () -> Unit,
     onNewLayout: () -> Unit,
     onEditAppearance: () -> Unit,
     onEditTouchpad: () -> Unit,
@@ -2005,14 +2050,6 @@ private fun LayoutsDeck(
             }
         },
         modifier = Modifier.firstDeckItem().focusRequester(firstItemFocusRequester),
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.quick_actions_title),
-        description = stringResource(R.string.quick_actions_desc),
-        actionText = stringResource(R.string.gamepad_action_open),
-        icon = Icons.Rounded.Bolt,
-        onClick = onOpenQuickActions,
     )
 
     GamepadActionCard(

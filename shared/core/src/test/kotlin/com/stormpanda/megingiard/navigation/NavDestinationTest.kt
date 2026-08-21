@@ -43,6 +43,17 @@ class NavDestinationTest {
     }
 
     @Test
+    fun `MacroPad destination defaults to QUICK_ACTIONS section`() {
+        val dest = NavDestination.MacroPad()
+        val config = dest.toPrimaryModalConfig()
+
+        assertEquals(PrimaryModalType.MACROPAD_EDITOR, config.type)
+        val payload = config.payload as? PrimaryModalPayload.MacroPad
+        assertNotNull(payload)
+        assertEquals(EditorSection.QUICK_ACTIONS, payload?.section)
+    }
+
+    @Test
     fun `MacroTimeline destination maps correctly to PrimaryModalConfig`() {
         val dest =
             NavDestination.MacroTimeline(

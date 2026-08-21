@@ -52,7 +52,7 @@ sealed interface PrimaryModalPayload {
     ) : PrimaryModalPayload
 
     data class MacroPad(
-        val section: EditorSection = EditorSection.PROFILES,
+        val section: EditorSection = EditorSection.QUICK_ACTIONS,
         val profileId: String? = null,
         val layoutId: String? = null,
         val macroId: String? = null,
