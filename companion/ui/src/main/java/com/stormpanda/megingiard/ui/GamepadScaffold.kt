@@ -268,8 +268,8 @@ fun GamepadCategoryTile(
                     if (focusState.isFocused) {
                         if (!selected) {
                             resetLastFocused?.invoke()
+                            onSelect?.invoke() ?: onClick()
                         }
-                        onSelect?.invoke() ?: onClick()
                     }
                 }.then(requesterModifier)
                 .primaryOverlayFocusable(
@@ -495,10 +495,15 @@ fun GamepadTwoPaneScaffold(
             delay(GS_INITIAL_FOCUS_DELAY_MS)
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
-                activeCategoryRequester.requestFocus()
-                AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
+                if (isCustomBackActive) {
+                    firstContentRequester.requestFocus()
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on sub-page content")
+                } else {
+                    activeCategoryRequester.requestFocus()
+                    AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")
+                }
             } catch (_: IllegalStateException) {
-                AppLog.d(TAG, "GamepadTwoPaneScaffold: activeCategoryRequester unattached on initial focus")
+                AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on initial focus")
             }
         }
 

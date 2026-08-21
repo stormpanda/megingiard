@@ -32,9 +32,11 @@ internal object MacroPadNavState {
     val appearanceDraft: StateFlow<PadLayout?> = _appearanceDraft.asStateFlow()
 
     fun selectSection(section: EditorSection) {
-        AppLog.d(TAG, "selectSection: section=$section")
-        _selectedSection.value = section
-        _subPageStack.value = emptyList()
+        AppLog.d(TAG, "selectSection: section=$section current=${_selectedSection.value}")
+        if (_selectedSection.value != section) {
+            _selectedSection.value = section
+            _subPageStack.value = emptyList()
+        }
     }
 
     fun push(subPage: MacroPadSubPage) {
@@ -92,11 +94,11 @@ internal object MacroPadNavState {
         AppLog.i(TAG, "applyPrimaryModalPayload: payload=${payload::class.simpleName}")
         when (payload) {
             is PrimaryModalPayload.MacroPad -> {
-                _selectedSection.value = payload.section
                 val profId = payload.profileId
                 val layId = payload.layoutId
                 val macId = payload.macroId
                 if (profId != null) {
+                    _selectedSection.value = payload.section
                     onSetActiveProfileId(profId)
                     _subPageStack.value = listOf(MacroPadSubPage.EditProfile(profId))
                 } else if (layId != null) {
@@ -108,6 +110,8 @@ internal object MacroPadNavState {
                 } else if (payload.editPositions) {
                     _selectedSection.value = EditorSection.BUTTONS
                     _subPageStack.value = listOf(MacroPadSubPage.EditButtonPositions)
+                } else if (_subPageStack.value.isEmpty()) {
+                    _selectedSection.value = payload.section
                 }
                 _macroTimelineFocusStepIndex.value = payload.focusStepIndex
             }

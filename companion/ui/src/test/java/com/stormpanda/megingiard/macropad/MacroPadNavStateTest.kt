@@ -49,12 +49,30 @@ class MacroPadNavStateTest {
     }
 
     @Test
-    fun `selectSection changes section and clears stack`() {
+    fun `selectSection changes section and clears stack only when section differs`() {
         MacroPadNavState.push(MacroPadSubPage.NewProfile)
         MacroPadNavState.selectSection(EditorSection.MACROS)
 
         assertEquals(EditorSection.MACROS, MacroPadNavState.selectedSection.value)
         assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
+
+        // Re-pushing a subpage and calling selectSection on the SAME section preserves the stack
+        MacroPadNavState.push(MacroPadSubPage.MacroTimeline("macro-1"))
+        MacroPadNavState.selectSection(EditorSection.MACROS)
+        assertEquals(listOf(MacroPadSubPage.MacroTimeline("macro-1")), MacroPadNavState.subPageStack.value)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with generic MacroPad payload preserves active subpage stack`() {
+        MacroPadNavState.selectSection(EditorSection.MACROS)
+        MacroPadNavState.push(MacroPadSubPage.MacroTimeline("macro-1"))
+
+        // Generic payload without specific macroId/profileId/layoutId shouldn't clobber active stack
+        val genericPayload = PrimaryModalPayload.MacroPad(section = EditorSection.QUICK_ACTIONS)
+        MacroPadNavState.applyPrimaryModalPayload(genericPayload)
+
+        assertEquals(EditorSection.MACROS, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.MacroTimeline("macro-1")), MacroPadNavState.subPageStack.value)
     }
 
     @Test
