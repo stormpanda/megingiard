@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.input.TouchAction
+import com.stormpanda.megingiard.mirror.TouchScreenObserver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -139,5 +140,74 @@ class TouchRecordingManagerTest {
         assertTrue(state is TouchRecordingState.Recording)
         assertEquals(TouchRecordingMode.TAP, (state as TouchRecordingState.Recording).mode)
         assertEquals(0, state.recordedGestureCount)
+    }
+
+    @Test
+    fun `updateLiveTelemetry updates recording state fields`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+
+        TouchRecordingManager.updateLiveTelemetry(
+            normX = 0.45f,
+            normY = 0.75f,
+            isDown = true,
+            activePointersCount = 1,
+            activeTrailPoints = listOf(Pair(0.45f, 0.75f)),
+        )
+
+        val state = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(0.45f, state.liveNormX)
+        assertEquals(0.75f, state.liveNormY)
+        assertEquals(true, state.isTouchDown)
+        assertEquals(1, state.activePointersCount)
+        assertEquals(1, state.activeTrailPoints.size)
+    }
+
+    @Test
+    fun `onTapRecorded records normalized coordinates and resets request`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+        assertEquals(true, TouchRecordingManager.recordingRequested.value)
+
+        TouchRecordingManager.onTapRecorded(0.33f, 0.66f)
+
+        assertEquals(Pair(0.33f, 0.66f), TouchRecordingManager.recordedTap.value)
+        assertEquals(false, TouchRecordingManager.recordingRequested.value)
+        assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
+
+        TouchRecordingManager.consumeRecordedTap()
+        assertEquals(null, TouchRecordingManager.recordedTap.value)
+    }
+
+    @Test
+    fun `onTouchEvent in TAP mode triggers onTapRecorded on touch event`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+        assertEquals(true, TouchRecordingManager.recordingRequested.value)
+
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.DOWN, 0.42f, 0.88f)
+
+        assertEquals(Pair(0.42f, 0.88f), TouchRecordingManager.recordedTap.value)
+        assertEquals(false, TouchRecordingManager.recordingRequested.value)
+        assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
+    }
+
+    @Test
+    fun `onTouchEvent in GESTURE mode records gesture segment on pointer release`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.DOWN, 0.1f, 0.2f)
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.MOVE, 0.3f, 0.4f)
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.UP, 0.5f, 0.6f)
+
+        val state = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(1, state.recordedGestureCount)
+        assertEquals(false, state.isTouchDown)
+
+        TouchRecordingManager.finishRecording()
+        val done = TouchRecordingManager.state.value as TouchRecordingState.Done
+        assertEquals(1, done.steps.size)
+        val path = done.steps[0] as MacroStep.TouchPath
+        assertEquals(3, path.samples.size)
+        assertEquals(0.1f, path.samples[0].normX)
+        assertEquals(0.3f, path.samples[1].normX)
+        assertEquals(0.5f, path.samples[2].normX)
     }
 }

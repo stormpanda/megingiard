@@ -418,9 +418,20 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
 
     <!-- Touch-Aufzeichnung -->
     <string name="macropad_macro_record_touch_dialog_title">Touch aufzeichnen</string>
-    <string name="macropad_macro_record_touch_dialog_message">Der Bildschirmspiegel wird gestartet. Wähle aus, ob du ein einzelnes Tippen (Tap) oder eine kontinuierliche Geste (inklusive Multi-Touch) aufzeichnen möchtest.</string>
+    <string name="macropad_macro_record_touch_dialog_message">Ein transparentes Erfassungs-Overlay wird auf dem Primärbildschirm geöffnet. Wähle aus, ob du ein einzelnes Tippen (Tap) oder eine kontinuierliche Geste (inklusive Multi-Touch) aufzeichnen möchtest.</string>
     <string name="macropad_macro_record_touch_option_tap">Tippen</string>
     <string name="macropad_macro_record_touch_option_gesture">Geste</string>
+    <string name="touch_recording_title">Touch-Eingabe aufzeichnen…</string>
+    <string name="touch_recording_mode_tap">Einzeltippen</string>
+    <string name="touch_recording_mode_gesture">Touch-Geste</string>
+    <string name="touch_recording_hint_tap">Tippe auf die gewünschte Stelle auf dem Hauptbildschirm. Die Position wird automatisch erfasst.</string>
+    <string name="touch_recording_hint_gesture">Führe Touch-Gesten auf dem Hauptbildschirm aus. Tippe auf ‚Stopp &amp; Speichern‘, wenn du fertig bist.</string>
+    <string name="touch_recording_radar_waiting">Warte auf Touch-Eingabe auf dem Hauptbildschirm…</string>
+    <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
+    <string name="touch_recording_primary_prompt_tap">Tippe auf den Primärbildschirm, um die Position aufzuzeichnen</string>
+    <string name="touch_recording_primary_prompt_gesture">Gesten auf dem Primärbildschirm ausführen</string>
+    <string name="touch_recording_actions_tap" formatted="false">%1$d Tippen</string>
+    <string name="touch_recording_actions_gestures" formatted="false">%1$d Gesten (%2$d Pkt.)</string>
     <string name="macropad_macro_test_run">Testlauf</string>
     <string name="cd_test_macro">Makro testen</string>
     <string name="macropad_macro_loop_toggle">Makro wiederholen</string>

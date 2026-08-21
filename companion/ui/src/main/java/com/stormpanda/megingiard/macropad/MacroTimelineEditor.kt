@@ -406,7 +406,6 @@ internal fun MacroTimelineSubPageContent(
                     MacroPadState.updateMacro(currentMacro)
                 }
                 AppStateManager.suspendCurrentAndDismiss()
-                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                 showRecordTouchDialog = false
             },
@@ -415,7 +414,6 @@ internal fun MacroTimelineSubPageContent(
                     MacroPadState.updateMacro(currentMacro)
                 }
                 AppStateManager.suspendCurrentAndDismiss()
-                if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                 showRecordTouchDialog = false
             },

@@ -23,7 +23,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.mirror.CropSelectorOverlay
 import com.stormpanda.megingiard.settings.SettingsManager
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 private const val TAG = "PrimaryOverlayActivity"
@@ -49,12 +49,17 @@ class PrimaryOverlayActivity : ComponentActivity() {
         windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
 
         lifecycleScope.launch {
-            AppStateManager.activePrimaryModal
-                .filter { it == null && AppStateManager.activeCropCutoutId.value == null }
-                .collect {
-                    AppLog.i(TAG, "activePrimaryModal is null -> finishing activity")
+            combine(
+                AppStateManager.activePrimaryModal,
+                AppStateManager.activeCropCutoutId,
+            ) { modal, cropId ->
+                modal == null && cropId == null
+            }.collect { shouldFinish ->
+                if (shouldFinish) {
+                    AppLog.i(TAG, "All primary overlays inactive -> finishing activity")
                     finish()
                 }
+            }
         }
 
         setContent {

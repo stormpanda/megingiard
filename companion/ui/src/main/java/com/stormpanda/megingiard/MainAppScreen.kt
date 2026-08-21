@@ -86,10 +86,11 @@ import com.stormpanda.megingiard.macropad.MacroPadState
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingManager
 import com.stormpanda.megingiard.macropad.PhysicalGamepadRecordingSheet
 import com.stormpanda.megingiard.macropad.TouchRecordingManager
+import com.stormpanda.megingiard.macropad.TouchRecordingSheet
+import com.stormpanda.megingiard.macropad.TouchRecordingState
 import com.stormpanda.megingiard.macropad.triggerHapticFeedback
 import com.stormpanda.megingiard.mirror.CutoutLayoutEditor
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
-import com.stormpanda.megingiard.mirror.TouchRecordingOverlay
 import com.stormpanda.megingiard.onboarding.OnboardingWizardManager
 import com.stormpanda.megingiard.privd.PrivdManager
 import com.stormpanda.megingiard.privd.PrivdSetupWizardDialog
@@ -414,6 +415,7 @@ fun MainAppScreen() {
             }
 
             val recordingRequested by TouchRecordingManager.recordingRequested.collectAsState()
+            val touchRecordingState by TouchRecordingManager.state.collectAsState()
 
             // Fullscreen modal overlays — rendered above MacroPad but below QuickMenuBar.
             AnimatedVisibility(
@@ -456,8 +458,18 @@ fun MainAppScreen() {
                 CutoutLayoutEditor()
             }
 
-            if (recordingRequested) {
-                TouchRecordingOverlay()
+            if (recordingRequested && touchRecordingState is TouchRecordingState.Recording) {
+                TouchRecordingSheet(
+                    state = touchRecordingState,
+                    onStop = {
+                        TouchRecordingManager.finishRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                    onCancel = {
+                        TouchRecordingManager.cancelRecording()
+                        AppStateManager.resumeSuspended()
+                    },
+                )
             }
 
             if (physicalRecordingState is GamepadRecordingState.Recording) {

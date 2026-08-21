@@ -411,9 +411,20 @@
     <string name="macropad_macro_record_gamepad_error_title">手把錄製不可用</string>
     <string name="macropad_macro_record_gamepad_error_start">無法啟動虛擬手把。錄製未開始。</string>
     <string name="macropad_macro_record_touch_dialog_title">錄製觸控</string>
-    <string name="macropad_macro_record_touch_dialog_message">螢幕投影將開始。請選擇您要錄製單次點擊還是連續手勢 (包含多指觸控)。</string>
+    <string name="macropad_macro_record_touch_dialog_message">主螢幕上將顯示透明擷取覆蓋層。請選擇您要錄製單次點擊還是連續手勢 (包含多指觸控)。</string>
     <string name="macropad_macro_record_touch_option_tap">點擊</string>
     <string name="macropad_macro_record_touch_option_gesture">手勢</string>
+    <string name="touch_recording_title">正在錄製螢幕觸控…</string>
+    <string name="touch_recording_mode_tap">單次點擊</string>
+    <string name="touch_recording_mode_gesture">觸控手勢</string>
+    <string name="touch_recording_hint_tap">請在主螢幕上點擊目標位置。點擊位置將自動記錄。</string>
+    <string name="touch_recording_hint_gesture">請在主螢幕上繪製觸控手勢。完成後點擊停止並儲存。</string>
+    <string name="touch_recording_radar_waiting">等待主螢幕上的觸控輸入…</string>
+    <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
+    <string name="touch_recording_primary_prompt_tap">點擊主螢幕以記錄觸控位置</string>
+    <string name="touch_recording_primary_prompt_gesture">在主螢幕上繪製手勢</string>
+    <string name="touch_recording_actions_tap" formatted="false">%1$d 次點擊</string>
+    <string name="touch_recording_actions_gestures" formatted="false">%1$d 個手勢 (%2$d 點)</string>
     <string name="cd_record_touch">錄製觸控步驟</string>
     <string name="macropad_macro_test_run">測試運行</string>
     <string name="cd_test_macro">測試巨集</string>

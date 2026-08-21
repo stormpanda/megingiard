@@ -1844,7 +1844,6 @@ fun MacroPadEditor(
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                     AppStateManager.suspendCurrentAndDismiss()
-                                                    if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                                                     TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                                                     showRecordTouchDialog = false
                                                 },
@@ -1852,7 +1851,6 @@ fun MacroPadEditor(
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                     AppStateManager.suspendCurrentAndDismiss()
-                                                    if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                                                     TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                                                     showRecordTouchDialog = false
                                                 },

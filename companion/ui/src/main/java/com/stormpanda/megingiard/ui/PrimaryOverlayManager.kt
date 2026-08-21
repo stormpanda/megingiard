@@ -74,9 +74,8 @@ object PrimaryOverlayManager {
                 AppStateManager.activePrimaryModal,
                 AppStateManager.activeCropCutoutId,
             ) { modal, cropId ->
-                modal to cropId
-            }.collect { (modal, cropId) ->
-                val shouldShow = modal != null || cropId != null
+                modal != null || cropId != null
+            }.collect { shouldShow ->
                 if (shouldShow) {
                     showOverlay()
                 } else {

@@ -321,7 +321,7 @@ A fourth `pointerInput` block, placed last in the modifier chain (innermost = fi
    If the touch is outside the destination bounds of the active cutout, the coordinates are null (or a slot-aware UP is sent if a gesture was in progress for that pointer).
 3. **Injection**: normalised coordinates are forwarded to slot-aware `TouchInjector.injectTouch(slot, action, nx, ny)` (the shared `input/` package), mapping each pointer to its respective uinput slot `0..9`, which applies the hardware sensor transform and enqueues the command. On teardown, `TouchInjector.stop(token)` releases all touch slots and flushes those release commands before terminating the native injector, preventing stale Android touch indicators when projection or macro playback ends.
 
-During MacroPad touch recording, `TouchRecordingOverlay` keeps the mirrored 16:9 content centered in the 4:3 secondary display and renders the gesture-mode **Cancel** and **Stop & Save** controls in the lower black letterbox band. This keeps the control row outside the projected content geometry, so the touch-coordinate transform remains unchanged and button taps are not recorded as primary-screen touch samples.
+During MacroPad touch recording, touches are captured directly on the primary display via `PrimaryTouchRecordingOverlay`, while the secondary display presents `TouchRecordingSheet` with live telemetry, a 16:9 screen radar, and Cancel / Stop & Save controls. This completely eliminates projection error and letterbox distortion.
 
 **Shared injection infrastructure** (`input/` package):
 

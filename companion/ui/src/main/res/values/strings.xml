@@ -517,9 +517,20 @@ Open Settings to create a layout.</string>
 
     <!-- Touch recording flow -->
     <string name="macropad_macro_record_touch_dialog_title">Record Touch</string>
-    <string name="macropad_macro_record_touch_dialog_message">A screen mirror will start. Choose whether you want to record a single tap or a continuous gesture (including multi-touch).</string>
+    <string name="macropad_macro_record_touch_dialog_message">A transparent capture overlay will appear on the primary display. Choose whether you want to record a single tap or a continuous gesture (including multi-touch).</string>
     <string name="macropad_macro_record_touch_option_tap">Tap</string>
     <string name="macropad_macro_record_touch_option_gesture">Gesture</string>
+    <string name="touch_recording_title">Recording Screen Touch…</string>
+    <string name="touch_recording_mode_tap">Single Tap</string>
+    <string name="touch_recording_mode_gesture">Touch Gesture</string>
+    <string name="touch_recording_hint_tap">Tap the target location on the primary display. The tap position will be recorded automatically.</string>
+    <string name="touch_recording_hint_gesture">Draw your touch gestures on the primary display. Tap Stop &amp; Save when finished.</string>
+    <string name="touch_recording_radar_waiting">Waiting for touch input on primary display…</string>
+    <string name="touch_recording_radar_coords">X: %1$.1f%%  Y: %2$.1f%%</string>
+    <string name="touch_recording_primary_prompt_tap">Tap anywhere on the primary screen to record touch position</string>
+    <string name="touch_recording_primary_prompt_gesture">Draw gestures on the primary screen</string>
+    <string name="touch_recording_actions_tap" formatted="false">%1$d tap</string>
+    <string name="touch_recording_actions_gestures" formatted="false">%1$d gestures (%2$d pts)</string>
     <string name="cd_record_touch">Record touch step</string>
     <string name="macropad_macro_test_run">Test Run</string>
     <string name="cd_test_macro">Test macro</string>
