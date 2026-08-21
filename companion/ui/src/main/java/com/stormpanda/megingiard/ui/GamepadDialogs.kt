@@ -1,19 +1,12 @@
 package com.stormpanda.megingiard.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
@@ -22,12 +15,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
@@ -36,12 +26,7 @@ private const val TAG = "GamepadDialogs"
 
 private val GD_SEARCH_ICON_SIZE = 20.dp
 private val GD_SEARCH_CLEAR_SIZE = 18.dp
-private val GD_EMPTY_STATE_ICON_BOX_SIZE = 56.dp
-private val GD_EMPTY_STATE_ICON_SIZE = 28.dp
-private val GD_EMPTY_STATE_PADDING = 24.dp
-private val GD_SPACING_4 = 4.dp
 private val GD_SPACING_8 = 8.dp
-private val GD_BORDER_WIDTH = 1.dp
 
 /**
  * Gamepad-first search bar with clear button and optional category filter chips.
@@ -199,68 +184,4 @@ fun GamepadConfirmDialog(
             )
         },
     )
-}
-
-/**
- * Standard empty state display for lists and grids.
- */
-@Composable
-fun GamepadEmptyState(
-    icon: ImageVector,
-    title: String,
-    modifier: Modifier = Modifier,
-    description: String? = null,
-    actionText: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
-    val colors = LocalAppColors.current
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(GD_EMPTY_STATE_PADDING),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(GD_SPACING_8),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(GD_EMPTY_STATE_ICON_BOX_SIZE)
-                    .background(colors.surfaceVariant, CircleShape)
-                    .border(GD_BORDER_WIDTH, colors.subduedBorder, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = colors.onSurfaceSecondary,
-                modifier = Modifier.size(GD_EMPTY_STATE_ICON_SIZE),
-            )
-        }
-        Text(
-            text = title,
-            color = colors.onSurface,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        if (description != null) {
-            Text(
-                text = description,
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
-        }
-        if (actionText != null && onAction != null) {
-            Spacer(modifier = Modifier.height(GD_SPACING_4))
-            GamepadActionCard(
-                title = actionText,
-                onClick = {
-                    AppLog.d(TAG, "GamepadEmptyState: action clicked '$actionText'")
-                    onAction()
-                },
-                actionGlyph = GamePadGlyph.BTN_A,
-            )
-        }
-    }
 }

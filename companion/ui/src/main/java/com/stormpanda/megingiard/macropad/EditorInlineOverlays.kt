@@ -34,7 +34,7 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppIcon
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
@@ -320,10 +320,10 @@ internal fun AppPickerSubPageContent(
                     it.packageName.contains(searchQuery, ignoreCase = true)
             }
         if (filtered.isEmpty()) {
-            GamepadEmptyState(
-                icon = Icons.Rounded.Search,
-                title = stringResource(R.string.profile_settings_no_apps),
+            GamepadInfoBox(
+                text = stringResource(R.string.profile_settings_no_apps),
                 description = stringResource(R.string.macropad_icon_picker_empty_desc),
+                icon = Icons.Rounded.Search,
             )
         } else {
             LazyColumn(

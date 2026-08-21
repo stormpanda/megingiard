@@ -61,8 +61,8 @@ import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
-import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -426,16 +426,16 @@ internal fun SteamGridDbScrapeSubPageContent(
                 }
             }
         } else if (gamesList.isEmpty() && searchQuery.isNotBlank()) {
-            GamepadEmptyState(
-                icon = Icons.Rounded.Search,
-                title = stringResource(R.string.steamgriddb_scrape_no_games_found),
+            GamepadInfoBox(
+                text = stringResource(R.string.steamgriddb_scrape_no_games_found),
                 description = stringResource(R.string.steamgriddb_empty_games_desc),
+                icon = Icons.Rounded.Search,
             )
         } else if (imagesList.isEmpty() && selectedGame != null) {
-            GamepadEmptyState(
-                icon = Icons.Rounded.Image,
-                title = stringResource(R.string.steamgriddb_scrape_no_images_found),
+            GamepadInfoBox(
+                text = stringResource(R.string.steamgriddb_scrape_no_images_found),
                 description = stringResource(R.string.steamgriddb_empty_images_desc),
+                icon = Icons.Rounded.Image,
             )
         } else {
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {

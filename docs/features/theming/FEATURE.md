@@ -373,7 +373,7 @@ Megingiard provides a centralized, reusable suite of handheld gamepad-first comp
 | `GamepadColorSwatch` | Standalone circular color swatch with checkmark icon and 3 dp focus outline. | Preset palette, action card swatch badge |
 | `GamepadSearchBar` | Focusable search field with clear (`X`) button and optional horizontal filter chips. | `IconPickerDialog`, `SteamGridDbScrapeDialog` |
 | `GamepadConfirmDialog` | Standard modal confirmation dialog with gamepad controller hints and destructive styling. | `InlineConfirmDeleteOverlay`, step delete |
-| `GamepadEmptyState` | Empty state layout with circular icon backdrop, title, description, and optional call-to-action button. | Empty search results, empty macro/step lists |
+| `GamepadInfoBox` | Themed info banner / notice box with vector icon, surface background, subtle border, and optional title/description layout. | Sub-menu instructions, empty search/list notices |
 
 ### Two-Tier Handheld Focus & Navigation Model
 

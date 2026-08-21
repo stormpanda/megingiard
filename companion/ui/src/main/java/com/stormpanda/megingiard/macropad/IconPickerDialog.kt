@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
@@ -152,16 +152,11 @@ internal fun ChooseIconSubPageContent(
 
     // ── Icon grid ──────────────────────────────────────────────────────────
     if (results.isEmpty()) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxWidth().height(160.dp),
-        ) {
-            GamepadEmptyState(
-                icon = Icons.Rounded.Search,
-                title = stringResource(R.string.macropad_icon_picker_no_results),
-                description = stringResource(R.string.macropad_icon_picker_empty_desc),
-            )
-        }
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_icon_picker_no_results),
+            description = stringResource(R.string.macropad_icon_picker_empty_desc),
+            icon = Icons.Rounded.Search,
+        )
     } else {
         Box(
             modifier =

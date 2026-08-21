@@ -99,8 +99,8 @@ import com.stormpanda.megingiard.ui.GamepadCardRow
 import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadDeck
-import com.stormpanda.megingiard.ui.GamepadEmptyState
 import com.stormpanda.megingiard.ui.GamepadFocusCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadPill
 import com.stormpanda.megingiard.ui.GamepadReorderCard
 import com.stormpanda.megingiard.ui.GamepadReorderDeck
@@ -139,7 +139,6 @@ private const val MPE_MOVE_INITIAL_DELAY_MS = 250L
 private const val MPE_MOVE_START_DELAY_MS = 80L
 private const val MPE_MOVE_MIN_DELAY_MS = 16L
 private const val MPE_MOVE_ACCEL_FACTOR = 0.88f
-private val MPE_INFO_BANNER_RADIUS = 8.dp
 
 private fun applyActionToDraftButton(
     draftButton: PadButton,
@@ -2451,36 +2450,10 @@ private fun EditButtonPositionsSubPageContent(
     }
 
     // Non-highlightable Info Box
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .background(
-                    color = colors.surface.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(MPE_INFO_BANNER_RADIUS),
-                ).border(
-                    width = 1.dp,
-                    color = colors.onSurfaceSecondary.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(MPE_INFO_BANNER_RADIUS),
-                ).padding(horizontal = 14.dp, vertical = 12.dp),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Info,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = stringResource(R.string.macropad_editor_move_buttons_info),
-                color = colors.onSurfaceSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
+    GamepadInfoBox(
+        text = stringResource(R.string.macropad_editor_move_buttons_info),
+        iconTint = accentColor,
+    )
 
     if (buttons.isEmpty()) {
         Text(
@@ -2670,12 +2643,8 @@ private fun MacrosDeck(
 
     val macros = profile.macros
     if (macros.isEmpty()) {
-        GamepadEmptyState(
-            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-            title = stringResource(R.string.macropad_editor_no_macros_title),
-            description = stringResource(R.string.macropad_editor_no_macros_desc),
-            actionText = stringResource(R.string.gamepad_action_create_macro),
-            onAction = onNewMacro,
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_editor_no_macros_desc),
         )
     } else {
         macros.forEach { macro ->

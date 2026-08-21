@@ -8,7 +8,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.Redo
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Add
@@ -46,7 +45,7 @@ import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.DialogToastManager
 import com.stormpanda.megingiard.ui.GamepadActionCard
-import com.stormpanda.megingiard.ui.GamepadEmptyState
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadSaveExitActionRow
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
@@ -54,9 +53,6 @@ import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.PrimaryModalConfig
-import com.stormpanda.megingiard.ui.PrimaryModalPayload
-import com.stormpanda.megingiard.ui.PrimaryModalType
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.launch
@@ -363,12 +359,9 @@ internal fun MacroTimelineSubPageContent(
     )
 
     if (steps.isEmpty()) {
-        GamepadEmptyState(
-            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-            title = stringResource(R.string.macropad_macro_no_steps),
-            description = stringResource(R.string.macro_timeline_list_empty_desc),
-            actionText = stringResource(R.string.macropad_macro_add_step),
-            onAction = onOpenAddStep,
+        GamepadInfoBox(
+            text = stringResource(R.string.macro_timeline_list_empty_desc),
+            iconTint = accentColor,
         )
     } else {
         steps.forEachIndexed { idx, step ->

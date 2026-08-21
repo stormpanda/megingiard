@@ -958,5 +958,6 @@
     <string name="macropad_editor_reorder_buttons">重新排列按鈕</string>
     <string name="macropad_editor_reorder_buttons_enabled_desc">調整按鈕排列順序</string>
     <string name="macropad_editor_reorder_buttons_disabled_desc">選擇按鈕以編輯設定</string>
+    <string name="macro_timeline_list_empty_desc">新增步驟或錄製輸入序列</string>
     <string name="gamepad_action_done">完成</string>
 </resources>

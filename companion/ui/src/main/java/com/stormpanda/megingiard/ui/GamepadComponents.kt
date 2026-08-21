@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -155,6 +156,16 @@ private const val GC_SPLIT_ANIM_DURATION_MS = 220
 private const val GC_UNFOCUSED_MAX_LINES = 2
 private const val GC_DEFAULT_SLIDER_STEP = 0.05f
 private const val GC_DISABLED_CARD_ALPHA = 0.38f
+
+private val GC_INFO_BOX_RADIUS = 8.dp
+private const val GC_INFO_BOX_BG_ALPHA = 0.5f
+private const val GC_INFO_BOX_BORDER_ALPHA = 0.2f
+private val GC_INFO_BOX_BORDER_WIDTH = 1.dp
+private val GC_INFO_BOX_PADDING_H = 14.dp
+private val GC_INFO_BOX_PADDING_V = 12.dp
+private val GC_INFO_BOX_SPACING = 10.dp
+private val GC_INFO_BOX_ICON_SIZE = 20.dp
+private val GC_INFO_BOX_TEXT_SPACING = 2.dp
 
 /**
  * Base focusable gamepad card container with glowing accent bezel and spring focus transitions.
@@ -2197,6 +2208,69 @@ fun <T> GamepadTwoColumnGrid(
                 if (rowItems.size == 1) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Gamepad-first themed info banner / notice box matching the design across editor sub-menus.
+ */
+@Composable
+fun GamepadInfoBox(
+    text: String,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    icon: ImageVector = Icons.Rounded.Info,
+    iconTint: Color? = null,
+) {
+    val colors = LocalAppColors.current
+    val effectiveTint = iconTint ?: colors.accent
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(
+                    color = colors.surface.copy(alpha = GC_INFO_BOX_BG_ALPHA),
+                    shape = RoundedCornerShape(GC_INFO_BOX_RADIUS),
+                ).border(
+                    width = GC_INFO_BOX_BORDER_WIDTH,
+                    color = colors.onSurfaceSecondary.copy(alpha = GC_INFO_BOX_BORDER_ALPHA),
+                    shape = RoundedCornerShape(GC_INFO_BOX_RADIUS),
+                ).padding(horizontal = GC_INFO_BOX_PADDING_H, vertical = GC_INFO_BOX_PADDING_V),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(GC_INFO_BOX_SPACING),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = effectiveTint,
+                modifier = Modifier.size(GC_INFO_BOX_ICON_SIZE),
+            )
+            if (description != null) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(GC_INFO_BOX_TEXT_SPACING),
+                ) {
+                    Text(
+                        text = text,
+                        color = colors.onSurface,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = description,
+                        color = colors.onSurfaceSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            } else {
+                Text(
+                    text = text,
+                    color = colors.onSurfaceSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
     }
