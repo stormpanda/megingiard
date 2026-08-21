@@ -64,6 +64,7 @@ private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
 @Composable
 internal fun MacroTimelineSubPageContent(
     macro: Macro,
+    savedMacro: Macro? = null,
     accentColor: Color,
     onOpenManualSteps: () -> Unit,
     onDiscard: () -> Unit = {},
@@ -84,6 +85,7 @@ internal fun MacroTimelineSubPageContent(
     var randomizeTimingEnabled by remember(macro) { mutableStateOf(macro.randomizeTimingEnabled) }
     var randomizeTimingRangeMs by remember(macro) { mutableIntStateOf(macro.randomizeTimingRangeMs.coerceIn(5, 100)) }
 
+    val isNew = savedMacro == null
     val currentMacro =
         macro.copy(
             name = localName.trim().ifBlank { macro.name },
@@ -93,7 +95,7 @@ internal fun MacroTimelineSubPageContent(
             randomizeTimingEnabled = randomizeTimingEnabled,
             randomizeTimingRangeMs = randomizeTimingRangeMs,
         )
-    val hasChanges = currentMacro != macro
+    val hasChanges = currentMacro != savedMacro || isNew
     val isConfirmEnabled = localName.isNotBlank()
 
     val promptState =
@@ -153,9 +155,11 @@ internal fun MacroTimelineSubPageContent(
         }
         AppLog.i(
             TAG,
-            "startGamepadRecording() -> preserving current draft in MacroPadState, suspending editor and starting physical recording",
+            "startGamepadRecording() -> suspending editor and starting physical recording",
         )
-        MacroPadState.updateMacro(currentMacro)
+        if (savedMacro != null) {
+            MacroPadState.updateMacro(currentMacro)
+        }
         AppStateManager.suspendCurrentAndDismiss()
         PhysicalGamepadRecordingManager.startRecording()
     }
@@ -182,8 +186,10 @@ internal fun MacroTimelineSubPageContent(
                 )
         steps = newSteps
         val updated = currentMacro.copy(steps = newSteps)
-        AppLog.i(TAG, "Auto-persisting recorded touch tap into MacroPadState for macro '${updated.name}' (${updated.id})")
-        MacroPadState.updateMacro(updated)
+        if (savedMacro != null) {
+            AppLog.i(TAG, "Auto-persisting recorded touch tap into MacroPadState for macro '${updated.name}' (${updated.id})")
+            MacroPadState.updateMacro(updated)
+        }
         DialogToastManager.show(context.getString(R.string.macropad_macro_recorded_steps_toast_single))
         TouchRecordingManager.consumeRecordedTap()
     }
@@ -200,8 +206,10 @@ internal fun MacroTimelineSubPageContent(
         val newSteps = steps + shiftedSteps
         steps = newSteps
         val updated = currentMacro.copy(steps = newSteps)
-        AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
-        MacroPadState.updateMacro(updated)
+        if (savedMacro != null) {
+            AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
+            MacroPadState.updateMacro(updated)
+        }
         val count = recorded.steps.size
         val toastMsg =
             if (count == 1) {
@@ -223,8 +231,10 @@ internal fun MacroTimelineSubPageContent(
             val newSteps = steps + shiftedSteps
             steps = newSteps
             val updated = currentMacro.copy(steps = newSteps)
-            AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
-            MacroPadState.updateMacro(updated)
+            if (savedMacro != null) {
+                AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
+                MacroPadState.updateMacro(updated)
+            }
             val count = recorded.steps.size
             val toastMsg =
                 if (count == 1) {
@@ -392,14 +402,18 @@ internal fun MacroTimelineSubPageContent(
     if (showRecordTouchDialog) {
         TouchRecordStartDialog(
             onRecordTap = {
-                MacroPadState.updateMacro(currentMacro)
+                if (savedMacro != null) {
+                    MacroPadState.updateMacro(currentMacro)
+                }
                 AppStateManager.suspendCurrentAndDismiss()
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                 showRecordTouchDialog = false
             },
             onRecordGesture = {
-                MacroPadState.updateMacro(currentMacro)
+                if (savedMacro != null) {
+                    MacroPadState.updateMacro(currentMacro)
+                }
                 AppStateManager.suspendCurrentAndDismiss()
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)

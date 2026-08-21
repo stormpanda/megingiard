@@ -611,7 +611,7 @@ fun MacroPadEditor(
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode())
                                                 },
                                                 onEditMacro = { macro ->
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro.id))
+                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro = macro))
                                                 },
                                                 onDeleteMacro = { macro ->
                                                     val deletedName = macro.name
@@ -1255,7 +1255,7 @@ fun MacroPadEditor(
                                                     )
                                                 },
                                                 onEditMacro = { macro ->
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro.id))
+                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro = macro))
                                                 },
                                                 onOpenCreateMacroMode = { currentDraft ->
                                                     MacroPadNavState.setStack(
@@ -1773,7 +1773,6 @@ fun MacroPadEditor(
                                         }
 
                                         fun applyNewMacroToStack(newMacro: Macro) {
-                                            MacroPadState.addMacro(newMacro)
                                             if (currentSubPage.draftButton != null) {
                                                 val updatedDraft =
                                                     currentSubPage.draftButton.copy(
@@ -1794,11 +1793,12 @@ fun MacroPadEditor(
                                                         } else {
                                                             subPage
                                                         }
-                                                    } + MacroPadSubPage.MacroTimeline(newMacro.id)
+                                                    } + MacroPadSubPage.MacroTimeline(macro = null, draftMacro = newMacro)
                                                 MacroPadNavState.setStack(updatedStack)
                                             } else {
                                                 MacroPadNavState.setStack(
-                                                    subPageStack.dropLast(1) + MacroPadSubPage.MacroTimeline(newMacro.id),
+                                                    subPageStack.dropLast(1) +
+                                                        MacroPadSubPage.MacroTimeline(macro = null, draftMacro = newMacro),
                                                 )
                                             }
                                         }
@@ -1863,8 +1863,10 @@ fun MacroPadEditor(
 
                                     is MacroPadSubPage.MacroTimeline -> {
                                         val macro =
-                                            profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                            currentSubPage.effectiveMacro
+                                                ?: profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
                                                 ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
+                                        val savedMacro = currentSubPage.macro
                                         if (macro != null) {
                                             GamepadDeck(
                                                 breadcrumbs =
@@ -1875,26 +1877,33 @@ fun MacroPadEditor(
                                             ) {
                                                 MacroTimelineSubPageContent(
                                                     macro = macro,
+                                                    savedMacro = savedMacro,
                                                     accentColor = colors.accent,
                                                     onOpenManualSteps = {
                                                         MacroPadNavState.setStack(
                                                             subPageStack +
-                                                                MacroPadSubPage.ManualMacroSteps(macro.id),
+                                                                MacroPadSubPage.ManualMacroSteps(
+                                                                    macro = currentSubPage.macro,
+                                                                    draftMacro = macro,
+                                                                ),
                                                         )
                                                     },
                                                     onDiscard = {
-                                                        if (macro.steps.isEmpty()) {
-                                                            MacroPadState.deleteMacro(macro.id)
-                                                        }
                                                         MacroPadNavState.pop()
                                                     },
                                                     onSave = { updatedMacro ->
-                                                        MacroPadState.updateMacro(updatedMacro)
+                                                        if (savedMacro == null) {
+                                                            MacroPadState.addMacro(updatedMacro)
+                                                        } else {
+                                                            MacroPadState.updateMacro(updatedMacro)
+                                                        }
                                                         MacroPadNavState.pop()
                                                     },
                                                     onDelete = {
                                                         val deletedName = macro.name
-                                                        MacroPadState.deleteMacro(macro.id)
+                                                        if (savedMacro != null) {
+                                                            MacroPadState.deleteMacro(macro.id)
+                                                        }
                                                         MacroPadNavState.pop()
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_macro_deleted_toast, deletedName),
@@ -1907,7 +1916,8 @@ fun MacroPadEditor(
 
                                     is MacroPadSubPage.ManualMacroSteps -> {
                                         val macro =
-                                            profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                            currentSubPage.effectiveMacro
+                                                ?: profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
                                                 ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
                                         if (macro != null) {
                                             GamepadDeck(
@@ -1924,19 +1934,30 @@ fun MacroPadEditor(
                                                     onOpenAddStep = {
                                                         MacroPadNavState.setStack(
                                                             subPageStack +
-                                                                MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = null),
+                                                                MacroPadSubPage.MacroStepEdit(
+                                                                    macro = currentSubPage.macro,
+                                                                    draftMacro = macro,
+                                                                    stepIndex = null,
+                                                                ),
                                                         )
                                                     },
                                                     onOpenEditStep = { stepIdx ->
                                                         MacroPadNavState.setStack(
                                                             subPageStack +
-                                                                MacroPadSubPage.MacroStepEdit(macro.id, stepIndex = stepIdx),
+                                                                MacroPadSubPage.MacroStepEdit(
+                                                                    macro = currentSubPage.macro,
+                                                                    draftMacro = macro,
+                                                                    stepIndex = stepIdx,
+                                                                ),
                                                         )
                                                     },
                                                     onOpenReorderSteps = {
                                                         MacroPadNavState.setStack(
                                                             subPageStack +
-                                                                MacroPadSubPage.ReorderMacroSteps(macro.id),
+                                                                MacroPadSubPage.ReorderMacroSteps(
+                                                                    macro = currentSubPage.macro,
+                                                                    draftMacro = macro,
+                                                                ),
                                                         )
                                                     },
                                                 )
@@ -1946,7 +1967,8 @@ fun MacroPadEditor(
 
                                     is MacroPadSubPage.MacroStepEdit -> {
                                         val macro =
-                                            profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                            currentSubPage.effectiveMacro
+                                                ?: profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
                                                 ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
                                         if (macro != null &&
                                             (currentSubPage.stepIndex == null || currentSubPage.stepIndex < macro.steps.size)
@@ -1986,20 +2008,62 @@ fun MacroPadEditor(
                                                             } else {
                                                                 (macro.steps + newStep) to macro.steps.size
                                                             }
+                                                        val updatedMacro = macro.copy(steps = updatedSteps)
                                                         val parentDepth = subPageStack.size - 1
-                                                        MacroPadNavState.recordFocusedKey(parentDepth, "macro_step_$targetIndex")
-                                                        MacroPadNavState.pop()
-                                                        MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
+                                                        MacroPadNavState.recordFocusedKey(parentDepth, "macro_manual_step_$targetIndex")
+                                                        val updatedStack =
+                                                            subPageStack.dropLast(1).map { page ->
+                                                                when (page) {
+                                                                    is MacroPadSubPage.MacroTimeline -> {
+                                                                        page.copy(draftMacro = updatedMacro)
+                                                                    }
+
+                                                                    is MacroPadSubPage.ManualMacroSteps -> {
+                                                                        page.copy(
+                                                                            draftMacro = updatedMacro,
+                                                                        )
+                                                                    }
+
+                                                                    else -> {
+                                                                        page
+                                                                    }
+                                                                }
+                                                            }
+                                                        MacroPadNavState.setStack(updatedStack)
+                                                        if (currentSubPage.macro != null) {
+                                                            MacroPadState.updateMacro(updatedMacro)
+                                                        }
                                                     },
                                                     onDiscard = { MacroPadNavState.pop() },
                                                     onDuplicate = { dupStep ->
                                                         val newStart = macro.steps.totalDurationMs()
                                                         val duplicated = dupStep.withStartTime(newStart)
+                                                        val updatedMacro = macro.copy(steps = macro.steps + duplicated)
                                                         val parentDepth = subPageStack.size - 1
                                                         val newIndex = macro.steps.size
-                                                        MacroPadNavState.recordFocusedKey(parentDepth, "macro_step_$newIndex")
-                                                        MacroPadNavState.pop()
-                                                        MacroPadState.updateMacro(macro.copy(steps = macro.steps + duplicated))
+                                                        MacroPadNavState.recordFocusedKey(parentDepth, "macro_manual_step_$newIndex")
+                                                        val updatedStack =
+                                                            subPageStack.dropLast(1).map { page ->
+                                                                when (page) {
+                                                                    is MacroPadSubPage.MacroTimeline -> {
+                                                                        page.copy(draftMacro = updatedMacro)
+                                                                    }
+
+                                                                    is MacroPadSubPage.ManualMacroSteps -> {
+                                                                        page.copy(
+                                                                            draftMacro = updatedMacro,
+                                                                        )
+                                                                    }
+
+                                                                    else -> {
+                                                                        page
+                                                                    }
+                                                                }
+                                                            }
+                                                        MacroPadNavState.setStack(updatedStack)
+                                                        if (currentSubPage.macro != null) {
+                                                            MacroPadState.updateMacro(updatedMacro)
+                                                        }
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_macro_step_duplicate),
                                                         )
@@ -2011,6 +2075,7 @@ fun MacroPadEditor(
                                                                     i !=
                                                                         currentSubPage.stepIndex
                                                                 }
+                                                            val updatedMacro = macro.copy(steps = updatedSteps)
                                                             val parentDepth = subPageStack.size - 1
                                                             if (updatedSteps.isNotEmpty()) {
                                                                 val targetIndex =
@@ -2021,13 +2086,35 @@ fun MacroPadEditor(
                                                                     }
                                                                 MacroPadNavState.recordFocusedKey(
                                                                     parentDepth,
-                                                                    "macro_step_$targetIndex",
+                                                                    "macro_manual_step_$targetIndex",
                                                                 )
                                                             } else {
                                                                 MacroPadNavState.removeFocusedKey(parentDepth)
                                                             }
-                                                            MacroPadNavState.pop()
-                                                            MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
+                                                            val updatedStack =
+                                                                subPageStack.dropLast(1).map { page ->
+                                                                    when (page) {
+                                                                        is MacroPadSubPage.MacroTimeline -> {
+                                                                            page.copy(
+                                                                                draftMacro = updatedMacro,
+                                                                            )
+                                                                        }
+
+                                                                        is MacroPadSubPage.ManualMacroSteps -> {
+                                                                            page.copy(
+                                                                                draftMacro = updatedMacro,
+                                                                            )
+                                                                        }
+
+                                                                        else -> {
+                                                                            page
+                                                                        }
+                                                                    }
+                                                                }
+                                                            MacroPadNavState.setStack(updatedStack)
+                                                            if (currentSubPage.macro != null) {
+                                                                MacroPadState.updateMacro(updatedMacro)
+                                                            }
                                                             DialogToastManager.show(
                                                                 context.getString(R.string.macropad_macro_step_delete),
                                                             )
@@ -2040,7 +2127,8 @@ fun MacroPadEditor(
 
                                     is MacroPadSubPage.ReorderMacroSteps -> {
                                         val macro =
-                                            profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
+                                            currentSubPage.effectiveMacro
+                                                ?: profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
                                                 ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
                                         if (macro != null) {
                                             val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
@@ -2063,7 +2151,20 @@ fun MacroPadEditor(
                                                 },
                                                 itemIcon = { step -> stepIcon(step) },
                                                 onReorder = { reorderedSteps ->
-                                                    MacroPadState.updateMacro(macro.copy(steps = reorderedSteps))
+                                                    val updatedMacro = macro.copy(steps = reorderedSteps)
+                                                    val updatedStack =
+                                                        subPageStack.map { page ->
+                                                            when (page) {
+                                                                is MacroPadSubPage.MacroTimeline -> page.copy(draftMacro = updatedMacro)
+                                                                is MacroPadSubPage.ManualMacroSteps -> page.copy(draftMacro = updatedMacro)
+                                                                is MacroPadSubPage.ReorderMacroSteps -> page.copy(draftMacro = updatedMacro)
+                                                                else -> page
+                                                            }
+                                                        }
+                                                    MacroPadNavState.setStack(updatedStack)
+                                                    if (currentSubPage.macro != null) {
+                                                        MacroPadState.updateMacro(updatedMacro)
+                                                    }
                                                 },
                                                 breadcrumbs =
                                                     listOf(

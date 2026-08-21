@@ -212,27 +212,47 @@ internal sealed interface MacroPadSubPage {
     }
 
     data class MacroTimeline(
-        val macroId: String,
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
     ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class ManualMacroSteps(
-        val macroId: String,
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
     ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class MacroStepEdit(
-        val macroId: String,
-        val stepIndex: Int?,
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
+        val stepIndex: Int? = null,
     ) : MacroPadSubPage {
+        constructor(macroId: String, stepIndex: Int?) : this(macro = null, draftMacro = null, macroId = macroId, stepIndex = stepIndex)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
     data class ReorderMacroSteps(
-        val macroId: String,
+        val macro: Macro? = null,
+        val draftMacro: Macro? = null,
+        val macroId: String = draftMacro?.id ?: macro?.id ?: "",
     ) : MacroPadSubPage {
+        constructor(macroId: String) : this(macro = null, draftMacro = null, macroId = macroId)
+
+        val effectiveMacro: Macro? get() = draftMacro ?: macro
         override val parentSection = EditorSection.MACROS
     }
 
