@@ -31,11 +31,15 @@ internal object MacroPadNavState {
     private val _appearanceDraft = MutableStateFlow<PadLayout?>(null)
     val appearanceDraft: StateFlow<PadLayout?> = _appearanceDraft.asStateFlow()
 
+    private val _savedFocusKeysByDepth = MutableStateFlow<Map<Int, Any>>(emptyMap())
+    val savedFocusKeysByDepth: StateFlow<Map<Int, Any>> = _savedFocusKeysByDepth.asStateFlow()
+
     fun selectSection(section: EditorSection) {
         AppLog.d(TAG, "selectSection: section=$section current=${_selectedSection.value}")
         if (_selectedSection.value != section) {
             _selectedSection.value = section
             _subPageStack.value = emptyList()
+            _savedFocusKeysByDepth.value = emptyMap()
         }
     }
 
@@ -70,6 +74,21 @@ internal object MacroPadNavState {
         _appearanceDraft.value = layout
     }
 
+    fun recordFocusedKey(
+        depth: Int,
+        key: Any,
+    ) {
+        _savedFocusKeysByDepth.value = _savedFocusKeysByDepth.value + (depth to key)
+    }
+
+    fun removeFocusedKey(depth: Int) {
+        _savedFocusKeysByDepth.value = _savedFocusKeysByDepth.value - depth
+    }
+
+    fun clearFocusedKeys(minDepth: Int = 0) {
+        _savedFocusKeysByDepth.value = _savedFocusKeysByDepth.value.filterKeys { it < minDepth }
+    }
+
     /**
      * Resets the navigation state back to default (Quick Actions deck, empty subpage stack).
      */
@@ -80,6 +99,7 @@ internal object MacroPadNavState {
         _macroTimelineFocusStepIndex.value = null
         _pendingProfilePackage.value = null
         _appearanceDraft.value = null
+        _savedFocusKeysByDepth.value = emptyMap()
     }
 
     /**

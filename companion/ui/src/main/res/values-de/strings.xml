@@ -499,6 +499,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_test_run_success">Makro \"%1$s\" ausgeführt</string>
     <string name="macropad_macro_record_gamepad_desc">Controller-Tasten und Stick-Bewegungen aufzeichnen</string>
     <string name="macropad_macro_record_touch_desc">Tippen und Gesten aus der Bildschirmspiegelung aufnehmen</string>
+    <string name="macropad_macro_recorded_steps_toast_single">1 Schritt aufgezeichnet</string>
+    <string name="macropad_macro_recorded_steps_toast_multiple">%1$d Schritte aufgezeichnet</string>
 
     <string name="macropad_picker_folder_empty">Keine Makros verfügbar</string>
     <string name="cd_more_options">Weitere Optionen</string>

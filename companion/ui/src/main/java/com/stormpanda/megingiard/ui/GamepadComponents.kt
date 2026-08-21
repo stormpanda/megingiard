@@ -916,6 +916,7 @@ fun GamepadTextFieldCard(
     val colors = LocalAppColors.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var isEditing by remember { mutableStateOf(false) }
+    var hasBeenEditing by remember { mutableStateOf(false) }
     var draftValue by remember {
         mutableStateOf(TextFieldValue(text = value))
     }
@@ -941,6 +942,7 @@ fun GamepadTextFieldCard(
 
     LaunchedEffect(isEditing) {
         if (isEditing) {
+            hasBeenEditing = true
             draftValue = TextFieldValue(text = value, selection = TextRange(0, value.length))
             keyboardController?.hide()
             try {
@@ -948,7 +950,7 @@ fun GamepadTextFieldCard(
             } catch (_: IllegalStateException) {
                 // Focus requester unattached
             }
-        } else {
+        } else if (hasBeenEditing) {
             keyboardController?.hide()
             AppStateManager.setFullscreenKeyboardActive(false)
             try {

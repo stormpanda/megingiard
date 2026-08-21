@@ -318,6 +318,9 @@ fun GamepadTwoPaneScaffold(
     isCustomBackActive: Boolean = false,
     onCustomBack: (() -> Unit)? = null,
     navigationKey: Any? = null,
+    savedFocusKeys: Map<Int, Any>? = null,
+    onRecordFocusedKey: ((depth: Int, key: Any) -> Unit)? = null,
+    onRemoveFocusedKey: ((depth: Int) -> Unit)? = null,
     footerContent: (@Composable () -> Unit)? = null,
     sidebarFooter: (@Composable () -> Unit)? = null,
     sidebarWidth: Dp = GS_SIDEBAR_WIDTH,
@@ -329,8 +332,14 @@ fun GamepadTwoPaneScaffold(
     val activeCategoryRequester = remember { FocusRequester() }
     val firstContentRequester = remember { FocusRequester() }
     val activeDeckCardRequesters = remember { mutableMapOf<Any, FocusRequester>() }
-    val savedFocusKeyByDepth = remember { mutableMapOf<Int, Any>() }
-    var currentDepth by remember { mutableIntStateOf(0) }
+    val savedFocusKeyByDepth = remember { mutableMapOf<Int, Any>().apply { if (savedFocusKeys != null) putAll(savedFocusKeys) } }
+    val initialDepth =
+        when (navigationKey) {
+            is Collection<*> -> navigationKey.size
+            is Boolean -> if (navigationKey) 1 else 0
+            else -> if (isCustomBackActive) 1 else 0
+        }
+    var currentDepth by remember { mutableIntStateOf(initialDepth) }
     var isDeckFocused by remember { mutableStateOf(false) }
     var isSidebarFocused by remember { mutableStateOf(false) }
 
@@ -416,6 +425,7 @@ fun GamepadTwoPaneScaffold(
         LocalLastFocusedDeckTracker provides { key, req ->
             savedFocusKeyByDepth[currentDepth] = key
             activeDeckCardRequesters[key] = req
+            onRecordFocusedKey?.invoke(currentDepth, key)
         },
         LocalDeckCardRegistry provides { key, req ->
             if (req != null) {
@@ -424,7 +434,10 @@ fun GamepadTwoPaneScaffold(
                 activeDeckCardRequesters.remove(key)
             }
         },
-        LocalResetLastFocusedTracker provides { savedFocusKeyByDepth.remove(currentDepth) },
+        LocalResetLastFocusedTracker provides {
+            savedFocusKeyByDepth.remove(currentDepth)
+            onRemoveFocusedKey?.invoke(currentDepth)
+        },
         LocalBringIntoViewSpec provides bringIntoViewSpec,
     ) {
         val effectiveNavKey = navigationKey ?: isCustomBackActive
@@ -443,7 +456,10 @@ fun GamepadTwoPaneScaffold(
                 currentDepth = newDepth
 
                 // Clean up deeper depth key references when backing out
-                savedFocusKeyByDepth.keys.filter { it > newDepth }.forEach { savedFocusKeyByDepth.remove(it) }
+                savedFocusKeyByDepth.keys.filter { it > newDepth }.forEach { deeperDepth ->
+                    savedFocusKeyByDepth.remove(deeperDepth)
+                    onRemoveFocusedKey?.invoke(deeperDepth)
+                }
 
                 fun performFocus(): Boolean {
                     inputModeManager.requestInputMode(InputMode.Keyboard)
@@ -460,6 +476,7 @@ fun GamepadTwoPaneScaffold(
                                 return true
                             } catch (_: IllegalStateException) {
                                 savedFocusKeyByDepth.remove(newDepth)
+                                onRemoveFocusedKey?.invoke(newDepth)
                             }
                         }
                         try {
@@ -496,8 +513,15 @@ fun GamepadTwoPaneScaffold(
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 if (isCustomBackActive) {
-                    firstContentRequester.requestFocus()
-                    AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on sub-page content")
+                    val savedKey = savedFocusKeyByDepth[currentDepth]
+                    val savedRequester = if (savedKey != null) activeDeckCardRequesters[savedKey] else null
+                    if (savedRequester != null) {
+                        savedRequester.requestFocus()
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus restored to card '$savedKey' at depth $currentDepth")
+                    } else {
+                        firstContentRequester.requestFocus()
+                        AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on sub-page content")
+                    }
                 } else {
                     activeCategoryRequester.requestFocus()
                     AppLog.d(TAG, "GamepadTwoPaneScaffold: initial focus requested on active category")

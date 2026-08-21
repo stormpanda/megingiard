@@ -502,6 +502,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_record_gamepad_dialog_dont_show_again">Don\'t show again</string>
     <string name="macropad_macro_record_gamepad_error_title">Gamepad Recording Unavailable</string>
     <string name="macropad_macro_record_gamepad_error_start">The virtual gamepad could not be started. Recording was not started.</string>
+    <string name="macropad_macro_recorded_steps_toast_single">1 step recorded</string>
+    <string name="macropad_macro_recorded_steps_toast_multiple">%1$d steps recorded</string>
 
     <!-- Touch recording flow -->
     <string name="macropad_macro_record_touch_dialog_title">Record Touch</string>

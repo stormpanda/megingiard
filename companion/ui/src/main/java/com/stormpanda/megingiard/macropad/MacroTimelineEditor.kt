@@ -195,6 +195,7 @@ internal fun MacroTimelineSubPageContent(
         val updated = currentMacro.copy(steps = newSteps)
         AppLog.i(TAG, "Auto-persisting recorded touch tap into MacroPadState for macro '${updated.name}' (${updated.id})")
         MacroPadState.updateMacro(updated)
+        DialogToastManager.show(context.getString(R.string.macropad_macro_recorded_steps_toast_single))
         TouchRecordingManager.consumeRecordedTap()
     }
 
@@ -212,6 +213,14 @@ internal fun MacroTimelineSubPageContent(
         val updated = currentMacro.copy(steps = newSteps)
         AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
         MacroPadState.updateMacro(updated)
+        val count = recorded.steps.size
+        val toastMsg =
+            if (count == 1) {
+                context.getString(R.string.macropad_macro_recorded_steps_toast_single)
+            } else {
+                context.getString(R.string.macropad_macro_recorded_steps_toast_multiple, count)
+            }
+        DialogToastManager.show(toastMsg)
         TouchRecordingManager.resetState()
     }
 
@@ -227,6 +236,14 @@ internal fun MacroTimelineSubPageContent(
             val updated = currentMacro.copy(steps = newSteps)
             AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
             MacroPadState.updateMacro(updated)
+            val count = recorded.steps.size
+            val toastMsg =
+                if (count == 1) {
+                    context.getString(R.string.macropad_macro_recorded_steps_toast_single)
+                } else {
+                    context.getString(R.string.macropad_macro_recorded_steps_toast_multiple, count)
+                }
+            DialogToastManager.show(toastMsg)
         }
         PhysicalGamepadRecordingManager.resetState()
     }
@@ -242,6 +259,7 @@ internal fun MacroTimelineSubPageContent(
         value = localName,
         onValueChange = { localName = it },
         icon = Icons.Rounded.Edit,
+        itemKey = "macro_name",
         modifier = Modifier.firstDeckItem(),
     )
 
@@ -250,6 +268,7 @@ internal fun MacroTimelineSubPageContent(
         description = stringResource(R.string.cd_test_macro),
         actionText = stringResource(R.string.gamepad_action_run),
         icon = Icons.Rounded.PlayArrow,
+        itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
             MacroExecutor.execute(currentMacro)
@@ -270,6 +289,7 @@ internal fun MacroTimelineSubPageContent(
         description = stringResource(R.string.macropad_macro_record_gamepad_desc),
         actionText = stringResource(R.string.macropad_macro_record_gamepad),
         icon = Icons.Rounded.SportsEsports,
+        itemKey = "macro_record_gamepad",
         onClick = { requestGamepadRecording() },
     )
 
@@ -278,6 +298,7 @@ internal fun MacroTimelineSubPageContent(
         description = stringResource(R.string.macropad_macro_record_touch_desc),
         actionText = stringResource(R.string.macropad_macro_record_touch),
         icon = Icons.Rounded.TouchApp,
+        itemKey = "macro_record_touch",
         onClick = { requestTouchRecording() },
     )
 
@@ -286,6 +307,7 @@ internal fun MacroTimelineSubPageContent(
         description = stringResource(R.string.macro_step_action_type_desc),
         actionText = stringResource(R.string.gamepad_action_add),
         icon = Icons.Rounded.Add,
+        itemKey = "macro_add_step",
         onClick = onOpenAddStep,
     )
 
@@ -295,6 +317,7 @@ internal fun MacroTimelineSubPageContent(
             description = stringResource(R.string.macropad_macro_reorder_steps_desc),
             actionText = stringResource(R.string.gamepad_action_reorder),
             icon = Icons.Rounded.SwapVert,
+            itemKey = "macro_reorder_steps",
             onClick = onOpenReorderSteps,
         )
     }
@@ -357,6 +380,7 @@ internal fun MacroTimelineSubPageContent(
                 actionText = stringResource(R.string.gamepad_action_edit),
                 icon = stepIcon(step),
                 onClick = { onOpenEditStep(idx) },
+                itemKey = "macro_step_$idx",
             )
         }
     }

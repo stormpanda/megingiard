@@ -235,11 +235,15 @@ internal fun MacroStepEditSubPageContent(
             }
 
             StepType.JOYSTICK_PATH -> {
-                (step as? MacroStep.JoystickPath)?.withTiming(startMs.toLong(), durMs.toLong()) ?: step!!
+                (step as? MacroStep.JoystickPath)?.withTiming(startMs.toLong(), durMs.toLong())
+                    ?: (step as? MacroStep.JoystickPath)
+                    ?: MacroStep.GamepadButtonTap(startMs.toLong(), durMs.toLong(), 0, "")
             }
 
             StepType.TOUCH_PATH -> {
-                (step as? MacroStep.TouchPath)?.withTiming(startMs.toLong(), durMs.toLong()) ?: step!!
+                (step as? MacroStep.TouchPath)?.withTiming(startMs.toLong(), durMs.toLong())
+                    ?: (step as? MacroStep.TouchPath)
+                    ?: MacroStep.TouchTap(startMs.toLong(), durMs.toLong(), 0.5f, 0.5f)
             }
         }
 

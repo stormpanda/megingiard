@@ -136,4 +136,33 @@ class MacroPadNavStateTest {
         assertEquals(listOf(MacroPadSubPage.EditButtonPositions), MacroPadNavState.subPageStack.value)
         assertEquals("btn-123", selectedButtonId)
     }
+
+    @Test
+    fun `focus tracking records and removes keys per depth`() {
+        MacroPadNavState.recordFocusedKey(depth = 0, key = "deck_card_profile")
+        MacroPadNavState.recordFocusedKey(depth = 1, key = "btn_record_gamepad")
+
+        assertEquals(
+            mapOf(0 to "deck_card_profile", 1 to "btn_record_gamepad"),
+            MacroPadNavState.savedFocusKeysByDepth.value,
+        )
+
+        MacroPadNavState.removeFocusedKey(depth = 1)
+        assertEquals(
+            mapOf(0 to "deck_card_profile"),
+            MacroPadNavState.savedFocusKeysByDepth.value,
+        )
+
+        MacroPadNavState.recordFocusedKey(depth = 1, key = "btn_record_touch")
+        MacroPadNavState.recordFocusedKey(depth = 2, key = "macro_step_1")
+        MacroPadNavState.clearFocusedKeys(minDepth = 2)
+
+        assertEquals(
+            mapOf(0 to "deck_card_profile", 1 to "btn_record_touch"),
+            MacroPadNavState.savedFocusKeysByDepth.value,
+        )
+
+        MacroPadNavState.reset()
+        assertTrue(MacroPadNavState.savedFocusKeysByDepth.value.isEmpty())
+    }
 }

@@ -207,6 +207,7 @@ fun MacroPadEditor(
     var appearanceDraft by remember { mutableStateOf<PadLayout?>(null) }
 
     val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsState()
+    val savedFocusKeys by MacroPadNavState.savedFocusKeysByDepth.collectAsState()
 
     LaunchedEffect(activePrimaryModal) {
         MacroPadNavState.applyPrimaryModalPayload(activePrimaryModal?.payload)
@@ -290,6 +291,9 @@ fun MacroPadEditor(
                         MacroPadNavState.pop()
                     },
                     navigationKey = subPageStack,
+                    savedFocusKeys = savedFocusKeys,
+                    onRecordFocusedKey = { depth, key -> MacroPadNavState.recordFocusedKey(depth, key) },
+                    onRemoveFocusedKey = { depth -> MacroPadNavState.removeFocusedKey(depth) },
                     sidebarContent = {
                         GamepadCategoryTile(
                             title = stringResource(R.string.quick_actions_title),
@@ -1769,7 +1773,9 @@ fun MacroPadEditor(
                                         val macro =
                                             profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
                                                 ?: profiles.flatMap { it.macros }.firstOrNull { it.id == currentSubPage.macroId }
-                                        if (macro != null) {
+                                        if (macro != null &&
+                                            (currentSubPage.stepIndex == null || currentSubPage.stepIndex < macro.steps.size)
+                                        ) {
                                             val step = currentSubPage.stepIndex?.let { macro.steps.getOrNull(it) }
                                             GamepadDeck(
                                                 breadcrumbs =
@@ -1805,15 +1811,15 @@ fun MacroPadEditor(
                                                             } else {
                                                                 macro.steps + newStep
                                                             }
-                                                        MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                         MacroPadNavState.pop()
+                                                        MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                     },
                                                     onDiscard = { MacroPadNavState.pop() },
                                                     onDuplicate = { dupStep ->
                                                         val newStart = macro.steps.totalDurationMs()
                                                         val duplicated = dupStep.withStartTime(newStart)
-                                                        MacroPadState.updateMacro(macro.copy(steps = macro.steps + duplicated))
                                                         MacroPadNavState.pop()
+                                                        MacroPadState.updateMacro(macro.copy(steps = macro.steps + duplicated))
                                                         DialogToastManager.show(
                                                             context.getString(R.string.macropad_macro_step_duplicate),
                                                         )
@@ -1825,8 +1831,8 @@ fun MacroPadEditor(
                                                                     i !=
                                                                         currentSubPage.stepIndex
                                                                 }
-                                                            MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                             MacroPadNavState.pop()
+                                                            MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                             DialogToastManager.show(
                                                                 context.getString(R.string.macropad_macro_step_delete),
                                                             )
