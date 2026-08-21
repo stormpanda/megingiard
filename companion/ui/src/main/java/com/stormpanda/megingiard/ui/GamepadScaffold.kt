@@ -345,7 +345,7 @@ fun GamepadTwoPaneScaffold(
 
     val transferFocusToDeck: () -> Unit = {
         var handled = false
-        val targetKey = savedFocusKeyByDepth[currentDepth]
+        val targetKey = savedFocusKeys?.get(currentDepth) ?: savedFocusKeyByDepth[currentDepth]
         val targetRequester = if (targetKey != null) activeDeckCardRequesters[targetKey] else null
         if (targetRequester != null) {
             try {
@@ -354,6 +354,7 @@ fun GamepadTwoPaneScaffold(
                 handled = true
             } catch (_: IllegalStateException) {
                 savedFocusKeyByDepth.remove(currentDepth)
+                onRemoveFocusedKey?.invoke(currentDepth)
             }
         }
         if (!handled) {
@@ -461,22 +462,27 @@ fun GamepadTwoPaneScaffold(
                     onRemoveFocusedKey?.invoke(deeperDepth)
                 }
 
-                fun performFocus(): Boolean {
+                fun performFocus(allowFallback: Boolean = false): Boolean {
                     inputModeManager.requestInputMode(InputMode.Keyboard)
                     if (isBackTransition) {
-                        val parentKey = savedFocusKeyByDepth[newDepth]
-                        val parentRequester = if (parentKey != null) activeDeckCardRequesters[parentKey] else null
-                        if (parentRequester != null) {
-                            try {
-                                parentRequester.requestFocus()
-                                AppLog.d(
-                                    TAG,
-                                    "GamepadTwoPaneScaffold: restored focus to parent trigger card '$parentKey' at depth $newDepth",
-                                )
-                                return true
-                            } catch (_: IllegalStateException) {
-                                savedFocusKeyByDepth.remove(newDepth)
-                                onRemoveFocusedKey?.invoke(newDepth)
+                        val parentKey = savedFocusKeys?.get(newDepth) ?: savedFocusKeyByDepth[newDepth]
+                        if (parentKey != null) {
+                            val parentRequester = activeDeckCardRequesters[parentKey]
+                            if (parentRequester != null) {
+                                try {
+                                    parentRequester.requestFocus()
+                                    AppLog.d(
+                                        TAG,
+                                        "GamepadTwoPaneScaffold: restored focus to parent trigger card '$parentKey' at depth $newDepth",
+                                    )
+                                    return true
+                                } catch (_: IllegalStateException) {
+                                    savedFocusKeyByDepth.remove(newDepth)
+                                    onRemoveFocusedKey?.invoke(newDepth)
+                                }
+                            }
+                            if (!allowFallback) {
+                                return false
                             }
                         }
                         try {
@@ -497,10 +503,10 @@ fun GamepadTwoPaneScaffold(
                     }
                 }
 
-                if (!performFocus()) {
+                if (!performFocus(allowFallback = false)) {
                     delay(GS_INITIAL_FOCUS_DELAY_MS)
                     try {
-                        performFocus()
+                        performFocus(allowFallback = true)
                     } catch (_: IllegalStateException) {
                         AppLog.d(TAG, "GamepadTwoPaneScaffold: focus requester unattached on auto focus restore")
                     }
@@ -513,7 +519,7 @@ fun GamepadTwoPaneScaffold(
             try {
                 inputModeManager.requestInputMode(InputMode.Keyboard)
                 if (isCustomBackActive) {
-                    val savedKey = savedFocusKeyByDepth[currentDepth]
+                    val savedKey = savedFocusKeys?.get(currentDepth) ?: savedFocusKeyByDepth[currentDepth]
                     val savedRequester = if (savedKey != null) activeDeckCardRequesters[savedKey] else null
                     if (savedRequester != null) {
                         savedRequester.requestFocus()

@@ -205,12 +205,13 @@ LaunchedEffect(subPageStack) {
 }
 ```
 
-### 4.4 Hoisted Focus State Across Modal Suspensions
+### 4.4 Hoisted Focus State Across Modal Suspensions & Item Mutations
 
 When composite editor overlays are suspended (e.g. `AppStateManager.suspendCurrentAndDismiss()` during physical gamepad or touch recording) and unmounted:
 1. `GamepadTwoPaneScaffold` delegates focused card tracking at each navigation depth to a hoisted state holder (such as `MacroPadNavState.savedFocusKeysByDepth`).
 2. Every deck card automatically registers its `itemKey` and `FocusRequester`.
 3. Upon modal resumption (`AppStateManager.resumeSuspended()`), `GamepadTwoPaneScaffold` initializes its depth map with the hoisted focus keys and automatically restores focus directly to the exact triggering card (e.g. *Record Controller Input*) on mount, avoiding reset to the top deck item.
+4. When item mutations occur in child sub-pages (e.g. deleting the last step of a macro in `MacroStepEdit`), the parent depth's focus key is adjusted to target the new adjacent item (`"macro_step_${remaining - 1}"`) or removed if no items remain, ensuring focus seamlessly transitions to the new last item upon popping the sub-page stack.
 
 ---
 

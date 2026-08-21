@@ -165,4 +165,29 @@ class MacroPadNavStateTest {
         MacroPadNavState.reset()
         assertTrue(MacroPadNavState.savedFocusKeysByDepth.value.isEmpty())
     }
+
+    @Test
+    fun `step deletion updates parent focus key to new last step or removes key`() {
+        val initialStepsCount = 3
+        val deletedIndex = 2 // last step
+        val remainingCount = initialStepsCount - 1
+        val parentDepth = 1
+
+        val targetIndex =
+            if (deletedIndex >= remainingCount) {
+                remainingCount - 1
+            } else {
+                deletedIndex
+            }
+
+        MacroPadNavState.recordFocusedKey(parentDepth, "macro_step_$targetIndex")
+        assertEquals(
+            mapOf(1 to "macro_step_1"),
+            MacroPadNavState.savedFocusKeysByDepth.value,
+        )
+
+        // Deleting only remaining step (count becomes 0)
+        MacroPadNavState.removeFocusedKey(parentDepth)
+        assertTrue(MacroPadNavState.savedFocusKeysByDepth.value.isEmpty())
+    }
 }

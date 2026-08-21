@@ -1799,7 +1799,7 @@ fun MacroPadEditor(
                                                     suggestedStartTimeMs = macro.steps.totalDurationMs(),
                                                     initialShiftMode = ShiftMode.END_DELTA,
                                                     onConfirm = { newStep, shiftMode ->
-                                                        val updatedSteps =
+                                                        val (updatedSteps, targetIndex) =
                                                             if (currentSubPage.stepIndex != null && step != null) {
                                                                 applyShiftSubsequent(
                                                                     macro.steps,
@@ -1807,10 +1807,12 @@ fun MacroPadEditor(
                                                                     step,
                                                                     newStep,
                                                                     shiftMode,
-                                                                )
+                                                                ) to currentSubPage.stepIndex
                                                             } else {
-                                                                macro.steps + newStep
+                                                                (macro.steps + newStep) to macro.steps.size
                                                             }
+                                                        val parentDepth = subPageStack.size - 1
+                                                        MacroPadNavState.recordFocusedKey(parentDepth, "macro_step_$targetIndex")
                                                         MacroPadNavState.pop()
                                                         MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                     },
@@ -1818,6 +1820,9 @@ fun MacroPadEditor(
                                                     onDuplicate = { dupStep ->
                                                         val newStart = macro.steps.totalDurationMs()
                                                         val duplicated = dupStep.withStartTime(newStart)
+                                                        val parentDepth = subPageStack.size - 1
+                                                        val newIndex = macro.steps.size
+                                                        MacroPadNavState.recordFocusedKey(parentDepth, "macro_step_$newIndex")
                                                         MacroPadNavState.pop()
                                                         MacroPadState.updateMacro(macro.copy(steps = macro.steps + duplicated))
                                                         DialogToastManager.show(
@@ -1831,6 +1836,21 @@ fun MacroPadEditor(
                                                                     i !=
                                                                         currentSubPage.stepIndex
                                                                 }
+                                                            val parentDepth = subPageStack.size - 1
+                                                            if (updatedSteps.isNotEmpty()) {
+                                                                val targetIndex =
+                                                                    if (currentSubPage.stepIndex >= updatedSteps.size) {
+                                                                        updatedSteps.size - 1
+                                                                    } else {
+                                                                        currentSubPage.stepIndex
+                                                                    }
+                                                                MacroPadNavState.recordFocusedKey(
+                                                                    parentDepth,
+                                                                    "macro_step_$targetIndex",
+                                                                )
+                                                            } else {
+                                                                MacroPadNavState.removeFocusedKey(parentDepth)
+                                                            }
                                                             MacroPadNavState.pop()
                                                             MacroPadState.updateMacro(macro.copy(steps = updatedSteps))
                                                             DialogToastManager.show(
