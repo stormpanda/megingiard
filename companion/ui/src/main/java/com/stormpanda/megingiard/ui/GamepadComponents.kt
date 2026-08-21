@@ -1027,77 +1027,119 @@ fun GamepadTextFieldCard(
             }
         },
     ) { isFocused ->
-        Column(
-            modifier = Modifier.fillMaxWidth(),
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(tween(GC_ANIM_DURATION_MS)),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-            ) {
-                if (icon != null) {
-                    GamepadCardIcon(
-                        icon = icon,
-                        isFocused = isFocused,
-                    )
-                    Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
-                }
+            if (!isEditing) {
+                val (displayTitle, displayDescription) =
+                    when {
+                        isError -> {
+                            val headline = if (value.isNotBlank()) "\"$value\"" else title
+                            headline to description
+                        }
 
-                GamepadCardText(
-                    title = title,
-                    description = description,
+                        value.isNotBlank() -> {
+                            val headline = "\"$value\""
+                            val sub =
+                                if (description != null) {
+                                    if (isFocused) "$title — $description" else title
+                                } else {
+                                    title
+                                }
+                            headline to sub
+                        }
+
+                        else -> {
+                            title to (description ?: placeholder)
+                        }
+                    }
+
+                GamepadCardRow(
+                    title = displayTitle,
+                    description = displayDescription,
+                    icon = icon,
                     isFocused = isFocused,
                     isError = isError,
-                    modifier = Modifier.weight(1f),
+                    trailingContent = {
+                        GamepadPill(
+                            text = stringResource(R.string.gamepad_action_edit),
+                            isHighlighted = isFocused,
+                        )
+                    },
                 )
-
-                Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
-
-                Box(
-                    modifier = Modifier.height(GC_ICON_BOX_SIZE),
-                    contentAlignment = Alignment.CenterEnd,
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    GamepadPill(
-                        text =
-                            if (isEditing) {
-                                stringResource(
-                                    R.string.gamepad_action_save,
-                                )
-                            } else {
-                                stringResource(R.string.gamepad_action_edit)
-                            },
-                        isAccent = isEditing,
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        if (icon != null) {
+                            GamepadCardIcon(
+                                icon = icon,
+                                isFocused = isFocused,
+                            )
+                            Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
+                        }
+
+                        GamepadCardText(
+                            title = title,
+                            description = description,
+                            isFocused = isFocused,
+                            isError = isError,
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        Spacer(modifier = Modifier.width(GC_ROW_CONTENT_SPACING))
+
+                        Box(
+                            modifier = Modifier.height(GC_ICON_BOX_SIZE),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            GamepadPill(
+                                text = stringResource(R.string.gamepad_action_save),
+                                isAccent = true,
+                                modifier =
+                                    Modifier.clickable {
+                                        onValueChange(draftValue.text.trim())
+                                        isEditing = false
+                                    },
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(GC_SPACING_8))
+
+                    AppTextField(
+                        value = draftValue,
+                        onValueChange = {
+                            draftValue = it
+                            onValueChange(it.text)
+                        },
+                        placeholder = placeholder?.let { { Text(it) } },
+                        isError = isError,
+                        singleLine = singleLine,
+                        enabled = enabled,
+                        readOnly = false,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions =
+                            KeyboardActions(onDone = {
+                                onValueChange(draftValue.text.trim())
+                                isEditing = false
+                            }),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .focusProperties {
+                                    canFocus = true
+                                }.focusRequester(textFieldFocusRequester),
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(GC_SPACING_8))
-
-            AppTextField(
-                value = if (isEditing) draftValue else TextFieldValue(value),
-                onValueChange = {
-                    if (isEditing) {
-                        draftValue = it
-                        onValueChange(it.text)
-                    }
-                },
-                placeholder = placeholder?.let { { Text(it) } },
-                isError = isError,
-                singleLine = singleLine,
-                enabled = enabled,
-                readOnly = !isEditing,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions =
-                    KeyboardActions(onDone = {
-                        onValueChange(draftValue.text.trim())
-                        isEditing = false
-                    }),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .focusProperties {
-                            canFocus = isEditing
-                        }.focusRequester(textFieldFocusRequester),
-            )
         }
     }
 }

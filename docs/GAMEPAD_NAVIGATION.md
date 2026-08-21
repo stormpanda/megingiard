@@ -243,7 +243,7 @@ All gamepad UI components live in [`GamepadComponents.kt`](file:///Users/maiktho
 | `GamepadStepperCard` | Numeric / discrete property card with `◀ Value ▶` capsule. | D-Pad Left/Right decrements/increments value directly. |
 | `GamepadChoiceCard` | Enum / option carousel cycling through options in-place. | D-Pad Left/Right cycles options without opening a sub-menu. |
 | `GamepadSliderCard` | Continuous or stepped float slider with customizable track brush or accent track. | D-Pad Left/Right adjusts slider value with focus highlighting. |
-| `GamepadTextFieldCard` | In-deck text input card with virtual keyboard integration. | Accent border glow on focus, opens keyboard on Button A. |
+| `GamepadTextFieldCard` | Collapsible in-deck text input card with virtual keyboard integration (56 dp single-row with quoted value headline and `[ Edit ]` CTA when collapsed; expands on editing). | Accent border glow on focus, expands and opens keyboard on Button A / Enter. |
 | `GamepadTwoStepConfirmCard` | Destructive action card requiring two-step confirmation (`[ Delete ]` -> `[ Confirm ]`). | Accent glow transitioning to error-tinted confirmation pill on initial trigger. |
 | `GamepadReorderCard` | List item card with drag handle icon and interactive up/down reordering. | Accent border glow, D-Pad Up/Down reorders item in list. |
 | `GamepadColorPaletteCard` / `GamepadColorPaletteGrid` | Interactive color swatches for custom theme or element coloring. | Highlighted swatch ring (`GC_SWATCH_BORDER_WIDTH_ADJUSTING = 3.dp`), D-Pad 2D grid traversal. |
