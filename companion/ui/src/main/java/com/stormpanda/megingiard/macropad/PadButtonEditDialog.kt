@@ -159,7 +159,7 @@ internal fun EditButtonSubPageContent(
     onOpenAppPicker: (currentDraft: PadButton) -> Unit,
     onOpenColorSubMenu: (currentDraft: PadButton, target: ButtonColorTarget) -> Unit,
     onOpenKeyboardPicker: ((currentDraft: PadButton) -> Unit)? = null,
-    onOpenGamepadPicker: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenGamepadPicker: ((currentDraft: PadButton, slotIndex: Int) -> Unit)? = null,
     onOpenMousePicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
@@ -416,8 +416,8 @@ internal fun EditButtonSubPageContent(
         onOpenKeyboardPicker = {
             onOpenKeyboardPicker?.invoke(currentButton)
         },
-        onOpenGamepadPicker = {
-            onOpenGamepadPicker?.invoke(currentButton)
+        onOpenGamepadPicker = { slotIndex ->
+            onOpenGamepadPicker?.invoke(currentButton, slotIndex)
         },
         onOpenMousePicker = {
             onOpenMousePicker?.invoke(currentButton)

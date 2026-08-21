@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.ViewQuilt
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
@@ -1226,7 +1227,7 @@ fun MacroPadEditor(
                                                             ),
                                                     )
                                                 },
-                                                onOpenGamepadPicker = { currentDraft ->
+                                                onOpenGamepadPicker = { currentDraft, slotIndex ->
                                                     MacroPadNavState.setStack(
                                                         subPageStack.dropLast(1) +
                                                             MacroPadSubPage.EditButton(
@@ -1236,6 +1237,7 @@ fun MacroPadEditor(
                                                             MacroPadSubPage.ChooseGamepadButton(
                                                                 button = currentSubPage.button,
                                                                 draftButton = currentDraft,
+                                                                slotIndex = slotIndex,
                                                             ),
                                                     )
                                                 },
@@ -1470,8 +1472,23 @@ fun MacroPadEditor(
                                     is MacroPadSubPage.ChooseGamepadButton -> {
                                         val effectiveButton = currentSubPage.draftButton
                                         val currentBtnAction = effectiveButton.action as? PadAction.GamepadButton
-                                        val currentBtnCode = currentBtnAction?.btnCode ?: GamepadKeycodes.BTN_SOUTH
+                                        val slotIndex = currentSubPage.slotIndex
+                                        val currentBtnCode =
+                                            when (slotIndex) {
+                                                1 -> currentBtnAction?.extraBtnCodes?.getOrNull(0) ?: -1
+                                                2 -> currentBtnAction?.extraBtnCodes?.getOrNull(1) ?: -1
+                                                3 -> currentBtnAction?.extraBtnCodes?.getOrNull(2) ?: -1
+                                                else -> currentBtnAction?.btnCode ?: GamepadKeycodes.BTN_SOUTH
+                                            }
                                         val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
+                                        val slotTitle =
+                                            when (slotIndex) {
+                                                1 -> stringResource(R.string.macropad_picker_label_extra_1)
+                                                2 -> stringResource(R.string.macropad_picker_label_extra_2)
+                                                3 -> stringResource(R.string.macropad_picker_label_extra_3)
+                                                else -> stringResource(R.string.macropad_picker_visual_gamepad_title)
+                                            }
+                                        val hasAssignedExtra = slotIndex in 1..3 && currentBtnCode != -1
                                         GamepadDeck(
                                             breadcrumbs =
                                                 listOf(
@@ -1485,19 +1502,53 @@ fun MacroPadEditor(
                                                             },
                                                         )
                                                     },
-                                                    stringResource(R.string.macropad_picker_visual_gamepad_title),
+                                                    slotTitle,
                                                 ),
                                         ) {
+                                            if (hasAssignedExtra) {
+                                                GamepadActionCard(
+                                                    title = stringResource(R.string.macropad_modifier_none),
+                                                    description = stringResource(R.string.macropad_picker_label_extra_desc),
+                                                    actionText = stringResource(R.string.gamepad_action_clear),
+                                                    icon = Icons.Rounded.Close,
+                                                    onClick = {
+                                                        val baseAction =
+                                                            currentBtnAction
+                                                                ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
+                                                        val newAction =
+                                                            updateGamepadButtonSlot(
+                                                                currentAction = baseAction,
+                                                                slotIndex = slotIndex,
+                                                                selectedCode = null,
+                                                                swapFaceButtons = swapFaceButtons,
+                                                            )
+                                                        val updatedDraft = effectiveButton.copy(action = newAction)
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack.dropLast(1).map { subPage ->
+                                                                if (subPage is MacroPadSubPage.EditButton) {
+                                                                    subPage.copy(draftButton = updatedDraft)
+                                                                } else {
+                                                                    subPage
+                                                                }
+                                                            },
+                                                        )
+                                                    },
+                                                    modifier = Modifier.firstDeckItem(),
+                                                )
+                                            }
                                             VisualGamepadPicker(
                                                 selectedBtnCode = currentBtnCode,
                                                 accentColor = colors.accent,
                                                 onSelectButton = { preset ->
-                                                    val shortLabel = preset.displayShortLabel(swapFaceButtons)
+                                                    val baseAction =
+                                                        currentBtnAction
+                                                            ?: PadAction.GamepadButton(GamepadKeycodes.BTN_SOUTH, "A")
                                                     val newAction =
-                                                        PadAction.GamepadButton(
-                                                            btnCode = preset.code,
-                                                            label = shortLabel,
-                                                            extraBtnCodes = currentBtnAction?.extraBtnCodes ?: emptyList(),
+                                                        updateGamepadButtonSlot(
+                                                            currentAction = baseAction,
+                                                            slotIndex = slotIndex,
+                                                            selectedCode = preset.code,
+                                                            swapFaceButtons = swapFaceButtons,
                                                         )
                                                     val updatedDraft = effectiveButton.copy(action = newAction)
                                                     MacroPadNavState.setStack(
@@ -1510,6 +1561,7 @@ fun MacroPadEditor(
                                                         },
                                                     )
                                                 },
+                                                modifier = if (hasAssignedExtra) Modifier else Modifier.firstDeckItem(),
                                             )
                                         }
                                     }

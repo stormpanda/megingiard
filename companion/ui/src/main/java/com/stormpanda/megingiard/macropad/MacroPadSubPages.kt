@@ -160,6 +160,7 @@ internal sealed interface MacroPadSubPage {
     data class ChooseGamepadButton(
         val button: PadButton?,
         val draftButton: PadButton,
+        val slotIndex: Int = 0,
     ) : MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }

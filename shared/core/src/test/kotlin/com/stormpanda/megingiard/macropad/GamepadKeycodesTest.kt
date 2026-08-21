@@ -83,4 +83,114 @@ class GamepadKeycodesTest {
         assertEquals("X", northPreset.displayShortLabel(swapFaceButtons = true))
         assertEquals("Y", westPreset.displayShortLabel(swapFaceButtons = true))
     }
+
+    @Test
+    fun testUpdateGamepadButtonSlotPrimary() {
+        val initial =
+            PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = "A",
+                extraBtnCodes = listOf(GamepadKeycodes.BTN_NORTH, GamepadKeycodes.BTN_TL),
+            )
+
+        // Change primary to BTN_NORTH (which is currently in extraBtnCodes)
+        val updated =
+            updateGamepadButtonSlot(
+                currentAction = initial,
+                slotIndex = 0,
+                selectedCode = GamepadKeycodes.BTN_NORTH,
+                swapFaceButtons = false,
+            )
+
+        assertEquals(GamepadKeycodes.BTN_NORTH, updated.btnCode)
+        assertEquals("Y", updated.label)
+        // BTN_NORTH should be automatically removed from extraBtnCodes
+        assertEquals(listOf(GamepadKeycodes.BTN_TL), updated.extraBtnCodes)
+    }
+
+    @Test
+    fun testUpdateGamepadButtonSlotExtras() {
+        val initial =
+            PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = "A",
+                extraBtnCodes = emptyList(),
+            )
+
+        // Set Extra 1
+        val withExtra1 =
+            updateGamepadButtonSlot(
+                currentAction = initial,
+                slotIndex = 1,
+                selectedCode = GamepadKeycodes.BTN_TL,
+                swapFaceButtons = false,
+            )
+        assertEquals(listOf(GamepadKeycodes.BTN_TL), withExtra1.extraBtnCodes)
+
+        // Set Extra 2
+        val withExtra2 =
+            updateGamepadButtonSlot(
+                currentAction = withExtra1,
+                slotIndex = 2,
+                selectedCode = GamepadKeycodes.BTN_TR,
+                swapFaceButtons = false,
+            )
+        assertEquals(listOf(GamepadKeycodes.BTN_TL, GamepadKeycodes.BTN_TR), withExtra2.extraBtnCodes)
+
+        // Set Extra 3
+        val withExtra3 =
+            updateGamepadButtonSlot(
+                currentAction = withExtra2,
+                slotIndex = 3,
+                selectedCode = GamepadKeycodes.BTN_TL2,
+                swapFaceButtons = false,
+            )
+        assertEquals(
+            listOf(GamepadKeycodes.BTN_TL, GamepadKeycodes.BTN_TR, GamepadKeycodes.BTN_TL2),
+            withExtra3.extraBtnCodes,
+        )
+
+        // Cannot add primary button as an extra button
+        val tryAddPrimaryAsExtra =
+            updateGamepadButtonSlot(
+                currentAction = withExtra3,
+                slotIndex = 1,
+                selectedCode = GamepadKeycodes.BTN_SOUTH,
+                swapFaceButtons = false,
+            )
+        assertEquals(
+            listOf(GamepadKeycodes.BTN_TR, GamepadKeycodes.BTN_TL2),
+            tryAddPrimaryAsExtra.extraBtnCodes,
+        )
+    }
+
+    @Test
+    fun testUpdateGamepadButtonSlotToggleAndClear() {
+        val initial =
+            PadAction.GamepadButton(
+                btnCode = GamepadKeycodes.BTN_SOUTH,
+                label = "A",
+                extraBtnCodes = listOf(GamepadKeycodes.BTN_TL, GamepadKeycodes.BTN_TR),
+            )
+
+        // Tapping the same code on Extra 1 toggles it off
+        val toggled =
+            updateGamepadButtonSlot(
+                currentAction = initial,
+                slotIndex = 1,
+                selectedCode = GamepadKeycodes.BTN_TL,
+                swapFaceButtons = false,
+            )
+        assertEquals(listOf(GamepadKeycodes.BTN_TR), toggled.extraBtnCodes)
+
+        // Passing null explicitly clears the slot
+        val cleared =
+            updateGamepadButtonSlot(
+                currentAction = initial,
+                slotIndex = 2,
+                selectedCode = null,
+                swapFaceButtons = false,
+            )
+        assertEquals(listOf(GamepadKeycodes.BTN_TL), cleared.extraBtnCodes)
+    }
 }

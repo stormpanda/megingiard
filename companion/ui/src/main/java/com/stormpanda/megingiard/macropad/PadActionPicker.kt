@@ -27,7 +27,7 @@ internal fun ActionPicker(
     onEditMacro: ((Macro) -> Unit)? = null,
     onOpenAppPicker: (() -> Unit)? = null,
     onOpenKeyboardPicker: () -> Unit = {},
-    onOpenGamepadPicker: () -> Unit = {},
+    onOpenGamepadPicker: (slotIndex: Int) -> Unit = {},
     onOpenMousePicker: () -> Unit = {},
     onOpenMirrorPicker: () -> Unit = {},
     onOpenOverlayPicker: () -> Unit = {},

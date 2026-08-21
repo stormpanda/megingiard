@@ -121,13 +121,10 @@ internal fun MouseButtonPicker(
 @Composable
 internal fun GamepadButtonPicker(
     current: PadAction.GamepadButton,
-    onOpenPicker: () -> Unit,
+    onOpenPicker: (slotIndex: Int) -> Unit,
     onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
-    var extra1 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(0)) }
-    var extra2 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(1)) }
-    var extra3 by remember(current.extraBtnCodes) { mutableStateOf(current.extraBtnCodes.getOrNull(2)) }
     val noneLabel = stringResource(R.string.macropad_modifier_none)
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
@@ -135,102 +132,47 @@ internal fun GamepadButtonPicker(
         GamepadKeycodes.PRESETS.firstOrNull { it.code == current.btnCode }
             ?: GamepadKeycodes.PRESETS.first()
 
-    fun presetShortLabel(code: Int?) =
-        code?.let { c ->
-            GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.displayShortLabel(swapFaceButtons)
-        }
-
     @Composable
-    fun presetMenuLabel(code: Int?): String =
+    fun presetLabel(code: Int?): String =
         code?.let { c ->
             GamepadKeycodes.PRESETS.firstOrNull { it.code == c }?.localizedDisplayLabel(swapFaceButtons)
         } ?: noneLabel
 
-    fun emitChange(
-        primary: GamepadKeycodes.GamepadButtonPreset,
-        e1: Int?,
-        e2: Int?,
-        e3: Int?,
-    ) {
-        onChange(PadAction.GamepadButton(primary.code, primary.displayShortLabel(swapFaceButtons), listOfNotNull(e1, e2, e3)))
-    }
+    val extra1 = current.extraBtnCodes.getOrNull(0)
+    val extra2 = current.extraBtnCodes.getOrNull(1)
+    val extra3 = current.extraBtnCodes.getOrNull(2)
 
     GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_button),
         description = stringResource(R.string.macropad_picker_label_button_desc),
         actionText = currentPreset.localizedDisplayLabel(swapFaceButtons),
         icon = Icons.Rounded.SportsEsports,
-        onClick = onOpenPicker,
+        onClick = { onOpenPicker(0) },
         modifier = Modifier.firstDeckItem(isFirstItem),
     )
 
-    val extra1Options =
-        listOf<Int?>(null) +
-            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra2, extra3) }
-    val extra1Idx = extra1Options.indexOf(extra1).coerceAtLeast(0)
-    GamepadChoiceCard(
+    GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_extra_1),
         description = stringResource(R.string.macropad_picker_label_extra_desc),
-        selectedText = presetShortLabel(extra1) ?: presetMenuLabel(extra1),
+        actionText = presetLabel(extra1),
         icon = Icons.Rounded.SportsEsports,
-        onPrevious = {
-            val nextIdx = (extra1Idx - 1 + extra1Options.size) % extra1Options.size
-            val code = extra1Options[nextIdx]
-            extra1 = code
-            emitChange(currentPreset, code, extra2, extra3)
-        },
-        onNext = {
-            val nextIdx = (extra1Idx + 1) % extra1Options.size
-            val code = extra1Options[nextIdx]
-            extra1 = code
-            emitChange(currentPreset, code, extra2, extra3)
-        },
+        onClick = { onOpenPicker(1) },
     )
 
-    val extra2Options =
-        listOf<Int?>(null) +
-            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra3) }
-    val extra2Idx = extra2Options.indexOf(extra2).coerceAtLeast(0)
-    GamepadChoiceCard(
+    GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_extra_2),
         description = stringResource(R.string.macropad_picker_label_extra_desc),
-        selectedText = presetShortLabel(extra2) ?: presetMenuLabel(extra2),
+        actionText = presetLabel(extra2),
         icon = Icons.Rounded.SportsEsports,
-        onPrevious = {
-            val nextIdx = (extra2Idx - 1 + extra2Options.size) % extra2Options.size
-            val code = extra2Options[nextIdx]
-            extra2 = code
-            emitChange(currentPreset, extra1, code, extra3)
-        },
-        onNext = {
-            val nextIdx = (extra2Idx + 1) % extra2Options.size
-            val code = extra2Options[nextIdx]
-            extra2 = code
-            emitChange(currentPreset, extra1, code, extra3)
-        },
+        onClick = { onOpenPicker(2) },
     )
 
-    val extra3Options =
-        listOf<Int?>(null) +
-            GamepadKeycodes.PRESETS.map { it.code }.filter { it != current.btnCode && it !in setOfNotNull(extra1, extra2) }
-    val extra3Idx = extra3Options.indexOf(extra3).coerceAtLeast(0)
-    GamepadChoiceCard(
+    GamepadActionCard(
         title = stringResource(R.string.macropad_picker_label_extra_3),
         description = stringResource(R.string.macropad_picker_label_extra_desc),
-        selectedText = presetShortLabel(extra3) ?: presetMenuLabel(extra3),
+        actionText = presetLabel(extra3),
         icon = Icons.Rounded.SportsEsports,
-        onPrevious = {
-            val nextIdx = (extra3Idx - 1 + extra3Options.size) % extra3Options.size
-            val code = extra3Options[nextIdx]
-            extra3 = code
-            emitChange(currentPreset, extra1, extra2, code)
-        },
-        onNext = {
-            val nextIdx = (extra3Idx + 1) % extra3Options.size
-            val code = extra3Options[nextIdx]
-            extra3 = code
-            emitChange(currentPreset, extra1, extra2, code)
-        },
+        onClick = { onOpenPicker(3) },
     )
 }
 

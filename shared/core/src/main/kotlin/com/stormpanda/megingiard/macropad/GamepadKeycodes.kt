@@ -155,3 +155,57 @@ fun GamepadKeycodes.GamepadButtonPreset.displayShortLabel(swapFaceButtons: Boole
         swapFaceButtons && code == GamepadKeycodes.BTN_WEST -> "Y"
         else -> shortLabel
     }
+
+/**
+ * Updates a gamepad button action's slot ([slotIndex]: 0 = primary, 1 = extra 1, 2 = extra 2, 3 = extra 3)
+ * with the specified [selectedCode] (or `null` to clear).
+ *
+ * Tapping an already selected code on an extra slot toggles it off (`null`).
+ * The primary button code is automatically excluded from extra buttons.
+ */
+fun updateGamepadButtonSlot(
+    currentAction: PadAction.GamepadButton,
+    slotIndex: Int,
+    selectedCode: Int?,
+    swapFaceButtons: Boolean = false,
+): PadAction.GamepadButton {
+    if (slotIndex == 0) {
+        val preset =
+            GamepadKeycodes.PRESETS.firstOrNull { it.code == selectedCode }
+                ?: GamepadKeycodes.PRESETS.first()
+        val newExtras = currentAction.extraBtnCodes.filter { it != preset.code }
+        return currentAction.copy(
+            btnCode = preset.code,
+            label = preset.displayShortLabel(swapFaceButtons),
+            extraBtnCodes = newExtras,
+        )
+    }
+
+    val extraIdx = slotIndex - 1
+    var e1 = currentAction.extraBtnCodes.getOrNull(0)
+    var e2 = currentAction.extraBtnCodes.getOrNull(1)
+    var e3 = currentAction.extraBtnCodes.getOrNull(2)
+
+    when (extraIdx) {
+        0 -> {
+            e1 = if (selectedCode == e1) null else selectedCode
+            if (e2 == selectedCode) e2 = null
+            if (e3 == selectedCode) e3 = null
+        }
+
+        1 -> {
+            e2 = if (selectedCode == e2) null else selectedCode
+            if (e1 == selectedCode) e1 = null
+            if (e3 == selectedCode) e3 = null
+        }
+
+        2 -> {
+            e3 = if (selectedCode == e3) null else selectedCode
+            if (e1 == selectedCode) e1 = null
+            if (e2 == selectedCode) e2 = null
+        }
+    }
+
+    val newExtras = listOfNotNull(e1, e2, e3).filter { it != currentAction.btnCode }
+    return currentAction.copy(extraBtnCodes = newExtras)
+}
