@@ -339,7 +339,7 @@ fun GamepadFocusCard(
                 }.focusRequester(cardFocusRequester)
                 .then(keyModifier)
                 .then(focusableOrClickModifier),
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.TopStart,
     ) {
         Box(
             modifier =
@@ -347,7 +347,7 @@ fun GamepadFocusCard(
                     .fillMaxWidth()
                     .alpha(if (enabled) 1f else GC_DISABLED_CARD_ALPHA)
                     .padding(horizontal = GC_CARD_H_PADDING, vertical = GC_CARD_V_PADDING),
-            contentAlignment = Alignment.CenterStart,
+            contentAlignment = Alignment.TopStart,
         ) {
             content(isEffectivelyFocused)
         }
