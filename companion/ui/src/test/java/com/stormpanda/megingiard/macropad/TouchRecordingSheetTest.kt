@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 private const val TAG = "TouchRecordingSheetTest"
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33])
+@Config(sdk = [33], qualifiers = "w800dp-h600dp")
 class TouchRecordingSheetTest {
     @get:Rule
     val composeTestRule = createComposeRule()
