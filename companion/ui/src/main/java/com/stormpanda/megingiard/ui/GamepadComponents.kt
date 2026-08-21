@@ -717,6 +717,7 @@ fun GamepadToggleCard(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     GamepadFocusCard(
         onClick =
@@ -728,6 +729,7 @@ fun GamepadToggleCard(
         enabled = enabled,
         modifier = modifier,
         itemKey = itemKey,
+        onFocusChanged = onFocusChanged,
     ) { isFocused ->
         GamepadCardRow(
             title = title,
@@ -759,6 +761,7 @@ fun GamepadAdjustableCard(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     var isAdjusting by remember { mutableStateOf(false) }
 
@@ -789,6 +792,7 @@ fun GamepadAdjustableCard(
             if (!focused) {
                 isAdjusting = false
             }
+            onFocusChanged?.invoke(focused)
         },
     ) { isFocused ->
         GamepadCardRow(
@@ -838,6 +842,7 @@ fun GamepadStepperCard(
     onValueClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     GamepadAdjustableCard(
         title = title,
@@ -850,6 +855,7 @@ fun GamepadStepperCard(
         onClick = onValueClick,
         enabled = enabled,
         itemKey = itemKey,
+        onFocusChanged = onFocusChanged,
     )
 }
 
@@ -881,6 +887,7 @@ fun GamepadChoiceCard(
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     itemKey: Any? = title,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     GamepadAdjustableCard(
         title = title,
@@ -893,6 +900,7 @@ fun GamepadChoiceCard(
         onClick = onClick,
         enabled = enabled,
         itemKey = itemKey,
+        onFocusChanged = onFocusChanged,
     )
 }
 
@@ -1174,6 +1182,7 @@ fun GamepadActionCard(
     isDestructive: Boolean = false,
     alwaysShowFullDescription: Boolean = false,
     itemKey: Any? = title,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
 
@@ -1183,6 +1192,7 @@ fun GamepadActionCard(
         modifier = modifier,
         itemKey = itemKey,
         cardBgColor = cardBgColor,
+        onFocusChanged = onFocusChanged,
     ) { isFocused ->
         GamepadCardRow(
             title = title,
@@ -1635,6 +1645,7 @@ fun GamepadReorderCard(
     cardFocusRequester: FocusRequester = remember { FocusRequester() },
     itemKey: Any? = title,
     enabled: Boolean = true,
+    onFocusChanged: ((Boolean) -> Unit)? = null,
 ) {
     val colors = LocalAppColors.current
 
@@ -1713,6 +1724,7 @@ fun GamepadReorderCard(
             if (!isFocused && isMoving) {
                 onToggleMoving()
             }
+            onFocusChanged?.invoke(isFocused)
         },
     ) { isFocused ->
         GamepadCardRow(

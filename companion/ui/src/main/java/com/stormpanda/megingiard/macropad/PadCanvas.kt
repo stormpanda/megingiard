@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -120,6 +121,14 @@ private const val PC_RADIAL_EXTRA_RINGS = 3
 
 // Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
 private const val PC_BTN_GRADIENT_OUTER = 0.9f
+
+// Drag handles & highlight pointers
+private val PC_HANDLE_SIZE = 32.dp
+private val PC_HANDLE_PADDING = 4.dp
+private const val PC_POINTER_ROTATION_TOP = 0f
+private const val PC_POINTER_ROTATION_BOTTOM = 180f
+private const val PC_POINTER_ROTATION_LEFT = 270f
+private const val PC_POINTER_ROTATION_RIGHT = 90f
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pad canvas — drag buttons to reposition
@@ -312,9 +321,9 @@ internal fun PadCanvas(
             )
         }
 
-        // Render handles for the active button if not locked
+        // Render handles or highlight pointers for the active button
         val activeBtn = (layout?.buttons ?: emptyList()).firstOrNull { it.id == selectedButtonId }
-        if (!isLocked && activeBtn != null) {
+        if (activeBtn != null) {
             val isTrackpoint = activeBtn.action is PadAction.TrackpointMove
             val tpMultiplier = if (isTrackpoint) (activeBtn.action as PadAction.TrackpointMove).size.multiplier else 1f
             val chipWidthPx =
@@ -343,73 +352,122 @@ internal fun PadCanvas(
             val halfW = chipWidthPx / 2f
             val halfH = chipHeightPx / 2f
 
-            val handleSize = 16.dp
-            val handleSizePx = with(density) { handleSize.toPx() }
-            val paddingPx = with(density) { 4.dp.toPx() }
+            val handleSizePx = with(density) { PC_HANDLE_SIZE.toPx() }
+            val paddingPx = with(density) { PC_HANDLE_PADDING.toPx() }
 
-            // Top handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX - handleSizePx / 2f,
-                topPx = centerY - halfH - paddingPx - handleSizePx,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val topHandleLeft = centerX - handleSizePx / 2f
+            val topHandleTop = centerY - halfH - paddingPx - handleSizePx
 
-            // Bottom handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX - handleSizePx / 2f,
-                topPx = centerY + halfH + paddingPx,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val bottomHandleLeft = centerX - handleSizePx / 2f
+            val bottomHandleTop = centerY + halfH + paddingPx
 
-            // Left handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX - halfW - paddingPx - handleSizePx,
-                topPx = centerY - handleSizePx / 2f,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val leftHandleLeft = centerX - halfW - paddingPx - handleSizePx
+            val leftHandleTop = centerY - handleSizePx / 2f
 
-            // Right handle
-            DragHandle(
-                buttonId = activeBtn.id,
-                leftPx = centerX + halfW + paddingPx,
-                topPx = centerY - handleSizePx / 2f,
-                handleSize = handleSize,
-                buttonPosX = activeBtn.posX,
-                buttonPosY = activeBtn.posY,
-                w = w,
-                h = h,
-                gridMode = gridMode,
-                gridStepPx = gridStepPx,
-                layoutId = layout?.id,
-                accentColor = accentColor,
-            )
+            val rightHandleLeft = centerX + halfW + paddingPx
+            val rightHandleTop = centerY - handleSizePx / 2f
+
+            if (!isLocked) {
+                // Top handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = topHandleLeft,
+                    topPx = topHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+
+                // Bottom handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = bottomHandleLeft,
+                    topPx = bottomHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+
+                // Left handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = leftHandleLeft,
+                    topPx = leftHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+
+                // Right handle
+                DragHandle(
+                    buttonId = activeBtn.id,
+                    leftPx = rightHandleLeft,
+                    topPx = rightHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    buttonPosX = activeBtn.posX,
+                    buttonPosY = activeBtn.posY,
+                    w = w,
+                    h = h,
+                    gridMode = gridMode,
+                    gridStepPx = gridStepPx,
+                    layoutId = layout?.id,
+                    accentColor = accentColor,
+                )
+            } else {
+                // Top pointer (points DOWN towards the button)
+                HighlightPointer(
+                    leftPx = topHandleLeft,
+                    topPx = topHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_TOP,
+                    accentColor = accentColor,
+                )
+
+                // Bottom pointer (points UP towards the button)
+                HighlightPointer(
+                    leftPx = bottomHandleLeft,
+                    topPx = bottomHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_BOTTOM,
+                    accentColor = accentColor,
+                )
+
+                // Left pointer (points RIGHT towards the button)
+                HighlightPointer(
+                    leftPx = leftHandleLeft,
+                    topPx = leftHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_LEFT,
+                    accentColor = accentColor,
+                )
+
+                // Right pointer (points LEFT towards the button)
+                HighlightPointer(
+                    leftPx = rightHandleLeft,
+                    topPx = rightHandleTop,
+                    handleSize = PC_HANDLE_SIZE,
+                    rotation = PC_POINTER_ROTATION_RIGHT,
+                    accentColor = accentColor,
+                )
+            }
         }
 
         AnimatedVisibility(
@@ -993,6 +1051,30 @@ private fun DragHandle(
             name = "drag_pan",
             size = handleSize,
             tint = accentColor,
+        )
+    }
+}
+
+@Composable
+private fun HighlightPointer(
+    leftPx: Float,
+    topPx: Float,
+    handleSize: Dp,
+    rotation: Float,
+    accentColor: Color,
+) {
+    Box(
+        modifier =
+            Modifier
+                .absoluteOffset { IntOffset(leftPx.roundToInt(), topPx.roundToInt()) }
+                .size(handleSize),
+        contentAlignment = Alignment.Center,
+    ) {
+        MaterialSymbol(
+            name = "arrow_drop_down",
+            size = handleSize,
+            tint = accentColor,
+            modifier = Modifier.rotate(rotation),
         )
     }
 }

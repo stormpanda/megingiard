@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -173,6 +174,20 @@ internal fun EditButtonSubPageContent(
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val activeLayout = MacroPadState.activeLayout.collectAsState().value
+
+    LaunchedEffect(button?.id) {
+        if (button != null) {
+            MacroPadState.setSelectedButtonId(button.id)
+        }
+    }
+    DisposableEffect(button?.id) {
+        onDispose {
+            if (button != null) {
+                MacroPadState.setSelectedButtonId(null)
+            }
+        }
+    }
+
     val defaultButtonLabel = stringResource(R.string.macropad_editor_new_button_default_label)
     val initAction =
         button?.action

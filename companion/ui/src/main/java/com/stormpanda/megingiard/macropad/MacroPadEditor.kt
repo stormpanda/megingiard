@@ -2176,6 +2176,12 @@ private fun ButtonsDeck(
             }
         }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            MacroPadState.setSelectedButtonId(null)
+        }
+    }
+
     LaunchedEffect(movingItemKey, movingIndex) {
         if (movingItemKey != null && movingIndex >= 0) {
             lazyListState.animateScrollToItem(movingIndex + MPE_BUTTON_HEADER_COUNT)
@@ -2195,6 +2201,7 @@ private fun ButtonsDeck(
                 icon = Icons.Rounded.OpenWith,
                 onClick = onEditButtonPositions,
                 modifier = Modifier.firstDeckItem(),
+                onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
             )
         }
 
@@ -2213,6 +2220,7 @@ private fun ButtonsDeck(
                 icon = Icons.Rounded.Grid4x4,
                 onPrevious = { MacroPadState.setGridMode(gridModes[(gridIdx - 1 + gridModes.size) % gridModes.size]) },
                 onNext = { MacroPadState.setGridMode(gridModes[(gridIdx + 1) % gridModes.size]) },
+                onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
             )
         }
 
@@ -2223,6 +2231,7 @@ private fun ButtonsDeck(
                 actionText = stringResource(R.string.gamepad_action_add),
                 icon = Icons.Rounded.Add,
                 onClick = onAddButton,
+                onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
             )
         }
 
@@ -2248,6 +2257,7 @@ private fun ButtonsDeck(
                     isReordering = it
                     if (!it) movingItemKey = null
                 },
+                onFocusChanged = { if (it) MacroPadState.setSelectedButtonId(null) },
             )
         }
 
@@ -2297,6 +2307,11 @@ private fun ButtonsDeck(
                     icon = btn.action.toCategory().icon(),
                     actionText = stringResource(R.string.gamepad_action_edit),
                     onClick = { onEditButton(btn) },
+                    onFocusChanged = { isFocused ->
+                        if (isFocused) {
+                            MacroPadState.setSelectedButtonId(btn.id)
+                        }
+                    },
                 )
             }
         } else {
@@ -2346,6 +2361,11 @@ private fun ButtonsDeck(
                         },
                         dragHandleModifier = Modifier.draggableHandle(),
                         itemKey = key,
+                        onFocusChanged = { isFocused ->
+                            if (isFocused) {
+                                MacroPadState.setSelectedButtonId(btn.id)
+                            }
+                        },
                     )
                 }
             }
