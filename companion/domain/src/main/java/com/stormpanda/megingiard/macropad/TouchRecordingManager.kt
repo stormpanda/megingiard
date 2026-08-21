@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "TouchRecordingManager"
 private const val TRM_MAX_TRAIL_POINTS = 40
+private const val CLIENT_TOKEN = "TouchRecordingManager"
 
 enum class TouchRecordingMode { TAP, GESTURE }
 
@@ -107,7 +108,7 @@ object TouchRecordingManager {
         TouchScreenObserver.onTouchEvent = { slot, action, normX, normY ->
             handleObservedTouch(slot, action, normX, normY)
         }
-        TouchScreenObserver.start()
+        TouchScreenObserver.start(CLIENT_TOKEN)
     }
 
     private fun handleObservedTouch(
@@ -238,7 +239,7 @@ object TouchRecordingManager {
         normY: Float,
     ) {
         AppLog.i(TAG, "onTapRecorded normX=$normX normY=$normY")
-        TouchScreenObserver.stop()
+        TouchScreenObserver.stop(CLIENT_TOKEN)
         _recordedTap.value = Pair(normX, normY)
         _state.value = TouchRecordingState.Idle
         _recordingRequested.value = false
@@ -290,7 +291,7 @@ object TouchRecordingManager {
             AppLog.w(TAG, "finishRecording called while not recording — ignored")
             return
         }
-        TouchScreenObserver.stop()
+        TouchScreenObserver.stop(CLIENT_TOKEN)
         AppLog.i(TAG, "finishRecording steps=${recordedGestureSteps.size}")
         val sorted = recordedGestureSteps.sortedBy { it.startTimeMs }
         val trimmed = trimLeadingIdle(sorted)
@@ -304,7 +305,7 @@ object TouchRecordingManager {
      */
     fun cancelRecording() {
         AppLog.i(TAG, "cancelRecording")
-        TouchScreenObserver.stop()
+        TouchScreenObserver.stop(CLIENT_TOKEN)
         _recordingRequested.value = false
         _recordedTap.value = null
         recordedGestureSteps.clear()
@@ -322,7 +323,7 @@ object TouchRecordingManager {
 
     fun resetState() {
         AppLog.d(TAG, "resetState")
-        TouchScreenObserver.stop()
+        TouchScreenObserver.stop(CLIENT_TOKEN)
         recordedGestureSteps.clear()
         _state.value = TouchRecordingState.Idle
     }

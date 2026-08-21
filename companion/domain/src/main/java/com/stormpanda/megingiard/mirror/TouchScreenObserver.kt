@@ -12,6 +12,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Collections
 import java.util.concurrent.Executors
 
 private const val TAG = "TouchScreenObserver"
@@ -60,8 +61,12 @@ private class SlotTracker(
  *
  * Monitors physical touches on Display 0 in real time without grabbing the device (`EVIOCGRAB`),
  * allowing the foreground game or emulator to receive all native touches unimpeded with zero latency.
+ *
+ * Uses token-based client reference counting so multiple consumers (e.g. Follow Mode, Touch Macro Recording)
+ * can safely request touch observation without prematurely closing active sessions.
  */
 object TouchScreenObserver {
+    private val activeClients = Collections.synchronizedSet(mutableSetOf<String>())
     private var job: Job? = null
 
     // Created per start(), closed per stop() so the backing thread does not outlive the session.
@@ -80,9 +85,57 @@ object TouchScreenObserver {
      */
     @Volatile var onTouchEvent: ((slot: Int, action: TouchAction, normX: Float, normY: Float) -> Unit)? = null
 
-    fun start() {
+    val isRunning: Boolean
+        get() = job?.isActive == true
+
+    /**
+     * Starts the passive touch screen reader for a specific client [clientToken].
+     * Coordinates lifecycle across multiple concurrent active clients.
+     */
+    @Synchronized
+    fun start(clientToken: String) {
+        val wasEmpty = activeClients.isEmpty()
+        activeClients.add(clientToken)
+        AppLog.i(TAG, "start() client='$clientToken' activeClients=$activeClients")
+        if (wasEmpty) {
+            startInternal()
+        }
+    }
+
+    /**
+     * Stops the passive touch screen reader for a specific client [clientToken].
+     * Only terminates the underlying reader thread when all registered clients have released it.
+     */
+    @Synchronized
+    fun stop(clientToken: String) {
+        if (!activeClients.contains(clientToken)) {
+            AppLog.d(TAG, "stop() called for non-active client '$clientToken'. Ignoring.")
+            return
+        }
+        activeClients.remove(clientToken)
+        AppLog.i(TAG, "stop() client='$clientToken' activeClients=$activeClients")
+        if (activeClients.isEmpty()) {
+            onTouchNormalized = null
+            onTouchEvent = null
+            stopInternal()
+        }
+    }
+
+    /**
+     * Force-stops all clients and tears down the reader thread. For testing / cleanup only.
+     */
+    @Synchronized
+    fun stopAll() {
+        AppLog.i(TAG, "stopAll() activeClients=$activeClients")
+        activeClients.clear()
+        onTouchNormalized = null
+        onTouchEvent = null
+        stopInternal()
+    }
+
+    private fun startInternal() {
         if (job != null) return
-        AppLog.i(TAG, "start()")
+        AppLog.i(TAG, "startInternal()")
         val exec = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
         dispatcher = exec
         job =
@@ -197,10 +250,8 @@ object TouchScreenObserver {
             }
     }
 
-    fun stop() {
-        AppLog.i(TAG, "stop()")
-        onTouchNormalized = null
-        onTouchEvent = null
+    private fun stopInternal() {
+        AppLog.i(TAG, "stopInternal()")
         activeStream?.close() // unblocks the blocking read() immediately
         activeStream = null
         job?.cancel()

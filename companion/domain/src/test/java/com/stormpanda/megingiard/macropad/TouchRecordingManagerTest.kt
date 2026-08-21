@@ -13,6 +13,7 @@ class TouchRecordingManagerTest {
         TouchRecordingManager.cancelRecording()
         TouchRecordingManager.resetState()
         TouchRecordingManager.consumeRecordedTap()
+        TouchScreenObserver.stopAll()
     }
 
     @Test

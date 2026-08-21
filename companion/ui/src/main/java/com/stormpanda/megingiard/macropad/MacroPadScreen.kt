@@ -334,9 +334,9 @@ internal fun PadSurface(
             TouchScreenObserver.onTouchNormalized = { nx, ny ->
                 ScreenCaptureManager.onTouchReceived(nx, ny)
             }
-            TouchScreenObserver.start()
+            TouchScreenObserver.start("MacroPadScreen_FollowMode")
         } else {
-            TouchScreenObserver.stop()
+            TouchScreenObserver.stop("MacroPadScreen_FollowMode")
             TouchScreenObserver.onTouchNormalized = null
         }
     }
@@ -344,7 +344,7 @@ internal fun PadSurface(
     DisposableEffect(Unit) {
         onDispose {
             TouchInjector.stop("TouchProjection")
-            TouchScreenObserver.stop()
+            TouchScreenObserver.stop("MacroPadScreen_FollowMode")
         }
     }
 
