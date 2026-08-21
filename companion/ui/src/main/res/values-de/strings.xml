@@ -403,6 +403,13 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- %d = Anzahl referenzierender Tasten -->
     <string name="macropad_macro_delete_confirm_referenced">Dieses Makro wird von %d Taste(n) verwendet. Trotzdem löschen?</string>
     <string name="macropad_macro_duplicate">Makro duplizieren</string>
+    <string name="macropad_macro_create_title">Makro erstellen</string>
+    <string name="macropad_macro_create_record_gamepad_title">Controller-Eingabe aufnehmen</string>
+    <string name="macropad_macro_create_record_gamepad_desc">Nimm Live-Combos, Tastendrücke und Analogstick-Bewegungen direkt über den Controller auf.</string>
+    <string name="macropad_macro_create_record_touch_title">Bildschirm-Touch aufnehmen</string>
+    <string name="macropad_macro_create_record_touch_desc">Nimm Fingertipps oder kontinuierliche Touch-Gesten direkt auf der Bildschirmübertragung auf.</string>
+    <string name="macropad_macro_create_manual_title">Schritt für Schritt erstellen</string>
+    <string name="macropad_macro_create_manual_desc">Erstelle zeitgesteuerte Eingabeschritte manuell von Grund auf mit millimetergenauer Millisekunden-Kontrolle.</string>
     <string name="macropad_macro_editor_save">Speichern</string>
     <string name="macropad_macro_editor_cancel">Abbrechen</string>
 

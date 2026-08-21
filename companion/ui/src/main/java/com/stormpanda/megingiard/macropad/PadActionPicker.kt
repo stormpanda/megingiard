@@ -25,6 +25,7 @@ internal fun ActionPicker(
     enableGamepad: Boolean = true,
     enableMouse: Boolean = true,
     onEditMacro: ((Macro) -> Unit)? = null,
+    onOpenCreateMacroMode: (() -> Unit)? = null,
     onOpenAppPicker: (() -> Unit)? = null,
     onOpenKeyboardPicker: () -> Unit = {},
     onOpenGamepadPicker: (slotIndex: Int) -> Unit = {},
@@ -58,11 +59,21 @@ internal fun ActionPicker(
             )
         }
 
+        is PadAction.BackgroundPeek -> {
+            GamepadActionCard(
+                title = stringResource(R.string.macropad_action_ambient_peek),
+                description = stringResource(R.string.macropad_action_ambient_peek_desc),
+                actionText = stringResource(R.string.macropad_action_ambient_peek),
+                icon = Icons.Rounded.Layers,
+                onClick = onOpenMirrorPicker,
+                modifier = Modifier.firstDeckItem(isFirstItem),
+            )
+        }
+
         is PadAction.MirrorPlayStop,
         is PadAction.MirrorFreeze,
         is PadAction.MirrorViewportEdit,
         is PadAction.MirrorTouchProjection,
-        is PadAction.BackgroundPeek,
         -> {
             GamepadActionCard(
                 title = stringResource(R.string.macropad_action_group_mirror),
@@ -110,7 +121,14 @@ internal fun ActionPicker(
         }
 
         is PadAction.Macro -> {
-            MacroPicker(current, accentColor, onEditMacro, onChange, isFirstItem = isFirstItem)
+            MacroPicker(
+                current = current,
+                accentColor = accentColor,
+                onEditMacro = onEditMacro,
+                onOpenCreateMacroMode = onOpenCreateMacroMode,
+                onChange = onChange,
+                isFirstItem = isFirstItem,
+            )
         }
     }
 }

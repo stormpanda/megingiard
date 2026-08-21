@@ -88,6 +88,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.keyboard.LinuxKeycodes
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
+import com.stormpanda.megingiard.privd.PrivdManager
+import com.stormpanda.megingiard.privd.PrivdState
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.steamgriddb.SteamGridDbScrapeSubPageContent
 import com.stormpanda.megingiard.ui.AppDivider
@@ -386,38 +388,9 @@ fun MacroPadEditor(
                                                     MacroPadNavState.setStack(listOf(MacroPadSubPage.ChooseButtonType))
                                                 },
                                                 onNewMacro = {
-                                                    val defaultMacroName =
-                                                        context.getString(R.string.macropad_macro_default_name)
-                                                    val existingMacroNames = profile.macros.map { it.name }
-                                                    val newMacroName =
-                                                        if (existingMacroNames.none {
-                                                                it.equals(defaultMacroName, ignoreCase = true)
-                                                            }
-                                                        ) {
-                                                            defaultMacroName
-                                                        } else {
-                                                            var index = 2
-                                                            while (existingMacroNames.any {
-                                                                    it.equals(
-                                                                        "$defaultMacroName ($index)",
-                                                                        ignoreCase = true,
-                                                                    )
-                                                                }
-                                                            ) {
-                                                                index++
-                                                            }
-                                                            "$defaultMacroName ($index)"
-                                                        }
-                                                    val newMacro =
-                                                        Macro(
-                                                            id = UUID.randomUUID().toString(),
-                                                            name = newMacroName,
-                                                            steps = emptyList(),
-                                                        )
-                                                    MacroPadState.addMacro(newMacro)
                                                     MacroPadNavState.setMacroTimelineFocusStepIndex(null)
                                                     MacroPadNavState.setStack(
-                                                        listOf(MacroPadSubPage.MacroTimeline(newMacro.id)),
+                                                        listOf(MacroPadSubPage.ChooseMacroMode()),
                                                     )
                                                 },
                                                 onNewLayout = {
@@ -635,32 +608,7 @@ fun MacroPadEditor(
                                                 profile = profile,
                                                 accentColor = colors.accent,
                                                 onNewMacro = {
-                                                    val defaultMacroName = context.getString(R.string.macropad_macro_default_name)
-                                                    val existingMacroNames = profile.macros.map { it.name }
-                                                    val newMacroName =
-                                                        if (existingMacroNames.none { it.equals(defaultMacroName, ignoreCase = true) }) {
-                                                            defaultMacroName
-                                                        } else {
-                                                            var index = 2
-                                                            while (existingMacroNames.any {
-                                                                    it.equals(
-                                                                        "$defaultMacroName ($index)",
-                                                                        ignoreCase = true,
-                                                                    )
-                                                                }
-                                                            ) {
-                                                                index++
-                                                            }
-                                                            "$defaultMacroName ($index)"
-                                                        }
-                                                    val newMacro =
-                                                        Macro(
-                                                            id = UUID.randomUUID().toString(),
-                                                            name = newMacroName,
-                                                            steps = emptyList(),
-                                                        )
-                                                    MacroPadState.addMacro(newMacro)
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(newMacro.id))
+                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode())
                                                 },
                                                 onEditMacro = { macro ->
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro.id))
@@ -1147,13 +1095,27 @@ fun MacroPadEditor(
                                                             posY = 0.5f,
                                                             action = defaultAction,
                                                         )
-                                                    MacroPadNavState.setStack(
-                                                        subPageStack.dropLast(1) +
-                                                            MacroPadSubPage.EditButton(
-                                                                button = null,
-                                                                draftButton = newDraft,
-                                                            ),
-                                                    )
+                                                    if (group == ActionGroup.MACRO && profile.macros.isEmpty()) {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack.dropLast(1) +
+                                                                MacroPadSubPage.EditButton(
+                                                                    button = null,
+                                                                    draftButton = newDraft,
+                                                                ) +
+                                                                MacroPadSubPage.ChooseMacroMode(
+                                                                    forButton = null,
+                                                                    draftButton = newDraft,
+                                                                ),
+                                                        )
+                                                    } else {
+                                                        MacroPadNavState.setStack(
+                                                            subPageStack.dropLast(1) +
+                                                                MacroPadSubPage.EditButton(
+                                                                    button = null,
+                                                                    draftButton = newDraft,
+                                                                ),
+                                                        )
+                                                    }
                                                 },
                                             )
                                         }
@@ -1294,6 +1256,19 @@ fun MacroPadEditor(
                                                 },
                                                 onEditMacro = { macro ->
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro.id))
+                                                },
+                                                onOpenCreateMacroMode = { currentDraft ->
+                                                    MacroPadNavState.setStack(
+                                                        subPageStack.dropLast(1) +
+                                                            MacroPadSubPage.EditButton(
+                                                                button = currentSubPage.button,
+                                                                draftButton = currentDraft,
+                                                            ) +
+                                                            MacroPadSubPage.ChooseMacroMode(
+                                                                forButton = currentSubPage.button,
+                                                                draftButton = currentDraft,
+                                                            ),
+                                                    )
                                                 },
                                                 onDuplicate = { btn ->
                                                     activeLayout?.id?.let { MacroPadState.duplicateButtonInLayout(btn, it) }
@@ -1767,6 +1742,125 @@ fun MacroPadEditor(
                                         }
                                     }
 
+                                    is MacroPadSubPage.ChooseMacroMode -> {
+                                        var showRecordTouchDialog by remember { mutableStateOf(false) }
+                                        val privdState by PrivdManager.state.collectAsState()
+                                        val defaultMacroName = stringResource(R.string.macropad_macro_default_name)
+                                        val existingMacroNames = profile.macros.map { it.name }
+
+                                        fun createNewMacro(): Macro {
+                                            val newMacroName =
+                                                if (existingMacroNames.none { it.equals(defaultMacroName, ignoreCase = true) }) {
+                                                    defaultMacroName
+                                                } else {
+                                                    var index = 2
+                                                    while (existingMacroNames.any {
+                                                            it.equals(
+                                                                "$defaultMacroName ($index)",
+                                                                ignoreCase = true,
+                                                            )
+                                                        }
+                                                    ) {
+                                                        index++
+                                                    }
+                                                    "$defaultMacroName ($index)"
+                                                }
+                                            return Macro(
+                                                id = UUID.randomUUID().toString(),
+                                                name = newMacroName,
+                                                steps = emptyList(),
+                                            )
+                                        }
+
+                                        fun applyNewMacroToStack(newMacro: Macro) {
+                                            MacroPadState.addMacro(newMacro)
+                                            if (currentSubPage.draftButton != null) {
+                                                val updatedDraft =
+                                                    currentSubPage.draftButton.copy(
+                                                        action = PadAction.Macro(newMacro.id),
+                                                        label =
+                                                            if (currentSubPage.draftButton.label ==
+                                                                context.getString(R.string.macropad_editor_new_button_default_label)
+                                                            ) {
+                                                                newMacro.name
+                                                            } else {
+                                                                currentSubPage.draftButton.label
+                                                            },
+                                                    )
+                                                val updatedStack =
+                                                    subPageStack.dropLast(1).map { subPage ->
+                                                        if (subPage is MacroPadSubPage.EditButton) {
+                                                            subPage.copy(draftButton = updatedDraft)
+                                                        } else {
+                                                            subPage
+                                                        }
+                                                    } + MacroPadSubPage.MacroTimeline(newMacro.id)
+                                                MacroPadNavState.setStack(updatedStack)
+                                            } else {
+                                                MacroPadNavState.setStack(
+                                                    subPageStack.dropLast(1) + MacroPadSubPage.MacroTimeline(newMacro.id),
+                                                )
+                                            }
+                                        }
+
+                                        val breadcrumbs =
+                                            if (currentSubPage.forButton != null || currentSubPage.draftButton != null) {
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    stringResource(R.string.macropad_macro_create_title),
+                                                )
+                                            } else {
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_manage_macros),
+                                                    stringResource(R.string.macropad_macro_create_title),
+                                                )
+                                            }
+
+                                        GamepadDeck(breadcrumbs = breadcrumbs) {
+                                            ChooseMacroModeSubPageContent(
+                                                onRecordGamepad = {
+                                                    if (privdState != PrivdState.RUNNING) {
+                                                        DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
+                                                        return@ChooseMacroModeSubPageContent
+                                                    }
+                                                    val newMacro = createNewMacro()
+                                                    applyNewMacroToStack(newMacro)
+                                                    AppStateManager.suspendCurrentAndDismiss()
+                                                    PhysicalGamepadRecordingManager.startRecording()
+                                                },
+                                                onRecordTouch = {
+                                                    showRecordTouchDialog = true
+                                                },
+                                                onBuildManual = {
+                                                    val newMacro = createNewMacro()
+                                                    applyNewMacroToStack(newMacro)
+                                                },
+                                            )
+                                        }
+
+                                        if (showRecordTouchDialog) {
+                                            TouchRecordStartDialog(
+                                                onRecordTap = {
+                                                    val newMacro = createNewMacro()
+                                                    applyNewMacroToStack(newMacro)
+                                                    AppStateManager.suspendCurrentAndDismiss()
+                                                    if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+                                                    TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+                                                    showRecordTouchDialog = false
+                                                },
+                                                onRecordGesture = {
+                                                    val newMacro = createNewMacro()
+                                                    applyNewMacroToStack(newMacro)
+                                                    AppStateManager.suspendCurrentAndDismiss()
+                                                    if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
+                                                    TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+                                                    showRecordTouchDialog = false
+                                                },
+                                                onCancel = { showRecordTouchDialog = false },
+                                            )
+                                        }
+                                    }
+
                                     is MacroPadSubPage.MacroTimeline -> {
                                         val macro =
                                             profile?.macros?.firstOrNull { it.id == currentSubPage.macroId }
@@ -1800,7 +1894,12 @@ fun MacroPadEditor(
                                                                 MacroPadSubPage.ReorderMacroSteps(macro.id),
                                                         )
                                                     },
-                                                    onDiscard = { MacroPadNavState.pop() },
+                                                    onDiscard = {
+                                                        if (macro.steps.isEmpty()) {
+                                                            MacroPadState.deleteMacro(macro.id)
+                                                        }
+                                                        MacroPadNavState.pop()
+                                                    },
                                                     onSave = { updatedMacro ->
                                                         MacroPadState.updateMacro(updatedMacro)
                                                         MacroPadNavState.pop()

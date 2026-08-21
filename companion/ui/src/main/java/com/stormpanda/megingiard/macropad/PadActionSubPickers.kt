@@ -181,6 +181,7 @@ internal fun MacroPicker(
     current: PadAction.Macro,
     accentColor: Color,
     onEditMacro: ((Macro) -> Unit)? = null,
+    onOpenCreateMacroMode: (() -> Unit)? = null,
     onChange: (PadAction) -> Unit,
     isFirstItem: Boolean = false,
 ) {
@@ -225,7 +226,15 @@ internal fun MacroPicker(
         )
     }
 
-    if (onEditMacro != null) {
+    if (onOpenCreateMacroMode != null) {
+        GamepadActionCard(
+            title = stringResource(R.string.settings_macropad_new),
+            description = stringResource(R.string.macropad_picker_macro_new_desc),
+            actionText = stringResource(R.string.gamepad_action_create),
+            icon = Icons.Rounded.Add,
+            onClick = onOpenCreateMacroMode,
+        )
+    } else if (onEditMacro != null) {
         GamepadActionCard(
             title = stringResource(R.string.settings_macropad_new),
             description = stringResource(R.string.macropad_picker_macro_new_desc),

@@ -479,6 +479,13 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_delete_confirm">Delete this macro? Pad buttons that reference it will stop working.</string>
     <string name="macropad_macro_delete_confirm_referenced">This macro is used by %d button(s). Delete anyway?</string>
     <string name="macropad_macro_duplicate">Duplicate Macro</string>
+    <string name="macropad_macro_create_title">Create Macro</string>
+    <string name="macropad_macro_create_record_gamepad_title">Record Controller Input</string>
+    <string name="macropad_macro_create_record_gamepad_desc">Record live gameplay combos, button presses, and analog stick movements directly from your controller.</string>
+    <string name="macropad_macro_create_record_touch_title">Record Screen Touch</string>
+    <string name="macropad_macro_create_record_touch_desc">Record taps or continuous multi-touch gestures directly on the screen mirror.</string>
+    <string name="macropad_macro_create_manual_title">Build Step-by-Step</string>
+    <string name="macropad_macro_create_manual_desc">Configure timed input steps manually from scratch with precise millisecond control.</string>
 
     <!-- MacroTimelineEditor -->
     <string name="macropad_macro_editor_save">Save</string>

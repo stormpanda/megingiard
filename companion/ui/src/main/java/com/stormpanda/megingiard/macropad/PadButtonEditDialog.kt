@@ -165,6 +165,7 @@ internal fun EditButtonSubPageContent(
     onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onEditMacro: ((Macro) -> Unit)? = null,
+    onOpenCreateMacroMode: ((currentDraft: PadButton) -> Unit)? = null,
     onDuplicate: ((PadButton) -> Unit)? = null,
     onCopyToLayout: ((PadButton) -> Unit)? = null,
     onDelete: ((PadButton) -> Unit)? = null,
@@ -409,6 +410,10 @@ internal fun EditButtonSubPageContent(
         onEditMacro = { macro ->
             actionBeforeEdit = action
             onEditMacro?.invoke(macro)
+        },
+        onOpenCreateMacroMode = {
+            actionBeforeEdit = action
+            onOpenCreateMacroMode?.invoke(currentButton)
         },
         onOpenAppPicker = {
             onOpenAppPicker(currentButton)
