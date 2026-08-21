@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -63,6 +64,7 @@ private val VGP_GRID_CORNER = 8.dp
 private val VGP_SECTION_SPACING = 12.dp
 private val VGP_ROW_SPACING = 6.dp
 private val VGP_CLUSTER_SPACING = 14.dp
+private val VGP_CENTER_CLEAR_SPACING = 106.dp
 private val VGP_MAIN_BODY_PADDING_TOP = 4.dp
 private val VGP_LABEL_SPACING = 4.dp
 private val VGP_CARD_CORNER = 8.dp
@@ -86,6 +88,7 @@ internal fun VisualGamepadPicker(
     accentColor: Color,
     onSelectButton: (preset: GamepadKeycodes.GamepadButtonPreset) -> Unit,
     modifier: Modifier = Modifier,
+    onClear: (() -> Unit)? = null,
 ) {
     AppLog.d(TAG, "VisualGamepadPicker: selectedBtnCode=$selectedBtnCode")
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
@@ -220,7 +223,7 @@ internal fun VisualGamepadPicker(
             }
         }
 
-        // ── Main Body: Left Column (LS + D-Pad) vs Center (Home) vs Right (Face + RS)
+        // ── Main Body: Left Column (LS + D-Pad) vs Center (Home + Clear) vs Right (Face + RS)
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = VGP_MAIN_BODY_PADDING_TOP),
             horizontalArrangement = Arrangement.SpaceAround,
@@ -266,10 +269,15 @@ internal fun VisualGamepadPicker(
                 )
             }
 
-            // ── Center Bottom: Home / Guide Button ───────────────────────────
+            // ── Center: Home / Guide Button & Clear Button ───────────────────
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement =
+                    if (onClear != null) {
+                        Arrangement.spacedBy(VGP_CENTER_CLEAR_SPACING)
+                    } else {
+                        Arrangement.Center
+                    },
             ) {
                 GamepadButtonTile(
                     preset = modePreset,
@@ -282,6 +290,12 @@ internal fun VisualGamepadPicker(
                     icon = Icons.Rounded.Home,
                     onClick = { onSelectButton(modePreset) },
                 )
+
+                if (onClear != null) {
+                    ClearButtonTile(
+                        onClick = onClear,
+                    )
+                }
             }
 
             // ── Right Column: Face Buttons Top, Right Stick Bottom ───────────
@@ -827,6 +841,53 @@ private fun GamepadButtonTile(
                 fontSize = fontSize,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClearButtonTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val shape = RoundedCornerShape(VGP_CARD_CORNER)
+
+    Box(
+        modifier =
+            modifier
+                .size(width = VGP_SYS_BTN_WIDTH, height = VGP_SYS_BTN_HEIGHT)
+                .clip(shape)
+                .background(colors.surface)
+                .border(
+                    width = VGP_BORDER_WIDTH,
+                    color = colors.subduedBorder,
+                    shape = shape,
+                ).primaryOverlayFocusable(
+                    onClick = onClick,
+                    shape = shape,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(horizontal = 4.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Close,
+                contentDescription = stringResource(R.string.gamepad_action_clear),
+                tint = colors.error,
+                modifier = Modifier.size(14.dp),
+            )
+            Text(
+                text = stringResource(R.string.gamepad_action_clear),
+                color = colors.error,
+                fontSize = VGP_SYS_FONT_SIZE,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
             )
         }
     }
