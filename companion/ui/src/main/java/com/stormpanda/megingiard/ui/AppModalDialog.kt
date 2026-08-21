@@ -5,15 +5,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,6 +33,11 @@ internal val APP_DIALOG_ELEVATION = 8.dp
 internal val APP_DIALOG_PADDING = 20.dp
 internal const val APP_DIALOG_SCRIM_ALPHA = 0.5f
 internal const val APP_DIALOG_WIDTH_FRACTION = 0.85f
+
+private val APP_DIALOG_ICON_BOTTOM_PADDING = 12.dp
+private val APP_DIALOG_TITLE_BOTTOM_PADDING = 12.dp
+private val APP_DIALOG_TEXT_BOTTOM_PADDING = 20.dp
+private val APP_DIALOG_BUTTON_SPACING = 8.dp
 
 /**
  * Centralized modal dialog container for non-fullscreen popups and dialogs.
@@ -102,9 +109,9 @@ fun AppModalDialog(
 }
 
 /**
- * Centralized wrapper around Material 3 [AlertDialog] that automatically applies the
+ * Centralized alert dialog composable that automatically applies the
  * app's dual-corner bezel light refraction border ([rememberBezelBrush]) and
- * theme colors.
+ * theme colors using [AppModalDialog] to support all overlay and presentation contexts.
  *
  * @param onDismissRequest Called when the user tries to dismiss the dialog.
  * @param confirmButton The primary action button.
@@ -124,18 +131,54 @@ fun AppAlertDialog(
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
 ) {
-    val colors = LocalAppColors.current
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = confirmButton,
-        modifier = modifier.border(1.dp, brush = rememberBezelBrush(), shape = AlertDialogDefaults.shape),
-        dismissButton = dismissButton,
-        icon = icon,
-        title = title,
-        text = text,
-        containerColor = colors.surface,
-        iconContentColor = colors.onSurface,
-        titleContentColor = colors.onSurface,
-        textContentColor = colors.onSurfaceSecondary,
-    )
+    AppModalDialog(
+        onDismiss = onDismissRequest,
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            icon?.let {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .padding(bottom = APP_DIALOG_ICON_BOTTOM_PADDING),
+                ) {
+                    it()
+                }
+            }
+            title?.let {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.Start)
+                            .padding(bottom = APP_DIALOG_TITLE_BOTTOM_PADDING),
+                ) {
+                    it()
+                }
+            }
+            text?.let {
+                Box(
+                    modifier =
+                        Modifier
+                            .align(Alignment.Start)
+                            .padding(bottom = APP_DIALOG_TEXT_BOTTOM_PADDING),
+                ) {
+                    it()
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                dismissButton?.let {
+                    it()
+                    Spacer(modifier = Modifier.width(APP_DIALOG_BUTTON_SPACING))
+                }
+                confirmButton()
+            }
+        }
+    }
 }

@@ -1,23 +1,19 @@
 package com.stormpanda.megingiard.macropad
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.LocalAppColors
-import com.stormpanda.megingiard.ui.rememberBezelBrush
 
 private const val TAG = "TouchRecordStartDialog"
+private val TRSD_CONFIRM_BUTTON_SPACING = 8.dp
 
 /**
  * Confirmation dialog shown before the recording mirror is opened.
@@ -53,7 +49,7 @@ internal fun TouchRecordStartDialog(
         },
         confirmButton = {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(TRSD_CONFIRM_BUTTON_SPACING),
             ) {
                 TextButton(onClick = onRecordTap) {
                     Text(
