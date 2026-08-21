@@ -208,6 +208,10 @@ fun MacroPadEditor(
     val activePrimaryModal by AppStateManager.activePrimaryModal.collectAsState()
     val savedFocusKeys by MacroPadNavState.savedFocusKeysByDepth.collectAsState()
 
+    LaunchedEffect(selectedSection) {
+        MacroPadState.setSelectedButtonId(null)
+    }
+
     LaunchedEffect(activePrimaryModal) {
         MacroPadNavState.applyPrimaryModalPayload(activePrimaryModal?.payload)
     }
@@ -2176,12 +2180,6 @@ private fun ButtonsDeck(
             }
         }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            MacroPadState.setSelectedButtonId(null)
-        }
-    }
-
     LaunchedEffect(movingItemKey, movingIndex) {
         if (movingItemKey != null && movingIndex >= 0) {
             lazyListState.animateScrollToItem(movingIndex + MPE_BUTTON_HEADER_COUNT)
@@ -2362,7 +2360,7 @@ private fun ButtonsDeck(
                         dragHandleModifier = Modifier.draggableHandle(),
                         itemKey = key,
                         onFocusChanged = { isFocused ->
-                            if (isFocused) {
+                            if (isFocused || isMoving) {
                                 MacroPadState.setSelectedButtonId(btn.id)
                             }
                         },
@@ -2397,6 +2395,12 @@ private fun EditButtonPositionsSubPageContent(
     BackHandler(enabled = movingButtonId != null) {
         stopMovingImmediate()
         movingButtonId = null
+    }
+
+    LaunchedEffect(buttons) {
+        if (selectedButtonId == null && buttons.isNotEmpty()) {
+            MacroPadState.setSelectedButtonId(buttons.first().id)
+        }
     }
 
     LaunchedEffect(selectedButtonId) {
