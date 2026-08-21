@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.mirror
 
 import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -82,6 +83,11 @@ fun TouchRecordingOverlay(modifier: Modifier = Modifier) {
     val mode by TouchRecordingManager.recordingMode.collectAsState()
     val srcWidth by ScreenCaptureManager.captureSourceWidth.collectAsState()
     val srcHeight by ScreenCaptureManager.captureSourceHeight.collectAsState()
+
+    BackHandler {
+        TouchRecordingManager.cancelRecording()
+        AppStateManager.resumeSuspended()
+    }
 
     DisposableEffect(Unit) {
         TouchInjector.start(context, "TouchRecordingOverlay")

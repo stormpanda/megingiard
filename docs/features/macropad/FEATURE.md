@@ -552,6 +552,19 @@ PadProfile
         └── hapticStrength: HapticStrength (OFF | LIGHT | MEDIUM | STRONG | CUSTOM, default OFF)
 ```
 
+### MacroPadNavState (`:companion:ui`)
+
+`MacroPadNavState` is an `internal object` singleton in `companion/ui/…/macropad/` that centralises navigation hierarchy and subpage stack state across composable lifecycles and modal suspensions.
+
+| Property / Method | Description |
+| --- | --- |
+| `selectedSection: StateFlow<EditorSection>` | Active primary category deck (`QUICK_ACTIONS`, `PROFILES`, `LAYOUTS`, `BACKGROUND`, `BUTTONS`, `MACROS`). |
+| `subPageStack: StateFlow<List<MacroPadSubPage>>` | Active stack of nested subpages, preserving deep subpages (e.g. `MacroTimeline`, `EditButtonPositions`, `LayoutAppearance`) across suspension and remounting. |
+| `selectSection(section)` | Selects a top-level category and resets the subpage stack to empty. |
+| `push(subPage)` / `pop()` | Appends or drops the top subpage in the stack. |
+| `reset()` | Restores default state (`QUICK_ACTIONS`, empty stack) upon explicit editor exit (`onDone`). |
+| `applyPrimaryModalPayload(payload)` | Directs incoming `PrimaryModalPayload` deep links into the appropriate section and subpage stack. |
+
 ### MacroPadMediaRepository (`:app`)
 
 `MacroPadMediaRepository` is an `object` singleton in `app/…/macropad/` that encapsulates all filesystem and bitmap storage operations for MacroPad layout backgrounds.

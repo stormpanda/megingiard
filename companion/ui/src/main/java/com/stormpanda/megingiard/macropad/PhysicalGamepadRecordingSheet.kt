@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -119,6 +120,10 @@ internal fun PhysicalGamepadRecordingSheet(
     val context = LocalContext.current
     val bezelBrush = rememberBezelBrush()
     val recording = state as? GamepadRecordingState.Recording
+
+    BackHandler {
+        onCancel()
+    }
 
     DisposableEffect(Unit) {
         AppLog.i(TAG, "PhysicalGamepadRecordingSheet visible")

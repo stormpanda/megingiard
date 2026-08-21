@@ -167,16 +167,7 @@ internal fun MacroTimelineSubPageContent(
             "startGamepadRecording() -> preserving current draft in MacroPadState, suspending editor and starting physical recording",
         )
         MacroPadState.updateMacro(currentMacro)
-        val suspendConfig =
-            PrimaryModalConfig(
-                type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
-                payload =
-                    PrimaryModalPayload.MacroTimeline(
-                        macroId = macro.id,
-                        focusStepIndex = steps.size,
-                    ),
-            )
-        AppStateManager.suspendCurrentAndDismiss(suspendConfig)
+        AppStateManager.suspendCurrentAndDismiss()
         PhysicalGamepadRecordingManager.startRecording()
     }
 
@@ -457,32 +448,14 @@ internal fun MacroTimelineSubPageContent(
         TouchRecordStartDialog(
             onRecordTap = {
                 MacroPadState.updateMacro(currentMacro)
-                val suspendConfig =
-                    PrimaryModalConfig(
-                        type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
-                        payload =
-                            PrimaryModalPayload.MacroTimeline(
-                                macroId = macro.id,
-                                focusStepIndex = steps.size,
-                            ),
-                    )
-                AppStateManager.suspendCurrentAndDismiss(suspendConfig)
+                AppStateManager.suspendCurrentAndDismiss()
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
                 showRecordTouchDialog = false
             },
             onRecordGesture = {
                 MacroPadState.updateMacro(currentMacro)
-                val suspendConfig =
-                    PrimaryModalConfig(
-                        type = PrimaryModalType.MACRO_TIMELINE_EDITOR,
-                        payload =
-                            PrimaryModalPayload.MacroTimeline(
-                                macroId = macro.id,
-                                focusStepIndex = steps.size,
-                            ),
-                    )
-                AppStateManager.suspendCurrentAndDismiss(suspendConfig)
+                AppStateManager.suspendCurrentAndDismiss()
                 if (!ScreenCaptureManager.isCapturing.value) AppStateManager.requestMirrorStart()
                 TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
                 showRecordTouchDialog = false

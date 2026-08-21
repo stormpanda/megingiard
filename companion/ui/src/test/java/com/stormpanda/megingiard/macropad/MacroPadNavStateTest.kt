@@ -1,0 +1,121 @@
+package com.stormpanda.megingiard.macropad
+
+import com.stormpanda.megingiard.ui.PrimaryModalPayload
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class MacroPadNavStateTest {
+    @Before
+    fun setup() {
+        MacroPadNavState.reset()
+    }
+
+    @Test
+    fun `default state is QUICK_ACTIONS with empty stack`() {
+        assertEquals(EditorSection.QUICK_ACTIONS, MacroPadNavState.selectedSection.value)
+        assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
+        assertEquals(null, MacroPadNavState.macroTimelineFocusStepIndex.value)
+        assertEquals(null, MacroPadNavState.pendingProfilePackage.value)
+        assertEquals(null, MacroPadNavState.appearanceDraft.value)
+    }
+
+    @Test
+    fun `push appends subpage to stack`() {
+        MacroPadNavState.push(MacroPadSubPage.NewProfile)
+        assertEquals(listOf(MacroPadSubPage.NewProfile), MacroPadNavState.subPageStack.value)
+
+        MacroPadNavState.push(MacroPadSubPage.EditProfile("profile-123"))
+        assertEquals(
+            listOf(MacroPadSubPage.NewProfile, MacroPadSubPage.EditProfile("profile-123")),
+            MacroPadNavState.subPageStack.value,
+        )
+    }
+
+    @Test
+    fun `pop removes top subpage and returns true when stack not empty`() {
+        MacroPadNavState.push(MacroPadSubPage.NewProfile)
+        MacroPadNavState.push(MacroPadSubPage.EditProfile("profile-123"))
+
+        assertTrue(MacroPadNavState.pop())
+        assertEquals(listOf(MacroPadSubPage.NewProfile), MacroPadNavState.subPageStack.value)
+
+        assertTrue(MacroPadNavState.pop())
+        assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
+
+        assertFalse(MacroPadNavState.pop())
+    }
+
+    @Test
+    fun `selectSection changes section and clears stack`() {
+        MacroPadNavState.push(MacroPadSubPage.NewProfile)
+        MacroPadNavState.selectSection(EditorSection.MACROS)
+
+        assertEquals(EditorSection.MACROS, MacroPadNavState.selectedSection.value)
+        assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
+    }
+
+    @Test
+    fun `reset restores default section and clears stack and drafts`() {
+        MacroPadNavState.selectSection(EditorSection.BUTTONS)
+        MacroPadNavState.push(MacroPadSubPage.EditButtonPositions)
+        MacroPadNavState.setMacroTimelineFocusStepIndex(5)
+        MacroPadNavState.setPendingProfilePackage("com.test.app")
+
+        MacroPadNavState.reset()
+
+        assertEquals(EditorSection.QUICK_ACTIONS, MacroPadNavState.selectedSection.value)
+        assertTrue(MacroPadNavState.subPageStack.value.isEmpty())
+        assertEquals(null, MacroPadNavState.macroTimelineFocusStepIndex.value)
+        assertEquals(null, MacroPadNavState.pendingProfilePackage.value)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with MacroTimeline updates section and stack`() {
+        val payload = PrimaryModalPayload.MacroTimeline(macroId = "macro-456", focusStepIndex = 2)
+        MacroPadNavState.applyPrimaryModalPayload(payload)
+
+        assertEquals(EditorSection.MACROS, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.MacroTimeline("macro-456")), MacroPadNavState.subPageStack.value)
+        assertEquals(2, MacroPadNavState.macroTimelineFocusStepIndex.value)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with LayoutSettings updates section and stack`() {
+        val payload = PrimaryModalPayload.LayoutSettings(layoutId = "layout-789")
+        MacroPadNavState.applyPrimaryModalPayload(payload)
+
+        assertEquals(EditorSection.LAYOUTS, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.LayoutAppearance("layout-789")), MacroPadNavState.subPageStack.value)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with ProfileSettings updates section and stack`() {
+        val payload = PrimaryModalPayload.ProfileSettings(profileId = "profile-abc")
+        var activatedProfileId: String? = null
+        MacroPadNavState.applyPrimaryModalPayload(
+            payload = payload,
+            onSetActiveProfileId = { activatedProfileId = it },
+        )
+
+        assertEquals(EditorSection.PROFILES, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.EditProfile("profile-abc")), MacroPadNavState.subPageStack.value)
+        assertEquals("profile-abc", activatedProfileId)
+    }
+
+    @Test
+    fun `applyPrimaryModalPayload with ButtonInspector updates section and stack`() {
+        val payload = PrimaryModalPayload.ButtonInspector(buttonId = "btn-123")
+        var selectedButtonId: String? = null
+        MacroPadNavState.applyPrimaryModalPayload(
+            payload = payload,
+            onSetSelectedButtonId = { selectedButtonId = it },
+        )
+
+        assertEquals(EditorSection.BUTTONS, MacroPadNavState.selectedSection.value)
+        assertEquals(listOf(MacroPadSubPage.EditButtonPositions), MacroPadNavState.subPageStack.value)
+        assertEquals("btn-123", selectedButtonId)
+    }
+}
