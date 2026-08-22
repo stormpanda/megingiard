@@ -84,4 +84,36 @@ class TouchRecordingSheetTest {
 
         assertTrue("Stop & Save button must trigger onStop callback", stopped)
     }
+
+    @Test
+    fun touchRecordingSheet_rendersMultiTouchPointers() {
+        val testColors = paletteFor(ThemeMode.DARK)
+
+        val state =
+            TouchRecordingState.Recording(
+                mode = TouchRecordingMode.GESTURE,
+                recordedGestureCount = 1,
+                totalRecordedSampleCount = 12,
+                startElapsedRealtime = 1000L,
+                activePointers =
+                    listOf(
+                        TouchPointerState(slot = 0, normX = 0.25f, normY = 0.35f, trail = listOf(Pair(0.2f, 0.3f), Pair(0.25f, 0.35f))),
+                        TouchPointerState(slot = 1, normX = 0.75f, normY = 0.85f, trail = listOf(Pair(0.7f, 0.8f), Pair(0.75f, 0.85f))),
+                    ),
+            )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalAppColors provides testColors) {
+                TouchRecordingSheet(
+                    state = state,
+                    onStop = {},
+                    onCancel = {},
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Touch Gesture").assertExists()
+        composeTestRule.onNodeWithText("P1: 25.0%, 35.0%  •  P2: 75.0%, 85.0%").assertExists()
+        composeTestRule.onNodeWithText("Stop & Save").assertExists()
+    }
 }

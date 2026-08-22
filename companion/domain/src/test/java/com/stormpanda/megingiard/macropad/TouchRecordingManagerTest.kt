@@ -144,10 +144,10 @@ class TouchRecordingManagerTest {
     }
 
     @Test
-    fun `updateLiveTelemetry updates recording state fields`() {
+    fun `updateLivePointerState updates recording state fields`() {
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
 
-        TouchRecordingManager.updateLiveTelemetry(
+        TouchRecordingManager.updateLivePointerState(
             normX = 0.45f,
             normY = 0.75f,
             isDown = true,
@@ -161,6 +161,27 @@ class TouchRecordingManagerTest {
         assertEquals(true, state.isTouchDown)
         assertEquals(1, state.activePointersCount)
         assertEquals(1, state.activeTrailPoints.size)
+        assertEquals(1, state.activePointers.size)
+    }
+
+    @Test
+    fun `updateLivePointers updates multi-touch pointer states with isolated trails`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+
+        val pointer0 = TouchPointerState(slot = 0, normX = 0.2f, normY = 0.3f, trail = listOf(Pair(0.2f, 0.3f), Pair(0.25f, 0.35f)))
+        val pointer1 = TouchPointerState(slot = 1, normX = 0.8f, normY = 0.7f, trail = listOf(Pair(0.8f, 0.7f), Pair(0.75f, 0.65f)))
+
+        TouchRecordingManager.updateLivePointers(listOf(pointer0, pointer1))
+
+        val state = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(2, state.activePointersCount)
+        assertEquals(2, state.activePointers.size)
+        assertEquals(true, state.isTouchDown)
+        assertEquals(0.2f, state.activePointers[0].normX)
+        assertEquals(0.8f, state.activePointers[1].normX)
+        assertEquals(2, state.activePointers[0].trail.size)
+        assertEquals(2, state.activePointers[1].trail.size)
+        assertEquals(4, state.activeTrailPoints.size)
     }
 
     @Test
@@ -218,5 +239,53 @@ class TouchRecordingManagerTest {
         assertEquals(0.1f, path.samples[0].normX)
         assertEquals(0.3f, path.samples[1].normX)
         assertEquals(0.5f, path.samples[2].normX)
+    }
+
+    @Test
+    fun `onTouchEvent in GESTURE mode tracks simultaneous multi-touch pointers and maintains separate trails`() {
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
+
+        // Pointer 0 down and move
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.DOWN, 0.1f, 0.2f)
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.MOVE, 0.15f, 0.25f)
+
+        // Pointer 1 down and move
+        TouchScreenObserver.onTouchEvent?.invoke(1, TouchAction.DOWN, 0.8f, 0.9f)
+        TouchScreenObserver.onTouchEvent?.invoke(1, TouchAction.MOVE, 0.85f, 0.95f)
+
+        val recordingState = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(2, recordingState.activePointersCount)
+        assertEquals(2, recordingState.activePointers.size)
+        assertEquals(true, recordingState.isTouchDown)
+
+        val p0 = recordingState.activePointers.first { it.slot == 0 }
+        val p1 = recordingState.activePointers.first { it.slot == 1 }
+        assertEquals(0.15f, p0.normX)
+        assertEquals(0.25f, p0.normY)
+        assertEquals(2, p0.trail.size)
+        assertEquals(0.85f, p1.normX)
+        assertEquals(0.95f, p1.normY)
+        assertEquals(2, p1.trail.size)
+
+        // Release pointer 0 first; pointer 1 is still down, so segment is not finished yet
+        TouchScreenObserver.onTouchEvent?.invoke(0, TouchAction.UP, 0.15f, 0.25f)
+        val midState = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(1, midState.activePointersCount)
+        assertEquals(1, midState.activePointers.size)
+        assertEquals(0, midState.recordedGestureCount)
+
+        // Release pointer 1; all pointers lifted, gesture segment completes
+        TouchScreenObserver.onTouchEvent?.invoke(1, TouchAction.UP, 0.85f, 0.95f)
+        val finalState = TouchRecordingManager.state.value as TouchRecordingState.Recording
+        assertEquals(0, finalState.activePointersCount)
+        assertEquals(1, finalState.recordedGestureCount)
+
+        TouchRecordingManager.finishRecording()
+        val done = TouchRecordingManager.state.value as TouchRecordingState.Done
+        assertEquals(1, done.steps.size)
+        val path = done.steps[0] as MacroStep.TouchPath
+        assertEquals(6, path.samples.size)
+        assertEquals(3, path.samples.count { it.pointerId == 0 })
+        assertEquals(3, path.samples.count { it.pointerId == 1 })
     }
 }

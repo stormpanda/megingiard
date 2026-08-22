@@ -100,6 +100,29 @@ private const val TRS_TOUCH_INDICATOR_RADIUS_DP = 10f
 private const val TRS_TOUCH_PULSE_RADIUS_DP = 22f
 private const val TRS_TRAIL_STROKE_WIDTH_DP = 3.5f
 
+private val TRS_POINTER_PALETTE =
+    listOf(
+        Color(0xFFFFB300), // Amber (Slot 1)
+        Color(0xFF00E676), // Emerald Green (Slot 2)
+        Color(0xFFFF4081), // Magenta / Pink (Slot 3)
+        Color(0xFF00E5FF), // Cyan / Sky (Slot 4)
+        Color(0xFFFF9100), // Deep Orange (Slot 5)
+        Color(0xFFD500F9), // Purple / Violet (Slot 6)
+        Color(0xFFAEEA00), // Lime (Slot 7)
+        Color(0xFFFF6E40), // Coral (Slot 8)
+        Color(0xFF1DE9B6), // Teal (Slot 9)
+    )
+
+private fun pointerColor(
+    slot: Int,
+    accentColor: Color,
+): Color =
+    if (slot == 0) {
+        accentColor
+    } else {
+        TRS_POINTER_PALETTE[(slot - 1) % TRS_POINTER_PALETTE.size]
+    }
+
 private fun formatElapsedTime(elapsedMs: Long): String {
     val totalSec = elapsedMs / 1000
     val min = totalSec / 60
@@ -111,7 +134,7 @@ private fun formatElapsedTime(elapsedMs: Long): String {
 /**
  * Companion HUD rendered on Display 4 (Secondary Display) during a touch macro recording session.
  *
- * Displays live touch telemetry, a proportional 16:9 screen radar visualizing top-screen touch positions
+ * Displays live touch tracking state, a proportional 16:9 screen radar visualizing top-screen touch positions
  * and active gesture trails in real time, step counter, session timer, and Cancel / Stop action buttons.
  */
 @Composable
@@ -364,20 +387,42 @@ internal fun TouchRecordingSheet(
                 )
 
                 // ── Coords Readout ──────────────────────────────────────────
-                val liveX = recording?.liveNormX
-                val liveY = recording?.liveNormY
+                val activePointers = recording?.activePointers ?: emptyList()
+                val fallbackX = recording?.liveNormX
+                val fallbackY = recording?.liveNormY
                 val coordsText =
-                    if (liveX != null && liveY != null) {
-                        val pctX = liveX * 100f
-                        val pctY = liveY * 100f
-                        stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
-                    } else {
-                        stringResource(R.string.touch_recording_radar_waiting)
+                    when {
+                        activePointers.size > 1 -> {
+                            activePointers.joinToString(separator = "  •  ") { pointer ->
+                                val pName = "P${pointer.slot + 1}"
+                                val px = pointer.normX * 100f
+                                val py = pointer.normY * 100f
+                                "$pName: %1$.1f%%, %2$.1f%%".format(px, py)
+                            }
+                        }
+
+                        activePointers.size == 1 -> {
+                            val p = activePointers.first()
+                            val pctX = p.normX * 100f
+                            val pctY = p.normY * 100f
+                            stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
+                        }
+
+                        fallbackX != null && fallbackY != null -> {
+                            val pctX = fallbackX * 100f
+                            val pctY = fallbackY * 100f
+                            stringResource(R.string.touch_recording_radar_coords, pctX, pctY)
+                        }
+
+                        else -> {
+                            stringResource(R.string.touch_recording_radar_waiting)
+                        }
                     }
 
+                val isTracking = activePointers.isNotEmpty() || fallbackX != null
                 Text(
                     text = coordsText,
-                    color = if (liveX != null) colors.accent else colors.onSurfaceSecondary,
+                    color = if (isTracking) colors.accent else colors.onSurfaceSecondary,
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Medium,
@@ -454,7 +499,6 @@ private fun TouchScreenRadar(
     val accentColor = colors.accent
     val dividerColor = colors.divider
     val surfaceVariant = colors.surfaceVariant
-    val actionColor = colors.actionColorSystem
 
     val pulseTransition = rememberInfiniteTransition(label = "radarTouchPulse")
     val livePulseScale by pulseTransition.animateFloat(
@@ -495,51 +539,104 @@ private fun TouchScreenRadar(
                 strokeWidth = 1f,
             )
 
-            // Active trail points (drawn connected)
-            val trail = recording?.activeTrailPoints ?: emptyList()
-            if (trail.size >= 2) {
-                val path = Path()
-                trail.forEachIndexed { index, (nx, ny) ->
-                    val px = nx * width
-                    val py = ny * height
-                    if (index == 0) {
-                        path.moveTo(px, py)
-                    } else {
-                        path.lineTo(px, py)
+            val activePointers = recording?.activePointers ?: emptyList()
+            if (activePointers.isNotEmpty()) {
+                // 1. Draw trails for each active pointer independently
+                for (pointer in activePointers) {
+                    val trail = pointer.trail
+                    if (trail.size >= 2) {
+                        val path = Path()
+                        trail.forEachIndexed { index, (nx, ny) ->
+                            val px = nx * width
+                            val py = ny * height
+                            if (index == 0) {
+                                path.moveTo(px, py)
+                            } else {
+                                path.lineTo(px, py)
+                            }
+                        }
+                        val color = pointerColor(pointer.slot, accentColor)
+                        drawPath(
+                            path = path,
+                            color = color.copy(alpha = 0.85f),
+                            style = Stroke(width = trailStrokeWidthPx),
+                        )
                     }
                 }
-                drawPath(
-                    path = path,
-                    color = actionColor,
-                    style = Stroke(width = trailStrokeWidthPx),
-                )
-            }
 
-            // Live touch pointer indicator
-            val liveX = recording?.liveNormX
-            val liveY = recording?.liveNormY
-            if (liveX != null && liveY != null) {
-                val touchPx = liveX * width
-                val touchPy = liveY * height
+                // 2. Draw live indicator dots and pulse halos for each active pointer
+                for (pointer in activePointers) {
+                    val touchPx = pointer.normX * width
+                    val touchPy = pointer.normY * height
+                    val pColor = pointerColor(pointer.slot, accentColor)
 
-                if (recording.isTouchDown) {
+                    // Pulse halo
                     drawCircle(
-                        color = actionColor.copy(alpha = 0.35f),
+                        color = pColor.copy(alpha = 0.35f),
                         radius = touchPulseRadiusPx * livePulseScale,
                         center = Offset(touchPx, touchPy),
                     )
+
+                    // Outer circle
+                    drawCircle(
+                        color = pColor,
+                        radius = touchIndicatorRadiusPx,
+                        center = Offset(touchPx, touchPy),
+                    )
+
+                    // Center white dot
+                    drawCircle(
+                        color = Color.White,
+                        radius = touchIndicatorRadiusPx * 0.45f,
+                        center = Offset(touchPx, touchPy),
+                    )
+                }
+            } else {
+                // Fallback for single pointer or legacy state if activePointers is empty
+                val trail = recording?.activeTrailPoints ?: emptyList()
+                if (trail.size >= 2) {
+                    val path = Path()
+                    trail.forEachIndexed { index, (nx, ny) ->
+                        val px = nx * width
+                        val py = ny * height
+                        if (index == 0) {
+                            path.moveTo(px, py)
+                        } else {
+                            path.lineTo(px, py)
+                        }
+                    }
+                    drawPath(
+                        path = path,
+                        color = accentColor.copy(alpha = 0.85f),
+                        style = Stroke(width = trailStrokeWidthPx),
+                    )
                 }
 
-                drawCircle(
-                    color = accentColor,
-                    radius = touchIndicatorRadiusPx,
-                    center = Offset(touchPx, touchPy),
-                )
-                drawCircle(
-                    color = Color.White,
-                    radius = touchIndicatorRadiusPx * 0.45f,
-                    center = Offset(touchPx, touchPy),
-                )
+                val liveX = recording?.liveNormX
+                val liveY = recording?.liveNormY
+                if (liveX != null && liveY != null) {
+                    val touchPx = liveX * width
+                    val touchPy = liveY * height
+
+                    if (recording.isTouchDown) {
+                        drawCircle(
+                            color = accentColor.copy(alpha = 0.35f),
+                            radius = touchPulseRadiusPx * livePulseScale,
+                            center = Offset(touchPx, touchPy),
+                        )
+                    }
+
+                    drawCircle(
+                        color = accentColor,
+                        radius = touchIndicatorRadiusPx,
+                        center = Offset(touchPx, touchPy),
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = touchIndicatorRadiusPx * 0.45f,
+                        center = Offset(touchPx, touchPy),
+                    )
+                }
             }
         }
     }

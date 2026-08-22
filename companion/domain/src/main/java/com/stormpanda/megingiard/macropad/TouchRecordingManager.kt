@@ -16,6 +16,21 @@ private const val CLIENT_TOKEN = "TouchRecordingManager"
 
 enum class TouchRecordingMode { TAP, GESTURE }
 
+/**
+ * Live state for a single active touch pointer on the screen.
+ *
+ * @property slot Pointer slot index (0..9) identifying the finger.
+ * @property normX Normalised X coordinate [0.0, 1.0].
+ * @property normY Normalised Y coordinate [0.0, 1.0].
+ * @property trail Historical path coordinates for this pointer's current stroke.
+ */
+data class TouchPointerState(
+    val slot: Int,
+    val normX: Float,
+    val normY: Float,
+    val trail: List<Pair<Float, Float>> = emptyList(),
+)
+
 sealed interface TouchRecordingState {
     data object Idle : TouchRecordingState
 
@@ -24,11 +39,12 @@ sealed interface TouchRecordingState {
         val recordedGestureCount: Int = 0,
         val totalRecordedSampleCount: Int = 0,
         val startElapsedRealtime: Long = 0L,
-        val liveNormX: Float? = null,
-        val liveNormY: Float? = null,
-        val isTouchDown: Boolean = false,
-        val activePointersCount: Int = 0,
-        val activeTrailPoints: List<Pair<Float, Float>> = emptyList(),
+        val activePointers: List<TouchPointerState> = emptyList(),
+        val liveNormX: Float? = activePointers.firstOrNull()?.normX,
+        val liveNormY: Float? = activePointers.firstOrNull()?.normY,
+        val isTouchDown: Boolean = activePointers.isNotEmpty(),
+        val activePointersCount: Int = activePointers.size,
+        val activeTrailPoints: List<Pair<Float, Float>> = activePointers.flatMap { it.trail },
     ) : TouchRecordingState
 
     data class Done(
@@ -45,7 +61,7 @@ sealed interface TouchRecordingState {
  *    [TouchScreenObserver] on `/dev/input/event6`.
  * 2. On Display 0 (Primary Display), touches pass straight to the foreground game/app with zero lag.
  * 3. On Display 4 (Secondary Display), [MainAppScreen] observes [recordingRequested] and displays
- *    [TouchRecordingSheet] with live telemetry, a 16:9 touch radar monitor, and Cancel / Stop controls.
+ *    [TouchRecordingSheet] with live pointer indicators, a 16:9 touch radar monitor, and Cancel / Stop controls.
  * 4. [TouchScreenObserver] streams evdev touch events to [handleObservedTouch] in real time.
  * 5. On finish or cancel, [TouchScreenObserver] stops and the top-screen editor is resumed.
  */
@@ -73,12 +89,26 @@ object TouchRecordingManager {
      */
     val recordedTap: StateFlow<Pair<Float, Float>?> = _recordedTap.asStateFlow()
 
+    private class PointerTracker(
+        val slot: Int,
+        var normX: Float,
+        var normY: Float,
+        val trail: MutableList<Pair<Float, Float>> = mutableListOf(),
+    ) {
+        fun toPointerState(): TouchPointerState =
+            TouchPointerState(
+                slot = slot,
+                normX = normX,
+                normY = normY,
+                trail = trail.toList(),
+            )
+    }
+
     private var sessionStartEpochMs = 0L
     private var gestureSegmentStartEpochMs = 0L
     private var gestureSegmentStartOffsetMs = 0L
     private var isGestureSegmentRecording = false
-    private val activeSlots = mutableSetOf<Int>()
-    private val activeTrail = mutableListOf<Pair<Float, Float>>()
+    private val activePointers = mutableMapOf<Int, PointerTracker>()
     private val currentGestureSamples = mutableListOf<TouchSample>()
 
     /**
@@ -92,8 +122,7 @@ object TouchRecordingManager {
         gestureSegmentStartEpochMs = 0L
         gestureSegmentStartOffsetMs = 0L
         isGestureSegmentRecording = false
-        activeSlots.clear()
-        activeTrail.clear()
+        activePointers.clear()
         currentGestureSamples.clear()
         _recordedTap.value = null
         recordedGestureSteps.clear()
@@ -139,9 +168,9 @@ object TouchRecordingManager {
                             gestureSegmentStartOffsetMs = (now - sessionStartEpochMs).coerceAtLeast(0L)
                             currentGestureSamples.clear()
                         }
-                        activeSlots.add(slot)
-                        activeTrail.add(Pair(normX, normY))
-                        if (activeTrail.size > TRM_MAX_TRAIL_POINTS) activeTrail.removeAt(0)
+                        val tracker = PointerTracker(slot, normX, normY)
+                        tracker.trail.add(Pair(normX, normY))
+                        activePointers[slot] = tracker
 
                         val offsetMs = (now - gestureSegmentStartEpochMs).coerceAtLeast(0L)
                         currentGestureSamples.add(
@@ -156,9 +185,12 @@ object TouchRecordingManager {
                     }
 
                     TouchAction.MOVE -> {
-                        if (activeSlots.contains(slot)) {
-                            activeTrail.add(Pair(normX, normY))
-                            if (activeTrail.size > TRM_MAX_TRAIL_POINTS) activeTrail.removeAt(0)
+                        val tracker = activePointers[slot]
+                        if (tracker != null) {
+                            tracker.normX = normX
+                            tracker.normY = normY
+                            tracker.trail.add(Pair(normX, normY))
+                            if (tracker.trail.size > TRM_MAX_TRAIL_POINTS) tracker.trail.removeAt(0)
 
                             val offsetMs = (now - gestureSegmentStartEpochMs).coerceAtLeast(0L)
                             currentGestureSamples.add(
@@ -174,8 +206,8 @@ object TouchRecordingManager {
                     }
 
                     TouchAction.UP -> {
-                        if (activeSlots.contains(slot)) {
-                            activeSlots.remove(slot)
+                        val tracker = activePointers.remove(slot)
+                        if (tracker != null) {
                             val offsetMs = (now - gestureSegmentStartEpochMs).coerceAtLeast(0L)
                             currentGestureSamples.add(
                                 TouchSample(
@@ -187,34 +219,45 @@ object TouchRecordingManager {
                                 ),
                             )
 
-                            if (activeSlots.isEmpty() && isGestureSegmentRecording && currentGestureSamples.isNotEmpty()) {
+                            if (activePointers.isEmpty() && isGestureSegmentRecording && currentGestureSamples.isNotEmpty()) {
                                 isGestureSegmentRecording = false
                                 recordGestureCompleted(
                                     samples = currentGestureSamples.toList(),
                                     startOffsetMs = gestureSegmentStartOffsetMs,
                                 )
                                 currentGestureSamples.clear()
-                                activeTrail.clear()
                             }
                         }
                     }
                 }
 
-                updateLiveTelemetry(
-                    normX = normX,
-                    normY = normY,
-                    isDown = activeSlots.isNotEmpty(),
-                    activePointersCount = activeSlots.size,
-                    activeTrailPoints = activeTrail.toList(),
-                )
+                updateLivePointers(activePointers.values.map { it.toPointerState() })
             }
         }
     }
 
     /**
-     * Updates live touch telemetry for the secondary companion monitor radar.
+     * Updates live touch pointer states for the secondary companion monitor radar.
      */
-    fun updateLiveTelemetry(
+    fun updateLivePointers(pointers: List<TouchPointerState>) {
+        val current = _state.value as? TouchRecordingState.Recording ?: return
+        val primary = pointers.firstOrNull()
+        val allTrail = pointers.flatMap { it.trail }
+        _state.value =
+            current.copy(
+                activePointers = pointers,
+                liveNormX = primary?.normX,
+                liveNormY = primary?.normY,
+                isTouchDown = pointers.isNotEmpty(),
+                activePointersCount = pointers.size,
+                activeTrailPoints = allTrail,
+            )
+    }
+
+    /**
+     * Updates live touch pointer states for testing or explicit updates.
+     */
+    fun updateLivePointerState(
         normX: Float?,
         normY: Float?,
         isDown: Boolean,
@@ -222,8 +265,15 @@ object TouchRecordingManager {
         activeTrailPoints: List<Pair<Float, Float>>,
     ) {
         val current = _state.value as? TouchRecordingState.Recording ?: return
+        val pointers =
+            if (normX != null && normY != null && isDown) {
+                listOf(TouchPointerState(slot = 0, normX = normX, normY = normY, trail = activeTrailPoints))
+            } else {
+                emptyList()
+            }
         _state.value =
             current.copy(
+                activePointers = pointers,
                 liveNormX = normX,
                 liveNormY = normY,
                 isTouchDown = isDown,
@@ -290,9 +340,12 @@ object TouchRecordingManager {
             currentState.copy(
                 recordedGestureCount = recordedGestureSteps.size,
                 totalRecordedSampleCount = totalSamples,
+                activePointers = emptyList(),
                 isTouchDown = false,
                 activePointersCount = 0,
                 activeTrailPoints = emptyList(),
+                liveNormX = null,
+                liveNormY = null,
             )
     }
 
@@ -307,6 +360,7 @@ object TouchRecordingManager {
         val trimmed = trimLeadingIdle(sorted)
         _state.value = TouchRecordingState.Done(trimmed)
         recordedGestureSteps.clear()
+        activePointers.clear()
         _recordingRequested.value = false
     }
 
@@ -319,6 +373,7 @@ object TouchRecordingManager {
         _recordingRequested.value = false
         _recordedTap.value = null
         recordedGestureSteps.clear()
+        activePointers.clear()
         _state.value = TouchRecordingState.Idle
     }
 
@@ -335,6 +390,7 @@ object TouchRecordingManager {
         AppLog.d(TAG, "resetState")
         TouchScreenObserver.stop(CLIENT_TOKEN)
         recordedGestureSteps.clear()
+        activePointers.clear()
         _state.value = TouchRecordingState.Idle
     }
 
