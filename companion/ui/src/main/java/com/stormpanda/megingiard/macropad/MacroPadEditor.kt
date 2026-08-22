@@ -1865,14 +1865,22 @@ fun MacroPadEditor(
                                                     macro = macro,
                                                     savedMacro = savedMacro,
                                                     accentColor = colors.accent,
-                                                    onOpenManualSteps = {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack +
+                                                    onOpenManualSteps = { draftMacro ->
+                                                        val updatedStack =
+                                                            subPageStack.map { page ->
+                                                                if (page is MacroPadSubPage.MacroTimeline &&
+                                                                    page.macroId == draftMacro.id
+                                                                ) {
+                                                                    page.copy(draftMacro = draftMacro)
+                                                                } else {
+                                                                    page
+                                                                }
+                                                            } +
                                                                 MacroPadSubPage.ManualMacroSteps(
                                                                     macro = currentSubPage.macro,
-                                                                    draftMacro = macro,
-                                                                ),
-                                                        )
+                                                                    draftMacro = draftMacro,
+                                                                )
+                                                        MacroPadNavState.setStack(updatedStack)
                                                     },
                                                     onDiscard = {
                                                         MacroPadNavState.pop()

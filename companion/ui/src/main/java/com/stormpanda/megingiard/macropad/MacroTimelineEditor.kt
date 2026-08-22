@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,8 +50,6 @@ import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private const val TAG = "MacroTimelineEditor"
 
@@ -61,8 +58,6 @@ private const val MTE_UNDO_STACK_MAX = 50
 private const val MTE_PULSE_DURATION_MS = 1400
 private const val MTE_PULSE_ACCENT_ALPHA = 0.35f
 private const val MTE_PULSE_SURFACE_ALPHA = 0.55f
-private const val MTE_TEST_RUN_PRE_DELAY_MS = 350L
-private const val MTE_TEST_RUN_POST_DELAY_MS = 300L
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -70,14 +65,13 @@ internal fun MacroTimelineSubPageContent(
     macro: Macro,
     savedMacro: Macro? = null,
     accentColor: Color,
-    onOpenManualSteps: () -> Unit,
+    onOpenManualSteps: (Macro) -> Unit,
     onDiscard: () -> Unit = {},
     onSave: (Macro) -> Unit,
     onDelete: () -> Unit = {},
 ) {
     val colors = LocalAppColors.current
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     var localName by remember(macro) { mutableStateOf(macro.name) }
     var steps by remember(macro) { mutableStateOf(macro.steps) }
@@ -144,6 +138,18 @@ internal fun MacroTimelineSubPageContent(
     val physicalRecordingAvailable = privdState == PrivdState.RUNNING
     val swapFaceButtons by MacroPadSettings.gamepadSwapFaceButtons.collectAsState()
 
+    fun syncDraftToNavState(draft: Macro) {
+        val updatedStack =
+            MacroPadNavState.subPageStack.value.map { page ->
+                if (page is MacroPadSubPage.MacroTimeline && page.macroId == draft.id) {
+                    page.copy(draftMacro = draft)
+                } else {
+                    page
+                }
+            }
+        MacroPadNavState.setStack(updatedStack)
+    }
+
     fun pushUndo(previous: List<MacroStep>) {
         val bounded = (undoStack + listOf(previous)).takeLast(MTE_UNDO_STACK_MAX)
         undoStack = bounded
@@ -159,6 +165,7 @@ internal fun MacroTimelineSubPageContent(
             TAG,
             "startGamepadRecording() -> suspending editor and starting physical recording",
         )
+        syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)
         }
@@ -171,6 +178,7 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchTapRecording() {
+        syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)
         }
@@ -179,6 +187,7 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchGestureRecording() {
+        syncDraftToNavState(currentMacro)
         if (savedMacro != null) {
             MacroPadState.updateMacro(currentMacro)
         }
@@ -198,6 +207,7 @@ internal fun MacroTimelineSubPageContent(
         val newSteps = steps + shiftedSteps
         steps = newSteps
         val updated = currentMacro.copy(steps = newSteps)
+        syncDraftToNavState(updated)
         if (savedMacro != null) {
             AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
             MacroPadState.updateMacro(updated)
@@ -223,6 +233,7 @@ internal fun MacroTimelineSubPageContent(
             val newSteps = steps + shiftedSteps
             steps = newSteps
             val updated = currentMacro.copy(steps = newSteps)
+            syncDraftToNavState(updated)
             if (savedMacro != null) {
                 AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
                 MacroPadState.updateMacro(updated)
@@ -267,23 +278,18 @@ internal fun MacroTimelineSubPageContent(
         itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
-            scope.launch {
-                AppLog.i(
-                    TAG,
-                    "Starting test run for macro '${currentMacro.name}' (${currentMacro.id}) with ${currentMacro.steps.size} steps",
-                )
-                AppStateManager.suspendCurrentAndDismiss()
-                try {
-                    delay(MTE_TEST_RUN_PRE_DELAY_MS)
-                    MacroExecutor.executeAndWait(currentMacro, context)
-                    delay(MTE_TEST_RUN_POST_DELAY_MS)
-                } finally {
-                    AppStateManager.resumeSuspended()
-                    DialogToastManager.show(
-                        context.getString(R.string.macropad_macro_test_run_success, currentMacro.name),
-                    )
-                }
-            }
+            syncDraftToNavState(currentMacro)
+            MacroExecutor.runTest(
+                macro = currentMacro,
+                context = context,
+                onComplete = { success ->
+                    if (success) {
+                        DialogToastManager.show(
+                            context.getString(R.string.macropad_macro_test_run_success, currentMacro.name),
+                        )
+                    }
+                },
+            )
         },
     )
 
@@ -308,7 +314,10 @@ internal fun MacroTimelineSubPageContent(
         actionText = stringResource(R.string.macropad_macro_manual_steps_action),
         icon = Icons.Rounded.Tune,
         itemKey = "macro_manual_steps",
-        onClick = onOpenManualSteps,
+        onClick = {
+            syncDraftToNavState(currentMacro)
+            onOpenManualSteps(currentMacro)
+        },
     )
 
     GamepadActionCard(

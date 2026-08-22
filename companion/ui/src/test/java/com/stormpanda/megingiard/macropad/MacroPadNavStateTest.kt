@@ -190,4 +190,33 @@ class MacroPadNavStateTest {
         MacroPadNavState.removeFocusedKey(parentDepth)
         assertTrue(MacroPadNavState.savedFocusKeysByDepth.value.isEmpty())
     }
+
+    @Test
+    fun `MacroTimeline subpage preserves draftMacro with steps across stack updates`() {
+        val initialMacro = Macro(id = "macro-draft", name = "Initial Macro", steps = emptyList())
+        val timelineSubPage = MacroPadSubPage.MacroTimeline(macro = null, draftMacro = initialMacro)
+        MacroPadNavState.push(timelineSubPage)
+
+        val updatedMacro =
+            initialMacro.copy(
+                steps =
+                    listOf(
+                        MacroStep.GamepadButtonTap(startTimeMs = 0L, durationMs = 100L, btnCode = 96, label = "A"),
+                    ),
+            )
+
+        val updatedStack =
+            MacroPadNavState.subPageStack.value.map { page ->
+                if (page is MacroPadSubPage.MacroTimeline && page.macroId == updatedMacro.id) {
+                    page.copy(draftMacro = updatedMacro)
+                } else {
+                    page
+                }
+            }
+        MacroPadNavState.setStack(updatedStack)
+
+        val activeSubPage = MacroPadNavState.subPageStack.value.last() as MacroPadSubPage.MacroTimeline
+        assertEquals(updatedMacro, activeSubPage.effectiveMacro)
+        assertEquals(1, activeSubPage.effectiveMacro?.steps?.size)
+    }
 }
