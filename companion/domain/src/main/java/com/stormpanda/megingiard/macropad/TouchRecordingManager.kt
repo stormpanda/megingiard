@@ -2,6 +2,7 @@ package com.stormpanda.megingiard.macropad
 
 import android.os.SystemClock
 import com.stormpanda.megingiard.AppLog
+import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.mirror.TouchScreenObserver
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 private const val TAG = "TouchRecordingManager"
 private const val TRM_MAX_TRAIL_POINTS = 40
+private const val TRM_DEFAULT_TAP_DURATION_MS = 100L
 private const val CLIENT_TOKEN = "TouchRecordingManager"
 
 enum class TouchRecordingMode { TAP, GESTURE }
@@ -240,9 +242,17 @@ object TouchRecordingManager {
     ) {
         AppLog.i(TAG, "onTapRecorded normX=$normX normY=$normY")
         TouchScreenObserver.stop(CLIENT_TOKEN)
+        val step =
+            MacroStep.TouchTap(
+                startTimeMs = 0L,
+                durationMs = TRM_DEFAULT_TAP_DURATION_MS,
+                normX = normX,
+                normY = normY,
+            )
         _recordedTap.value = Pair(normX, normY)
-        _state.value = TouchRecordingState.Idle
+        _state.value = TouchRecordingState.Done(listOf(step))
         _recordingRequested.value = false
+        AppStateManager.resumeSuspended()
     }
 
     /**

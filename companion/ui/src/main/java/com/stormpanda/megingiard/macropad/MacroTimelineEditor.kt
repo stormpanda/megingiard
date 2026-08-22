@@ -138,7 +138,6 @@ internal fun MacroTimelineSubPageContent(
             null
         }
 
-    val recordedTap by TouchRecordingManager.recordedTap.collectAsState()
     val touchRecordingState by TouchRecordingManager.state.collectAsState()
     val physicalRecordingState by PhysicalGamepadRecordingManager.state.collectAsState()
     val privdState by PrivdManager.state.collectAsState()
@@ -185,28 +184,6 @@ internal fun MacroTimelineSubPageContent(
         }
         AppStateManager.suspendCurrentAndDismiss()
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
-    }
-
-    LaunchedEffect(recordedTap) {
-        val tap = recordedTap ?: return@LaunchedEffect
-        val nextStart = steps.totalDurationMs()
-        pushUndo(steps)
-        val newSteps =
-            steps +
-                MacroStep.TouchTap(
-                    startTimeMs = nextStart,
-                    durationMs = MTE_DEFAULT_TOUCH_DURATION_MS,
-                    normX = tap.first,
-                    normY = tap.second,
-                )
-        steps = newSteps
-        val updated = currentMacro.copy(steps = newSteps)
-        if (savedMacro != null) {
-            AppLog.i(TAG, "Auto-persisting recorded touch tap into MacroPadState for macro '${updated.name}' (${updated.id})")
-            MacroPadState.updateMacro(updated)
-        }
-        DialogToastManager.show(context.getString(R.string.macropad_macro_recorded_steps_toast_single))
-        TouchRecordingManager.consumeRecordedTap()
     }
 
     LaunchedEffect(touchRecordingState) {

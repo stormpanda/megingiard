@@ -172,7 +172,11 @@ class TouchRecordingManagerTest {
 
         assertEquals(Pair(0.33f, 0.66f), TouchRecordingManager.recordedTap.value)
         assertEquals(false, TouchRecordingManager.recordingRequested.value)
-        assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
+        val done = TouchRecordingManager.state.value as TouchRecordingState.Done
+        assertEquals(1, done.steps.size)
+        val tapStep = done.steps.first() as MacroStep.TouchTap
+        assertEquals(0.33f, tapStep.normX, 0.001f)
+        assertEquals(0.66f, tapStep.normY, 0.001f)
 
         TouchRecordingManager.consumeRecordedTap()
         assertEquals(null, TouchRecordingManager.recordedTap.value)
@@ -187,7 +191,11 @@ class TouchRecordingManagerTest {
 
         assertEquals(Pair(0.42f, 0.88f), TouchRecordingManager.recordedTap.value)
         assertEquals(false, TouchRecordingManager.recordingRequested.value)
-        assertEquals(TouchRecordingState.Idle, TouchRecordingManager.state.value)
+        val done = TouchRecordingManager.state.value as TouchRecordingState.Done
+        assertEquals(1, done.steps.size)
+        val tapStep = done.steps.first() as MacroStep.TouchTap
+        assertEquals(0.42f, tapStep.normX, 0.001f)
+        assertEquals(0.88f, tapStep.normY, 0.001f)
     }
 
     @Test
