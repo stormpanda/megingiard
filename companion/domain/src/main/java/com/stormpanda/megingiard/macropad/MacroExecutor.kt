@@ -2,7 +2,6 @@ package com.stormpanda.megingiard.macropad
 
 import android.content.Context
 import com.stormpanda.megingiard.AppLog
-import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.input.TouchAction
 import com.stormpanda.megingiard.input.TouchInjector
 import kotlinx.coroutines.CoroutineScope
@@ -81,36 +80,6 @@ object MacroExecutor {
             AppLog.d(TAG, "execute macro='${macro.name}' id=${macro.id} steps=${macro.steps.size} loop=${macro.loopEnabled}")
             val job = scope.launch { executeSuspend(macro, ctx) }
             runningJobs[macro.id] = job
-        }
-    }
-
-    /**
-     * Executes [macro] as an automated Test Run on the app-lifetime [scope].
-     *
-     * Suspends the current UI, delays for foreground focus transition, plays the macro
-     * in a single shot without looping, delays for visual settle, resumes the suspended UI,
-     * and triggers [onComplete] on the main thread.
-     */
-    fun runTestRun(
-        macro: Macro,
-        context: Context? = null,
-        preDelayMs: Long = 350L,
-        postDelayMs: Long = 300L,
-        onComplete: (() -> Unit)? = null,
-    ) {
-        if (macro.steps.isEmpty()) return
-        val ctx = context ?: appContext
-        scope.launch {
-            AppLog.i(TAG, "Starting test run for macro '${macro.name}' (${macro.id}) with ${macro.steps.size} steps")
-            AppStateManager.suspendCurrentAndDismiss()
-            try {
-                delay(preDelayMs)
-                executeAndWait(macro, ctx)
-                delay(postDelayMs)
-            } finally {
-                AppStateManager.resumeSuspended()
-                onComplete?.invoke()
-            }
         }
     }
 

@@ -1,36 +1,18 @@
 package com.stormpanda.megingiard.macropad
 
 import com.stormpanda.megingiard.AppLog
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeoutOrNull
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Before
 import org.junit.Test
 
 private const val TAG = "MacroExecutorTest"
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MacroExecutorTest {
-    private val testDispatcher = UnconfinedTestDispatcher()
-
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
-
     @Test
     fun testMacroExecutionCompletesAndClearsRunningId() =
         runBlocking {
@@ -152,44 +134,5 @@ class MacroExecutorTest {
             MacroExecutor.executeAndWait(macro)
 
             assertFalse("Macro should have finished and cleared running status", MacroExecutor.isRunning(macro.id))
-        }
-
-    @Test
-    fun testRunTestRunExecutesAndCallsCompletion() =
-        runBlocking {
-            val macro =
-                Macro(
-                    id = "test-run-macro",
-                    name = "Test Run Macro",
-                    steps =
-                        listOf(
-                            MacroStep.GamepadButtonTap(
-                                startTimeMs = 0L,
-                                durationMs = 10L,
-                                btnCode = 96,
-                                label = "A",
-                            ),
-                        ),
-                )
-
-            var completed = false
-            MacroExecutor.setRunningMacroIdsForTest(emptySet())
-            MacroExecutor.runTestRun(
-                macro = macro,
-                preDelayMs = 10L,
-                postDelayMs = 10L,
-                onComplete = { completed = true },
-            )
-
-            // Wait for completion
-            val finished =
-                withTimeoutOrNull(1000) {
-                    while (!completed) {
-                        delay(10)
-                    }
-                    true
-                }
-
-            assertEquals("Test Run should invoke completion callback", true, finished)
         }
 }
