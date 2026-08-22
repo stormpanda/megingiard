@@ -1743,7 +1743,6 @@ fun MacroPadEditor(
                                     }
 
                                     is MacroPadSubPage.ChooseMacroMode -> {
-                                        var showRecordTouchDialog by remember { mutableStateOf(false) }
                                         val privdState by PrivdManager.state.collectAsState()
                                         val defaultMacroName = stringResource(R.string.macropad_macro_default_name)
                                         val existingMacroNames = profile.macros.map { it.name }
@@ -1828,33 +1827,22 @@ fun MacroPadEditor(
                                                     AppStateManager.suspendCurrentAndDismiss()
                                                     PhysicalGamepadRecordingManager.startRecording()
                                                 },
-                                                onRecordTouch = {
-                                                    showRecordTouchDialog = true
-                                                },
                                                 onBuildManual = {
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                 },
-                                            )
-                                        }
-
-                                        if (showRecordTouchDialog) {
-                                            TouchRecordStartDialog(
-                                                onRecordTap = {
+                                                onRecordTouchTap = {
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                     AppStateManager.suspendCurrentAndDismiss()
                                                     TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
-                                                    showRecordTouchDialog = false
                                                 },
-                                                onRecordGesture = {
+                                                onRecordTouchGesture = {
                                                     val newMacro = createNewMacro()
                                                     applyNewMacroToStack(newMacro)
                                                     AppStateManager.suspendCurrentAndDismiss()
                                                     TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
-                                                    showRecordTouchDialog = false
                                                 },
-                                                onCancel = { showRecordTouchDialog = false },
                                             )
                                         }
                                     }

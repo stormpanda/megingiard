@@ -1,6 +1,7 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Tune
@@ -18,8 +19,9 @@ private const val TAG = "ChooseMacroModeSubPage"
 
 private enum class MacroCreationChoice {
     RECORD_GAMEPAD,
-    RECORD_TOUCH,
     BUILD_MANUAL,
+    RECORD_TOUCH_TAP,
+    RECORD_TOUCH_GESTURE,
 }
 
 private data class MacroChoiceItem(
@@ -33,8 +35,9 @@ private data class MacroChoiceItem(
 @Composable
 internal fun ChooseMacroModeSubPageContent(
     onRecordGamepad: () -> Unit,
-    onRecordTouch: () -> Unit,
     onBuildManual: () -> Unit,
+    onRecordTouchTap: () -> Unit,
+    onRecordTouchGesture: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     AppLog.d(TAG, "ChooseMacroModeSubPageContent rendered")
@@ -50,18 +53,25 @@ internal fun ChooseMacroModeSubPageContent(
                     icon = Icons.Rounded.SportsEsports,
                 ),
                 MacroChoiceItem(
-                    choice = MacroCreationChoice.RECORD_TOUCH,
-                    titleRes = R.string.macropad_macro_create_record_touch_title,
-                    descRes = R.string.macropad_macro_create_record_touch_desc,
-                    actionRes = R.string.macropad_macro_record_touch,
-                    icon = Icons.Rounded.TouchApp,
-                ),
-                MacroChoiceItem(
                     choice = MacroCreationChoice.BUILD_MANUAL,
                     titleRes = R.string.macropad_macro_create_manual_title,
                     descRes = R.string.macropad_macro_create_manual_desc,
                     actionRes = R.string.gamepad_action_create,
                     icon = Icons.Rounded.Tune,
+                ),
+                MacroChoiceItem(
+                    choice = MacroCreationChoice.RECORD_TOUCH_TAP,
+                    titleRes = R.string.macropad_macro_create_record_touch_tap_title,
+                    descRes = R.string.macropad_macro_create_record_touch_tap_desc,
+                    actionRes = R.string.macropad_macro_record_touch,
+                    icon = Icons.Rounded.TouchApp,
+                ),
+                MacroChoiceItem(
+                    choice = MacroCreationChoice.RECORD_TOUCH_GESTURE,
+                    titleRes = R.string.macropad_macro_create_record_touch_gesture_title,
+                    descRes = R.string.macropad_macro_create_record_touch_gesture_desc,
+                    actionRes = R.string.macropad_macro_record_touch,
+                    icon = Icons.Rounded.Gesture,
                 ),
             )
         }
@@ -79,8 +89,9 @@ internal fun ChooseMacroModeSubPageContent(
             onClick = {
                 when (item.choice) {
                     MacroCreationChoice.RECORD_GAMEPAD -> onRecordGamepad()
-                    MacroCreationChoice.RECORD_TOUCH -> onRecordTouch()
                     MacroCreationChoice.BUILD_MANUAL -> onBuildManual()
+                    MacroCreationChoice.RECORD_TOUCH_TAP -> onRecordTouchTap()
+                    MacroCreationChoice.RECORD_TOUCH_GESTURE -> onRecordTouchGesture()
                 }
             },
             modifier = cardModifier,

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
@@ -80,7 +81,6 @@ internal fun MacroTimelineSubPageContent(
 
     var localName by remember(macro) { mutableStateOf(macro.name) }
     var steps by remember(macro) { mutableStateOf(macro.steps) }
-    var showRecordTouchDialog by remember { mutableStateOf(false) }
     var undoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var redoStack by remember { mutableStateOf<List<List<MacroStep>>>(emptyList()) }
     var loopEnabled by remember(macro) { mutableStateOf(macro.loopEnabled) }
@@ -167,12 +167,24 @@ internal fun MacroTimelineSubPageContent(
         PhysicalGamepadRecordingManager.startRecording()
     }
 
-    fun requestTouchRecording() {
-        showRecordTouchDialog = true
-    }
-
     fun requestGamepadRecording() {
         startGamepadRecording()
+    }
+
+    fun requestTouchTapRecording() {
+        if (savedMacro != null) {
+            MacroPadState.updateMacro(currentMacro)
+        }
+        AppStateManager.suspendCurrentAndDismiss()
+        TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
+    }
+
+    fun requestTouchGestureRecording() {
+        if (savedMacro != null) {
+            MacroPadState.updateMacro(currentMacro)
+        }
+        AppStateManager.suspendCurrentAndDismiss()
+        TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
     }
 
     LaunchedEffect(recordedTap) {
@@ -305,21 +317,12 @@ internal fun MacroTimelineSubPageContent(
     )
 
     GamepadActionCard(
-        title = stringResource(R.string.macropad_macro_record_gamepad_title),
-        description = stringResource(R.string.macropad_macro_record_gamepad_desc),
+        title = stringResource(R.string.macropad_macro_create_record_gamepad_title),
+        description = stringResource(R.string.macropad_macro_create_record_gamepad_desc),
         actionText = stringResource(R.string.macropad_macro_record_gamepad),
         icon = Icons.Rounded.SportsEsports,
         itemKey = "macro_record_gamepad",
         onClick = { requestGamepadRecording() },
-    )
-
-    GamepadActionCard(
-        title = stringResource(R.string.macropad_macro_record_touch_dialog_title),
-        description = stringResource(R.string.macropad_macro_record_touch_desc),
-        actionText = stringResource(R.string.macropad_macro_record_touch),
-        icon = Icons.Rounded.TouchApp,
-        itemKey = "macro_record_touch",
-        onClick = { requestTouchRecording() },
     )
 
     GamepadActionCard(
@@ -329,6 +332,24 @@ internal fun MacroTimelineSubPageContent(
         icon = Icons.Rounded.Tune,
         itemKey = "macro_manual_steps",
         onClick = onOpenManualSteps,
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_macro_create_record_touch_tap_title),
+        description = stringResource(R.string.macropad_macro_create_record_touch_tap_desc),
+        actionText = stringResource(R.string.macropad_macro_record_touch),
+        icon = Icons.Rounded.TouchApp,
+        itemKey = "macro_record_touch_tap",
+        onClick = { requestTouchTapRecording() },
+    )
+
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_macro_create_record_touch_gesture_title),
+        description = stringResource(R.string.macropad_macro_create_record_touch_gesture_desc),
+        actionText = stringResource(R.string.macropad_macro_record_touch),
+        icon = Icons.Rounded.Gesture,
+        itemKey = "macro_record_touch_gesture",
+        onClick = { requestTouchGestureRecording() },
     )
 
     // ── Playback & Looping Section ───────────────────────────────────────────
@@ -412,27 +433,4 @@ internal fun MacroTimelineSubPageContent(
             onDelete()
         },
     )
-
-    // ── Dialogs & Overlays ───────────────────────────────────────────────────
-    if (showRecordTouchDialog) {
-        TouchRecordStartDialog(
-            onRecordTap = {
-                if (savedMacro != null) {
-                    MacroPadState.updateMacro(currentMacro)
-                }
-                AppStateManager.suspendCurrentAndDismiss()
-                TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
-                showRecordTouchDialog = false
-            },
-            onRecordGesture = {
-                if (savedMacro != null) {
-                    MacroPadState.updateMacro(currentMacro)
-                }
-                AppStateManager.suspendCurrentAndDismiss()
-                TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
-                showRecordTouchDialog = false
-            },
-            onCancel = { showRecordTouchDialog = false },
-        )
-    }
 }

@@ -483,7 +483,11 @@ Open Settings to create a layout.</string>
     <string name="macropad_macro_create_record_gamepad_title">Record Controller Input</string>
     <string name="macropad_macro_create_record_gamepad_desc">Record live gameplay combos, button presses, and analog stick movements directly from your controller.</string>
     <string name="macropad_macro_create_record_touch_title">Record Screen Touch</string>
-    <string name="macropad_macro_create_record_touch_desc">Record taps or continuous multi-touch gestures directly on the screen mirror.</string>
+    <string name="macropad_macro_create_record_touch_desc">Record taps or continuous multi-touch gestures directly on the primary screen.</string>
+    <string name="macropad_macro_create_record_touch_tap_title">Record Single Touch</string>
+    <string name="macropad_macro_create_record_touch_tap_desc">Record a single targeted tap coordinate directly on the primary screen.</string>
+    <string name="macropad_macro_create_record_touch_gesture_title">Record Touch Gesture</string>
+    <string name="macropad_macro_create_record_touch_gesture_desc">Record multi-touch drag, swipe, and drawing gestures directly on the primary screen.</string>
     <string name="macropad_macro_create_manual_title">Build Step-by-Step</string>
     <string name="macropad_macro_create_manual_desc">Configure timed input steps manually from scratch with precise millisecond control.</string>
     <string name="macropad_macro_manual_steps_title">Manually Edit Steps</string>

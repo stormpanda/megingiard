@@ -407,7 +407,11 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_macro_create_record_gamepad_title">Controller-Eingabe aufnehmen</string>
     <string name="macropad_macro_create_record_gamepad_desc">Nimm Live-Combos, Tastendrücke und Analogstick-Bewegungen direkt über den Controller auf.</string>
     <string name="macropad_macro_create_record_touch_title">Bildschirm-Touch aufnehmen</string>
-    <string name="macropad_macro_create_record_touch_desc">Nimm Fingertipps oder kontinuierliche Touch-Gesten direkt auf der Bildschirmübertragung auf.</string>
+    <string name="macropad_macro_create_record_touch_desc">Nimm Fingertipps oder kontinuierliche Touch-Gesten direkt auf dem Hauptbildschirm auf.</string>
+    <string name="macropad_macro_create_record_touch_tap_title">Einzelne Berührung aufnehmen</string>
+    <string name="macropad_macro_create_record_touch_tap_desc">Nimm eine einzelne Zielberührung direkt auf dem Hauptbildschirm auf.</string>
+    <string name="macropad_macro_create_record_touch_gesture_title">Touch-Geste aufnehmen</string>
+    <string name="macropad_macro_create_record_touch_gesture_desc">Nimm Multi-Touch-Wisch- und Ziehgesten direkt auf dem Hauptbildschirm auf.</string>
     <string name="macropad_macro_create_manual_title">Schritt für Schritt erstellen</string>
     <string name="macropad_macro_create_manual_desc">Erstelle zeitgesteuerte Eingabeschritte manuell von Grund auf mit millimetergenauer Millisekunden-Kontrolle.</string>
     <string name="macropad_macro_manual_steps_title">Schritte manuell bearbeiten</string>
