@@ -151,6 +151,14 @@ internal fun MacroTimelineSubPageContent(
         redoStack = emptyList()
     }
 
+    fun syncCurrentMacroState() {
+        if (savedMacro != null) {
+            MacroPadState.updateMacro(currentMacro)
+        } else {
+            MacroPadNavState.updateCurrentMacroTimelineDraft(currentMacro)
+        }
+    }
+
     fun startGamepadRecording() {
         if (!physicalRecordingAvailable) {
             DialogToastManager.show(context.getString(R.string.privd_error_daemon_unreachable))
@@ -160,9 +168,7 @@ internal fun MacroTimelineSubPageContent(
             TAG,
             "startGamepadRecording() -> suspending editor and starting physical recording",
         )
-        if (savedMacro != null) {
-            MacroPadState.updateMacro(currentMacro)
-        }
+        syncCurrentMacroState()
         AppStateManager.suspendCurrentAndDismiss()
         PhysicalGamepadRecordingManager.startRecording()
     }
@@ -172,17 +178,13 @@ internal fun MacroTimelineSubPageContent(
     }
 
     fun requestTouchTapRecording() {
-        if (savedMacro != null) {
-            MacroPadState.updateMacro(currentMacro)
-        }
+        syncCurrentMacroState()
         AppStateManager.suspendCurrentAndDismiss()
         TouchRecordingManager.requestRecording(TouchRecordingMode.TAP)
     }
 
     fun requestTouchGestureRecording() {
-        if (savedMacro != null) {
-            MacroPadState.updateMacro(currentMacro)
-        }
+        syncCurrentMacroState()
         AppStateManager.suspendCurrentAndDismiss()
         TouchRecordingManager.requestRecording(TouchRecordingMode.GESTURE)
     }
@@ -204,6 +206,8 @@ internal fun MacroTimelineSubPageContent(
         if (savedMacro != null) {
             AppLog.i(TAG, "Auto-persisting recorded touch tap into MacroPadState for macro '${updated.name}' (${updated.id})")
             MacroPadState.updateMacro(updated)
+        } else {
+            MacroPadNavState.updateCurrentMacroTimelineDraft(updated)
         }
         DialogToastManager.show(context.getString(R.string.macropad_macro_recorded_steps_toast_single))
         TouchRecordingManager.consumeRecordedTap()
@@ -224,6 +228,8 @@ internal fun MacroTimelineSubPageContent(
         if (savedMacro != null) {
             AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
             MacroPadState.updateMacro(updated)
+        } else {
+            MacroPadNavState.updateCurrentMacroTimelineDraft(updated)
         }
         val count = recorded.steps.size
         val toastMsg =
@@ -249,6 +255,8 @@ internal fun MacroTimelineSubPageContent(
             if (savedMacro != null) {
                 AppLog.i(TAG, "Auto-persisting ${newSteps.size} total steps into MacroPadState for macro '${updated.name}' (${updated.id})")
                 MacroPadState.updateMacro(updated)
+            } else {
+                MacroPadNavState.updateCurrentMacroTimelineDraft(updated)
             }
             val count = recorded.steps.size
             val toastMsg =
@@ -290,23 +298,22 @@ internal fun MacroTimelineSubPageContent(
         itemKey = "macro_test_run",
         enabled = steps.isNotEmpty(),
         onClick = {
-            scope.launch {
-                AppLog.i(
-                    TAG,
-                    "Starting test run for macro '${currentMacro.name}' (${currentMacro.id}) with ${currentMacro.steps.size} steps",
-                )
-                AppStateManager.suspendCurrentAndDismiss()
-                try {
-                    delay(MTE_TEST_RUN_PRE_DELAY_MS)
-                    MacroExecutor.executeAndWait(currentMacro, context)
-                    delay(MTE_TEST_RUN_POST_DELAY_MS)
-                } finally {
-                    AppStateManager.resumeSuspended()
+            AppLog.i(
+                TAG,
+                "Starting test run for macro '${currentMacro.name}' (${currentMacro.id}) with ${currentMacro.steps.size} steps",
+            )
+            syncCurrentMacroState()
+            MacroExecutor.runTestRun(
+                macro = currentMacro,
+                context = context,
+                preDelayMs = MTE_TEST_RUN_PRE_DELAY_MS,
+                postDelayMs = MTE_TEST_RUN_POST_DELAY_MS,
+                onComplete = {
                     DialogToastManager.show(
                         context.getString(R.string.macropad_macro_test_run_success, currentMacro.name),
                     )
-                }
-            }
+                },
+            )
         },
     )
 

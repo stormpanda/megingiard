@@ -74,6 +74,38 @@ internal object MacroPadNavState {
         _appearanceDraft.value = layout
     }
 
+    /**
+     * Updates an in-flight draft macro across the subpage stack to keep steps and properties
+     * in sync across modal suspensions and remounts.
+     */
+    fun updateCurrentMacroTimelineDraft(updatedDraft: Macro) {
+        AppLog.d(TAG, "updateCurrentMacroTimelineDraft: macroId=${updatedDraft.id} steps=${updatedDraft.steps.size}")
+        _subPageStack.value =
+            _subPageStack.value.map { subPage ->
+                when (subPage) {
+                    is MacroPadSubPage.MacroTimeline -> {
+                        if (subPage.macroId == updatedDraft.id || subPage.draftMacro?.id == updatedDraft.id) {
+                            subPage.copy(draftMacro = updatedDraft)
+                        } else {
+                            subPage
+                        }
+                    }
+
+                    is MacroPadSubPage.ManualMacroSteps -> {
+                        if (subPage.macroId == updatedDraft.id || subPage.draftMacro?.id == updatedDraft.id) {
+                            subPage.copy(draftMacro = updatedDraft)
+                        } else {
+                            subPage
+                        }
+                    }
+
+                    else -> {
+                        subPage
+                    }
+                }
+            }
+    }
+
     fun recordFocusedKey(
         depth: Int,
         key: Any,
