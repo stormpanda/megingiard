@@ -1469,6 +1469,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_discard">Verwerfen</string>
     <string name="macropad_editor_color_preview_title">Stilvorschau</string>
     <string name="macropad_editor_color_preview_desc">Gespeichertes Aussehen im Vergleich zu den aktuellen Änderungen</string>
+    <string name="macropad_editor_color_wheel_undo_title">Farbänderungen rückgängig machen</string>
+    <string name="macropad_editor_color_wheel_undo_desc">Auf die ursprüngliche Farbe zurücksetzen (%1$s)</string>
+    <string name="macropad_editor_color_wheel_undo_desc_no_changes">Farbe wurde nicht verändert</string>
     <!-- Quick Actions -->
     <string name="quick_actions_title">Schnellaktionen</string>
     <string name="quick_actions_desc">Direkt zu häufig verwendeten Layout-Werkzeugen und Einstellungen springen</string>

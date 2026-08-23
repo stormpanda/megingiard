@@ -1460,6 +1460,9 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_discard">Discard</string>
     <string name="macropad_editor_color_preview_title">Style Preview</string>
     <string name="macropad_editor_color_preview_desc">Saved appearance compared to in-flight changes</string>
+    <string name="macropad_editor_color_wheel_undo_title">Undo Color Changes</string>
+    <string name="macropad_editor_color_wheel_undo_desc">Revert to the original color (%1$s)</string>
+    <string name="macropad_editor_color_wheel_undo_desc_no_changes">Color has not been modified</string>
     <!-- Quick Actions -->
     <string name="quick_actions_title">Quick Actions</string>
     <string name="quick_actions_desc">Jump directly to frequently used layout tools and preferences</string>

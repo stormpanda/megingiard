@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
@@ -451,18 +452,37 @@ internal fun ColorWheelSubPageContent(
         )
     }
 
-    // ── Live Color Swatch Card ───────────────────────────────────────
+    val hasChanges = remember(workingColor, initialColor) { workingColor.toArgb() != initialColor.toArgb() }
+    val initialHex =
+        if (showAlphaSlider && initialColor.alpha < 0.99f) {
+            String.format("#%06X (%d%%)", 0xFFFFFF and initialColor.toArgb(), (initialColor.alpha * 100).roundToInt())
+        } else {
+            String.format("#%06X", 0xFFFFFF and initialColor.toArgb())
+        }
+
+    // ── Revert / Undo Changes Card ───────────────────────────────────
     GamepadActionCard(
-        title = title,
-        description = hex,
-        icon = Icons.Rounded.Colorize,
+        title = stringResource(R.string.macropad_editor_color_wheel_undo_title),
+        description =
+            if (hasChanges) {
+                stringResource(R.string.macropad_editor_color_wheel_undo_desc, initialHex)
+            } else {
+                stringResource(R.string.macropad_editor_color_wheel_undo_desc_no_changes)
+            },
+        icon = Icons.AutoMirrored.Rounded.Undo,
         actionLeadingContent = {
             GamepadColorSwatch(
-                color = workingColor,
-                isSelected = true,
+                color = initialColor,
+                isSelected = !hasChanges,
             )
         },
-        actionText = stringResource(R.string.gamepad_color_selected),
-        onClick = {},
+        actionText = if (hasChanges) stringResource(R.string.macropad_macro_editor_undo) else null,
+        enabled = hasChanges,
+        onClick = {
+            hue = initHsv[0]
+            sat = initHsv[1]
+            bri = initHsv[2]
+            alpha = if (showAlphaSlider) initialColor.alpha.coerceIn(0.1f, 1f) else 1f
+        },
     )
 }
