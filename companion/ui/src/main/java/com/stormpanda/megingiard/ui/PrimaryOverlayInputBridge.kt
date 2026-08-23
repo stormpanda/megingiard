@@ -62,7 +62,7 @@ object PrimaryOverlayInputBridge {
     private val _focusRecoveryEvents = MutableSharedFlow<Int>(extraBufferCapacity = 16)
     val focusRecoveryEvents: SharedFlow<Int> = _focusRecoveryEvents.asSharedFlow()
 
-    private val scope = CoroutineScope(Dispatchers.Main.immediate + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var repeatJob: Job? = null
     private var lastJoystickKeyCode = 0
 
@@ -133,7 +133,7 @@ object PrimaryOverlayInputBridge {
             lastJoystickKeyCode = targetKeyCode
             onDpadKey(KeyEvent.ACTION_DOWN, targetKeyCode)
             repeatJob =
-                scope.launch {
+                scope.launch(Dispatchers.Main) {
                     delay(REPEAT_INITIAL_DELAY_MS)
                     var delayMs = REPEAT_START_DELAY_MS
                     while (isActive && lastJoystickKeyCode == targetKeyCode) {

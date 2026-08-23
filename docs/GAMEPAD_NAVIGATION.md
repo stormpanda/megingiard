@@ -236,6 +236,7 @@ All gamepad UI components live in [`GamepadComponents.kt`](file:///Users/maiktho
 
 | Component | Interaction Model | Focus Visuals |
 | :--- | :--- | :--- |
+| `GamepadTwoPaneScaffold` | Standardized 2-pane gamepad scaffold (sidebar categories + right-side content deck) with sidebar focus trapping, sub-page back stack, and focus recovery. | Focus indicators for category tiles and right-side deck cards. |
 | `GamepadFocusCard` | Base focusable card container with spring focus transitions, background elevation, and custom key listeners. | Accent border glow (`GC_FOCUS_BORDER_WIDTH = 2.5.dp`), surface alpha elevation (`GC_CARD_FOCUSED_BG_ALPHA = 0.95f`). |
 | `GamepadActionCard` | Clickable action card with title, description, icon, and action badge (`actionText`). | Full card border glow on focus, D-Pad Center / Button A execution. |
 | `GamepadToggleCard` | Binary setting card with interactive `[ ON ● ]` / `[ OFF ○ ]` pill switch. | Accent border on focus, pill status switch on Button A / Enter. |

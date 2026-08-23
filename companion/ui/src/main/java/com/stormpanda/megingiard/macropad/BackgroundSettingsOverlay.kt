@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,15 +11,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Grain
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.TouchApp
@@ -56,19 +60,23 @@ import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.ui.AppAlertDialog
 import com.stormpanda.megingiard.ui.AppDivider
-import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.AppTextField
-import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.BumperDirection
+import com.stormpanda.megingiard.ui.GamepadCategoryTile
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadDeck
 import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
+import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
 import com.stormpanda.megingiard.ui.HelpIntro
 import com.stormpanda.megingiard.ui.HelpModal
 import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
+import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.blockPointerEvents
+import com.stormpanda.megingiard.ui.firstDeckItem
 import kotlin.math.roundToInt
 
 private const val TAG = "BackgroundSettingsOverlay"
@@ -87,6 +95,14 @@ private const val ASO_SMOOTHING_STRONG = 3f
 private const val ASO_SMOOTHING_VAL_LIGHT = 75
 private const val ASO_SMOOTHING_VAL_MEDIUM = 80
 private const val ASO_SMOOTHING_VAL_STRONG = 85
+
+private sealed interface AmbientCategory {
+    data object General : AmbientCategory
+
+    data class Cutout(
+        val id: String,
+    ) : AmbientCategory
+}
 
 @Composable
 internal fun BackgroundSettingsOverlay(
@@ -114,11 +130,35 @@ internal fun BackgroundSettingsOverlay(
 
     var dimAlpha by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.ambientDim) }
     var edgeBlendWidth by remember(currentLayout.id) { mutableFloatStateOf(currentLayout.mirrorEdgeBlendWidth) }
-    var renamingCutout by remember { mutableStateOf<ScreenCutout?>(null) }
-    var renameText by remember(renamingCutout) { mutableStateOf(renamingCutout?.name ?: "") }
     var pendingProjectionCutout by remember { mutableStateOf<ScreenCutout?>(null) }
     val previewConfig by AmbientPreviewManager.config.collectAsState()
     val isInPreview = previewConfig != null
+
+    var selectedCategory by remember { mutableStateOf<AmbientCategory>(AmbientCategory.General) }
+
+    LaunchedEffect(currentLayout.mirrorCutouts) {
+        val current = selectedCategory
+        if (current is AmbientCategory.Cutout && currentLayout.mirrorCutouts.none { it.id == current.id }) {
+            selectedCategory = AmbientCategory.General
+        }
+    }
+
+    val categories =
+        remember(currentLayout.mirrorCutouts) {
+            listOf(AmbientCategory.General) + currentLayout.mirrorCutouts.map { AmbientCategory.Cutout(it.id) }
+        }
+
+    LaunchedEffect(categories) {
+        PrimaryOverlayInputBridge.bumperEvents.collect { direction ->
+            val currentIndex = categories.indexOf(selectedCategory).coerceAtLeast(0)
+            val nextIndex =
+                when (direction) {
+                    BumperDirection.PREV -> (currentIndex - 1 + categories.size) % categories.size
+                    BumperDirection.NEXT -> (currentIndex + 1) % categories.size
+                }
+            selectedCategory = categories[nextIndex]
+        }
+    }
 
     fun commitLayout(block: PadLayout.() -> PadLayout) {
         val updated = MacroPadState.activeLayout.value ?: return
@@ -162,237 +202,283 @@ internal fun BackgroundSettingsOverlay(
                 .blockPointerEvents(),
     ) {
         if (!isInPreview) {
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(colors.appBackground)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                // GENERAL SECTION
-                Text(
-                    text = stringResource(R.string.settings_section_general).uppercase(),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                GamepadStepperCard(
-                    title = labelDim,
-                    description = stringResource(R.string.help_ambient_dim_desc),
-                    valueText = "${(dimAlpha * ASO_PERCENT_DIVISOR).toInt()}%",
-                    icon = Icons.Rounded.Opacity,
-                    onDecrement = {
-                        val newVal = (dimAlpha - ASO_DIM_STEP).coerceIn(0f, ASO_DIM_MAX)
-                        dimAlpha = newVal
-                        commitLayout { copy(ambientDim = newVal) }
-                    },
-                    onIncrement = {
-                        val newVal = (dimAlpha + ASO_DIM_STEP).coerceIn(0f, ASO_DIM_MAX)
-                        dimAlpha = newVal
-                        commitLayout { copy(ambientDim = newVal) }
-                    },
-                )
-
-                val blendIndex = (edgeBlendWidth / 25f).roundToInt().coerceIn(0, 4)
-                val blendLabels =
-                    listOf(
-                        stringResource(R.string.mirror_edge_blend_strength_off),
-                        stringResource(R.string.mirror_edge_blend_strength_light),
-                        stringResource(R.string.mirror_edge_blend_strength_medium),
-                        stringResource(R.string.mirror_edge_blend_strength_strong),
-                        stringResource(R.string.mirror_edge_blend_strength_max),
+            GamepadTwoPaneScaffold(
+                scrollableDeck = false,
+                sidebarContent = {
+                    GamepadCategoryTile(
+                        title = stringResource(R.string.settings_section_general),
+                        icon = Icons.Rounded.Tune,
+                        selected = selectedCategory is AmbientCategory.General,
+                        onClick = { selectedCategory = AmbientCategory.General },
                     )
-                GamepadChoiceCard(
-                    title = labelEdgeBlending,
-                    description = stringResource(R.string.help_ambient_blend_desc),
-                    selectedText = blendLabels[blendIndex],
-                    icon = Icons.Rounded.Grain,
-                    onPrevious = {
-                        val newIdx = (blendIndex - 1 + blendLabels.size) % blendLabels.size
-                        edgeBlendWidth = newIdx * 25f
-                        commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
-                    },
-                    onNext = {
-                        val newIdx = (blendIndex + 1) % blendLabels.size
-                        edgeBlendWidth = newIdx * 25f
-                        commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
-                    },
-                )
 
-                // Follow Touch Cutout target
-                val followCutoutId = currentLayout.mirrorCutouts.find { it.followTouch }?.id
-                val cutoutsList = currentLayout.mirrorCutouts
-                val followOptions = listOf<String?>(null) + cutoutsList.map { it.id }
-                val followIdx = followOptions.indexOf(followCutoutId).coerceAtLeast(0)
-                val followSelectedText =
-                    if (followCutoutId == null) {
-                        stringResource(R.string.settings_mirror_follow_touch_off)
+                    if (currentLayout.mirrorCutouts.isEmpty()) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
+                                    .background(
+                                        color = colors.surface.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(8.dp),
+                                    ).border(
+                                        width = 1.dp,
+                                        color = colors.subduedBorder,
+                                        shape = RoundedCornerShape(8.dp),
+                                    ).padding(12.dp),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Info,
+                                    contentDescription = null,
+                                    tint = colors.onSurfaceSecondary,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_mirror_no_cutouts),
+                                    color = colors.onSurfaceSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
                     } else {
-                        val defName = stringResource(R.string.settings_mirror_cutout_default)
-                        cutoutsList.find { it.id == followCutoutId }?.name?.ifBlank { defName } ?: defName
-                    }
-
-                GamepadChoiceCard(
-                    title = stringResource(R.string.settings_mirror_follow_touch),
-                    description = stringResource(R.string.settings_mirror_follow_touch_desc),
-                    selectedText = followSelectedText,
-                    icon = Icons.Rounded.TouchApp,
-                    enabled = cutoutsList.isNotEmpty(),
-                    onPrevious = {
-                        if (followOptions.isNotEmpty()) {
-                            val newIdx = (followIdx - 1 + followOptions.size) % followOptions.size
-                            val newId = followOptions[newIdx]
-                            val updated = currentLayout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
-                            commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
-                            ScreenCaptureManager.setFollowActive(newId != null, persist = false)
-                        }
-                    },
-                    onNext = {
-                        if (followOptions.isNotEmpty()) {
-                            val newIdx = (followIdx + 1) % followOptions.size
-                            val newId = followOptions[newIdx]
-                            val updated = currentLayout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
-                            commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
-                            ScreenCaptureManager.setFollowActive(newId != null, persist = false)
-                        }
-                    },
-                )
-
-                // CUTOUTS SECTION
-                Text(
-                    text = stringResource(R.string.settings_section_cutouts).uppercase(),
-                    color = colors.accent,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 10.dp),
-                )
-
-                if (currentLayout.mirrorCutouts.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.settings_mirror_no_cutouts),
-                        color = colors.onSurfaceSecondary,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 12.dp),
-                    )
-                } else {
-                    currentLayout.mirrorCutouts.forEachIndexed { index, cutout ->
-                        val cutoutTitle =
-                            cutout.name.ifBlank {
-                                stringResource(R.string.settings_mirror_cutout_default_name_fmt, index + 1)
-                            }
-
-                        Text(
-                            text = cutoutTitle,
-                            color = colors.onSurface,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 6.dp),
-                        )
-
-                        GamepadActionCard(
-                            title = stringResource(R.string.macropad_cutout_rename_title),
-                            description = stringResource(R.string.macropad_cutout_rename_desc),
-                            actionText = stringResource(R.string.gamepad_action_rename),
-                            icon = Icons.Rounded.Edit,
-                            onClick = { renamingCutout = cutout },
-                        )
-
-                        // Smoothing Carousel
-                        val smoothingModes =
-                            listOf(
-                                stringResource(R.string.mirror_smoothing_strength_off),
-                                stringResource(R.string.mirror_smoothing_strength_light),
-                                stringResource(R.string.mirror_smoothing_strength_medium),
-                                stringResource(R.string.mirror_smoothing_strength_strong),
+                        currentLayout.mirrorCutouts.forEachIndexed { index, cutout ->
+                            val cutoutTitle =
+                                cutout.name.ifBlank {
+                                    stringResource(R.string.settings_mirror_cutout_default_name_fmt, index + 1)
+                                }
+                            GamepadCategoryTile(
+                                title = cutoutTitle,
+                                icon = Icons.Rounded.Crop,
+                                selected = selectedCategory == AmbientCategory.Cutout(cutout.id),
+                                onClick = { selectedCategory = AmbientCategory.Cutout(cutout.id) },
                             )
-                        val currentSmoothIdx =
-                            if (cutout.motionSmoothing) {
-                                when (cutout.motionSmoothingStrength) {
-                                    ASO_SMOOTHING_VAL_LIGHT -> 1
-                                    ASO_SMOOTHING_VAL_MEDIUM -> 2
-                                    ASO_SMOOTHING_VAL_STRONG -> 3
-                                    else -> 3
-                                }
-                            } else {
-                                0
-                            }
-
-                        GamepadChoiceCard(
-                            title = stringResource(R.string.settings_mirror_follow_smoothing),
-                            description = stringResource(R.string.settings_mirror_follow_smoothing_desc),
-                            selectedText = smoothingModes[currentSmoothIdx],
-                            icon = Icons.Rounded.Tune,
-                            onPrevious = {
-                                val nextIdx = (currentSmoothIdx - 1 + smoothingModes.size) % smoothingModes.size
-                                val isSmooth = nextIdx > 0
-                                val strength =
-                                    when (nextIdx) {
-                                        1 -> ASO_SMOOTHING_VAL_LIGHT
-                                        2 -> ASO_SMOOTHING_VAL_MEDIUM
-                                        else -> ASO_SMOOTHING_VAL_STRONG
-                                    }
-                                val updated =
-                                    currentLayout.mirrorCutouts.map {
-                                        if (it.id ==
-                                            cutout.id
-                                        ) {
-                                            it.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength)
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                commitLayout { copy(mirrorCutouts = updated) }
-                            },
-                            onNext = {
-                                val nextIdx = (currentSmoothIdx + 1) % smoothingModes.size
-                                val isSmooth = nextIdx > 0
-                                val strength =
-                                    when (nextIdx) {
-                                        1 -> ASO_SMOOTHING_VAL_LIGHT
-                                        2 -> ASO_SMOOTHING_VAL_MEDIUM
-                                        else -> ASO_SMOOTHING_VAL_STRONG
-                                    }
-                                val updated =
-                                    currentLayout.mirrorCutouts.map {
-                                        if (it.id ==
-                                            cutout.id
-                                        ) {
-                                            it.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength)
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                commitLayout { copy(mirrorCutouts = updated) }
-                            },
-                        )
-
-                        // Touch Projection
-                        GamepadToggleCard(
-                            title = stringResource(R.string.settings_mirror_touch_projection),
-                            description = stringResource(R.string.settings_mirror_touch_projection_desc),
-                            checked = cutout.touchProjectionEnabled,
-                            icon = Icons.Rounded.Mouse,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked && currentLayout.backgroundTouchpad.enabled) {
-                                    pendingProjectionCutout = cutout
-                                } else {
-                                    val updated =
-                                        currentLayout.mirrorCutouts.map {
-                                            if (it.id == cutout.id) it.copy(touchProjectionEnabled = isChecked) else it
-                                        }
-                                    commitLayout { copy(mirrorCutouts = updated) }
-                                    if (isChecked) {
-                                        ScreenCaptureManager.setLocked(true)
-                                    }
-                                }
-                            },
-                        )
+                        }
                     }
-                }
-            }
+                },
+                content = {
+                    when (val category = selectedCategory) {
+                        is AmbientCategory.General -> {
+                            GamepadDeck(
+                                title = stringResource(R.string.settings_section_general),
+                                accentColor = colors.accent,
+                            ) {
+                                GamepadStepperCard(
+                                    modifier = Modifier.firstDeckItem(),
+                                    title = labelDim,
+                                    description = stringResource(R.string.help_ambient_dim_desc),
+                                    valueText = "${(dimAlpha * ASO_PERCENT_DIVISOR).toInt()}%",
+                                    icon = Icons.Rounded.Opacity,
+                                    onDecrement = {
+                                        val newVal = (dimAlpha - ASO_DIM_STEP).coerceIn(0f, ASO_DIM_MAX)
+                                        dimAlpha = newVal
+                                        commitLayout { copy(ambientDim = newVal) }
+                                    },
+                                    onIncrement = {
+                                        val newVal = (dimAlpha + ASO_DIM_STEP).coerceIn(0f, ASO_DIM_MAX)
+                                        dimAlpha = newVal
+                                        commitLayout { copy(ambientDim = newVal) }
+                                    },
+                                )
+
+                                val blendIndex = (edgeBlendWidth / 25f).roundToInt().coerceIn(0, 4)
+                                val blendLabels =
+                                    listOf(
+                                        stringResource(R.string.mirror_edge_blend_strength_off),
+                                        stringResource(R.string.mirror_edge_blend_strength_light),
+                                        stringResource(R.string.mirror_edge_blend_strength_medium),
+                                        stringResource(R.string.mirror_edge_blend_strength_strong),
+                                        stringResource(R.string.mirror_edge_blend_strength_max),
+                                    )
+                                GamepadChoiceCard(
+                                    title = labelEdgeBlending,
+                                    description = stringResource(R.string.help_ambient_blend_desc),
+                                    selectedText = blendLabels[blendIndex],
+                                    icon = Icons.Rounded.Grain,
+                                    onPrevious = {
+                                        val newIdx = (blendIndex - 1 + blendLabels.size) % blendLabels.size
+                                        edgeBlendWidth = newIdx * 25f
+                                        commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
+                                    },
+                                    onNext = {
+                                        val newIdx = (blendIndex + 1) % blendLabels.size
+                                        edgeBlendWidth = newIdx * 25f
+                                        commitLayout { copy(mirrorEdgeBlendWidth = edgeBlendWidth) }
+                                    },
+                                )
+
+                                // Follow Touch Cutout target
+                                val followCutoutId = currentLayout.mirrorCutouts.find { it.followTouch }?.id
+                                val cutoutsList = currentLayout.mirrorCutouts
+                                val followOptions = listOf<String?>(null) + cutoutsList.map { it.id }
+                                val followIdx = followOptions.indexOf(followCutoutId).coerceAtLeast(0)
+                                val followSelectedText =
+                                    if (followCutoutId == null) {
+                                        stringResource(R.string.settings_mirror_follow_touch_off)
+                                    } else {
+                                        val defName = stringResource(R.string.settings_mirror_cutout_default)
+                                        cutoutsList.find { it.id == followCutoutId }?.name?.ifBlank { defName } ?: defName
+                                    }
+
+                                GamepadChoiceCard(
+                                    title = stringResource(R.string.settings_mirror_follow_touch),
+                                    description = stringResource(R.string.settings_mirror_follow_touch_desc),
+                                    selectedText = followSelectedText,
+                                    icon = Icons.Rounded.TouchApp,
+                                    enabled = cutoutsList.isNotEmpty(),
+                                    onPrevious = {
+                                        if (followOptions.isNotEmpty()) {
+                                            val newIdx = (followIdx - 1 + followOptions.size) % followOptions.size
+                                            val newId = followOptions[newIdx]
+                                            val updated = currentLayout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
+                                            commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
+                                            ScreenCaptureManager.setFollowActive(newId != null, persist = false)
+                                        }
+                                    },
+                                    onNext = {
+                                        if (followOptions.isNotEmpty()) {
+                                            val newIdx = (followIdx + 1) % followOptions.size
+                                            val newId = followOptions[newIdx]
+                                            val updated = currentLayout.mirrorCutouts.map { it.copy(followTouch = (it.id == newId)) }
+                                            commitLayout { copy(mirrorCutouts = updated, mirrorFollowActive = (newId != null)) }
+                                            ScreenCaptureManager.setFollowActive(newId != null, persist = false)
+                                        }
+                                    },
+                                )
+                            }
+                        }
+
+                        is AmbientCategory.Cutout -> {
+                            val cutoutIndex = currentLayout.mirrorCutouts.indexOfFirst { it.id == category.id }
+                            val cutout = currentLayout.mirrorCutouts.getOrNull(cutoutIndex)
+                            if (cutout != null) {
+                                val cutoutTitle =
+                                    cutout.name.ifBlank {
+                                        stringResource(R.string.settings_mirror_cutout_default_name_fmt, cutoutIndex + 1)
+                                    }
+                                GamepadDeck(
+                                    title = cutoutTitle,
+                                    accentColor = colors.accent,
+                                ) {
+                                    GamepadTextFieldCard(
+                                        modifier = Modifier.firstDeckItem(),
+                                        title = stringResource(R.string.macropad_cutout_rename_title),
+                                        description = stringResource(R.string.macropad_cutout_rename_desc),
+                                        value = cutout.name,
+                                        placeholder = stringResource(R.string.mirror_editor_cutout_name_hint),
+                                        icon = Icons.Rounded.Edit,
+                                        itemKey = "cutout_${cutout.id}_rename",
+                                        onValueChange = { newName ->
+                                            val trimmed = newName.trim()
+                                            val updated =
+                                                currentLayout.mirrorCutouts.map {
+                                                    if (it.id == cutout.id) it.copy(name = trimmed) else it
+                                                }
+                                            commitLayout { copy(mirrorCutouts = updated) }
+                                        },
+                                    )
+
+                                    // Smoothing Carousel
+                                    val smoothingModes =
+                                        listOf(
+                                            stringResource(R.string.mirror_smoothing_strength_off),
+                                            stringResource(R.string.mirror_smoothing_strength_light),
+                                            stringResource(R.string.mirror_smoothing_strength_medium),
+                                            stringResource(R.string.mirror_smoothing_strength_strong),
+                                        )
+                                    val currentSmoothIdx =
+                                        if (cutout.motionSmoothing) {
+                                            when (cutout.motionSmoothingStrength) {
+                                                ASO_SMOOTHING_VAL_LIGHT -> 1
+                                                ASO_SMOOTHING_VAL_MEDIUM -> 2
+                                                ASO_SMOOTHING_VAL_STRONG -> 3
+                                                else -> 3
+                                            }
+                                        } else {
+                                            0
+                                        }
+
+                                    GamepadChoiceCard(
+                                        title = stringResource(R.string.settings_mirror_follow_smoothing),
+                                        description = stringResource(R.string.settings_mirror_follow_smoothing_desc),
+                                        selectedText = smoothingModes[currentSmoothIdx],
+                                        icon = Icons.Rounded.Tune,
+                                        itemKey = "cutout_${cutout.id}_smoothing",
+                                        onPrevious = {
+                                            val nextIdx = (currentSmoothIdx - 1 + smoothingModes.size) % smoothingModes.size
+                                            val isSmooth = nextIdx > 0
+                                            val strength =
+                                                when (nextIdx) {
+                                                    1 -> ASO_SMOOTHING_VAL_LIGHT
+                                                    2 -> ASO_SMOOTHING_VAL_MEDIUM
+                                                    else -> ASO_SMOOTHING_VAL_STRONG
+                                                }
+                                            val updated =
+                                                currentLayout.mirrorCutouts.map {
+                                                    if (it.id ==
+                                                        cutout.id
+                                                    ) {
+                                                        it.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength)
+                                                    } else {
+                                                        it
+                                                    }
+                                                }
+                                            commitLayout { copy(mirrorCutouts = updated) }
+                                        },
+                                        onNext = {
+                                            val nextIdx = (currentSmoothIdx + 1) % smoothingModes.size
+                                            val isSmooth = nextIdx > 0
+                                            val strength =
+                                                when (nextIdx) {
+                                                    1 -> ASO_SMOOTHING_VAL_LIGHT
+                                                    2 -> ASO_SMOOTHING_VAL_MEDIUM
+                                                    else -> ASO_SMOOTHING_VAL_STRONG
+                                                }
+                                            val updated =
+                                                currentLayout.mirrorCutouts.map {
+                                                    if (it.id ==
+                                                        cutout.id
+                                                    ) {
+                                                        it.copy(motionSmoothing = isSmooth, motionSmoothingStrength = strength)
+                                                    } else {
+                                                        it
+                                                    }
+                                                }
+                                            commitLayout { copy(mirrorCutouts = updated) }
+                                        },
+                                    )
+
+                                    // Touch Projection
+                                    GamepadToggleCard(
+                                        title = stringResource(R.string.settings_mirror_touch_projection),
+                                        description = stringResource(R.string.settings_mirror_touch_projection_desc),
+                                        checked = cutout.touchProjectionEnabled,
+                                        icon = Icons.Rounded.Mouse,
+                                        itemKey = "cutout_${cutout.id}_projection",
+                                        onCheckedChange = { isChecked ->
+                                            if (isChecked && currentLayout.backgroundTouchpad.enabled) {
+                                                pendingProjectionCutout = cutout
+                                            } else {
+                                                val updated =
+                                                    currentLayout.mirrorCutouts.map {
+                                                        if (it.id == cutout.id) it.copy(touchProjectionEnabled = isChecked) else it
+                                                    }
+                                                commitLayout { copy(mirrorCutouts = updated) }
+                                                if (isChecked) {
+                                                    ScreenCaptureManager.setLocked(true)
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+            )
         }
 
         // Projection conflict alert
@@ -441,62 +527,6 @@ internal fun BackgroundSettingsOverlay(
                     }
                 },
             )
-        }
-    }
-
-    if (renamingCutout != null) {
-        val targetCutout = renamingCutout!!
-        AppModalDialog(
-            onDismiss = { renamingCutout = null },
-        ) {
-            Text(
-                text = stringResource(R.string.mirror_editor_rename_cutout),
-                color = colors.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-
-            AppTextField(
-                value = renameText,
-                onValueChange = { renameText = it },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                singleLine = true,
-                placeholder = {
-                    Text(
-                        text = stringResource(R.string.mirror_editor_cutout_name_hint),
-                        color = colors.onSurfaceSecondary,
-                    )
-                },
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = { renamingCutout = null }) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_cancel),
-                        color = colors.onSurfaceSecondary,
-                    )
-                }
-                TextButton(
-                    onClick = {
-                        val newName = renameText.trim()
-                        val updatedCutouts =
-                            currentLayout.mirrorCutouts.map { c ->
-                                if (c.id == targetCutout.id) c.copy(name = newName) else c
-                            }
-                        commitLayout { copy(mirrorCutouts = updatedCutouts) }
-                        renamingCutout = null
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.macropad_editor_done),
-                        color = colors.accent,
-                    )
-                }
-            }
         }
     }
 
