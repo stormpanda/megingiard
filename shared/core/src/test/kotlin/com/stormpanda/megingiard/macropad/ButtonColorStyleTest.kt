@@ -118,11 +118,12 @@ class ButtonColorStyleTest {
     }
 
     @Test
-    fun `ColorOption Custom round-trip`() {
-        val custom = ColorOption.Custom(0xFFFF0000.toInt())
+    fun `ColorOption Custom with alpha round-trip`() {
+        val custom = ColorOption.Custom(0x80FF0000.toInt())
         val encoded = json.encodeToString<ColorOption>(custom)
         val decoded = json.decodeFromString<ColorOption>(encoded)
         assertEquals(custom, decoded)
+        assertEquals(0x80FF0000.toInt(), (decoded as ColorOption.Custom).argb)
     }
 
     @Test

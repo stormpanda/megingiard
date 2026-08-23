@@ -73,6 +73,7 @@ import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
 import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
+import kotlin.math.roundToInt
 
 private const val TAG = "PadButtonEditDialog"
 private const val PBD_PULSE_DURATION_MS = 1400
@@ -104,10 +105,25 @@ internal fun describeButtonColorOption(
     resolvedColor: Color,
 ): String =
     when (option) {
-        null -> stringResource(R.string.layout_settings_color_layout_default)
-        is ColorOption.Neutral -> stringResource(R.string.layout_settings_color_neutral)
-        is ColorOption.Accent -> stringResource(R.string.layout_settings_color_accent)
-        is ColorOption.Custom -> String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
+        null -> {
+            stringResource(R.string.layout_settings_color_layout_default)
+        }
+
+        is ColorOption.Neutral -> {
+            stringResource(R.string.layout_settings_color_neutral)
+        }
+
+        is ColorOption.Accent -> {
+            stringResource(R.string.layout_settings_color_accent)
+        }
+
+        is ColorOption.Custom -> {
+            if (resolvedColor.alpha < 0.99f) {
+                String.format("#%06X (%d%%)", 0xFFFFFF and resolvedColor.toArgb(), (resolvedColor.alpha * 100).roundToInt())
+            } else {
+                String.format("#%06X", 0xFFFFFF and resolvedColor.toArgb())
+            }
+        }
     }
 
 /**
@@ -993,7 +1009,11 @@ internal fun ButtonColorSubPageContent(
         title = stringResource(R.string.gamepad_action_custom_color),
         description =
             if (isCustomSelected) {
-                String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
+                if (currentColor.alpha < 0.99f) {
+                    String.format("#%06X (%d%%)", 0xFFFFFF and currentColor.toArgb(), (currentColor.alpha * 100).roundToInt())
+                } else {
+                    String.format("#%06X", 0xFFFFFF and currentColor.toArgb())
+                }
             } else {
                 stringResource(R.string.macropad_editor_color_wheel_desc)
             },

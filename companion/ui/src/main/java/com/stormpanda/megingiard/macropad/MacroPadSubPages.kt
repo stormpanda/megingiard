@@ -390,7 +390,12 @@ internal fun ColorWheelSubPageContent(
         )
     }
 
-    val hex = String.format("#%06X", 0xFFFFFF and workingColor.toArgb())
+    val hex =
+        if (showAlphaSlider && workingColor.alpha < 0.99f) {
+            String.format("#%06X (%d%%)", 0xFFFFFF and workingColor.toArgb(), (workingColor.alpha * 100).roundToInt())
+        } else {
+            String.format("#%06X", 0xFFFFFF and workingColor.toArgb())
+        }
 
     GamepadSliderCard(
         title = stringResource(R.string.settings_color_hue),

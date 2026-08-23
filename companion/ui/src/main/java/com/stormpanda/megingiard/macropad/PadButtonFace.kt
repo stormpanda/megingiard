@@ -49,7 +49,7 @@ internal fun PadButtonFace(
             val wPx = with(density) { width.toPx() }
             val hPx = with(density) { height.toPx() }
             val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-            val maxAlpha = (bgAlpha * gradientScale).coerceIn(0f, 1f)
+            val maxAlpha = (bgAlpha * gradientScale * bgColor.alpha).coerceIn(0f, 1f)
             Brush.radialGradient(
                 0.00f to bgColor.copy(alpha = 0f),
                 0.50f to bgColor.copy(alpha = maxAlpha * 0.25f),
@@ -78,14 +78,15 @@ internal fun PadButtonFace(
                     if (isIconOnly) {
                         drawContent()
                     } else {
+                        val effectiveBackingColor = PBF_BACKING_COLOR.copy(alpha = PBF_BACKING_COLOR.alpha * bgColor.alpha)
                         if (isDeviceDisabled) {
                             drawContext.canvas.saveLayer(Rect(0f, 0f, size.width, size.height), disabledPaint)
-                            drawRect(color = PBF_BACKING_COLOR)
+                            drawRect(color = effectiveBackingColor)
                             drawRect(brush = bgBrush)
                             drawContent()
                             drawContext.canvas.restore()
                         } else {
-                            drawRect(color = PBF_BACKING_COLOR)
+                            drawRect(color = effectiveBackingColor)
                             drawRect(brush = bgBrush)
                             drawContent()
                         }

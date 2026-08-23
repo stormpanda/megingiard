@@ -301,7 +301,11 @@ internal fun PadButtonContent(
     effectiveContentAccent: Color = effectiveTextTint,
 ) {
     if (isTrackpoint) {
-        Text("●", color = effectiveContentAccent.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge)
+        Text(
+            "●",
+            color = effectiveContentAccent.copy(alpha = 0.7f * effectiveContentAccent.alpha),
+            style = MaterialTheme.typography.titleLarge,
+        )
     } else if (btn.action is PadAction.ScrollWheel) {
         ScrollWheelFace(accentColor = effectiveContentAccent)
     } else if (btn.action is PadAction.BackgroundPeek) {
@@ -392,6 +396,7 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
     val r = tint.red
     val g = tint.green
     val b = tint.blue
+    val a = tint.alpha
     val matrix =
         ColorMatrix(
             floatArrayOf(
@@ -413,7 +418,7 @@ private fun tintedGrayscaleFilter(tint: Color): ColorFilter {
                 0f,
                 0f,
                 0f,
-                1f,
+                a,
                 0f,
             ),
         )
@@ -436,7 +441,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
         Icon(
             Icons.Rounded.KeyboardArrowUp,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f),
+            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.height(4.dp))
@@ -444,7 +449,7 @@ internal fun ScrollWheelFace(accentColor: Color) {
         Icon(
             Icons.Rounded.KeyboardArrowDown,
             contentDescription = null,
-            tint = accentColor.copy(alpha = 0.5f),
+            tint = accentColor.copy(alpha = 0.5f * accentColor.alpha),
             modifier = Modifier.size(18.dp),
         )
         Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp))
