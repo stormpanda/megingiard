@@ -1,13 +1,18 @@
 package com.stormpanda.megingiard.macropad
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,11 +24,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamePadGlyph
 import com.stormpanda.megingiard.ui.GamepadActionCard
@@ -40,6 +47,9 @@ import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
 private const val TAG = "MacroPadSubPages"
+private val MPS_UNDO_ARROW_SIZE = 12.dp
+private const val MPS_UNDO_ARROW_ALPHA = 0.6f
+private val MPS_UNDO_SWATCH_SPACING = 6.dp
 
 internal enum class LayoutColorTarget {
     TEXT,
@@ -452,6 +462,7 @@ internal fun ColorWheelSubPageContent(
         )
     }
 
+    val colors = LocalAppColors.current
     val hasChanges = remember(workingColor, initialColor) { workingColor.toArgb() != initialColor.toArgb() }
     val initialHex =
         if (showAlphaSlider && initialColor.alpha < 0.99f) {
@@ -465,16 +476,38 @@ internal fun ColorWheelSubPageContent(
         title = stringResource(R.string.macropad_editor_color_wheel_undo_title),
         description =
             if (hasChanges) {
-                stringResource(R.string.macropad_editor_color_wheel_undo_desc, initialHex)
+                stringResource(R.string.macropad_editor_color_wheel_undo_desc, "$hex → $initialHex")
             } else {
                 stringResource(R.string.macropad_editor_color_wheel_undo_desc_no_changes)
             },
         icon = Icons.AutoMirrored.Rounded.Undo,
         actionLeadingContent = {
-            GamepadColorSwatch(
-                color = initialColor,
-                isSelected = !hasChanges,
-            )
+            if (hasChanges) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MPS_UNDO_SWATCH_SPACING),
+                ) {
+                    GamepadColorSwatch(
+                        color = workingColor,
+                        isSelected = true,
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                        contentDescription = null,
+                        tint = colors.onSurfaceSecondary.copy(alpha = MPS_UNDO_ARROW_ALPHA),
+                        modifier = Modifier.size(MPS_UNDO_ARROW_SIZE),
+                    )
+                    GamepadColorSwatch(
+                        color = initialColor,
+                        isSelected = false,
+                    )
+                }
+            } else {
+                GamepadColorSwatch(
+                    color = initialColor,
+                    isSelected = true,
+                )
+            }
         },
         actionText = if (hasChanges) stringResource(R.string.macropad_macro_editor_undo) else null,
         enabled = hasChanges,
