@@ -3,6 +3,7 @@ package com.stormpanda.megingiard.macropad
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Colorize
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Save
@@ -272,7 +273,6 @@ internal sealed interface MacroPadSubPage {
         val section: EditorSection,
         val showAlphaSlider: Boolean = true,
         val onColorChange: ((Color) -> Unit)? = null,
-        val onSave: (Color) -> Unit,
     ) : MacroPadSubPage {
         override val parentSection = section
     }
@@ -301,7 +301,6 @@ internal fun GamepadSubPageHeader(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ColorWheelSubPageContent(
     title: String,
@@ -310,8 +309,6 @@ internal fun ColorWheelSubPageContent(
     accentColor: Color,
     showAlphaSlider: Boolean = true,
     onColorChange: ((Color) -> Unit)? = null,
-    onDiscard: () -> Unit = {},
-    onSaveColor: (Color) -> Unit,
 ) {
     val initHsv =
         remember(initialColor) {
@@ -330,18 +327,6 @@ internal fun ColorWheelSubPageContent(
             if (showAlphaSlider) base.copy(alpha = alpha) else base
         }
     }
-
-    val hasChanges =
-        remember(workingColor, initialColor) {
-            workingColor.toArgb() != initialColor.toArgb()
-        }
-
-    val promptState =
-        rememberSaveExitPromptState(
-            hasChanges = hasChanges,
-            onSave = { onSaveColor(workingColor) },
-            onDiscard = onDiscard,
-        )
 
     LaunchedEffect(Unit) {
         snapshotFlow { workingColor }
@@ -466,39 +451,18 @@ internal fun ColorWheelSubPageContent(
         )
     }
 
-    // ── Save Section ─────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_save),
-        color = accentColor,
-    )
-
-    ColorPreviewInfoBox(
-        title = stringResource(R.string.macropad_editor_color_preview_title),
+    // ── Live Color Swatch Card ───────────────────────────────────────
+    GamepadActionCard(
+        title = title,
         description = hex,
-        savedPreview = {
-            GamepadColorSwatch(
-                color = initialColor,
-                isSelected = false,
-            )
-        },
-        currentPreview = {
+        icon = Icons.Rounded.Colorize,
+        actionLeadingContent = {
             GamepadColorSwatch(
                 color = workingColor,
                 isSelected = true,
             )
         },
-    )
-
-    GamepadSaveExitActionRow(
-        title = title,
-        description = hex,
-        saveActionText = stringResource(R.string.gamepad_action_confirm),
-        saveIcon = Icons.Rounded.Save,
-        enabled = true,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
+        actionText = stringResource(R.string.gamepad_color_selected),
+        onClick = {},
     )
 }

@@ -297,70 +297,18 @@ internal fun LayoutColorSubPageContent(
     savedLayout: PadLayout?,
     target: LayoutColorTarget,
     accentColor: Color,
+    onColorOptionChanged: (ColorOption) -> Unit,
     onOpenColorWheel: (title: String, breadcrumbs: List<String>, initialColor: Color, inFlightLayout: PadLayout) -> Unit,
-    onDiscard: () -> Unit = {},
-    onSave: (inFlightLayout: PadLayout) -> Unit,
 ) {
-    val colors = LocalAppColors.current
     val globalAccentInt by SettingsManager.accentColor.collectAsState()
     val globalAccentColor = Color(globalAccentInt)
 
-    val initialOption =
+    val currentOption =
         when (target) {
             LayoutColorTarget.TEXT -> layout.buttonTextColor
             LayoutColorTarget.BORDER -> layout.buttonBorderColor
             LayoutColorTarget.BG -> layout.buttonBgColor
         }
-    var selectedOption by remember(layout.id, target, initialOption) { mutableStateOf(initialOption) }
-
-    val effectiveSavedLayout = savedLayout ?: layout
-
-    val savedBaselineOption =
-        when (target) {
-            LayoutColorTarget.TEXT -> effectiveSavedLayout.buttonTextColor
-            LayoutColorTarget.BORDER -> effectiveSavedLayout.buttonBorderColor
-            LayoutColorTarget.BG -> effectiveSavedLayout.buttonBgColor
-        }
-
-    val hasChanges = selectedOption != savedBaselineOption
-
-    val pulseTransition = rememberInfiniteTransition(label = "colorSubPageSavePulse")
-    val pulseFraction by pulseTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec =
-            infiniteRepeatable(
-                animation = tween(durationMillis = LSE_PULSE_DURATION_MS, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-        label = "colorSavePulseFraction",
-    )
-    val saveCardBgColor =
-        if (hasChanges) {
-            lerp(
-                colors.surface.copy(alpha = LSE_PULSE_SURFACE_ALPHA),
-                colors.accent.copy(alpha = LSE_PULSE_ACCENT_ALPHA),
-                pulseFraction,
-            )
-        } else {
-            null
-        }
-
-    fun buildInFlightLayout(): PadLayout =
-        when (target) {
-            LayoutColorTarget.TEXT -> layout.copy(buttonTextColor = selectedOption)
-            LayoutColorTarget.BORDER -> layout.copy(buttonBorderColor = selectedOption)
-            LayoutColorTarget.BG -> layout.copy(buttonBgColor = selectedOption)
-        }
-
-    val inFlightLayout = buildInFlightLayout()
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { inFlightLayout }
-            .collectLatest { liveLayout ->
-                MacroPadState.setPreviewLayout(liveLayout)
-            }
-    }
 
     val defaultNeutralColor =
         when (target) {
@@ -371,18 +319,10 @@ internal fun LayoutColorSubPageContent(
 
     val currentColor =
         if (target == LayoutColorTarget.BG) {
-            resolveBgColorOption(selectedOption, globalAccentColor)
+            resolveBgColorOption(currentOption, globalAccentColor)
         } else {
-            resolveColorOption(selectedOption, globalAccentColor, defaultNeutralColor)
+            resolveColorOption(currentOption, globalAccentColor, defaultNeutralColor)
         }
-
-    val savedResolvedText = resolveColorOption(effectiveSavedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-    val savedResolvedBorder = resolveColorOption(effectiveSavedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val savedResolvedBg = resolveBgColorOption(effectiveSavedLayout.buttonBgColor, globalAccentColor)
-
-    val currentResolvedText = resolveColorOption(inFlightLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
-    val currentResolvedBorder = resolveColorOption(inFlightLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val currentResolvedBg = resolveBgColorOption(inFlightLayout.buttonBgColor, globalAccentColor)
 
     val targetTitle =
         when (target) {
@@ -406,16 +346,9 @@ internal fun LayoutColorSubPageContent(
             stringResource(R.string.gamepad_action_custom_color),
         )
 
-    val isNeutralSelected = selectedOption is ColorOption.Neutral
-    val isAccentSelected = selectedOption is ColorOption.Accent
-    val isCustomSelected = selectedOption is ColorOption.Custom
-
-    val promptState =
-        rememberSaveExitPromptState(
-            hasChanges = hasChanges,
-            onSave = { onSave(inFlightLayout) },
-            onDiscard = onDiscard,
-        )
+    val isNeutralSelected = currentOption is ColorOption.Neutral
+    val isAccentSelected = currentOption is ColorOption.Accent
+    val isCustomSelected = currentOption is ColorOption.Custom
 
     // Option 1: Theme Neutral
     GamepadActionCard(
@@ -434,7 +367,7 @@ internal fun LayoutColorSubPageContent(
             } else {
                 stringResource(R.string.gamepad_action_select)
             },
-        onClick = { selectedOption = ColorOption.Neutral },
+        onClick = { onColorOptionChanged(ColorOption.Neutral) },
         modifier = Modifier.firstDeckItem(),
     )
 
@@ -455,7 +388,7 @@ internal fun LayoutColorSubPageContent(
             } else {
                 stringResource(R.string.gamepad_action_select)
             },
-        onClick = { selectedOption = ColorOption.Accent },
+        onClick = { onColorOptionChanged(ColorOption.Accent) },
     )
 
     // Option 3: Custom Color (Color Wheel)
@@ -489,51 +422,9 @@ internal fun LayoutColorSubPageContent(
                 selectColorWheelTitle,
                 colorWheelBreadcrumbs,
                 currentColor,
-                inFlightLayout,
+                layout,
             )
         },
-    )
-
-    // ── Save Section ─────────────────────────────────────────────────
-    GamepadSectionHeader(
-        text = stringResource(R.string.macropad_editor_section_save),
-        color = accentColor,
-    )
-
-    ColorPreviewInfoBox(
-        title = stringResource(R.string.macropad_editor_color_preview_title),
-        description = stringResource(R.string.macropad_editor_color_preview_desc),
-        savedPreview = {
-            SwordsButtonPreview(
-                textColor = savedResolvedText,
-                borderColor = savedResolvedBorder,
-                bgColor = savedResolvedBg,
-                isIconOnly = false,
-            )
-        },
-        currentPreview = {
-            SwordsButtonPreview(
-                textColor = currentResolvedText,
-                borderColor = currentResolvedBorder,
-                bgColor = currentResolvedBg,
-                isIconOnly = false,
-            )
-        },
-    )
-
-    // ── Save & Exit Action Row ───────────────────────────────────────────────
-    GamepadSaveExitActionRow(
-        title = stringResource(R.string.macropad_editor_save_button_colors_title),
-        description = stringResource(R.string.macropad_editor_save_button_colors_desc),
-        cardBgColor = saveCardBgColor,
-        saveActionText = stringResource(R.string.gamepad_action_confirm),
-        saveIcon = Icons.Rounded.Save,
-        enabled = true,
-        showExitPrompt = promptState.showExitPrompt,
-        saveFocusRequester = promptState.focusRequester,
-        bringIntoViewRequester = promptState.bringIntoViewRequester,
-        onSave = promptState.onSave,
-        onDiscard = promptState.onDiscard,
     )
 }
 
