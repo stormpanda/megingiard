@@ -1458,6 +1458,8 @@ Open Settings to create a layout.</string>
     <string name="gamepad_action_discard_and_exit">Discard &amp; Exit</string>
     <string name="gamepad_action_discard_and_exit_desc">Revert changes and exit</string>
     <string name="gamepad_action_discard">Discard</string>
+    <string name="macropad_editor_color_preview_title">Style Preview</string>
+    <string name="macropad_editor_color_preview_desc">Saved appearance compared to in-flight changes</string>
     <!-- Quick Actions -->
     <string name="quick_actions_title">Quick Actions</string>
     <string name="quick_actions_desc">Jump directly to frequently used layout tools and preferences</string>

@@ -51,9 +51,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 
 private const val TAG = "LayoutSettingsEditor"
-private val LSE_SAVE_PREVIEW_SPACING = 6.dp
-private val LSE_ARROW_SIZE = 14.dp
-private const val LSE_ARROW_ALPHA = 0.6f
 private const val LSE_PULSE_DURATION_MS = 1400
 private const val LSE_PULSE_ACCENT_ALPHA = 0.35f
 private const val LSE_PULSE_SURFACE_ALPHA = 0.55f
@@ -153,11 +150,11 @@ internal fun LayoutAppearanceSubPageContent(
 
     val currentResolvedText = resolveColorOption(layout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val currentResolvedBorder = resolveColorOption(layout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val currentResolvedBg = resolveColorOption(layout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val currentResolvedBg = resolveBgColorOption(layout.buttonBgColor, globalAccentColor)
 
     val savedResolvedText = resolveColorOption(savedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val savedResolvedBorder = resolveColorOption(savedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val savedResolvedBg = resolveColorOption(savedLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val savedResolvedBg = resolveBgColorOption(savedLayout.buttonBgColor, globalAccentColor)
 
     GamepadTextFieldCard(
         title = stringResource(R.string.quick_menu_layout_name_hint),
@@ -256,37 +253,33 @@ internal fun LayoutAppearanceSubPageContent(
         color = accentColor,
     )
 
-    // ── Save & Exit Action Row (with Saved vs In-Flight Previews) ─────────────
+    ColorPreviewInfoBox(
+        title = stringResource(R.string.macropad_editor_color_preview_title),
+        description = stringResource(R.string.macropad_editor_color_preview_desc),
+        savedPreview = {
+            SwordsButtonPreview(
+                textColor = savedResolvedText,
+                borderColor = savedResolvedBorder,
+                bgColor = savedResolvedBg,
+                isIconOnly = false,
+            )
+        },
+        currentPreview = {
+            SwordsButtonPreview(
+                textColor = currentResolvedText,
+                borderColor = currentResolvedBorder,
+                bgColor = currentResolvedBg,
+                isIconOnly = false,
+            )
+        },
+    )
+
+    // ── Save & Exit Action Row ───────────────────────────────────────────────
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
         cardBgColor = saveCardBgColor,
-        saveActionLeadingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LSE_SAVE_PREVIEW_SPACING),
-            ) {
-                SwordsButtonPreview(
-                    textColor = savedResolvedText,
-                    borderColor = savedResolvedBorder,
-                    bgColor = savedResolvedBg,
-                    isIconOnly = false,
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = LSE_ARROW_ALPHA),
-                    modifier = Modifier.size(LSE_ARROW_SIZE),
-                )
-                SwordsButtonPreview(
-                    textColor = currentResolvedText,
-                    borderColor = currentResolvedBorder,
-                    bgColor = currentResolvedBg,
-                    isIconOnly = false,
-                )
-            }
-        },
-        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveActionText = stringResource(R.string.gamepad_action_confirm),
         saveIcon = Icons.Rounded.Save,
         enabled = true,
         showExitPrompt = promptState.showExitPrompt,
@@ -376,15 +369,20 @@ internal fun LayoutColorSubPageContent(
             LayoutColorTarget.BG -> MP_AMBIENT_NEUTRAL_BG
         }
 
-    val currentColor = resolveColorOption(selectedOption, globalAccentColor, defaultNeutralColor)
+    val currentColor =
+        if (target == LayoutColorTarget.BG) {
+            resolveBgColorOption(selectedOption, globalAccentColor)
+        } else {
+            resolveColorOption(selectedOption, globalAccentColor, defaultNeutralColor)
+        }
 
     val savedResolvedText = resolveColorOption(effectiveSavedLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val savedResolvedBorder = resolveColorOption(effectiveSavedLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val savedResolvedBg = resolveColorOption(effectiveSavedLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val savedResolvedBg = resolveBgColorOption(effectiveSavedLayout.buttonBgColor, globalAccentColor)
 
     val currentResolvedText = resolveColorOption(inFlightLayout.buttonTextColor, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val currentResolvedBorder = resolveColorOption(inFlightLayout.buttonBorderColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val currentResolvedBg = resolveColorOption(inFlightLayout.buttonBgColor, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val currentResolvedBg = resolveBgColorOption(inFlightLayout.buttonBgColor, globalAccentColor)
 
     val targetTitle =
         when (target) {
@@ -502,37 +500,33 @@ internal fun LayoutColorSubPageContent(
         color = accentColor,
     )
 
-    // ── Save & Exit Action Row (with Saved vs In-Flight Previews) ─────────────
+    ColorPreviewInfoBox(
+        title = stringResource(R.string.macropad_editor_color_preview_title),
+        description = stringResource(R.string.macropad_editor_color_preview_desc),
+        savedPreview = {
+            SwordsButtonPreview(
+                textColor = savedResolvedText,
+                borderColor = savedResolvedBorder,
+                bgColor = savedResolvedBg,
+                isIconOnly = false,
+            )
+        },
+        currentPreview = {
+            SwordsButtonPreview(
+                textColor = currentResolvedText,
+                borderColor = currentResolvedBorder,
+                bgColor = currentResolvedBg,
+                isIconOnly = false,
+            )
+        },
+    )
+
+    // ── Save & Exit Action Row ───────────────────────────────────────────────
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_editor_save_button_colors_desc),
         cardBgColor = saveCardBgColor,
-        saveActionLeadingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LSE_SAVE_PREVIEW_SPACING),
-            ) {
-                SwordsButtonPreview(
-                    textColor = savedResolvedText,
-                    borderColor = savedResolvedBorder,
-                    bgColor = savedResolvedBg,
-                    isIconOnly = false,
-                )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = LSE_ARROW_ALPHA),
-                    modifier = Modifier.size(LSE_ARROW_SIZE),
-                )
-                SwordsButtonPreview(
-                    textColor = currentResolvedText,
-                    borderColor = currentResolvedBorder,
-                    bgColor = currentResolvedBg,
-                    isIconOnly = false,
-                )
-            }
-        },
-        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveActionText = stringResource(R.string.gamepad_action_confirm),
         saveIcon = Icons.Rounded.Save,
         enabled = true,
         showExitPrompt = promptState.showExitPrompt,

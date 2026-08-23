@@ -20,6 +20,20 @@ private const val TAG = "MacroPadState"
 private const val MP_DEFAULT_PROFILE_NAME = "Profile"
 private const val MP_DEFAULT_LAYOUT_NAME = "Layout"
 private const val DUPLICATE_BUTTON_OFFSET = 0.05f
+private const val MP_LEGACY_BG_ALPHA_MIGRATION = 0xB3 // 70% opacity in hex (matching previous default resting level)
+
+private fun migrateButtonBgColorOption(option: ColorOption?): ColorOption? {
+    if (option is ColorOption.Custom) {
+        val alpha = (option.argb ushr 24) and 0xFF
+        // If alpha is full opacity (0xFF / 1.0f) from pre-opacity versions,
+        // migrate it to the documented previous resting default 0.70f (0xB3).
+        if (alpha == 0xFF) {
+            val migratedArgb = (MP_LEGACY_BG_ALPHA_MIGRATION shl 24) or (option.argb and 0x00FFFFFF)
+            return ColorOption.Custom(migratedArgb)
+        }
+    }
+    return option
+}
 
 private fun List<String>.nextUniqueName(
     baseName: String,
@@ -272,6 +286,7 @@ object MacroPadState {
                         p.layouts.map { layout ->
                             var current = layout
                             var changed = false
+                            @Suppress("DEPRECATION")
                             if (current.buttonColorNoMirror != null || current.buttonColorMirror != null) {
                                 needsSave = true
                                 changed = true
@@ -283,6 +298,28 @@ object MacroPadState {
                                         buttonColorNoMirror = null,
                                         buttonColorMirror = null,
                                     )
+                            }
+                            val migratedBg = migrateButtonBgColorOption(current.buttonBgColor) ?: current.buttonBgColor
+                            if (migratedBg != current.buttonBgColor) {
+                                needsSave = true
+                                changed = true
+                                current = current.copy(buttonBgColor = migratedBg)
+                            }
+                            val migratedButtons =
+                                current.buttons.map { btn ->
+                                    val btnMigratedBg = migrateButtonBgColorOption(btn.buttonBgColor)
+                                    if (btnMigratedBg != btn.buttonBgColor) {
+                                        needsSave = true
+                                        changed = true
+                                        btn.copy(buttonBgColor = btnMigratedBg)
+                                    } else {
+                                        btn
+                                    }
+                                }
+                            if (migratedButtons != current.buttons) {
+                                needsSave = true
+                                changed = true
+                                current = current.copy(buttons = migratedButtons)
                             }
                             if (!current.mirrorConfigured) {
                                 needsSave = true

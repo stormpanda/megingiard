@@ -119,9 +119,6 @@ private val PC_RADIAL_CENTER_DOT = 5.dp
 private const val PC_RADIAL_MIN_POINTS = 4
 private const val PC_RADIAL_EXTRA_RINGS = 3
 
-// Outer gradient edge alpha for editor chip buttons (matches use-mode resting appearance)
-private const val PC_BTN_GRADIENT_OUTER = 0.9f
-
 // Drag handles & highlight pointers
 private val PC_HANDLE_SIZE = 32.dp
 private val PC_HANDLE_PADDING = 4.dp
@@ -527,7 +524,7 @@ private fun DraggableButton(
     val resolvedBorderColorOption = btn.buttonBorderColor ?: layout.buttonBorderColor
     val resolvedTextColorOption = btn.buttonTextColor ?: layout.buttonTextColor
 
-    val effectiveBg = resolveColorOption(resolvedBgColorOption, accentColor, MP_AMBIENT_NEUTRAL_BG)
+    val effectiveBg = resolveBgColorOption(resolvedBgColorOption, accentColor)
     val effectiveBorder = resolveColorOption(resolvedBorderColorOption, accentColor, MP_AMBIENT_NEUTRAL_BORDER)
     val effectiveTextTint = resolveColorOption(resolvedTextColorOption, accentColor, MP_AMBIENT_NEUTRAL_TEXT)
 
@@ -719,8 +716,6 @@ private fun DraggableButton(
             isDeviceDisabled = isDeviceDisabled,
             borderColor = effectiveBorder,
             bgColor = effectiveBg,
-            bgAlpha = 0.25f,
-            gradientScale = PC_BTN_GRADIENT_OUTER / 0.25f,
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -735,7 +730,7 @@ private fun DraggableButton(
             PadButtonContent(
                 btn = btn,
                 effectiveTextTint = effectiveTextTint,
-                iconSize = MP_BUTTON_UNIT_DP * 0.73f * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
+                iconSize = MP_BTN_ICON_UNIT * minOf(btn.buttonSize.cols, btn.buttonSize.rows),
                 isTrackpoint = isTrackpoint,
             )
         }

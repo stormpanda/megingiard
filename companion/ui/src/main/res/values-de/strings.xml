@@ -1467,6 +1467,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="gamepad_action_discard_and_exit">Verwerfen &amp; Beenden</string>
     <string name="gamepad_action_discard_and_exit_desc">Änderungen verwerfen und beenden</string>
     <string name="gamepad_action_discard">Verwerfen</string>
+    <string name="macropad_editor_color_preview_title">Stilvorschau</string>
+    <string name="macropad_editor_color_preview_desc">Gespeichertes Aussehen im Vergleich zu den aktuellen Änderungen</string>
     <!-- Quick Actions -->
     <string name="quick_actions_title">Schnellaktionen</string>
     <string name="quick_actions_desc">Direkt zu häufig verwendeten Layout-Werkzeugen und Einstellungen springen</string>

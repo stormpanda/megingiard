@@ -37,19 +37,17 @@ internal fun PadButtonFace(
     isDeviceDisabled: Boolean,
     borderColor: Color,
     bgColor: Color,
-    bgAlpha: Float,
-    gradientScale: Float = 2.8f,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
 
     val bgBrush =
-        remember(bgColor, bgAlpha, gradientScale, width, height, density) {
+        remember(bgColor, width, height, density) {
             val wPx = with(density) { width.toPx() }
             val hPx = with(density) { height.toPx() }
             val halfDiag = sqrt(wPx * wPx + hPx * hPx) / 2f
-            val maxAlpha = (bgAlpha * gradientScale * bgColor.alpha).coerceIn(0f, 1f)
+            val maxAlpha = bgColor.alpha.coerceIn(0f, 1f)
             Brush.radialGradient(
                 0.00f to bgColor.copy(alpha = 0f),
                 0.50f to bgColor.copy(alpha = maxAlpha * 0.25f),

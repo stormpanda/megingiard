@@ -907,4 +907,57 @@ class MacroPadStateTest {
         assertEquals(null, MacroPadState.previewLayout.value)
         assertEquals(savedLayout, MacroPadState.activeLayout.value)
     }
+
+    @Test
+    fun `loadFrom migrates legacy full opacity custom buttonBgColor on layout and buttons`() {
+        val pId = UUID.randomUUID().toString()
+        val lId = UUID.randomUUID().toString()
+        val b1 =
+            PadButton(
+                id = "btn-1",
+                label = "Full Opacity Custom",
+                posX = 0.1f,
+                posY = 0.1f,
+                action = PadAction.KeyboardKey(65, "A"),
+                buttonBgColor = ColorOption.Custom(0xFFFF5500.toInt()), // Alpha = 0xFF (1.0f)
+            )
+        val b2 =
+            PadButton(
+                id = "btn-2",
+                label = "Existing Custom Alpha",
+                posX = 0.3f,
+                posY = 0.3f,
+                action = PadAction.KeyboardKey(66, "B"),
+                buttonBgColor = ColorOption.Custom(0x80FF5500.toInt()), // Alpha = 0x80 (~0.5f)
+            )
+        val layout =
+            PadLayout(
+                id = lId,
+                name = "Layout",
+                buttonBgColor = ColorOption.Custom(0xFF00FF00.toInt()), // Alpha = 0xFF (1.0f)
+                buttons = listOf(b1, b2),
+                mirrorConfigured = true,
+            )
+        val profile = PadProfile(id = pId, name = "Profile", layouts = listOf(layout), activeLayoutId = lId)
+
+        MacroPadState.loadFrom(listOf(profile), pId)
+
+        val loadedProfile = MacroPadState.profiles.value.first { it.id == pId }
+        val loadedLayout = loadedProfile.layouts.first { it.id == lId }
+
+        // Layout bg color migrated from 0xFF to 0xB3 (0.70f)
+        val layoutBg = loadedLayout.buttonBgColor as ColorOption.Custom
+        assertEquals(0xB3, (layoutBg.argb ushr 24) and 0xFF)
+        assertEquals(0x00FF00, layoutBg.argb and 0x00FFFFFF)
+
+        // Button 1 bg color migrated from 0xFF to 0xB3 (0.70f)
+        val btn1Bg = loadedLayout.buttons.first { it.id == "btn-1" }.buttonBgColor as ColorOption.Custom
+        assertEquals(0xB3, (btn1Bg.argb ushr 24) and 0xFF)
+        assertEquals(0xFF5500, btn1Bg.argb and 0x00FFFFFF)
+
+        // Button 2 bg color preserved at 0x80
+        val btn2Bg = loadedLayout.buttons.first { it.id == "btn-2" }.buttonBgColor as ColorOption.Custom
+        assertEquals(0x80, (btn2Bg.argb ushr 24) and 0xFF)
+        assertEquals(0xFF5500, btn2Bg.argb and 0x00FFFFFF)
+    }
 }

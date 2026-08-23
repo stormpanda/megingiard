@@ -2229,6 +2229,7 @@ fun MacroPadEditor(
                                                 accentColor = colors.accent,
                                                 showAlphaSlider = currentSubPage.showAlphaSlider,
                                                 onColorChange = currentSubPage.onColorChange,
+                                                onDiscard = { MacroPadNavState.pop() },
                                                 onSaveColor = currentSubPage.onSave,
                                             )
                                         }

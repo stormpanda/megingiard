@@ -79,11 +79,6 @@ private const val TAG = "PadButtonEditDialog"
 private const val PBD_PULSE_DURATION_MS = 1400
 private const val PBD_PULSE_ACCENT_ALPHA = 0.35f
 private const val PBD_PULSE_SURFACE_ALPHA = 0.55f
-private const val PBD_ARROW_ALPHA = 0.6f
-private const val PBD_PREVIEW_BG_ALPHA = 0.25f
-private const val PBD_PREVIEW_GRADIENT_SCALE = 2.8f
-private val PBD_SAVE_PREVIEW_SPACING = 8.dp
-private val PBD_ARROW_SIZE = 16.dp
 
 private val PBD_COLOR_PREVIEW_SIZE = 36.dp
 private val PBD_CORNER_RADIUS_DP = 6.dp
@@ -362,7 +357,7 @@ internal fun EditButtonSubPageContent(
 
     val currentText = resolveColorOption(effectiveTextOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_TEXT)
     val currentBorder = resolveColorOption(effectiveBorderOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_BORDER)
-    val currentBg = resolveColorOption(effectiveBgOpt, globalAccentColor, MP_AMBIENT_NEUTRAL_BG)
+    val currentBg = resolveBgColorOption(effectiveBgOpt, globalAccentColor)
 
     val showLabelAndIcon = action !is PadAction.ScrollWheel && action !is PadAction.TrackpointMove && action !is PadAction.AppLauncher
 
@@ -606,8 +601,6 @@ internal fun EditButtonSubPageContent(
                         isDeviceDisabled = false,
                         borderColor = bColor,
                         bgColor = bgCol,
-                        bgAlpha = PBD_PREVIEW_BG_ALPHA,
-                        gradientScale = PBD_PREVIEW_GRADIENT_SCALE,
                     ) {
                         if (iconName != null) {
                             MaterialSymbol(
@@ -853,10 +846,9 @@ internal fun ButtonColorSubPageContent(
             MP_AMBIENT_NEUTRAL_BORDER,
         )
     val savedResolvedBg =
-        resolveColorOption(
+        resolveBgColorOption(
             effectiveSavedButton.buttonBgColor ?: (activeLayout?.buttonBgColor ?: ColorOption.Neutral),
             globalAccentColor,
-            MP_AMBIENT_NEUTRAL_BG,
         )
 
     val currentResolvedText =
@@ -872,10 +864,9 @@ internal fun ButtonColorSubPageContent(
             MP_AMBIENT_NEUTRAL_BORDER,
         )
     val currentResolvedBg =
-        resolveColorOption(
+        resolveBgColorOption(
             inFlightButton.buttonBgColor ?: (activeLayout?.buttonBgColor ?: ColorOption.Neutral),
             globalAccentColor,
-            MP_AMBIENT_NEUTRAL_BG,
         )
 
     val targetTitle =
@@ -914,8 +905,6 @@ internal fun ButtonColorSubPageContent(
             isDeviceDisabled = false,
             borderColor = bCol,
             bgColor = bgCol,
-            bgAlpha = PBD_PREVIEW_BG_ALPHA,
-            gradientScale = PBD_PREVIEW_GRADIENT_SCALE,
         ) {
             val icon = button.iconName
             if (icon != null) {
@@ -1046,27 +1035,23 @@ internal fun ButtonColorSubPageContent(
         color = accentColor,
     )
 
+    ColorPreviewInfoBox(
+        title = stringResource(R.string.macropad_editor_color_preview_title),
+        description = stringResource(R.string.macropad_editor_color_preview_desc),
+        savedPreview = {
+            renderPreviewFace(savedResolvedText, savedResolvedBorder, savedResolvedBg)
+        },
+        currentPreview = {
+            renderPreviewFace(currentResolvedText, currentResolvedBorder, currentResolvedBg)
+        },
+    )
+
     // ── Save & Exit Action Row ───────────────────────────────────────
     GamepadSaveExitActionRow(
         title = stringResource(R.string.macropad_editor_save_button_colors_title),
         description = stringResource(R.string.macropad_btn_color_save_desc),
         cardBgColor = saveCardBgColor,
-        saveActionLeadingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(PBD_SAVE_PREVIEW_SPACING),
-            ) {
-                renderPreviewFace(savedResolvedText, savedResolvedBorder, savedResolvedBg)
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                    contentDescription = null,
-                    tint = colors.onSurfaceSecondary.copy(alpha = PBD_ARROW_ALPHA),
-                    modifier = Modifier.size(PBD_ARROW_SIZE),
-                )
-                renderPreviewFace(currentResolvedText, currentResolvedBorder, currentResolvedBg)
-            }
-        },
-        saveActionText = stringResource(R.string.gamepad_action_save),
+        saveActionText = stringResource(R.string.gamepad_action_confirm),
         saveIcon = Icons.Rounded.Save,
         enabled = true,
         showExitPrompt = promptState.showExitPrompt,
