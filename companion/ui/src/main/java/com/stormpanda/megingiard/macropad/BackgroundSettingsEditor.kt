@@ -88,8 +88,6 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.math.ViewportMath
 import com.stormpanda.megingiard.settings.SettingsManager
-import com.stormpanda.megingiard.ui.AppModalDialog
-import com.stormpanda.megingiard.ui.FullScreenTopBar
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadFocusCard
@@ -97,11 +95,7 @@ import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
-import com.stormpanda.megingiard.ui.HelpEntry
 import com.stormpanda.megingiard.ui.HelpIconButton
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.blockPointerEvents
 import com.stormpanda.megingiard.ui.firstDeckItem
@@ -716,37 +710,5 @@ private fun CropHintItem(
                 color = colors.onSurfaceSecondary,
             )
         }
-    }
-}
-
-@Composable
-private fun BackgroundSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.layout_settings_bg_section_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_bg_settings_intro))
-
-        HelpSection(stringResource(R.string.help_layout_settings_sec_properties))
-        HelpEntry(
-            label = stringResource(R.string.help_layout_settings_bg_title),
-            description = stringResource(R.string.help_layout_settings_bg_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.help_bg_settings_dimming_title),
-            description = stringResource(R.string.help_bg_settings_dimming_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.help_bg_settings_crop_title),
-            description = stringResource(R.string.help_bg_settings_crop_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.help_layout_settings_mask_title),
-            description = stringResource(R.string.help_layout_settings_mask_desc),
-        )
     }
 }

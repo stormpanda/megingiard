@@ -145,7 +145,6 @@ help_close_cd  — content description for the Close button
 | `ui/onboarding/OnboardingWizardDialog.kt` | Multi-step tour host dialog with `OnboardingStepper` header and step navigation |
 | `ui/WelcomeTutorialDialog.kt` | Step 1 (`WelcomeStepContent`) onboarding content |
 | `ui/QuickMenuTutorialDialog.kt` | Step 2 (`QuickMenuStepContent`) gesture trial onboarding content |
-| `ui/MacroEditorTutorialDialog.kt` | Macro editor onboarding tutorial dialog |
 | `macropad/MacroPadEditor.kt` | `MacroPadEditorHelpModal` content + icon wiring |
 | `macropad/MacroTimelineEditor.kt` | `MacroTimelineHelpModal` content + icon wiring |
 | `macropad/BackgroundSettingsOverlay.kt` | `BackgroundSettingsHelpModal` content + icon wiring |

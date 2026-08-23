@@ -174,22 +174,7 @@ For external applications (such as the standalone Megingiard Game Focus launcher
 - The custom accent color is persisted independently (`KEY_CUSTOM_ACCENT_COLOR` / `customAccentColor`), retaining the user's custom HSV values and preview swatch even when an `ACCENT_PALETTE_PRESETS` preset is actively selected.
 - The accent swatch still shows the stored user accent even when the currently active theme may ignore it.
 
-### Shared Dropdowns — `ui/AppDropdown.kt`
-
-- Selection dropdowns use the shared `AppDropdown` composable, styled after the Ambient Settings vignette-shape picker: a compact rounded trigger with subtle surface tint, trailing drop-down icon, themed surface menu, and accent-coloured selected item.
-- `AppDropdown` supports compact trailing controls, full-width form fields, disabled empty states, and optional footer actions for selectors such as the MacroPad profile picker.
-- Context/action menus that are not value selectors may continue to use Material `DropdownMenu` directly.
-
-### Settings Rows — `ui/AppSettingsRow.kt`
-
-All settings rows across the app (Global Settings, Keyboard/Touchpad tool settings, MacroPad editor layout settings) use the shared container composables `AppSettingsRow` and `AppDivider`.
-
-**`AppSettingsRow`** is a transparent container:
-
-- Applies consistent `16.dp` horizontal and `12.dp` vertical padding by default (both overridable).
-- Enforces a `48.dp` minimum touch-target height.
-- Adds `Modifier.clickable` only when `onClick` is non-null (rows without an action are not clickable).
-- Has **no background** — the parent section/dialog/screen owns the background.
+### Separators — `AppDivider`
 
 **`AppDivider`** renders a thin `HorizontalDivider` using `AppColors.settingsSeparator` as its default colour.
 
@@ -199,8 +184,6 @@ All settings rows across the app (Global Settings, Keyboard/Touchpad tool settin
 - The `divider` token is reserved for non-row guide lines drawn directly on a Canvas (e.g. `MacroVerticalTimeline`).
 
 **`quickMenuBarIdleColor` — per-palette constants:** Each palette defines its own named constant (`DARK_QM_BAR_IDLE`, `LIGHT_QM_BAR_IDLE`, `CP_QM_BAR_IDLE`), all set to `Color.White.copy(alpha = 0.4f)`. This ensures consistent pull-tab visibility across Dark, Light, and Cyberpunk themes while keeping theme-specific constants for future divergence.
-
-**Background ownership rule:** Settings rows are transparent. The parent `Column` that groups a set of settings rows is responsible for setting `Modifier.background(colors.surface)`. This is why `GlobalSettingsScreen.SettingsSection` and `BackgroundSettingsOverlay` wrap their row groups in `Column(modifier = Modifier.fillMaxWidth().background(colors.surface))` rather than per-row backgrounds.
 
 ### Persistence — `SettingsManager.kt`
 
