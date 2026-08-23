@@ -8,12 +8,14 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -28,6 +30,7 @@ import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
+import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
@@ -265,6 +268,7 @@ internal sealed interface MacroPadSubPage {
         val initialColor: Color,
         val section: EditorSection,
         val showAlphaSlider: Boolean = true,
+        val onColorChange: ((Color) -> Unit)? = null,
         val onSave: (Color) -> Unit,
     ) : MacroPadSubPage {
         override val parentSection = section
@@ -301,6 +305,7 @@ internal fun ColorWheelSubPageContent(
     initialColor: Color,
     accentColor: Color,
     showAlphaSlider: Boolean = true,
+    onColorChange: ((Color) -> Unit)? = null,
     onSaveColor: (Color) -> Unit,
 ) {
     val initHsv =
@@ -319,6 +324,13 @@ internal fun ColorWheelSubPageContent(
             val base = Color(AndroidColor.HSVToColor(floatArrayOf(hue, sat, bri)))
             if (showAlphaSlider) base.copy(alpha = alpha) else base
         }
+    }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { workingColor }
+            .collectLatest { color ->
+                onColorChange?.invoke(color)
+            }
     }
 
     val hueGradient =

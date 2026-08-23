@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -70,6 +71,7 @@ import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import kotlinx.coroutines.flow.collectLatest
 import java.util.UUID
 
 private const val TAG = "PadButtonEditDialog"
@@ -301,6 +303,14 @@ internal fun EditButtonSubPageContent(
 
     val isNew = savedButton == null
     val currentButton = buildCurrentButton()
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { currentButton }
+            .collectLatest { liveBtn ->
+                MacroPadState.setPreviewButton(liveBtn)
+            }
+    }
+
     val hasChanges =
         isNew || currentButton.copy(posX = savedButton.posX, posY = savedButton.posY) != savedButton
 
@@ -789,6 +799,13 @@ internal fun ButtonColorSubPageContent(
         }
 
     val inFlightButton = buildInFlightButton()
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { inFlightButton }
+            .collectLatest { liveBtn ->
+                MacroPadState.setPreviewButton(liveBtn)
+            }
+    }
 
     val layoutDefaultOption =
         when (target) {

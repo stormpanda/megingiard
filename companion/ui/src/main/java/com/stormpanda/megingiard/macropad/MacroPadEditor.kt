@@ -187,6 +187,7 @@ fun MacroPadEditor(
             AppLog.i(TAG, "MacroPadEditor dismissed")
             MacroPadState.setEditingButtonPositions(false)
             MacroPadState.setSelectedButtonId(null)
+            MacroPadState.clearPreviewLayout()
         }
     }
 
@@ -225,12 +226,21 @@ fun MacroPadEditor(
     }
 
     LaunchedEffect(subPageStack) {
-        if (subPageStack.none {
+        val hasAppearanceSubPages =
+            subPageStack.any {
                 it is MacroPadSubPage.LayoutAppearance || it is MacroPadSubPage.LayoutColor ||
                     (it is MacroPadSubPage.ColorWheel && it.section == EditorSection.LAYOUTS)
             }
-        ) {
+        val hasButtonSubPages =
+            subPageStack.any {
+                it is MacroPadSubPage.EditButton || it is MacroPadSubPage.ButtonColor ||
+                    (it is MacroPadSubPage.ColorWheel && it.section == EditorSection.BUTTONS)
+            }
+        if (!hasAppearanceSubPages) {
             appearanceDraft = null
+        }
+        if (!hasAppearanceSubPages && !hasButtonSubPages) {
+            MacroPadState.clearPreviewLayout()
         }
     }
 
@@ -908,6 +918,30 @@ fun MacroPadEditor(
                                                                     breadcrumbs = breadcrumbs,
                                                                     initialColor = initialColor,
                                                                     section = EditorSection.LAYOUTS,
+                                                                    onColorChange = { liveColor ->
+                                                                        val option = ColorOption.Custom(liveColor.toArgb())
+                                                                        val liveLayout =
+                                                                            when (currentSubPage.target) {
+                                                                                LayoutColorTarget.TEXT -> {
+                                                                                    inFlightLayout.copy(
+                                                                                        buttonTextColor = option,
+                                                                                    )
+                                                                                }
+
+                                                                                LayoutColorTarget.BORDER -> {
+                                                                                    inFlightLayout.copy(
+                                                                                        buttonBorderColor = option,
+                                                                                    )
+                                                                                }
+
+                                                                                LayoutColorTarget.BG -> {
+                                                                                    inFlightLayout.copy(
+                                                                                        buttonBgColor = option,
+                                                                                    )
+                                                                                }
+                                                                            }
+                                                                        MacroPadState.setPreviewLayout(liveLayout)
+                                                                    },
                                                                     onSave = { savedColor ->
                                                                         val option = ColorOption.Custom(savedColor.toArgb())
                                                                         val updatedLayout =
@@ -1340,6 +1374,30 @@ fun MacroPadEditor(
                                                                 breadcrumbs = breadcrumbs,
                                                                 initialColor = initialColor,
                                                                 section = EditorSection.BUTTONS,
+                                                                onColorChange = { liveColor ->
+                                                                    val option = ColorOption.Custom(liveColor.toArgb())
+                                                                    val liveButton =
+                                                                        when (currentSubPage.target) {
+                                                                            ButtonColorTarget.TEXT -> {
+                                                                                inFlightButton.copy(
+                                                                                    buttonTextColor = option,
+                                                                                )
+                                                                            }
+
+                                                                            ButtonColorTarget.BORDER -> {
+                                                                                inFlightButton.copy(
+                                                                                    buttonBorderColor = option,
+                                                                                )
+                                                                            }
+
+                                                                            ButtonColorTarget.BG -> {
+                                                                                inFlightButton.copy(
+                                                                                    buttonBgColor = option,
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    MacroPadState.setPreviewButton(liveButton)
+                                                                },
                                                                 onSave = { savedColor ->
                                                                     val option = ColorOption.Custom(savedColor.toArgb())
                                                                     val updatedDraft =
@@ -2170,6 +2228,7 @@ fun MacroPadEditor(
                                                 initialColor = currentSubPage.initialColor,
                                                 accentColor = colors.accent,
                                                 showAlphaSlider = currentSubPage.showAlphaSlider,
+                                                onColorChange = currentSubPage.onColorChange,
                                                 onSaveColor = currentSubPage.onSave,
                                             )
                                         }

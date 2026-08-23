@@ -814,4 +814,97 @@ class MacroPadStateTest {
         MacroPadState.setEditingButtonPositions(false)
         assertEquals(null, MacroPadState.selectedButtonId.value)
     }
+
+    @Test
+    fun `setPreviewLayout and clearPreviewLayout manage in-flight layout preview`() {
+        val p1Id = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val savedLayout = PadLayout(id = l1Id, name = "Saved Layout", buttonTextColor = ColorOption.Neutral, mirrorConfigured = true)
+        val p1 = PadProfile(id = p1Id, name = "Profile 1", layouts = listOf(savedLayout), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        assertEquals(savedLayout, MacroPadState.activeLayout.value)
+        assertEquals(null, MacroPadState.previewLayout.value)
+
+        // Set in-flight preview layout
+        val previewLayout = savedLayout.copy(buttonTextColor = ColorOption.Accent)
+        MacroPadState.setPreviewLayout(previewLayout)
+
+        assertEquals(previewLayout, MacroPadState.previewLayout.value)
+        assertEquals(previewLayout, MacroPadState.activeLayout.value)
+        // Underlying saved profiles list is unaffected
+        assertEquals(
+            ColorOption.Neutral,
+            MacroPadState.profiles.value
+                .first()
+                .layouts
+                .first()
+                .buttonTextColor,
+        )
+
+        // Clear preview layout
+        MacroPadState.clearPreviewLayout()
+        assertEquals(null, MacroPadState.previewLayout.value)
+        assertEquals(savedLayout, MacroPadState.activeLayout.value)
+    }
+
+    @Test
+    fun `setPreviewButton replaces existing button or appends new button in activeLayout preview`() {
+        val p1Id = UUID.randomUUID().toString()
+        val l1Id = UUID.randomUUID().toString()
+        val b1 =
+            PadButton(
+                id = "btn-1",
+                label = "A",
+                posX = 0.2f,
+                posY = 0.2f,
+                action = PadAction.KeyboardKey(65, "A"),
+                buttonTextColor = ColorOption.Neutral,
+            )
+        val savedLayout = PadLayout(id = l1Id, name = "Saved Layout", buttons = listOf(b1), mirrorConfigured = true)
+        val p1 = PadProfile(id = p1Id, name = "Profile 1", layouts = listOf(savedLayout), activeLayoutId = l1Id)
+        MacroPadState.loadFrom(listOf(p1), p1Id)
+
+        // 1. Modify existing button in preview
+        val modifiedB1 = b1.copy(buttonTextColor = ColorOption.Accent)
+        MacroPadState.setPreviewButton(modifiedB1)
+
+        val preview1 = MacroPadState.activeLayout.value
+        assertNotNull(preview1)
+        assertEquals(1, preview1!!.buttons.size)
+        assertEquals(ColorOption.Accent, preview1.buttons.first().buttonTextColor)
+        // Profiles list still has saved button
+        assertEquals(
+            ColorOption.Neutral,
+            MacroPadState.profiles.value
+                .first()
+                .layouts
+                .first()
+                .buttons
+                .first()
+                .buttonTextColor,
+        )
+
+        // 2. Add new button in preview
+        val b2 =
+            PadButton(
+                id = "btn-2",
+                label = "B",
+                posX = 0.4f,
+                posY = 0.4f,
+                action = PadAction.KeyboardKey(66, "B"),
+                buttonTextColor = ColorOption.Custom(0xFF112233.toInt()),
+            )
+        MacroPadState.setPreviewButton(b2)
+
+        val preview2 = MacroPadState.activeLayout.value
+        assertNotNull(preview2)
+        assertEquals(2, preview2!!.buttons.size)
+        assertTrue(preview2.buttons.any { it.id == "btn-2" })
+
+        // 3. Passing null clears preview
+        MacroPadState.setPreviewButton(null)
+        assertEquals(null, MacroPadState.previewLayout.value)
+        assertEquals(savedLayout, MacroPadState.activeLayout.value)
+    }
 }

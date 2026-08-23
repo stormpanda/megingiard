@@ -118,15 +118,47 @@ object MacroPadState {
             ps.firstOrNull { it.id == id } ?: ps.firstOrNull()
         }.stateIn(scope, SharingStarted.Eagerly, null)
 
-    /** Derived: the currently active layout within the active profile. */
+    private val _previewLayout = MutableStateFlow<PadLayout?>(null)
+    val previewLayout: StateFlow<PadLayout?> = _previewLayout.asStateFlow()
+
+    /** Derived: the currently active layout within the active profile (or preview layout if set). */
     val activeLayout: StateFlow<PadLayout?> =
-        activeProfile
-            .map { profile ->
-                if (profile == null) return@map null
-                val layoutId = profile.activeLayoutId
-                profile.layouts.firstOrNull { it.id == layoutId }
-                    ?: profile.layouts.firstOrNull()
-            }.stateIn(scope, SharingStarted.Eagerly, null)
+        combine(activeProfile, _previewLayout) { profile, preview ->
+            if (preview != null) return@combine preview
+            if (profile == null) return@combine null
+            val layoutId = profile.activeLayoutId
+            profile.layouts.firstOrNull { it.id == layoutId }
+                ?: profile.layouts.firstOrNull()
+        }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    fun setPreviewLayout(layout: PadLayout?) {
+        AppLog.d(TAG, "setPreviewLayout(${layout?.id}, name='${layout?.name}')")
+        _previewLayout.value = layout
+    }
+
+    fun clearPreviewLayout() {
+        AppLog.d(TAG, "clearPreviewLayout()")
+        _previewLayout.value = null
+    }
+
+    fun setPreviewButton(button: PadButton?) {
+        if (button == null) {
+            clearPreviewLayout()
+            return
+        }
+        val currentProfile = activeProfile.value ?: return
+        val currentActiveLayout =
+            currentProfile.layouts.firstOrNull { it.id == currentProfile.activeLayoutId }
+                ?: currentProfile.layouts.firstOrNull() ?: return
+        val isExisting = currentActiveLayout.buttons.any { it.id == button.id }
+        val updatedButtons =
+            if (isExisting) {
+                currentActiveLayout.buttons.map { if (it.id == button.id) button else it }
+            } else {
+                currentActiveLayout.buttons + button
+            }
+        setPreviewLayout(currentActiveLayout.copy(buttons = updatedButtons))
+    }
 
     private val _selectedButtonId = MutableStateFlow<String?>(null)
     val selectedButtonId: StateFlow<String?> = _selectedButtonId.asStateFlow()
@@ -191,6 +223,7 @@ object MacroPadState {
         profiles: List<PadProfile>,
         activeProfileId: String?,
     ) {
+        _previewLayout.value = null
         var needsSave = false
         val inputProfiles =
             if (profiles.isEmpty()) {
@@ -356,6 +389,7 @@ object MacroPadState {
 
     fun setActiveProfileId(id: String?) {
         AppLog.i(TAG, "setActiveProfileId: $id")
+        _previewLayout.value = null
         _activeProfileId.value = id
         MacroPadSettings.saveMacroPadData()
     }
@@ -443,6 +477,7 @@ object MacroPadState {
     fun setActiveLayoutId(layoutId: String) {
         val profile = activeProfile.value ?: return
         AppLog.d(TAG, "setActiveLayoutId: profileId=${profile.id} layoutId=$layoutId")
+        _previewLayout.value = null
         updateProfile(profile.copy(activeLayoutId = layoutId))
     }
 

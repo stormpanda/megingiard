@@ -22,11 +22,13 @@ import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,6 +47,7 @@ import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.firstDeckItem
 import com.stormpanda.megingiard.ui.rememberSaveExitPromptState
+import kotlinx.coroutines.flow.collectLatest
 
 private const val TAG = "LayoutSettingsEditor"
 private val LSE_SAVE_PREVIEW_SPACING = 6.dp
@@ -80,6 +83,13 @@ internal fun LayoutAppearanceSubPageContent(
 ) {
     val colors = LocalAppColors.current
     var nameText by remember(savedLayout.id, savedLayout.name) { mutableStateOf(savedLayout.name) }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { layout }
+            .collectLatest { inFlightLayout ->
+                MacroPadState.setPreviewLayout(inFlightLayout)
+            }
+    }
 
     val normalizedName = nameText.trim()
     val isDuplicate = existingNames.any { it.equals(normalizedName, ignoreCase = true) }
@@ -338,6 +348,13 @@ internal fun LayoutColorSubPageContent(
         }
 
     val inFlightLayout = buildInFlightLayout()
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { inFlightLayout }
+            .collectLatest { liveLayout ->
+                MacroPadState.setPreviewLayout(liveLayout)
+            }
+    }
 
     val defaultNeutralColor =
         when (target) {
