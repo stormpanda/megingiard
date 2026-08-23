@@ -110,11 +110,6 @@ import com.stormpanda.megingiard.ui.GamepadSectionHeader
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIconButton
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryModalPayload
 import com.stormpanda.megingiard.ui.PrimaryModalType
@@ -172,8 +167,6 @@ internal val MPE_SECTION_HEADER_V_PADDING = 10.dp
 fun MacroPadEditor(
     onDone: () -> Unit,
     showTopBar: Boolean = true,
-    showHelp: Boolean = false,
-    onDismissHelp: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -200,8 +193,6 @@ fun MacroPadEditor(
 
     val selectedSection by MacroPadNavState.selectedSection.collectAsState()
     val subPageStack by MacroPadNavState.subPageStack.collectAsState()
-    var internalShowEditorHelp by remember { mutableStateOf(false) }
-    val effectiveShowHelp = showHelp || internalShowEditorHelp
 
     // Temporary storage for intermediate wizard picks (e.g. app picker for new/edit profile, icon picker)
     var pendingProfilePackage by remember { mutableStateOf<String?>(null) }
@@ -282,9 +273,7 @@ fun MacroPadEditor(
                     MacroPadNavState.reset()
                     onDone()
                 },
-            ) {
-                HelpIconButton(onClick = { internalShowEditorHelp = true })
-            }
+            )
             AppDivider()
         }
 
@@ -2229,14 +2218,6 @@ fun MacroPadEditor(
                 )
             }
         }
-
-        MacroPadEditorHelpModal(
-            visible = effectiveShowHelp,
-            onDismiss = {
-                internalShowEditorHelp = false
-                onDismissHelp()
-            },
-        )
     }
 }
 
@@ -2990,115 +2971,5 @@ private fun MacrosDeck(
                 onClick = { onEditMacro(macro) },
             )
         }
-    }
-}
-
-@Composable
-private fun MacroPadEditorHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_editor_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_editor_intro))
-
-        HelpSection(stringResource(R.string.help_editor_section_profiles))
-        HelpEntry(
-            label = stringResource(R.string.help_editor_profiles_label),
-            description = stringResource(R.string.help_editor_profiles_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Add,
-            label = stringResource(R.string.help_editor_add_profile_label),
-            description = stringResource(R.string.help_editor_add_profile_desc),
-        )
-        HelpEntry(
-            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-            label = stringResource(R.string.help_editor_profile_macros_label),
-            description = stringResource(R.string.help_editor_profile_macros_desc),
-        )
-
-        HelpSection(stringResource(R.string.help_editor_section_layouts))
-        HelpEntry(
-            label = stringResource(R.string.help_editor_layouts_label),
-            description = stringResource(R.string.help_editor_layouts_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Bolt,
-            label = stringResource(R.string.quick_actions_title),
-            description = stringResource(R.string.quick_actions_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Add,
-            label = stringResource(R.string.help_editor_add_layout_label),
-            description = stringResource(R.string.help_editor_add_layout_desc),
-        )
-
-        HelpSection(stringResource(R.string.help_editor_section_buttons))
-        HelpEntry(
-            icon = Icons.Rounded.OpenWith,
-            label = stringResource(R.string.macropad_editor_edit_button_positions),
-            description = stringResource(R.string.macropad_editor_edit_button_positions_card_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Grid4x4,
-            label = stringResource(R.string.macropad_editor_snap_grid),
-            description = stringResource(R.string.macropad_editor_snap_grid_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Add,
-            label = stringResource(R.string.macropad_editor_add_button),
-            description = stringResource(R.string.macropad_editor_create_button_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.SwapVert,
-            label = stringResource(R.string.macropad_editor_reorder_buttons),
-            description = stringResource(R.string.macropad_editor_reorder_buttons_enabled_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Edit,
-            label = stringResource(R.string.help_editor_button_edit_label),
-            description = stringResource(R.string.help_editor_button_edit_desc),
-        )
-
-        HelpSection(stringResource(R.string.macropad_editor_manage_macros))
-        HelpEntry(
-            icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
-            label = stringResource(R.string.macropad_macro_list_title),
-            description = stringResource(R.string.help_editor_profile_macros_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Add,
-            label = stringResource(R.string.macropad_macro_step_new),
-            description = stringResource(R.string.macro_step_action_type_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.SportsEsports,
-            label = stringResource(R.string.macropad_macro_record_gamepad_title),
-            description = stringResource(R.string.macropad_macro_record_gamepad_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.TouchApp,
-            label = stringResource(R.string.macropad_macro_record_touch_dialog_title),
-            description = stringResource(R.string.macropad_macro_record_touch_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.SwapVert,
-            label = stringResource(R.string.macropad_macro_reorder_steps_title),
-            description = stringResource(R.string.macropad_macro_reorder_steps_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.PlayArrow,
-            label = stringResource(R.string.macropad_macro_test_run),
-            description = stringResource(R.string.cd_test_macro),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Repeat,
-            label = stringResource(R.string.macropad_macro_loop_toggle),
-            description = stringResource(R.string.macropad_macro_loop_pause_label),
-        )
     }
 }

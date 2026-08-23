@@ -35,7 +35,7 @@ internal fun FullScreenTopBar(
     title: String,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    trailingContent: @Composable () -> Unit,
+    trailingContent: @Composable () -> Unit = {},
 ) {
     val colors = LocalAppColors.current
     val activeToast by DialogToastManager.currentToast.collectAsState()

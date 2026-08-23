@@ -55,10 +55,6 @@ sealed interface NavDestination {
     data class CropSelector(
         val cutoutId: String,
     ) : NavDestination
-
-    data class Help(
-        val sectionKey: String? = null,
-    ) : NavDestination
 }
 
 /**
@@ -149,13 +145,6 @@ fun NavDestination.toPrimaryModalConfig(): PrimaryModalConfig =
             PrimaryModalConfig(
                 type = PrimaryModalType.CROP_SELECTOR,
                 payload = PrimaryModalPayload.CropSelector(cutoutId = cutoutId),
-            )
-        }
-
-        is NavDestination.Help -> {
-            PrimaryModalConfig(
-                type = PrimaryModalType.HELP_TUTORIAL,
-                payload = PrimaryModalPayload.Help(sectionKey = sectionKey),
             )
         }
     }

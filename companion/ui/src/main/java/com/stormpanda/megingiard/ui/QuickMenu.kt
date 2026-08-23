@@ -325,15 +325,7 @@ fun QuickMenu(
                         icon = Icons.AutoMirrored.Rounded.HelpOutline,
                         contentDescription = stringResource(R.string.help_open_cd),
                         colors = colors,
-                        onClick = {
-                            val isDual = DisplayDetector.findSecondaryDisplay(context) != null
-                            if (isDual) {
-                                AppStateManager.openPrimaryModal(PrimaryModalConfig(PrimaryModalType.HELP_TUTORIAL))
-                                onDismiss()
-                            } else {
-                                showQuickMenuHelp = true
-                            }
-                        },
+                        onClick = { showQuickMenuHelp = true },
                     )
                 }
             }

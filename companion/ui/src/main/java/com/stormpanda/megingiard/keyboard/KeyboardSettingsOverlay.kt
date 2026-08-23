@@ -14,9 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -25,10 +23,6 @@ import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.viewmodel.KeyboardViewModel
 
@@ -37,15 +31,11 @@ private const val TAG = "KbSettingsOverlay"
 @Composable
 fun KeyboardSettingsOverlay(
     onBack: () -> Unit,
-    showHelp: Boolean = false,
-    onDismissHelp: () -> Unit = {},
     viewModel: KeyboardViewModel = viewModel(),
 ) {
     val colors = LocalAppColors.current
     val currentLayout by viewModel.kbLayout.collectAsState()
     val kbTouchpadEnabled by viewModel.kbTouchpadEnabled.collectAsState()
-    var internalShowHelp by remember { mutableStateOf(false) }
-    val effectiveShowHelp = showHelp || internalShowHelp
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "KeyboardSettingsOverlay composed")
@@ -81,40 +71,6 @@ fun KeyboardSettingsOverlay(
             checked = kbTouchpadEnabled,
             icon = Icons.Rounded.Mouse,
             onCheckedChange = { viewModel.setKbTouchpadEnabled(it) },
-        )
-    }
-
-    KeyboardSettingsHelpModal(
-        visible = effectiveShowHelp,
-        onDismiss = {
-            internalShowHelp = false
-            onDismissHelp()
-        },
-    )
-}
-
-@Composable
-private fun KeyboardSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_keyboard_settings_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_keyboard_settings_intro))
-
-        HelpSection(stringResource(R.string.settings_kb_layout))
-        HelpEntry(
-            label = stringResource(R.string.settings_kb_layout),
-            description = stringResource(R.string.help_keyboard_settings_layout_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_kb_touchpad))
-        HelpEntry(
-            label = stringResource(R.string.settings_kb_touchpad),
-            description = stringResource(R.string.help_keyboard_settings_touchpad_desc),
         )
     }
 }

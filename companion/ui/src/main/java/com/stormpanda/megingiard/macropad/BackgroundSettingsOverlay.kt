@@ -68,11 +68,6 @@ import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadTextFieldCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoPaneScaffold
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIconButton
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import com.stormpanda.megingiard.ui.PrimaryOverlayInputBridge
 import com.stormpanda.megingiard.ui.blockPointerEvents
@@ -105,11 +100,7 @@ private sealed interface AmbientCategory {
 }
 
 @Composable
-internal fun BackgroundSettingsOverlay(
-    onDone: () -> Unit,
-    showHelp: Boolean = false,
-    onDismissHelp: () -> Unit = {},
-) {
+internal fun BackgroundSettingsOverlay(onDone: () -> Unit) {
     val context = LocalContext.current
     val colors = LocalAppColors.current
     val layout by MacroPadState.activeLayout.collectAsState()
@@ -191,9 +182,6 @@ internal fun BackgroundSettingsOverlay(
             edgeBlendWidth = l.mirrorEdgeBlendWidth
         }
     }
-
-    var internalShowAmbientHelp by remember { mutableStateOf(false) }
-    val effectiveShowHelp = showHelp || internalShowAmbientHelp
 
     Box(
         modifier =
@@ -528,62 +516,6 @@ internal fun BackgroundSettingsOverlay(
                 },
             )
         }
-    }
-
-    BackgroundSettingsHelpModal(
-        visible = effectiveShowHelp,
-        onDismiss = {
-            internalShowAmbientHelp = false
-            onDismissHelp()
-        },
-    )
-}
-
-@Composable
-private fun BackgroundSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_ambient_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_ambient_intro))
-
-        HelpSection(stringResource(R.string.settings_section_general))
-        HelpEntry(
-            icon = Icons.Rounded.Opacity,
-            label = stringResource(R.string.settings_macropad_dim),
-            description = stringResource(R.string.help_ambient_dim_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Grain,
-            label = stringResource(R.string.mirror_edge_blend_label),
-            description = stringResource(R.string.help_ambient_blend_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.TouchApp,
-            label = stringResource(R.string.settings_mirror_follow_touch),
-            description = stringResource(R.string.help_ambient_follow_touch_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_section_cutouts))
-        HelpEntry(
-            icon = null,
-            label = stringResource(R.string.help_ambient_cutouts_label),
-            description = stringResource(R.string.help_ambient_cutouts_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Tune,
-            label = stringResource(R.string.settings_mirror_follow_smoothing),
-            description = stringResource(R.string.help_ambient_smoothing_desc),
-        )
-        HelpEntry(
-            icon = Icons.Rounded.Mouse,
-            label = stringResource(R.string.settings_mirror_touch_projection),
-            description = stringResource(R.string.help_ambient_touch_projection_desc),
-        )
     }
 }
 

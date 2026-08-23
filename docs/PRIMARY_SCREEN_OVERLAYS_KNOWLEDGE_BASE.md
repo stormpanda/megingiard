@@ -29,7 +29,7 @@ Instead of rendering heavy configuration dialogs, inspector panels, and settings
                │ - GlobalSettingsContent      │  │ - MacroPad Canvas       │
                │ - LayoutInspectorContent     │  │ - Mirror Surface        │
                │ - MacroEditorContent         │  │ - Quick Menu Bar        │
-               │ - HelpModalContent           │  │ - Keyboard / Touchpad   │
+               │ - AmbientSettingsContent     │  │ - Keyboard / Touchpad   │
                │ (Zero-Pause Window + Scrim)  │  │ (Always interactive)    │
                └──────────────────────────────┘  └─────────────────────────┘
 ```
@@ -155,7 +155,7 @@ To prevent code duplication between dual-screen overlay and single-screen fallba
 │  - GlobalSettingsContent(...)                          │
 │  - LayoutInspectorContent(...)                         │
 │  - MacroEditorContent(...)                             │
-│  - HelpModalContent(...)                               │
+│  - AmbientSettingsContent(...)                         │
 └───────────────────────────┬────────────────────────────┘
                             │
             ┌───────────────┴───────────────┐

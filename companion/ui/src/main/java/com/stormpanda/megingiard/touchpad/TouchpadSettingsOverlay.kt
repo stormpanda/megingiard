@@ -34,10 +34,6 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.GamepadStepperCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
-import com.stormpanda.megingiard.ui.HelpEntry
-import com.stormpanda.megingiard.ui.HelpIntro
-import com.stormpanda.megingiard.ui.HelpModal
-import com.stormpanda.megingiard.ui.HelpSection
 import com.stormpanda.megingiard.ui.LocalAppColors
 import java.util.Locale
 
@@ -48,11 +44,7 @@ private val TS_SPACING_CARDS = 10.dp
 private val TS_SECTION_TOP_PADDING = 10.dp
 
 @Composable
-fun TouchpadSettingsOverlay(
-    onBack: () -> Unit,
-    showHelp: Boolean = false,
-    onDismissHelp: () -> Unit = {},
-) {
+fun TouchpadSettingsOverlay(onBack: () -> Unit) {
     val colors = LocalAppColors.current
 
     val touchpadTapToClick by TouchpadSettings.touchpadTapToClick.collectAsState()
@@ -67,8 +59,6 @@ fun TouchpadSettingsOverlay(
     val touchpadNaturalScroll by TouchpadSettings.touchpadNaturalScroll.collectAsState()
     val touchpadScrollSpeed by TouchpadSettings.touchpadScrollSpeed.collectAsState()
     val touchpadHapticsEnabled by TouchpadSettings.touchpadHapticsEnabled.collectAsState()
-    var internalShowHelp by remember { mutableStateOf(false) }
-    val effectiveShowHelp = showHelp || internalShowHelp
 
     DisposableEffect(Unit) {
         AppLog.d(TAG, "TouchpadSettingsOverlay composed")
@@ -203,95 +193,5 @@ fun TouchpadSettingsOverlay(
                 onIncrement = { TouchpadSettings.setTouchpadMirrorDim((touchpadMirrorDim + 10).coerceAtMost(90)) },
             )
         }
-    }
-
-    TouchpadSettingsHelpModal(
-        visible = effectiveShowHelp,
-        onDismiss = {
-            internalShowHelp = false
-            onDismissHelp()
-        },
-    )
-}
-
-@Composable
-private fun TouchpadSettingsHelpModal(
-    visible: Boolean,
-    onDismiss: () -> Unit,
-) {
-    HelpModal(
-        visible = visible,
-        title = stringResource(R.string.help_touchpad_settings_title),
-        onDismiss = onDismiss,
-    ) {
-        HelpIntro(stringResource(R.string.help_touchpad_settings_intro))
-
-        HelpSection(stringResource(R.string.settings_touchpad_use_mouse))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_use_mouse),
-            description = stringResource(R.string.help_touchpad_settings_mode_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_tap_to_click))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_tap_to_click),
-            description = stringResource(R.string.help_touchpad_settings_tap_to_click_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_two_finger_tap),
-            description = stringResource(R.string.help_touchpad_settings_two_finger_tap_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_three_finger_tap),
-            description = stringResource(R.string.help_touchpad_settings_three_finger_tap_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_tap_drag))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_tap_drag),
-            description = stringResource(R.string.help_touchpad_settings_tap_drag_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_two_finger_scroll))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_two_finger_scroll),
-            description = stringResource(R.string.help_touchpad_settings_scroll_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_natural_scroll),
-            description = stringResource(R.string.help_touchpad_settings_natural_scroll_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_scroll_speed),
-            description = stringResource(R.string.help_touchpad_settings_scroll_speed_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_mouse_4_5))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_mouse_4_5),
-            description = stringResource(R.string.help_touchpad_settings_mouse_4_5_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_sensitivity))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_sensitivity),
-            description = stringResource(R.string.help_touchpad_settings_sensitivity_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_haptics))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_haptics),
-            description = stringResource(R.string.help_touchpad_settings_haptics_desc),
-        )
-
-        HelpSection(stringResource(R.string.settings_touchpad_mirroring))
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_mirroring),
-            description = stringResource(R.string.help_touchpad_settings_mirroring_desc),
-        )
-        HelpEntry(
-            label = stringResource(R.string.settings_touchpad_mirror_dim),
-            description = stringResource(R.string.help_touchpad_settings_mirror_dim_desc),
-        )
     }
 }

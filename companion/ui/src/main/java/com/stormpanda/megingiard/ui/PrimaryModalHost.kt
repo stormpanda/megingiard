@@ -80,58 +80,40 @@ fun PrimaryModalHost(
         }
 
         PrimaryModalType.KEYBOARD_SETTINGS -> {
-            var showHelp by remember { mutableStateOf(false) }
             PrimaryOverlayContainer(
                 title = stringResource(R.string.settings_keyboard_title),
                 icon = Icons.Rounded.Keyboard,
                 onDismiss = onDismiss,
                 modifier = modifier,
-                actions = {
-                    HelpIconButton(onClick = { showHelp = true })
-                },
             ) {
                 KeyboardSettingsOverlay(
                     onBack = onDismiss,
-                    showHelp = showHelp,
-                    onDismissHelp = { showHelp = false },
                 )
             }
         }
 
         PrimaryModalType.TOUCHPAD_SETTINGS -> {
-            var showHelp by remember { mutableStateOf(false) }
             PrimaryOverlayContainer(
                 title = stringResource(R.string.settings_touchpad_title),
                 icon = Icons.Rounded.Mouse,
                 onDismiss = onDismiss,
                 modifier = modifier,
-                actions = {
-                    HelpIconButton(onClick = { showHelp = true })
-                },
             ) {
                 TouchpadSettingsOverlay(
                     onBack = onDismiss,
-                    showHelp = showHelp,
-                    onDismissHelp = { showHelp = false },
                 )
             }
         }
 
         PrimaryModalType.BACKGROUND_SETTINGS -> {
-            var showHelp by remember { mutableStateOf(false) }
             PrimaryOverlayContainer(
                 title = stringResource(R.string.quick_menu_ambient_settings),
                 icon = Icons.Rounded.Videocam,
                 onDismiss = onDismiss,
                 modifier = modifier,
-                actions = {
-                    HelpIconButton(onClick = { showHelp = true })
-                },
             ) {
                 BackgroundSettingsOverlay(
                     onDone = onDismiss,
-                    showHelp = showHelp,
-                    onDismissHelp = { showHelp = false },
                 )
             }
         }
@@ -142,32 +124,16 @@ fun PrimaryModalHost(
         PrimaryModalType.PROFILE_SETTINGS,
         PrimaryModalType.MACRO_TIMELINE_EDITOR,
         -> {
-            var showHelp by remember { mutableStateOf(false) }
             PrimaryOverlayContainer(
                 title = stringResource(R.string.macropad_editor_title),
                 icon = Icons.Rounded.Widgets,
                 onDismiss = onDismiss,
                 modifier = modifier,
-                actions = {
-                    HelpIconButton(onClick = { showHelp = true })
-                },
             ) {
                 MacroPadEditor(
                     onDone = onDismiss,
                     showTopBar = false,
-                    showHelp = showHelp,
-                    onDismissHelp = { showHelp = false },
                 )
-            }
-        }
-
-        PrimaryModalType.HELP_TUTORIAL -> {
-            HelpModal(
-                visible = true,
-                title = stringResource(R.string.help_editor_title),
-                onDismiss = onDismiss,
-            ) {
-                HelpIntro(text = stringResource(R.string.help_editor_intro))
             }
         }
 

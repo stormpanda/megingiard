@@ -17,7 +17,6 @@ enum class PrimaryModalType {
     LAYOUT_SETTINGS,
     PROFILE_SETTINGS,
     MACRO_TIMELINE_EDITOR,
-    HELP_TUTORIAL,
     CROP_SELECTOR,
 }
 
@@ -25,10 +24,6 @@ enum class PrimaryModalType {
  * Optional contextual data passed when opening a primary screen modal.
  */
 sealed interface PrimaryModalPayload {
-    data class Help(
-        val sectionKey: String? = null,
-    ) : PrimaryModalPayload
-
     data class ButtonInspector(
         val buttonId: String,
     ) : PrimaryModalPayload
