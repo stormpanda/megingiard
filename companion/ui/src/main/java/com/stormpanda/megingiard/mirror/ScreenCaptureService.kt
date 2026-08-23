@@ -331,11 +331,8 @@ class ScreenCaptureService : Service() {
                 return@launch
             }
 
-            if (directPrivdActiveSurface != surface && directPrivdSession != null) {
-                AppLog.i(TAG, "target surface changed -> restarting direct privileged mirror session")
-                directPrivdSession?.release()
-                directPrivdSession = null
-                directPrivdActiveSurface = null
+            if (directPrivdActiveSurface == surface) {
+                return@launch
             }
 
             var directSession = directPrivdSession
@@ -379,9 +376,25 @@ class ScreenCaptureService : Service() {
                 }
 
                 if (!success && startGeneration == directPrivdStartGeneration) {
+                    AppLog.w(TAG, "direct privileged mirror send failed — attempting session recreation")
                     directSession.release()
                     directPrivdSession = null
-                    launchConsentFallback("direct privileged mirror send failed after $DIRECT_MIRROR_MAX_RETRIES attempts")
+                    directPrivdActiveSurface = null
+
+                    val freshSession = DirectPrivdMirrorSession(capturedSrcWidth, capturedSrcHeight)
+                    directPrivdSession = freshSession
+                    val restarted = freshSession.start()
+                    if (restarted && startGeneration == directPrivdStartGeneration) {
+                        if (DirectMirrorSurfaceBridge.sendToDirectServer(surface, capturedSrcWidth, capturedSrcHeight)) {
+                            directPrivdActiveSurface = surface
+                            AppLog.i(TAG, "direct privileged mirror recovered after session recreation")
+                            return@launch
+                        }
+                    }
+                    freshSession.release()
+                    directPrivdSession = null
+                    directPrivdActiveSurface = null
+                    launchConsentFallback("direct privileged mirror send failed after retry and recovery")
                 }
             }
         }

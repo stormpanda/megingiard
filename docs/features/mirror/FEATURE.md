@@ -168,7 +168,7 @@ Primary Display
 ```
 
 - **`ScreenCaptureService`** (foreground service) holds the `MediaProjection` token, obtained via user consent in `CaptureRequestActivity`. It creates and manages the `VirtualDisplay`, which streams the primary display's graphics buffer directly to the target `Surface` registered in `MasterSurfaceRegistry` by `EmbeddedMirrorView`.
-- **Embedded View Architecture:** Screen mirroring renders seamlessly inside `MainActivity` / `MainAppScreen` using `EmbeddedMirrorView` (`MultiCutoutContainer` wrapping `ThrottledTextureView`). This avoids window type mismatch issues, removes secondary-display `Presentation` window Z-order conflicts, and allows modals, editors, and Quick Menu overlays to composite directly in the standard Jetpack Compose hierarchy.
+- **Embedded View Architecture & Prioritized Surface Registry:** Screen mirroring renders seamlessly inside `MainActivity` / `MainAppScreen` using `EmbeddedMirrorView` (`MultiCutoutContainer` wrapping `ThrottledTextureView`). `MasterSurfaceRegistry` manages active display surfaces using an owner-based priority hierarchy (`PRIORITY_TOUCHPAD = 20`, `PRIORITY_MACROPAD = 10`). When the Touchpad overlay opens with mirroring active, `MasterSurfaceRegistry` directs the video capture stream to the Touchpad's 16:9 view. When Touchpad is closed or in mouse mode, `MasterSurfaceRegistry` automatically reverts active streaming to MacroPad's surface without recreating or tearing down MacroPad's background mirror view. This avoids window type mismatch issues, removes secondary-display `Presentation` window Z-order conflicts, and allows modals, editors, and Quick Menu overlays to composite directly in the standard Jetpack Compose hierarchy.
 
 ### Architecture: Privileged Capture Pipeline (FR-M9)
 

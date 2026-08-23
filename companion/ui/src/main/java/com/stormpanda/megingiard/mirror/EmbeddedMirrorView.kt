@@ -25,14 +25,18 @@ import com.stormpanda.megingiard.AppStateManager
 import com.stormpanda.megingiard.macropad.MacroPadMediaRepository
 import com.stormpanda.megingiard.macropad.MacroPadState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val TAG = "EmbeddedMirrorView"
 
 @Composable
-fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
+fun EmbeddedMirrorView(
+    modifier: Modifier = Modifier,
+    surfaceOwner: String = MasterSurfaceRegistry.OWNER_MACROPAD,
+    surfacePriority: Int = MasterSurfaceRegistry.PRIORITY_MACROPAD,
+    overrideCutouts: List<ScreenCutout>? = null,
+    showLayoutBackground: Boolean = true,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -51,11 +55,17 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
     val layout by MacroPadState.activeLayout.collectAsState()
     val screenshotRequested by ScreenCaptureManager.screenshotRequested.collectAsState()
 
-    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
+    val effectiveCutouts = overrideCutouts ?: cutouts
+
+    var bgBitmap by remember(layout?.backgroundImagePath, layout?.backgroundImageVersion, showLayoutBackground) {
         mutableStateOf<Bitmap?>(null)
     }
 
-    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion) {
+    LaunchedEffect(layout?.backgroundImagePath, layout?.backgroundImageVersion, showLayoutBackground) {
+        if (!showLayoutBackground) {
+            bgBitmap = null
+            return@LaunchedEffect
+        }
         val path = layout?.backgroundImagePath
         if (path != null) {
             withContext(Dispatchers.IO) {
@@ -92,24 +102,27 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
 
                     var smoother = gpuMotionSmoother
                     if (smoother == null && width > 0 && height > 0) {
-                        AppLog.i(TAG, "Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)")
+                        AppLog.i(
+                            TAG,
+                            "[$surfaceOwner] Initializing GpuMotionSmoother unified pipeline for master Surface (strength=$effectiveStrength)",
+                        )
                         smoother = GpuMotionSmoother(master, width, height, effectiveStrength)
                         gpuMotionSmoother = smoother
                         val inSurface = smoother.inputSurface
                         if (inSurface != null) {
                             currentRoutedSurface = inSurface
-                            MasterSurfaceRegistry.setMasterSurface(inSurface)
+                            MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, inSurface, surfacePriority)
                         }
                     } else if (smoother != null) {
                         smoother.updateStrength(effectiveStrength)
                         val inSurface = smoother.inputSurface
                         if (inSurface != null && currentRoutedSurface != inSurface) {
                             currentRoutedSurface = inSurface
-                            MasterSurfaceRegistry.setMasterSurface(inSurface)
+                            MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, inSurface, surfacePriority)
                         }
                     } else {
                         currentRoutedSurface = master
-                        MasterSurfaceRegistry.setMasterSurface(master)
+                        MasterSurfaceRegistry.registerMasterSurface(surfaceOwner, master, surfacePriority)
                     }
                 }
             }
@@ -154,14 +167,15 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
         }
     }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(surfaceOwner, surfacePriority) {
         onDispose {
+            val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
             containerHolder.gpuMotionSmoother?.release()
             containerHolder.gpuMotionSmoother = null
             containerHolder.currentRoutedSurface = null
+            MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
             containerHolder.masterSurface?.release()
             containerHolder.masterSurface = null
-            MasterSurfaceRegistry.setMasterSurface(null)
         }
     }
 
@@ -226,12 +240,12 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
                         } catch (e: Exception) {
                             AppLog.e(TAG, "Error setting initial surface frame rate", e)
                         }
-                        AppLog.d(TAG, "master TextureView surface available")
+                        AppLog.d(TAG, "master TextureView surface available for $surfaceOwner")
                         containerHolder.updateSurfaceRouting(
                             currentSrcW,
                             currentSrcH,
-                            ScreenCaptureManager.cutouts.value,
-                            AppStateManager.isFullscreenMouseActive.value,
+                            effectiveCutouts,
+                            overrideCutouts != null || AppStateManager.isFullscreenMouseActive.value,
                         )
                     }
 
@@ -242,11 +256,12 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
                     ) {}
 
                     override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
-                        AppLog.d(TAG, "master TextureView surface destroyed")
+                        AppLog.d(TAG, "master TextureView surface destroyed for $surfaceOwner")
+                        val surfaceToClear = containerHolder.currentRoutedSurface ?: containerHolder.masterSurface
                         containerHolder.gpuMotionSmoother?.release()
                         containerHolder.gpuMotionSmoother = null
                         containerHolder.currentRoutedSurface = null
-                        MasterSurfaceRegistry.setMasterSurface(null)
+                        MasterSurfaceRegistry.unregisterMasterSurface(surfaceOwner, surfaceToClear)
                         containerHolder.masterSurface?.release()
                         containerHolder.masterSurface = null
                         return true
@@ -266,18 +281,18 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
             mcc
         },
         update = { mcc ->
-            mcc.cutouts = cutouts
+            mcc.cutouts = effectiveCutouts
             mcc.isFrozen = isFrozen
             mcc.frozenBitmap = frozenBitmap
-            mcc.viewportScale = scale
-            mcc.viewportOffsetX = offsetX
-            mcc.viewportOffsetY = offsetY
+            mcc.viewportScale = if (overrideCutouts != null) 1f else scale
+            mcc.viewportOffsetX = if (overrideCutouts != null) 0f else offsetX
+            mcc.viewportOffsetY = if (overrideCutouts != null) 0f else offsetY
             mcc.bgBitmap = bgBitmap
-            mcc.useAsMask = layout?.useBackgroundImageAsMask == true
-            mcc.bgImageScale = layout?.bgImageScale ?: 1f
-            mcc.bgImageOffsetX = layout?.bgImageOffsetX ?: 0f
-            mcc.bgImageOffsetY = layout?.bgImageOffsetY ?: 0f
-            mcc.bgImageDim = layout?.backgroundImageDim ?: 0f
+            mcc.useAsMask = showLayoutBackground && layout?.useBackgroundImageAsMask == true
+            mcc.bgImageScale = if (showLayoutBackground) layout?.bgImageScale ?: 1f else 1f
+            mcc.bgImageOffsetX = if (showLayoutBackground) layout?.bgImageOffsetX ?: 0f else 0f
+            mcc.bgImageOffsetY = if (showLayoutBackground) layout?.bgImageOffsetY ?: 0f else 0f
+            mcc.bgImageDim = if (showLayoutBackground) layout?.backgroundImageDim ?: 0f else 0f
 
             val tv = containerHolder.textureView
             if (tv != null) {
@@ -295,7 +310,12 @@ fun EmbeddedMirrorView(modifier: Modifier = Modifier) {
 
             val currentSrcW = if (srcWidth > 0) srcWidth else 1920
             val currentSrcH = if (srcHeight > 0) srcHeight else 1080
-            containerHolder.updateSurfaceRouting(currentSrcW, currentSrcH, cutouts, isFullscreenMouseActive)
+            containerHolder.updateSurfaceRouting(
+                currentSrcW,
+                currentSrcH,
+                effectiveCutouts,
+                overrideCutouts != null || isFullscreenMouseActive,
+            )
         },
     )
 }

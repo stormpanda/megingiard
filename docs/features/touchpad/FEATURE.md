@@ -162,7 +162,7 @@ Dismissal on the secondary display reuses the edge-swipe gesture path: `SwipeGes
 
 **Touchpad Mirroring Integration:**
 
-- When absolute touchpad mirroring is active (`touchpadMirrorActive == true`), `FullscreenMouseOverlay` renders `EmbeddedMirrorView` with a single full-screen master cutout directly inside its touch pad area.
+- When absolute touchpad mirroring is active (`isMirroringActive == true`), `FullscreenMouseOverlay` renders `EmbeddedMirrorView` with owner `MasterSurfaceRegistry.OWNER_TOUCHPAD` (`priority = 20`) and `ScreenCutout.FULLSCREEN` directly inside its 16:9 touch pad area. `MasterSurfaceRegistry` routes the video capture stream to the Touchpad and automatically restores MacroPad's surface when the Touchpad closes or mirroring is paused.
 - A semi-transparent black overlay dims the mirrored stream based on the user-configured `touchpadMirrorDim` level.
 - The lifecycle of the capture service is managed: if the capture service was started _by_ the touchpad, it is stopped immediately when the touchpad is closed or mode is toggled, restoring the previous active/inactive screen capture state of the MacroPad.
 

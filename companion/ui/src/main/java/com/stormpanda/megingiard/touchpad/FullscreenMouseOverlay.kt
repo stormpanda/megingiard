@@ -73,7 +73,9 @@ import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.macropad.HapticStrength
 import com.stormpanda.megingiard.macropad.triggerHaptic
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
+import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
+import com.stormpanda.megingiard.mirror.ScreenCutout
 import com.stormpanda.megingiard.settings.SettingsManager
 import com.stormpanda.megingiard.settings.TouchpadSettings
 import com.stormpanda.megingiard.ui.LocalAppColors
@@ -430,7 +432,13 @@ fun FullscreenMouseOverlay() {
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (isMirroringActive) {
-                                    EmbeddedMirrorView(modifier = Modifier.fillMaxSize())
+                                    EmbeddedMirrorView(
+                                        modifier = Modifier.fillMaxSize(),
+                                        surfaceOwner = MasterSurfaceRegistry.OWNER_TOUCHPAD,
+                                        surfacePriority = MasterSurfaceRegistry.PRIORITY_TOUCHPAD,
+                                        overrideCutouts = listOf(ScreenCutout.FULLSCREEN),
+                                        showLayoutBackground = false,
+                                    )
                                     Box(
                                         modifier =
                                             Modifier

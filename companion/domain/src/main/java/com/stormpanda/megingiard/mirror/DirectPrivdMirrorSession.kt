@@ -43,19 +43,31 @@ class DirectPrivdMirrorSession(
         return true
     }
 
-    fun stop() {
+    suspend fun stop() {
         if (stopping || _state.value == State.STOPPED || _state.value == State.IDLE) return
         val shouldStopRemote = _state.value == State.RUNNING
         stopping = true
         AppLog.i(TAG, "stop()")
-        if (shouldStopRemote) {
-            scope.launch(NonCancellable) { runCatching { PrivdClient.stopMirror() } }
-        }
         _state.value = State.STOPPED
+        if (shouldStopRemote) {
+            runCatching { PrivdClient.stopMirror() }
+        }
     }
 
     fun release() {
-        stop()
+        if (stopping || _state.value == State.STOPPED || _state.value == State.IDLE) {
+            scope.cancel()
+            return
+        }
+        val shouldStopRemote = _state.value == State.RUNNING
+        stopping = true
+        AppLog.i(TAG, "release()")
+        _state.value = State.STOPPED
+        if (shouldStopRemote) {
+            scope.launch(NonCancellable) {
+                runCatching { PrivdClient.stopMirror() }
+            }
+        }
         scope.cancel()
     }
 }

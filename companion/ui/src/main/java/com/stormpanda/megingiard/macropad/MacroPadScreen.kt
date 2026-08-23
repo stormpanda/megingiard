@@ -54,6 +54,7 @@ import com.stormpanda.megingiard.BitmapUtils
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.input.TouchInjector
 import com.stormpanda.megingiard.mirror.EmbeddedMirrorView
+import com.stormpanda.megingiard.mirror.MasterSurfaceRegistry
 import com.stormpanda.megingiard.mirror.ScreenCaptureManager
 import com.stormpanda.megingiard.mirror.TouchProjectionController
 import com.stormpanda.megingiard.mirror.TouchScreenObserver
@@ -124,7 +125,11 @@ fun MacroPadScreen(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         if (showEmbeddedMirror) {
-            EmbeddedMirrorView(modifier = Modifier.fillMaxSize())
+            EmbeddedMirrorView(
+                modifier = Modifier.fillMaxSize(),
+                surfaceOwner = MasterSurfaceRegistry.OWNER_MACROPAD,
+                surfacePriority = MasterSurfaceRegistry.PRIORITY_MACROPAD,
+            )
         }
 
         val p = profile

@@ -58,6 +58,23 @@ data class ScreenCutout(
     val aspectRatioMode: AspectRatioMode = if (keepAspectRatio) AspectRatioMode.TOP else AspectRatioMode.BOTTOM,
 ) {
     companion object {
+        val FULLSCREEN =
+            ScreenCutout(
+                id = "fullscreen_master",
+                name = "",
+                srcX = 0f,
+                srcY = 0f,
+                srcWidth = 1f,
+                srcHeight = 1f,
+                destX = 0f,
+                destY = 0f,
+                destWidth = 1f,
+                destHeight = 1f,
+                opacity = 1f,
+                shape = CutoutShape.RECTANGLE,
+                aspectRatioMode = AspectRatioMode.TOP,
+            )
+
         fun createDefault(
             srcPixelWidth: Float = 1920f,
             srcPixelHeight: Float = 1080f,
