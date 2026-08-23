@@ -62,8 +62,8 @@ Each button supports one of the following actions:
     - **Mirror Action Picker**: Displays all 5 screen mirror actions (Mirror Start/Stop, Mirror Freeze, Mirror Viewport, Touch Projection, and Background Peek) in a 2-column card grid.
     - **Overlay Action Picker**: Displays the 2 overlay actions (Fullscreen Mouse, Fullscreen Keyboard) in a 2-column card grid.
     - **Layout Action Picker**: Displays all 3 layout actions (Next Layout, Previous Layout, Profile Switcher) in a 2-column card grid.
-    - **App Launcher**: Extracted into a dedicated top-level `ActionGroup.APP_LAUNCHER` button type. In the button editor, the app selection card (`AppLauncherPicker`) is displayed directly without redundant action sub-menu selectors.
-  - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Launcher) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.
+    - **App Quick-Switch**: Extracted into a dedicated top-level `ActionGroup.APP_LAUNCHER` button type. In the button editor, the app selection card (`AppLauncherPicker`) is displayed directly without redundant action sub-menu selectors to quickly switch between Megingiard and another app.
+  - Modifiers (Mod 1, Mod 2 for keyboard), combo buttons (Extra 1, Extra 2, Extra 3 for gamepad), and specific app target (for App Quick-Switch) remain configurable on the `EditButton` page below the primary action card. For `GamepadButton`, selecting any extra input card (Extra 1, Extra 2, Extra 3) opens the same `VisualGamepadPicker` sub-page as the primary button action, enabling visual selection, automatic deduplication, toggle-to-deselect, and an in-deck Clear action.
 - `GamepadButton` and all mouse actions use dedicated injectors (`GamepadInjector`, `MouseInjector`) backed by their own native binary processes.
 
 > **Optional: physical-pad merge** — When [Privileged Mode](../privileged-mode/FEATURE.md) is RUNNING and its `Gamepad merge` per-feature flag is enabled, `GamepadInjector` routes all gamepad events to `PrivdGamepadInjector` instead of the virtual uinput path. The privileged daemon writes them into the connected physical controller's evdev node, so games see only one device. Falls back transparently to the virtual gamepad when Privileged Mode is OFF.
@@ -281,9 +281,9 @@ Each button supports one of the following actions:
 - Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
 - Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), and the active **MacroPad Screen** (`MacroPadScreen`).
 
-### FR-P15: App Launcher Button & Floating Bubble Overlay
+### FR-P15: App Quick-Switch Button & Floating Bubble Overlay
 
-- Users can add buttons of type **App Launcher** (`PadAction.AppLauncher`) to MacroPad layouts.
+- Users can add buttons of type **App Quick-Switch** (`PadAction.AppLauncher`) to MacroPad layouts to switch quickly between Megingiard and an external application.
 - **Single-Field Persistence**: For optimal portable layout persistence, `PadAction.AppLauncher` stores **only `packageName`** in JSON layout profiles (`{"type":"app_launcher","packageName":"..."}`). The application title and launcher icon are resolved dynamically at runtime via `PackageManager`.
 - **Application Picker**: When configuring an App Launcher button in the editor, an app picker dialog lists all installed launcher applications (`PackageManager.queryIntentActivities` with `Intent.CATEGORY_LAUNCHER`), allowing the user to select an app by name or package name.
 - **Editor Simplification & Dynamic Label**: Selecting the App Launcher action automatically hides the **Label** text input field and **Icon** picker from the button edit dialog (`PadButtonEditDialog`). The button label is dynamically evaluated as `"Open <AppName>"` (`"Öffnen <AppName>"` in German) derived from `PackageManager`.

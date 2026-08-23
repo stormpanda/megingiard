@@ -504,8 +504,8 @@
     <string name="macropad_action_group_layout_desc">切換配置或開啟設定檔切換器</string>
     <string name="macropad_action_group_mirror">投影選單</string>
     <string name="macropad_action_group_mirror_desc">控制螢幕鏡像串流、凍結或觸控投影</string>
-    <string name="macropad_action_group_app_launcher">應用程式啟動器</string>
-    <string name="macropad_action_group_app_launcher_desc">啟動已安裝的 Android 應用程式或遊戲</string>
+    <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
+    <string name="macropad_action_group_app_launcher_desc">在 Megingiard 與其他應用程式之間快速切換</string>
     <string name="macropad_action_group_other">全螢幕工具</string>
     <string name="macropad_action_group_other_desc">開啟全螢幕滑鼠與鍵盤覆蓋層</string>
     <string name="macropad_picker_label_group">按鈕類型</string>

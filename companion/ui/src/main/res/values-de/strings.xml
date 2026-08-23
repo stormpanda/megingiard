@@ -178,7 +178,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_mirror_touch_projection">Touch-Projektion</string>
     <string name="macropad_action_fullscreen_mouse">Vollbild-Maus</string>
     <string name="macropad_action_fullscreen_keyboard">Vollbild-Tastatur</string>
-    <string name="macropad_action_app_launcher">App-Launcher</string>
+    <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Anwendung auswählen</string>
     <string name="app_launcher_picker_search">Anwendungen suchen…</string>
     <string name="app_launcher_picker_no_apps">Keine Anwendungen gefunden</string>
@@ -664,8 +664,8 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_group_layout_desc">Layouts wechseln oder den Profilwechsler öffnen</string>
     <string name="macropad_action_group_mirror">Mirror-Menü</string>
     <string name="macropad_action_group_mirror_desc">Bildschirmübertragung, Einfrieren oder Touch-Projektion steuern</string>
-    <string name="macropad_action_group_app_launcher">App-Starter</string>
-    <string name="macropad_action_group_app_launcher_desc">Eine installierte Android-App oder ein Spiel starten</string>
+    <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
+    <string name="macropad_action_group_app_launcher_desc">Schnell zwischen Megingiard und einer anderen App wechseln</string>
     <string name="macropad_action_group_other">Overlays</string>
     <string name="macropad_action_group_other_desc">Vollbild-Maus- und Tastatur-Overlays öffnen</string>
     <string name="macropad_picker_label_group">Tastentyp</string>
@@ -1227,7 +1227,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_action_mirror_viewport_edit_desc">Zoom, Pan und Zuschnitt des Mirrors anpassen</string>
     <string name="macropad_action_mirror_touch_projection_desc">Berührungen direkt auf das gespiegelte Display projizieren</string>
     <string name="macropad_action_ambient_peek_desc">Gedrückt halten oder tippen, um den Bildschirm darunter zu zeigen</string>
-    <string name="macropad_action_app_launcher_desc">Installierte Android-App starten</string>
+    <string name="macropad_action_app_launcher_desc">Schnell zwischen Megingiard und einer anderen App wechseln</string>
     <string name="macropad_action_fullscreen_mouse_desc">Vollbild-Touchpad-Overlay öffnen</string>
     <string name="macropad_action_fullscreen_keyboard_desc">Vollbild-Tastatur-Overlay öffnen</string>
     <string name="macropad_action_layout_next_desc">Zum nächsten Layout im Profil wechseln</string>

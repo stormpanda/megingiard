@@ -394,6 +394,7 @@ internal fun EditButtonSubPageContent(
         enableKeyboard = enableKeyboard,
         enableGamepad = enableGamepad,
         enableMouse = enableMouse,
+        isFirstItem = !showLabelAndIcon,
         onOpenMacroPicker = {
             onOpenMacroPicker?.invoke(currentButton)
         },

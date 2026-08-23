@@ -224,7 +224,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_touch_projection">Touch Projection</string>
     <string name="macropad_action_fullscreen_mouse">Fullscreen Mouse</string>
     <string name="macropad_action_fullscreen_keyboard">Fullscreen Keyboard</string>
-    <string name="macropad_action_app_launcher">App Launcher</string>
+    <string name="macropad_action_app_launcher">App Quick-Switch</string>
     <string name="app_launcher_picker_title">Select Application</string>
     <string name="app_launcher_picker_search">Search applications…</string>
     <string name="app_launcher_picker_no_apps">No applications found</string>
@@ -655,8 +655,8 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_group_layout_desc">Switch layouts or open the profile switcher</string>
     <string name="macropad_action_group_mirror">Mirror Menu</string>
     <string name="macropad_action_group_mirror_desc">Control screen mirroring stream, freezing, or touch projection</string>
-    <string name="macropad_action_group_app_launcher">App Launcher</string>
-    <string name="macropad_action_group_app_launcher_desc">Launch an installed Android app or game</string>
+    <string name="macropad_action_group_app_launcher">App Quick-Switch</string>
+    <string name="macropad_action_group_app_launcher_desc">Quickly switch between Megingiard and another app</string>
     <string name="macropad_action_group_other">Overlays</string>
     <string name="macropad_action_group_other_desc">Open fullscreen mouse and keyboard overlays</string>
     <string name="macropad_picker_label_group">Button Type</string>
@@ -1218,7 +1218,7 @@ Open Settings to create a layout.</string>
     <string name="macropad_action_mirror_viewport_edit_desc">Adjust zoom, pan, and crop on mirror</string>
     <string name="macropad_action_mirror_touch_projection_desc">Project touches directly to mirrored display</string>
     <string name="macropad_action_ambient_peek_desc">Hold or toggle to reveal display underneath</string>
-    <string name="macropad_action_app_launcher_desc">Launch an installed Android application</string>
+    <string name="macropad_action_app_launcher_desc">Quickly switch between Megingiard and another app</string>
     <string name="macropad_action_fullscreen_mouse_desc">Open full-screen virtual touchpad overlay</string>
     <string name="macropad_action_fullscreen_keyboard_desc">Open full-screen virtual keyboard overlay</string>
     <string name="macropad_action_layout_next_desc">Switch to next layout in active profile</string>
