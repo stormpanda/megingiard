@@ -390,7 +390,7 @@ fun MacroPadEditor(
                                                 onNewMacro = {
                                                     MacroPadNavState.setMacroTimelineFocusStepIndex(null)
                                                     MacroPadNavState.setStack(
-                                                        listOf(MacroPadSubPage.ChooseMacroMode()),
+                                                        listOf(MacroPadSubPage.ChooseMacroMode),
                                                     )
                                                 },
                                                 onNewLayout = {
@@ -608,7 +608,7 @@ fun MacroPadEditor(
                                                 profile = profile,
                                                 accentColor = colors.accent,
                                                 onNewMacro = {
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode())
+                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.ChooseMacroMode)
                                                 },
                                                 onEditMacro = { macro ->
                                                     MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro = macro))
@@ -1095,27 +1095,13 @@ fun MacroPadEditor(
                                                             posY = 0.5f,
                                                             action = defaultAction,
                                                         )
-                                                    if (group == ActionGroup.MACRO && profile.macros.isEmpty()) {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack.dropLast(1) +
-                                                                MacroPadSubPage.EditButton(
-                                                                    button = null,
-                                                                    draftButton = newDraft,
-                                                                ) +
-                                                                MacroPadSubPage.ChooseMacroMode(
-                                                                    forButton = null,
-                                                                    draftButton = newDraft,
-                                                                ),
-                                                        )
-                                                    } else {
-                                                        MacroPadNavState.setStack(
-                                                            subPageStack.dropLast(1) +
-                                                                MacroPadSubPage.EditButton(
-                                                                    button = null,
-                                                                    draftButton = newDraft,
-                                                                ),
-                                                        )
-                                                    }
+                                                    MacroPadNavState.setStack(
+                                                        subPageStack.dropLast(1) +
+                                                            MacroPadSubPage.EditButton(
+                                                                button = null,
+                                                                draftButton = newDraft,
+                                                            ),
+                                                    )
                                                 },
                                             )
                                         }
@@ -1254,18 +1240,15 @@ fun MacroPadEditor(
                                                             ),
                                                     )
                                                 },
-                                                onEditMacro = { macro ->
-                                                    MacroPadNavState.setStack(subPageStack + MacroPadSubPage.MacroTimeline(macro = macro))
-                                                },
-                                                onOpenCreateMacroMode = { currentDraft ->
+                                                onOpenMacroPicker = { currentDraft ->
                                                     MacroPadNavState.setStack(
                                                         subPageStack.dropLast(1) +
                                                             MacroPadSubPage.EditButton(
                                                                 button = currentSubPage.button,
                                                                 draftButton = currentDraft,
                                                             ) +
-                                                            MacroPadSubPage.ChooseMacroMode(
-                                                                forButton = currentSubPage.button,
+                                                            MacroPadSubPage.ChooseMacroAction(
+                                                                button = currentSubPage.button,
                                                                 draftButton = currentDraft,
                                                             ),
                                                     )
@@ -1742,6 +1725,43 @@ fun MacroPadEditor(
                                         }
                                     }
 
+                                    is MacroPadSubPage.ChooseMacroAction -> {
+                                        val effectiveButton = currentSubPage.draftButton
+                                        GamepadDeck(
+                                            breadcrumbs =
+                                                listOf(
+                                                    stringResource(R.string.macropad_editor_section_buttons),
+                                                    effectiveButton.label.ifBlank {
+                                                        stringResource(
+                                                            if (currentSubPage.button != null) {
+                                                                R.string.macropad_editor_section_button_settings
+                                                            } else {
+                                                                R.string.macropad_editor_add_button
+                                                            },
+                                                        )
+                                                    },
+                                                    stringResource(R.string.macropad_action_macro),
+                                                ),
+                                        ) {
+                                            MacroActionPickerSubPageContent(
+                                                currentAction = effectiveButton.action,
+                                                accentColor = colors.accent,
+                                                onSelectAction = { act ->
+                                                    val updatedDraft = applyActionToDraftButton(effectiveButton, act)
+                                                    MacroPadNavState.setStack(
+                                                        subPageStack.dropLast(1).map { subPage ->
+                                                            if (subPage is MacroPadSubPage.EditButton) {
+                                                                subPage.copy(draftButton = updatedDraft)
+                                                            } else {
+                                                                subPage
+                                                            }
+                                                        },
+                                                    )
+                                                },
+                                            )
+                                        }
+                                    }
+
                                     is MacroPadSubPage.ChooseMacroMode -> {
                                         val privdState by PrivdManager.state.collectAsState()
                                         val defaultMacroName = stringResource(R.string.macropad_macro_default_name)
@@ -1772,48 +1792,17 @@ fun MacroPadEditor(
                                         }
 
                                         fun applyNewMacroToStack(newMacro: Macro) {
-                                            if (currentSubPage.draftButton != null) {
-                                                val updatedDraft =
-                                                    currentSubPage.draftButton.copy(
-                                                        action = PadAction.Macro(newMacro.id),
-                                                        label =
-                                                            if (currentSubPage.draftButton.label ==
-                                                                context.getString(R.string.macropad_editor_new_button_default_label)
-                                                            ) {
-                                                                newMacro.name
-                                                            } else {
-                                                                currentSubPage.draftButton.label
-                                                            },
-                                                    )
-                                                val updatedStack =
-                                                    subPageStack.dropLast(1).map { subPage ->
-                                                        if (subPage is MacroPadSubPage.EditButton) {
-                                                            subPage.copy(draftButton = updatedDraft)
-                                                        } else {
-                                                            subPage
-                                                        }
-                                                    } + MacroPadSubPage.MacroTimeline(macro = null, draftMacro = newMacro)
-                                                MacroPadNavState.setStack(updatedStack)
-                                            } else {
-                                                MacroPadNavState.setStack(
-                                                    subPageStack.dropLast(1) +
-                                                        MacroPadSubPage.MacroTimeline(macro = null, draftMacro = newMacro),
-                                                )
-                                            }
+                                            MacroPadNavState.setStack(
+                                                subPageStack.dropLast(1) +
+                                                    MacroPadSubPage.MacroTimeline(macro = null, draftMacro = newMacro),
+                                            )
                                         }
 
                                         val breadcrumbs =
-                                            if (currentSubPage.forButton != null || currentSubPage.draftButton != null) {
-                                                listOf(
-                                                    stringResource(R.string.macropad_editor_section_buttons),
-                                                    stringResource(R.string.macropad_macro_create_title),
-                                                )
-                                            } else {
-                                                listOf(
-                                                    stringResource(R.string.macropad_editor_manage_macros),
-                                                    stringResource(R.string.macropad_macro_create_title),
-                                                )
-                                            }
+                                            listOf(
+                                                stringResource(R.string.macropad_editor_manage_macros),
+                                                stringResource(R.string.macropad_macro_create_title),
+                                            )
 
                                         GamepadDeck(breadcrumbs = breadcrumbs) {
                                             ChooseMacroModeSubPageContent(

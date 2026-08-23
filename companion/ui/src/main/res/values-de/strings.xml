@@ -1362,8 +1362,9 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <string name="macropad_picker_label_extra_desc">Optionale Combo-Taste</string>
     <string name="macropad_picker_mouse_button_desc">Zu simulierender Mausklick</string>
     <string name="macropad_picker_macro_desc">Gespeicherte Makro-Sequenz ausführen</string>
-    <string name="macropad_picker_macro_edit_desc">Schritte für %1$s bearbeiten</string>
-    <string name="macropad_picker_macro_new_desc">Eine neue Makro-Sequenz aufzeichnen</string>
+    <string name="macropad_picker_macro_create_info_title">Makros erstellen</string>
+    <string name="macropad_picker_macro_create_info_desc">Um ein neues Makro zu erstellen, erstelle oder nimm es zuerst im Makro-Menü oder über die Schnellaktionen auf.</string>
+    <string name="macropad_picker_macro_empty_title">Keine Makros verfügbar</string>
     <string name="macropad_btn_color_save_desc">Farbänderungen auf diese Taste anwenden</string>
     <string name="macropad_btn_color_layout_default_desc">Standardfarbe des Layouts übernehmen</string>
 

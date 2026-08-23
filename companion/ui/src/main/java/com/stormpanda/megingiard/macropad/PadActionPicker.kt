@@ -24,8 +24,7 @@ internal fun ActionPicker(
     enableKeyboard: Boolean = true,
     enableGamepad: Boolean = true,
     enableMouse: Boolean = true,
-    onEditMacro: ((Macro) -> Unit)? = null,
-    onOpenCreateMacroMode: (() -> Unit)? = null,
+    onOpenMacroPicker: (() -> Unit)? = null,
     onOpenAppPicker: (() -> Unit)? = null,
     onOpenKeyboardPicker: () -> Unit = {},
     onOpenGamepadPicker: (slotIndex: Int) -> Unit = {},
@@ -124,9 +123,7 @@ internal fun ActionPicker(
             MacroPicker(
                 current = current,
                 accentColor = accentColor,
-                onEditMacro = onEditMacro,
-                onOpenCreateMacroMode = onOpenCreateMacroMode,
-                onChange = onChange,
+                onOpenMacroPicker = onOpenMacroPicker ?: {},
                 isFirstItem = isFirstItem,
             )
         }

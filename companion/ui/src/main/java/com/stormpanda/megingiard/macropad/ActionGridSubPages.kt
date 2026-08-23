@@ -1,17 +1,22 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CropFree
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PauseCircle
+import androidx.compose.material.icons.rounded.SmartButton
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import com.stormpanda.megingiard.AppLog
 import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.ui.GamepadActionCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.GamepadTwoColumnGrid
 
 private const val TAG = "ActionGridSubPages"
@@ -202,5 +208,55 @@ internal fun LayoutActionPickerSubPageContent(
             onClick = { onSelectAction(item.action) },
             modifier = cardModifier,
         )
+    }
+}
+
+@Composable
+internal fun MacroActionPickerSubPageContent(
+    currentAction: PadAction,
+    accentColor: Color,
+    onSelectAction: (action: PadAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppLog.d(TAG, "MacroActionPickerSubPageContent: currentAction=$currentAction")
+    val profile by MacroPadState.activeProfile.collectAsState()
+    val macros = profile?.macros ?: emptyList()
+
+    if (macros.isEmpty()) {
+        GamepadInfoBox(
+            text = stringResource(R.string.macropad_picker_macro_empty_title),
+            description = stringResource(R.string.macropad_picker_macro_create_info_desc),
+            icon = Icons.Rounded.Info,
+            modifier = modifier.fillMaxWidth(),
+        )
+    } else {
+        val currentMacroId = (currentAction as? PadAction.Macro)?.macroId
+        GamepadTwoColumnGrid(
+            items = macros,
+            modifier = modifier,
+        ) { macro, _, cardModifier ->
+            val isSelected = macro.id == currentMacroId
+            val stepCountDesc =
+                if (macro.steps.size == 1) {
+                    stringResource(R.string.macropad_macro_step_count_single)
+                } else {
+                    stringResource(R.string.macropad_macro_step_count_multiple, macro.steps.size)
+                }
+
+            GamepadActionCard(
+                title = macro.name,
+                description = stepCountDesc,
+                icon = Icons.Rounded.SmartButton,
+                actionText =
+                    if (isSelected) {
+                        stringResource(R.string.gamepad_color_selected)
+                    } else {
+                        stringResource(R.string.gamepad_action_select)
+                    },
+                alwaysShowFullDescription = true,
+                onClick = { onSelectAction(PadAction.Macro(macro.id)) },
+                modifier = cardModifier,
+            )
+        }
     }
 }

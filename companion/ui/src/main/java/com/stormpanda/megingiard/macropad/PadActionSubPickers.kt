@@ -1,8 +1,8 @@
 package com.stormpanda.megingiard.macropad
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.SmartButton
@@ -21,8 +21,8 @@ import com.stormpanda.megingiard.R
 import com.stormpanda.megingiard.settings.MacroPadSettings
 import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadChoiceCard
+import com.stormpanda.megingiard.ui.GamepadInfoBox
 import com.stormpanda.megingiard.ui.firstDeckItem
-import java.util.UUID
 
 private const val TAG = "PadActionSubPickers"
 
@@ -180,78 +180,29 @@ internal fun GamepadButtonPicker(
 internal fun MacroPicker(
     current: PadAction.Macro,
     accentColor: Color,
-    onEditMacro: ((Macro) -> Unit)? = null,
-    onOpenCreateMacroMode: (() -> Unit)? = null,
-    onChange: (PadAction) -> Unit,
+    onOpenMacroPicker: () -> Unit,
     isFirstItem: Boolean = false,
 ) {
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros = profile?.macros ?: emptyList()
-    val defaultName = stringResource(R.string.macropad_macro_default_name)
 
     val selectedMacro =
         macros.firstOrNull { it.id == current.macroId }
             ?: macros.firstOrNull()
 
-    val macroIdx = macros.indexOf(selectedMacro).coerceAtLeast(0)
-
-    GamepadChoiceCard(
-        title = stringResource(R.string.macropad_action_macro),
-        description = stringResource(R.string.macropad_picker_macro_desc),
-        selectedText = selectedMacro?.name ?: stringResource(R.string.macropad_picker_folder_empty),
-        icon = Icons.Rounded.SmartButton,
-        enabled = macros.isNotEmpty(),
-        modifier = Modifier.firstDeckItem(isFirstItem),
-        onPrevious = {
-            if (macros.isNotEmpty()) {
-                val nextIdx = (macroIdx - 1 + macros.size) % macros.size
-                onChange(PadAction.Macro(macros[nextIdx].id))
-            }
-        },
-        onNext = {
-            if (macros.isNotEmpty()) {
-                val nextIdx = (macroIdx + 1) % macros.size
-                onChange(PadAction.Macro(macros[nextIdx].id))
-            }
-        },
+    GamepadInfoBox(
+        text = stringResource(R.string.macropad_picker_macro_create_info_title),
+        description = stringResource(R.string.macropad_picker_macro_create_info_desc),
+        icon = Icons.Rounded.Info,
+        modifier = Modifier.fillMaxWidth(),
     )
 
-    if (onEditMacro != null && selectedMacro != null) {
-        GamepadActionCard(
-            title = stringResource(R.string.settings_macropad_edit),
-            description = stringResource(R.string.macropad_picker_macro_edit_desc, selectedMacro.name),
-            actionText = stringResource(R.string.gamepad_action_edit),
-            icon = Icons.Rounded.Edit,
-            onClick = { onEditMacro(selectedMacro) },
-        )
-    }
-
-    if (onOpenCreateMacroMode != null) {
-        GamepadActionCard(
-            title = stringResource(R.string.settings_macropad_new),
-            description = stringResource(R.string.macropad_picker_macro_new_desc),
-            actionText = stringResource(R.string.gamepad_action_create),
-            icon = Icons.Rounded.Add,
-            onClick = onOpenCreateMacroMode,
-        )
-    } else if (onEditMacro != null) {
-        GamepadActionCard(
-            title = stringResource(R.string.settings_macropad_new),
-            description = stringResource(R.string.macropad_picker_macro_new_desc),
-            actionText = stringResource(R.string.gamepad_action_create),
-            icon = Icons.Rounded.Add,
-            onClick = {
-                val newMacroId = UUID.randomUUID().toString()
-                val newMacro =
-                    Macro(
-                        id = newMacroId,
-                        name = defaultName,
-                        steps = emptyList(),
-                    )
-                MacroPadState.addMacro(newMacro)
-                onChange(PadAction.Macro(newMacroId))
-                onEditMacro(newMacro)
-            },
-        )
-    }
+    GamepadActionCard(
+        title = stringResource(R.string.macropad_action_macro),
+        description = stringResource(R.string.macropad_picker_macro_desc),
+        actionText = selectedMacro?.name ?: stringResource(R.string.macropad_picker_folder_empty),
+        icon = Icons.Rounded.SmartButton,
+        onClick = onOpenMacroPicker,
+        modifier = Modifier.firstDeckItem(isFirstItem),
+    )
 }

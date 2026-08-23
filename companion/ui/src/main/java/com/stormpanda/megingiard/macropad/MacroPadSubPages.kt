@@ -203,12 +203,15 @@ internal sealed interface MacroPadSubPage {
         override val parentSection = EditorSection.BUTTONS
     }
 
-    data class ChooseMacroMode(
-        val forButton: PadButton? = null,
-        val draftButton: PadButton? = null,
+    data class ChooseMacroAction(
+        val button: PadButton?,
+        val draftButton: PadButton,
     ) : MacroPadSubPage {
-        override val parentSection: EditorSection
-            get() = if (forButton != null || draftButton != null) EditorSection.BUTTONS else EditorSection.MACROS
+        override val parentSection = EditorSection.BUTTONS
+    }
+
+    data object ChooseMacroMode : MacroPadSubPage {
+        override val parentSection = EditorSection.MACROS
     }
 
     data class MacroTimeline(

@@ -164,8 +164,7 @@ internal fun EditButtonSubPageContent(
     onOpenMirrorPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenOverlayPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onOpenLayoutPicker: ((currentDraft: PadButton) -> Unit)? = null,
-    onEditMacro: ((Macro) -> Unit)? = null,
-    onOpenCreateMacroMode: ((currentDraft: PadButton) -> Unit)? = null,
+    onOpenMacroPicker: ((currentDraft: PadButton) -> Unit)? = null,
     onDuplicate: ((PadButton) -> Unit)? = null,
     onCopyToLayout: ((PadButton) -> Unit)? = null,
     onDelete: ((PadButton) -> Unit)? = null,
@@ -235,24 +234,12 @@ internal fun EditButtonSubPageContent(
     val profile by MacroPadState.activeProfile.collectAsState()
     val macros = profile?.macros ?: emptyList()
 
-    var actionBeforeEdit by remember { mutableStateOf<PadAction?>(null) }
-
     LaunchedEffect(macros) {
         val currentAction = action
         if (currentAction is PadAction.Macro) {
             val macroExists = macros.any { it.id == currentAction.macroId }
             if (!macroExists) {
-                val revertTo = actionBeforeEdit
-                if (revertTo != null) {
-                    if (revertTo is PadAction.Macro) {
-                        val revertMacroExists = macros.any { it.id == revertTo.macroId }
-                        action = if (revertMacroExists) revertTo else initAction
-                    } else {
-                        action = revertTo
-                    }
-                } else {
-                    action = initAction
-                }
+                action = initAction
             }
         }
     }
@@ -407,13 +394,8 @@ internal fun EditButtonSubPageContent(
         enableKeyboard = enableKeyboard,
         enableGamepad = enableGamepad,
         enableMouse = enableMouse,
-        onEditMacro = { macro ->
-            actionBeforeEdit = action
-            onEditMacro?.invoke(macro)
-        },
-        onOpenCreateMacroMode = {
-            actionBeforeEdit = action
-            onOpenCreateMacroMode?.invoke(currentButton)
+        onOpenMacroPicker = {
+            onOpenMacroPicker?.invoke(currentButton)
         },
         onOpenAppPicker = {
             onOpenAppPicker(currentButton)

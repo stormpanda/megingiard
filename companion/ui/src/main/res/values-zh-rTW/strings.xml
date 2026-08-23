@@ -954,8 +954,9 @@
     <string name="macropad_picker_label_extra_desc">選用的組合按鈕</string>
     <string name="macropad_picker_mouse_button_desc">要模擬的滑鼠點擊</string>
     <string name="macropad_picker_macro_desc">要觸發的已儲存巨集序列</string>
-    <string name="macropad_picker_macro_edit_desc">編輯 %1$s 的步驟</string>
-    <string name="macropad_picker_macro_new_desc">錄製新的巨集序列</string>
+    <string name="macropad_picker_macro_create_info_title">建立巨集</string>
+    <string name="macropad_picker_macro_create_info_desc">若要建立新巨集，請先在「巨集」選單或透過「快速動作」錄製或建立。</string>
+    <string name="macropad_picker_macro_empty_title">無可用巨集</string>
     <string name="macropad_btn_color_save_desc">將色彩變更套用至此按鈕</string>
     <string name="macropad_btn_color_layout_default_desc">繼承配置預設色彩</string>
     <string name="macropad_editor_edit_button_positions">編輯按鈕位置</string>

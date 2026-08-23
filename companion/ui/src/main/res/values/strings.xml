@@ -1353,8 +1353,9 @@ Open Settings to create a layout.</string>
     <string name="macropad_picker_label_extra_desc">Optional combo button</string>
     <string name="macropad_picker_mouse_button_desc">Mouse click to simulate</string>
     <string name="macropad_picker_macro_desc">Saved macro sequence to trigger</string>
-    <string name="macropad_picker_macro_edit_desc">Edit steps for %1$s</string>
-    <string name="macropad_picker_macro_new_desc">Record a new macro sequence</string>
+    <string name="macropad_picker_macro_create_info_title">Macro Creation</string>
+    <string name="macropad_picker_macro_create_info_desc">To create a new macro, build or record it in the Macros menu or via Quick Actions first.</string>
+    <string name="macropad_picker_macro_empty_title">No Macros Available</string>
     <string name="macropad_btn_color_save_desc">Apply color changes to this button</string>
     <string name="macropad_btn_color_layout_default_desc">Inherit layout-wide default color</string>
 
