@@ -122,8 +122,8 @@ The Screen Mirror feature provides a permanent, real-time, hardware-accelerated 
 
 ### FR-M13: Multi-Cutout Edge Blending
 
-- The user MUST be able to configure an edge blending width using a slider with a live preview button (`Edge blending` / `Kantenübergänge`) in the background settings overlay.
-- The slider range MUST be `0` to `100 dp`. Clicking the preview icon displays a live preview bar at the bottom of the secondary screen, allowing real-time adjustment with visual feedback.
+- The user MUST be able to configure an edge blending width using a slider (`Edge blending` / `Kantenübergänge`) in the background settings overlay (`GamepadSliderCard`).
+- The slider range MUST be `0` to `100 dp` in steps of `5 dp`, displaying "Off" when `0 dp` is selected and the active value in `dp` otherwise.
 - The edge blending width (`mirrorEdgeBlendWidth`) MUST be saved and persisted per-layout inside the layout configuration schema.
 - When edge blending is configured (> 0 dp):
   - Fades MUST be applied to the edges of each cutout.
@@ -249,7 +249,7 @@ The master texture surface buffer allocation matches the source resolution. The 
 
 ### Ambient Dimming Support
 
-- **Per-Layout Dim Level (`ambientDim`)**: In `BackgroundSettingsOverlay`, users can configure a dimming percentage (`0%` to `90%`, stored as `ambientDim` in `PadLayout`).
+- **Per-Layout Dim Level (`ambientDim`)**: In `BackgroundSettingsOverlay`, users can configure a dimming percentage (`0%` to `90%` in 5% steps using `GamepadSliderCard`, stored as `ambientDim` in `PadLayout`).
 - **Dimming Veil Application**: `EmbeddedMirrorView` passes `layout.ambientDim` to `MultiCutoutContainer`. During drawing in `MultiCutoutContainer`, a semi-transparent black veil (`Color.argb(alpha, 0, 0, 0)`) is drawn specifically over the rendered screen cutouts, keeping overlay buttons in `MacroPadScreen` legible without affecting any configured background image artwork (which maintains its own independent `backgroundImageDim` setting).
 
 ### Cutout Layout Editor & Viewport Centering

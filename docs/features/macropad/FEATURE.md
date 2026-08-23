@@ -187,9 +187,8 @@ Each button supports one of the following actions:
 - When background display is enabled and capturing is active, `MacroPadScreen` renders `EmbeddedMirrorView` at Layer 0 underneath `PadSurface(transparentBackground = true)`.
 - In background display mode, the **Quick Menu Bar** MUST remain visible on the secondary display, and edge swipes from the configured bar edge MUST open/close the Quick Menu so users can always access navigation/actions even if no mirror-control button exists in the current layout.
 - **Per-layout background settings:** Dimming parameters are stored **per layout** in `PadLayout` (not globally).
-- **Background Settings Overlay** (`BackgroundSettingsOverlay`): Configures the active layout's dimming parameters, edge blending, layout-wide touch tracking, and per-cutout smoothing settings.
-- **Slider Preview Mode:** Live-preview dimming value on the secondary display.
-- **Dimming** (0–90%, default 0%): draws a semi-transparent black overlay on top of the mirror background.
+- **Background Settings Overlay** (`BackgroundSettingsOverlay`): Configures the active layout's dimming parameters, edge blending (`GamepadSliderCard`), layout-wide touch tracking, and per-cutout smoothing settings.
+- **Dimming** (0–90%, default 0%): Configured via a `GamepadSliderCard` that draws a semi-transparent black overlay on top of the mirror background.
 - A special **Background Peek** action (`PadAction.BackgroundPeek`): toggles hiding all buttons and dimming.
 - When the capture service is not running and ambient is enabled, the MacroPad falls back to its normal opaque rendering on the primary display.
 - **Per-layout button color defaults** (`PadLayout.buttonTextColor` / `PadLayout.buttonBorderColor` / `PadLayout.buttonBgColor`): Each layout can independently configure the default colors for text/icon, border, and fading color.
@@ -276,8 +275,8 @@ Each button supports one of the following actions:
 
 ### FR-P9c: Background Image Dimming
 
-- Users can dim the background image using a slider in the background settings overlay.
-- Dimming ranges from **0%** (no dimming) up to **90%** (maximum dimming) to prevent complete obscurity.
+- Users can dim the background image using a `GamepadSliderCard` in the layout background settings editor (`LayoutBackgroundSubPageContent`).
+- Dimming ranges from **0%** (no dimming) up to **95%** (maximum dimming) in **5%** steps to prevent complete obscurity.
 - Transparent and semi-transparent PNG images are fully supported: dimming is applied using a `SrcAtop` blending tint color filter. This ensures that only the non-transparent/colored pixels of the image are dimmed, and the transparent background/cutout regions remain completely unaffected.
 - Real-time dimming is visible within the **Layout Settings background preview thumbnail**, the **Layout Editor Canvas** (`PadCanvas`), and the active **MacroPad Screen** (`MacroPadScreen`).
 

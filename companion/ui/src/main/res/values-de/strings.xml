@@ -836,7 +836,7 @@ Einstellungen öffnen, um ein Layout zu erstellen.</string>
     <!-- Ambient / Background Settings help -->
     <string name="help_ambient_title">Bildschirmspiegelungs-Einstellungen — Hilfe</string>
     <string name="help_ambient_intro">Diese Einstellungen steuern, wie das gespiegelte Bild im Ambient-Modus aussieht — wenn Megingiard im Hintergrund hinter deinen Schaltflächen läuft. Alle Änderungen gelten nur für das aktuell aktive Layout.</string>
-    <string name="help_ambient_dim_desc" formatted="false">Reduziert die Helligkeit des gespiegelten Bildes durch einen schwarzen Schleier. 0 % bedeutet kein Abdunkeln; 90 % ist nahezu schwarz. Das Auge-Symbol ermöglicht eine Live-Vorschau auf dem Sekundärbildschirm.</string>
+    <string name="help_ambient_dim_desc" formatted="false">Reduziert die Helligkeit des gespiegelten Bildes durch einen schwarzen Schleier. 0 % bedeutet kein Abdunkeln; 90 % ist nahezu schwarz.</string>
     <string name="help_ambient_blend_desc">Blendet die Ränder des Spiegelbildes nach innen aus, sodass der Inhalt fließend in den Hintergrund übergeht statt abrupt abzubrechen. Höhere Werte erzeugen einen stärkeren Vignetten-Effekt.</string>
     <string name="help_ambient_follow_touch_desc">Zentriert den gespiegelten Bildausschnitt auf der zuletzt berührten Stelle des Hauptbildschirms. Wähle einen Ausschnitt aus dem Dropdown, um es zu aktivieren, oder Aus, um es zu deaktivieren.</string>
     <string name="help_ambient_cutouts_label">Ausschnitt-Liste</string>

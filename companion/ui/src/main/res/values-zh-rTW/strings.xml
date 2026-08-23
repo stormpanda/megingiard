@@ -653,7 +653,7 @@
     <string name="help_timeline_randomise_desc">每次執行時為每個步驟的時序新增一個微小的隨機偏移 (±範圍)。這使巨集感覺不那麼機械化，並有助於避免某些應用程式中的自動偵測模式。</string>
     <string name="help_ambient_title">螢幕投影設定 — 說明</string>
     <string name="help_ambient_intro">這些設定控制投影的上方螢幕圖像在背景模式下的外觀 — 即當 Megingiard 在按鈕後方背景運行時。所有變更僅套用於當前活動的配置。</string>
-    <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色蒙版來降低投影圖像的亮度。0% 表示不調暗；90% 幾乎為全黑。使用眼睛圖示可在次螢幕上即時預覽效果而不儲存。</string>
+    <string name="help_ambient_dim_desc" formatted="false">透過覆蓋一層黑色蒙版來降低投影圖像的亮度。0% 表示不調暗；90% 幾乎為全黑。</string>
     <string name="help_ambient_blend_desc">使投影圖像的邊緣向內淡出，讓投影內容與背景平滑過渡而非生硬切斷。較高的值會產生更強的暈影效果。</string>
     <string name="help_ambient_follow_touch_desc">將投影視窗中心對齊您在主螢幕上最後觸碰的位置。從下拉選單中選擇一個區塊以啟用，或選擇「關閉」以禁用。</string>
     <string name="help_ambient_cutouts_label">區塊列表</string>

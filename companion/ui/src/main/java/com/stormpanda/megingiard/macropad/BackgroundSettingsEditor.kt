@@ -92,7 +92,7 @@ import com.stormpanda.megingiard.ui.GamepadActionCard
 import com.stormpanda.megingiard.ui.GamepadConfirmDialog
 import com.stormpanda.megingiard.ui.GamepadFocusCard
 import com.stormpanda.megingiard.ui.GamepadSectionHeader
-import com.stormpanda.megingiard.ui.GamepadStepperCard
+import com.stormpanda.megingiard.ui.GamepadSliderCard
 import com.stormpanda.megingiard.ui.GamepadToggleCard
 import com.stormpanda.megingiard.ui.GamepadTwoStepConfirmCard
 import com.stormpanda.megingiard.ui.HelpIconButton
@@ -106,6 +106,10 @@ import java.io.File
 import kotlin.math.roundToInt
 
 private const val TAG = "BackgroundSettingsEditor"
+
+private const val BSE_DIM_MAX = 0.95f
+private const val BSE_DIM_STEP = 0.05f
+private const val BSE_PERCENT_DIVISOR = 100f
 
 private val BSE_PREVIEW_IMAGE_ROUNDING = 8.dp
 private val BSE_BORDER_WIDTH_1 = 1.dp
@@ -343,18 +347,16 @@ internal fun LayoutBackgroundSubPageContent(
             onClick = { onOpenCrop(bgScale, bgOffsetX, bgOffsetY) },
         )
 
-        GamepadStepperCard(
+        GamepadSliderCard(
             title = stringResource(R.string.layout_settings_bg_image_dimming_title),
             description = stringResource(R.string.help_bg_settings_dimming_desc),
-            valueText = "${(bgImageDim * 100).roundToInt()}%",
+            value = bgImageDim,
+            valueRange = 0f..BSE_DIM_MAX,
+            step = BSE_DIM_STEP,
             icon = Icons.Rounded.BrightnessMedium,
-            onDecrement = {
-                val newVal = (bgImageDim - 0.05f).coerceIn(0f, 0.95f)
-                bgImageDim = (newVal * 100).roundToInt() / 100f
-            },
-            onIncrement = {
-                val newVal = (bgImageDim + 0.05f).coerceIn(0f, 0.95f)
-                bgImageDim = (newVal * 100).roundToInt() / 100f
+            valueLabel = "${(bgImageDim * BSE_PERCENT_DIVISOR).roundToInt()}%",
+            onValueChange = { newVal ->
+                bgImageDim = (newVal * BSE_PERCENT_DIVISOR).roundToInt() / BSE_PERCENT_DIVISOR
             },
         )
 
